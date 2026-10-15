@@ -27,6 +27,7 @@ import {
     getBlockLibraryContentSource,
     getBlockLibraryName,
     isBlockLibraryAvailableForPackage,
+    withAlwaysIncludedBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
 import type { Project } from '@/types/base';
 import type { AddonSource } from '@/types/demoPackages';
@@ -184,7 +185,7 @@ async function reinstallBlockLibraries(
 
     const { allLibraries, libraryContentSources } = collectLibrarySources(
         project,
-        project.selectedBlockLibraries ?? [],
+        withAlwaysIncludedBlockLibraries(project.selectedBlockLibraries, project.selectedPackage ?? ''),
         logger,
     );
 

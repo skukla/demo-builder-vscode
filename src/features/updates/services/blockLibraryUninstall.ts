@@ -25,6 +25,7 @@ import {
     getBlockLibraryName,
     getBlockLibrarySource,
     getNativeBlockLibraries,
+    withAlwaysIncludedBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import {
@@ -91,7 +92,8 @@ function keptLibraries(project: Project): Array<{ name?: string; owner?: string;
         })),
         ...(project.customBlockLibraries ?? []).map((lib) => ({ name: lib.name, ...lib.source })),
     ];
-    for (const id of project.selectedBlockLibraries ?? []) {
+    // An always-included library is kept whether or not anything names it.
+    for (const id of withAlwaysIncludedBlockLibraries(project.selectedBlockLibraries, project.selectedPackage ?? '')) {
         kept.push({ name: getBlockLibraryName(id), ...getBlockLibrarySource(id) });
     }
     return kept;

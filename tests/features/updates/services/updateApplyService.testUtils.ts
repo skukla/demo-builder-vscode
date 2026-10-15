@@ -149,6 +149,15 @@ export function edsProject(overrides: Partial<Project> = {}): Project {
             },
         },
         installedInspectorSdk: { commitSha: 'old', installedAt: '2026-01-01T00:00:00.000Z' },
+        // Every storefront has Demo Builder Blocks (always included, 2026-10-15);
+        // without it the check would offer to install it.
+        installedBlockLibraries: [
+            installedLibrary('Demo Builder Blocks', {
+                owner: 'skukla',
+                repo: 'demo-builder-block-library',
+                branch: 'main',
+            }),
+        ],
         ...overrides,
     });
 }

@@ -20,6 +20,7 @@ import {
     resetFakes,
 } from './updateApplyService.testUtils';
 import * as vscode from 'vscode';
+import blockLibraries from '@/features/components/config/block-libraries.json';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
     computeProjectUpdateSelections,
@@ -27,10 +28,16 @@ import {
 } from '@/features/updates/services/updateSelections';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
-const LIBRARY = {
-    name: 'Demo Builder Blocks',
-    source: { owner: 'skukla', repo: 'demo-builder-block-library', branch: 'main' },
-};
+function catalogEntry(id: string) {
+    const entry = blockLibraries.libraries.find((l) => l.id === id);
+    if (!entry) throw new Error(`${id} is not in block-libraries.json`);
+    return { name: entry.name, source: entry.source };
+}
+
+/** An optional library the SC can tick (Demo Builder Blocks is always included, 2026-10-15). */
+const LIBRARY = catalogEntry('demo-team-blocks');
+/** The record every storefront has; `edsProject()` carries it, so it is kept when overriding. */
+const DEMO_BUILDER = catalogEntry('demo-builder-blocks');
 
 function setSyncBehavior(value: 'ask' | 'enabled' | 'disabled'): void {
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
@@ -44,7 +51,7 @@ beforeEach(() => {
 
 describe('computeProjectUpdateSelections — block library installs', () => {
     it('selects a library the project selected but has no record of, resolved from the catalog', async () => {
-        const project = edsProject({ selectedBlockLibraries: ['demo-builder-blocks'] });
+        const project = edsProject({ selectedBlockLibraries: ['demo-team-blocks'] });
 
         const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
 
@@ -54,8 +61,11 @@ describe('computeProjectUpdateSelections — block library installs', () => {
 
     it('selects nothing once the library is recorded', async () => {
         const project = edsProject({
-            selectedBlockLibraries: ['demo-builder-blocks'],
-            installedBlockLibraries: [installedLibrary(LIBRARY.name, LIBRARY.source)],
+            selectedBlockLibraries: ['demo-team-blocks'],
+            installedBlockLibraries: [
+                installedLibrary(DEMO_BUILDER.name, DEMO_BUILDER.source),
+                installedLibrary(LIBRARY.name, LIBRARY.source),
+            ],
         });
 
         const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
@@ -69,7 +79,8 @@ describe('applyUpdatesHeadless — block library installs', () => {
     it('hands the installer the project and library, records the result, and says what was added', async () => {
         const ctx = makeCtx();
         const onProgress = jest.fn();
-        const project = edsProject({ selectedBlockLibraries: ['demo-builder-blocks'] });
+        const project = edsProject({ selectedBlockLibraries: ['demo-team-blocks'] });
+        const recordsBefore = [...(project.installedBlockLibraries ?? [])];
         mockInstallBlockLibraryFiles.mockResolvedValue({
             success: true,
             blocksCount: 1,
@@ -82,8 +93,9 @@ describe('applyUpdatesHeadless — block library installs', () => {
 
         expect(mockInstallBlockLibraryFiles).toHaveBeenCalledTimes(1);
         expect(mockInstallBlockLibraryFiles).toHaveBeenCalledWith({ project, library: LIBRARY }, ctx);
-        expect(onProgress).toHaveBeenCalledWith('Installing block library Demo Builder Blocks');
+        expect(onProgress).toHaveBeenCalledWith(`Installing block library ${LIBRARY.name}`);
         expect(project.installedBlockLibraries).toEqual([
+            ...recordsBefore,
             {
                 ...LIBRARY,
                 commitSha: 'src-1',
@@ -96,7 +108,7 @@ describe('applyUpdatesHeadless — block library installs', () => {
             successCount: 1,
             failCount: 0,
             errors: [],
-            installed: ['Added 1 block from Demo Builder Blocks to demo.'],
+            installed: [`Added 1 block from ${LIBRARY.name} to demo.`],
         });
         expect(res.totalApplied).toBe(1);
     });
@@ -125,6 +137,7 @@ describe('applyUpdatesHeadless — block library installs', () => {
     it('reports a failed install by library name, records nothing, and counts it failed', async () => {
         const ctx = makeCtx();
         const project = edsProject();
+        const recordsBefore = [...(project.installedBlockLibraries ?? [])];
         mockInstallBlockLibraryFiles.mockRejectedValue(new Error('No blocks found in source libraries'));
         const sel = { ...emptySelections(), blockLibraryInstall: [{ project, library: LIBRARY }] };
 
@@ -133,10 +146,10 @@ describe('applyUpdatesHeadless — block library installs', () => {
         expect(res.blockLibraryInstall).toEqual({
             successCount: 0,
             failCount: 1,
-            errors: ['Demo Builder Blocks: No blocks found in source libraries'],
+            errors: [`${LIBRARY.name}: No blocks found in source libraries`],
         });
         expect(res.totalFailed).toBe(1);
-        expect(project.installedBlockLibraries).toBeUndefined();
+        expect(project.installedBlockLibraries).toStrictEqual(recordsBefore);
         expect(ctx.stateManager.saveProject).not.toHaveBeenCalled();
     });
 

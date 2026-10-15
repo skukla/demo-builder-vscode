@@ -85,6 +85,15 @@ export function projectWithAddons(overrides: Partial<Project> = {}): Project {
                 blockIds: ['hero', 'cards'],
                 installedAt: '2025-01-01T00:00:00Z',
             },
+            // Every storefront has Demo Builder Blocks (always included, 2026-10-15);
+            // without it the check would offer to install it.
+            {
+                name: 'Demo Builder Blocks',
+                source: { owner: 'skukla', repo: 'demo-builder-block-library', branch: 'main' },
+                commitSha: 'abc123',
+                blockIds: ['catalog-menu'],
+                installedAt: '2025-01-01T00:00:00Z',
+            },
         ],
         installedInspectorSdk: {
             commitSha: 'sdk-abc123',

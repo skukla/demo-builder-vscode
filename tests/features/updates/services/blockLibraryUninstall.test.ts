@@ -68,8 +68,8 @@ function edsProject(overrides: Partial<Project> = {}): Project {
 
 function installed(overrides: Partial<InstalledBlockLibrary> = {}): InstalledBlockLibrary {
     return {
-        name: DEMO_BUILDER.name,
-        source: DEMO_BUILDER.source,
+        name: DEMO_TEAM.name,
+        source: DEMO_TEAM.source,
         commitSha: COMMIT,
         blockIds: ['hero'],
         installedAt: '2026-10-01T00:00:00.000Z',
@@ -135,7 +135,7 @@ describe('findUnselectedInstalledBlockLibraries', () => {
     });
 
     it('leaves out an installed library that is still selected, matched by source or by name', () => {
-        const selected = { selectedBlockLibraries: ['demo-builder-blocks'] };
+        const selected = { selectedBlockLibraries: ['demo-team-blocks'] };
         const bySource = edsProject({
             ...selected,
             installedBlockLibraries: [installed({ name: 'renamed' })],
@@ -149,6 +149,15 @@ describe('findUnselectedInstalledBlockLibraries', () => {
 
         expect(findUnselectedInstalledBlockLibraries(bySource)).toStrictEqual([]);
         expect(findUnselectedInstalledBlockLibraries(byName)).toStrictEqual([]);
+    });
+
+    it('never finds the always-included library, ticked or not (owner, 2026-10-15)', () => {
+        const project = edsProject({
+            selectedBlockLibraries: [],
+            installedBlockLibraries: [installed({ name: DEMO_BUILDER.name, source: DEMO_BUILDER.source })],
+        });
+
+        expect(findUnselectedInstalledBlockLibraries(project)).toStrictEqual([]);
     });
 
     it('never finds a library that is native to the project package', () => {
@@ -223,7 +232,7 @@ describe('applyBlockLibraryUninstall', () => {
             'demo-storefront',
             'main',
             expect.arrayContaining([{ path: 'blocks/hero/hero.js', mode: '100644', type: 'blob', sha: null }]),
-            `chore: remove ${DEMO_BUILDER.name} (1 block)`,
+            `chore: remove ${DEMO_TEAM.name} (1 block)`,
         );
         // DA.live is addressed by the project's DA org and the repository's name.
         expect(daLive.removeBlockFromLibrary).toHaveBeenCalledTimes(1);
@@ -233,7 +242,7 @@ describe('applyBlockLibraryUninstall', () => {
         expect(project.installedBlockLibraries).toStrictEqual([]);
         expect(deps.stateManager.saveProject).toHaveBeenCalledWith(project);
         expect(outcome).toEqual({
-            name: DEMO_BUILDER.name,
+            name: DEMO_TEAM.name,
             removedBlockIds: ['hero'],
             leftBlocks: [],
             leftEntries: [],

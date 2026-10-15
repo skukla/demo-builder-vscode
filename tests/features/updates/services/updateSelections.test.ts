@@ -296,7 +296,7 @@ describe('computeProjectUpdateSelections', () => {
          * non-empty, and a deployed ERP with newer code, so the integration category is.
          */
         const everythingProject = (): Project => {
-            const base = edsProject({ selectedBlockLibraries: ['demo-builder-blocks'] });
+            const base = edsProject({ selectedBlockLibraries: ['demo-team-blocks'] });
             return {
                 ...base,
                 appBuilderComponents: {

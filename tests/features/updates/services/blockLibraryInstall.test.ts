@@ -94,6 +94,9 @@ function installed(overrides: Partial<InstalledBlockLibrary> = {}): InstalledBlo
     };
 }
 
+/** Demo Builder Blocks already in the storefront, so a case about something else stays about it. */
+const BUILDER_BLOCKS_INSTALLED = installed({ name: LIBRARY.name, source: SRC });
+
 function makeCtx() {
     return {
         secrets: createMockSecretStorage().secrets,
@@ -142,8 +145,17 @@ describe('findUninstalledBlockLibraries', () => {
         expect(findUninstalledBlockLibraries(project)).toEqual([LIBRARY]);
     });
 
+    it('offers the always-included library to a project that never chose it (option A, 2026-10-15)', () => {
+        const project = edsProject({ selectedBlockLibraries: [] });
+
+        expect(findUninstalledBlockLibraries(project)).toEqual([LIBRARY]);
+    });
+
     it('leaves out a library whose source is the storefront\'s own template', () => {
-        const project = edsProject({ selectedBlockLibraries: ['demo-team-blocks'] });
+        const project = edsProject({
+            selectedBlockLibraries: ['demo-team-blocks'],
+            installedBlockLibraries: [BUILDER_BLOCKS_INSTALLED],
+        });
         const meta = project.componentInstances!['eds-storefront'].metadata!;
         meta.templateOwner = 'demo-system-stores';
         meta.templateRepo = 'accs-citisignal';
@@ -153,7 +165,10 @@ describe('findUninstalledBlockLibraries', () => {
 
     it('applies the package filter creation applies, and ignores an unknown id', () => {
         // isle5 is onlyForPackages: ['isle5'].
-        const project = edsProject({ selectedBlockLibraries: ['isle5', 'no-such-library'] });
+        const project = edsProject({
+            selectedBlockLibraries: ['isle5', 'no-such-library'],
+            installedBlockLibraries: [BUILDER_BLOCKS_INSTALLED],
+        });
 
         expect(findUninstalledBlockLibraries(project)).toStrictEqual([]);
     });
@@ -162,6 +177,7 @@ describe('findUninstalledBlockLibraries', () => {
         const custom = { name: 'Mine', source: { owner: 'me', repo: 'my-blocks', branch: 'main' } };
         const project = edsProject({
             selectedBlockLibraries: [],
+            installedBlockLibraries: [BUILDER_BLOCKS_INSTALLED],
             customBlockLibraries: [
                 custom,
                 { name: 'Broken', source: { owner: '', repo: 'x', branch: 'main' } },

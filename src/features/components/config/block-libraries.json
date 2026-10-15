@@ -72,7 +72,8 @@
     {
       "id": "demo-builder-blocks",
       "name": "Demo Builder Blocks",
-      "description": "Optional blocks from Demo Builder: a nav menu built from the Commerce category tree",
+      "description": "Blocks every storefront gets from Demo Builder: a nav menu built from the Commerce category tree",
+      "alwaysIncluded": true,
       "type": "standalone",
       "source": {
         "owner": "skukla",

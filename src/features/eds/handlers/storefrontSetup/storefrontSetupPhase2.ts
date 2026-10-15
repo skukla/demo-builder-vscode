@@ -34,6 +34,7 @@ import {
     getBlockLibraryName,
     getBlockLibrarySource,
     isBlockLibraryAvailableForPackage,
+    withAlwaysIncludedBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
@@ -117,7 +118,8 @@ export async function executePhaseHelixConfig(
     }
 
     const allLibraries = collectAllBlockLibraries(
-        effectiveBlockLibraries,
+        // Demo Builder Blocks and any other always-included library, whatever was ticked.
+        withAlwaysIncludedBlockLibraries(effectiveBlockLibraries, options?.packageId ?? ''),
         options?.customBlockLibraries,
         options?.packageId ?? '',
         logger,

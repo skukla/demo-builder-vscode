@@ -55,6 +55,20 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const DEMO_TEAM = blockLibraries.libraries.find((l) => l.id === 'demo-team-blocks');
 if (!DEMO_TEAM) throw new Error('demo-team-blocks is not in block-libraries.json');
+const DEMO_BUILDER = blockLibraries.libraries.find((l) => l.id === 'demo-builder-blocks');
+if (!DEMO_BUILDER) throw new Error('demo-builder-blocks is not in block-libraries.json');
+
+/**
+ * Every storefront has Demo Builder Blocks (always included, owner decision 2026-10-15);
+ * without its record every project here would have an install pending.
+ */
+const DEMO_BUILDER_RECORD = {
+    name: DEMO_BUILDER.name,
+    source: DEMO_BUILDER.source,
+    commitSha: 'c'.repeat(40),
+    blockIds: ['catalog-menu'],
+    installedAt: '2026-10-01T00:00:00.000Z',
+};
 
 function edsProject(overrides: Partial<Project> = {}): Project {
     return createMockProject({
@@ -62,6 +76,7 @@ function edsProject(overrides: Partial<Project> = {}): Project {
         selectedStack: 'eds-accs',
         selectedPackage: 'citisignal',
         selectedBlockLibraries: [],
+        installedBlockLibraries: [DEMO_BUILDER_RECORD],
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',
@@ -75,12 +90,13 @@ function edsProject(overrides: Partial<Project> = {}): Project {
 }
 
 /** Ticked, and not in the storefront yet. */
-const withInstallPending = () => edsProject({ selectedBlockLibraries: ['demo-builder-blocks'] });
+const withInstallPending = () => edsProject({ selectedBlockLibraries: ['demo-team-blocks'] });
 
 /** In the storefront, and no longer ticked. */
 const withRemovalPending = () =>
     edsProject({
         installedBlockLibraries: [
+            DEMO_BUILDER_RECORD,
             {
                 name: DEMO_TEAM.name,
                 source: DEMO_TEAM.source,

@@ -28,6 +28,7 @@ import {
     getBlockLibraryName,
     getBlockLibrarySource,
     isBlockLibraryAvailableForPackage,
+    withAlwaysIncludedBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
 import type { BlockLibraryEntry } from '@/features/eds/services/blockCollectionHelpers';
 import { toInstalledBlockLibrary } from '@/features/eds/services/installedBlockLibraryRecord';
@@ -58,7 +59,9 @@ export function sameRepo(a: AddonSource, b: { owner?: string; repo?: string }): 
 function selectedLibraryEntries(project: Project): BlockLibraryEntry[] {
     const packageId = project.selectedPackage ?? '';
     const entries: BlockLibraryEntry[] = [];
-    for (const libraryId of project.selectedBlockLibraries ?? []) {
+    // An always-included library counts as selected, so an existing storefront
+    // without it is offered it here (option A, owner 2026-10-15).
+    for (const libraryId of withAlwaysIncludedBlockLibraries(project.selectedBlockLibraries, packageId)) {
         if (!isBlockLibraryAvailableForPackage(libraryId, packageId)) continue;
         const source = getBlockLibrarySource(libraryId);
         if (source) entries.push({ source, name: getBlockLibraryName(libraryId) });

@@ -294,17 +294,15 @@
                         "items": {
                             "type": "string",
                             "enum": [
-                                "demo-team-blocks",
-                                "demo-builder-blocks"
+                                "demo-team-blocks"
                             ],
                             "enumDescriptions": [
-                                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront",
-                                "Demo Builder Blocks — optional blocks from Demo Builder: a nav menu built from the Commerce category tree"
+                                "Demo Team Block Collection — general-purpose blocks built by the Demo Team, usable in any EDS storefront"
                             ]
                         },
                         "uniqueItems": true,
                         "default": [],
-                        "description": "Block libraries to pre-select by default for new EDS projects. Empty by default — package-native block libraries (e.g. Isle5 for the Isle5 package, BuildRight for the BuildRight package) are always installed automatically regardless of this setting. Use this to add OTHER libraries you'd like pre-checked across all your projects."
+                        "description": "Block libraries to pre-select by default for new EDS projects. Empty by default — package-native block libraries (e.g. Isle5 for the Isle5 package, BuildRight for the BuildRight package) are always installed automatically regardless of this setting, and so is Demo Builder Blocks, in every EDS storefront. Use this to add OTHER libraries you'd like pre-checked across all your projects."
                     },
                     "demoBuilder.blockLibraries.custom": {
                         "type": "array",

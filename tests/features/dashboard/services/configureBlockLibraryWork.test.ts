@@ -71,6 +71,7 @@ function edsProject(overrides: Partial<Project> = {}): Project {
         selectedStack: 'eds-accs',
         selectedPackage: 'citisignal',
         selectedBlockLibraries: [],
+        installedBlockLibraries: installed(),
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',
@@ -94,6 +95,30 @@ function demoTeamRecord(overrides: Partial<InstalledBlockLibrary> = {}): Install
         installedAt: '2026-10-01T00:00:00.000Z',
         ...overrides,
     };
+}
+
+/**
+ * A custom library the SC has since unticked: installed, no longer selected. Used where
+ * one save both adds Demo Team blocks and removes another library.
+ */
+function droppedCustomRecord(): InstalledBlockLibrary {
+    return demoTeamRecord({
+        name: 'My Blocks',
+        source: { owner: 'acme', repo: 'my-blocks', branch: 'main' },
+    });
+}
+
+/**
+ * The storefront's installed records. Every storefront has Demo Builder Blocks (always
+ * included, owner decision 2026-10-15), so without its record each case would also install it.
+ */
+function installed(...records: InstalledBlockLibrary[]): InstalledBlockLibrary[] {
+    const demoBuilder = demoTeamRecord({
+        name: DEMO_BUILDER.name,
+        source: DEMO_BUILDER.source,
+        blockIds: ['catalog-menu'],
+    });
+    return [demoBuilder, ...records];
 }
 
 function makeDeps(): BlockLibraryWorkDeps {
@@ -123,7 +148,7 @@ function repos(trees: Record<string, Record<string, string>>): void {
 }
 
 const STOREFRONT = 'me/demo-storefront';
-const DEMO_BUILDER_REPO = `${DEMO_BUILDER.source.owner}/${DEMO_BUILDER.source.repo}`;
+const DEMO_TEAM_REPO = `${DEMO_TEAM.source.owner}/${DEMO_TEAM.source.repo}`;
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -139,14 +164,14 @@ beforeEach(() => {
 
 describe('findPendingBlockLibraryWork', () => {
     it('is computed from the project: selected and not installed installs, installed and not selected removes', () => {
-        const record = demoTeamRecord();
+        const record = droppedCustomRecord();
         const project = edsProject({
-            selectedBlockLibraries: ['demo-builder-blocks'],
-            installedBlockLibraries: [record],
+            selectedBlockLibraries: ['demo-team-blocks'],
+            installedBlockLibraries: installed(record),
         });
 
         expect(findPendingBlockLibraryWork(project)).toEqual({
-            install: [{ name: DEMO_BUILDER.name, source: DEMO_BUILDER.source }],
+            install: [{ name: DEMO_TEAM.name, source: DEMO_TEAM.source }],
             remove: [record],
         });
     });
@@ -154,7 +179,7 @@ describe('findPendingBlockLibraryWork', () => {
     it('finds nothing when what is selected is what is installed', () => {
         const project = edsProject({
             selectedBlockLibraries: ['demo-team-blocks'],
-            installedBlockLibraries: [demoTeamRecord()],
+            installedBlockLibraries: installed(demoTeamRecord()),
         });
 
         expect(findPendingBlockLibraryWork(project)).toEqual({ install: [], remove: [] });
@@ -164,21 +189,21 @@ describe('findPendingBlockLibraryWork', () => {
 describe('describePendingBlockLibraryWork', () => {
     it('names what Republish will add and remove', () => {
         const project = edsProject({
-            selectedBlockLibraries: ['demo-builder-blocks'],
-            installedBlockLibraries: [demoTeamRecord()],
+            selectedBlockLibraries: ['demo-team-blocks'],
+            installedBlockLibraries: installed(droppedCustomRecord()),
         });
 
         expect(describePendingBlockLibraryWork(project)).toBe(
-            ` Block libraries: add ${DEMO_BUILDER.name}; remove ${DEMO_TEAM.name}.`,
+            ` Block libraries: add ${DEMO_TEAM.name}; remove My Blocks.`,
         );
     });
 
     it('names only the half there is', () => {
         expect(
-            describePendingBlockLibraryWork(edsProject({ selectedBlockLibraries: ['demo-builder-blocks'] })),
-        ).toBe(` Block libraries: add ${DEMO_BUILDER.name}.`);
+            describePendingBlockLibraryWork(edsProject({ selectedBlockLibraries: ['demo-team-blocks'] })),
+        ).toBe(` Block libraries: add ${DEMO_TEAM.name}.`);
         expect(
-            describePendingBlockLibraryWork(edsProject({ installedBlockLibraries: [demoTeamRecord()] })),
+            describePendingBlockLibraryWork(edsProject({ installedBlockLibraries: installed(demoTeamRecord()) })),
         ).toBe(` Block libraries: remove ${DEMO_TEAM.name}.`);
     });
 
@@ -191,9 +216,9 @@ describe('applyPendingBlockLibraryWork', () => {
     it('installs a newly ticked library through the existing installer and records it', async () => {
         repos({
             [STOREFRONT]: { 'scripts/aem.js': 'x' },
-            [DEMO_BUILDER_REPO]: { 'blocks/catalog-menu/catalog-menu.js': 'menu' },
+            [DEMO_TEAM_REPO]: { 'blocks/cards/cards.js': 'cards' },
         });
-        const project = edsProject({ selectedBlockLibraries: ['demo-builder-blocks'] });
+        const project = edsProject({ selectedBlockLibraries: ['demo-team-blocks'] });
 
         const { lines, storefrontChanged } = await applyPendingBlockLibraryWork(project, makeDeps());
 
@@ -203,20 +228,21 @@ describe('applyPendingBlockLibraryWork', () => {
             'me',
             'demo-storefront',
             'main',
-            [{ path: 'blocks/catalog-menu/catalog-menu.js', mode: '100644', type: 'blob', content: 'block file' }],
-            `chore: add ${DEMO_BUILDER.name} (1 blocks)`,
+            [{ path: 'blocks/cards/cards.js', mode: '100644', type: 'blob', content: 'block file' }],
+            `chore: add ${DEMO_TEAM.name} (1 blocks)`,
         );
         expect(project.installedBlockLibraries).toEqual([
-            expect.objectContaining({ name: DEMO_BUILDER.name, blockIds: ['catalog-menu'] }),
+            ...installed(),
+            expect.objectContaining({ name: DEMO_TEAM.name, blockIds: ['cards'] }),
         ]);
         expect(lines).toEqual([
-            { level: 'info', text: `Added 1 block from ${DEMO_BUILDER.name} to demo.` },
+            { level: 'info', text: `Added 1 block from ${DEMO_TEAM.name} to demo.` },
         ]);
     });
 
     it('removes an unticked library and reports it', async () => {
         repos({ [STOREFRONT]: { 'blocks/hero/hero.js': HERO_JS, 'scripts/aem.js': 'x' } });
-        const project = edsProject({ installedBlockLibraries: [demoTeamRecord()] });
+        const project = edsProject({ installedBlockLibraries: installed(demoTeamRecord()) });
 
         const { lines, storefrontChanged } = await applyPendingBlockLibraryWork(project, makeDeps());
 
@@ -228,7 +254,7 @@ describe('applyPendingBlockLibraryWork', () => {
             [{ path: 'blocks/hero/hero.js', mode: '100644', type: 'blob', sha: null }],
             `chore: remove ${DEMO_TEAM.name} (1 block)`,
         );
-        expect(project.installedBlockLibraries).toStrictEqual([]);
+        expect(project.installedBlockLibraries).toStrictEqual(installed());
         expect(lines).toEqual([
             { level: 'info', text: `Removed 1 block that ${DEMO_TEAM.name} added to demo.` },
         ]);
@@ -237,18 +263,18 @@ describe('applyPendingBlockLibraryWork', () => {
     it('removes before it installs when one save does both', async () => {
         repos({
             [STOREFRONT]: { 'blocks/hero/hero.js': HERO_JS },
-            [DEMO_BUILDER_REPO]: { 'blocks/catalog-menu/catalog-menu.js': 'menu' },
+            [DEMO_TEAM_REPO]: { 'blocks/cards/cards.js': 'cards' },
         });
         const project = edsProject({
-            selectedBlockLibraries: ['demo-builder-blocks'],
-            installedBlockLibraries: [demoTeamRecord()],
+            selectedBlockLibraries: ['demo-team-blocks'],
+            installedBlockLibraries: installed(droppedCustomRecord()),
         });
 
         const { lines } = await applyPendingBlockLibraryWork(project, makeDeps());
 
         expect(fileOps.commitTreeToBranch.mock.calls.map((call) => call[4])).toEqual([
-            `chore: remove ${DEMO_TEAM.name} (1 block)`,
-            `chore: add ${DEMO_BUILDER.name} (1 blocks)`,
+            'chore: remove My Blocks (1 block)',
+            `chore: add ${DEMO_TEAM.name} (1 blocks)`,
         ]);
         expect(lines.map((line) => line.level)).toEqual(['info', 'info']);
     });
@@ -256,7 +282,7 @@ describe('applyPendingBlockLibraryWork', () => {
     it('warns, naming the block, when a removal left one in place', async () => {
         repos({ [STOREFRONT]: { 'blocks/hero/hero.js': 'edited by the SC' } });
         const record = demoTeamRecord();
-        const project = edsProject({ installedBlockLibraries: [record] });
+        const project = edsProject({ installedBlockLibraries: installed(record) });
 
         const { lines, storefrontChanged } = await applyPendingBlockLibraryWork(project, makeDeps());
 
@@ -278,7 +304,7 @@ describe('applyPendingBlockLibraryWork', () => {
     it('does nothing at all for a native library', async () => {
         const project = edsProject({
             selectedPackage: 'bodea',
-            installedBlockLibraries: [demoTeamRecord({ name: BODEA.name, source: BODEA.source })],
+            installedBlockLibraries: installed(demoTeamRecord({ name: BODEA.name, source: BODEA.source })),
         });
 
         const { lines, storefrontChanged } = await applyPendingBlockLibraryWork(project, makeDeps());
@@ -288,46 +314,50 @@ describe('applyPendingBlockLibraryWork', () => {
         expect(fileOps.listRepoFiles).not.toHaveBeenCalled();
         expect(fileOps.repoArchive.downloadRepoContents).not.toHaveBeenCalled();
         expect(fileOps.commitTreeToBranch).not.toHaveBeenCalled();
-        expect(project.installedBlockLibraries).toHaveLength(1);
+        expect(project.installedBlockLibraries).toHaveLength(2);
     });
 
     it('reports a failed removal and still runs the install', async () => {
         fileOps.listRepoFiles.mockImplementation(async (owner: string, repo: string) => {
-            if (`${owner}/${repo}` === DEMO_BUILDER_REPO) {
-                return [{ path: 'blocks/catalog-menu/catalog-menu.js', type: 'blob', sha: 's' }];
+            if (`${owner}/${repo}` === DEMO_TEAM_REPO) {
+                return [{ path: 'blocks/cards/cards.js', type: 'blob', sha: 's' }];
+            }
+            // The kept Demo Builder Blocks repository must not claim hero, or hero would stay.
+            if (`${owner}/${repo}` === `${DEMO_BUILDER.source.owner}/${DEMO_BUILDER.source.repo}`) {
+                return [];
             }
             return [{ path: 'blocks/hero/hero.js', type: 'blob', sha: blobSha(HERO_JS) }];
         });
         fileOps.commitTreeToBranch.mockRejectedValueOnce(new Error('main is protected'));
         const project = edsProject({
-            selectedBlockLibraries: ['demo-builder-blocks'],
-            installedBlockLibraries: [demoTeamRecord()],
+            selectedBlockLibraries: ['demo-team-blocks'],
+            installedBlockLibraries: installed(droppedCustomRecord()),
         });
 
         const { lines } = await applyPendingBlockLibraryWork(project, makeDeps());
 
         expect(lines).toEqual([
-            { level: 'error', text: `Failed to remove ${DEMO_TEAM.name} from demo: main is protected` },
-            { level: 'info', text: `Added 1 block from ${DEMO_BUILDER.name} to demo.` },
+            { level: 'error', text: 'Failed to remove My Blocks from demo: main is protected' },
+            { level: 'info', text: `Added 1 block from ${DEMO_TEAM.name} to demo.` },
         ]);
     });
 
     it('says what it is doing as it goes', async () => {
         repos({
             [STOREFRONT]: { 'blocks/hero/hero.js': HERO_JS },
-            [DEMO_BUILDER_REPO]: { 'blocks/catalog-menu/catalog-menu.js': 'menu' },
+            [DEMO_TEAM_REPO]: { 'blocks/cards/cards.js': 'cards' },
         });
         const project = edsProject({
-            selectedBlockLibraries: ['demo-builder-blocks'],
-            installedBlockLibraries: [demoTeamRecord()],
+            selectedBlockLibraries: ['demo-team-blocks'],
+            installedBlockLibraries: installed(droppedCustomRecord()),
         });
         const onProgress = jest.fn();
 
         await applyPendingBlockLibraryWork(project, makeDeps(), onProgress);
 
         expect(onProgress.mock.calls).toEqual([
-            [`Removing ${DEMO_TEAM.name}`],
-            [`Adding ${DEMO_BUILDER.name}`],
+            ['Removing My Blocks'],
+            [`Adding ${DEMO_TEAM.name}`],
         ]);
     });
 });

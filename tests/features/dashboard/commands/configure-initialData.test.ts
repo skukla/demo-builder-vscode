@@ -128,10 +128,8 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
         }>();
 
         expect(data.blockLibraryChoices.native.map((lib) => lib.id)).toEqual(['bodea-blocks']);
-        expect(data.blockLibraryChoices.available.map((lib) => lib.id)).toEqual([
-            'demo-team-blocks',
-            'demo-builder-blocks',
-        ]);
+        // Demo Builder Blocks is always included, never a choice (owner decision 2026-10-15).
+        expect(data.blockLibraryChoices.available.map((lib) => lib.id)).toEqual(['demo-team-blocks']);
     });
 
     it('offers a project that is not Edge Delivery no block libraries', async () => {

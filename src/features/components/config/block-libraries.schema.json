@@ -83,6 +83,10 @@
           "type": "boolean",
           "description": "Whether this library should be pre-selected by default for non-native packages"
         },
+        "alwaysIncluded": {
+          "type": "boolean",
+          "description": "Installed in EVERY storefront this library's stack types and packages allow, whatever was ticked, and never offered as a choice or removed (owner, 2026-10-15). Because it lands everywhere, a block belongs in such a library only if any storefront could use it: blocks do nothing until an author places them, but each one lengthens every author's block list."
+        },
         "contentSource": {
           "type": "object",
           "required": ["org", "site"],

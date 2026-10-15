@@ -15,6 +15,7 @@
  * Written BEFORE the builder exists (strict RED).
  */
 
+import blockLibraries from '@/features/components/config/block-libraries.json';
 import { buildInitialProject } from '@/features/project-creation/handlers/executor';
 import { findUninstalledBlockLibraries } from '@/features/updates/services/blockLibraryInstall';
 import type { Project } from '@/types/base';
@@ -306,6 +307,19 @@ describe('buildInitialProject — installed block libraries', () => {
         commitSha: 'old000',
         installedAt: '2026-01-01T00:00:00.000Z',
     };
+    const demoBuilder = blockLibraries.libraries.find((l) => l.id === 'demo-builder-blocks');
+    if (!demoBuilder) throw new Error('demo-builder-blocks is not in block-libraries.json');
+    /**
+     * Storefront setup installs Demo Builder Blocks into every storefront (always included,
+     * owner decision 2026-10-15), so its records carry this one too.
+     */
+    const DEMO_BUILDER_RECORD: InstalledBlockLibrary = {
+        name: demoBuilder.name,
+        source: demoBuilder.source,
+        commitSha: 'def456',
+        blockIds: ['catalog-menu'],
+        installedAt: '2026-10-09T00:00:00.000Z',
+    };
 
     const withRecords = (records?: InstalledBlockLibrary[]): ProjectCreationConfig =>
         config({
@@ -337,15 +351,19 @@ describe('buildInitialProject — installed block libraries', () => {
     });
 
     it('leaves nothing for the update check to offer on the created project', () => {
-        const project = withStorefront(buildInitialProject(withRecords([RECORD]), PROJECT_PATH));
+        const project = withStorefront(
+            buildInitialProject(withRecords([DEMO_BUILDER_RECORD, RECORD]), PROJECT_PATH),
+        );
 
         expect(findUninstalledBlockLibraries(project)).toStrictEqual([]);
     });
 
-    it('control: without the records, the update check offers the library again', () => {
+    it('control: without the records, the update check offers the libraries again', () => {
         const project = withStorefront(buildInitialProject(withRecords(), PROJECT_PATH));
 
+        // Demo Builder Blocks is offered too: it is always included (owner decision 2026-10-15).
         expect(findUninstalledBlockLibraries(project).map((lib) => lib.name)).toEqual([
+            demoBuilder.name,
             'Demo Team Blocks',
         ]);
     });

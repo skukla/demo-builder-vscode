@@ -43,10 +43,8 @@ describe('buildBlockLibraryChoices', () => {
     it('offers the libraries the wizard offers for the project stack and package', () => {
         const choices = buildBlockLibraryChoices(edsProject(), []);
 
-        expect(choices.available.map((lib) => lib.id)).toEqual([
-            'demo-team-blocks',
-            'demo-builder-blocks',
-        ]);
+        // Demo Builder Blocks is always included, never a choice (owner decision 2026-10-15).
+        expect(choices.available.map((lib) => lib.id)).toEqual(['demo-team-blocks']);
         expect(choices.native).toStrictEqual([]);
     });
 

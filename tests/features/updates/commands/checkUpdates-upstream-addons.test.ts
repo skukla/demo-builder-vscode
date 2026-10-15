@@ -99,10 +99,12 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         // operations except the installer call itself (the shared stub), so the
         // argument it receives is the real dispatch's.
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = projectWithAddons({ selectedBlockLibraries: ['demo-builder-blocks'] });
+        // An optional library: Demo Builder Blocks is always included, so the shared
+        // fixture already has it installed.
+        const project = projectWithAddons({ selectedBlockLibraries: ['demo-team-blocks'] });
         const library = {
-            name: 'Demo Builder Blocks',
-            source: { owner: 'skukla', repo: 'demo-builder-block-library', branch: 'main' },
+            name: 'Demo Team Block Collection',
+            source: { owner: 'demo-system-stores', repo: 'accs-citisignal', branch: 'main' },
         };
         mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
@@ -128,16 +130,16 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         expect(installItems).toHaveLength(1);
         expect(installItems[0]).toMatchObject({
             label: 'test-project',
-            detail: '    $(package) Demo Builder Blocks: install',
-            description: 'skukla/demo-builder-block-library',
+            detail: '    $(package) Demo Team Block Collection: install',
+            description: 'demo-system-stores/accs-citisignal',
             library,
         });
         // Checking wrote nothing; the install ran once, after the pick, into the
         // project's own storefront repository.
         expect(installMock).toHaveBeenCalledTimes(1);
         expect(installMock.mock.calls[0].slice(1, 4)).toEqual(['testuser', 'my-storefront', [library]]);
-        expect(project.installedBlockLibraries).toHaveLength(2);
-        expect(project.installedBlockLibraries![1]).toMatchObject({
+        expect(project.installedBlockLibraries).toHaveLength(3);
+        expect(project.installedBlockLibraries![2]).toMatchObject({
             ...library,
             commitSha: 'src-1',
             blockIds: ['commerce-nav'],
@@ -147,7 +149,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
 
     it('does not install a selected library when the SC picks nothing', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = projectWithAddons({ selectedBlockLibraries: ['demo-builder-blocks'] });
+        const project = projectWithAddons({ selectedBlockLibraries: ['demo-team-blocks'] });
         mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
         (vscode.window.showQuickPick as jest.Mock).mockResolvedValue([]);
@@ -159,7 +161,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
 
         expect(vscode.window.showQuickPick).toHaveBeenCalled();
         expect(installBlockCollections as jest.Mock).not.toHaveBeenCalled();
-        expect(project.installedBlockLibraries).toHaveLength(1);
+        expect(project.installedBlockLibraries).toHaveLength(2);
     });
 
     it('should show inspector SDK update items in QuickPick', async () => {
@@ -191,7 +193,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         expect(inspectorItems[0].commitsBehind).toBe(4);
     });
 
-    it('should not show add-on items when no libraries or SDK installed', async () => {
+    it('with no libraries or SDK installed, offers only the always-included library (option A)', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
         const project = projectWithAddons({
             installedBlockLibraries: undefined,
@@ -205,12 +207,18 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
         MockAddonChecker.prototype.checkBlockLibraries.mockResolvedValue([]);
         MockAddonChecker.prototype.checkInspectorSdk.mockResolvedValue(null);
 
+        (vscode.window.showQuickPick as jest.Mock).mockResolvedValue([]);
+
         const command = new CheckUpdatesCommand(mockContext, mockStateManager, mockLogger);
         const executePromise = command.execute();
         await jest.runAllTimersAsync();
         await executePromise;
 
-        expect(vscode.window.showQuickPick).not.toHaveBeenCalled();
+        const items = (vscode.window.showQuickPick as jest.Mock).mock.calls[0][0];
+        const offered = items.filter((i: any) => i.isBlockLibraryInstall || i.isInspectorUpdate || i.isBlockLibraryUpdate);
+        expect(offered).toHaveLength(1);
+        // Ticked only when it is the open project's row; no project is open here.
+        expect(offered[0]).toMatchObject({ detail: '    $(package) Demo Builder Blocks: install' });
     });
 
     it('should log error and continue when block library update fails', async () => {

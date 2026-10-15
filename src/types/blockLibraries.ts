@@ -17,6 +17,12 @@ export interface BlockLibrary {
      */
     defaultForPackages?: string[];
     default?: boolean;
+    /**
+     * Installed in every storefront the stack types and packages allow, whatever was
+     * ticked; never offered as a choice and never removed. Each block in such a library
+     * reaches every author's block list, so it holds only general-purpose blocks.
+     */
+    alwaysIncluded?: boolean;
     /** DA.live content source containing block documentation pages (.da/library/blocks/) */
     contentSource?: { org: string; site: string };
 }
