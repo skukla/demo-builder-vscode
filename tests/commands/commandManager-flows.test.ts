@@ -188,15 +188,14 @@ describe('navigate routes a sidebar click to its surface', () => {
 // =============================================================================
 
 describe('signInAdobe', () => {
-    it('reports success on the status bar', async () => {
+    // The success line is the sign-in's own (extension.ts, onDidSignIn), so every
+    // screen that signs in says it the same way; the command adds no second one.
+    it('leaves the success line to the sign-in, and warns about nothing', async () => {
         const h = harness();
 
         await h.handlerFor('demoBuilder.signInAdobe')();
 
-        expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
-            '$(check) Signed in to Adobe',
-            5000
-        );
+        expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 
@@ -256,15 +255,15 @@ describe('signInDaLive', () => {
         });
     });
 
-    it('reports success on the status bar', async () => {
+    // The sign-in flow names who signed in itself (daLiveSignedInMessage); the
+    // command's own line used to overwrite it with a vaguer one.
+    it('leaves the success line to the sign-in flow', async () => {
         const h = harness();
 
         await h.handlerFor('demoBuilder.signInDaLive')();
 
-        expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
-            '$(check) Signed in to DA.live',
-            5000
-        );
+        expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 
     it('reports a failure with the reason the flow gave', async () => {
@@ -484,7 +483,7 @@ describe('openComponent', () => {
 // =============================================================================
 
 describe('signInGitHub', () => {
-    it('signs in and names the account on the status bar', async () => {
+    it('signs in, leaving the success line to signInToGitHub', async () => {
         const h = harness();
 
         await h.handlerFor('demoBuilder.signInGitHub')();
@@ -492,10 +491,7 @@ describe('signInGitHub', () => {
         expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
             force: false,
         });
-        expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
-            '$(check) Signed in to GitHub as sayurihanki',
-            5000
-        );
+        expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
         expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
     });
 

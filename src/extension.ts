@@ -21,6 +21,7 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 import { watchEngineChoice } from '@/features/ai/engine/engineChoiceWatch';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
@@ -452,6 +453,8 @@ export async function activate(context: vscode.ExtensionContext) {
         // left an open dashboard saying SIGNED OUT until it was reopened (2026-10-14).
         context.subscriptions.push(
             authenticationService.onDidSignIn(() => {
+                // Said once here, so every screen that signs in says it the same way.
+                showSuccessInStatusBar('Signed in to Adobe');
                 void ProjectDashboardWebviewCommand.refreshStatus();
             }),
         );

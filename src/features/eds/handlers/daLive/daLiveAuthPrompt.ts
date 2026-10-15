@@ -14,8 +14,8 @@
 import * as vscode from 'vscode';
 import { validateDaLiveTokenStrict } from '../../services/daLive/daLiveTokenValidation';
 import { getDaLiveAuthService } from '../edsServiceCache';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -180,6 +180,19 @@ async function confirmTokenReady(context: DaLiveAuthContext): Promise<boolean> {
         return false;
     }
     return true;
+}
+
+/**
+ * What a DA.live sign-in says when it worked, on every path that signs in. It names
+ * WHO signed in, not just where: on the clipboard path the SC never looked at the
+ * token, so this is the only place a colleague's still-valid token shows itself.
+ *
+ * @param org - the DA.live namespace the token is pinned to
+ * @param email - the token's account, when it carries one
+ * @returns the line for the status bar
+ */
+export function daLiveSignedInMessage(org: string, email?: string): string {
+    return `Signed in to DA.live (${org})` + (email ? ` as ${email}` : '');
 }
 
 /**
@@ -419,11 +432,7 @@ async function validateAndStoreToken(
         // never looked at the token, so this is the only place a wrong identity
         // can show itself — a colleague's still-valid token would otherwise
         // bind silently and 403 every later write.
-        vscode.window.setStatusBarMessage(
-            `✅ Connected to DA.live (${trimmedOrg})` +
-                (validation.email ? ` as ${validation.email}` : ''),
-            TIMEOUTS.STATUS_BAR_INFO,
-        );
+        showSuccessInStatusBar(daLiveSignedInMessage(trimmedOrg, validation.email));
 
         return { success: true, email: validation.email };
     } catch (error) {

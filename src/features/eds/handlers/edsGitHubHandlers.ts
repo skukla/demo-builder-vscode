@@ -18,6 +18,7 @@ import { GITHUB_SCOPES } from '../services/types';
 import { getGitHubServices } from './edsHelpers';
 import { createRepoFromSource } from './storefrontSetup/storefrontSetupPhase1';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -160,6 +161,7 @@ export async function signInToGitHub(
     // session.account.label is the GitHub login. Do NOT re-validate after a
     // forced re-auth — the token was just minted; a transient 401 here would
     // falsely flag a working session as broken and re-prompt indefinitely.
+    showSuccessInStatusBar(`Signed in to GitHub as ${session.account.label}`);
     return { login: session.account.label };
 }
 
@@ -310,6 +312,7 @@ export async function handleGitHubChangeAccount(
         };
 
         context.logger.debug('[EDS] GitHub account changed to:', user.login);
+        showSuccessInStatusBar(`Signed in to GitHub as ${user.login}`);
         await context.sendMessage('github-auth-complete', {
             isAuthenticated: true,
             user,

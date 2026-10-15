@@ -14,6 +14,8 @@
 
 import * as vscode from 'vscode';
 import { getDaLiveAuthService, validateDaLiveTokenStrict } from '../edsHelpers';
+import { daLiveSignedInMessage } from './daLiveAuthPrompt';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { DaLiveAuthStatusPayload, DaLiveLoginOpenedPayload, DaLiveTokenWithOrgResultPayload } from '@/types/webviewPayloads';
@@ -198,6 +200,7 @@ export async function handleStoreDaLiveTokenWithOrg(
         });
 
         context.logger.info('[EDS] DA.live token stored, namespace pinned to:', orgName);
+        showSuccessInStatusBar(daLiveSignedInMessage(orgName, validation.email));
 
         // Send success with the picked namespace
         await context.sendMessage('dalive-token-with-org-result', {

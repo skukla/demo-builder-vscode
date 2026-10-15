@@ -402,9 +402,8 @@ export class CommandManager {
                 },
                 () => auth.login(force),
             );
-            if (ok) {
-                vscode.window.setStatusBarMessage('$(check) Signed in to Adobe', 5000);
-            } else {
+            // Success is announced by the sign-in itself (extension.ts, onDidSignIn).
+            if (!ok) {
                 void vscode.window.showWarningMessage(
                     'Adobe sign-in did not complete. Check the Debug Logs output channel.',
                 );
@@ -424,9 +423,8 @@ export class CommandManager {
                 context: this.context,
                 logger: this.logger,
             });
-            if (result.success) {
-                vscode.window.setStatusBarMessage('$(check) Signed in to DA.live', 5000);
-            } else if (!result.cancelled) {
+            // Success is announced by the sign-in flow itself (daLiveSignedInMessage).
+            if (!result.success && !result.cancelled) {
                 void vscode.window.showWarningMessage(
                     `DA.live sign-in failed${result.error ? `: ${result.error}` : ''}.`,
                 );
@@ -460,10 +458,8 @@ export class CommandManager {
                 { location: vscode.ProgressLocation.Notification, title: 'Signing in to GitHub' },
                 () => signInToGitHub(tokenService, this.logger, { force }),
             );
-            if ('login' in outcome) {
-                vscode.window.setStatusBarMessage(`$(check) Signed in to GitHub as ${outcome.login}`, 5000);
-                return;
-            }
+            // Success is announced by signInToGitHub itself.
+            if ('login' in outcome) return;
             // A cancel is the SC's own choice; only a failure is worth a warning.
             if (!outcome.cancelled) {
                 void vscode.window.showWarningMessage(

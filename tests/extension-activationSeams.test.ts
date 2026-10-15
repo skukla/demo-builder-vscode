@@ -19,6 +19,7 @@ import {
     mockRefreshGlobalMcpIfPresent,
     mockMcpServerCtor,
     mockOnDidSignIn,
+    mockAdobeOnDidSignIn,
     mockGetAccessToken,
     mockGetGitHubToken,
     mockRegisterEwListener,
@@ -36,6 +37,7 @@ import {
     mockSendAuthoringExperienceUpdate,
 } from './extension.testUtils';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 
@@ -129,6 +131,28 @@ describe('the seams activate() hands away', () => {
             // Activation alone does not work: the sweep needs a DA.live session,
             // and activation is the moment one is LEAST likely to exist.
             expect(mockRenewPublishKeys).toHaveBeenCalled();
+        });
+    });
+
+    describe('the Adobe sign-in signal (2026-10-14, 2026-10-15)', () => {
+        it('says the sign-in worked and refreshes an open dashboard, whichever screen signed in', async () => {
+            const refresh = jest
+                .spyOn(ProjectDashboardWebviewCommand, 'refreshStatus')
+                .mockResolvedValue(undefined);
+            await activate(createActivationContext());
+            await settle();
+            (vscode.window.setStatusBarMessage as jest.Mock).mockClear();
+
+            const handler = mockAdobeOnDidSignIn.mock.calls[0][0];
+            handler();
+            await settle();
+
+            expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+                '✅ Signed in to Adobe',
+                TIMEOUTS.STATUS_BAR_SUCCESS,
+            );
+            expect(refresh).toHaveBeenCalledTimes(1);
+            refresh.mockRestore();
         });
     });
 

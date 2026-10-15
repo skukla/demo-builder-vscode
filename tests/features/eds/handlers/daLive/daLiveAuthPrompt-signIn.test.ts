@@ -528,7 +528,7 @@ describe('showDaLiveAuthQuickPick', () => {
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
-                '✅ Connected to DA.live (my-org) as user@example.com',
+                '✅ Signed in to DA.live (my-org) as user@example.com',
                 expect.any(Number)
             );
         });
@@ -545,7 +545,7 @@ describe('showDaLiveAuthQuickPick', () => {
             await showDaLiveAuthQuickPick(mockContext);
 
             expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
-                '✅ Connected to DA.live (my-org)',
+                '✅ Signed in to DA.live (my-org)',
                 expect.any(Number)
             );
         });

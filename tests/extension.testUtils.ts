@@ -160,9 +160,10 @@ jest.mock('@/features/sidebar/providers/sidebarProvider', () => ({
 }));
 
 jest.mock('@/features/authentication/services/authenticationService', () => ({
-    // activate() subscribes the dashboard refresh to a successful Adobe sign-in.
+    // activate() subscribes the dashboard refresh and the success line to a
+    // successful Adobe sign-in.
     AuthenticationService: jest.fn().mockImplementation(() => ({
-        onDidSignIn: jest.fn(() => ({ dispose: jest.fn() })),
+        onDidSignIn: (listener: () => void) => mockAdobeOnDidSignIn(listener),
     })),
 }));
 
@@ -241,6 +242,8 @@ jest.mock('@/features/project-creation/services/aiBundle/globalMcpRegistration',
  * activation wired it right; their own behaviour has its own suites.
  */
 export const mockOnDidSignIn = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
+/** The Adobe sign-in signal (AuthenticationService.onDidSignIn), captured like DA.live's. */
+export const mockAdobeOnDidSignIn = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
 export const mockGetAccessToken = jest.fn();
 export const mockMigrateDaLiveToken = jest.fn(async () => undefined);
 export const mockGetGitHubToken = jest.fn();
