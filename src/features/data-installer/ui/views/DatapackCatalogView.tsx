@@ -38,7 +38,7 @@
  * @module features/data-installer/ui/views/DatapackCatalogView
  */
 
-import { Flex, Link, Switch, View } from '@adobe/react-spectrum';
+import { Flex, Link, Switch } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     groupDatapacks,
@@ -60,7 +60,7 @@ import { ImportDatapackModal } from '../components/ImportDatapackModal';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
@@ -231,11 +231,7 @@ export function DatapackCatalogView(): React.JSX.Element {
         // (its comment records why not CenteredFeedbackContainer: that takes a
         // FIXED DimensionValue and cannot express "fill this screen").
         return (
-            <View height="100vh">
-                <Flex justifyContent="center" alignItems="center" height="100%">
-                    <LoadingDisplay size="L" message="Loading datapacks" />
-                </Flex>
-            </View>
+            <FullScreenLoading message="Loading datapacks" />
         );
     }
 

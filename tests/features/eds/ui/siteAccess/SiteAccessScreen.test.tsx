@@ -77,6 +77,21 @@ describe('SiteAccessScreen', () => {
         expect(mockRequest).toHaveBeenCalledWith('getSiteAccess', { target: undefined }, undefined);
     });
 
+    it('first reads behind the full-window loading view, not a bar at the top (EDS-41)', async () => {
+        let finish: (value: unknown) => void = () => undefined;
+        answer({ getSiteAccess: () => new Promise((resolve) => { finish = resolve; }) });
+
+        const { container } = renderScreen(true);
+
+        expect(await screen.findByText('Reading site access')).toBeInTheDocument();
+        expect(container.querySelector('div[style*="100vh"]')).not.toBeNull();
+        expect(screen.queryByText('Site Access')).not.toBeInTheDocument();
+
+        await act(async () => finish({ success: true, data: VIEW }));
+        expect(await screen.findByText('owner@x.example')).toBeInTheDocument();
+        expect(screen.getByText('Site Access')).toBeInTheDocument();
+    });
+
     it('offers a menu only on rows with something to remove', async () => {
         answer({ getSiteAccess: () => ({ success: true, data: VIEW }) });
 

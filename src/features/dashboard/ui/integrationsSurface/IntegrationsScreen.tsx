@@ -19,7 +19,7 @@
  * @module features/dashboard/ui/integrationsSurface/IntegrationsScreen
  */
 
-import { Flex, Text, View } from '@adobe/react-spectrum';
+import { Flex, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { ErpAssignDialogs, useErpAssignDialogs } from '../components/integrations/ErpAssignDialogs';
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
@@ -39,7 +39,7 @@ import { useIntegrationCards } from './useIntegrationCards';
 import { useIntegrationCardSearch } from './useIntegrationCardSearch';
 import { useIntegrationsScreenActions } from './useIntegrationsScreenActions';
 import { CtaEmptyState } from '@/core/ui/components/feedback/CtaEmptyState';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
@@ -115,11 +115,7 @@ export function IntegrationsScreen({
     // models in-panel feedback), so it cannot express "fill this 100vh screen".
     if (hasAdobeContext && !projectStatus) {
         return (
-            <View height="100vh" backgroundColor="gray-50">
-                <Flex justifyContent="center" alignItems="center" height="100%">
-                    <LoadingDisplay size="L" message="Loading integrations" />
-                </Flex>
-            </View>
+            <FullScreenLoading message="Loading integrations" backgroundColor="gray-50" />
         );
     }
 

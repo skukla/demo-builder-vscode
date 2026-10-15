@@ -30,6 +30,7 @@ import { PeopleList } from './PeopleList';
 import { SiteAccessNoticeView } from './SiteAccessNoticeView';
 import { useSiteAccess, type SiteTarget } from './useSiteAccess';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
+import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
@@ -109,6 +110,12 @@ export function SiteAccessScreen({ projectName, hasStorefront }: SiteAccessScree
         setPending(null);
         void change(pending.removal.type, pending.email, target);
     };
+
+    // The first read, with nothing yet to show: the house full-window gate (EDS-41).
+    // A later read keeps the list on screen and shows the bar above it instead.
+    if (busy && !view && hasStorefront && notices.length === 0) {
+        return <FullScreenLoading message={busy} backgroundColor="gray-50" />;
+    }
 
     return (
         <PageLayout

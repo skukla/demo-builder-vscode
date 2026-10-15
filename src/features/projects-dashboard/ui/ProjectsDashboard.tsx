@@ -17,7 +17,7 @@ import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { buildMenuItems } from './projectsDashboardHelpers';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
@@ -125,11 +125,7 @@ export function ProjectsDashboard({
     if (isLoading) {
         return (
             <div ref={containerRef}>
-                <View height="100vh" backgroundColor="gray-50">
-                    <Flex justifyContent="center" alignItems="center" height="100%">
-                        <LoadingDisplay size="L" message="Loading projects" />
-                    </Flex>
-                </View>
+                <FullScreenLoading message="Loading projects" backgroundColor="gray-50" />
             </div>
         );
     }

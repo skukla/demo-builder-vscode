@@ -23,12 +23,13 @@
  * @module features/data-installer/ui/views/DatapackActivityView
  */
 
-import { Button, Flex, Item, Picker, View } from '@adobe/react-spectrum';
+import { Button, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { ActivityEntry, OperationMode, Page } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
+import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 
@@ -171,11 +172,7 @@ export function DatapackActivityView(): React.JSX.Element {
         // (its comment records why not CenteredFeedbackContainer: that takes a
         // FIXED DimensionValue and cannot express "fill this screen").
         return (
-            <View height="100vh">
-                <Flex justifyContent="center" alignItems="center" height="100%">
-                    <LoadingDisplay size="L" message="Loading activity" />
-                </Flex>
-            </View>
+            <FullScreenLoading message="Loading activity" />
         );
     }
 
