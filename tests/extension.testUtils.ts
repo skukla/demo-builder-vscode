@@ -160,7 +160,10 @@ jest.mock('@/features/sidebar/providers/sidebarProvider', () => ({
 }));
 
 jest.mock('@/features/authentication/services/authenticationService', () => ({
-    AuthenticationService: jest.fn().mockImplementation(() => ({})),
+    // activate() subscribes the dashboard refresh to a successful Adobe sign-in.
+    AuthenticationService: jest.fn().mockImplementation(() => ({
+        onDidSignIn: jest.fn(() => ({ dispose: jest.fn() })),
+    })),
 }));
 
 jest.mock('@/commands/commandManager', () => ({

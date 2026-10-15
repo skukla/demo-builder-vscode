@@ -448,6 +448,14 @@ export async function activate(context: vscode.ExtensionContext) {
             }),
         );
 
+        // An Adobe sign-in started from another screen (Configure's store discovery)
+        // left an open dashboard saying SIGNED OUT until it was reopened (2026-10-14).
+        context.subscriptions.push(
+            authenticationService.onDidSignIn(() => {
+                void ProjectDashboardWebviewCommand.refreshStatus();
+            }),
+        );
+
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it
         registerFileWatchers(context);

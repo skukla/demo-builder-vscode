@@ -47,6 +47,8 @@ export class AuthenticationService {
     private readonly signInDeps: AdobeSignInDeps;
     /** Every sign-in goes through here: one at a time (see signInGate). */
     private readonly signIn: (force: boolean) => Promise<boolean>;
+    /** Who hears that a sign-in succeeded (see onDidSignIn). */
+    private readonly signInListeners = new Set<() => void>();
 
     constructor(
         extensionPath: string,
@@ -87,7 +89,11 @@ export class AuthenticationService {
             stepLogger: () => this.ensureStepLogger(),
         };
         this.signIn = createSignInGate({
-            run: (force) => runAdobeLogin(this.signInDeps, force),
+            run: async (force) => {
+                const signedIn = await runAdobeLogin(this.signInDeps, force);
+                if (signedIn) this.signInListeners.forEach((listener) => listener());
+                return signedIn;
+            },
             signedInNow: () => {
                 this.cacheManager.clearTokenInspectionCache();
                 return this.tokenManager.isTokenValid();
@@ -203,6 +209,16 @@ export class AuthenticationService {
      */
     async login(force = false): Promise<boolean> {
         return this.signIn(force);
+    }
+
+    /**
+     * Hear once each time a sign-in succeeds, whichever screen started it. A screen
+     * that read "signed out" earlier (the dashboard) re-reads on this; without it a
+     * sign-in from Configure left the dashboard saying SIGNED OUT (2026-10-14).
+     */
+    onDidSignIn(listener: () => void): { dispose(): void } {
+        this.signInListeners.add(listener);
+        return { dispose: () => this.signInListeners.delete(listener) };
     }
 
     /**

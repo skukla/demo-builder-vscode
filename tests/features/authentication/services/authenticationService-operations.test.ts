@@ -157,6 +157,42 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(1);
         });
 
+        // 2026-10-14: a sign-in started from Configure left the dashboard showing
+        // "SIGNED OUT", because nothing told it a sign-in had happened.
+        it('tells its listeners once when a sign-in succeeds, even with two callers', async () => {
+            const token = 'x'.repeat(150);
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
+            const heard = jest.fn();
+            authService.onDidSignIn(heard);
+
+            await Promise.all([authService.login(), authService.login()]);
+
+            expect(heard).toHaveBeenCalledTimes(1);
+        });
+
+        it('tells nobody when the sign-in fails', async () => {
+            mockCommandExecutor.execute.mockRejectedValue(new Error('timeout'));
+            const heard = jest.fn();
+            authService.onDidSignIn(heard);
+
+            await authService.login();
+
+            expect(heard).not.toHaveBeenCalled();
+        });
+
+        it('stops telling a listener once it is disposed', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult('x'.repeat(150)));
+            const gone = jest.fn();
+            const kept = jest.fn();
+            authService.onDidSignIn(gone).dispose();
+            authService.onDidSignIn(kept);
+
+            await authService.login();
+
+            expect(gone).not.toHaveBeenCalled();
+            expect(kept).toHaveBeenCalledTimes(1);
+        });
+
         it('should NOT retry when CLI succeeds with valid token', async () => {
             const token = 'x'.repeat(150);
             mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
