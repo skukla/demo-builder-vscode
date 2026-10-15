@@ -96,6 +96,26 @@
         "importFromFile": {
             "tool": "create_project_from_file",
             "reason": "Both start a project from an exported project file. The handler opens a file picker and then the wizard; the tool takes the file's path and creates through create_project's own path, seeded by the same integration seeding the wizard's import uses (2026-10-03)."
+        },
+        "addSiteAdmin": {
+            "tool": "set_site_admin",
+            "reason": "set_site_admin with admin:true calls the same addSiteAdmin."
+        },
+        "removeSiteAdmin": {
+            "tool": "set_site_admin",
+            "reason": "set_site_admin with admin:false calls the same removeSiteAdmin."
+        },
+        "addContentReader": {
+            "tool": "set_content_reader",
+            "reason": "set_content_reader with read:true calls the same addContentReader."
+        },
+        "removeContentReader": {
+            "tool": "set_content_reader",
+            "reason": "set_content_reader with read:false calls the same removeContentReader."
+        },
+        "waitForSiteAccess": {
+            "tool": "get_site_access",
+            "reason": "The handler polls until the admin role lands and says which way it went; an agent reads the same roster with get_site_access when it wants to know."
         }
     },
     "exclusions": {
@@ -117,23 +137,20 @@
         "continue-prerequisites": {
             "reason": "Resumes the wizard's own check loop from an index held in shared state. An agent uses check_prerequisites and install_prerequisite."
         },
-        "re-detect-context": {
-            "reason": "Clears org caches and re-reads them for the wizard's display after a sign-in outside the app. Agent tools carry their org target on every call."
-        },
         "store-dalive-token-with-org": {
             "reason": "Takes a pasted DA.live credential. An agent must never carry one; connect_dalive hands the paste to the user."
         },
         "storefront-setup-cancel": {
             "reason": "Aborts the wizard's in-flight storefront setup through its own AbortController, behind a modal confirmation. An agent undoes with delete_github_repo and cleanup_dalive_site."
         },
-        "prepareSetupChecks": {
-            "reason": "Signs in to Commerce early so the setup guide's first check is fast. check_setup_steps signs in itself."
-        },
         "provision-accs-credentials": {
             "reason": "Creates a credential in the user's Console workspace. Kept panel-only on purpose; the handler's own comment says never in the MCP maps."
         },
         "use-bundle-setup": {
             "reason": "Closes the wizard and reopens it pre-filled from a bundle's setup. UI navigation; the job behind it, starting a project from an exported file, is create_project_from_file."
+        },
+        "check-erp-integration-holder": {
+            "reason": "Greys the ERP integration out in the Add Integration modal when another project already runs one on this Commerce instance (AB-78). An agent gets the same answer as a refusal from add_integration, add_erp or create_project, before anything is made."
         }
     },
     "gaps": {
@@ -149,8 +166,11 @@
         "github-change-account": {
             "reason": "No tool switches the GitHub account (clear the token, force a fresh sign-in). sign_in covers signing in, not changing who."
         },
-        "getErpOwnershipOptions": {
-            "reason": "add_erp asks the agent to offer the user an ownership rule, and no tool reads the options the dialog shows (which websites and sources are still unowned)."
+        "promoteAppBuilderComponent": {
+            "reason": "No tool saves a blank-starter app to its own GitHub repository. The handler asks where and what to call it through dialogs, so a tool needs a variant that takes both."
+        },
+        "unpromoteAppBuilderComponent": {
+            "reason": "No tool undoes saving a blank-starter app to its own repository (deletes the repository, makes it a blank-starter app again). Goes with promoteAppBuilderComponent."
         }
     }
 }
