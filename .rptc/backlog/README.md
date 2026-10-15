@@ -236,7 +236,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-71` | fix | [An agent's project delete ignores the "deleteAll" setting](2026-10-10-agent-delete-ignores-delete-all-setting.md) | — | low | backlog |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
-### eds  (53)
+### eds  (54)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -292,6 +292,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-44` | fix | [Changing the store in Configure makes pages for the new catalog](2026-10-15-store-change-makes-pages-for-the-new-catalog.md) | — | med | backlog |
 | `EDS-45` | fix | [The B2B template's 404 page renders blank](2026-10-15-b2b-template-404-page-renders-blank.md) | — | low | backlog |
 | `EDS-46` | feature | [The store step warns about a website with no products](2026-10-15-store-step-warns-about-a-website-with-no-products.md) | — | low | backlog |
+| `EDS-47` | feature | [Grant a B2B website's categories to its shared catalogs](2026-10-15-grant-categories-to-b2b-shared-catalogs.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (121)
@@ -674,7 +675,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*274 item(s) sit outside the A–G chain.*
+*275 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
