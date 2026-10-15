@@ -182,9 +182,12 @@ export function createNewCategoryPagesWatcher(deps: NewCategoryPagesWatcherDeps)
             else deps.logger.warn(`${LOG} Could not check ${project.name} for new categories: ${found.error}`);
             return;
         }
+        const promisedRecheck = said.signIn;
         said.signIn = false;
         if (found.status === 'nothing') {
             said.offered = undefined;
+            // The sign-in notice promised a check; say it happened, once.
+            if (promisedRecheck) void deps.notify(`Checked "${nameOf(project)}" again: no new categories.`);
             return;
         }
         if (!resolveAutoAddCategoryPages(project, deps.autoAddByDefault())) {

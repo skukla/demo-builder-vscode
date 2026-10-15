@@ -323,6 +323,31 @@ describe('when it cannot look', () => {
         expect(h.notify).toHaveBeenCalledTimes(3);
     });
 
+    it('closes the loop it opened: after the sign-in notice, a clean look says so once', async () => {
+        // Owner, 2026-10-14: the notice promised "it will check again", the check ran on
+        // sign-in, found nothing, and said nothing, so the promise read as broken.
+        const h = await harness(undefined);
+        h.categories = [SIGNS];
+        h.pages = {
+            ...h.s.port,
+            read: async () => {
+                throw new DaLiveAuthError('Authentication expired. Please log in again.');
+            },
+        };
+        await h.watcher.check();
+        await h.watcher.idle();
+
+        h.pages = h.s.port;
+        await h.watcher.check();
+        await h.watcher.idle();
+        await h.watcher.check();
+        await h.watcher.idle();
+
+        expect(h.notify).toHaveBeenCalledTimes(2);
+        expect(h.notify).toHaveBeenLastCalledWith('Checked "Justrite" again: no new categories.');
+        expect(h.s.written).toStrictEqual([]);
+    });
+
     it('a failed page listing is logged, offers nothing, and writes nothing', async () => {
         const h = await harness(ADD_PAGES);
         h.setting = true;
