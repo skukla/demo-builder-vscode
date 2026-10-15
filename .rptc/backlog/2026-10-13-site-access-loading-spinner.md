@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: backlog
+status: active
 ---
 
 # The Site Access screen's loading spinner matches the rest of the extension
@@ -29,3 +29,4 @@ The Site Access screen's first loading view looks like the one Configure and Int
 show, checked side by side in the Extension Dev Host.
 
 ## Shipped so far
+- 2026-10-15  fix(ui): Site Access loads behind the house full-window spinner (`bac79ab35`)
