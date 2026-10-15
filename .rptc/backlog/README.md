@@ -289,9 +289,9 @@ each item's own file; what has already landed against an item is in its
 | `EDS-41` | fix | [The Site Access screen's loading spinner matches the rest of the extension](2026-10-13-site-access-loading-spinner.md) | — | low | active |
 | `EDS-42` | feature | [Edit switches a project's repository or site](2026-10-13-edit-switches-repository-or-site.md) | PL-75 | med | backlog |
 | `EDS-43` | feature | [Save a block from a storefront as a reusable block library](2026-10-13-save-a-storefront-block-as-a-library.md) | — | med | backlog |
-| `EDS-44` | fix | [Changing the store in Configure makes pages for the new catalog](2026-10-15-store-change-makes-pages-for-the-new-catalog.md) | — | med | backlog |
-| `EDS-45` | fix | [The B2B template's 404 page renders blank](2026-10-15-b2b-template-404-page-renders-blank.md) | — | low | backlog |
-| `EDS-46` | feature | [The store step warns about a website with no products](2026-10-15-store-step-warns-about-a-website-with-no-products.md) | — | low | backlog |
+| `EDS-44` | fix | [Changing the store in Configure makes pages for the new catalog](2026-10-15-store-change-makes-pages-for-the-new-catalog.md) | — | med | built |
+| `EDS-45` | fix | [The B2B template's 404 page renders blank](2026-10-15-b2b-template-404-page-renders-blank.md) | — | low | built |
+| `EDS-46` | feature | [The store step warns about a website with no products](2026-10-15-store-step-warns-about-a-website-with-no-products.md) | — | low | built |
 | `EDS-47` | feature | [Grant a B2B website's categories to its shared catalogs](2026-10-15-grant-categories-to-b2b-shared-catalogs.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
@@ -419,7 +419,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-75` | feature | [Preview what every ERP will own before "Add another ERP"](2026-10-09-erp-add-preview.md) | — | med | built |
 | `AB-76` | feature | [The ERP setup checklist follows each ERP's ownership mode](2026-10-09-erp-setup-checklist-follows-the-ownership-mode.md) | — | low | backlog |
 | `AB-77` | feature | [Prepare this store: the ERP setup steps the extension can apply, not only check](2026-10-10-prepare-this-store-for-the-erp-integration.md) | — | high | built |
-| `AB-78` | feature | [One Commerce instance runs one ERP integration](2026-10-15-second-erp-on-a-shared-commerce-backend.md) | — | med | active |
+| `AB-78` | feature | [One Commerce instance runs one ERP integration](2026-10-15-second-erp-on-a-shared-commerce-backend.md) | — | med | built |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (4)

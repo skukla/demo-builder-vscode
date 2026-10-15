@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # One Commerce instance runs one ERP integration
@@ -87,3 +87,7 @@ webhooks or event providers).
 Read-only first: ask the store which apps are installed, and read the App
 Management and webhook docs. Any live second install is a cloud write on a shared
 store and needs the owner's go-ahead.
+
+## Shipped so far
+
+- 2026-10-15  feat(app-builder): one ERP integration per Commerce instance (`85b7abbef`)

@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # The B2B template's 404 page renders blank
@@ -29,3 +29,7 @@ Checked on `skukla/my-commerce-demo` and on the template's `main` (no company-sw
 
 Recommendation: 2 while 1 is pending, since every B2B demo shows a blank page for any mistyped
 or unpublished link. Check first whether the non-B2B boilerplate has the same gap.
+
+## Shipped so far
+
+- 2026-10-15  fix(eds): a missing page on a B2B storefront shows the site's 404, not a blank page (`e9e76c948`)

@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Changing the store in Configure makes pages for the new catalog
@@ -28,3 +28,7 @@ Reset is needed and offers it. Decide which by measuring how long a product-page
 for a real catalog: the creation path already knows how.
 
 Related: EDS-27 (new categories get pages), EDS-24 (category pages at setup).
+
+## Shipped so far
+
+- 2026-10-15  feat(eds): a store change replaces the storefront's product and category pages (`54e5d35f3`)

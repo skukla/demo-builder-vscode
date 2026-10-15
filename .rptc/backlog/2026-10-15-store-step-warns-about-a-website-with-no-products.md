@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # The store step warns about a website with no products
@@ -25,3 +25,7 @@ products or no search index, that its storefront will have no products, before t
 A warning, not a block: a demo may be meant to start empty.
 
 Related: the release test plan now tells the walker which website to pick.
+
+## Shipped so far
+
+- 2026-10-15  feat(eds): warn when guests won't see any products in the chosen store view (`209ea1aad`)
