@@ -76,8 +76,6 @@ export interface CheckErpIntegrationHolderResponse {
         holder?: string;
         /** The one line saying so, and where to add the ERP instead. */
         message?: string;
-        /** The short reason on the greyed-out tile. */
-        note?: string;
     };
 }
 

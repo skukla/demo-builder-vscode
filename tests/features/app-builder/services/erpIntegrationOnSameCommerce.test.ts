@@ -10,7 +10,6 @@
 
 import {
     erpIntegrationOnSameCommerce,
-    erpIntegrationTakenNote,
     oneErpIntegrationPerInstance,
 } from '@/features/app-builder/services/erpIntegrationOnSameCommerce';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -142,10 +141,9 @@ describe('naming the project that holds the instance', () => {
         expect(oneErpIntegrationPerInstance(holder)).toBe(
             'JustRite already has an ERP integration on this Commerce instance. Add your ERP there instead.',
         );
-        expect(erpIntegrationTakenNote(holder)).toBe('JustRite already has one on this Commerce instance');
     });
 
     it('falls back to the folder name for a project with no title — control', () => {
-        expect(erpIntegrationTakenNote({ name: 'justrite' })).toBe('justrite already has one on this Commerce instance');
+        expect(oneErpIntegrationPerInstance({ name: 'justrite' })).toMatch(/^justrite already has/);
     });
 });

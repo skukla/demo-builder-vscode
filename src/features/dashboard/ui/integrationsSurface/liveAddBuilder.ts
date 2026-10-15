@@ -24,7 +24,7 @@ import type {
 } from '@/types/webviewRequests';
 
 /** What the commits read at commit time, each kept current by the adapter. */
-export interface LiveAddRefs {
+interface LiveAddRefs {
     /** The stack-filtered catalog. */
     catalog: MutableRefObject<AppBuilderComponentCatalogEntry[]>;
     /** The live project's keyed components. */

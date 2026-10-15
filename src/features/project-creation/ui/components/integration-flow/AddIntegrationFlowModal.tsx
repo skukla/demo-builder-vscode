@@ -29,6 +29,7 @@ import { isAdobeSignedIn } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { FlowStageBody } from './FlowStageBody';
 import { type FlowMode, FlowStageId } from './flowStages';
+import type { UnavailableEntries } from './stages/CatalogStage';
 import { useIntegrationFlow, type ApiEditTarget } from './useIntegrationFlow';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
@@ -65,11 +66,11 @@ export interface AddIntegrationFlowModalProps {
     /** The FINISHED catalog entries (kind picker count, catalog + API stages). */
     catalog: AppBuilderComponentCatalogEntry[];
     /**
-     * Catalog entries that cannot be added here, by id, with the reason shown on
-     * their greyed-out tile — the ERP integration when another project already runs
-     * one on this Commerce instance (AB-78).
+     * Catalog entries that cannot be added here, greyed out with the reason, and the
+     * message saying what to do instead — the ERP integration when another project
+     * already runs one on this Commerce instance (AB-78).
      */
-    unavailable?: Readonly<Record<string, string>>;
+    unavailable?: UnavailableEntries;
     /** The blank starter app (the "Build custom" kind seeds it), if any. */
     blankComponent?: AppBuilderComponentCatalogEntry;
     /**

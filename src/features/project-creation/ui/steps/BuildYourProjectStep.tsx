@@ -198,7 +198,7 @@ function renderActiveArea(areaId: string | undefined, ctx: ActiveAreaContext): R
                     packages={ctx.packages}
                     stacks={ctx.stacks}
                     notice={ctx.erpNotice}
-                    unavailable={ctx.erpHolder?.unavailable}
+                    unavailable={ctx.erpHolder}
                 />
             );
         case 'commerce':

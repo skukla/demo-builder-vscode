@@ -16,7 +16,6 @@
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import {
     erpIntegrationHolder,
-    erpIntegrationTakenNote,
     oneErpIntegrationPerInstance,
 } from '@/features/app-builder/services/erpIntegrationOnSameCommerce';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -53,7 +52,7 @@ async function subjectOf(
  *
  * @param context - handler context (state manager)
  * @param payload - the wizard's backend and values, or nothing for the open project
- * @returns the holder's name, the message and the tile's note, or an empty answer
+ * @returns the holder's name and the message, or an empty answer
  */
 export async function handleCheckErpIntegrationHolder(
     context: HandlerContext,
@@ -69,7 +68,6 @@ export async function handleCheckErpIntegrationHolder(
         data: {
             holder: getProjectDisplayName(holder),
             message: oneErpIntegrationPerInstance(holder),
-            note: erpIntegrationTakenNote(holder),
         },
     };
 }

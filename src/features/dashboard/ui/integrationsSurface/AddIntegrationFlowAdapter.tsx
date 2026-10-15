@@ -276,7 +276,7 @@ export function AddIntegrationFlowAdapter({
             updateState={updateState}
             meshComponent={meshComponent}
             catalog={catalog}
-            unavailable={erpHolder?.unavailable}
+            unavailable={erpHolder}
             blankComponent={blankComponent}
             reservedIds={reservedIds}
             builder={builder}

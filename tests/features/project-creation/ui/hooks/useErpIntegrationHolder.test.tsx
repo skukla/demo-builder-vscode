@@ -21,7 +21,6 @@ import type { WizardState } from '@/types/webview';
 import type { CheckErpIntegrationHolderResponse } from '@/types/webviewRequests';
 
 const MESSAGE = 'justrite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
-const NOTE = 'justrite already has one on this Commerce instance';
 const CONFIGS = {
     'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://na1.api.commerce.adobe.com/tenant-x/graphql' },
 };
@@ -37,7 +36,7 @@ function wizard(overrides: Partial<WizardState> = {}): WizardState {
 }
 
 function held(): CheckErpIntegrationHolderResponse {
-    return { success: true, data: { holder: 'justrite', message: MESSAGE, note: NOTE } };
+    return { success: true, data: { holder: 'justrite', message: MESSAGE } };
 }
 
 beforeEach(() => {
@@ -72,7 +71,7 @@ describe('selectsErpIntegration', () => {
 });
 
 describe('useErpIntegrationHolder', () => {
-    it('answers the message and greys out the ERP integration, and nothing else', async () => {
+    it('answers the banner and greys out the ERP integration, and nothing else', async () => {
         mockRequest.mockResolvedValue(held());
 
         const { result } = renderHook(() => useErpIntegrationHolder(wizardHolderRequest(wizard())));
@@ -80,7 +79,7 @@ describe('useErpIntegrationHolder', () => {
 
         expect(mockRequest).toHaveBeenCalledWith('check-erp-integration-holder', wizardHolderRequest(wizard()));
         expect(result.current?.message).toBe(MESSAGE);
-        expect(result.current?.unavailable).toEqual({ 'erp-integration': NOTE });
+        expect(result.current?.ids).toEqual(['erp-integration']);
     });
 
     it("asks the dashboard's question about the open project", async () => {

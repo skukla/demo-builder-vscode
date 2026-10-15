@@ -3,8 +3,8 @@
  *
  * Graybox: the real Add Integration modal, stage switch and gallery, over the real
  * catalog. Asserted: with another project holding the instance, the ERP integration's
- * gallery tile is greyed out with the reason (the API Mesh treatment; that the other
- * tiles stay pickable is the gallery's own suite); the Build step's line shows above
+ * gallery tile is greyed out (the API Mesh treatment) under a banner saying what to do
+ * instead (that the other tiles stay pickable is the gallery's own suite); the Build step's line shows above
  * the results (when to show it is the Build step's suite); and with nothing
  * unavailable nothing changes.
  *
@@ -43,13 +43,14 @@ jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
 }));
 
 import { IntegrationsStep } from '@/features/project-creation/ui/steps/IntegrationsStep';
+import type { UnavailableEntries } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
 import type { WizardState } from '@/types/webview';
 import { PACKAGES, STACKS, baseState } from './IntegrationsStep.testUtils';
 
-const NOTE = 'justrite already has one on this Commerce instance';
-const UNAVAILABLE = { 'erp-integration': NOTE };
+const MESSAGE = 'JustRite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
+const UNAVAILABLE: UnavailableEntries = { message: MESSAGE, ids: ['erp-integration'] };
 
-async function renderStep(state: WizardState, unavailable?: Record<string, string>, notice?: React.ReactNode): Promise<void> {
+async function renderStep(state: WizardState, unavailable?: UnavailableEntries, notice?: React.ReactNode): Promise<void> {
     render(
         <Provider theme={defaultTheme}>
             <IntegrationsStep
@@ -93,13 +94,15 @@ beforeEach(() => {
 });
 
 describe('IntegrationsStep — an instance that already has an ERP integration', () => {
-    it('greys the ERP integration out in the gallery, with the reason', async () => {
+    it('greys the ERP integration out under a banner saying what to do instead', async () => {
         await renderStep(baseState(), UNAVAILABLE);
 
         const dialog = await openGallery();
 
         expect(within(dialog).getByRole('button', { name: /ERP Integration/ })).toBeDisabled();
-        expect(within(dialog).getByText(NOTE)).toBeInTheDocument();
+        expect(within(dialog).getByTestId('catalog-unavailable')).toHaveTextContent(MESSAGE);
+        // Its only tile is out, so there is nothing to name.
+        expect(within(dialog).queryByLabelText(/Name \(optional\)/)).not.toBeInTheDocument();
     });
 
     it('leaves it pickable when nothing is unavailable — control', async () => {
@@ -108,7 +111,7 @@ describe('IntegrationsStep — an instance that already has an ERP integration',
         const dialog = await openGallery();
 
         expect(within(dialog).getByRole('button', { name: /ERP Integration/ })).toBeEnabled();
-        expect(within(dialog).queryByText(NOTE)).not.toBeInTheDocument();
+        expect(within(dialog).queryByTestId('catalog-unavailable')).not.toBeInTheDocument();
     });
 
     it('shows the line it is given above the results', async () => {

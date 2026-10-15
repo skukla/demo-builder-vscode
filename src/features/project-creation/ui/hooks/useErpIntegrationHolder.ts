@@ -3,7 +3,7 @@
  * instance? (AB-78)
  *
  * One Commerce instance runs one ERP integration. Both hosts of the Add Integration
- * modal ask (`check-erp-integration-holder`) and hand the answer's `unavailable` to
+ * modal ask (`check-erp-integration-holder`) and hand the answer to
  * it, so the ERP integration's tile is greyed out with the reason — the treatment
  * the API Mesh tile gets once a project has its mesh. The wizard asks with its
  * choices while the SC is on Integrations; the dashboard asks about the open project
@@ -23,19 +23,18 @@ import { useEffect, useRef, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { bringsSystem } from '@/features/components/services/appBuilderComponentLinks';
+import type { UnavailableEntries } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
 import type { WizardState } from '@/types/webview';
 import type {
     CheckErpIntegrationHolderRequest,
     CheckErpIntegrationHolderResponse,
 } from '@/types/webviewRequests';
 
-/** Which project runs the instance's ERP integration, and what to show for it. */
-export interface ErpIntegrationHolder {
-    /** The one line naming the project, and where to add the ERP instead. */
-    message: string;
-    /** Every ERP integration catalog entry, by id, with the reason its tile is greyed out. */
-    unavailable: Readonly<Record<string, string>>;
-}
+/**
+ * Which project runs the instance's ERP integration, as the Add Integration modal
+ * takes it: the banner saying what to do instead, and the tiles to grey out.
+ */
+export type ErpIntegrationHolder = UnavailableEntries;
 
 /** The dashboard's question: about the open project. */
 export const ASK_ABOUT_OPEN_PROJECT: CheckErpIntegrationHolderRequest = {};
@@ -73,13 +72,11 @@ export function wizardHolderRequest(state: WizardState): CheckErpIntegrationHold
     };
 }
 
-/** The answer as the modal and the wizard use it. */
+/** The answer as the modal and the wizard use it: the message, and every ERP integration entry. */
 function toHolder(data: CheckErpIntegrationHolderResponse['data'] | undefined): ErpIntegrationHolder | undefined {
-    if (!data?.message || !data.note) return undefined;
-    const note = data.note;
+    if (!data?.message) return undefined;
     const catalog = getAppBuilderComponentCatalog();
-    const ids = catalog.filter((entry) => bringsSystem(entry, catalog)).map((entry) => entry.id);
-    return { message: data.message, unavailable: Object.fromEntries(ids.map((id) => [id, note])) };
+    return { message: data.message, ids: catalog.filter((entry) => bringsSystem(entry, catalog)).map((entry) => entry.id) };
 }
 
 /** Ask the host; a failed request is no answer. */

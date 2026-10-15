@@ -63,6 +63,7 @@ import {
     pairedSystemTarget,
     type PairedSystemNameTarget,
 } from '@/features/project-creation/ui/components/integration-flow/PairedSystemNameDialog';
+import type { UnavailableEntries } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
 import type { ApiEditTarget } from '@/features/project-creation/ui/components/integration-flow/useIntegrationFlow';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -83,8 +84,8 @@ export interface IntegrationsStepProps extends BaseStepProps {
     stacks?: Stack[];
     /** A line above the results: why Continue is held (AB-78), from the Build step. */
     notice?: React.ReactNode;
-    /** Catalog entries the Add Integration modal greys out, by id, with the reason. */
-    unavailable?: Readonly<Record<string, string>>;
+    /** Catalog entries the Add Integration modal greys out, and what to do instead. */
+    unavailable?: UnavailableEntries;
 }
 
 /** Case-insensitive, whitespace-trimmed name comparison. */

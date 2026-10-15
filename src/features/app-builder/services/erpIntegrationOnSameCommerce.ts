@@ -76,17 +76,6 @@ export function erpIntegrationHolder(
 }
 
 /**
- * The short reason on the ERP integration's greyed-out tile in the Add Integration
- * modal, beside the API Mesh tile's "Already added — one per project".
- *
- * @param holder - the project that runs the instance's ERP integration
- * @returns the note
- */
-export function erpIntegrationTakenNote(holder: ProjectNameParts): string {
-    return `${getProjectDisplayName(holder)} already has one on this Commerce instance`;
-}
-
-/**
  * Why the add was refused, naming the project to add the ERP to.
  *
  * @param holder - the project that runs the instance's ERP integration

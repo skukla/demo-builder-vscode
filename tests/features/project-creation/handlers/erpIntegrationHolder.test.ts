@@ -52,7 +52,7 @@ describe('check-erp-integration-holder', () => {
 
         expect(result).toEqual({
             success: true,
-            data: { holder: 'justrite', message: MESSAGE, note: 'justrite already has one on this Commerce instance' },
+            data: { holder: 'justrite', message: MESSAGE },
         });
     });
 

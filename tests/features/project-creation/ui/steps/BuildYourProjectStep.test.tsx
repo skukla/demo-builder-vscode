@@ -68,11 +68,11 @@ jest.mock('@/features/project-creation/ui/steps/StorefrontStep', () => ({
 
 jest.mock('@/features/project-creation/ui/steps/IntegrationsStep', () => ({
     IntegrationsStep: (
-        props: StubBodyProps & { notice?: React.ReactNode; unavailable?: Record<string, string> },
+        props: StubBodyProps & { notice?: React.ReactNode; unavailable?: { ids: readonly string[] } },
     ) => {
         capturedSetCanProceed.integrations = props.setCanProceed;
         return (
-            <div data-testid="integrations-body" data-unavailable={JSON.stringify(props.unavailable ?? {})}>
+            <div data-testid="integrations-body" data-unavailable={(props.unavailable?.ids ?? []).join(',')}>
                 Integrations body
                 {props.notice}
             </div>
@@ -412,7 +412,7 @@ describe('BuildYourProjectStep — body receives a NO-OP setCanProceed', () => {
 describe('BuildYourProjectStep — one ERP integration per Commerce instance (AB-78)', () => {
     const HELD: ErpIntegrationHolder = {
         message: 'justrite already has an ERP integration on this Commerce instance. Add your ERP there instead.',
-        unavailable: { 'erp-integration': 'justrite already has one on this Commerce instance' },
+        ids: ['erp-integration'],
     };
     const ON_INTEGRATIONS = {
         selectedPackage: 'citisignal',
@@ -435,10 +435,7 @@ describe('BuildYourProjectStep — one ERP integration per Commerce instance (AB
         setup(ON_INTEGRATIONS);
 
         expect(mockErpHolder).toHaveBeenCalledWith(expect.objectContaining({ backend: 'adobe-commerce-accs' }));
-        expect(screen.getByTestId('integrations-body')).toHaveAttribute(
-            'data-unavailable',
-            JSON.stringify(HELD.unavailable),
-        );
+        expect(screen.getByTestId('integrations-body')).toHaveAttribute('data-unavailable', 'erp-integration');
     });
 
     it('says why, and holds Continue, when the ERP integration is already selected', () => {
@@ -461,7 +458,7 @@ describe('BuildYourProjectStep — one ERP integration per Commerce instance (AB
         const { setCanProceed } = setup(DEPLOYABLE);
 
         expect(screen.queryByTestId('erp-integration-holder')).not.toBeInTheDocument();
-        expect(screen.getByTestId('integrations-body')).toHaveAttribute('data-unavailable', '{}');
+        expect(screen.getByTestId('integrations-body')).toHaveAttribute('data-unavailable', '');
         expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });
 });

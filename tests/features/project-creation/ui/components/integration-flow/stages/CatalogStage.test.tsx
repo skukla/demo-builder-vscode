@@ -264,33 +264,48 @@ describe('node-version disclosure', () => {
 });
 
 // One Commerce instance runs one ERP integration (AB-78). Like the API Mesh tile once
-// a project has its mesh, the tile stays in the gallery and says why it is out.
+// a project has its mesh, the tile stays in the gallery, greyed out. The words go in a
+// banner above the gallery, never on the tile, where they would be missed (owner).
 describe('an entry that cannot be added here', () => {
-    const TAKEN = 'justrite already has one on this Commerce instance';
+    const MESSAGE = 'JustRite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
 
-    it('greys its tile out with the reason, and leaves the others alone', () => {
-        renderStage({ unavailable: { 'acme-a': TAKEN } });
+    it('greys its tile out, and leaves the others alone', () => {
+        renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
 
         expect(screen.getByRole('button', { name: /Widget A/ })).toBeDisabled();
-        expect(screen.getByText(TAKEN)).toHaveClass('choice-card-note');
         expect(screen.getByRole('button', { name: /Widget B/ })).toBeEnabled();
     });
 
+    it('says why and what to do in a banner above the gallery, not on the tile', () => {
+        renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
+
+        expect(screen.getByTestId('catalog-unavailable')).toHaveTextContent(MESSAGE);
+        expect(screen.getByRole('button', { name: /Widget A/ })).not.toHaveTextContent(MESSAGE);
+    });
+
     it('cannot be picked', () => {
-        const { onPick } = renderStage({ unavailable: { 'acme-a': TAKEN } });
+        const { onPick } = renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
 
         fireEvent.click(screen.getByRole('button', { name: /Widget A/ }));
 
         expect(onPick).not.toHaveBeenCalled();
     });
 
-    it('says why it is out rather than what it would install', () => {
-        renderStage({
-            catalog: [{ ...entry('kit', 'Kit'), nodeVersion: '24' }],
-            unavailable: { kit: TAKEN },
-        });
+    it('drops the name field when no tile can be picked', () => {
+        renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a', 'acme-b'] } });
 
-        expect(screen.getByText(TAKEN)).toBeInTheDocument();
-        expect(screen.queryByText('Installs Node 24 on first use.')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/Name \(optional\)/)).not.toBeInTheDocument();
+    });
+
+    it('keeps the name field while another tile can still be picked — control', () => {
+        renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
+
+        expect(screen.getByLabelText(/Name \(optional\)/)).toBeInTheDocument();
+    });
+
+    it('shows no banner when nothing listed is unavailable', () => {
+        renderStage({ unavailable: { message: MESSAGE, ids: ['not-listed'] } });
+
+        expect(screen.queryByTestId('catalog-unavailable')).not.toBeInTheDocument();
     });
 });

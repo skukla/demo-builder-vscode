@@ -13,7 +13,7 @@ import React, { useMemo } from 'react';
 import { isMeshSelected } from '../../steps/tileStatus';
 import { ApiPickerStage } from './stages/ApiPickerStage';
 import { BlankStage } from './stages/BlankStage';
-import { CatalogStage } from './stages/CatalogStage';
+import { CatalogStage, type UnavailableEntries } from './stages/CatalogStage';
 import { CustomStage } from './stages/CustomStage';
 import { DestinationStage } from './stages/DestinationStage';
 import { KindStage } from './stages/KindStage';
@@ -37,14 +37,14 @@ const DEST_VIEWS = {
 } as const;
 
 /** What the stage bodies read off the journey's inputs (see the modal's props). */
-export interface StageBodyInputs {
+interface StageBodyInputs {
     state: AdobeAuthSessionState;
     updateState: (updates: Partial<WizardState>) => void;
     meshComponent?: AppBuilderComponentCatalogEntry;
     catalog: AppBuilderComponentCatalogEntry[];
     onSignIn?: () => Promise<unknown>;
-    /** Catalog entries that cannot be added here, by id, with the reason on their tile. */
-    unavailable?: Readonly<Record<string, string>>;
+    /** Catalog entries that cannot be added here, and what to do instead. */
+    unavailable?: UnavailableEntries;
 }
 
 /**

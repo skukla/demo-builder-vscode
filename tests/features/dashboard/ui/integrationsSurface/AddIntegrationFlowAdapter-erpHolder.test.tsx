@@ -10,7 +10,6 @@ import { act } from '@testing-library/react';
 import { mockRequest } from '../../../../helpers/webviewClientMock';
 import { modalProps, renderAdapter, resetCaptured } from './AddIntegrationFlowAdapter.testUtils';
 
-const NOTE = 'justrite already has one on this Commerce instance';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -22,14 +21,14 @@ describe('AddIntegrationFlowAdapter — an instance that already has an ERP inte
     it('asks about the open project while the add journey is open, and greys out the ERP integration', async () => {
         mockRequest.mockResolvedValue({
             success: true,
-            data: { holder: 'justrite', message: 'held', note: NOTE },
+            data: { holder: 'justrite', message: 'held' },
         });
 
         renderAdapter({ isOpen: true, mode: 'add' });
         await act(async () => {});
 
         expect(mockRequest).toHaveBeenCalledWith('check-erp-integration-holder', {});
-        expect(modalProps().unavailable).toEqual({ 'erp-integration': NOTE });
+        expect(modalProps().unavailable).toEqual({ message: 'held', ids: ['erp-integration'] });
     });
 
     it('greys out nothing when no project holds the instance — control', async () => {
