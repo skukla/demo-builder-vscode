@@ -3,8 +3,8 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { AddDemoModal } from '../components/add-demo/AddDemoModal';
 import { EditDemoPackageModal } from '../components/add-demo/EditDemoPackageModal';
 import { BrandGallery } from '../components/BrandGallery';
-import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { isNameSetInConfigure, projectNameDescription } from './editLocks';
+import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
@@ -45,7 +45,8 @@ export function WelcomeStep({
     addedDemos = NO_ADDED_DEMOS,
     onDemoAdded,
 }: WelcomeStepProps) {
-    const defaultProjectName = 'my-commerce-demo';
+    // Typed as a title, like the SC would; the field derives the folder name from it.
+    const defaultProjectTitle = 'My Commerce Demo';
     const [addDemoOpen, setAddDemoOpen] = useState(false);
     const [editingDemo, setEditingDemo] = useState<AddedDemo | undefined>(undefined);
     const selectableDefaultProps = useSelectableDefault();
@@ -83,7 +84,7 @@ export function WelcomeStep({
     // (owner, 2026-10-01).
     useEffect(() => {
         if (!state.projectName) {
-            updateState({ projectName: defaultProjectName });
+            updateState({ projectTitle: defaultProjectTitle, projectName: normalizeProjectName(defaultProjectTitle) });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount

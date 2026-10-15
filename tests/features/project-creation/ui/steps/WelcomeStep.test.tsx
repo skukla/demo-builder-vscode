@@ -53,7 +53,7 @@ describe('WelcomeStep', () => {
             );
 
             // updateState should be called with default project name
-            expect(mockUpdateState).toHaveBeenCalledWith({ projectName: 'my-commerce-demo' });
+            expect(mockUpdateState).toHaveBeenCalledWith({ projectTitle: 'My Commerce Demo', projectName: 'my-commerce-demo' });
         });
     });
 

@@ -87,13 +87,13 @@ describe('WelcomeStep — the default name, and no focus on load', () => {
     it('seeds the default name only when the field is empty', () => {
         const { updateState } = renderWelcome({ state: { projectName: '' } });
 
-        expect(updateState).toHaveBeenCalledWith({ projectName: 'my-commerce-demo' });
+        expect(updateState).toHaveBeenCalledWith({ projectTitle: 'My Commerce Demo', projectName: 'my-commerce-demo' });
     });
 
     it('leaves a name the project already carries alone', () => {
         const { updateState } = renderWelcome({ state: { projectName: 'kept-name' } });
 
-        expect(updateState).not.toHaveBeenCalledWith({ projectName: 'my-commerce-demo' });
+        expect(updateState).not.toHaveBeenCalledWith({ projectTitle: 'My Commerce Demo', projectName: 'my-commerce-demo' });
     });
 
     // The step has the package filter, and a screen with a search filter focuses
