@@ -15,8 +15,8 @@ import { generateInspectorTreeEntries, installInspectorTagging } from '../inspec
 import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
 import type { CodePatchResult } from '../patches/codePatchRegistry';
 import { demoFixLines, runDemoFixPass, type DemoFixReport } from '../patches/demoFixPass';
-import { installSmart404Handler } from '../pdp/pdp404HandlerPublisher';
 import { installQuickEdit } from '../quickEditPublisher';
+import { installMissingPageHandling } from '../storefront/notFoundPage';
 import { readRepoBoilerplate } from '../storefront/storefrontOrigin';
 import { resolveTemplateCommitSha } from '../templateCommitResolver';
 import type { GitHubTreeInput } from '../types';
@@ -355,7 +355,7 @@ export async function resetRepoToTemplate(
     // and was the one reported least — the result was discarded entirely.
     // `report()` is the context-appropriate surface (UI progress or MCP output),
     // matching how the overlay-registration failure is surfaced on this path.
-    const smart404 = await installSmart404Handler(
+    const smart404 = await installMissingPageHandling(
         githubFileOps,
         repoOwner,
         repoName,

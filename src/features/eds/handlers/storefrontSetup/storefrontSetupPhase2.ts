@@ -23,9 +23,9 @@ import {
     installInspectorTagging,
 } from '../../services/inspectorHelpers';
 import { toInstalledBlockLibrary } from '../../services/installedBlockLibraryRecord';
-import { installSmart404Handler } from '../../services/pdp/pdp404HandlerPublisher';
 import { placeholderStubPathsFor, placeholderStubTreeEntries } from '../../services/placeholderStubs';
 import { installQuickEdit } from '../../services/quickEditPublisher';
+import { installMissingPageHandling } from '../../services/storefront/notFoundPage';
 import { type GitHubTreeInput } from '../../services/types';
 import { addPdpCaveat, describeSmart404Skip } from '../edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
@@ -142,7 +142,7 @@ export async function executePhaseHelixConfig(
     // the result is no longer DISCARDED: a skip (no delayed.js, unparseable
     // overlay URL, failed commit) used to reach the debug log and nowhere else
     // while the run reported Complete.
-    const smart404 = await installSmart404Handler(
+    const smart404 = await installMissingPageHandling(
         githubFileOps,
         repoInfo.repoOwner,
         repoInfo.repoName,

@@ -204,13 +204,9 @@ export async function installSmart404Handler(
     // the whole handler.
     await installSmart404HeadRedirect(githubFileOps, repoOwner, repoName, logger);
 
-    // Vendor the same eager redirect into the storefront's static
-    // 404.html file. Helix serves this file on 404 responses for
-    // unknown paths (NOT the authored /404 page in DA.live — that's
-    // only used for direct /404 GETs). Without this, the mixed-case
-    // PDP 404 → eager-redirect flow never fires because the served
-    // 404 page bypasses head.html entirely.
-    await installSmart404On404HtmlFile(githubFileOps, repoOwner, repoName, logger);
+    // 404.html is NOT written here: `updateNotFoundPage` owns every write to it, so its
+    // import map and this redirect land in one commit (EDS-45). Callers ask it for the
+    // redirect when this returns installed.
 
     return { installed: true };
 }
@@ -223,68 +219,34 @@ export async function installSmart404Handler(
  * persists until `delayed.js` fires) but never break the storefront.
  */
 /**
- * Vendor the eager redirect into the storefront's static `404.html`
- * file. Helix serves this file on 404 responses for unknown paths,
- * bypassing `head.html` entirely — so the same snippet that's in
- * head.html needs to be in 404.html as well.
+ * The eager redirect, inserted into a 404.html's text. Helix serves this file on 404
+ * responses for unknown paths, bypassing `head.html`, so the snippet head.html carries
+ * has to be here too. Inserted before `</head>` so it runs during head parsing, before
+ * body paint; appended when there is no `</head>`.
  *
- * Same shape as `installSmart404HeadRedirect`: read, idempotent-check,
- * extract nonce, commit. Inserts the snippet right before `</head>`
- * so it runs as part of head parsing (synchronous, before body paint).
+ * Pure: `updateNotFoundPage` reads and writes the file. Answers null when there is
+ * nothing to do or nothing safe to do: the snippet is already there, or the page has no
+ * nonced script tag to take the CSP nonce from (the snippet would be blocked).
  *
- * Non-fatal at every step. Failures degrade the UX (mixed-case URLs
- * still show the visible Helix-default 404 page until delayed.js
- * fires, ~1-2s later) but never break the storefront.
+ * @param html - the 404.html as read
+ * @param logger - says why it skipped
+ * @returns the page with the redirect, or null
  */
-async function installSmart404On404HtmlFile(
-    githubFileOps: GitHubFileOperations,
-    repoOwner: string,
-    repoName: string,
-    logger: Logger,
-): Promise<void> {
-    const existing = await githubFileOps.getFileContent(repoOwner, repoName, '404.html');
-    if (!existing?.content) {
-        logger.warn('[PDP404] storefront 404.html not found — skipping eager redirect on 404.html');
-        return;
-    }
-    if (existing.content.includes(SMART_404_HEAD_MARKER_START)) {
+export function withEagerRedirect(html: string, logger: Logger): string | null {
+    if (html.includes(SMART_404_HEAD_MARKER_START)) {
         logger.info('[PDP404] Eager redirect already present in 404.html — skipping');
-        return;
+        return null;
     }
-    const nonce = extractCspNonce(existing.content);
+    const nonce = extractCspNonce(html);
     if (!nonce) {
         logger.warn(
             '[PDP404] 404.html has no nonced script tag — skipping eager redirect on 404.html (delayed.js fallback still active)',
         );
-        return;
+        return null;
     }
     const snippet = SMART_404_HEAD_SNIPPET_TEMPLATE.replace(/__NONCE__/g, nonce);
-    // Insert before </head> so the snippet runs during head parsing,
-    // before any body paint. If </head> is missing for any reason,
-    // append at the end as a safe fallback.
-    const headClose = existing.content.lastIndexOf('</head>');
-    const newContent =
-        headClose >= 0
-            ? existing.content.slice(0, headClose) + snippet + existing.content.slice(headClose)
-            : existing.content + snippet;
-    try {
-        await githubFileOps.createOrUpdateFile(
-            repoOwner,
-            repoName,
-            '404.html',
-            newContent,
-            'chore(demo-builder): vendor smart 404 eager redirect into 404.html',
-            existing.sha,
-        );
-        logger.info(
-            `[PDP404] Vendored eager redirect into 404.html (${repoOwner}/${repoName}, nonce="${nonce}")`,
-        );
-    } catch (error) {
-        const reason = (error as Error).message ?? 'unknown';
-        logger.warn(
-            `[PDP404] 404.html commit failed: ${reason} — eager redirect not installed on 404.html (delayed.js fallback still active)`,
-        );
-    }
+    const headClose = html.lastIndexOf('</head>');
+    return headClose >= 0 ? html.slice(0, headClose) + snippet + html.slice(headClose) : html + snippet;
 }
 
 async function installSmart404HeadRedirect(
