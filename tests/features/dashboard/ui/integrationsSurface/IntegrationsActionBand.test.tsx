@@ -149,6 +149,20 @@ describe('IntegrationsActionBand', () => {
         expect(props.onChangeDestination).toHaveBeenCalledTimes(1);
     });
 
+    // An empty project has nothing to deploy, and the add journey asks for an Adobe
+    // project itself, so the row would only be noise there (owner, 2026-10-15).
+    it('shows no destination row on an empty project with no destination', () => {
+        renderBand({ cards: [], destination: undefined });
+
+        expect(screen.queryByTestId('page-destination')).not.toBeInTheDocument();
+    });
+
+    it('still shows the destination an empty project already has — control', () => {
+        renderBand({ cards: [] });
+
+        expect(screen.getByTestId('page-destination')).toHaveTextContent('Kukla Mesh');
+    });
+
     it('routes the trailing button back to the project dashboard', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         const props = renderBand();

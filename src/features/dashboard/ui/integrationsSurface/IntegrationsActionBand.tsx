@@ -106,17 +106,21 @@ export function IntegrationsActionBand({
                     // LOCAL project name and the REMOTE Adobe
                     // destination were indistinguishable.
                     countTrailing={
-                        // Shown even with no Adobe project: a storefront-only project
-                        // has none, and an add needs one chosen first (2026-10-15).
-                        <div className="page-destination-row" data-testid="page-destination">
-                            <span className="page-destination-label">Deploys to</span>
-                            <DestinationContext
-                                project={destinationLabel}
-                                projectOnly
-                                onChange={onChangeDestination}
-                                unsetLabel="Not chosen yet"
-                            />
-                        </div>
+                        // Shown without an Adobe project only once something is here
+                        // to deploy: a storefront-only project with integrations needs
+                        // one chosen (2026-10-15). An empty project has nothing to
+                        // deploy, and the add journey asks for one itself (owner).
+                        (destinationLabel || cards.length > 0) && (
+                            <div className="page-destination-row" data-testid="page-destination">
+                                <span className="page-destination-label">Deploys to</span>
+                                <DestinationContext
+                                    project={destinationLabel}
+                                    projectOnly
+                                    onChange={onChangeDestination}
+                                    unsetLabel="Not chosen yet"
+                                />
+                            </div>
+                        )
                     }
                 />
             </View>
