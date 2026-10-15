@@ -138,6 +138,7 @@ import {
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
 import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
+import { handleCheckErpIntegrationHolder } from '@/features/project-creation/handlers/erpIntegrationHolderHandler';
 import {
     MessageHandler,
     defineHandlers,
@@ -371,6 +372,9 @@ export const dashboardHandlers = defineHandlers({
     // The singular id-less addApp/deployApp/redeployApp/removeApp delegates
     // retired with the dormant AppBuilderCard (ADR-011 D3 Step 08).
     addAppBuilderComponent: handleAddAppBuilderComponent,
+    // Whether another project already runs an ERP integration on this Commerce
+    // instance (AB-78), so the Add Integration modal can grey it out.
+    'check-erp-integration-holder': handleCheckErpIntegrationHolder,
     deployAppBuilderComponent: handleDeployAppBuilderComponent,
     redeployAppBuilderComponent: handleRedeployAppBuilderComponent,
     removeAppBuilderComponent: handleRemoveAppBuilderComponent,

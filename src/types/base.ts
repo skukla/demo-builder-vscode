@@ -272,6 +272,9 @@ export interface Project {
     updatedAt?: Date;
 }
 
+/** What names a Commerce instance: the backend chosen, and the values typed for it. */
+export type CommerceSource = Pick<Project, 'componentSelections' | 'componentConfigs'>;
+
 /**
  * An App Builder component's kind: a mesh artifact, an App Builder integration,
  * or a SYSTEM — a stand-in for an external system an integration talks to (the

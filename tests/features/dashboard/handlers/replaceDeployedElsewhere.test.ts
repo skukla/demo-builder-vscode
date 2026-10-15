@@ -157,12 +157,90 @@ describe('replaceDeployedElsewhere', () => {
         expect(mockRemove).not.toHaveBeenCalled();
     });
 
-    it('reads no projects at all when this project has no Adobe project', async () => {
-        const { context, stateManager } = contextWith(pairProject('justrite', 'Justrite ERP'));
+    it('replaces nothing when this project has no Adobe project', async () => {
+        const { context } = contextWith(pairProject('justrite', 'Justrite ERP'));
 
-        await replaceDeployedElsewhere(context, createMockProject({ adobe: undefined }), INTEGRATION, SERVICES, jest.fn());
+        const result = await replaceDeployedElsewhere(context, createMockProject({ adobe: undefined }), INTEGRATION, SERVICES, jest.fn());
 
-        expect(stateManager.getAllProjects).not.toHaveBeenCalled();
+        expect(result).toBeUndefined();
+        expect(mockRemove).not.toHaveBeenCalled();
+    });
+});
+
+describe('replaceDeployedElsewhere — one ERP integration per Commerce instance (AB-78)', () => {
+    const ENDPOINT = 'https://na1.api.commerce.adobe.com/tenant-x/graphql';
+    const ON_INSTANCE = {
+        componentSelections: { backend: 'adobe-commerce-accs' },
+        componentConfigs: { 'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: ENDPOINT } },
+    };
+
+    /** `pairProject`, on the shared Commerce instance. */
+    function onInstance(name: string, erpName: string, adobeProjectId?: string): Project {
+        return { ...pairProject(name, erpName, adobeProjectId), ...ON_INSTANCE };
+    }
+
+    /** `adding()` (the copy), on the shared instance, its ERP name kept. */
+    function copyOnInstance(): Project {
+        const copy = adding();
+        return {
+            ...copy,
+            componentSelections: ON_INSTANCE.componentSelections,
+            componentConfigs: { ...copy.componentConfigs, ...ON_INSTANCE.componentConfigs },
+        };
+    }
+
+    /** The project adding the pair, on the shared instance, in its own Adobe project. */
+    function scratch(): Project {
+        return createMockProject({
+            name: 'my-commerce-demo',
+            path: '/projects/my-commerce-demo',
+            adobe: { projectId: 'adobe-new', organization: 'org' },
+            ...ON_INSTANCE,
+        });
+    }
+
+    it('refuses, naming the project that holds the instance, and removes nothing', async () => {
+        const { context } = contextWith(onInstance('justrite', 'Justrite ERP', 'adobe-1'));
+
+        const result = await replaceDeployedElsewhere(context, scratch(), INTEGRATION, SERVICES, jest.fn());
+
+        expect(result).toEqual({
+            error: 'justrite already has an ERP integration on this Commerce instance. Add your ERP there instead.',
+            blocked: true,
+        });
+        expect(mockRemove).not.toHaveBeenCalled();
+    });
+
+    it('refuses even with no Adobe project chosen yet', async () => {
+        const { context } = contextWith(onInstance('justrite', 'Justrite ERP'));
+
+        const result = await replaceDeployedElsewhere(
+            context,
+            { ...scratch(), adobe: undefined },
+            INTEGRATION,
+            SERVICES,
+            jest.fn(),
+        );
+
+        expect(result).toMatchObject({ blocked: true });
+    });
+
+    it('still replaces a copy, which then no longer holds the instance', async () => {
+        const original = onInstance('justrite', 'Justrite ERP');
+        const { context } = contextWith(original);
+
+        const result = await replaceDeployedElsewhere(context, copyOnInstance(), INTEGRATION, SERVICES, jest.fn());
+
+        expect(result).toBeUndefined();
+        expect(mockRemove).toHaveBeenCalledWith(original, 'erp-integration', { _deps: true });
+    });
+
+    it('refuses before replacing when a third project also runs one there', async () => {
+        const { context } = contextWith(onInstance('justrite', 'Justrite ERP'), onInstance('acme', 'Acme ERP', 'adobe-2'));
+
+        const result = await replaceDeployedElsewhere(context, copyOnInstance(), INTEGRATION, SERVICES, jest.fn());
+
+        expect(result).toMatchObject({ blocked: true });
         expect(mockRemove).not.toHaveBeenCalled();
     });
 });

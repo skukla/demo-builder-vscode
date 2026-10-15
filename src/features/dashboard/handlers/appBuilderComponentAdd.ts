@@ -265,20 +265,23 @@ export async function addWithSteps(
         };
     }
 
-    await recordApiPicks(context, project, entry.id, options.apis);
-
-    report(OPERATION_STAGES.adding.label);
-    // The deploy tails report every step; hand them the reporter so a slow add
-    // narrates itself instead of sitting on one static title for the ~70s of
-    // subscribe + install + build + deploy.
     const services = {
         authManager: ServiceLocator.getAuthenticationService(),
         commandManager: ServiceLocator.getCommandExecutor(),
     };
     // One Adobe project holds one deployment of this name (2026-10-08): the one
-    // another local project put there goes first, or this add does not run.
+    // another local project put there goes first, or this add does not run. And one
+    // Commerce instance runs one ERP integration (AB-78): refused before anything is
+    // recorded.
     const replaced = await replaceDeployedElsewhere(context, project, entry, services, report);
-    if (replaced) return { success: false, error: replaced.error };
+    if (replaced) return { success: false, ...replaced };
+
+    await recordApiPicks(context, project, entry.id, options.apis);
+
+    // The deploy tails report every step; hand them the reporter so a slow add
+    // narrates itself instead of sitting on one static title for the ~70s of
+    // subscribe + install + build + deploy.
+    report(OPERATION_STAGES.adding.label);
     const deps = buildDefaultRunnerDeps(
         await buildRunnerDepsContext(context, project, services),
         (message, subMessage, position) => report(message, subMessage, position),

@@ -428,7 +428,7 @@ async function deployUnlessDone(
     // One Adobe project holds one ERP of this name (2026-10-08): another local project's
     // goes first, or this add does not run.
     const replaced = await replaceDeployedElsewhere(context, plan.project, plan.entry, services, report);
-    if (replaced) return { success: false, error: replaced.error };
+    if (replaced) return { success: false, ...replaced };
     const deps = buildDefaultRunnerDeps(
         await buildRunnerDepsContext(context, plan.project, services),
         (message, subMessage) => report(message, subMessage),

@@ -40,6 +40,7 @@ function renderStage(props: Partial<Props> = {}): {
                 catalog={
                     props.catalog ?? [entry('acme-a', 'Widget A'), entry('acme-b', 'Widget B')]
                 }
+                unavailable={props.unavailable}
                 selectedId={props.selectedId}
                 onPick={onPick}
                 label={props.label}
@@ -259,5 +260,37 @@ describe('node-version disclosure', () => {
         // A note of its own, so the tile's clipped description never cuts it off.
         expect(screen.getByText('Installs Node 24 on first use.')).toHaveClass('choice-card-note');
         expect(screen.getByText('Sync scaffolding.')).toBeInTheDocument();
+    });
+});
+
+// One Commerce instance runs one ERP integration (AB-78). Like the API Mesh tile once
+// a project has its mesh, the tile stays in the gallery and says why it is out.
+describe('an entry that cannot be added here', () => {
+    const TAKEN = 'justrite already has one on this Commerce instance';
+
+    it('greys its tile out with the reason, and leaves the others alone', () => {
+        renderStage({ unavailable: { 'acme-a': TAKEN } });
+
+        expect(screen.getByRole('button', { name: /Widget A/ })).toBeDisabled();
+        expect(screen.getByText(TAKEN)).toHaveClass('choice-card-note');
+        expect(screen.getByRole('button', { name: /Widget B/ })).toBeEnabled();
+    });
+
+    it('cannot be picked', () => {
+        const { onPick } = renderStage({ unavailable: { 'acme-a': TAKEN } });
+
+        fireEvent.click(screen.getByRole('button', { name: /Widget A/ }));
+
+        expect(onPick).not.toHaveBeenCalled();
+    });
+
+    it('says why it is out rather than what it would install', () => {
+        renderStage({
+            catalog: [{ ...entry('kit', 'Kit'), nodeVersion: '24' }],
+            unavailable: { kit: TAKEN },
+        });
+
+        expect(screen.getByText(TAKEN)).toBeInTheDocument();
+        expect(screen.queryByText('Installs Node 24 on first use.')).not.toBeInTheDocument();
     });
 });

@@ -309,6 +309,22 @@ export function systemBoundTo<T extends Pick<ListingEntry, 'kind' | 'boundTo'>>(
 }
 
 /**
+ * Whether an entry is an integration that brings a system — the ERP integration, or a
+ * numbered copy of it. One Commerce instance runs one of these (AB-78), so the add
+ * doors, the wizard and creation all ask this same question.
+ *
+ * @param entry - the entry, or a recorded component's kind and ids
+ * @param catalog - the catalog, for the bound system
+ * @returns whether a system binds to its kind
+ */
+export function bringsSystem(
+    entry: { kind: string; id: string; catalogId?: string },
+    catalog: readonly Pick<ListingEntry, 'kind' | 'boundTo'>[],
+): boolean {
+    return entry.kind === 'integration' && systemBoundTo(entry.catalogId ?? entry.id, catalog) !== undefined;
+}
+
+/**
  * The catalog entry of the system an integration serves in a LIST (`listedAs`), the one
  * its card adds more of ("Add another ERP", AB-16), or undefined when it serves none.
  *

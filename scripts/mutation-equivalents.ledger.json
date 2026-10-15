@@ -3293,7 +3293,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 192,
+            "line": 198,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -3306,7 +3306,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 202,
+            "line": 208,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -4625,7 +4625,7 @@
             "source": "PL-22 batch MUT-05"
         },
         {
-            "module": "src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx",
+            "module": "src/features/project-creation/ui/components/integration-flow/FlowStageBody.tsx",
             "anchors": [
                 "const EMPTY_IDS: string[] = [];"
             ],
@@ -12214,7 +12214,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 320,
+            "line": 254,
             "mutants": 1,
             "category": "other",
             "reason": "React compares a dependency array element-wise with Object.is, so a constant one-element array of the same string literal is as stable across renders as an empty one \u2014 the builder memo recomputes on neither. The mutant changes the array's contents and not the memo's behaviour, which is the only thing any caller can see. Verified by planting ['Stryker was here'] as the dependency list: all 35 tests green, including the rerender tests that DO fail when a genuinely dependent memo is frozen.",
@@ -12227,10 +12227,10 @@
             "anchors": [
                 "[],"
             ],
-            "line": 328,
+            "line": 267,
             "mutants": 1,
             "category": "other",
-            "reason": "Same argument as the builder memo on line 242: useCallback compares dependency arrays element-wise with Object.is, and a constant one-element array of a string literal never changes between renders, so the signIn callback is rebuilt on neither the original nor the mutant. Verified by planting ['Stryker was here'] as the dependency list \u2014 all 35 tests green, while the rerender tests that pin genuinely dependent memos do fail when those are frozen.",
+            "reason": "Same argument as the builder memo above it: useCallback compares dependency arrays element-wise with Object.is, and a constant one-element array of a string literal never changes between renders, so the signIn callback is rebuilt on neither the original nor the mutant. Verified by planting ['Stryker was here'] as the dependency list \u2014 all 35 tests green, while the rerender tests that pin genuinely dependent memos do fail when those are frozen.",
             "decision": "Recorded, not killed: the only replacements available are constants, which useCallback cannot tell apart from an empty list.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
@@ -15647,7 +15647,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 198,
+            "line": 204,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs. Same argument as the row for line 202: this is openAdd's array, that one openDestination's.",

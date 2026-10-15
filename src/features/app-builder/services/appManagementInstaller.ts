@@ -58,7 +58,7 @@ import {
 } from './appManagementUpgrade';
 import { sleep } from '@/core/utils/sleep';
 import { getBackendCommerceContract } from '@/features/components/services/backendCommerce';
-import type { Project } from '@/types/base';
+import type { CommerceSource, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /** The kit lib's own defaults (read from aio-commerce-lib-api source, 2026-08-27). */
@@ -129,10 +129,10 @@ export interface AppManagementCallInputs {
  * components.json and code holding the old name finds nothing, with no error
  * pointing anywhere — owner audit, 2026-08-27).
  *
- * @param project - the current project
+ * @param project - the current project, or a wizard's choices before one exists
  * @returns the association body fields, or an error naming what is missing
  */
-export function deriveCommerceTarget(project: Project): SetAssociationRequest | { error: string } {
+export function deriveCommerceTarget(project: CommerceSource): SetAssociationRequest | { error: string } {
     const backendId = project.componentSelections?.backend;
     const contract = getBackendCommerceContract(backendId);
     if (!contract) {

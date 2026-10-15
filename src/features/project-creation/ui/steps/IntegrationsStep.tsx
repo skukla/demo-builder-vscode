@@ -81,6 +81,10 @@ export interface IntegrationsStepProps extends BaseStepProps {
     packages?: DemoPackage[];
     /** Available stacks/architectures (catalog data; drives mesh availability). */
     stacks?: Stack[];
+    /** A line above the results: why Continue is held (AB-78), from the Build step. */
+    notice?: React.ReactNode;
+    /** Catalog entries the Add Integration modal greys out, by id, with the reason. */
+    unavailable?: Readonly<Record<string, string>>;
 }
 
 /** Case-insensitive, whitespace-trimmed name comparison. */
@@ -168,6 +172,8 @@ export function IntegrationsStep({
     updateState,
     packages = EMPTY_PACKAGES,
     stacks = EMPTY_STACKS,
+    notice,
+    unavailable,
 }: IntegrationsStepProps): React.ReactElement {
     const builder = useProjectBuilder(state, updateState, { packages, stacks });
     const {
@@ -369,6 +375,7 @@ export function IntegrationsStep({
                 areaLabel="Integrations"
                 viewClassName={rows.length === 0 ? 'int-results int-results--empty' : 'int-results'}
             >
+                {notice}
                 {cards.length === 0 && <EmptyState onAdd={openAdd} />}
                 {cards.length > 0 && (
                     <DestinationLine
@@ -429,6 +436,7 @@ export function IntegrationsStep({
                 // here to keep a pair together. A list filtered to integrations
                 // hid the ERP, so naming it forked the integration under a new id.
                 catalog={integrationEntries}
+                unavailable={unavailable}
                 blankComponent={blankComponent}
                 reservedIds={reservedIds}
                 builder={builder}

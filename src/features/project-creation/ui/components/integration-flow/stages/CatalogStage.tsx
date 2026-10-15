@@ -50,6 +50,17 @@ function matchesQuery(entry: AppBuilderComponentCatalogEntry, query: string): bo
     return `${entry.name} ${entry.description}`.toLowerCase().includes(query);
 }
 
+/**
+ * The muted note under a tile. Why it cannot be added, when it cannot; otherwise the
+ * tool cost, disclosed BEFORE the choice binds: the add door auto-installs the
+ * declared Node via fnm, and a one-time ~30s install should never be a surprise. A
+ * note rather than part of the description, which the tile clips.
+ */
+function noteFor(entry: AppBuilderComponentCatalogEntry, unavailableReason: string | undefined): string | undefined {
+    if (unavailableReason) return unavailableReason;
+    return entry.nodeVersion ? `Installs Node ${entry.nodeVersion} on first use.` : undefined;
+}
+
 export interface CatalogStageProps {
     /**
      * Genuine pre-built entries ONLY — the host narrows the mixed catalog with
@@ -61,6 +72,12 @@ export interface CatalogStageProps {
      * assume someone else honoured — so it now names the predicate instead.
      */
     catalog: AppBuilderComponentCatalogEntry[];
+    /**
+     * Entries that cannot be added here, by id, with the reason: their tiles stay in
+     * the gallery, greyed out with the reason as their note, like the API Mesh tile
+     * once a project has its mesh.
+     */
+    unavailable?: Readonly<Record<string, string>>;
     /** The draft's picked entry id (marks its tile selected). */
     selectedId?: string;
     /** Pick an entry (single-select — replaces any previous pick). */
@@ -79,6 +96,7 @@ export interface CatalogStageProps {
  */
 export function CatalogStage({
     catalog,
+    unavailable,
     selectedId,
     onPick,
     label,
@@ -111,12 +129,8 @@ export function CatalogStage({
                             variant="tile"
                             name={entry.name}
                             description={entry.description}
-                            // Disclose tool cost BEFORE the choice binds: the add
-                            // door auto-installs the declared Node via fnm, and a
-                            // one-time ~30s install should never be a surprise. A
-                            // note rather than part of the description, which the
-                            // tile clips.
-                            note={entry.nodeVersion ? `Installs Node ${entry.nodeVersion} on first use.` : undefined}
+                            disabled={unavailable?.[entry.id] !== undefined}
+                            note={noteFor(entry, unavailable?.[entry.id])}
                             selected={entry.id === selectedId}
                             onSelect={() => onPick(entry.id)}
                         />

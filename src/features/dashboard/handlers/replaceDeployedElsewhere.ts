@@ -5,6 +5,10 @@
  * registry check, its workspace, its record — and stopping the add when that removal
  * does not finish, so nothing is half-replaced.
  *
+ * It also refuses an add that would put a second ERP integration on a Commerce
+ * instance another local project already runs one on (`erpIntegrationOnSameCommerce`,
+ * AB-78). That check runs first, so a refused add has removed nothing.
+ *
  * A handler-layer module (ADR-015): it loads the other projects through the state
  * manager and builds that other project's runner deps, which a service may not do.
  * The three doors into `addAppBuilderComponent` call it first: the dashboard add, the
@@ -15,7 +19,12 @@
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
+import {
+    erpIntegrationOnSameCommerce,
+    oneErpIntegrationPerInstance,
+} from '@/features/app-builder/services/erpIntegrationOnSameCommerce';
 import { pairWithSameErpElsewhere } from '@/features/app-builder/services/pairWithSameErpElsewhere';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -33,12 +42,21 @@ export interface ReplaceServices {
     commandManager: CommandExecutor;
 }
 
-/** Every other local project, loaded without moving the current-project pointer. */
-async function loadOtherProjects(context: HandlerContext, project: Project): Promise<Project[]> {
+/**
+ * Every local project but one, loaded without moving the current-project pointer.
+ *
+ * @param context - the handler context (state manager)
+ * @param excludePath - the project to leave out; undefined loads them all
+ * @returns the loaded projects
+ */
+export async function loadOtherProjects(
+    context: HandlerContext,
+    excludePath: string | undefined,
+): Promise<Project[]> {
     const summaries = await context.stateManager.getAllProjects();
     const loaded = await Promise.all(
         summaries
-            .filter((summary) => summary.path !== project.path)
+            .filter((summary) => summary.path !== excludePath)
             .map((summary) =>
                 context.stateManager.loadProjectFromPath(summary.path, undefined, {
                     persistAfterLoad: false,
@@ -54,14 +72,16 @@ function adobeProjectTitle(project: Project): string {
 }
 
 /**
- * Remove the same-named deployment from the other project that holds it, if any.
+ * Refuse a second ERP integration on this Commerce instance, then remove the same-named
+ * deployment from the other project that holds it, if any.
  *
  * @param context - the handler context (state manager, logger)
  * @param project - the project about to deploy `entry`
  * @param entry - the catalog entry being added
  * @param services - the auth service and command executor the handler resolved
  * @param report - where the removal's stages go
- * @returns why the add must stop, when the other project's removal did not finish
+ * @returns why the add must stop: the instance already has an ERP integration, or the
+ *   other project's removal did not finish
  */
 export async function replaceDeployedElsewhere(
     context: HandlerContext,
@@ -69,14 +89,26 @@ export async function replaceDeployedElsewhere(
     entry: AppBuilderComponentCatalogEntry,
     services: ReplaceServices,
     report: (message: string, subMessage?: string) => void,
-): Promise<{ error: string } | undefined> {
-    if (!project.adobe?.projectId) return undefined;
-    const others = await loadOtherProjects(context, project);
-    const hit = pairWithSameErpElsewhere(project, entry, getAppBuilderComponentCatalog(), others);
+): Promise<{ error: string; blocked?: boolean } | undefined> {
+    const catalog = getAppBuilderComponentCatalog();
+    const others = await loadOtherProjects(context, project.path);
+    const hit = project.adobe?.projectId
+        ? pairWithSameErpElsewhere(project, entry, catalog, others)
+        : undefined;
+    // The project about to be replaced no longer holds the instance once it is.
+    const holder = erpIntegrationOnSameCommerce(
+        project,
+        entry,
+        catalog,
+        others.filter((other) => other !== hit?.project),
+    );
+    // `blocked`: nothing ran, so the caller must not record a failed add.
+    if (holder) return { error: oneErpIntegrationPerInstance(holder), blocked: true };
     if (!hit) return undefined;
     const { project: other, componentId, name } = hit;
     const title = adobeProjectTitle(project);
-    report(OPERATION_STAGES.removing.label, `Replacing ${other.name}'s ${name} in ${title}`);
+    const otherName = getProjectDisplayName(other);
+    report(OPERATION_STAGES.removing.label, `Replacing ${otherName}'s ${name} in ${title}`);
     context.logger.info(
         `[AppBuilderComponent Add] ${title} already holds ${name} from ${other.name} (${other.path}); removing ${componentId} there first`,
     );
@@ -91,7 +123,7 @@ export async function replaceDeployedElsewhere(
     if (removed.success) return undefined;
     return {
         error:
-            `${other.name}'s ${name} is still deployed in ${title}, so ${entry.name} was not added. ` +
+            `${otherName}'s ${name} is still deployed in ${title}, so ${entry.name} was not added. ` +
             `${removed.error ?? 'Its removal did not finish.'}`,
     };
 }

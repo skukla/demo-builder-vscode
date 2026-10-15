@@ -56,6 +56,7 @@ jest.mock('fs/promises', () => ({
 
 jest.mock('@/features/project-creation/handlers/executorPreflight', () => ({
     handlePortConflicts: jest.fn().mockResolvedValue(undefined),
+    refuseSecondErpIntegration: jest.fn().mockResolvedValue(undefined),
     cleanupOrphanedDirectory: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -142,6 +143,7 @@ import { finishEditWithoutRebuild } from '@/features/project-creation/handlers/e
 import {
     cleanupOrphanedDirectory,
     handlePortConflicts,
+    refuseSecondErpIntegration,
 } from '@/features/project-creation/handlers/executorPreflight';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
@@ -250,6 +252,19 @@ describe('executeProjectCreation — an Edit finished without the rebuild (PL-75
         expect(handlePortConflicts).not.toHaveBeenCalled();
         expect(cloneAllComponents).not.toHaveBeenCalled();
         expect(finalizeProject).not.toHaveBeenCalled();
+    });
+
+    it('stops before anything is made when the instance already has an ERP integration (AB-78)', async () => {
+        (finishEditWithoutRebuild as jest.Mock).mockResolvedValue(false);
+        (refuseSecondErpIntegration as jest.Mock).mockRejectedValueOnce(new Error('held'));
+        const { context } = makeContext();
+        const cfg = config();
+
+        await expect(executeProjectCreation(context, cfg)).rejects.toThrow('held');
+
+        expect(refuseSecondErpIntegration).toHaveBeenCalledWith(context, cfg);
+        expect(cleanupOrphanedDirectory).not.toHaveBeenCalled();
+        expect(cloneAllComponents).not.toHaveBeenCalled();
     });
 
     it('runs the full path when the Edit needs the rebuild', async () => {

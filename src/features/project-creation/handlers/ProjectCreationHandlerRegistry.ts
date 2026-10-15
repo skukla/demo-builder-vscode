@@ -14,6 +14,7 @@ import { addIntegrationFlowHandlers } from './addIntegrationFlowHandlers';
 // (registry -> index -> registry) that worked on evaluation-order luck.
 import { checkGitHubApp } from './checkGitHubAppHandler';
 import { handleCreateProject } from './createHandler';
+import { handleCheckErpIntegrationHolder } from './erpIntegrationHolderHandler';
 import { handleValidate } from './validateHandler';
 import * as lifecycle from './wizardLifecycleHandlers';
 import * as components from '@/features/components/handlers/componentHandlers';
@@ -129,6 +130,9 @@ export const projectCreationHandlers = defineHandlers({
     // Whether the store view the SC picked shows guests any products (EDS-46).
     // ACCS only; answers `unknown` otherwise, which the pickers render as nothing.
     'check-store-view-products': handleCheckStoreViewProducts,
+    // Whether another local project already runs an ERP integration on this
+    // Commerce instance (AB-78): one instance runs one.
+    'check-erp-integration-holder': handleCheckErpIntegrationHolder,
 
     // EDS handlers - Storefront Setup (renamed from Preflight)
     'storefront-setup-start': handleStartStorefrontSetup,

@@ -33,7 +33,7 @@ import {
 } from './executorEditMode';
 import { populateEdsMetadata, syncEdsConfigToRemote, setupEdsContent } from './executorEdsPhase';
 import { executeMeshPhase, populateMeshComponentConfigs } from './executorMeshPhase';
-import { handlePortConflicts, cleanupOrphanedDirectory } from './executorPreflight';
+import { handlePortConflicts, cleanupOrphanedDirectory, refuseSecondErpIntegration } from './executorPreflight';
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
@@ -202,8 +202,8 @@ export async function executeProjectCreation(
 
     // An Edit that changed nothing, or only integrations, is not a rebuild (PL-75).
     if (await finishEditWithoutRebuild(context, typedConfig, progressTracker)) return;
-    // Safety check: Ensure port is available
-    await handlePortConflicts(context, typedConfig, progressTracker);
+    await handlePortConflicts(context, typedConfig, progressTracker); // the port is free
+    await refuseSecondErpIntegration(context, typedConfig); // one ERP integration per instance (AB-78)
 
     // Determine project path based on edit mode (editProjectPath presence signals edit)
     const isEditMode = Boolean(typedConfig.editProjectPath);

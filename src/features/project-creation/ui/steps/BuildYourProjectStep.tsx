@@ -29,12 +29,19 @@
 
 import React, { useMemo } from 'react';
 import { BuildYourProjectSummary } from '../components/BuildYourProjectSummary';
+import {
+    selectsErpIntegration,
+    useErpIntegrationHolder,
+    wizardHolderRequest,
+    type ErpIntegrationHolder,
+} from '../hooks/useErpIntegrationHolder';
 import { areaSubSteps } from './areaSubSteps';
 import { architectureLabel, buildSummaryGroups } from './buildSummary';
 import { buildYourProjectAreas } from './buildYourProjectAreas';
 import { CommerceStep } from './CommerceStep';
 import { IntegrationsStep } from './IntegrationsStep';
 import { StorefrontStep } from './StorefrontStep';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { useCanProceedAll } from '@/core/ui/hooks/useCanProceed';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -105,9 +112,18 @@ export function BuildYourProjectStep({
     // committed destination). Primitive boolean only (re-render-loop guard).
     const activeAreaId = activeArea.id;
     const driver = areaSubSteps(activeAreaId);
+    // One Commerce instance runs one ERP integration (AB-78). Asked once here, on
+    // Integrations: the area's Add Integration modal greys the ERP integration out,
+    // and one picked before the instance was known holds Continue until removed.
+    const erpHolder = useErpIntegrationHolder(wizardHolderRequest(state));
+    // The message, only when the ERP integration is selected: the reason Continue
+    // is held, said where it is held.
+    const heldMessage =
+        erpHolder && selectsErpIntegration(state.selectedAppBuilderComponents) ? erpHolder.message : undefined;
+    const heldByAnother = activeAreaId === 'integrations' && heldMessage !== undefined;
     const canLeaveArea = driver
         ? driver.isComplete(state, driver.active(state))
-        : activeArea.status === 'completed';
+        : activeArea.status === 'completed' && !heldByAnother;
     useCanProceedAll([canLeaveArea], setCanProceed);
 
     // Body props shared by every area. The active body gets a NO-OP setCanProceed
@@ -136,6 +152,8 @@ export function BuildYourProjectStep({
                 blockLibraryDefaults,
                 customBlockLibraryDefaults,
                 onArchitectureChange,
+                erpHolder,
+                erpNotice: heldMessage && <InlineNotice title={heldMessage} testId="erp-integration-holder" />,
             })}
             rightContent={
                 <div className="commerce-summary-content">
@@ -154,6 +172,10 @@ interface ActiveAreaContext {
     blockLibraryDefaults?: string[];
     customBlockLibraryDefaults?: CustomBlockLibrary[];
     onArchitectureChange?: (oldStackId: string, newStackId: string) => void;
+    /** The project already running an ERP integration on this instance, if any. */
+    erpHolder?: ErpIntegrationHolder;
+    /** Why Continue is held on Integrations, when it is. */
+    erpNotice?: React.ReactNode;
 }
 
 /** Render the body component for the active area id (existing components, reused). */
@@ -171,7 +193,13 @@ function renderActiveArea(areaId: string | undefined, ctx: ActiveAreaContext): R
             );
         case 'integrations':
             return (
-                <IntegrationsStep {...ctx.bodyProps} packages={ctx.packages} stacks={ctx.stacks} />
+                <IntegrationsStep
+                    {...ctx.bodyProps}
+                    packages={ctx.packages}
+                    stacks={ctx.stacks}
+                    notice={ctx.erpNotice}
+                    unavailable={ctx.erpHolder?.unavailable}
+                />
             );
         case 'commerce':
         default:

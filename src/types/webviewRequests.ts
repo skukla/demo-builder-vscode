@@ -54,6 +54,34 @@ export interface CheckStoreViewProductsResponse {
 }
 
 /**
+ * `check-erp-integration-holder` — does another local project already run an ERP
+ * integration on this Commerce instance? (AB-78) One Commerce instance runs one.
+ * The wizard sends its choices; the dashboard sends nothing, meaning the open
+ * project. Both grey out the ERP integration in the Add Integration modal on a yes.
+ */
+export interface CheckErpIntegrationHolderRequest {
+    /** The backend the wizard chose, e.g. `adobe-commerce-accs`. Omitted: the open project. */
+    backend?: string;
+    /** The values the wizard has for it; the instance's address is among them. */
+    componentConfigs?: ComponentConfigs;
+    /** The project being edited, never its own holder. */
+    editProjectPath?: string;
+}
+
+/** The answer. Always `success: true`; no holder (or no instance yet) is an empty `data`. */
+export interface CheckErpIntegrationHolderResponse {
+    success: true;
+    data: {
+        /** The project that runs it. */
+        holder?: string;
+        /** The one line saying so, and where to add the ERP instead. */
+        message?: string;
+        /** The short reason on the greyed-out tile. */
+        note?: string;
+    };
+}
+
+/**
  * `probe-shared-demo` — read a colleague's repository before "Add a demo package"
  * offers it (shareable-demo step 03). Owner and repo, already split by the
  * sender; the handler validates the charset.

@@ -43,7 +43,7 @@ interface DeploymentElsewhere {
 }
 
 /** Deployed in Runtime, or installed into Commerce (an upgrade leaves it installed). */
-function isDeployed(state: AppBuilderComponentState | undefined): boolean {
+export function isDeployed(state: AppBuilderComponentState | undefined): boolean {
     if (!state) return false;
     const installed = state.installation?.status;
     return state.status === 'deployed' || installed === 'installed' || installed === 'upgraded';

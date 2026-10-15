@@ -133,7 +133,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 76 handlers', () => {
+        it('should have exactly 95 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
@@ -301,7 +301,9 @@ describe('dashboardHandlers', () => {
             // prepareCommerceStore + undoCommerceStorePreparation + setCommerceConfig (91 → 94,
             // AB-77, 2026-10-10): "Prepare this store" on the integration's card and the guide's
             // per-step Apply, its undo, and the one settings write outside a catalog step.
-            expect(types).toHaveLength(94);
+            // +1 (AB-78, 2026-10-15): whether another project already runs an ERP
+            // integration on this Commerce instance, for the Add Integration modal.
+            expect(types).toHaveLength(95);
         });
 
         it('should have handlers as functions', () => {
