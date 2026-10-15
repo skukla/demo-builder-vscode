@@ -14,7 +14,7 @@
         "src/features/eds/commands/cleanupDaLiveSites.ts:77": "Palette command, reading the site list before anything is chosen. This is the load, not the work.",
         "src/features/eds/commands/manageGitHubRepos.ts:178": "The repository deletion itself, from the palette. One notification is the right surface.",
         "src/features/eds/commands/manageGitHubRepos.ts:89": "Palette command, loading the repository list before anything is chosen.",
-        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:258": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
+        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:271": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
         "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts:102": "Runs when a VS Code setting changes, so there is no screen and no agent \u2014 a notification is the only surface available.",
         "src/features/updates/commands/checkUpdates.ts:68": "The update check, from the palette and from activation. Updates narrate themselves through their own notifications end to end.",
         "src/features/updates/commands/integrationUpdatePicker.ts:84": "Integration pair updates picked from the Check for Updates list (AB-73): the same notification sequence as the other update categories, since the SC is not on a screen while it runs.",
@@ -22,7 +22,7 @@
         "src/features/updates/commands/updateExecutor.ts:248": "Component update during the same run, and part of the same sequence.",
         "src/features/updates/commands/updateExecutor.ts:344": "Adobe MCP update during the same run, and part of the same sequence.",
         "src/features/updates/services/extensionUpdater.ts:21": "Installs the new VSIX and reloads the window. Nothing of ours survives the reload, so a surface owned by our own state is the wrong place for it.",
-        "src/commands/commandManager.ts:459": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
+        "src/commands/commandManager.ts:457": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
     },
     "blockingDialogs": {
         "src/features/dashboard/handlers/appBuilderComponentPromote.ts:121": "Gates: create a PUBLIC GitHub repository and push the app to it? Only when no screen modal is asking; from the card the same yes is the modal's Create button.",

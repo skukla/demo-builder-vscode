@@ -3152,7 +3152,7 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 227
+            "line": 228
         },
         {
             "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
@@ -3165,7 +3165,7 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
-            "line": 251
+            "line": 252
         },
         {
             "module": "src/features/project-creation/ui/components/BrandGallery.tsx",
@@ -5060,6 +5060,7 @@
             "anchors": [
                 "}, []);"
             ],
+            "line": 80,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant replaces resetCreation's empty dependency array with a one-element array built fresh on every render, so useCallback hands back a NEW function each render instead of a stable one. The hook returns it to RepoSelectionInline, whose two mode switches (handleCreateNew and handleUseExisting) list it as a dependency and are re-created in turn - but all of them are used only as onPress handlers, never as a dependency of an effect and never compared. Identity churn on callbacks nothing memoises against changes no behaviour a test or a user can observe.",
@@ -5072,7 +5073,7 @@
             "anchors": [
                 "}, [updateEdsConfig, resetCreation]);"
             ],
-            "line": 183,
+            "line": 196,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying handleCreateNew's dependency array pins it to the first updateEdsConfig, and so to the edsConfig present at mount. Its patch cannot show that: handleCreateNew explicitly sets repoMode, repoName, selectedRepo, existingRepo, resetToTemplate, createdRepo and daLiveSite - every field a repository selection or a name keystroke can change between mount and the press. Whatever stale config it spreads is overwritten field for field by the patch itself, so no input distinguishes the stale closure from a fresh one. The sibling handler (handleUseExisting, the same anchor on a later line) does NOT overwrite repoName, which is why its mutant is killed by a test rather than recorded here.",
@@ -6612,7 +6613,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 232,
+            "line": 234,
             "mutants": 1,
             "category": "block",
             "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload.",
@@ -6625,7 +6626,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 353,
+            "line": 355,
             "mutants": 1,
             "category": "block",
             "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log.",
@@ -6971,7 +6972,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 234,
+            "line": 247,
             "mutants": 1,
             "category": "block",
             "reason": "The else arm of the pinned-namespace check contains one logger.debug naming the namespace being reused. Emptying it changes no value: orgName already holds the pinned org, and the next statement is the browser gate. That the org box is NOT opened when a namespace is pinned \u2014 the decision this else belongs to \u2014 is asserted by 'should not ask for an org when a namespace is already pinned', which counts the boxes opened.",
@@ -8059,7 +8060,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 823,
+            "line": 826,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8084,7 +8085,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 557,
+            "line": 560,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8097,7 +8098,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 930,
+            "line": 933,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
@@ -8419,7 +8420,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 612,
+            "line": 608,
             "mutants": 1,
             "category": "block",
             "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints.",
@@ -15856,7 +15857,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 179,
+            "line": 180,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (debugLogger.warn that the agent-trace file sink is unavailable). That the catch EXISTS is tested: extension-activationSeams 'degrades to channel-only when the storage path cannot be created' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15869,7 +15870,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 290,
+            "line": 291,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.error that seeding the default AI prompts failed). That the catch EXISTS is tested: extension-activationSeams 'does not abort activation when seeding fails' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15882,7 +15883,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 593,
+            "line": 596,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.warn that the global MCP entry could not be refreshed). That the catch EXISTS is tested: extension-mcpAndHome 'does not abort activation when the repair throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15895,7 +15896,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 869,
+            "line": 872,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the secret sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed secret sweep stop the sweeps after it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15908,7 +15909,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 884,
+            "line": 887,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the DA.live token move was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed DA.live token move take activation down' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15921,7 +15922,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 906,
+            "line": 909,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the publish-key renewal sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failing sweep take activation down with it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15934,7 +15935,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 980,
+            "line": 983,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the Node sweep was skipped). That the catch EXISTS is tested: extension-nodeSweep 'shows nothing, and does not fail activation, when the sweep throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
