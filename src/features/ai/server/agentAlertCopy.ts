@@ -392,8 +392,11 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     },
     republish: {
         action: 'Republish the storefront',
+        // The second sentence is EDS-44: after a store change the same call replaces the
+        // old store's product and category pages, which the consent has to say.
         consequence:
-            'Pushes the current configuration live. Visitors see the change within minutes.',
+            'Pushes the current configuration live. Visitors see the change within minutes. ' +
+            "If the store changed, its product and category pages are replaced with the new store's.",
         target: [],
         // Repeatable and recoverable, and it fires several times in one flow -
         // the case a grant exists for.

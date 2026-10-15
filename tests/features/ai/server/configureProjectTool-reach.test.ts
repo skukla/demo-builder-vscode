@@ -52,6 +52,37 @@ describe('configure_project — the storefront', () => {
         expect(out.note).toMatch(/republish/);
     });
 
+    // EDS-44: a store change makes the republish replace the product and category pages,
+    // and the agent is told so before it calls it.
+    it("says the republish will also replace the pages when the store changed", async () => {
+        getCurrentProject.mockResolvedValue(publishedEdsProject());
+
+        const out = await serve()({ storeScope: SCOPE });
+
+        expect(out.note).toBe(
+            'These settings are now marked config-changed: call republish to apply them to the storefront. ' +
+                "The store changed, so republish also replaces the storefront's product and category pages " +
+                "with the new store's.",
+        );
+    });
+
+    it('says nothing about pages when the storefront change is not a store change', async () => {
+        getCurrentProject.mockResolvedValue(
+            publishedEdsProject({
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'old', ACCS_CUSTOMER_GROUP: 'a' } },
+                edsStorefrontState: {
+                    envVars: { ACCS_STORE_VIEW_CODE: 'old', ACCS_CUSTOMER_GROUP: 'a' },
+                    lastPublished: '2026-10-01T00:00:00Z',
+                },
+            }),
+        );
+
+        const out = await serve()({ env: { 'adobe-commerce-accs': { ACCS_CUSTOMER_GROUP: 'b' } } });
+
+        expect(out.storefrontMarkedStale).toEqual(['ACCS_CUSTOMER_GROUP']);
+        expect(out.note).not.toMatch(/product and category pages/);
+    });
+
     it('leaves the storefront alone when nothing it reads changed', async () => {
         getCurrentProject.mockResolvedValue(publishedEdsProject());
 

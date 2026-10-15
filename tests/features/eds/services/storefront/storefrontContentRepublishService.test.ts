@@ -6,9 +6,6 @@
  * Asserts the success contract and that a step failure is caught and returned.
  */
 
-const mockPreviewCode = jest.fn(async () => undefined);
-const mockPurgeCacheAll = jest.fn(async () => undefined);
-const mockPublishAllSiteContent = jest.fn(async (..._args: unknown[]) => undefined);
 
 // One instance each, so the steps that receive them can be asserted by identity.
 const mockContentOps = { sourceOps: {} };
@@ -50,21 +47,16 @@ import {
     applyDaLiveOrgConfigSettings,
     configureDaLivePermissions,
 } from '@/features/eds/handlers/edsHelpers';
-import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { PREVIEW_CODE_APP_NOT_ON_REPO_ERROR } from '../../../../helpers/helixAdminFixtures';
+import { fakeHelix, helixCalls } from './storefrontContentRepublishService.testUtils';
 
-/**
- * Helix arrives through `republishStorefrontContent`'s own params rather than by
- * mocking the module (ADR-016's mock-wall conversion). The three methods below are
- * everything this pipeline calls on it, so the fake states the real surface instead
- * of intercepting the constructor.
- */
-const fakeHelix = {
+// Helix arrives through the pipeline's own params; the shared fake states its surface.
+const {
     previewCode: mockPreviewCode,
     purgeCacheAll: mockPurgeCacheAll,
     publishAllSiteContent: mockPublishAllSiteContent,
-} as unknown as HelixService;
+} = helixCalls;
 
 const logger = createMockLogger();
 

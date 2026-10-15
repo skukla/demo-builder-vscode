@@ -148,6 +148,26 @@
             },
             "declinedAt": {
               "type": "string"
+            },
+            "catalogPagesPending": {
+              "type": "object",
+              "properties": {
+                "fromWebsiteCode": {
+                  "type": "string"
+                },
+                "fromStoreCode": {
+                  "type": "string"
+                },
+                "fromStoreViewCode": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fromWebsiteCode",
+                "fromStoreCode",
+                "fromStoreViewCode"
+              ],
+              "description": "Set when a published config.json changed the store (website, store or store view code) and the storefront's product and category pages are still the previous store's (EDS-44). Names that previous store. Cleared once a republish has replaced the pages (`storeScopePages.ts`)."
             }
           },
           "required": [

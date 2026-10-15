@@ -22,18 +22,15 @@
  */
 
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
-import { listDaLivePages } from '../daLive/daLivePageWalk';
 import type { DaLiveSourceOperations } from '../daLive/daLiveSourceOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import { removeProductPages, type ProductPageHelix } from '../storefront/productPageRemoval';
-import { otherProjectsPublishingTo } from '../storefront/sharedRepoProjects';
+import { productPageRemovalDepsFor } from '../storefront/projectProductPages';
 import type { EdsResetParams } from './edsResetParams';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
-
-const PRODUCTS_FOLDER = '/products';
 
 /** The clients reset already holds, narrowed to what this step uses. */
 interface ResetClients {
@@ -65,15 +62,14 @@ export async function takeOutProductPages(
     report(8, 'Removing the old product pages');
     const result = await removeProductPages(
         { repoOwner, repoName },
-        {
+        productPageRemovalDepsFor({
+            projectPath: project.path,
+            target: { repoOwner, repoName, daLiveOrg, daLiveSite },
+            daLive: clients.daLiveContentOps,
             helix: helixSeam ?? new HelixService(logger, clients.githubTokenService, clients.tokenProvider),
-            // The DA.live documents under /products, sub-folders included.
-            listAuthoredProductPages: () =>
-                listDaLivePages(clients.daLiveContentOps, daLiveOrg, daLiveSite, PRODUCTS_FOLDER),
-            otherProjectsOnRepo: () =>
-                otherProjectsPublishingTo(stateManager, `${repoOwner}/${repoName}`, project.path),
+            stateManager,
             logger,
-        },
+        }),
     );
     if (result.status === 'nothing') return undefined;
     logger.info(`[EdsReset] Product pages: ${result.summary}`);

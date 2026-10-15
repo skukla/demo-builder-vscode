@@ -419,7 +419,7 @@ describe('spine choke-points', () => {
         expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
-    it('category PAGES: one step writes and removes them, from the three storefront flows only', () => {
+    it('category PAGES: one step writes and removes them, from the storefront flows only', () => {
         // Audited 2026-10-05 (EDS-24 redesign, no button). The primitive is the service
         // pair that writes and removes the category pages and the nav switch; only the
         // step calls it, because the step is what keeps the record on the project.
@@ -429,6 +429,12 @@ describe('spine choke-points', () => {
         // reset's removal first), reset (dashboard Reset and
         // reset_project, via executeEdsReset), and republish (dashboard Republish and
         // sync_content, via republishStorefrontContent).
+        //
+        // EDS-44 (2026-10-15) added a fourth: after a store change, the store-change
+        // service (`storeScopePages`) swaps the old store's pages for the new store's
+        // through `replaceCatalogMenuStep` — reset's removal then build, kept in the step
+        // file so the record still has one keeper. That service's own doors are pinned
+        // in 'STORE CHANGE pages' below.
         const primitive = /\b(applyCatalogMenu|removeCatalogMenu)\(/;
         expect(filesTouchingPrimitive(primitive)).toStrictEqual([
             'features/eds/services/catalogMenu/catalogMenuService.ts',
@@ -438,15 +444,18 @@ describe('spine choke-points', () => {
         const doors = [
             'features/eds/services/catalogMenu/catalogMenuStep.ts',
             'features/eds/services/reset/edsResetCatalogMenu.ts',
+            'features/eds/services/storefront/storeScopePages.ts',
             'features/eds/services/storefront/storefrontContentRepublishService.ts',
             'features/project-creation/services/catalogMenuPhase.ts',
         ];
-        const stepHits = filesTouchingPrimitive(/\b(applyCatalogMenuStep|removeCatalogMenuStep)\(/);
+        const stepHits = filesTouchingPrimitive(
+            /\b(applyCatalogMenuStep|removeCatalogMenuStep|replaceCatalogMenuStep)\(/,
+        );
         expect(stepHits).toEqual(expect.arrayContaining(doors));
         expect(stepHits.filter((f) => !doors.includes(f))).toStrictEqual([]);
     });
 
-    it('product PAGE removal: one implementation, reached from teardown and from reset only', () => {
+    it('product PAGE removal: one implementation, reached from teardown, reset and a store change only', () => {
         // Audited 2026-10-05 (EDS-26). Product pages are published through the overlay
         // and have no DA.live document, so nothing that walks DA.live ever removed them.
         // The primitive is `removeProductPages` — the one place that decides WHICH
@@ -461,11 +470,18 @@ describe('spine choke-points', () => {
         // delete content alone and leave every page live). Reset has its own door
         // (edsResetProductPages, called once by executeEdsReset before the content
         // pipeline pre-warms).
+        //
+        // EDS-44 (2026-10-15): a store change has its own door, the store-change
+        // service (`storeScopePages`), which removes the OLD store's product pages before
+        // publishing the new store's — Reset's order, without the rest of Reset. It
+        // builds the removal's deps with reset (`projectProductPages`), so the two read
+        // the authored pages and the other local projects the same way.
         const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
 
         expect(sorted(/\bremoveProductPages\(/)).toStrictEqual([
             'features/eds/services/reset/edsResetProductPages.ts',
             'features/eds/services/storefront/productPageRemoval.ts',
+            'features/eds/services/storefront/storeScopePages.ts',
             'features/eds/services/storefront/storefrontTeardown.ts',
         ]);
         expect(sorted(/\btearDownStorefront\(/)).toStrictEqual([
@@ -478,6 +494,24 @@ describe('spine choke-points', () => {
         expect(sorted(/\btakeOutProductPages\(/)).toStrictEqual([
             'features/eds/services/reset/edsResetProductPages.ts',
             'features/eds/services/reset/edsResetService.ts',
+        ]);
+    });
+
+    it('STORE CHANGE pages: one service, three doors (EDS-44)', () => {
+        // Audited 2026-10-15. After a store change the old store's product and category
+        // pages are replaced by ONE service, `replaceStoreScopePages`. Its doors:
+        // Configure's Republish (configureStorefrontRepublish), the agent's `republish`
+        // (storefrontTools), and the dashboard's Republish / `sync_content`
+        // (republishStorefrontContent). Each calls it only when the marker is set and its
+        // own config publish reached the CDN. A fourth door, or a door that rebuilds the
+        // pages by itself, fails here.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\breplaceStoreScopePages\(/)).toStrictEqual([
+            'features/ai/server/storefrontTools.ts',
+            'features/dashboard/commands/configureStorefrontRepublish.ts',
+            'features/eds/services/storefront/storeScopePages.ts',
+            'features/eds/services/storefront/storefrontContentRepublishService.ts',
         ]);
     });
 

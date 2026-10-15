@@ -8,15 +8,18 @@
  * step settled on in its 2026-08-22 loading-message audit, so the block does not
  * reflow as steps come and go.
  *
- * Every stage the runner and its handlers report is named here and used by reference,
- * so a stage and its expectation cannot drift apart. `operationStages.test.ts` fails
- * when a call site reports a literal instead.
+ * Every stage the runner and its handlers report is named here (the storefront's in
+ * `storefrontStages.ts`, spread in) and used by reference, so a stage and its
+ * expectation cannot drift apart. `operationStages.test.ts` fails when a call site
+ * reports a literal instead.
  *
  * THE DURATIONS ARE FIRST ESTIMATES, from single measurements in the step timings
  * `timedSteps` writes to Debug Logs (2026-09-18: subscribing 30s, 43s cold in the
  * 2026-08-27 audit; `aio app deploy` 54s; Runtime credentials 4s; requirements 4s).
  * Correct them from those logs as more runs are read.
  */
+
+import { STOREFRONT_STAGES } from './storefrontStages';
 
 export interface OperationStage {
     /** What is happening, as the SC reads it. */
@@ -185,13 +188,8 @@ export const OPERATION_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'Its Runtime namespace, then its Commerce Admin registration',
     },
-    // A mesh redeploy that changed its address left the storefront on the old one
-    // until someone republished by hand (2026-09-21).
-    republishingStorefront: {
-        label: 'Republishing storefront',
-        expectation: 'Usually under a minute',
-        detail: 'So it reads the mesh at its current address',
-    },
+    // The storefront's stages (republish, and the pages after a store change).
+    ...STOREFRONT_STAGES,
     removingWorkspace: {
         label: 'Removing the workspace',
         expectation: 'Up to a couple of minutes',

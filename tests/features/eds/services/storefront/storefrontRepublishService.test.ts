@@ -44,30 +44,8 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 
 import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { edsProject } from './storefrontRepublishService.testUtils';
 const logger = createMockLogger();
-
-/** A project the extractor accepts: repo, DA.live pair and a component path. */
-function edsProject(metadata: Record<string, unknown> = {}) {
-    return createMockProject({
-        name: 'p',
-        path: '/p',
-        componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                type: 'frontend',
-                status: 'ready',
-                path: '/p/storefront',
-                metadata: {
-                    githubRepo: 'me/shop',
-                    daLiveOrg: 'acme',
-                    daLiveSite: 'shop',
-                    ...metadata,
-                },
-            },
-        },
-    });
-}
 
 function run(over: Record<string, unknown> = {}, project = edsProject()) {
     const persist = jest.fn(async () => {});

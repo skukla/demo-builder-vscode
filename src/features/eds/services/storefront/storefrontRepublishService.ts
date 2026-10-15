@@ -14,6 +14,7 @@ import { generateProjectConfigJson } from '../configGenerator';
 import { syncConfigToRemote } from '../configSyncService';
 import type { PhaseProgressCallback } from '../types';
 import { updateStorefrontState } from './storefrontStalenessDetector';
+import { catalogPagesPendingAfter } from './storeScopeChange';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -171,6 +172,34 @@ export function extractRepublishParams(project: Project):
 // ==========================================================
 
 /**
+ * Record what the CDN now serves, and whether the store changed with it (EDS-44).
+ *
+ * The codes published before are read BEFORE `updateStorefrontState` replaces them,
+ * which is why the comparison lives here and not in each caller: every config publish
+ * — Configure, the dashboard, the agent, the mesh deploy's own republish — passes
+ * through this function. A store change leaves the storefront `stale` until a
+ * republish has replaced the product and category pages (`storeScopePages.ts`).
+ */
+function recordPublished(
+    project: Project,
+    publishedConfigs: Record<string, unknown>,
+    logger: Logger,
+): void {
+    const previous = project.edsStorefrontState;
+    updateStorefrontState(project, publishedConfigs);
+    const state = project.edsStorefrontState;
+    const pending = state ? catalogPagesPendingAfter(previous, state.envVars) : undefined;
+    if (state && pending) {
+        state.catalogPagesPending = pending;
+        logger.info(
+            `[StorefrontRepublish] The store changed (was ${pending.fromWebsiteCode || 'unset'}); ` +
+                'its product and category pages are replaced on the next republish',
+        );
+    }
+    project.edsStorefrontStatusSummary = pending ? 'stale' : 'published';
+}
+
+/**
  * Republish storefront config.json
  *
  * This function:
@@ -299,8 +328,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
             );
         } else {
             logger.debug('[StorefrontRepublish] Updating storefront state');
-            updateStorefrontState(project, publishedConfigs);
-            project.edsStorefrontStatusSummary = 'published';
+            recordPublished(project, publishedConfigs, logger);
             logger.info('[StorefrontRepublish] Storefront config republished successfully');
         }
         // To DISK, not just memory — see `persist` on RepublishParams.

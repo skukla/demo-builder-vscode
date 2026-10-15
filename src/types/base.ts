@@ -172,6 +172,17 @@ export interface Project {
         lastPublished: string; // ISO date string
         userDeclinedUpdate?: boolean; // User clicked "Later" on republish prompt
         declinedAt?: string; // ISO date string when user declined
+        /**
+         * Set when a published config.json changed the store (website, store or store
+         * view code) and the storefront's product and category pages are still the
+         * previous store's (EDS-44). Names that previous store. Cleared once a
+         * republish has replaced the pages (`storeScopePages.ts`).
+         */
+        catalogPagesPending?: {
+            fromWebsiteCode: string;
+            fromStoreCode: string;
+            fromStoreViewCode: string;
+        };
     };
     // EDS Storefront status summary for card grid display
     edsStorefrontStatusSummary?: 'published' | 'stale' | 'update-declined' | 'not-published';

@@ -4,8 +4,9 @@
  * There is no button. Storefront setup (project creation), reset and republish each run
  * {@link applyCatalogMenuStep}; reset first runs {@link removeCatalogMenuStep} with the
  * stored record, so what it wrote comes out before the content is re-copied and goes back
- * in after. The three call sites are the only callers — `tests/templates/
- * spine-chokepoints.test.ts` pins them.
+ * in after. After a store change (EDS-44), {@link replaceCatalogMenuStep} runs those two
+ * in that order for the store-change service (`storefront/storeScopePages.ts`). These are
+ * the only callers — `tests/templates/spine-chokepoints.test.ts` pins them.
  *
  * - The step acts only when the storefront's OWN repository has `blocks/catalog-menu/`
  *   (the Demo Builder Blocks library). When the block has gone, it takes out what it
@@ -55,6 +56,43 @@ export interface CatalogMenuSite {
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
+/** What one run of a step did: its sentence, and the counts a store change reports. */
+interface StepOutcome {
+    summary: string;
+    /** False when a page or the nav could not be changed, or the step could not run. */
+    ok: boolean;
+    /** Category pages written and published. */
+    written: number;
+    /** Pages Demo Builder wrote that the SC has edited since, so were left alone. */
+    edited: string[];
+}
+
+const failedStep = (summary: string): StepOutcome => ({ summary, ok: false, written: 0, edited: [] });
+
+function outcomeOf(
+    summary: string,
+    facts: { failed: unknown[]; nav: string; skipped: Array<{ path: string; reason: string }> },
+    written: number,
+): StepOutcome {
+    return {
+        summary,
+        ok: facts.failed.length === 0 && facts.nav !== 'failed',
+        written,
+        edited: facts.skipped.filter((s) => s.reason === 'edited').map((s) => s.path),
+    };
+}
+
+async function removal(project: Project, pages: StorefrontPages): Promise<StepOutcome | undefined> {
+    if (isEmptyRecord(readCatalogMenuRecord(project))) return undefined;
+    try {
+        const { record, ...facts } = await removeCatalogMenu({ pages }, readCatalogMenuRecord(project));
+        writeCatalogMenuRecord(project, record);
+        return outcomeOf(describeRemoval(facts), facts, 0);
+    } catch (error) {
+        return failedStep(`The category pages Demo Builder wrote could not be removed: ${messageOf(error)}.`);
+    }
+}
+
 /**
  * Take out the pages and the switch Demo Builder recorded writing — and nothing else.
  *
@@ -66,17 +104,10 @@ export async function removeCatalogMenuStep(
     project: Project,
     pages: StorefrontPages,
 ): Promise<string | undefined> {
-    if (isEmptyRecord(readCatalogMenuRecord(project))) return undefined;
-    try {
-        const { record, ...facts } = await removeCatalogMenu({ pages }, readCatalogMenuRecord(project));
-        writeCatalogMenuRecord(project, record);
-        return describeRemoval(facts);
-    } catch (error) {
-        return `The category pages Demo Builder wrote could not be removed: ${messageOf(error)}.`;
-    }
+    return (await removal(project, pages))?.summary;
 }
 
-async function applyWithBlock(project: Project, site: CatalogMenuSite): Promise<string> {
+async function applyWithBlock(project: Project, site: CatalogMenuSite): Promise<StepOutcome> {
     let report;
     try {
         report = await applyCatalogMenu(
@@ -86,11 +117,38 @@ async function applyWithBlock(project: Project, site: CatalogMenuSite): Promise<
     } catch (error) {
         // `applyCatalogMenu` throws only while reading — the category tree, or the
         // storefront's existing pages — before any write.
-        return `Category pages were not written: ${messageOf(error)}. Republish the storefront to try again.`;
+        return failedStep(
+            `Category pages were not written: ${messageOf(error)}. Republish the storefront to try again.`,
+        );
     }
     const { record, ...facts } = report;
     writeCatalogMenuRecord(project, record);
-    return describeBuild(facts);
+    return outcomeOf(describeBuild(facts), facts, facts.written.length);
+}
+
+async function build(project: Project, site: CatalogMenuSite): Promise<StepOutcome | undefined> {
+    let hasBlock: boolean;
+    try {
+        hasBlock = await site.hasBlock();
+    } catch (error) {
+        return failedStep(
+            `Couldn't check the storefront for the catalog menu block (${messageOf(error)}), so its category pages were not changed.`,
+        );
+    }
+    if (hasBlock) {
+        try {
+            return await applyWithBlock(project, site);
+        } catch (error) {
+            return failedStep(`Category pages were not written: ${messageOf(error)}.`);
+        }
+    }
+    const removed = await removal(project, site.pages);
+    return removed === undefined
+        ? undefined
+        : {
+              ...removed,
+              summary: `The storefront no longer has the catalog menu block, so Demo Builder took its menu out. ${removed.summary}`,
+          };
 }
 
 /**
@@ -106,23 +164,44 @@ export async function applyCatalogMenuStep(
     project: Project,
     site: CatalogMenuSite,
 ): Promise<string | undefined> {
-    let hasBlock: boolean;
-    try {
-        hasBlock = await site.hasBlock();
-    } catch (error) {
-        return `Couldn't check the storefront for the catalog menu block (${messageOf(error)}), so its category pages were not changed.`;
-    }
-    if (hasBlock) {
-        try {
-            return await applyWithBlock(project, site);
-        } catch (error) {
-            return `Category pages were not written: ${messageOf(error)}.`;
-        }
-    }
-    const removed = await removeCatalogMenuStep(project, site.pages);
-    return removed === undefined
-        ? undefined
-        : `The storefront no longer has the catalog menu block, so Demo Builder took its menu out. ${removed}`;
+    return (await build(project, site))?.summary;
+}
+
+/** What replacing the category pages after a store change did (EDS-44). */
+export interface CatalogMenuReplacement {
+    /** Category pages written and published for the store now live. */
+    written: number;
+    /** Web paths of pages Demo Builder wrote for the old store that the SC edited; kept. */
+    kept: string[];
+    /** Both steps' sentences, for the log; undefined when there was nothing to say. */
+    summary?: string;
+    /** The sentence of a step that could not finish, for the SC. */
+    problem?: string;
+}
+
+/**
+ * After a store change: take the old store's category pages out, then write the new
+ * store's — reset's two steps in reset's order. A page the SC edited stays (the record's
+ * hash guard) and comes back in `kept`. Never throws.
+ *
+ * @param project - the project, whose record is read and then replaced in place
+ * @param site - the storefront, reading the categories of the store now live
+ * @returns the counts and sentences the store-change summary needs
+ */
+export async function replaceCatalogMenuStep(
+    project: Project,
+    site: CatalogMenuSite,
+): Promise<CatalogMenuReplacement> {
+    const removed = await removal(project, site.pages);
+    const built = await build(project, site);
+    const outcomes = [removed, built].filter((o): o is StepOutcome => o !== undefined);
+    const join = (sentences: string[]): string | undefined => sentences.join(' ') || undefined;
+    return {
+        written: outcomes.reduce((sum, o) => sum + o.written, 0),
+        kept: [...new Set(outcomes.flatMap((o) => o.edited))],
+        summary: join(outcomes.map((o) => o.summary)),
+        problem: join(outcomes.filter((o) => !o.ok).map((o) => o.summary)),
+    };
 }
 
 /** A category, as the SC knows it, and the address its page goes at. */

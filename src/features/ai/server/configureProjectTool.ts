@@ -60,6 +60,7 @@ import {
 import componentsConfig from '@/features/components/config/components.json';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { stageSettingsChange } from '@/features/dashboard/services/projectSettingsChange';
+import { isStoreScopeChange } from '@/features/eds/services/storefront/storeScopeChange';
 import type { MeshChanges } from '@/features/mesh/services/types';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
 import type { Project } from '@/types/base';
@@ -257,14 +258,20 @@ async function regenerateEnvFiles(ctx: HandlerContext, project: Project): Promis
     }
 }
 
+/** What `republish` will also do when the change moved the storefront to another store (EDS-44). */
+const STORE_CHANGE_NOTE =
+    "The store changed, so republish also replaces the storefront's product and category pages with the new store's.";
+
 /** What the agent must do next for the change to reach what is live. */
-function nextSteps(mesh: boolean, storefront: boolean): { note?: string } {
+function nextSteps(mesh: boolean, storefrontVars: string[]): { note?: string } {
+    const storefront = storefrontVars.length > 0;
     const steps = [
         mesh ? 'call deploy_mesh to redeploy the mesh' : '',
         storefront ? 'call republish to apply them to the storefront' : '',
     ].filter(Boolean);
     if (steps.length === 0) return {};
-    return { note: `These settings are now marked config-changed: ${steps.join(', then ')}.` };
+    const note = `These settings are now marked config-changed: ${steps.join(', then ')}.`;
+    return { note: isStoreScopeChange(storefrontVars) ? `${note} ${STORE_CHANGE_NOTE}` : note };
 }
 
 export function registerConfigureProjectTool(
@@ -393,7 +400,7 @@ export function registerConfigureProjectTool(
                 stillUnset: stillUnset(project),
                 ...(meshMarkedStale.length ? { meshMarkedStale } : {}),
                 ...(storefrontMarkedStale.length ? { storefrontMarkedStale } : {}),
-                ...nextSteps(meshMarkedStale.length > 0, storefrontMarkedStale.length > 0),
+                ...nextSteps(meshMarkedStale.length > 0, storefrontMarkedStale),
                 ...(envNotWritten ? { envFilesNotWritten: envNotWritten } : {}),
             });
         },

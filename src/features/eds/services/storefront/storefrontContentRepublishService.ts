@@ -6,6 +6,10 @@
  * page, the category pages and catalog menu, and the pre-warmed product pages. The
  * dashboard's Republish button and the agent's `sync_content` tool both call this.
  *
+ * After a store change (EDS-44: `edsStorefrontState.catalogPagesPending`), the
+ * category and product pages are not refreshed but REPLACED with the new store's, by
+ * the one store-change service (`storeScopePages.ts`).
+ *
  * @module features/eds/services/storefront/storefrontContentRepublishService
  */
 
@@ -26,13 +30,18 @@ import { prewarmCatalog } from '../catalogPrewarmService';
 import { verifyConfigOnCdn } from '../configSyncService';
 import type { DaLiveAuthService } from '../daLive/daLiveAuthService';
 import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
+import type { TokenProvider } from '../daLive/daLiveOrgOperations';
 import { createDaLiveServiceTokenProvider } from '../daLive/daLiveTokenProviders';
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import { republishStorefrontConfig } from './storefrontRepublishService';
+import { hasCatalogPagesPending } from './storeScopeChange';
+import { replaceStoreScopePages, reportAsLines, type StoreScopeReport } from './storeScopePages';
+import { createStoreScopePagesDeps } from './storeScopePagesDeps';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 
 /** Parameters for the full storefront content republish pipeline. */
 export interface RepublishContentParams {
@@ -59,6 +68,14 @@ export interface RepublishContentParams {
     /** Optional per-step progress callback. */
     onProgress?: (message: string) => void;
     /**
+     * Where the store-change steps report their STAGES (EDS-44), when the caller shows
+     * stages — the dashboard's progress modal. Without it they reach `onProgress` as
+     * plain lines.
+     */
+    onStage?: StoreScopeReport;
+    /** Where the other local projects are read from: the shared-repository check (EDS-44). */
+    stateManager: StateManager;
+    /**
      * Helix seam. Defaults to a service built from this call's logger and
      * credentials; production never passes it.
      *
@@ -79,6 +96,106 @@ export interface RepublishContentResult {
     cdnVerified?: boolean;
     /** What happened to the category pages and the catalog menu (EDS-24), in SC words. */
     catalogMenu?: string;
+    /** After a store change: the one sentence on the new store's pages (EDS-44). */
+    storePages?: string;
+}
+
+/** The clients this pipeline built, which the catalog's page steps reuse. */
+interface PageClients {
+    helixService: HelixService;
+    daLiveContentOps: DaLiveContentOperations;
+    daLiveTokenProvider: TokenProvider;
+}
+
+const targetOf = (params: RepublishContentParams) => ({
+    repoOwner: params.repoOwner,
+    repoName: params.repoName,
+    daLiveOrg: params.daLiveOrg,
+    daLiveSite: params.daLiveSite,
+});
+
+/**
+ * Category pages and the catalog menu (EDS-24) — the step storefront setup and reset
+ * run — then the product pages. A category added since gets its page; ours are
+ * refreshed only if unedited; every other page is left alone. Never throws.
+ */
+async function refreshCatalogPages(
+    params: RepublishContentParams,
+    clients: PageClients,
+    report: (message: string) => void,
+): Promise<{ catalogMenu?: string }> {
+    const { project, logger, persist, daLiveOrg, daLiveSite } = params;
+    const catalogMenu = await applyCatalogMenuStep(
+        project,
+        createCatalogMenuSite({
+            project,
+            target: targetOf(params),
+            daLive: clients.daLiveContentOps.sourceOps,
+            helix: clients.helixService,
+            github: params.githubFiles,
+        }),
+    );
+    if (catalogMenu !== undefined) {
+        report(catalogMenu);
+        logger.info(`[Republish] Catalog menu: ${catalogMenu}`);
+        await persist(project);
+    }
+
+    // Pre-warm the catalog's PDP pages (self-gating: ACCS + BYOM only; non-fatal).
+    // Decided 2026-08-23: Republish is the lightweight retry for a prewarm that failed
+    // at creation — e.g. a hibernated Live Search index since reactivated via the
+    // "Reactivate Live Search" support request — and it also refreshes
+    // previously-prewarmed PDPs, which the content publish never reaches (they are
+    // synthetic pages, not DA content). Reset remains the heavyweight path.
+    try {
+        const overlayUrl = resolveByomOverlayConfig(undefined, daLiveOrg, daLiveSite);
+        if (overlayUrl) {
+            report('Loading the product pages so they are quick for visitors');
+            const prewarm = await prewarmCatalog(
+                project,
+                overlayUrl,
+                daLiveOrg,
+                daLiveSite,
+                clients.helixService,
+                logger,
+                (p) => report(p.message),
+            );
+            if (!prewarm.skipped) {
+                logger.info(
+                    `[Republish] Catalog pre-warming: ${prewarm.succeeded}/${prewarm.attempted} SKUs pre-published`,
+                );
+            }
+        }
+    } catch (prewarmError) {
+        logger.warn(
+            `[Republish] Catalog pre-warming failed (non-fatal): ${(prewarmError as Error).message}`,
+        );
+    }
+    return catalogMenu === undefined ? {} : { catalogMenu };
+}
+
+/** After a store change (EDS-44): the old store's pages out, the new store's in. */
+async function replaceStorePages(
+    params: RepublishContentParams,
+    clients: PageClients,
+    report: (message: string) => void,
+): Promise<string> {
+    const { project, logger } = params;
+    const deps = createStoreScopePagesDeps({
+        project,
+        target: targetOf(params),
+        daLiveTokenProvider: clients.daLiveTokenProvider,
+        githubFiles: params.githubFiles,
+        stateManager: params.stateManager,
+        persist: params.persist,
+        logger,
+        helixService: clients.helixService,
+        daLiveSourceOps: clients.daLiveContentOps.sourceOps,
+    });
+    const onStage = params.onStage ?? reportAsLines(report);
+    const { sentence } = await replaceStoreScopePages(project, deps, onStage);
+    report(sentence);
+    return sentence;
 }
 
 /**
@@ -168,61 +285,20 @@ export async function republishStorefrontContent(
             (info) => report(info.message),
         );
 
-        // Step 4b: Category pages and the catalog menu (EDS-24) — the step storefront
-        // setup and reset run. A category added since gets its page; ours are
-        // refreshed only if unedited; every other page is left alone. Never throws.
-        const catalogMenu = await applyCatalogMenuStep(
-            project,
-            createCatalogMenuSite({
-                project,
-                target: { repoOwner, repoName, daLiveOrg, daLiveSite },
-                daLive: daLiveContentOps.sourceOps,
-                helix: helixService,
-                github: params.githubFiles,
-            }),
-        );
-        if (catalogMenu !== undefined) {
-            report(catalogMenu);
-            logger.info(`[Republish] Catalog menu: ${catalogMenu}`);
-            await persist(project);
-        }
-
-        // Step 5: Pre-warm the catalog's PDP pages (self-gating: ACCS + BYOM
-        // only; non-fatal). Decided 2026-08-23: Republish is the lightweight
-        // retry for a prewarm that failed at creation — e.g. a hibernated
-        // Live Search index since reactivated via the "Reactivate Live
-        // Search" support request — and it also refreshes previously-prewarmed
-        // PDPs, which Step 4's content publish never reaches (they are
-        // synthetic pages, not DA content). Reset remains the heavyweight path.
-        try {
-            const overlayUrl = resolveByomOverlayConfig(undefined, daLiveOrg, daLiveSite);
-            if (overlayUrl) {
-                report('Loading the product pages so they are quick for visitors');
-                const prewarm = await prewarmCatalog(
-                    project,
-                    overlayUrl,
-                    daLiveOrg,
-                    daLiveSite,
-                    helixService,
-                    logger,
-                    (p) => report(p.message),
-                );
-                if (!prewarm.skipped) {
-                    logger.info(
-                        `[Republish] Catalog pre-warming: ${prewarm.succeeded}/${prewarm.attempted} SKUs pre-published`,
-                    );
-                }
-            }
-        } catch (prewarmError) {
-            logger.warn(
-                `[Republish] Catalog pre-warming failed (non-fatal): ${(prewarmError as Error).message}`,
-            );
-        }
+        // Steps 4b-5: the catalog's pages. After a store change whose config reached the
+        // CDN, the old store's product and category pages are replaced (EDS-44);
+        // otherwise they are refreshed as before.
+        const clients: PageClients = { helixService, daLiveContentOps, daLiveTokenProvider };
+        const storeChanged =
+            hasCatalogPagesPending(project) && configResult.success && !configResult.cdnError;
+        const sentences = storeChanged
+            ? { storePages: await replaceStorePages(params, clients, report) }
+            : await refreshCatalogPages(params, clients, report);
 
         // Step 6: Verify config.json on the CDN (best-effort).
         report('Verifying CDN');
         const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, logger);
-        return { success: true, cdnVerified, ...(catalogMenu === undefined ? {} : { catalogMenu }) };
+        return { success: true, cdnVerified, ...sentences };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logger.error(

@@ -204,7 +204,10 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
                     daLiveAuthService,
                     githubTokenService,
                     githubFiles,
+                    stateManager: context.stateManager,
                     onProgress: (message: string) => report('Republishing the content', message),
+                    // After a store change, the page steps are stages of their own (EDS-44).
+                    onStage: report,
                 });
 
                 if (!contentResult.success) {
@@ -223,7 +226,10 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
                 // was handed at init. `handleRenameProject` refreshes for the same
                 // reason — the title also comes from that payload.
                 await handleRequestStatus(context);
-                return { success: true };
+                // After a store change, the run ends with what the new store got (EDS-44).
+                return contentResult.storePages
+                    ? { success: true, note: contentResult.storePages }
+                    : { success: true };
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 context.logger.error('[Dashboard] Republish failed', error as Error);

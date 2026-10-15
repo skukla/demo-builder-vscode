@@ -64,6 +64,33 @@ Republish asks for the DA.live sign-in the CDN publish needs. When the change re
 GitHub but the live storefront still serves the previous configuration, the result says
 so instead of reporting success.
 
+### Changing the store (EDS-44)
+
+When the website, store or store view code changed, the storefront prompt reads **"The
+store changed. Republish the storefront?"** with "Its product and category pages are
+replaced with the new store's." The buttons are the same (Republish, Later). The combined
+mesh and storefront prompt says it too.
+
+Republish then runs in the house progress notification (`withOperationProgress`), one
+stage per step: Publishing the config, Removing product pages, Updating category pages,
+Publishing product pages (counted). It ends with one sentence, for example "Now on
+CitiSignal: 11 category pages and 39 product pages published. 30 old product pages
+removed." A category page the SC edited is kept and named ("Kept "/phones": you edited
+it."). Another local project on the same repository stops the product-page removal, and
+the sentence says so.
+
+How it is remembered: when a config publish puts different store codes live and the CDN
+accepts it, the project records `edsStorefrontState.catalogPagesPending`, naming the
+previous store (`storeScopeChange.ts`, set in `republishStorefrontConfig`, so the mesh
+deploy's own republish sets it too). The storefront stays amber until the pages are
+replaced. Later, a window restart and the mesh path all keep it. Configure's Republish,
+the dashboard's Republish (and `sync_content`) and the agent's `republish` each run the
+one service, `storeScopePages.ts`, when it is set: Reset's catalog half, in Reset's
+order. Undo is the same path: change the store back and republish.
+
+Configure's Republish reports to a notification, not a modal: the Configure screen has
+no progress modal and the Republish starts from the prompt's button.
+
 An authoring change runs on its own after the save (the DA.live editor path, and for
 Experience Workspace the Quick Edit setup), behind its own progress message.
 
@@ -72,6 +99,8 @@ Experience Workspace the Quick Edit setup), behind its own progress message.
 `configure_project` changes the same settings through the same staging. Its differences:
 it refuses secrets (the SC types those into Configure), it checks the mesh against the
 stored settings rather than the deployed mesh, and it answers with what it marked out of
-date and what to call next (`deploy_mesh`, then `republish`). It writes store codes under
+date and what to call next (`deploy_mesh`, then `republish`). When the store codes
+changed, its note adds that the republish also replaces the storefront's product and
+category pages with the new store's. It writes store codes under
 the names the backend reads: `ACCS_*_CODE` on SaaS, `ADOBE_COMMERCE_*_CODE` on PaaS and
 ACO.

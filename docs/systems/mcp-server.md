@@ -611,6 +611,15 @@ re-copies the content, then writes them again.
 
 So an agent that wants the menu gone deselects the library and resets (confirm-gated).
 
+After a store change (EDS-44) the pages belong to the old store. `configure_project`'s
+note then says the republish also replaces the product and category pages. `republish`
+and `sync_content` do it when the project's `edsStorefrontState.catalogPagesPending` is
+set and their own config publish reached the CDN: the old store's product pages come
+off, the category pages are swapped (edited ones kept), the new store's product pages
+are published. Both answer `storePages`, the one sentence the SC reads in Configure
+("Now on CitiSignal: 11 category pages and 39 product pages published. 30 old product
+pages removed."). One service does it for every door (`storeScopePages.ts`).
+
 For a category added in Commerce AFTER setup there are two tools (EDS-27,
 `categoryPageTools.ts`), on the same step file:
 

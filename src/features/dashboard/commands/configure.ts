@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { configureHandlers } from '../handlers/configureHandlers';
-import { runPendingBlockLibraryWork } from './configureBlockLibraryExecutor';
+import { republishFromConfigure, storefrontPrompt } from './configureStorefrontRepublish';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
@@ -10,6 +10,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
+import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { loadDeclaredSecretFlags } from '@/features/components/services/commerceSecretMigration';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
@@ -27,17 +28,12 @@ import {
     readProjectSettings,
     stageSettingsChange,
 } from '@/features/dashboard/services/projectSettingsChange';
-import {
-    ensureDaLiveAuth,
-    getEwCanvasBranch,
-    resolveProjectAuthoringExperience,
-} from '@/features/eds/handlers/edsHelpers';
+import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import {
     applyAuthoringExperienceFlip,
     type AuthoringExperienceFlipDeps,
 } from '@/features/eds/services/authoringExperienceFlip';
-import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
@@ -51,6 +47,9 @@ import type {
     CustomBlockLibraryDefaultsUpdatedPayload,
     DeploymentStatusPayload,
 } from '@/types/webviewPayloads';
+
+/** The id Configure's storefront Republish reports its progress under. */
+const CONFIGURE_REPUBLISH_ID = 'configure-republish-storefront';
 
 /** The setting custom block libraries are defined in. */
 const CUSTOM_BLOCK_LIBRARY_SETTING = 'demoBuilder.blockLibraries.custom';
@@ -549,68 +548,48 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
     }
 
     /**
-     * Republish storefront config.json for EDS projects.
-     * Shows progress notification and handles errors.
+     * Republish the storefront for EDS projects: block libraries, config.json and —
+     * after a store change — the product and category pages (EDS-44). One stage per
+     * step in the house progress notification; the outcome is shown here.
+     *
+     * Not `inModal`: Configure's screen has no progress modal, and this runs from the
+     * prompt's button, so the stages go to the notification (R2).
      */
     private async republishStorefront(project: Project): Promise<void> {
         try {
-            await vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    title: 'Republishing storefront',
-                    cancellable: false,
-                },
-                async (progress) => {
-                    // Block libraries first (EDS-39): add what is selected, remove what is not.
-                    const { context, stateManager, logger } = this;
-                    await runPendingBlockLibraryWork(project, { context, stateManager, logger }, (m) =>
-                        progress.report({ message: m }),
-                    );
-                    const result = await republishStorefrontConfig({
-                        persist: (p) => this.stateManager.saveProject(p),
-                        project,
-                        secrets: this.context.secrets,
-                        logger: this.logger,
-                        onProgress: (message) => {
-                            progress.report({ message });
-                        },
-                        // The CDN publish needs the DA.live session (PL-76). Without
-                        // it the push reached GitHub and the CDN kept the old config.
-                        ensureDaLiveSession: () =>
-                            ensureDaLiveAuth({ context, logger }, '[Configure]'),
-                    });
-
-                    if (result.success && result.cdnError) {
-                        // On GitHub, not live: say so instead of "republished".
-                        await ProjectDashboardWebviewCommand.refreshStatus();
-                        vscode.window.showWarningMessage(
-                            'The storefront configuration reached GitHub, but the live ' +
-                                `storefront still serves the previous one: ${result.cdnError}`,
-                        );
-                    } else if (result.success) {
-                        // Save updated project state
-                        await this.stateManager.saveProject(project);
-                        await ProjectDashboardWebviewCommand.refreshStatus();
-                        // Reset the once-per-session storefront notification flag so the
-                        // NEXT storefront config change re-prompts to republish. Mirrors
-                        // the mesh flow (deployMesh -> meshActionTaken) and restart flow
-                        // (startDemo -> restartActionTaken). Without this, the flag stays
-                        // latched after the first republish and later changes (e.g.
-                        // switching store views back) silently show "Configuration saved"
-                        // while the live storefront stays stale.
-                        await vscode.commands.executeCommand(
-                            'demoBuilder._internal.storefrontActionTaken',
-                        );
-                        this.showSuccessMessage(
-                            'Storefront configuration republished successfully',
-                        );
-                    } else {
-                        vscode.window.showErrorMessage(
-                            `Failed to republish storefront: ${result.error}`,
-                        );
-                    }
-                },
+            const { context, stateManager, logger } = this;
+            const outcome = await withOperationProgress(
+                { id: CONFIGURE_REPUBLISH_ID, title: 'Republishing storefront', inModal: false },
+                (report) => republishFromConfigure(project, { context, stateManager, logger }, report),
             );
+            const result = outcome.published;
+
+            if (result.success && result.cdnError) {
+                // On GitHub, not live: say so instead of "republished".
+                await ProjectDashboardWebviewCommand.refreshStatus();
+                vscode.window.showWarningMessage(
+                    'The storefront configuration reached GitHub, but the live ' +
+                        `storefront still serves the previous one: ${result.cdnError}`,
+                );
+            } else if (result.success) {
+                // Save updated project state
+                await this.stateManager.saveProject(project);
+                await ProjectDashboardWebviewCommand.refreshStatus();
+                // Reset the once-per-session storefront notification flag so the
+                // NEXT storefront config change re-prompts to republish. Mirrors
+                // the mesh flow (deployMesh -> meshActionTaken) and restart flow
+                // (startDemo -> restartActionTaken). Without this, the flag stays
+                // latched after the first republish and later changes (e.g.
+                // switching store views back) silently show "Configuration saved"
+                // while the live storefront stays stale.
+                await vscode.commands.executeCommand('demoBuilder._internal.storefrontActionTaken');
+                // After a store change, the one sentence on the new store's pages.
+                this.showSuccessMessage(
+                    outcome.storePages ?? 'Storefront configuration republished successfully',
+                );
+            } else {
+                vscode.window.showErrorMessage(`Failed to republish storefront: ${result.error}`);
+            }
         } catch (error) {
             this.logger.error('[Configure] Failed to republish storefront:', error as Error);
             vscode.window.showErrorMessage(
@@ -676,8 +655,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         );
 
         const selection = await vscode.window.showWarningMessage(
-            'Configuration saved. Apply changes to mesh and storefront?' +
-                describePendingBlockLibraryWork(project),
+            storefrontPrompt(project, true) + describePendingBlockLibraryWork(project),
             'Apply Changes',
             'Later',
         );
@@ -725,9 +703,9 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             'demoBuilder._internal.markStorefrontNotificationShown',
         );
 
+        // After a store change it says so: the Republish replaces the pages (EDS-44).
         const selection = await vscode.window.showInformationMessage(
-            'Configuration saved. Republish storefront to apply changes.' +
-                describePendingBlockLibraryWork(project),
+            storefrontPrompt(project, false) + describePendingBlockLibraryWork(project),
             'Republish',
             'Later',
         );

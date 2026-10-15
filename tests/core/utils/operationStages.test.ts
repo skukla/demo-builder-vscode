@@ -41,6 +41,9 @@ const STAGE_REPORTERS = [
     'src/core/shell/buildComponent.ts',
     'src/features/mesh/services/meshDeployment.ts',
     'src/features/mesh/services/deployMeshHeadless.ts',
+    // A republish after a store change (EDS-44): Configure's run and the service.
+    'src/features/dashboard/commands/configureStorefrontRepublish.ts',
+    'src/features/eds/services/storefront/storeScopePages.ts',
 ];
 
 /** A progress call whose FIRST argument is a string or template literal. */

@@ -32,10 +32,17 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { describeCdnPropagation } from '@/features/eds/services/configSyncService';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontContentRepublishService';
 import { readStorefrontReport, storefrontReportLines } from '@/features/eds/services/storefront/storefrontReport';
 import { createStorefrontReportDeps } from '@/features/eds/services/storefront/storefrontReportDeps';
-import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
+import {
+    republishStorefrontConfig,
+    type RepublishResult,
+} from '@/features/eds/services/storefront/storefrontRepublishService';
+import { hasCatalogPagesPending } from '@/features/eds/services/storefront/storeScopeChange';
+import { replaceStoreScopePages, reportAsLines } from '@/features/eds/services/storefront/storeScopePages';
+import { createStoreScopePagesDeps } from '@/features/eds/services/storefront/storeScopePagesDeps';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -59,6 +66,35 @@ function edsTargets(
 }
 
 /**
+ * After a config publish that put another store live (EDS-44): replace the old store's
+ * product and category pages with the new store's — the one service Configure and the
+ * dashboard use — and answer with its sentence. Nothing when the store did not change,
+ * or the CDN did not take the new config (the old pages still fit what is live).
+ */
+async function replacePagesAfterStoreChange(
+    ctx: HandlerContext,
+    project: Project,
+    published: RepublishResult,
+): Promise<string | undefined> {
+    if (!published.success || published.cdnError || !hasCatalogPagesPending(project)) return undefined;
+    const target = edsTargets(project);
+    if (!target) return undefined;
+    const { tokenService, fileOperations } = getGitHubServices(ctx.context.secrets);
+    const deps = createStoreScopePagesDeps({
+        project,
+        target,
+        daLiveTokenProvider: createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context)),
+        githubTokenService: tokenService,
+        githubFiles: fileOperations,
+        stateManager: ctx.stateManager,
+        persist: (p) => ctx.stateManager.saveProject(p),
+        logger: ctx.logger,
+    });
+    const { sentence } = await replaceStoreScopePages(project, deps, reportAsLines(phaseReporter()));
+    return sentence;
+}
+
+/**
  * Register the storefront action tools on `server`.
  *
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
@@ -76,7 +112,9 @@ export function registerStorefrontTools(
             description:
                 "Regenerate this project's EDS storefront config.json and publish it to " +
                 'GitHub and the CDN, replacing the config visitors are currently served. ' +
-                'Requires confirm:true.',
+                'When the store changed since the last publish, it also replaces the ' +
+                "storefront's product and category pages with the new store's and answers " +
+                'storePages. Requires confirm:true.',
             inputSchema: {
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
             },
@@ -130,11 +168,13 @@ export function registerStorefrontTools(
                         onProgress: phaseReporter(),
                     }),
                 );
+                const storePages = await replacePagesAfterStoreChange(ctx, project, result);
                 return asText({
                     success: result.success,
                     githubPushed: result.githubPushed,
                     cdnPublished: result.cdnPublished,
                     cdnVerified: result.cdnVerified,
+                    ...(storePages ? { storePages } : {}),
                     // The boolean alone left the caller to guess what an
                     // unverified publish meant; the ones that guessed read it as
                     // lost work. Say it outright.
@@ -212,6 +252,7 @@ export function registerStorefrontTools(
                         daLiveAuthService,
                         githubTokenService,
                         githubFiles,
+                        stateManager: ctx.stateManager,
                     }),
                 );
                 return asText({
@@ -219,6 +260,8 @@ export function registerStorefrontTools(
                     cdnVerified: result.cdnVerified,
                     // Category pages written or refreshed, and pages left alone by name (EDS-24).
                     ...(result.catalogMenu ? { categoryPages: result.catalogMenu } : {}),
+                    // After a store change: the new store's pages, in the SC's sentence (EDS-44).
+                    ...(result.storePages ? { storePages: result.storePages } : {}),
                     cdnStatus: result.success
                         ? describeCdnPropagation({ cdnVerified: result.cdnVerified })
                         : undefined,
