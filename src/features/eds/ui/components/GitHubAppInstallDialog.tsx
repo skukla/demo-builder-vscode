@@ -8,7 +8,7 @@
 import { Text } from '@adobe/react-spectrum';
 import LinkOut from '@spectrum-icons/workflow/LinkOut';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     CODE_SYNC_INSTALL_ACTION,
     CODE_SYNC_RECHECK_ACTION,
@@ -17,9 +17,11 @@ import {
 } from '../helpers/codeSyncInstallContent';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { SuccessStateDisplay } from '@/core/ui/components/feedback/SuccessStateDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface GitHubAppInstallDialogProps {
     /** GitHub repository owner */
@@ -42,6 +44,20 @@ export function GitHubAppInstallDialog({
 }: GitHubAppInstallDialogProps) {
     const [isChecking, setIsChecking] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const [isDetected, setIsDetected] = useState(false);
+    // Held in a ref: a caller's inline callback is a new function each render, and
+    // as an effect dependency it would restart the hold on every redraw.
+    const onDetected = useRef(onInstallDetected);
+    onDetected.current = onInstallDetected;
+
+    // A found app is confirmed for a glance before setup carries on, so the SC
+    // sees that "Check Again" worked (owner, 2026-10-15). Same hold as a finished
+    // operation's result.
+    useEffect(() => {
+        if (!isDetected) return undefined;
+        const timer = setTimeout(() => onDetected.current(), TIMEOUTS.UI.RESULT_GLANCE);
+        return () => clearTimeout(timer);
+    }, [isDetected]);
 
     const handleOpenInstallPage = () => {
         // Open the URL in the system browser via VS Code API
@@ -60,7 +76,7 @@ export function GitHubAppInstallDialog({
             }>('check-github-app', { owner, repo, lenient: true });
 
             if (result.success && result.isInstalled) {
-                onInstallDetected();
+                setIsDetected(true);
             } else {
                 setHasError(true);
             }
@@ -71,6 +87,16 @@ export function GitHubAppInstallDialog({
             setIsChecking(false);
         }
     };
+
+    if (isDetected) {
+        return (
+            <SuccessStateDisplay
+                title="AEM Code Sync is installed"
+                message={`${owner}/${repo} is connected. Continuing setup.`}
+                height="auto"
+            />
+        );
+    }
 
     // Show loading state while checking for app installation
     if (isChecking) {
