@@ -13,7 +13,11 @@
 
 import '../../../../helpers/webviewClientMock';
 jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
-    useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
+    useAutoStoreDetect: () => ({
+        autoDetectKey: undefined,
+        accsEndpoint: undefined,
+        forceFetch: jest.fn(),
+    }),
 }));
 
 /**
@@ -47,7 +51,11 @@ jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
 }));
 
 jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
-    useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
+    useAutoStoreDetect: () => ({
+        autoDetectKey: undefined,
+        accsEndpoint: undefined,
+        forceFetch: jest.fn(),
+    }),
 }));
 
 /**

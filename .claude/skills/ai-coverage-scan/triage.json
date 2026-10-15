@@ -140,6 +140,9 @@
         "check-credential-service": {
             "reason": "No tool asks whether the shared credential service serves this org; only the Diagnostics command and the Commerce step do."
         },
+        "check-store-view-products": {
+            "reason": "No tool asks on its own whether a store view shows guests any products. create_project runs the same check (probeStoreViewProducts) on its storeScope and puts the pickers' sentence in its answer's warnings (EDS-46)."
+        },
         "clear-dalive-auth": {
             "reason": "No tool signs out of DA.live. Whether an agent should be able to is an owner decision."
         },

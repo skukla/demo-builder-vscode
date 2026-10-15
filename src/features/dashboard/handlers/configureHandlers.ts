@@ -20,6 +20,7 @@ import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation/URLValidator';
 import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
+import { handleCheckStoreViewProducts } from '@/features/eds/handlers/storeViewProductsHandler';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -155,4 +156,6 @@ export const configureHandlers = defineHandlers({
     'discover-store-structure': handleDiscoverStoreStructureAndPersist,
     // Whether the OAuth fields need filling in at all. Status only — never a pair.
     'check-credential-service': handleCheckCredentialService,
+    // The same store pickers as the wizard, so the same no-products warning (EDS-46).
+    'check-store-view-products': handleCheckStoreViewProducts,
 });

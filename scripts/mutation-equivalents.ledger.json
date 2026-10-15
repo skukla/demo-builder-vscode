@@ -9040,7 +9040,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 216,
+            "line": 219,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -9053,7 +9053,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 231,
+            "line": 234,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",

@@ -31,6 +31,7 @@ import { handleForgetAddedDemo } from '@/features/eds/handlers/forgetAddedDemoHa
 import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { handleCancelStorefrontSetup, handleStartStorefrontSetup } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
+import { handleCheckStoreViewProducts } from '@/features/eds/handlers/storeViewProductsHandler';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { handleCheckPrerequisites } from '@/features/prerequisites/handlers/checkHandler';
 import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
@@ -125,6 +126,9 @@ export const projectCreationHandlers = defineHandlers({
     // Connection step can say the OAuth fields need no filling in. Status only —
     // the pair never crosses to the webview.
     'check-credential-service': handleCheckCredentialService,
+    // Whether the store view the SC picked shows guests any products (EDS-46).
+    // ACCS only; answers `unknown` otherwise, which the pickers render as nothing.
+    'check-store-view-products': handleCheckStoreViewProducts,
 
     // EDS handlers - Storefront Setup (renamed from Preflight)
     'storefront-setup-start': handleStartStorefrontSetup,

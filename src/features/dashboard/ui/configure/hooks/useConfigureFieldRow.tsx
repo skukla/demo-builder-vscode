@@ -85,7 +85,7 @@ export function useConfigureFieldRow({
         isStoreGroup,
     } = useStoreDiscovery();
 
-    const { autoDetectKey, forceFetch } = useAutoStoreDetect({
+    const { autoDetectKey, accsEndpoint, forceFetch } = useAutoStoreDetect({
         configs: componentConfigs,
         orgId: project.adobe?.organization,
         fetchStores,
@@ -132,6 +132,7 @@ export function useConfigureFieldRow({
                 getStoreGroupItems={getStoreGroupItems}
                 getStoreViewItems={getStoreViewItems}
                 onRefresh={forceFetch}
+                accsEndpoint={accsEndpoint}
             />
         ),
         [
@@ -151,6 +152,7 @@ export function useConfigureFieldRow({
             forceFetch,
             credentialService,
             componentSecretFlags,
+            accsEndpoint,
         ],
     );
 

@@ -57,11 +57,14 @@ import {
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import { mapBackendToEnvironmentType } from '@/features/eds/services/storefrontConfigParams';
+import { probeStoreViewProducts } from '@/features/eds/services/storeViewProducts';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import {
     buildProjectConfig,
     type ProjectConfigSource,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
+import { NO_GUEST_PRODUCTS_WARNING, warnsOfNoProducts } from '@/types/commerceStore';
 import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
 import type { AddedDemo } from '@/types/projectFile';
@@ -564,6 +567,32 @@ async function createEds(
     });
 }
 
+/**
+ * The store-view product check (EDS-46), as the store pickers run it: on ACCS,
+ * for the scope the caller chose, one anonymous Catalog Service search. Answers
+ * the warning to add to the result, or nothing — including whenever the check
+ * cannot answer. Never blocks creation: a demo may be meant to start empty.
+ */
+async function storeViewWarnings(
+    ctx: HandlerContext,
+    stackId: string,
+    accsEndpoint: string | undefined,
+    storeScope: StoreScope | undefined,
+): Promise<{ warnings: string[] } | undefined> {
+    if (!storeScope || !accsEndpoint) return undefined;
+    if (mapBackendToEnvironmentType(getStackById(stackId)?.backend) !== 'accs') return undefined;
+    const verdict = await probeStoreViewProducts(
+        accsEndpoint,
+        {
+            websiteCode: storeScope.website,
+            storeCode: storeScope.store,
+            storeViewCode: storeScope.storeView,
+        },
+        ctx.logger,
+    );
+    return warnsOfNoProducts(verdict) ? { warnings: [NO_GUEST_PRODUCTS_WARNING] } : undefined;
+}
+
 /** One creation, as either door states it: `create_project`'s arguments, or a project file's. */
 interface CreationRequest {
     projectName: string;
@@ -601,7 +630,9 @@ export async function runProjectCreation(ctx: HandlerContext, request: CreationR
     // An added demo whose package names its Commerce instance needs no endpoint
     // from the caller (EDS-22); one the caller passes still wins.
     const accsEndpoint = rest.accsEndpoint ?? demo?.configDefaults?.[ACCS_GRAPHQL_ENDPOINT];
-    const args = { ...rest, accsEndpoint, pkgId: pkg.id, stackId, demo: projectRowOf(demo) };
+    const warned = await storeViewWarnings(ctx, stackId, accsEndpoint, rest.storeScope);
+    const report = warned ? { ...rest.report, ...warned } : rest.report;
+    const args = { ...rest, report, accsEndpoint, pkgId: pkg.id, stackId, demo: projectRowOf(demo) };
 
     return stackId.startsWith('eds-')
         ? createEds(ctx, args, pkg, storefront, packages)

@@ -576,6 +576,13 @@ generates `config.json`, so a storefront built on a store other than the demo's 
 published with the wrong codes first and corrected after. On the file path the call's
 codes win over the file's; omitted, the file's codes stand.
 
+On ACCS, a given `storeScope` is also checked the way the wizard's and Configure's store
+pickers check it (EDS-46): one anonymous Catalog Service search for that store view
+(`storeViewProducts.ts`). When it finds no products, or the scope has no search index, the
+answer carries `warnings: ["Guests won't see any products in this store view."]` — the
+same sentence the pickers show. It never blocks or fails creation, and a check that cannot
+answer (timeout, network, HTTP error) adds nothing.
+
 ### Demo Builder's fixes on an added demo (EDS-13f, 2026-10-03)
 
 `get_storefront_report` (read-only, GitHub sign-in) answers the same report as **Demo

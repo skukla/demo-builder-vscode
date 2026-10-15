@@ -4,7 +4,8 @@
  * Renders a single config field with commerce-store-aware routing:
  * - Connection fields: always shown
  * - Store group fields: hidden until connection fields are complete
- * - Website code: shows discovery progress and store selection pickers
+ * - Website code: shows discovery progress and store selection pickers, and (ACCS)
+ *   a one-line warning when the chosen store view shows guests no products
  * - Store/view code fields: skipped (rendered by StoreSelectionRow)
  * - Other fields: standard renderer
  *
@@ -23,6 +24,7 @@ import type { StoreListItem } from '../hooks/useStoreDiscovery';
 import { BrokeredCredentialFields } from './BrokeredCredentialFields';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
 import { StoreSelectionRow } from './StoreSelectionRow';
+import { StoreViewProductsNotice } from './StoreViewProductsNotice';
 import { ACCS_OAUTH_CLIENT_ID, ACCS_OAUTH_CLIENT_SECRET } from '@/core/config/envVarKeys';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 
@@ -59,6 +61,11 @@ export interface StoreConfigFieldRowProps {
      * from "not configured", and a save would write the blank over it.
      */
     secretFlags?: Record<string, Record<string, boolean>>;
+    /**
+     * The ACCS GraphQL endpoint store detection keyed on (`useAutoStoreDetect`).
+     * Present only on ACCS; the store-view product check asks Catalog Service here.
+     */
+    accsEndpoint?: string;
 }
 
 export function StoreConfigFieldRow({
@@ -80,6 +87,7 @@ export function StoreConfigFieldRow({
     onRefresh,
     credentialService,
     secretFlags,
+    accsEndpoint,
 }: StoreConfigFieldRowProps): React.ReactNode {
     // A stored secret with no typed value: show that one EXISTS rather than an
     // empty box, and drop the error — the field is satisfied, just not visible.
@@ -150,6 +158,11 @@ export function StoreConfigFieldRow({
                     getWebsiteItems={getWebsiteItems}
                     getStoreGroupItems={getStoreGroupItems}
                     getStoreViewItems={getStoreViewItems}
+                />
+                <StoreViewProductsNotice
+                    group={group}
+                    getFieldValue={getFieldValue}
+                    accsEndpoint={accsEndpoint}
                 />
                 {onRefresh && (
                     <Flex marginTop="size-100" marginStart="size-50">

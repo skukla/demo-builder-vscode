@@ -116,10 +116,12 @@ interface ConfigHeaders {
  * - **ACCS**: Store codes only (no API key headers required)
  * - **ACO**: Commerce Optimizer headers (AC-View-ID, AC-Price-Book-ID placeholders)
  *
- * @param params - Configuration parameters including environment type
+ * @param params - Configuration parameters including environment type. Partial
+ *   because only optional fields are read, so a caller holding just a store scope
+ *   (the store-view product check) need not invent a repository.
  * @returns Headers object to inject into config.json
  */
-export function generateHeaders(params: ConfigGeneratorParams): ConfigHeaders {
+export function generateHeaders(params: Partial<ConfigGeneratorParams>): ConfigHeaders {
     const storeViewCode = params.storeViewCode || 'default';
     const storeCode = params.storeCode || 'default';
     const websiteCode = params.websiteCode || 'base';

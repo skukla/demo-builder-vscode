@@ -16,7 +16,7 @@
 import type { ComponentSettings, SetupConfigFixItem } from './appBuilderComponents';
 import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
-import type { CommerceStoreStructure } from './commerceStore';
+import type { CommerceStoreStructure, StoreViewCodes, StoreViewProducts } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
 import type { DaLiveContentSource } from './demoPackages';
 import type { ErpProductSelection } from './erpAssign';
@@ -34,6 +34,24 @@ import type {
 import type { ViewMode, ViewModeList } from './viewMode';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
+
+/**
+ * `check-store-view-products` — does a guest see any products in the store view
+ * the SC just picked? (EDS-46) Sent by the store pickers on the wizard's Business
+ * Structure step and on Configure, once all three codes are chosen.
+ */
+export interface CheckStoreViewProductsRequest extends StoreViewCodes {
+    /** The check runs on ACCS only; anything else answers `unknown`. */
+    backendType: 'accs' | 'paas';
+    /** The ACCS GraphQL endpoint the SC entered on the Connection step. */
+    endpoint: string;
+}
+
+/** The answer. Always `success: true`: a check that could not run says `unknown`. */
+export interface CheckStoreViewProductsResponse {
+    success: true;
+    data: { verdict: StoreViewProducts };
+}
 
 /**
  * `probe-shared-demo` — read a colleague's repository before "Add a demo package"

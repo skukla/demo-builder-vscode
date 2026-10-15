@@ -152,7 +152,7 @@ export function ConnectStoreStepContent({
     // to avoid a one-render-cycle delay from the parent round-trip.
     // -----------------------------------------------------------------------
 
-    const { autoDetectKey, forceFetch } = useAutoStoreDetect({
+    const { autoDetectKey, accsEndpoint, forceFetch } = useAutoStoreDetect({
         configs: liveConfigs ?? {},
         orgId: adobeOrg?.id,
         fetchStores,
@@ -317,6 +317,7 @@ export function ConnectStoreStepContent({
                             getStoreViewItems={getStoreViewItems}
                             onRefresh={forceFetch}
                             credentialService={credentialService}
+                            accsEndpoint={accsEndpoint}
                         />
                     )}
                 />

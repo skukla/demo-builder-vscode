@@ -1,5 +1,5 @@
 /**
- * InlineNotice: where its action sits.
+ * InlineNotice: where its action sits, and a title-only notice.
  */
 
 import React from 'react';
@@ -24,6 +24,18 @@ describe('InlineNotice', () => {
 
         const actions = screen.getByRole('button', { name: 'Fix it' }).closest('.inline-notice-actions');
         expect(actions?.parentElement).toHaveClass('inline-notice');
+    });
+
+    it('renders a title alone as one line, with no empty body line under it', () => {
+        render(
+            <Provider theme={defaultTheme}>
+                <InlineNotice title="Guests won't see any products in this store view." testId="one-line" />
+            </Provider>,
+        );
+
+        const notice = screen.getByTestId('one-line');
+        expect(notice).toHaveTextContent("Guests won't see any products in this store view.");
+        expect(notice.querySelector('.status-text')).toBeNull();
     });
 
     it('puts the action under the text with actionBelow', () => {

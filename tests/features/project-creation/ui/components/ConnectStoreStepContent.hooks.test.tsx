@@ -62,6 +62,14 @@ jest.mock('@/features/components/ui/components/BrokeredCredentialFields', () => 
     ),
 }));
 
+// Surfaces the endpoint it was handed: whether the row passes it on is the
+// assertion here. The notice's own behaviour is StoreConfigFieldRow-productCheck's.
+jest.mock('@/features/components/ui/components/StoreViewProductsNotice', () => ({
+    StoreViewProductsNotice: ({ accsEndpoint }: { accsEndpoint?: string }) => (
+        <div data-testid="store-view-products-notice" data-endpoint={accsEndpoint ?? ''} />
+    ),
+}));
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -126,6 +134,7 @@ beforeEach(() => {
     // rows stay hidden behind a falsy one, credential row included.
     mockUseAutoStoreDetect.mockReturnValue({
         autoDetectKey: ACCS_ENDPOINT_KEY,
+        accsEndpoint: undefined,
         forceFetch: jest.fn(),
     });
     mockUseCredentialService.mockReturnValue({ loading: false });
@@ -153,6 +162,25 @@ describe('what the auto-detect hook is told', () => {
 
         expect(mockUseAutoStoreDetect).toHaveBeenCalledWith(
             expect.objectContaining({ configs: live, orgId: ORG_ID })
+        );
+    });
+});
+
+describe('the store-view product check (EDS-46)', () => {
+    it('hands the store pickers the ACCS endpoint detection keyed on', () => {
+        const endpoint = 'https://accs.example.com/graphql';
+        mockUseAutoStoreDetect.mockReturnValue({
+            autoDetectKey: `accs:${endpoint}`,
+            accsEndpoint: endpoint,
+            forceFetch: jest.fn(),
+        });
+        mockUseStoreDiscovery.hasStoreData = true;
+
+        renderContent({ section: 'business-structure' });
+
+        expect(screen.getByTestId('store-view-products-notice')).toHaveAttribute(
+            'data-endpoint',
+            endpoint,
         );
     });
 });

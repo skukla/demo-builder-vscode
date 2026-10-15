@@ -5,7 +5,8 @@
  *
  * READ-ONLY. Two callers: the catalog pre-warm (`catalogPrewarmService.ts`),
  * which publishes a page for each pair, and the diagnostics sample
- * (`catalogSampleSku.ts`), which asks for one.
+ * (`catalogSampleSku.ts`), which asks for one. The same request, asking only for
+ * a count, answers the store-view product check (`storeViewProducts.ts`).
  *
  * @module features/eds/services/catalogEnumeration
  */
@@ -52,6 +53,18 @@ query GetProductsForPrewarm($pageSize: Int!, $currentPage: Int!) {
 }`;
 
 /**
+ * GraphQL query for how many products one scope's search holds. Asks for the
+ * count, not the products: a product with no `urlKey` still counts, where the
+ * enumeration above skips it.
+ */
+const COUNT_QUERY = `
+query CountProductsForScope($pageSize: Int!) {
+  productSearch(phrase: "", page_size: $pageSize) {
+    total_count
+  }
+}`;
+
+/**
  * One (urlKey, sku) pair from the catalog. Combined to form a path
  * `/products/<urlKey>/<sku>` to publish.
  */
@@ -78,17 +91,6 @@ export async function enumerateAccsCatalog(
     logger: Logger,
     maxItems: number = MAX_SKUS,
 ): Promise<SkuPath[]> {
-    // generateHeaders() returns { all: {...}, cs: {...} }. The catalog
-    // GraphQL endpoint expects both groups merged on every request —
-    // `all` is the shared base (Store: storeViewCode), `cs` is the
-    // Catalog Service-specific block (Magento-Customer-Group, store
-    // codes). Flatten before handing to fetch().
-    const configHeaders = generateHeaders(params);
-    const headers: Record<string, string> = {
-        ...(configHeaders.all ?? {}),
-        ...(configHeaders.cs ?? {}),
-        'Content-Type': 'application/json',
-    };
     const endpoint = params.commerceEndpoint;
     if (!endpoint) throw new Error('catalog prewarm requires a commerceEndpoint');
 
@@ -97,35 +99,18 @@ export async function enumerateAccsCatalog(
     let totalPages = 1;
 
     do {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                query: ENUMERATE_QUERY,
-                variables: { pageSize: PAGE_SIZE, currentPage },
-            }),
-            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+        const data = await postCatalogQuery<{
+            productSearch?: {
+                items?: Array<{ productView?: { sku?: string; urlKey?: string } }>;
+                page_info?: { total_pages?: number; current_page?: number };
+            };
+        }>(endpoint, params, {
+            query: ENUMERATE_QUERY,
+            variables: { pageSize: PAGE_SIZE, currentPage },
+            timeoutMs: TIMEOUTS.NORMAL,
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} from ${params.commerceEndpoint}`);
-        }
-
-        const data = (await response.json()) as {
-            data?: {
-                productSearch?: {
-                    items?: Array<{ productView?: { sku?: string; urlKey?: string } }>;
-                    page_info?: { total_pages?: number; current_page?: number };
-                };
-            };
-            errors?: Array<{ message: string }>;
-        };
-
-        if (data.errors && data.errors.length > 0) {
-            throw new Error(`GraphQL errors: ${data.errors.map((e) => e.message).join('; ')}`);
-        }
-
-        const result = data.data?.productSearch;
+        const result = data?.productSearch;
         if (!result?.items) {
             throw new Error('Catalog response missing productSearch.items');
         }
@@ -152,4 +137,77 @@ export async function enumerateAccsCatalog(
     } while (currentPage <= totalPages);
 
     return allPaths;
+}
+
+/**
+ * How many products one scope's search holds, read from `total_count`.
+ *
+ * Same request, headers and failure contract as {@link enumerateAccsCatalog}:
+ * throws on an HTTP non-2xx, on GraphQL `errors` (their messages joined into
+ * the reason), and on a payload with no count.
+ *
+ * @param endpoint - the Catalog Service GraphQL endpoint
+ * @param params - the scope and environment the headers are built from
+ * @returns the product count
+ */
+export async function countAccsCatalogProducts(
+    endpoint: string,
+    params: Partial<ConfigGeneratorParams>,
+): Promise<number> {
+    const data = await postCatalogQuery<{ productSearch?: { total_count?: number } }>(
+        endpoint,
+        params,
+        { query: COUNT_QUERY, variables: { pageSize: 1 }, timeoutMs: TIMEOUTS.QUICK },
+    );
+    const total = data?.productSearch?.total_count;
+    if (typeof total !== 'number') {
+        throw new Error('Catalog response missing productSearch.total_count');
+    }
+    return total;
+}
+
+/** One Catalog Service GraphQL request: what to ask and how long to wait. */
+interface CatalogQuery {
+    query: string;
+    variables: Record<string, unknown>;
+    timeoutMs: number;
+}
+
+/**
+ * POST one query to Catalog Service with the headers the storefront sends, and
+ * hand back its `data`.
+ *
+ * generateHeaders() returns { all: {...}, cs: {...} }. The catalog GraphQL
+ * endpoint expects both groups merged on every request — `all` is the shared
+ * base (Store: storeViewCode), `cs` is the Catalog Service-specific block
+ * (Magento-Customer-Group, store codes). Flattened before handing to fetch().
+ *
+ * @throws on HTTP non-2xx and on GraphQL `errors`
+ */
+async function postCatalogQuery<T>(
+    endpoint: string,
+    params: Partial<ConfigGeneratorParams>,
+    request: CatalogQuery,
+): Promise<T | undefined> {
+    const configHeaders = generateHeaders(params);
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            ...(configHeaders.all ?? {}),
+            ...(configHeaders.cs ?? {}),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: request.query, variables: request.variables }),
+        signal: AbortSignal.timeout(request.timeoutMs),
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status} from ${endpoint}`);
+    }
+
+    const body = (await response.json()) as { data?: T; errors?: Array<{ message: string }> };
+    if (body.errors && body.errors.length > 0) {
+        throw new Error(`GraphQL errors: ${body.errors.map((e) => e.message).join('; ')}`);
+    }
+    return body.data;
 }

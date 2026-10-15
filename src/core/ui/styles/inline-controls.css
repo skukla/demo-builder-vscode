@@ -3,8 +3,9 @@
  * components and the text-button that goes with them.
  *
  * FEATURE-SCOPED (ADR-017 §6 and §7). InlineNotice and InlineRenameField live in
- * core/ui/components; imported by the four entries that render one of them —
- * dashboard, integrations, projectsList and wizard.
+ * core/ui/components; imported by the entries that render one of them —
+ * dashboard, integrations, projectsList, siteAccess, wizard and configure (the
+ * store pickers' no-products notice, EDS-46).
  *
  * THEY WERE HIDING IN THE UTILITY SHEET. `--move` selects on a class's PREFIX and
  * the utility list names `inline`, so `.inline-notice-body` and

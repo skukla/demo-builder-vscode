@@ -49,7 +49,11 @@ jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
     }),
 }));
 jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
-    useAutoStoreDetect: jest.fn(() => ({ autoDetectKey: 'k-1', forceFetch: mockForceFetch })),
+    useAutoStoreDetect: jest.fn(() => ({
+        autoDetectKey: 'k-1',
+        accsEndpoint: 'https://na1.api.commerce.adobe.com/tenant/graphql',
+        forceFetch: mockForceFetch,
+    })),
 }));
 jest.mock('@/features/components/ui/hooks/useCredentialService', () => ({
     useCredentialService: jest.fn(() => mockCredential),
@@ -149,6 +153,8 @@ describe('useConfigureFieldRow', () => {
             getStoreGroupItems: mockGroupItems,
             getStoreViewItems: mockViewItems,
             onRefresh: mockForceFetch,
+            // The store-view product check asks here (EDS-46).
+            accsEndpoint: 'https://na1.api.commerce.adobe.com/tenant/graphql',
         });
     });
 });

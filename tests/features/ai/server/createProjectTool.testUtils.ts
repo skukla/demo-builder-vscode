@@ -20,6 +20,7 @@ import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizard
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getGitHubServices, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
+import { probeStoreViewProducts } from '@/features/eds/services/storeViewProducts';
 import {
     getAutoSelectedOptionalDependencies,
     getAvailableStacksForPackage,
@@ -30,6 +31,7 @@ import {
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
 import { poolUnits } from '../../../helpers/authenticationServiceFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/features/project-creation/handlers/executor', () => ({
     executeProjectCreation: jest.fn(async () => undefined),
@@ -71,6 +73,11 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 jest.mock('@/features/eds/handlers/edsHandlers', () => ({
     edsHandlers: { 'storefront-setup-start': jest.fn() },
 }));
+// The store-view product check (EDS-46) is a live Catalog Service read. It answers
+// `unknown` here unless a suite says otherwise — the answer that adds nothing.
+jest.mock('@/features/eds/services/storeViewProducts', () => ({
+    probeStoreViewProducts: jest.fn(async () => 'unknown'),
+}));
 jest.mock('@/features/ai/server/adobeTargetStore', () => ({
     getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
     runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
@@ -89,6 +96,7 @@ export {
     edsHandlers,
     getGitHubServices,
     getDaLiveAuthService,
+    probeStoreViewProducts,
     getAvailableStacksForPackage,
     getResolvedMeshRequirement,
     getSelectablePackages,
@@ -160,10 +168,14 @@ export const authManager = poolUnits({
     ),
 });
 
+/** The logger every headless context carries (`headlessHandlerContext.ts`). */
+export const toolLogger = createMockLogger();
+
 export const ctxFactory = (): HandlerContext =>
     ({
         authManager,
         context: {},
+        logger: toolLogger,
         sendMessage: jest.fn(async () => undefined),
     }) as unknown as HandlerContext;
 

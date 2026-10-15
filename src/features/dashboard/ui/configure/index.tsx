@@ -23,6 +23,10 @@ import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/utilities.css';
+// .inline-notice-* — the store pickers' "Guests won't see any products in this
+// store view." line (EDS-46) is an InlineNotice, and this screen renders the
+// same pickers as the wizard.
+import '@/core/ui/styles/inline-controls.css';
 // The block library cards on the Block Libraries tab are the wizard's picker (EDS-39),
 // and a sheet reaches only the bundles whose entry imports it. `.choice-*` is the
 // cards. wizard-misc.css is here for ONE rule, `.settings-link`, the picker's

@@ -29,8 +29,12 @@ import { cn } from '@/core/ui/utils/classNames';
 export interface InlineNoticeProps {
     /** Bold first line — name the condition, not the remedy. */
     title: string;
-    /** The explanation, and what the user can do about it. */
-    children: React.ReactNode;
+    /**
+     * The explanation, and what the user can do about it. Omit it for a one-line
+     * notice whose title says everything (the store pickers' "Guests won't see
+     * any products in this store view.").
+     */
+    children?: React.ReactNode;
     /** Amber (default) for something to act on; blue for context. */
     tone?: 'warning' | 'info';
     /** Optional secondary line, rendered smaller and dimmer. */
@@ -72,7 +76,7 @@ export function InlineNotice({
             <Icon size="S" UNSAFE_className="inline-notice-icon" />
             <div className="inline-notice-body">
                 <Text UNSAFE_className="inline-notice-title">{title}</Text>
-                <Text UNSAFE_className="status-text">{children}</Text>
+                {children && <Text UNSAFE_className="status-text">{children}</Text>}
                 {hint && <Text UNSAFE_className="inline-notice-hint">{hint}</Text>}
                 {action && actionBelow && <div className="inline-notice-actions">{action}</div>}
             </div>

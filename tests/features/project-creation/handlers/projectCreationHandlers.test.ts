@@ -59,6 +59,11 @@ describe('projectCreationHandlers', () => {
             expect(hasHandler(projectCreationHandlers, 'check-dalive-auth')).toBe(true);
         });
 
+        it('should register the store-view product check (EDS-46)', () => {
+            // The Business Structure pickers ask it once all three codes are chosen.
+            expect(hasHandler(projectCreationHandlers, 'check-store-view-products')).toBe(true);
+        });
+
         it('should register the console API handler', () => {
             expect(hasHandler(projectCreationHandlers, 'list-org-console-apis')).toBe(true);
         });

@@ -28,9 +28,12 @@ import {
 } from '@/features/components/services/envVarHelpers';
 import type { ComponentConfigs } from '@/types/webview';
 
+/** An ACCS autoDetectKey is this prefix followed by the endpoint itself. */
+const ACCS_KEY_PREFIX = 'accs:';
+
 /** Derive the component service group ID from an autoDetectKey prefix. */
 function groupIdFromKey(key: string): string {
-    return key.startsWith('accs:') ? STORE_GROUP_IDS.ACCS : STORE_GROUP_IDS.PAAS;
+    return key.startsWith(ACCS_KEY_PREFIX) ? STORE_GROUP_IDS.ACCS : STORE_GROUP_IDS.PAAS;
 }
 
 export interface UseAutoStoreDetectProps {
@@ -53,6 +56,11 @@ export interface UseAutoStoreDetectProps {
 
 export interface UseAutoStoreDetectReturn {
     autoDetectKey: string | undefined;
+    /**
+     * The ACCS GraphQL endpoint detection keyed on — set only when the key is an
+     * ACCS one. The store-view product check (EDS-46) asks Catalog Service here.
+     */
+    accsEndpoint: string | undefined;
     /** Imperatively re-trigger store discovery, bypassing the hasStoreData guard */
     forceFetch: () => void;
 }
@@ -150,7 +158,7 @@ export function useAutoStoreDetect({
         if (accsEndpoint) {
             try {
                 const url = new URL(accsEndpoint);
-                if (url.pathname.includes('graphql')) return `accs:${accsEndpoint}`;
+                if (url.pathname.includes('graphql')) return `${ACCS_KEY_PREFIX}${accsEndpoint}`;
             } catch { /* not valid yet */ }
         }
 
@@ -185,5 +193,9 @@ export function useAutoStoreDetect({
         handleFetchStores(groupId);
     }, [autoDetectKey, handleFetchStores]);
 
-    return { autoDetectKey, forceFetch };
+    const accsEndpoint = autoDetectKey?.startsWith(ACCS_KEY_PREFIX)
+        ? autoDetectKey.slice(ACCS_KEY_PREFIX.length)
+        : undefined;
+
+    return { autoDetectKey, accsEndpoint, forceFetch };
 }
