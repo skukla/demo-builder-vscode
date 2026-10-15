@@ -52,6 +52,8 @@ export interface NewCategoryPagesWatcherDeps {
     save(project: Project): Promise<void>;
     /** Show a notice; answers the button pressed, or undefined when it is dismissed. */
     notify(message: string, ...actions: string[]): Promise<string | undefined>;
+    /** Show progress while `job` runs: an add the SC asked for takes about a minute. */
+    inProgress<T>(title: string, job: () => Promise<T>): Promise<T>;
     logger: Pick<Logger, 'info' | 'warn' | 'debug'>;
 }
 
@@ -128,7 +130,10 @@ export function createNewCategoryPagesWatcher(deps: NewCategoryPagesWatcherDeps)
     }
 
     async function add(project: Project, site: CatalogMenuSite, unattended: boolean): Promise<void> {
-        const result = await addNewCategoryPagesStep(project, site);
+        // Asked for by a button: show it working. Pressing Add pages showed nothing for
+        // the minute the pages took (owner, 2026-10-15). Unattended adds stay quiet.
+        const write = (): ReturnType<typeof addNewCategoryPagesStep> => addNewCategoryPagesStep(project, site);
+        const result = unattended ? await write() : await deps.inProgress('Adding category pages', write);
         if (result.added.length > 0) await deps.save(project);
         deps.logger.info(`${LOG} ${project.name}: ${result.summary}`);
         if (result.signIn) {

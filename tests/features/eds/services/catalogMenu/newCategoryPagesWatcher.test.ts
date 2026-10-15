@@ -69,6 +69,8 @@ interface Harness {
     notify: jest.Mock<Promise<string | undefined>, [string, ...string[]]>;
     save: jest.Mock<Promise<void>, [Project]>;
     warn: jest.Mock;
+    /** The progress the SC sees while an answered offer adds its pages. */
+    inProgress: jest.Mock;
     watcher: ReturnType<typeof createNewCategoryPagesWatcher>;
 }
 
@@ -85,6 +87,7 @@ async function harness(answer?: string): Promise<Harness> {
         notify: jest.fn(async (_message: string, ..._actions: string[]) => answer),
         save: jest.fn(async (_project: Project) => undefined),
         warn: jest.fn(),
+        inProgress: jest.fn((_title: string, job: () => Promise<unknown>) => job()),
     } as Harness;
     const site = (): CatalogMenuSite => ({
         pages: h.pages,
@@ -100,6 +103,7 @@ async function harness(answer?: string): Promise<Harness> {
         autoAddByDefault: () => h.setting,
         save: h.save,
         notify: h.notify,
+        inProgress: h.inProgress,
         logger: { info: jest.fn(), warn: h.warn, debug: jest.fn() },
     });
     return h;
@@ -167,6 +171,18 @@ describe('setting off: it offers', () => {
             'Justrite: Added pages for 2 new categories: Tools (/tools), Gloves (/gloves).',
         );
         expect(readAutoAddOverride(h.project)).toBeUndefined();
+    });
+
+    // Owner, 2026-10-15: pressing Add pages showed nothing for the minute the pages
+    // took to publish, which read as nothing happening.
+    it('shows progress while the pages it was asked for are written and published', async () => {
+        const h = await harness(ADD_PAGES);
+
+        await h.watcher.check();
+        await h.watcher.idle();
+
+        expect(h.inProgress).toHaveBeenCalledTimes(1);
+        expect(h.inProgress).toHaveBeenCalledWith('Adding category pages', expect.any(Function));
     });
 
     it('"always for this project" keeps the choice on the project and adds the pages', async () => {
@@ -237,6 +253,8 @@ describe('setting on: it adds without asking', () => {
             'Justrite: Added pages for 2 new categories: Tools (/tools), Gloves (/gloves).',
             STOP_FOR_PROJECT,
         );
+        // Nobody pressed anything, so no progress pops up unasked; the result says it.
+        expect(h.inProgress).not.toHaveBeenCalled();
     });
 
     it('"stop for this project" turns it off for the project and saves that', async () => {

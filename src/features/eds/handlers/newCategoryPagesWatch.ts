@@ -17,6 +17,7 @@
 
 import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { catalogMenuSiteFor } from '@/features/ai/server/storefrontPages';
 import {
     AUTO_ADD_SETTING_LEAF,
@@ -64,6 +65,7 @@ export function registerNewCategoryPagesWatch(deps: NewCategoryPagesWatchDeps): 
         save: (project) => stateManager.saveProject(project),
         notify: (message, ...actions) =>
             Promise.resolve(vscode.window.showInformationMessage(message, ...actions)),
+        inProgress: (title, job) => withProgressRegister({ title }, () => job()),
         logger: deps.logger,
     });
     const look = (): void => void watcher.check();
