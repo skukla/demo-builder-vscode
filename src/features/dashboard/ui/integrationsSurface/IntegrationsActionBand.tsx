@@ -106,21 +106,17 @@ export function IntegrationsActionBand({
                     // LOCAL project name and the REMOTE Adobe
                     // destination were indistinguishable.
                     countTrailing={
-                        destinationLabel ? (
-                            <div
-                                className="page-destination-row"
-                                data-testid="page-destination"
-                            >
-                                <span className="page-destination-label">
-                                    Deploys to
-                                </span>
-                                <DestinationContext
-                                    project={destination?.projectTitle}
-                                    projectOnly
-                                    onChange={onChangeDestination}
-                                />
-                            </div>
-                        ) : undefined
+                        // Shown even with no Adobe project: a storefront-only project
+                        // has none, and an add needs one chosen first (2026-10-15).
+                        <div className="page-destination-row" data-testid="page-destination">
+                            <span className="page-destination-label">Deploys to</span>
+                            <DestinationContext
+                                project={destinationLabel}
+                                projectOnly
+                                onChange={onChangeDestination}
+                                unsetLabel="Not chosen yet"
+                            />
+                        </div>
                     }
                 />
             </View>

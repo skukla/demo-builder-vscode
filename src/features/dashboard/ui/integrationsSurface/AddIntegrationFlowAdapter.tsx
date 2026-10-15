@@ -86,6 +86,19 @@ export interface AddIntegrationFlowAdapterProps {
     }) => void;
 }
 
+/**
+ * The destination an add carries: the one its own steps chose, only when the project
+ * had none. Without it the add ran with no Adobe project and its workspace was made in
+ * the project cached from earlier (Justrite's, 2026-10-15).
+ */
+function chosenDestination(
+    chosen: { project?: DestinationRef; workspace?: DestinationRef },
+    hadDestination: boolean,
+): Pick<AddAppBuilderComponentRequestPayload, 'destination'> {
+    const { project, workspace } = chosen;
+    return !hadDestination && project?.id && workspace?.id ? { destination: { project, workspace } } : {};
+}
+
 /** Post an add whose steps narrate to the progress modal. */
 function postAdd(payload: AddAppBuilderComponentRequestPayload): void {
     webviewClient.postMessage('addAppBuilderComponent', { ...payload, progress: 'modal' });
@@ -145,6 +158,10 @@ export function AddIntegrationFlowAdapter({
     // project and the workspace in separate commits, and the post fires on the
     // second — a setState-backed read would still see the previous render's value.
     const destinationRef = useRef<{ project?: DestinationRef; workspace?: DestinationRef }>({});
+    // Whether the live project already deploys somewhere. When it does not, the add
+    // journey's own destination steps choose one, and the add must carry it.
+    const hadDestinationRef = useRef(Boolean(adobeProjectId));
+    hadDestinationRef.current = Boolean(adobeProjectId);
 
     const updateState = useCallback(
         (updates: Partial<WizardState>): void => {
@@ -265,6 +282,7 @@ export function AddIntegrationFlowAdapter({
                         ...(copy ? { instanceId: copy.id } : {}),
                         apis: apiPicksRef.current[id],
                         name: displayName,
+                        ...chosenDestination(destinationRef.current, hadDestinationRef.current),
                     };
                     postAdd(payload);
                     // The payload rides along so the modal's Retry re-sends this
@@ -293,6 +311,7 @@ export function AddIntegrationFlowAdapter({
                     source,
                     ...(instance ? { name: instance.name, instanceId: instance.id } : {}),
                     apis: apiPicksRef.current[picksKey],
+                    ...chosenDestination(destinationRef.current, hadDestinationRef.current),
                 };
                 postAdd(payload);
                 onAddStartedRef.current?.(picksKey, instance?.name ?? source.repo, payload);

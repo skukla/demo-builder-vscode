@@ -18,6 +18,7 @@ import {
     type GuardableResult,
 } from './appBuilderComponentOperation';
 import { postComponentsSnapshot, refreshProjectStatus } from './appBuilderComponentPush';
+import { recordDestination } from './projectDestinationRecord';
 import { replaceDeployedElsewhere } from './replaceDeployedElsewhere';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -407,12 +408,28 @@ export const handleAddAppBuilderComponent: MessageHandler<
     const entry = copyWhenTaken(project, resolved, payload ?? {});
     const refusal = refuseAdd(project, entry);
     if (refusal) return refusal;
+    await recordChosenDestination(context, project, payload?.destination);
 
     await recordPairNames(context, project, entry, payload?.name);
     const label = addLabel(project, entry);
     const result = await runAdd(context, project, entry, payload ?? {});
     return reportAddOutcome(context, entry, result, label, progressSurfaceOf(payload));
 }, addedIdOf);
+
+/**
+ * Record the destination the add's own steps chose, before anything is made. Only for a
+ * project with none: the flow sends one only then, and an existing destination is changed
+ * through Deploys to, never by an add. Without this the add ran with no Adobe project and
+ * its workspace was made in the project cached from earlier (Justrite's, 2026-10-15).
+ */
+async function recordChosenDestination(
+    context: HandlerContext,
+    project: Project,
+    chosen: AddAppBuilderComponentRequestPayload['destination'],
+): Promise<void> {
+    if (!chosen || project.adobe?.projectId || !chosen.project.id || !chosen.workspace.id) return;
+    await recordDestination(context, project, chosen.project, chosen.workspace);
+}
 
 /**
  * A catalog entry the project already holds is added again as a numbered copy

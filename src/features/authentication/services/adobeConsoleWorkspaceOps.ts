@@ -128,8 +128,10 @@ export class AdobeConsoleWorkspaceOps {
             // Explicit target wins over the cache — same reason as createProject:
             // the agent's selection lives in `adobeTargetStore`, which never
             // reaches this cache, so a cached project could be a different one.
-            const orgId = target?.orgId ?? this.cacheManager.getCachedOrganization()?.id;
-            const projectId = target?.projectId ?? this.cacheManager.getCachedProject()?.id;
+            // A told target is used whole or not at all: borrowing a missing half from the
+            // cache put an ERP's workspace in another project (2026-10-15).
+            const orgId = target ? target.orgId : this.cacheManager.getCachedOrganization()?.id;
+            const projectId = target ? target.projectId : this.cacheManager.getCachedProject()?.id;
             if (!orgId || !projectId) {
                 this.debugLogger.debug(
                     '[Entity Fetcher] Cannot create workspace: missing org or project ID',

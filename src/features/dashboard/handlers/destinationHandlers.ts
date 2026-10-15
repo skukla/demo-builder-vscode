@@ -19,6 +19,7 @@
 
 import * as vscode from 'vscode';
 import { postComponentsSnapshot, runGuards } from './appBuilderComponentHandlers';
+import { recordDestination } from './projectDestinationRecord';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { DESTINATION_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -115,30 +116,6 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
     );
 
 /**
- * The org the destination is recorded under.
- *
- * A stored org carries over untouched (sign-in owns org selection). A project
- * that has NONE — created from a package that deploys no mesh, so creation
- * recorded no Adobe context — takes the signed-in org, the only one its IMS
- * token can address. Left empty, the destination looked complete while every
- * credential read refused it: "no Adobe org, project and workspace to take a
- * credential from" (2026-09-30, a project pointed at a fresh Console project).
- */
-async function orgOf(
-    project: Project,
-    context: HandlerContext,
-): Promise<{ organization: string; organizationName: string | undefined }> {
-    const stored = project.adobe?.organization;
-    if (stored) return { organization: stored, organizationName: project.adobe?.organizationName };
-    // Resolved, not read from the cache: the cache is empty until something
-    // resolves the org, and after a window reload nothing has (measured
-    // 2026-09-30 — the cached read answered undefined and wrote '' again).
-    const signedIn = await context.authManager?.getEntityServices()
-        .then((units) => units.resolver.getCurrentOrganization());
-    return { organization: signedIn?.id ?? '', organizationName: signedIn?.name };
-}
-
-/**
  * The destination change itself, inside the notification.
  *
  * Split out so the handler stays under the complexity limit and so every slow
@@ -217,29 +194,8 @@ export async function applyDestination(
     // project back. Nothing undeploys from it — a move only ever deploys.
     const previous = project.adobe ? { ...project.adobe } : undefined;
 
-    project.adobe = {
-        ...project.adobe,
-        ...(await orgOf(project, context)),
-        authenticated: project.adobe?.authenticated ?? true,
-        projectId: nextProject.id,
-        projectName: nextProject.name ?? nextProject.title ?? nextProject.id,
-        projectTitle: nextProject.title,
-        workspace: nextWorkspace.id,
-        workspaceName: nextWorkspace.name,
-        workspaceTitle: nextWorkspace.title,
-    };
-
     report('Saving the new destination');
-    await context.stateManager.saveProject(project);
-    context.logger.info(
-        `[Destination] Now deploying to ${project.adobe.projectTitle ?? project.adobe.projectName}` +
-            ` · ${project.adobe.workspaceTitle ?? project.adobe.workspaceName}`,
-    );
-
-    // Immediately after the write, not after the move: `project.adobe` already
-    // names the new target, every deploy below goes there, and a header still
-    // showing the old one would be wrong for the whole run.
-    await sendProjectDestinationUpdate(project.adobe);
+    await recordDestination(context, project, nextProject, nextWorkspace);
 
     if (movingIds.length === 0) {
         return { success: true, data: { destination: project.adobe, previous } };
@@ -291,7 +247,7 @@ export async function applyDestination(
     if (!move.success) {
         // The migration pointed the project back; the header must follow, or it
         // keeps naming a destination the project no longer uses.
-        await sendProjectDestinationUpdate(project.adobe);
+        if (project.adobe) await sendProjectDestinationUpdate(project.adobe);
         const cause = move.failed.map((f) => `${f.id} (${f.error})`).join(', ');
         // Once an integration's old side is gone the project is NOT pointed back,
         // and there is no previous destination still serving it to point at.

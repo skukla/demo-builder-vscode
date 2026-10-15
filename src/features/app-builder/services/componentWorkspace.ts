@@ -159,6 +159,10 @@ export function inheritedWorkspace(
  *
  * @returns a reason when the workspace could not be made, otherwise undefined
  */
+/** What an add says when the project has no Adobe project to make a workspace in. */
+export const NO_ADOBE_PROJECT =
+    'This project has no Adobe project yet. Choose one under Deploys to on the Integrations screen, then add it again.';
+
 export async function ensureComponentWorkspace(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
@@ -178,6 +182,12 @@ export async function ensureComponentWorkspace(
     if (entry.kind === 'mesh') return undefined;
     const existing = project.appBuilderComponents?.[entry.id]?.workspace;
     if (existing) return undefined;
+    // A storefront-only project records the org alone. Without its own project there is
+    // nowhere to make a workspace: one was made in the project cached from earlier
+    // (Justrite's, 2026-10-15). Say where to choose one instead.
+    if (!project.adobe?.organization || !project.adobe?.projectId) {
+        return { error: NO_ADOBE_PROJECT };
+    }
 
     const workspace =
         inheritedWorkspace(project, entry, deps.catalog) ??

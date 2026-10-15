@@ -17,7 +17,7 @@
  */
 
 import { act } from '@testing-library/react';
-import '../../../../helpers/webviewClientMock';
+import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import {
     PROJECT_TWO,
     WORKSPACE_TWO,
@@ -139,5 +139,47 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
 
         expect(modalProps().state.adobeProject).toStrictEqual(PROJECT_TWO);
         expect(modalProps().state.adobeWorkspace).toStrictEqual(WORKSPACE_TWO);
+    });
+});
+
+/**
+ * An add on a project with NO destination carries the one its own steps chose
+ * (2026-10-15). The SC created "Kukla Commerce Demo" in the add's destination steps;
+ * the add ran without it, and its workspace was made in the project cached from
+ * earlier — Justrite's.
+ */
+describe('AddIntegrationFlowAdapter — an add carries a destination its steps chose', () => {
+    function lastAdd(): Record<string, unknown> {
+        const calls = mockPostMessage.mock.calls.filter((c) => c[0] === 'addAppBuilderComponent');
+        return calls[calls.length - 1][1] as Record<string, unknown>;
+    }
+
+    it('sends the chosen project and workspace when the project had none', () => {
+        renderAdapter({ adobeProjectId: undefined, adobeWorkspaceId: undefined });
+        pickProject();
+        pickWorkspace();
+
+        modalProps().builder.onAppBuilderComponentToggle('commerce-paas-mesh', true);
+
+        expect(lastAdd().destination).toStrictEqual({ project: PROJECT_TWO, workspace: WORKSPACE_TWO });
+    });
+
+    it('sends none when the project already deploys somewhere — control', () => {
+        renderAdapter();
+        pickProject();
+        pickWorkspace();
+
+        modalProps().builder.onAppBuilderComponentToggle('commerce-paas-mesh', true);
+
+        expect(lastAdd()).not.toHaveProperty('destination');
+    });
+
+    it('sends none when only half a destination was chosen', () => {
+        renderAdapter({ adobeProjectId: undefined, adobeWorkspaceId: undefined });
+        pickProject();
+
+        modalProps().builder.onAppBuilderComponentToggle('commerce-paas-mesh', true);
+
+        expect(lastAdd()).not.toHaveProperty('destination');
     });
 });

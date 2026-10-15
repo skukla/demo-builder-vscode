@@ -48,7 +48,7 @@
         "src/core/build/buildStampUi.ts:72": "Not a decision: shows which build of Demo Builder is running. Modal on purpose, because it is read when someone is unsure which build they have, and a toast that disappears is too easy to miss.",
         "src/features/authentication/handlers/deleteAdobeProjectHandler.ts:128": "Gates: permanently delete an Adobe I/O project and its event registrations and providers. Cannot be undone.",
         "src/features/dashboard/handlers/appBuilderComponentPromote.ts:286": "Gates: delete from GitHub the repository Demo Builder created when an app was saved to one. Cannot be undone.",
-        "src/features/dashboard/handlers/destinationHandlers.ts:359": "Gates: move the project to another Adobe project, which removes each integration with a workspace of its own from the old one (uninstalled from Commerce, workspace deleted). An Edit asks this before anything runs.",
+        "src/features/dashboard/handlers/destinationHandlers.ts:315": "Gates: move the project to another Adobe project, which removes each integration with a workspace of its own from the old one (uninstalled from Commerce, workspace deleted). An Edit asks this before anything runs.",
         "src/features/projects-dashboard/services/deletionConfirmation.ts:37": "Gates: delete a project's files and configuration from this computer. Cannot be undone."
     }
 }

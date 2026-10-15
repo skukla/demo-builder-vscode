@@ -233,16 +233,18 @@ describe('IntegrationsScreen', () => {
                 expect(screen.getByTestId('page-destination')).toHaveTextContent(/deploys to/i);
             });
 
-            it('renders no destination row when there is none — control', () => {
-                // DestinationContext returns null on a half-known destination, so
-                // the row must not appear as an empty labelled shell.
+            // 2026-10-15: with no Adobe project the row used to vanish, so an SC on a
+            // storefront-only project had nowhere to choose one before an add.
+            it('offers to choose a destination when there is none', () => {
                 const handlers = captureHandlers();
                 render(
                     <IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />
                 );
                 settleStatus(handlers);
 
-                expect(screen.queryByTestId('page-destination')).not.toBeInTheDocument();
+                const row = screen.getByTestId('page-destination');
+                expect(row).toHaveTextContent('Not chosen yet');
+                expect(screen.getByRole('button', { name: 'Choose' })).toBeInTheDocument();
             });
         });
 

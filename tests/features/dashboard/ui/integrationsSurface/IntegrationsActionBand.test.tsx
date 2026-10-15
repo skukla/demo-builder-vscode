@@ -135,11 +135,18 @@ describe('IntegrationsActionBand', () => {
         expect(props.onChangeDestination).toHaveBeenCalledTimes(1);
     });
 
-    it('renders no destination row without a destination — control', () => {
-        renderBand({ destination: undefined });
+    // 2026-10-15: a storefront-only project has no Adobe project, and with the row
+    // hidden an SC could not choose one before adding an integration.
+    it('offers to choose a destination when the project has none', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        const props = renderBand({ destination: undefined });
 
-        expect(headerProps().countTrailing).toBeUndefined();
-        expect(screen.queryByTestId('page-destination')).not.toBeInTheDocument();
+        const row = screen.getByTestId('page-destination');
+        expect(row).toHaveTextContent('Deploys to');
+        expect(row).toHaveTextContent('Not chosen yet');
+
+        await user.click(screen.getByRole('button', { name: 'Choose' }));
+        expect(props.onChangeDestination).toHaveBeenCalledTimes(1);
     });
 
     it('routes the trailing button back to the project dashboard', async () => {

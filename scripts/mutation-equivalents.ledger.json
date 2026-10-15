@@ -7272,7 +7272,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
             ],
-            "line": 105,
+            "line": 104,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",
@@ -10709,18 +10709,6 @@
             "source": "EDS-8 IntegrationsScreen split"
         },
         {
-            "module": "src/features/dashboard/ui/integrationsSurface/IntegrationsActionBand.tsx",
-            "anchors": [
-                "project={destination?.projectTitle}"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "This line renders only inside `destinationLabel ? (...) : undefined`, and destinationLabel is formatDestination(destination), which returns undefined whenever destination is undefined. So on every path that reaches the line destination is defined, and `destination.projectTitle` reads the same value as `destination?.projectTitle`. No input can make the two differ; the band suite's no-destination control renders no row at all. Survived identically on IntegrationsScreen.tsx before the EDS-8 split.",
-            "decision": "none \u2014 the ?. is redundant but harmless; removing it would trade a dead guard for a type error the compiler cannot see through the ternary",
-            "recorded": "2026-10-08",
-            "source": "EDS-8 IntegrationsScreen split"
-        },
-        {
             "module": "src/features/dashboard/ui/configure/hooks/useConfigureSave.ts",
             "anchors": [
                 "}, []);"
@@ -12226,7 +12214,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 301,
+            "line": 320,
             "mutants": 1,
             "category": "other",
             "reason": "React compares a dependency array element-wise with Object.is, so a constant one-element array of the same string literal is as stable across renders as an empty one \u2014 the builder memo recomputes on neither. The mutant changes the array's contents and not the memo's behaviour, which is the only thing any caller can see. Verified by planting ['Stryker was here'] as the dependency list: all 35 tests green, including the rerender tests that DO fail when a genuinely dependent memo is frozen.",
@@ -12239,7 +12227,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 309,
+            "line": 328,
             "mutants": 1,
             "category": "other",
             "reason": "Same argument as the builder memo on line 242: useCallback compares dependency arrays element-wise with Object.is, and a constant one-element array of a string literal never changes between renders, so the signIn callback is rebuilt on neither the original nor the mutant. Verified by planting ['Stryker was here'] as the dependency list \u2014 all 35 tests green, while the rerender tests that pin genuinely dependent memos do fail when those are frozen.",
@@ -16125,7 +16113,7 @@
             "source": "PL-70 batch MUT-01"
         },
         {
-            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
+            "module": "src/features/dashboard/handlers/projectDestinationRecord.ts",
             "anchors": [
                 "if (stored) return { organization: stored, organizationName: project.adobe?.organizationName };"
             ],

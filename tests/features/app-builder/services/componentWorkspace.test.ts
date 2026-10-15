@@ -59,6 +59,28 @@ beforeEach(() => {
     jest.clearAllMocks();
 });
 
+describe('a project with no Adobe project', () => {
+    // 2026-10-15: a storefront-only project records the org alone. An ERP add then
+    // made its workspace in the project cached from earlier — Justrite's.
+    it('makes nothing, and says where to choose one', async () => {
+        const project = createMockProject({ adobe: { organization: 'org-1' }, appBuilderComponents: {} });
+        const maker = makerThatCreates();
+
+        const result = await ensureComponentWorkspace(project, ERP_INTEGRATION, {
+            maker,
+            saveProject,
+            nameOf: () => 'Northwind ERP',
+        });
+
+        expect(maker.createWorkspace).not.toHaveBeenCalled();
+        expect(saveProject).not.toHaveBeenCalled();
+        expect(result).toStrictEqual({
+            error:
+                'This project has no Adobe project yet. Choose one under Deploys to on the Integrations screen, then add it again.',
+        });
+    });
+});
+
 describe('a component that needs its own workspace', () => {
     it('creates one titled for the SC and records id, name and title', async () => {
         const project = projectWith();

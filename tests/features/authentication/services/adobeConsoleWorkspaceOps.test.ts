@@ -112,6 +112,23 @@ describe('AdobeConsoleWorkspaceOps.createWorkspace — where it is created', () 
         expect(createWorkspace.mock.calls[0].slice(0, 2)).toStrictEqual(['org-agent', 'proj-agent']);
     });
 
+    // 2026-10-15: an ERP add on a project with no Adobe project passed
+    // `{ orgId, projectId: undefined }`, and the missing half came from the cache:
+    // Justrite's project, which the SC had open earlier. A told target is used whole
+    // or not at all.
+    it('refuses a target missing its project rather than borrowing the cached one', async () => {
+        const createWorkspace = jest.fn();
+        const { ops } = build(
+            { createWorkspace, createRuntimeNamespace: jest.fn().mockResolvedValue({}) },
+            { org: CACHED_ORG, project: CACHED_PROJECT },
+        );
+
+        const result = await ops.createWorkspace('Northwind ERP', '', { orgId: 'org-1', projectId: undefined });
+
+        expect(result).toStrictEqual({ error: 'No organization or project selected.' });
+        expect(createWorkspace).not.toHaveBeenCalled();
+    });
+
     it('initialises the SDK before it reads the target', async () => {
         const createWorkspace = jest.fn();
         const { ops, sdk } = build({ createWorkspace }, { initialized: false });
