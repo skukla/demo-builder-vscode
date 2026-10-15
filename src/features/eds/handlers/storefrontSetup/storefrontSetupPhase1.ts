@@ -251,12 +251,13 @@ async function executePhaseExistingRepo(
         repoInfo.repoUrl = `https://github.com/${edsConfig.existingRepo}`;
     }
 
-    logger.info(
-        `[Storefront Setup] Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
-    );
+    const made = edsConfig.createdRepo; // the wizard SELECTS what it creates: say "new" (2026-10-15)
+    const isNew = made?.owner === repoInfo.repoOwner && made?.name === repoInfo.repoName;
+    const usingMessage = isNew ? 'Using your new repository' : 'Using existing repository';
+    logger.info(`[Storefront Setup] ${usingMessage}: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: 'Using existing repository',
+        message: usingMessage,
         subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 5,
         ...repoInfo,

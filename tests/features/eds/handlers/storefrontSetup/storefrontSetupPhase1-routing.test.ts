@@ -185,6 +185,21 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
         expect(messages(context)).not.toContain('Using repository');
         expect(services.githubRepoLifecycle.createFromTemplate).not.toHaveBeenCalled();
     });
+
+    it('calls the repository the wizard just created new, though it is selected like an existing one', async () => {
+        // Creating a repository selects it (repoMode existing), so the message said
+        // "Using existing repository" for one made a minute earlier (owner, 2026-10-15).
+        const { context } = await run(
+            config({
+                repoMode: 'existing',
+                existingRepo: 'skukla/made-by-the-wizard',
+                createdRepo: CREATED_REPO,
+            }),
+        );
+
+        expect(messages(context)).toContain('Using your new repository');
+        expect(messages(context)).not.toContain('Using existing repository');
+    });
 });
 
 /**
