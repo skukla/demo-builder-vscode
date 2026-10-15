@@ -91,3 +91,4 @@ store and needs the owner's go-ahead.
 ## Shipped so far
 
 - 2026-10-15  feat(app-builder): one ERP integration per Commerce instance (`85b7abbef`)
+- 2026-10-15  fix(app-builder): say why the ERP integration is unavailable in a banner (`bf20bae50`)
