@@ -97,7 +97,7 @@ you for a moment: it stops until you install the GitHub app.
 | 1.2 | Sign out of DA.live, then sign in again with a fresh token on the clipboard. Then ask the agent "am I signed in to DA.live?" | No token box opens. The status bar names the namespace and your email. The agent says yes [EDS-35, EDS-8] | `[no cloud]` |  |
 | 1.3 | Sign in to DA.live again, this time with an empty clipboard. Paste an expired token first, then a good one. | The token box opens. The expired token is refused in words ("Token has expired...") and nothing is stored. The good one signs in [EDS-8] | `[no cloud]` |  |
 | 1.4 | Sign out of Adobe and sign in again. Then open a project that lives in a different Adobe org. | The browser opens once. The org list refreshes. The other-org project shows the "Switch IMS Org" warning, and no browser opens by itself [EDS-8] | `[no cloud]` |  |
-| 1.5 ★ | Open every screen once: Create Project, Edit Project, Project Dashboard, Configure, the sidebar, Your Projects, the AI overview and Prompt Library, Integrations, Data Installer, Manage Site Access. | Each one draws and loads its data. Your Projects ends with a dashed **New project** card. Integrations ends with a dashed **Add an integration** card [EDS-8, PL-69, PL-62] | `[no cloud]` |  |
+| 1.5 ★ | Open every screen once: Create Project, Edit Project, Project Dashboard, Configure, the sidebar, Your Projects, the AI overview and Prompt Library, Integrations, Data Installer, Manage Site Access. | Each one draws and loads its data. Your Projects ends with a dashed **New project** card. Integrations ends with a dashed **Add an integration** card [EDS-8, PL-69, PL-62] | `[no cloud]` | pass 2026-10-14: every screen drew and loaded. Two fixes came out of it: the dashboard now re-reads status after an Adobe sign-in from another screen (`1896352bd`), and Site Access first loads behind the house full-window spinner (`bac79ab35`, EDS-41) |
 | 1.6 | On the dashboard of a storefront project and of a non-storefront one, look at the tiles. Open and close Export, Save as Package, and View AI Capabilities (close that one with Esc). Click AEM Assets. | Tiles are where they were: Open, Storefront (storefront projects only), Build, Share. Each dialog opens and closes. AEM Assets opens for this project [EDS-8, EDS-21] | `[no cloud]` |  |
 | 1.7 | Open the dashboard of a project whose mesh is deployed and unchanged. | No "redeploy" prompt [EDS-8] | `[no cloud]` |  |
 | 1.8 | Run **Check for Updates** with Justrite open. *Only shows a row if the ERP or the integration has newer code.* If you apply it: **changes live data** (redeploys to Justrite; there is no undo, and it is what you want anyway). | One row per pair, "Justrite: ERP Integration and Justrite ERP", ticked because Justrite is open. Applying it deploys the new code and then brings Commerce up to it [AB-73, AB-13] | `[needs Justrite]` | pass 2026-10-14: one row for the pair, applied, deployed both ERPs and the integration (12:37 to 12:42). It was unticked because bju was the open project at the time (log 12:36:49), which is the designed behaviour; the ticked-when-open half was not seen |
@@ -110,6 +110,11 @@ you for a moment: it stops until you install the GitHub app.
 
 Open any project that is **not** Justrite first, and leave it open. Then start a new project:
 an Edge Delivery storefront, with a block library ticked.
+
+**In the store step, pick the Justrite website** (website `justrite`, store `juststore`, store
+view `justeng`). It is the only website on this Commerce with products assigned; picking Main
+Website gives a storefront whose category and product pages are empty (found 2026-10-14, when
+the plan did not say so). Rows 2.7 and 2.10 need products to check.
 
 | # | Do this | Expect | Needs | Result |
 |---|---|---|---|---|
