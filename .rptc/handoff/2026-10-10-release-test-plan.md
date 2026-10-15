@@ -93,7 +93,7 @@ you for a moment: it stops until you install the GitHub app.
 
 | # | Do this | Expect | Needs | Result |
 |---|---|---|---|---|
-| 1.1 ★ | Press F5. Do not sign in to anything. | You are still signed in to DA.live from before. Nothing asks you to sign in again [EDS-35] | `[no cloud]` |  |
+| 1.1 ★ | Press F5. Do not sign in to anything. | You are still signed in to DA.live from before. Nothing asks you to sign in again [EDS-35] | `[no cloud]` | pass 2026-10-14 (second F5, fresh sign-in). The first F5 showed the expired-sign-in notice: the earlier DA.live token had run out (a new one lives about 4h20m), not been lost |
 | 1.2 | Sign out of DA.live, then sign in again with a fresh token on the clipboard. Then ask the agent "am I signed in to DA.live?" | No token box opens. The status bar names the namespace and your email. The agent says yes [EDS-35, EDS-8] | `[no cloud]` |  |
 | 1.3 | Sign in to DA.live again, this time with an empty clipboard. Paste an expired token first, then a good one. | The token box opens. The expired token is refused in words ("Token has expired...") and nothing is stored. The good one signs in [EDS-8] | `[no cloud]` |  |
 | 1.4 | Sign out of Adobe and sign in again. Then open a project that lives in a different Adobe org. | The browser opens once. The org list refreshes. The other-org project shows the "Switch IMS Org" warning, and no browser opens by itself [EDS-8] | `[no cloud]` |  |
