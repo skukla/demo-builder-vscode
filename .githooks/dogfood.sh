@@ -137,7 +137,9 @@ echo "PRE-PUSH — the gate runs before a push, not after"
 # the hook's own logic — that it skips a delete-only push, and that a failing gate stops
 # the push — with the gate itself stubbed.
 PP="$SB/pre-push"
-sed 's|npm run gate|"$GATE_STUB"|' "$HOOKS/pre-push" > "$PP"
+# gate:docs FIRST: `npm run gate` is a prefix of it, and swapping that first would
+# leave `"$GATE_STUB":docs` behind.
+sed -e 's|npm run gate:docs|"$DOCS_STUB"|' -e 's|npm run gate|"$GATE_STUB"|' "$HOOKS/pre-push" > "$PP"
 chmod +x "$PP"
 
 GATE_STUB="$SB/gate-ok"; printf '#!/usr/bin/env bash\nexit 0\n' > "$GATE_STUB"; chmod +x "$GATE_STUB"
@@ -155,6 +157,43 @@ export GATE_STUB
 if printf 'refs/heads/x deadbeef refs/heads/x abc\n' | "$PP" >/dev/null 2>&1; then
   bad "a failing gate REFUSES the push" "the push was allowed"
 else ok "a failing gate REFUSES the push"; fi
+
+# Which gate a push runs is decided by what it CHANGES (2026-10-16): only Markdown,
+# docs/ or .rptc/ runs the docs checks; anything else runs the full gate. Real commits,
+# because the hook reads the range with `git diff --name-only`. Each stub records that
+# it ran, so the cases see WHICH gate ran rather than only that the push was allowed.
+GATE_STUB="$SB/gate-mark"; printf '#!/usr/bin/env bash\necho full >> "%s/ran"\nexit 0\n' "$SB" > "$GATE_STUB"; chmod +x "$GATE_STUB"
+DOCS_STUB="$SB/docs-mark"; printf '#!/usr/bin/env bash\necho docs >> "%s/ran"\nexit 0\n' "$SB" > "$DOCS_STUB"; chmod +x "$DOCS_STUB"
+export GATE_STUB DOCS_STUB
+# The commits skip this harness's own commit hooks; the hooks path is put BACK to what
+# it was, because the control below depends on it.
+hooks_was=$(git config core.hooksPath)
+git config core.hooksPath /dev/null
+before=$(git rev-parse HEAD)
+mkdir -p docs .rptc; echo n > docs/note.md; echo n > .rptc/item.md; echo n > README.md
+# Named paths on BOTH add and commit: the stubs above live in this repo's directory, and
+# an earlier case leaves a file staged that the control below commits.
+git add docs/note.md .rptc/item.md README.md; git commit -qm 'docs only' -- docs/note.md .rptc/item.md README.md
+docs_sha=$(git rev-parse HEAD)
+echo code > code.ts; git add code.ts; git commit -qm 'code too' -- code.ts
+code_sha=$(git rev-parse HEAD)
+git config core.hooksPath "$hooks_was"
+
+rm -f "$SB/ran"
+printf 'refs/heads/x %s refs/heads/x %s\n' "$docs_sha" "$before" | "$PP" >/dev/null 2>&1
+[[ "$(cat "$SB/ran" 2>/dev/null)" == "docs" ]] && ok "a docs-only push runs only the docs checks" \
+  || bad "a docs-only push runs only the docs checks" "ran: $(cat "$SB/ran" 2>/dev/null)"
+
+rm -f "$SB/ran"
+printf 'refs/heads/x %s refs/heads/x %s\n' "$code_sha" "$before" | "$PP" >/dev/null 2>&1
+[[ "$(cat "$SB/ran" 2>/dev/null)" == "full" ]] && ok "a push with any code file runs the full gate" \
+  || bad "a push with any code file runs the full gate" "ran: $(cat "$SB/ran" 2>/dev/null)"
+
+DOCS_STUB="$SB/docs-fail"; printf '#!/usr/bin/env bash\nexit 1\n' > "$DOCS_STUB"; chmod +x "$DOCS_STUB"
+export DOCS_STUB
+if printf 'refs/heads/x %s refs/heads/x %s\n' "$docs_sha" "$before" | "$PP" >/dev/null 2>&1; then
+  bad "failing docs checks REFUSE a docs-only push" "the push was allowed"
+else ok "failing docs checks REFUSE a docs-only push"; fi
 
 echo
 echo "CONTROL — proves this harness can see a failure"

@@ -49,6 +49,40 @@ if [ "$only_deletes" -eq 1 ]; then
     exit 0
 fi
 
+# A push that changes only Markdown, docs/ or .rptc/ runs only the checks that READ
+# those files (`npm run gate:docs`, ~35s): the repo-rule enforcers in tests/sop, the
+# hook tests, the template checks and the tool-prompt coverage. The full gate (~9 min
+# on this machine) re-ran 2,000 code suites for a docs commit that could change none of
+# their answers (owner, 2026-10-16: "the gate should be smarter"). Any other file in
+# the push runs the full gate, and CI runs everything on every push regardless.
+docs_only=1
+if [ "${#ranges[@]}" -eq 0 ]; then
+    docs_only=0
+fi
+for r in "${ranges[@]}"; do
+    changed=$(git diff --name-only "$r" 2>/dev/null) || { docs_only=0; break; }
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        case "$f" in
+            docs/*|.rptc/*|*.md) ;;
+            *) docs_only=0 ;;
+        esac
+    done <<< "$changed"
+done
+
+if [ "$docs_only" -eq 1 ]; then
+    echo "pre-push: only docs changed, so running the checks that read them (npm run gate:docs)"
+    echo
+    if npm run gate:docs; then
+        echo
+        echo "pre-push: docs gate passed."
+        exit 0
+    fi
+    echo >&2
+    echo "pre-push: REFUSED — the docs checks failed, and CI would fail the same way." >&2
+    exit 1
+fi
+
 echo "pre-push: running the quality gate (matches CI) — 'git push --no-verify' skips it"
 echo
 
