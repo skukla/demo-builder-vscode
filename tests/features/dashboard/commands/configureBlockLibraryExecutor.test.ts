@@ -227,8 +227,8 @@ describe('runPendingBlockLibraryWork', () => {
         );
         expect(report).toHaveBeenCalledWith('Publishing the block list');
         // Its own progress lines are steps under that stage.
-        mockRefresh.mock.calls[0][0].onProgress('Publishing 9 library paths');
-        expect(report).toHaveBeenLastCalledWith('Publishing the block list', 'Publishing 9 library paths');
+        mockRefresh.mock.calls[0][0].onProgress('Publishing the block list: 9 pages');
+        expect(report).toHaveBeenLastCalledWith('Publishing the block list', 'Publishing the block list: 9 pages');
         expect(answered).toEqual([{ level: 'info', text: 'Added 2 blocks.' }]);
     });
 

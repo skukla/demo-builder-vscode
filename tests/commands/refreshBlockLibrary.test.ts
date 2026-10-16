@@ -205,7 +205,7 @@ describe('RefreshBlockLibraryCommand', () => {
         );
         executePipelineMock.mockImplementation(
             async (_params: unknown, _services: unknown, onProgress: (info: { message: string }) => void) => {
-                onProgress({ message: 'Configuring block library' });
+                onProgress({ message: 'Building block library' });
                 return { success: true, contentFilesCopied: 0, libraryPaths: [] };
             },
         );
@@ -214,7 +214,7 @@ describe('RefreshBlockLibraryCommand', () => {
 
         await cmd.execute();
 
-        expect(report).toHaveBeenCalledWith({ message: 'Configuring block library' });
+        expect(report).toHaveBeenCalledWith({ message: 'Building block library' });
     });
 
     /**

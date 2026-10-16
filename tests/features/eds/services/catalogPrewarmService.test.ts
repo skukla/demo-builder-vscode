@@ -371,6 +371,10 @@ describe('prewarmCatalog — happy path', () => {
         const perSkuUpdates = progressCalls.filter((p) => p.current !== undefined);
         expect(perSkuUpdates).toHaveLength(2);
         expect(perSkuUpdates[1]).toEqual(expect.objectContaining({ current: 2, total: 2 }));
+        expect(perSkuUpdates.map((p) => p.message)).toStrictEqual([
+            'Warming product pages: 1 of 2 pages',
+            'Warming product pages: 2 of 2 pages',
+        ]);
     });
 });
 
@@ -416,7 +420,7 @@ describe('prewarmCatalog — the skip reason it reports', () => {
 
         expect(onProgress).toHaveBeenCalledWith({
             operation: 'catalog-prewarm',
-            message: 'Enumerating catalog',
+            message: 'Warming product pages: reading the catalog',
         });
     });
 });

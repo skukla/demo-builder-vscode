@@ -16,6 +16,7 @@
 
 import type { HelixBulkPublish } from './helixBulkPublish';
 import type { HelixPageDiscovery } from './helixPageDiscovery';
+import { STOREFRONT_JOBS, countLine, jobLine } from '@/core/utils/storefrontJobs';
 import type { Logger } from '@/types/logger';
 
 /** Default branch for Helix operations */
@@ -105,7 +106,7 @@ export class HelixSiteContent {
         // Report: Discovering content (still needed to get page count for progress)
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.DISCOVERING,
-            message: 'Discovering content to publish',
+            message: jobLine(STOREFRONT_JOBS.publishingPages, 'finding them'),
         });
 
         // List all publishable pages from DA.live to get count for progress reporting
@@ -151,7 +152,7 @@ export class HelixSiteContent {
         // Phase 1: Bulk preview (sync from DA.live to preview CDN)
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.PUBLISHING,
-            message: 'Previewing all content',
+            message: jobLine(STOREFRONT_JOBS.previewingPages, countLine(0, pages.length, 'page')),
             current: 0,
             total: pages.length,
         });
@@ -163,7 +164,7 @@ export class HelixSiteContent {
             (processed, total) => {
                 onProgress?.({
                     phase: SITE_PUBLISH_PHASES.PUBLISHING,
-                    message: `Previewing content (${processed}/${total})`,
+                    message: jobLine(STOREFRONT_JOBS.previewingPages, countLine(processed, total, 'page')),
                     current: Math.floor(processed / 2), // First half of progress
                     total: pages.length,
                 });
@@ -176,7 +177,7 @@ export class HelixSiteContent {
         // Phase 2: Bulk publish (sync from preview to live CDN)
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.PUBLISHING,
-            message: 'Publishing to live CDN',
+            message: jobLine(STOREFRONT_JOBS.publishingPages, countLine(0, pages.length, 'page')),
             current: Math.floor(pages.length / 2),
             total: pages.length,
         });
@@ -188,7 +189,7 @@ export class HelixSiteContent {
             (processed, total) => {
                 onProgress?.({
                     phase: SITE_PUBLISH_PHASES.PUBLISHING,
-                    message: `Publishing to CDN (${processed}/${total})`,
+                    message: jobLine(STOREFRONT_JOBS.publishingPages, countLine(processed, total, 'page')),
                     current: Math.floor(pages.length / 2) + Math.floor(processed / 2), // Second half
                     total: pages.length,
                 });
@@ -201,7 +202,7 @@ export class HelixSiteContent {
         // Report completion
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.COMPLETE,
-            message: `Published ${pages.length} pages to CDN`,
+            message: jobLine(STOREFRONT_JOBS.publishingPages, `${pages.length} published`),
             current: pages.length,
             total: pages.length,
         });
@@ -225,7 +226,7 @@ export class HelixSiteContent {
 
             onProgress?.({
                 phase: SITE_PUBLISH_PHASES.PUBLISHING,
-                message: `Publishing to CDN (${i + 1}/${pages.length})`,
+                message: jobLine(STOREFRONT_JOBS.publishingPages, countLine(i + 1, pages.length, 'page')),
                 current: i,
                 total: pages.length,
                 currentPath: path,
@@ -257,7 +258,10 @@ export class HelixSiteContent {
         // Report completion
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.COMPLETE,
-            message: `Published ${publishedCount} pages to CDN${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`,
+            message: jobLine(
+                STOREFRONT_JOBS.publishingPages,
+                `${publishedCount} published${skippedCount > 0 ? `, ${skippedCount} had no content` : ''}`,
+            ),
             current: pages.length,
             total: pages.length,
         });

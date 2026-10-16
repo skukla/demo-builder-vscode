@@ -111,7 +111,7 @@ describe('executeEdsPipeline - clearing content', () => {
 
             expect(progress[0]).toEqual({
                 operation: 'content-clear',
-                message: 'Clearing existing DA.live content',
+                message: 'Clearing DA.live content',
                 subMessage: 'test-org/test-site',
             });
         });
@@ -134,7 +134,7 @@ describe('executeEdsPipeline - clearing content', () => {
 
             expect(progress).toContainEqual({
                 operation: 'content-clear',
-                message: 'Clearing content (7 files removed)',
+                message: 'Clearing DA.live content: 7 files removed',
                 subMessage: '/products/shoes.html',
             });
         });
@@ -148,7 +148,7 @@ describe('executeEdsPipeline - clearing content', () => {
 
             await executeEdsPipeline(params, services, onProgress);
 
-            expect(messages()).toContain('Cleared 12 files');
+            expect(messages()).toContain('Clearing DA.live content: 12 files removed');
         });
 
         it('stops the whole pipeline when the clear fails', async () => {

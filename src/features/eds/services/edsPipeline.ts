@@ -42,6 +42,7 @@ import {
 import { carriedWebPaths, findMissingPages, type MissingPagesResult } from './storefront/missingPages';
 import { readStorefrontCodePaths } from './storefrontCodeReader';
 import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
+import { STOREFRONT_JOBS, countLine, itemCount, jobLine } from '@/core/utils/storefrontJobs';
 import type { Project } from '@/types/base';
 import type { BrandAssetsConfig, ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -261,7 +262,7 @@ async function pipelineClearContent(
 
     onProgress?.({
         operation: 'content-clear',
-        message: 'Clearing existing DA.live content',
+        message: STOREFRONT_JOBS.clearingContent,
         subMessage: `${daLiveOrg}/${daLiveSite}`,
     });
     logger.info(`[EdsPipeline] Clearing all DA.live content for ${daLiveOrg}/${daLiveSite}`);
@@ -272,7 +273,7 @@ async function pipelineClearContent(
         (info) => {
             onProgress?.({
                 operation: 'content-clear',
-                message: `Clearing content (${info.deleted} files removed)`,
+                message: jobLine(STOREFRONT_JOBS.clearingContent, `${info.deleted} files removed`),
                 subMessage: info.current,
             });
         },
@@ -285,7 +286,7 @@ async function pipelineClearContent(
     logger.info(`[EdsPipeline] Cleared ${clearResult.deletedCount} files`);
     onProgress?.({
         operation: 'content-clear',
-        message: `Cleared ${clearResult.deletedCount} files`,
+        message: jobLine(STOREFRONT_JOBS.clearingContent, `${clearResult.deletedCount} files removed`),
     });
 }
 
@@ -310,7 +311,7 @@ async function pipelineCopyContent(
 ): Promise<{ filesCopied: number; sheetPaths: string[]; codePathsOnSource: string[]; carriedPaths: string[] }> {
     onProgress?.({
         operation: 'content-copy',
-        message: 'Populating DA.live content',
+        message: STOREFRONT_JOBS.copyingContent,
         subMessage: `from ${contentSource.org}/${contentSource.site}`,
     });
 
@@ -340,7 +341,8 @@ async function pipelineCopyContent(
         daLiveSite,
         (progress) => {
             const statusMessage =
-                progress.message || `Copying content (${progress.processed}/${progress.total})`;
+                progress.message ||
+                jobLine(STOREFRONT_JOBS.copyingContent, countLine(progress.processed, progress.total, 'file'));
             onProgress?.({
                 operation: 'content-copy',
                 message: statusMessage,
@@ -381,13 +383,14 @@ async function pipelineCopyContent(
         );
     }
 
+    const filesCopied = contentResult.totalFiles + overlaidFiles;
     onProgress?.({
         operation: 'content-copy',
-        message: 'Content populated',
+        message: jobLine(STOREFRONT_JOBS.copyingContent, `${itemCount(filesCopied, 'file')} copied`),
     });
 
     return {
-        filesCopied: contentResult.totalFiles + overlaidFiles,
+        filesCopied,
         sheetPaths: contentResult.sheetPaths,
         codePathsOnSource: contentResult.codePathsOnSource,
         carriedPaths: carriedWebPaths(copiedFiles, contentResult.sheetPaths),
@@ -410,7 +413,7 @@ async function pipelinePublishContent(
 ): Promise<string[] | undefined> {
     onProgress?.({
         operation: 'content-publish',
-        message: 'Publishing content to CDN',
+        message: STOREFRONT_JOBS.publishingPages,
         subMessage: `${repoOwner}/${repoName}`,
     });
 
@@ -476,7 +479,7 @@ async function pipelineConfigureBlockLibrary(
 
     onProgress?.({
         operation: 'block-library',
-        message: 'Configuring block library',
+        message: STOREFRONT_JOBS.buildingBlockLibrary,
         // Which storefront it is building the library into — the same slot, and
         // the same org/site shape, the other DA.live steps fill.
         subMessage: `${daLiveOrg}/${daLiveSite}`,
@@ -520,7 +523,7 @@ async function pipelineConfigureBlockLibrary(
         logger.info(`[EdsPipeline] Block library: ${libResult.blocksCount} blocks configured`);
         onProgress?.({
             operation: 'block-library',
-            message: `Block library configured (${libResult.blocksCount} blocks)`,
+            message: jobLine(STOREFRONT_JOBS.buildingBlockLibrary, itemCount(libResult.blocksCount, 'block')),
         });
     }
 
@@ -739,7 +742,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: async ({ params, services, onProgress }) => {
             onProgress?.({
                 operation: 'eds-settings',
-                message: 'Applying EDS configuration',
+                message: STOREFRONT_JOBS.applyingDaLiveSettings,
             });
             const { applyDaLiveOrgConfigSettings } = await import('../handlers/edsHelpers');
             await applyDaLiveOrgConfigSettings(
@@ -757,7 +760,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: async ({ params, services, onProgress }) => {
             onProgress?.({
                 operation: 'cache-purge',
-                message: 'Purging stale cache',
+                message: STOREFRONT_JOBS.clearingCache,
             });
             await services.helixService.purgeCacheAll(params.repoOwner, params.repoName, 'main');
             services.logger.info('[EdsPipeline] Stale cache purged');
@@ -855,8 +858,8 @@ async function pipelinePublishSheets({ params, services, ctx, onProgress }: Pipe
     const count = ctx.sheetPaths.length;
     onProgress?.({
         operation: 'sheet-publish',
-        message: 'Publishing sheets',
-        subMessage: `Publishing ${count} ${count === 1 ? 'sheet' : 'sheets'}`,
+        message: jobLine(STOREFRONT_JOBS.publishingSheets, itemCount(count, 'sheet')),
+        subMessage: `${params.repoOwner}/${params.repoName}`,
     });
 
     const { publishSheetPaths } = await import('../handlers/edsHelpers');
@@ -890,14 +893,14 @@ function libraryPathsToPublish(paths: string[], onlyBlocks: string[] | undefined
 async function pipelinePublishLibrary({ params, services, ctx, onProgress }: PipelineStepEnv) {
     const { helixService, daLiveContentOps, logger } = services;
     const toPublish = libraryPathsToPublish(ctx.libraryPaths, params.publishLibraryBlocksOnly);
-    // The subMessage slot is carried end-to-end (pipeline callback →
-    // storefront-setup-progress → the wizard's progress view) but this step
-    // never filled it — a 2-minute spinner with a static hint (user-asked
-    // 2026-08-23). Say what is actually happening: how much, then which half.
+    // A 2-minute spinner with a static hint was the complaint (user-asked
+    // 2026-08-23). Say what is actually happening: how much, then which half;
+    // the line under it names the site, as the other steps do.
+    const site = `${params.repoOwner}/${params.repoName}`;
     onProgress?.({
         operation: 'library-publish',
-        message: 'Publishing block library',
-        subMessage: `Publishing ${toPublish.length} library ${toPublish.length === 1 ? 'path' : 'paths'}`,
+        message: jobLine(STOREFRONT_JOBS.publishingBlockList, itemCount(toPublish.length, 'page')),
+        subMessage: site,
     });
 
     const { publishLibraryPaths, verifyLibraryPreviewed } = await import('../handlers/edsHelpers');
@@ -910,8 +913,8 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
     );
     onProgress?.({
         operation: 'library-publish',
-        message: 'Publishing block library',
-        subMessage: 'Verifying the library previewed',
+        message: jobLine(STOREFRONT_JOBS.publishingBlockList, 'checking it is live'),
+        subMessage: site,
     });
     const previewed = await verifyLibraryPreviewed(
         params.repoOwner,
@@ -946,7 +949,7 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
 async function pipelineUnpublishLeftovers({ params, services, ctx, onProgress }: PipelineStepEnv) {
     onProgress?.({
         operation: 'leftover-pages',
-        message: 'Removing old pages',
+        message: STOREFRONT_JOBS.removingOldPages,
         subMessage: `${params.repoOwner}/${params.repoName}`,
     });
     const site = { owner: params.repoOwner, repo: params.repoName };
@@ -1004,7 +1007,7 @@ async function pipelineReadStorefrontCode({ params, services, ctx }: PipelineSte
 async function pipelineCheckMissingPages({ params, services, ctx, onProgress }: PipelineStepEnv) {
     const source = params.contentSource;
     if (!source) return;
-    onProgress?.({ operation: 'page-check', message: 'Checking the copied pages' });
+    onProgress?.({ operation: 'page-check', message: STOREFRONT_JOBS.checkingCopiedPages });
     const result = await findMissingPages(
         { owner: params.repoOwner, repo: params.repoName },
         source,

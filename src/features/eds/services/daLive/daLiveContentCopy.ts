@@ -50,6 +50,7 @@ import { backfillMissingPaths, enumerateAndFilterContentPaths } from './daLiveCo
 import { copySingleFile as copySingleFileImpl, type CopySingleFile } from './daLiveFileCopy';
 import { copyDaLiveSite as copyDaLiveSiteImpl, type SiteCopyResult } from './daLiveSiteCopy';
 import type { DaLiveSourceOperations } from './daLiveSourceOperations';
+import { STOREFRONT_JOBS, jobLine } from '@/core/utils/storefrontJobs';
 import type { ContentPatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
@@ -293,7 +294,7 @@ export class DaLiveContentCopy {
             processed: 0,
             total: 0,
             percentage: 0,
-            message: 'Enumerating source content',
+            message: jobLine(STOREFRONT_JOBS.copyingContent, 'finding the pages'),
             currentFile: `${source.org}/${source.site}`,
         });
 
@@ -309,7 +310,7 @@ export class DaLiveContentCopy {
             processed: 0,
             total: 0,
             percentage: 0,
-            message: 'Preparing content copy',
+            message: jobLine(STOREFRONT_JOBS.copyingContent, 'getting ready'),
             currentFile: `${contentPaths.length} pages from ${source.org}/${source.site}`,
         });
 
@@ -379,13 +380,7 @@ export class DaLiveContentCopy {
         );
 
         // Final progress update
-        if (progressCallback) {
-            progressCallback({
-                processed: totalFiles,
-                total: totalFiles,
-                percentage: 100,
-            });
-        }
+        progressCallback?.({ processed: totalFiles, total: totalFiles, percentage: 100 });
 
         return {
             success: failedFiles.length === 0,

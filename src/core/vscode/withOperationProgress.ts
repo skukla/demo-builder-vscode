@@ -90,6 +90,16 @@ function endOf(id: string, result: OperationOutcome): OperationProgressPayload {
     };
 }
 
+/**
+ * The line under a stage. When the stage IS the job reporting ("Copying the content"
+ * over "Copying the content: 40 of 103 files"), it is only what follows the name:
+ * the name shows once (progress vocabulary, owner 2026-10-16).
+ */
+function stepUnder(stage: string, step: string): string {
+    const prefix = `${stage}: `;
+    return step.startsWith(prefix) ? step.slice(prefix.length) : step;
+}
+
 /** R1 and R7: every stage — and every step of anything nested — to the modal. */
 async function runInModal<T extends OperationOutcome>(
     id: string,
@@ -104,7 +114,7 @@ async function runInModal<T extends OperationOutcome>(
             stage,
             position,
             // Row 2 is never blank: a stage that names no step shows its own detail.
-            step: step || detailFor(stage),
+            step: step ? stepUnder(stage, step) : detailFor(stage),
             expectation: expectationFor(stage),
         });
     };

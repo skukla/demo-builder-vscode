@@ -23,7 +23,7 @@ export interface LoadingDisplayProps {
  *
  * THE THREE-ROW CONTRACT (settled with the user, 2026-08-22 loading audit):
  * - `message` (row 1): what the step is doing — and the COUNT, when there is
- *   one ("Copying content (10/61)"). Counts live here, not below.
+ *   one ("Copying the content: 10 of 61 files"). Counts live here, not below.
  * - `subMessage` (row 2): the moving detail — the thing being counted (a file
  *   path, a repo, a site). Fill it whenever a truthful value exists; the row
  *   reserves its space when empty so the title never jumps.

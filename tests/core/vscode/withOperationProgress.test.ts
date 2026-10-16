@@ -90,6 +90,21 @@ describe('started from a button on a screen (R1)', () => {
         });
     });
 
+    // When the step IS the job, the line under it is the job's count, never its name
+    // a second time (progress vocabulary, owner 2026-10-16).
+    it("drops the step's own name from the line under it", async () => {
+        await withOperationProgress({ id: ID, title: 'Resetting Bodea', inModal: true }, async (report) => {
+            report('Copying the content', 'Copying the content: 40 of 103 files');
+            report('Copying the content', 'Publishing the pages: 3 of 9 pages');
+            return { success: true };
+        });
+
+        const steps = modalPayloads()
+            .filter((p) => p.state === 'running')
+            .map((p) => p.step);
+        expect(steps).toStrictEqual(['40 of 103 files', 'Publishing the pages: 3 of 9 pages']);
+    });
+
     it('ends the modal with the reason when the operation fails', async () => {
         await withOperationProgress({ id: ID, title: 'Deploying ERP', inModal: true }, async () => ({
             success: false,

@@ -581,41 +581,26 @@ describe('executeEdsReset - pipeline progress mapping', () => {
         ]);
     });
 
-    it('rewrites content-publish progress as a page count on the publishing step', async () => {
+    // The publish's progress numbers are HALF-way numbers during its preview, so the
+    // reset no longer turns them into a page count: the pipeline's own message
+    // already carries the real one (2026-10-16).
+    it('passes content-publish progress through as the pipeline worded it', async () => {
         const { progress } = await runReset();
         progress.length = 0;
 
         pipelineProgressCallback()({
             operation: 'content-publish',
-            message: 'Publishing',
-            current: 3,
-            total: 10,
+            message: 'Previewing the pages: 3 of 64 pages',
+            current: 1,
+            total: 64,
         });
 
         expect(progress).toStrictEqual([
             {
                 step: RESET_STEP.publishingPages,
                 totalSteps: 11,
-                message: 'Publishing to CDN (3/10 pages)',
+                message: 'Previewing the pages: 3 of 64 pages',
             },
-        ]);
-    });
-
-    it.each([
-        ['no current', { current: undefined, total: 10 }],
-        ['a zero total', { current: 3, total: 0 }],
-    ])('leaves the content-publish message alone with %s', async (_label, counts) => {
-        const { progress } = await runReset();
-        progress.length = 0;
-
-        pipelineProgressCallback()({
-            operation: 'content-publish',
-            message: 'Publishing',
-            ...counts,
-        });
-
-        expect(progress).toStrictEqual([
-            { step: RESET_STEP.publishingPages, totalSteps: 11, message: 'Publishing' },
         ]);
     });
 });

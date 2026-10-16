@@ -107,7 +107,7 @@ async function setUp(p: Project, over: Partial<StoreScopePagesDeps> = {}) {
         },
         publishProductPages: jest.fn(async (onProgress) => {
             order.push('publish product pages');
-            onProgress({ operation: 'catalog-prewarm', message: 'Pre-warming PDPs: 1/39', current: 1, total: 39 });
+            onProgress({ operation: 'catalog-prewarm', message: 'Warming product pages: 1 of 39 pages', current: 1, total: 39 });
             return published(39);
         }),
         persist: jest.fn(async (saved: Project) => {
@@ -239,7 +239,7 @@ describe('replaceStoreScopePages', () => {
             OPERATION_STAGES.removingProductPages.label,
             "Removing the old store's product pages (30)",
         );
-        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.publishingProductPages.label, 'Pre-warming PDPs: 1/39', {
+        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.publishingProductPages.label, 'Warming product pages: 1 of 39 pages', {
             index: 1,
             total: 39,
         });

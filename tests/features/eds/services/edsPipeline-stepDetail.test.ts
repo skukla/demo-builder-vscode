@@ -117,7 +117,7 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(progress[0]).toEqual({
                 operation: 'content-copy',
-                message: 'Populating DA.live content',
+                message: 'Copying the content',
                 subMessage: 'from src-org/src-site',
             });
         });
@@ -168,15 +168,15 @@ describe('executeEdsPipeline - step detail', () => {
 
             await executeEdsPipeline(params, services, onProgress);
 
-            expect(find('content-copy', /Copying content/)?.message).toBe('Copying content (3/10)');
+            expect(find('content-copy', /: 3 of/)?.message).toBe('Copying the content: 3 of 10 files');
         });
 
-        it('says the content is populated when it is', async () => {
+        it('says how many files it copied when it is done', async () => {
             await executeEdsPipeline(params, services, onProgress);
 
             expect(progress).toContainEqual({
                 operation: 'content-copy',
-                message: 'Content populated',
+                message: 'Copying the content: 42 files copied',
             });
         });
 
@@ -270,6 +270,34 @@ describe('executeEdsPipeline - step detail', () => {
     // =========================================================================
     // Publishing content
     // =========================================================================
+
+    // =========================================================================
+    // The jobs between the copy and the publish, by their one name
+    // =========================================================================
+
+    describe('the jobs named once for every flow', () => {
+        it('applies the DA.live settings under that name', async () => {
+            await executeEdsPipeline(params, services, onProgress);
+
+            expect(progress).toContainEqual({ operation: 'eds-settings', message: 'Applying DA.live settings' });
+        });
+
+        it('clears the cache under that name', async () => {
+            await executeEdsPipeline({ ...params, purgeCache: true }, services, onProgress);
+
+            expect(progress).toContainEqual({ operation: 'cache-purge', message: 'Clearing the cache' });
+        });
+
+        it('starts publishing the pages under that name', async () => {
+            await executeEdsPipeline(params, services, onProgress);
+
+            expect(progress).toContainEqual({
+                operation: 'content-publish',
+                message: 'Publishing the pages',
+                subMessage: 'test-owner/test-repo',
+            });
+        });
+    });
 
     describe('publishing content to the CDN', () => {
         it('falls back to the repo when the bulk job does not say which page', async () => {
@@ -395,7 +423,7 @@ describe('executeEdsPipeline - step detail', () => {
             // step had no second line at all until 2026-09-20.
             expect(progress).toContainEqual({
                 operation: 'block-library',
-                message: 'Configuring block library',
+                message: 'Building block library',
                 subMessage: 'test-org/test-site',
             });
         });
@@ -405,7 +433,7 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(progress).toContainEqual({
                 operation: 'block-library',
-                message: 'Block library configured (5 blocks)',
+                message: 'Building block library: 5 blocks',
             });
         });
 
@@ -420,7 +448,7 @@ describe('executeEdsPipeline - step detail', () => {
 
             await executeEdsPipeline(withLibrary(), services, onProgress);
 
-            expect(find('block-library', /configured \(/)).toBeUndefined();
+            expect(find('block-library', /: \d+ blocks$/)).toBeUndefined();
         });
 
         it('tolerates a source org the SC has no DA.live access to', async () => {
@@ -479,23 +507,23 @@ describe('executeEdsPipeline - step detail', () => {
             return { ...params, skipContent: true, includeBlockLibrary: true };
         };
 
-        it('says how many paths it is publishing', async () => {
+        it('says how many pages it is publishing', async () => {
             // A two-minute spinner with a static hint was the complaint; the
             // count and then the half tell the SC what is happening.
             await executeEdsPipeline(withPaths(['/a', '/b']), services, onProgress);
 
             expect(progress).toContainEqual({
                 operation: 'library-publish',
-                message: 'Publishing block library',
-                subMessage: 'Publishing 2 library paths',
+                message: 'Publishing the block list: 2 pages',
+                subMessage: 'test-owner/test-repo',
             });
         });
 
-        it('says path, not paths, when there is one', async () => {
+        it('says page, not pages, when there is one', async () => {
             await executeEdsPipeline(withPaths(['/a']), services, onProgress);
 
-            expect(find('library-publish', /^Publishing block/)?.subMessage).toBe(
-                'Publishing 1 library path'
+            expect(find('library-publish', /: 1 page$/)?.message).toBe(
+                'Publishing the block list: 1 page'
             );
         });
 
@@ -504,8 +532,8 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(progress).toContainEqual({
                 operation: 'library-publish',
-                message: 'Publishing block library',
-                subMessage: 'Verifying the library previewed',
+                message: 'Publishing the block list: checking it is live',
+                subMessage: 'test-owner/test-repo',
             });
         });
 
@@ -620,8 +648,8 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(progress).toContainEqual({
                 operation: 'sheet-publish',
-                message: 'Publishing sheets',
-                subMessage: 'Publishing 2 sheets',
+                message: 'Publishing the sheets: 2 sheets',
+                subMessage: 'test-owner/test-repo',
             });
         });
 
@@ -630,8 +658,8 @@ describe('executeEdsPipeline - step detail', () => {
 
             await executeEdsPipeline(params, services, onProgress);
 
-            expect(find('sheet-publish', /^Publishing sheets$/)?.subMessage).toBe(
-                'Publishing 1 sheet'
+            expect(find('sheet-publish', /: 1 sheet$/)?.message).toBe(
+                'Publishing the sheets: 1 sheet'
             );
         });
 

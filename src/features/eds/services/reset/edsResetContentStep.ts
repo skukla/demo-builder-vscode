@@ -40,14 +40,13 @@ const PIPELINE_STEP_MAP: Record<string, number> = {
 
 /** Map a pipeline progress event to the wizard step number and format the message. */
 function mapPipelineProgress(
-    info: { operation: string; message: string; current?: number; total?: number },
+    info: { operation: string; message: string },
     report: (step: number, message: string) => void,
 ): void {
-    let message = info.message;
-    if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
-        message = `Publishing to CDN (${info.current}/${info.total} pages)`;
-    }
-    report(PIPELINE_STEP_MAP[info.operation] ?? RESET_STEP.copyingContent, message);
+    // The pipeline's own message is already the job's line, with real counts. This
+    // used to rewrite the publish's message from its progress numbers, which are
+    // HALF-way numbers during the preview, shown as pages published (2026-10-16).
+    report(PIPELINE_STEP_MAP[info.operation] ?? RESET_STEP.copyingContent, info.message);
 }
 
 /** What the content pipeline hands back to the reset. */

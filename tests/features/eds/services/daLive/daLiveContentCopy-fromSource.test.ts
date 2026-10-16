@@ -454,14 +454,14 @@ describe('DaLiveContentCopy.copyContentFromSource', () => {
                 processed: 0,
                 total: 0,
                 percentage: 0,
-                message: 'Enumerating source content',
+                message: 'Copying the content: finding the pages',
                 currentFile: 'src-org/src-site',
             });
             expect(progress).toHaveBeenNthCalledWith(2, {
                 processed: 0,
                 total: 0,
                 percentage: 0,
-                message: 'Preparing content copy',
+                message: 'Copying the content: getting ready',
                 currentFile: '7 pages from src-org/src-site',
             });
         });

@@ -139,12 +139,34 @@ describe('HelixSiteContent.publishAllSiteContent', () => {
             ]);
         });
 
+        // One name per job (progress vocabulary, owner 2026-10-16): the finding, the
+        // preview and the publish each say which job they are, then the count.
+        it('names each half by its job, with the pages counted', async () => {
+            previewAllContent.mockImplementation(async (_o, _s, _b, report?: BulkProgress) => {
+                report?.(2, 3);
+            });
+            publishAllContent.mockImplementation(async (_o, _s, _b, report?: BulkProgress) => {
+                report?.(3, 3);
+            });
+
+            await site.publishAllSiteContent('owner/repo', 'main', undefined, undefined, onProgress);
+
+            expect(onProgress.mock.calls.map(([info]) => info.message)).toStrictEqual([
+                'Publishing the pages: finding them',
+                'Previewing the pages: 0 of 3 pages',
+                'Previewing the pages: 2 of 3 pages',
+                'Publishing the pages: 0 of 3 pages',
+                'Publishing the pages: 3 of 3 pages',
+                'Publishing the pages: 3 published',
+            ]);
+        });
+
         it('reports completion at the full page count', async () => {
             await site.publishAllSiteContent('owner/repo', 'main', undefined, undefined, onProgress);
 
             expect(onProgress).toHaveBeenLastCalledWith({
                 phase: SITE_PUBLISH_PHASES.COMPLETE,
-                message: 'Published 3 pages to CDN',
+                message: 'Publishing the pages: 3 published',
                 current: 3,
                 total: 3,
             });
@@ -203,7 +225,7 @@ describe('HelixSiteContent.publishAllSiteContent', () => {
             expect(perPage).toEqual([
                 {
                     phase: 'publishing',
-                    message: 'Publishing to CDN (1/3)',
+                    message: 'Publishing the pages: 1 of 3 pages',
                     current: 0,
                     total: 3,
                     currentPath: '/',
@@ -213,7 +235,7 @@ describe('HelixSiteContent.publishAllSiteContent', () => {
             ]);
             expect(onProgress).toHaveBeenLastCalledWith({
                 phase: SITE_PUBLISH_PHASES.COMPLETE,
-                message: 'Published 3 pages to CDN',
+                message: 'Publishing the pages: 3 published',
                 current: 3,
                 total: 3,
             });
@@ -232,7 +254,7 @@ describe('HelixSiteContent.publishAllSiteContent', () => {
             expect(onProgress).toHaveBeenLastCalledWith(
                 expect.objectContaining({
                     phase: SITE_PUBLISH_PHASES.COMPLETE,
-                    message: 'Published 2 pages to CDN (1 skipped)',
+                    message: 'Publishing the pages: 2 published, 1 had no content',
                 }),
             );
         });
@@ -240,7 +262,7 @@ describe('HelixSiteContent.publishAllSiteContent', () => {
         it('completion does not mention skipping when nothing was skipped', async () => {
             await site.publishAllSiteContent('owner/repo', 'main', undefined, undefined, onProgress);
 
-            expect(onProgress.mock.lastCall?.[0].message).not.toMatch(/skipped/);
+            expect(onProgress.mock.lastCall?.[0].message).not.toMatch(/no content/);
         });
 
         it('any other per-page failure stops the publish and propagates', async () => {

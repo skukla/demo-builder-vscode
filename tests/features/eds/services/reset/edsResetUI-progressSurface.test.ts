@@ -152,7 +152,7 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
             onProgress?.({
                 step: RESET_STEP.publishingPages,
                 totalSteps: 11,
-                message: 'Publishing block library',
+                message: 'Publishing the block list: 11 pages',
             });
             onProgress?.({ step: RESET_STEP.resettingCode, totalSteps: 11, message: 'Reset 3448 files' });
             return { success: true };
@@ -166,7 +166,7 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
             progress: 'modal',
         });
 
-        expect(mockReport).toHaveBeenCalledWith('Publishing the pages', 'Publishing block library', {
+        expect(mockReport).toHaveBeenCalledWith('Publishing the pages', 'Publishing the block list: 11 pages', {
             index: RESET_STEP.publishingPages,
             total: 11,
         });

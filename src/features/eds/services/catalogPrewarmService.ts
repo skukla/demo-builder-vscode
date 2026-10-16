@@ -52,6 +52,7 @@ import { describeScope } from './storefront/servedStorefrontConfig';
 import { extractConfigParams } from './storefrontConfigParams';
 import type { EdsPipelineProgressCallback } from './types';
 import { runInBatches } from '@/core/utils/promiseUtils';
+import { STOREFRONT_JOBS, countLine, jobLine } from '@/core/utils/storefrontJobs';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -148,7 +149,10 @@ export async function prewarmCatalog(
         return makeSkipped('no commerce endpoint');
     }
 
-    onProgress?.({ operation: 'catalog-prewarm', message: 'Enumerating catalog' });
+    onProgress?.({
+        operation: 'catalog-prewarm',
+        message: jobLine(STOREFRONT_JOBS.warmingProductPages, 'reading the catalog'),
+    });
 
     let skuPaths: SkuPath[];
     try {
@@ -220,7 +224,7 @@ export async function prewarmCatalog(
         completed += 1;
         onProgress?.({
             operation: 'catalog-prewarm',
-            message: `Pre-warming PDPs: ${completed}/${skuPaths.length}`,
+            message: jobLine(STOREFRONT_JOBS.warmingProductPages, countLine(completed, skuPaths.length, 'page')),
             current: completed,
             total: skuPaths.length,
         });

@@ -167,7 +167,7 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
 
             const lines = progress.filter((p) => p.operation === 'page-check').map((p) => p.message);
             expect(lines).toEqual([
-                'Checking the copied pages',
+                'Checking copied pages',
                 '⚠️ 1 page the source has is missing from this storefront: /checkout',
             ]);
         });
