@@ -36,12 +36,37 @@ export interface GitHubReleaseInfo {
 }
 
 // ---------------------------------------------------------------------------
-// Header construction
+// Token + header construction
 // ---------------------------------------------------------------------------
 
 /**
- * Build standard GitHub API headers, optionally including an auth token
- * from VS Code's SecretStorage.
+ * EDS stores the GitHub OAuth token under this key as JSON
+ * `{ token, tokenType, scopes }` — see `TOKEN_STORAGE_KEY` and `storeToken` in
+ * src/features/eds/services/github/githubTokenService.ts (type `GitHubToken` in
+ * src/features/eds/services/types.ts). Read directly, not via the EDS service,
+ * because updates must not import from features/eds.
+ */
+const EDS_TOKEN_KEY = 'github-token';
+
+/**
+ * Read the GitHub access token EDS stored. Returns null when none is stored
+ * or the stored value is not the expected JSON.
+ */
+export async function readGitHubToken(secrets: vscode.SecretStorage): Promise<string | null> {
+    const stored = await secrets.get(EDS_TOKEN_KEY);
+    if (!stored) return null;
+    try {
+        const parsed = JSON.parse(stored) as { token?: unknown };
+        // An empty string is returned as-is: callers' `!token` checks reject it.
+        return typeof parsed.token === 'string' ? parsed.token : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Build standard GitHub API headers, optionally including the auth token
+ * EDS stored in VS Code's SecretStorage.
  */
 export async function buildGitHubHeaders(
     secrets: vscode.SecretStorage,
@@ -51,7 +76,7 @@ export async function buildGitHubHeaders(
         'User-Agent': 'Demo-Builder-VSCode',
     };
 
-    const token = await secrets.get('githubToken');
+    const token = await readGitHubToken(secrets);
     if (token) {
         headers['Authorization'] = `token ${token}`;
     }

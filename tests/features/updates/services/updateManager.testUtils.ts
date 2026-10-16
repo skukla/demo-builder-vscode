@@ -31,6 +31,7 @@ export * as vscode from 'vscode';
 import type { Extension } from 'vscode';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
+import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
 /**
  * Shared test utilities for UpdateManager tests
  *
@@ -50,13 +51,10 @@ export function createUpdateManagerContext(version: string = '1.0.0'): any {
         // Only `packageJSON.version` is read; the rest of `Extension` is not built.
         extension: { packageJSON: { version } } as unknown as Extension<unknown>,
         // This suite's own: the GitHub token must resolve, or update checks
-        // take the unauthenticated path and the assertions change.
-        secrets: {
-            get: jest.fn().mockResolvedValue('mock-github-token'),
-            store: jest.fn(),
-            delete: jest.fn(),
-            onDidChange: jest.fn(),
-        },
+        // take the unauthenticated path and the assertions change. Seeded under
+        // the real key and shape — a `get` that answered every key with a bare
+        // string is what let production read a key nothing writes.
+        secrets: createMockSecretStorage(githubTokenSecret('mock-github-token')).secrets,
     });
 }
 
@@ -87,7 +85,13 @@ export function createMockRelease(options: {
     hasAssets?: boolean;
     assetType?: 'vsix' | 'zipball';
 }): any {
-    const { version, prerelease = false, draft = false, hasAssets = true, assetType = 'vsix' } = options;
+    const {
+        version,
+        prerelease = false,
+        draft = false,
+        hasAssets = true,
+        assetType = 'vsix',
+    } = options;
 
     const release: any = {
         tag_name: `v${version}`,
@@ -155,11 +159,13 @@ export function createMockReleasesArray(options?: {
 /**
  * Creates a mock project with components
  */
-export function createUpdateManagerProject(components: { id: string; version: string; repoUrl?: string; path?: string; name?: string }[]): any {
+export function createUpdateManagerProject(
+    components: { id: string; version: string; repoUrl?: string; path?: string; name?: string }[]
+): any {
     const componentInstances: any = {};
     const componentVersions: any = {};
 
-    components.forEach(comp => {
+    components.forEach((comp) => {
         componentInstances[comp.id] = {
             id: comp.id,
             ...(comp.repoUrl && { repoUrl: comp.repoUrl }),

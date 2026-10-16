@@ -24,6 +24,18 @@
  */
 
 import type * as vscode from 'vscode';
+import type { GitHubToken } from '@/features/eds/services/types';
+
+/**
+ * Seed entry for a GitHub token stored the way `GitHubTokenService.storeToken`
+ * writes it: JSON under `github-token`. Typed to the real interface so a test
+ * cannot seed a key or shape production never writes — which is how the update
+ * checkers read `githubToken` (a key nothing writes) with every test green.
+ */
+export function githubTokenSecret(token: string): Record<string, string> {
+    const stored: GitHubToken = { token, tokenType: 'bearer', scopes: ['repo'] };
+    return { 'github-token': JSON.stringify(stored) };
+}
 
 export function createMockSecretStorage(initial: Record<string, string> = {}): {
     secrets: jest.Mocked<vscode.SecretStorage>;
