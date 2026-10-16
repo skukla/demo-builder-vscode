@@ -44,6 +44,10 @@ const STAGE_REPORTERS = [
     // A republish after a store change (EDS-44): Configure's run and the service.
     'src/features/dashboard/commands/configureStorefrontRepublish.ts',
     'src/features/eds/services/storefront/storeScopePages.ts',
+    // A project delete's steps, numbered (progress vocabulary slice 2, 2026-10-16):
+    // every line was a literal shown as the step until then.
+    'src/features/projects-dashboard/services/projectDeletionService.ts',
+    'src/features/projects-dashboard/services/edsExternalCleanup.ts',
 ];
 
 /** A progress call whose FIRST argument is a string or template literal. */

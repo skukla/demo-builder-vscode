@@ -15,15 +15,20 @@
 
 import * as vscode from 'vscode';
 import type { CleanupOptions } from './deletionConfirmation';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { HelixService } from '@/features/eds/services/helix/helixService';
-import type { extractEdsMetadata, CleanupResultItem } from '@/features/eds/services/resourceCleanupHelpers';
+import type { CleanupResultItem, EdsProjectMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import type { ProductPageRemovalResult } from '@/features/eds/services/storefront/productPageRemoval';
 import { otherProjectsPublishingTo } from '@/features/eds/services/storefront/sharedRepoProjects';
-import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
+import {
+    tearDownStorefront,
+    teardownSteps,
+    type StorefrontTeardownTarget,
+} from '@/features/eds/services/storefront/storefrontTeardown';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -77,6 +82,38 @@ export interface DeletionServices {
 }
 
 /**
+ * Report a step of the cleanup as it starts, with what it is doing under it: a label
+ * from the stage table (progress vocabulary slice 2, owner 2026-10-16).
+ */
+export type CleanupStepReport = (stage: string, step?: string) => void;
+
+/** The storefront the DA.live cleanup takes down, when the SC chose it and it can. */
+function daLiveTarget(
+    edsMetadata: EdsProjectMetadata,
+    options: CleanupOptions,
+): StorefrontTeardownTarget | undefined {
+    if (!options.deleteDaLiveSite || !edsMetadata.daLiveOrg || !edsMetadata.daLiveSite) return undefined;
+    return { daLiveOrg: edsMetadata.daLiveOrg, daLiveSite: edsMetadata.daLiveSite, githubRepo: edsMetadata.githubRepo };
+}
+
+/** The repository the GitHub cleanup deletes, when the SC chose it. */
+function repoToDelete(edsMetadata: EdsProjectMetadata, options: CleanupOptions): string | undefined {
+    return options.deleteGitHubRepo ? edsMetadata.githubRepo : undefined;
+}
+
+/**
+ * The steps {@link performEdsCleanup} will report, in order, so the delete can number
+ * them before any runs: the DA.live sign-in, the storefront's teardown, the repository.
+ */
+export function edsCleanupSteps(edsMetadata: EdsProjectMetadata, options: CleanupOptions): string[] {
+    const site = daLiveTarget(edsMetadata, options);
+    return [
+        ...(site ? [OPERATION_STAGES.checkingRequirements.label, ...teardownSteps(site)] : []),
+        ...(repoToDelete(edsMetadata, options) ? [OPERATION_STAGES.deletingRepository.label] : []),
+    ];
+}
+
+/**
  * Ensure DA.live authentication, prompting user if needed.
  * Returns the auth service if authenticated, or null if auth was declined/failed.
  *
@@ -109,16 +146,17 @@ async function ensureDaLiveAuth(
  */
 async function performDaLiveCleanup(
     context: HandlerContext,
-    edsMetadata: ReturnType<typeof extractEdsMetadata>,
+    edsMetadata: EdsProjectMetadata,
     options: CleanupOptions,
     results: CleanupResultItem[],
-    progress: vscode.Progress<{ message?: string }>,
+    report: CleanupStepReport,
     services?: DeletionServices,
 ): Promise<void> {
-    if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;
+    const site = daLiveTarget(edsMetadata, options);
+    if (!site) return;
 
-    progress.report({ message: 'Deleting the DA.live site' });
-    const resourceName = `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`;
+    report(OPERATION_STAGES.checkingRequirements.label, 'Your DA.live sign-in');
+    const resourceName = `${site.daLiveOrg}/${site.daLiveSite}`;
 
     try {
         const daLiveAuthService = await ensureDaLiveAuth(context, resourceName, results);
@@ -129,11 +167,7 @@ async function performDaLiveCleanup(
         // The same four steps the agent's cleanup runs, in the same order — the
         // CDN unpublish lived only here until 2026-09-19 (AI-9).
         const torn = await tearDownStorefront(
-            {
-                daLiveOrg: edsMetadata.daLiveOrg,
-                daLiveSite: edsMetadata.daLiveSite,
-                githubRepo: edsMetadata.githubRepo,
-            },
+            site,
             {
                 tokenProvider: daLiveTokenProvider,
                 logger: context.logger,
@@ -147,24 +181,25 @@ async function performDaLiveCleanup(
                 makeHelix: services?.makeHelix,
                 otherProjectsOnRepo: (repo) =>
                     otherProjectsPublishingTo(context.stateManager, repo, options.projectPath),
-                onStep: (step) => progress.report({ message: step }),
+                onStep: (step) => report(step),
+                onStepDetail: (step, detail) => report(step, detail),
             },
         );
-        reportProductPages(torn.productPages, edsMetadata.githubRepo ?? resourceName, results);
+        reportProductPages(torn.productPages, site.githubRepo ?? resourceName, results);
 
         // Only when pages actually came down: nothing was published means nothing
         // to report as cleaned up.
         if ((torn.unpublishedPages ?? 0) > 0 && !torn.stillPublished) {
             results.push({
                 type: 'helix',
-                name: edsMetadata.githubRepo ?? resourceName,
+                name: site.githubRepo ?? resourceName,
                 success: true,
             });
-        } else if (torn.stillPublished && edsMetadata.githubRepo) {
+        } else if (torn.stillPublished && site.githubRepo) {
             // Pages still answer, or it could not be told (EDS-33): never a silent "deleted".
             results.push({
                 type: 'helix',
-                name: edsMetadata.githubRepo,
+                name: site.githubRepo,
                 success: false,
                 error: torn.publishSummary,
             });
@@ -214,9 +249,9 @@ async function performGitHubCleanup(
     context: HandlerContext,
     githubRepo: string,
     results: CleanupResultItem[],
-    progress: vscode.Progress<{ message?: string }>,
+    report: CleanupStepReport,
 ): Promise<void> {
-    progress.report({ message: 'Deleting the repository' });
+    report(OPERATION_STAGES.deletingRepository.label);
 
     try {
         const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
@@ -274,21 +309,23 @@ async function promptGitHubAuth(
 }
 
 /**
- * Perform EDS external resource cleanup
+ * Perform EDS external resource cleanup, reporting each step in the order
+ * {@link edsCleanupSteps} lists them.
  */
 export async function performEdsCleanup(
     context: HandlerContext,
-    edsMetadata: ReturnType<typeof extractEdsMetadata>,
+    edsMetadata: EdsProjectMetadata,
     options: CleanupOptions,
     results: CleanupResultItem[],
-    progress: vscode.Progress<{ message?: string }>,
+    report: CleanupStepReport,
     services?: DeletionServices,
 ): Promise<void> {
     // 1. Delete DA.live site
-    await performDaLiveCleanup(context, edsMetadata, options, results, progress, services);
+    await performDaLiveCleanup(context, edsMetadata, options, results, report, services);
 
     // 2. Delete GitHub repository
-    if (options.deleteGitHubRepo && edsMetadata?.githubRepo) {
-        await performGitHubCleanup(context, edsMetadata.githubRepo, results, progress);
+    const repo = repoToDelete(edsMetadata, options);
+    if (repo) {
+        await performGitHubCleanup(context, repo, results, report);
     }
 }

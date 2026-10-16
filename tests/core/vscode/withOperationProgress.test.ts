@@ -7,8 +7,9 @@
  */
 
 import * as vscode from 'vscode';
-import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { reportPhase, withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { reportStep } from '@/core/utils/operationStepChannel';
 import { startModalRun } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
@@ -130,6 +131,43 @@ describe('started from a button on a screen (R1)', () => {
         expect(modalPayloads()).toContainEqual(
             expect.objectContaining({ stage: STAGE.label, step: 'Building the mesh config' }),
         );
+    });
+
+    // Slice 2 of the progress vocabulary (owner 2026-10-16): a command run inside the
+    // modal (Sync Storefront, Refresh Blocks) had only plain lines to report, so its
+    // first line froze as the step for the whole run. A step it reports as a step is
+    // line 1; its plain lines stay under it.
+    it('shows a step reported from inside the run as the step, with its plain lines under it', async () => {
+        await withOperationProgress({ id: ID, title: 'Syncing the storefront', inModal: true }, async () => {
+            reportStep(OPERATION_STAGES.savingChanges.label);
+            reportPhase('Committing 3 files');
+            reportStep(OPERATION_STAGES.pushingToGitHub.label, 'demo-org/demo-repo');
+            return { success: true };
+        });
+
+        const running = modalPayloads()
+            .filter((p) => p.state === 'running')
+            .map(({ stage, step, expectation, position }) => ({ stage, step, expectation, position }));
+        expect(running).toStrictEqual([
+            {
+                stage: OPERATION_STAGES.savingChanges.label,
+                step: OPERATION_STAGES.savingChanges.detail,
+                expectation: OPERATION_STAGES.savingChanges.expectation,
+                position: undefined,
+            },
+            {
+                stage: OPERATION_STAGES.savingChanges.label,
+                step: 'Committing 3 files',
+                expectation: OPERATION_STAGES.savingChanges.expectation,
+                position: undefined,
+            },
+            {
+                stage: OPERATION_STAGES.pushingToGitHub.label,
+                step: 'demo-org/demo-repo',
+                expectation: OPERATION_STAGES.pushingToGitHub.expectation,
+                position: undefined,
+            },
+        ]);
     });
 });
 

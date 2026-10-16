@@ -1255,7 +1255,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 595,
+            "line": 613,
             "mutants": 1,
             "category": "block",
             "reason": "The catch in readDaLiveToken holds only `return undefined;`, and a function that falls off the end of an empty catch also returns undefined, so the mutant is behaviourally identical. The explicit return cannot be deleted: tsconfig sets noImplicitReturns, which rejects a path that returns nothing when another path returns a value. The suite pins the outcome \u2014 a throwing auth service yields no DA.live token and the sync still runs.",
@@ -7592,30 +7592,6 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/projects-dashboard/services/edsExternalCleanup.ts",
-            "anchors": [
-                "progress.report({ message: 'Deleting the DA.live site' });"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
-            "decision": "none \u2014 presentation.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/edsExternalCleanup.ts",
-            "anchors": [
-                "progress.report({ message: 'Deleting the repository' });"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
-            "decision": "none \u2014 presentation.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
             "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
             "anchors": [
                 "deleteGitHubRepo: !!edsMetadata?.githubRepo,"
@@ -7648,30 +7624,6 @@
             "category": "optionalChain",
             "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
             "decision": "none \u2014 equivalent; no call can distinguish either chain.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/edsExternalCleanup.ts",
-            "anchors": [
-                "if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;"
-            ],
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
-            "decision": "none \u2014 equivalent; both chains are on the same already-proven value.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/edsExternalCleanup.ts",
-            "anchors": [
-                "if (options.deleteGitHubRepo && edsMetadata?.githubRepo) {"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
-            "decision": "none \u2014 equivalent; the CONDITION is tested (an unticked repo row is spared), only the chain is unkillable.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
@@ -16167,7 +16119,7 @@
             "anchors": [
                 "deleteGithubRepo: args?.deleteGithubRepo === true,"
             ],
-            "line": 88,
+            "line": 89,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green.",
@@ -16180,7 +16132,7 @@
             "anchors": [
                 "deleteDaLiveSite: args?.deleteDaLiveSite === true,"
             ],
-            "line": 89,
+            "line": 90,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green.",

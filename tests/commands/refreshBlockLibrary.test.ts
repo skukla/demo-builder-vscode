@@ -76,6 +76,7 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
 // --- Imports ---------------------------------------------------------------
 
 import { RefreshBlockLibraryCommand } from '@/commands/refreshBlockLibrary';
+import { withStepSink } from '@/core/utils/operationStepChannel';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthError } from '@/features/eds/services/types';
@@ -195,7 +196,26 @@ describe('RefreshBlockLibraryCommand', () => {
         expect(() => onProgress({ operation: 'block-library', message: 'configuring...' })).not.toThrow();
     });
 
-    it('hands each pipeline message to the progress notification, as its message', async () => {
+    /** The pipeline as a library-only rebuild runs it, by the operations it reports. */
+    function pipelineReportsItsSteps(): void {
+        executePipelineMock.mockImplementation(
+            async (
+                _params: unknown,
+                _services: unknown,
+                onProgress: (info: { operation: string; message: string }) => void,
+            ) => {
+                onProgress({ operation: 'block-library', message: 'Building block library' });
+                onProgress({ operation: 'block-library', message: 'Building block library: 5 blocks' });
+                onProgress({ operation: 'eds-settings', message: 'Applying DA.live settings' });
+                onProgress({ operation: 'library-publish', message: 'Publishing the block list: 2 pages' });
+                return { success: true, contentFilesCopied: 0, libraryPaths: [] };
+            },
+        );
+    }
+
+    // The notification shows one line: the step, never a count (progress
+    // vocabulary, owner 2026-10-16). It showed each raw pipeline message until then.
+    it("shows each step's name as the progress notification's message", async () => {
         // The reporter the notification was opened with — the only thing the SC
         // sees for the length of a rebuild.
         const report = jest.fn();
@@ -203,18 +223,44 @@ describe('RefreshBlockLibraryCommand', () => {
             async (_options: unknown, callback: (progress: { report: jest.Mock }) => Promise<unknown>) =>
                 callback({ report }),
         );
-        executePipelineMock.mockImplementation(
-            async (_params: unknown, _services: unknown, onProgress: (info: { message: string }) => void) => {
-                onProgress({ message: 'Building block library' });
-                return { success: true, contentFilesCopied: 0, libraryPaths: [] };
-            },
-        );
+        pipelineReportsItsSteps();
         const cmd = new RefreshBlockLibraryCommand(makeContext(), makeStateManager(EDS_PROJECT), makeLogger());
         cmd.helixService = fakeHelix;
 
         await cmd.execute();
 
-        expect(report).toHaveBeenCalledWith({ message: 'Building block library' });
+        expect(report.mock.calls).toStrictEqual([
+            [{ message: 'Building block library' }],
+            [{ message: 'Building block library' }],
+            [{ message: 'Applying DA.live settings' }],
+            [{ message: 'Publishing the block list' }],
+        ]);
+    });
+
+    // Started from the dashboard, the refresh runs inside the progress modal. Its
+    // messages reached it as plain lines, so the first froze as line 1 for the whole
+    // rebuild (progress vocabulary slice 2, owner 2026-10-16).
+    it('shows the progress modal each step, with what it is doing under it', async () => {
+        const report = jest.fn();
+        (vscode.window.withProgress as jest.Mock).mockImplementation(
+            async (_options: unknown, callback: (progress: { report: jest.Mock }) => Promise<unknown>) =>
+                callback({ report }),
+        );
+        pipelineReportsItsSteps();
+        const cmd = new RefreshBlockLibraryCommand(makeContext(), makeStateManager(EDS_PROJECT), makeLogger());
+        cmd.helixService = fakeHelix;
+        const steps: Array<[string, string | undefined]> = [];
+
+        await withStepSink((stage, step) => steps.push([stage, step]), () => cmd.execute());
+
+        expect(steps).toStrictEqual([
+            ['Building block library', 'Building block library'],
+            ['Building block library', 'Building block library: 5 blocks'],
+            ['Applying DA.live settings', 'Applying DA.live settings'],
+            ['Publishing the block list', 'Publishing the block list: 2 pages'],
+        ]);
+        // Nothing a second time as a plain line.
+        expect(report).not.toHaveBeenCalled();
     });
 
     /**

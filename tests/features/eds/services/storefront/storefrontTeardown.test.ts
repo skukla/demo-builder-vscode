@@ -10,8 +10,10 @@
  */
 
 import type { UnpublishPagesResult } from '@/features/eds/services/helix/helixPageDeletion';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import {
     tearDownStorefront,
+    teardownSteps,
     type TeardownHelix,
 } from '@/features/eds/services/storefront/storefrontTeardown';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -164,6 +166,8 @@ describe('with a repo to unpublish against', () => {
         expect(result.contentDeleted).toBe(true);
     });
 
+    // Each a step from the stage table, so the progress modal shows it with its
+    // expectation (progress vocabulary slice 2, owner 2026-10-16).
     it('narrates each step for a caller that is showing progress', async () => {
         const steps: string[] = [];
         const { deps } = depsWith(helixFake(), contentFake(), (step) => steps.push(step));
@@ -171,11 +175,70 @@ describe('with a repo to unpublish against', () => {
         await tearDownStorefront(SITE, deps);
 
         expect(steps).toEqual([
-            'Taking the pages off the CDN',
-            'Removing the product pages',
-            'Deleting the DA.live content',
-            'Clearing the site settings',
+            OPERATION_STAGES.takingPagesOffSite.label,
+            OPERATION_STAGES.removingProductPages.label,
+            OPERATION_STAGES.clearingDaLiveContent.label,
+            OPERATION_STAGES.clearingSiteSettings.label,
         ]);
+    });
+
+    // A caller numbers the steps ("2 of 6") from this list before any runs.
+    it('lists the steps it will narrate, in order, before it runs', async () => {
+        const steps: string[] = [];
+        const { deps } = depsWith(helixFake(), contentFake(), (step) => steps.push(step));
+
+        const listed = teardownSteps(SITE);
+        await tearDownStorefront(SITE, deps);
+
+        expect(listed).toStrictEqual(steps);
+    });
+
+    // A count belongs on the line under the step, never in its name.
+    it('says how many DA.live documents are gone so far, under the step', async () => {
+        const content = contentFake({
+            deleteAllSiteContent: jest.fn(async (_org: string, _site: string, onProgress?: (info: { deleted: number; current: string }) => void) => {
+                onProgress?.({ deleted: 1, current: '/index.html' });
+                onProgress?.({ deleted: 2, current: '/about.html' });
+                return { success: true, deletedCount: 2, deletedPaths: [] };
+            }),
+        });
+        const { deps } = depsWith(helixFake(), content);
+        const details: Array<[string, string]> = [];
+
+        await tearDownStorefront(SITE, { ...deps, onStepDetail: (step, detail) => details.push([step, detail]) });
+
+        expect(details).toContainEqual([OPERATION_STAGES.clearingDaLiveContent.label, '1 file removed']);
+        expect(details).toContainEqual([OPERATION_STAGES.clearingDaLiveContent.label, '2 files removed']);
+    });
+
+    // The delete's own words under it: the table's line for this step is the
+    // republish's ("the old store's product pages").
+    it('says what the product pages are, under their step', async () => {
+        const { deps } = depsWith();
+        const details: Array<[string, string]> = [];
+
+        await tearDownStorefront(SITE, { ...deps, onStepDetail: (step, detail) => details.push([step, detail]) });
+
+        expect(details).toContainEqual([OPERATION_STAGES.removingProductPages.label, 'The page made for each product']);
+    });
+});
+
+describe('the steps it lists', () => {
+    it('lists only the DA.live steps when there is no repo to unpublish against', () => {
+        expect(teardownSteps({ daLiveOrg: 'acme', daLiveSite: 'shop' })).toStrictEqual([
+            OPERATION_STAGES.clearingDaLiveContent.label,
+            OPERATION_STAGES.clearingSiteSettings.label,
+        ]);
+    });
+
+    it('narrates only those it listed when there is no repo', async () => {
+        const steps: string[] = [];
+        const { deps } = depsWith(helixFake(), contentFake(), (step) => steps.push(step));
+        const target = { daLiveOrg: 'acme', daLiveSite: 'shop' };
+
+        await tearDownStorefront(target, deps);
+
+        expect(steps).toStrictEqual(teardownSteps(target));
     });
 });
 
@@ -385,7 +448,8 @@ describe('with no repo', () => {
 
         expect(helix.unpublishPages).not.toHaveBeenCalled();
         expect(helix.listPublishedPaths).not.toHaveBeenCalled();
-        expect(content.deleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
+        // The callback is the count under the step (progress vocabulary slice 2).
+        expect(content.deleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop', expect.any(Function));
         expect(result.stillPublished).toBe(true);
         expect(result.publishState).toBe('unknown');
         expect(result.publishSummary).toContain('No GitHub repository');

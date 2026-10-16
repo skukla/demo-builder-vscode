@@ -15,6 +15,9 @@ import {
     handleRefreshBlockLibrary,
     handleSyncStorefront,
 } from '@/features/dashboard/handlers/edsContentHandlers';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { reportStep } from '@/core/utils/operationStepChannel';
 import { startModalRun } from '@/core/vscode/operationProgress';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -44,6 +47,13 @@ function pushes(): Array<Record<string, unknown>> {
         .map(([, payload]) => payload as Record<string, unknown>);
 }
 
+/** The modal's lines while a step runs, as [line 1, line 2]; the run's own opening push names none. */
+function running(): Array<[unknown, unknown]> {
+    return pushes()
+        .filter((payload) => payload.state === 'running' && payload.stage !== undefined)
+        .map((payload) => [payload.stage, payload.step]);
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
     executeCommand.mockResolvedValue({ success: true });
@@ -64,6 +74,28 @@ describe('sync storefront', () => {
             startedAt: expect.any(Number),
             tookMs: expect.any(Number),
         });
+    });
+
+    // Until slice 2 of the progress vocabulary (owner 2026-10-16) the command's first
+    // line froze as the modal's step for the whole sync.
+    it("shows each step the command reports as the modal's step, its lines under it", async () => {
+        startModalRun('sync-storefront', screen);
+        executeCommand.mockImplementation(async () => {
+            reportStep(OPERATION_STAGES.savingChanges.label);
+            reportPhase('3 files');
+            reportStep(OPERATION_STAGES.pushingToGitHub.label);
+            reportStep(OPERATION_STAGES.publishingCode.label);
+            return { success: true };
+        });
+
+        await handleSyncStorefront(context(), { id: 'sync-storefront', progress: 'modal' });
+
+        expect(running()).toStrictEqual([
+            [OPERATION_STAGES.savingChanges.label, OPERATION_STAGES.savingChanges.detail],
+            [OPERATION_STAGES.savingChanges.label, '3 files'],
+            [OPERATION_STAGES.pushingToGitHub.label, OPERATION_STAGES.pushingToGitHub.detail],
+            [OPERATION_STAGES.publishingCode.label, OPERATION_STAGES.publishingCode.detail],
+        ]);
     });
 
     // The SC dismissed the commit-message prompt. Nothing failed, so the modal
@@ -94,6 +126,22 @@ describe('sync storefront', () => {
 });
 
 describe('refresh block library', () => {
+    it("shows each step as the modal's step, without its name a second time under it", async () => {
+        startModalRun('block-library', screen);
+        executeCommand.mockImplementation(async () => {
+            reportStep(OPERATION_STAGES.buildingBlockLibrary.label, 'Building block library: 5 blocks');
+            reportStep(OPERATION_STAGES.publishingBlockList.label, 'Publishing the block list: 2 pages');
+            return { success: true };
+        });
+
+        await handleRefreshBlockLibrary(context(), { id: 'block-library', progress: 'modal' });
+
+        expect(running()).toStrictEqual([
+            [OPERATION_STAGES.buildingBlockLibrary.label, '5 blocks'],
+            [OPERATION_STAGES.publishingBlockList.label, '2 pages'],
+        ]);
+    });
+
     it('ends the modal on what the command answered', async () => {
         startModalRun('block-library', screen);
         executeCommand.mockResolvedValue({ success: false, error: 'DA.live refused' });

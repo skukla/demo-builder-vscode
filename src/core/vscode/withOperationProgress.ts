@@ -10,7 +10,8 @@
  *   command using `BaseCommand.withProgress`, a helper using `withProgressRegister` —
  *   reports into the same modal. They stand down on the same channel an agent's
  *   notifier uses (`agentPhaseChannel`), so a modal and a notification never show at
- *   once for one operation.
+ *   once for one operation. Their plain lines are the line under the current step;
+ *   a step they report AS a step (`reportStep`, `operationStepChannel`) is line 1.
  * - **R2, anywhere else:** one notification with the fixed title and the STAGE name as
  *   its message — the short set of words, capped at 25 characters in `operationStages`.
  *   The step is the modal's long set and never reaches a notification. A pair's
@@ -26,6 +27,7 @@ import { withModalAsking } from './operationPrompt';
 import { withProgressRegister } from './progressRegister';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { detailFor, expectationFor } from '@/core/utils/operationStages';
+import { withStepSink } from '@/core/utils/operationStepChannel';
 import { stageLine } from '@/core/utils/stageLine';
 import type { OperationOffer, OperationPosition, OperationProgressPayload } from '@/types/webviewPayloads';
 
@@ -125,10 +127,14 @@ async function runInModal<T extends OperationOutcome>(
     };
     // Something nested reports a plain line: the step under the stage in progress.
     const nested = (message: string): void => (current ? push(current, message) : report(message));
+    // Something nested reports a STEP (`reportStep`): line 1, with its line under it.
+    const nestedStep = (stage: string, step?: string): void => report(stage, step);
 
     // The id goes where a guard deep inside the work can find it, so a question it
     // must ask reaches this modal instead of a notification beside it.
-    const result = await withModalAsking(id, () => withPhaseSinks([nested], () => run(report)));
+    const result = await withModalAsking(id, () =>
+        withPhaseSinks([nested], () => withStepSink(nestedStep, () => run(report))),
+    );
     await pushOperationProgress(endOf(id, result));
     return result;
 }

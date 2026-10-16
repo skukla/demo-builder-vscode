@@ -17,6 +17,7 @@
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { firstUsableDaLiveToken } from '@/features/eds/services/daLive/daLiveTokenChain';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
@@ -170,7 +171,7 @@ export async function cleanUpProjectCloud(
     }
 
     if (choice.deleteGithubRepo && metadata.githubRepo) {
-        reportPhase('Deleting the repository');
+        reportPhase(OPERATION_STAGES.deletingRepository.label);
         const [owner, repo] = metadata.githubRepo.split('/');
         try {
             const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');

@@ -37,6 +37,8 @@
 import { checkLiveStatus } from './liveStatusCheck';
 import { removeProductPages, type ProductPageRemovalResult } from './productPageRemoval';
 import { unpublishStorefront, type LiveStatusCheck, type PublishState } from './storefrontUnpublish';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { itemCount } from '@/core/utils/storefrontJobs';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { Logger } from '@/types/logger';
@@ -110,8 +112,13 @@ export interface StorefrontTeardownDeps {
      * which project, if any, it is acting for.
      */
     otherProjectsOnRepo: (githubRepo: string) => Promise<string[]>;
-    /** One short line per step, for a caller that is narrating progress. */
+    /**
+     * Each step as it starts, once: a label from the stage table, in the order
+     * {@link teardownSteps} lists them, for a caller that is narrating progress.
+     */
     onStep?: (step: string) => void;
+    /** What a step is doing now ("12 files removed"), for the line under it. */
+    onStepDetail?: (step: string, detail: string) => void;
 }
 
 export interface StorefrontTeardownResult {
@@ -141,6 +148,24 @@ export interface StorefrontTeardownResult {
     error?: string;
 }
 
+/** Whether there is a repository to take the pages off the CDN by. */
+function repoOf(target: StorefrontTeardownTarget): { owner: string; repo: string } | undefined {
+    const [owner, repo] = (target.githubRepo ?? '').split('/');
+    return owner && repo ? { owner, repo } : undefined;
+}
+
+/**
+ * The steps {@link tearDownStorefront} will narrate for `target`, in order, so a caller
+ * can number them before any runs ("2 of 6"). A step that fails still counts: the
+ * product pages are skipped when the unpublish throws, and the count moves on.
+ */
+export function teardownSteps(target: StorefrontTeardownTarget): string[] {
+    const cdn = repoOf(target)
+        ? [OPERATION_STAGES.takingPagesOffSite.label, OPERATION_STAGES.removingProductPages.label]
+        : [];
+    return [...cdn, OPERATION_STAGES.clearingDaLiveContent.label, OPERATION_STAGES.clearingSiteSettings.label];
+}
+
 /**
  * Take the storefront down: CDN first, then the source, then its config.
  *
@@ -151,7 +176,7 @@ export async function tearDownStorefront(
     target: StorefrontTeardownTarget,
     deps: StorefrontTeardownDeps,
 ): Promise<StorefrontTeardownResult> {
-    const { logger, tokenProvider, onStep } = deps;
+    const { logger, tokenProvider, onStep, onStepDetail } = deps;
     const { daLiveOrg, daLiveSite } = target;
     const result: StorefrontTeardownResult = {
         stillPublished: true,
@@ -161,9 +186,10 @@ export async function tearDownStorefront(
         contentDeleted: false,
     };
 
-    const [owner, repo] = (target.githubRepo ?? '').split('/');
-    if (owner && repo) {
-        onStep?.('Taking the pages off the CDN');
+    const cdnRepo = repoOf(target);
+    if (cdnRepo) {
+        const { owner, repo } = cdnRepo;
+        onStep?.(OPERATION_STAGES.takingPagesOffSite.label);
         try {
             await deps.initKeyStore();
             const helix = (deps.makeHelix ?? ((l, tp) => new HelixService(l, undefined, tp)))(
@@ -183,7 +209,8 @@ export async function tearDownStorefront(
 
             // The DA.live pages just listed ARE the authored pages: anything else Helix
             // holds under /products/{urlKey}/{sku} was made through the overlay.
-            onStep?.('Removing the product pages');
+            onStep?.(OPERATION_STAGES.removingProductPages.label);
+            onStepDetail?.(OPERATION_STAGES.removingProductPages.label, 'The page made for each product');
             result.productPages = await removeProductPages(
                 { repoOwner: owner, repoName: repo },
                 {
@@ -212,7 +239,7 @@ export async function tearDownStorefront(
         );
     }
 
-    onStep?.('Deleting the DA.live content');
+    onStep?.(OPERATION_STAGES.clearingDaLiveContent.label);
     const contentOps = (deps.makeContentOps ?? ((tp, l) => new DaLiveContentOperations(tp, l).sourceOps))(
         tokenProvider,
         logger,
@@ -220,7 +247,9 @@ export async function tearDownStorefront(
     // NOT wrapped: an org mismatch has to reach the caller as itself. The agent
     // surface maps it to a typed non-retryable answer, and swallowing it here
     // turned that into a plain "deletion failed" string.
-    const deleted = await contentOps.deleteAllSiteContent(daLiveOrg, daLiveSite);
+    const deleted = await contentOps.deleteAllSiteContent(daLiveOrg, daLiveSite, ({ deleted: count }) =>
+        onStepDetail?.(OPERATION_STAGES.clearingDaLiveContent.label, `${itemCount(count, 'file')} removed`),
+    );
     logger.debug(
         `[Teardown] DA.live content deleted: ${deleted.deletedCount} file(s) from ${daLiveOrg}/${daLiveSite}`,
     );
@@ -228,7 +257,7 @@ export async function tearDownStorefront(
     result.deletedCount = deleted.deletedCount;
     result.error = deleted.error;
 
-    onStep?.('Clearing the site settings');
+    onStep?.(OPERATION_STAGES.clearingSiteSettings.label);
     const { DaLiveConfigService } = await import('@/features/eds/services/daLive/daLiveConfigService');
     const configService = new DaLiveConfigService(tokenProvider, logger);
     const permissions = await configService.removeSitePermissions(daLiveOrg, daLiveSite);

@@ -282,6 +282,8 @@ describe('the push that follows a clean rebase', () => {
             daLiveToken: 'dalive-token',
             githubRepo: { owner: 'demo-org', site: 'demo-repo', branch: undefined },
             skipCommit: true,
+            // The service names the push and the code publish through it.
+            onStep: expect.any(Function),
         });
         // A clean rebase never opens the conflict prompt.
         expect(showWarningMessage).not.toHaveBeenCalled();

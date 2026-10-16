@@ -398,7 +398,8 @@ describe('cloud-resource tools (DA.live)', () => {
                 publishSummary: expect.stringContaining('No GitHub repository'),
                 note: expect.stringContaining('githubRepo'),
             });
-            expect(mockDeleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
+            // The teardown hands over a count callback for the line under its step.
+            expect(mockDeleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop', expect.any(Function));
         });
 
         it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {

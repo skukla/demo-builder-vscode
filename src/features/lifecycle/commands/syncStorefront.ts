@@ -29,6 +29,8 @@ import { isManagedStorefrontFile } from './managedStorefrontFiles';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { COMPONENT_IDS } from '@/core/constants';
 import { PollingService } from '@/core/shell/pollingService';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { reportStep } from '@/core/utils/operationStepChannel';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     askDuringOperation,
@@ -67,6 +69,21 @@ export interface SyncStorefrontOutcome {
 }
 
 const DEFAULT_COMMIT_MESSAGE = 'Demo Builder: sync local changes';
+
+/** The progress a sync step is reported on when no progress modal is showing it. */
+type SyncProgress = vscode.Progress<{ message?: string }>;
+
+/**
+ * Report a step of the sync: line 1 of the progress modal when the dashboard started
+ * it, else the notification's message (progress vocabulary slice 2, owner
+ * 2026-10-16). Sent as a plain line inside the modal, the first one froze as the step
+ * for the whole run.
+ */
+function stepOn(progress: SyncProgress): (stage: string) => void {
+    return (stage) => {
+        if (!reportStep(stage)) progress.report({ message: stage });
+    };
+}
 
 export class SyncStorefrontCommand extends BaseCommand {
     /**
@@ -137,13 +154,14 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         const result = await this.withProgress('Syncing storefront', async (progress) => {
             try {
-                progress.report({ message: 'Saving your changes' });
+                stepOn(progress)(OPERATION_STAGES.savingChanges.label);
                 return await syncAndPublish({
                     storefrontPath,
                     commitMessage,
                     githubRepo,
                     githubToken,
                     daLiveToken,
+                    onStep: stepOn(progress),
                 });
             } catch (err) {
                 if (err instanceof PushRejectedError && err.reason === 'ruleset') {
@@ -200,7 +218,7 @@ export class SyncStorefrontCommand extends BaseCommand {
      */
     private async handlePushRejected(args: {
         storefrontPath: string;
-        progress: vscode.Progress<{ message?: string }>;
+        progress: SyncProgress;
         githubToken?: string;
         daLiveToken?: string;
         githubRepo?: { owner: string; site: string; branch?: string };
@@ -209,7 +227,8 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         // Plain words: a producer syncing a storefront has never heard of a
         // rebase, and this fires during an operation they cannot cancel.
-        progress.report({ message: 'Merging their work in' });
+        const step = stepOn(progress);
+        step(OPERATION_STAGES.mergingChanges.label);
 
         const rebaseOutcome = await this.attemptRebase(storefrontPath);
         if (rebaseOutcome === 'clean') {
@@ -262,9 +281,7 @@ export class SyncStorefrontCommand extends BaseCommand {
             return;
         }
 
-        progress.report({
-            message: 'Waiting for your merge',
-        });
+        step(OPERATION_STAGES.waitingForMerge.label);
         await this.revealStorefrontConflicts(storefrontPath);
 
         try {
@@ -284,7 +301,7 @@ export class SyncStorefrontCommand extends BaseCommand {
             return;
         }
 
-        progress.report({ message: 'Finishing the merge' });
+        step(OPERATION_STAGES.finishingMerge.label);
         try {
             await execFile('git', ['-C', storefrontPath, 'rebase', '--continue']);
         } catch (err) {
@@ -375,7 +392,7 @@ export class SyncStorefrontCommand extends BaseCommand {
 
     private async completePushAfterRebase(args: {
         storefrontPath: string;
-        progress: vscode.Progress<{ message?: string }>;
+        progress: SyncProgress;
         githubToken?: string;
         daLiveToken?: string;
         githubRepo?: { owner: string; site: string; branch?: string };
@@ -394,8 +411,8 @@ export class SyncStorefrontCommand extends BaseCommand {
         // commits push through the same code path as a fresh sync — token
         // injection, push semantics, and Helix preview+publish all stay in
         // one place. The rebase has already produced the commits we want to
-        // push, so we skip the stage + commit phase.
-        progress.report({ message: 'Pushing to GitHub' });
+        // push, so we skip the stage + commit phase. The service names the push
+        // and the code publish as they start.
         let result: SyncAndPublishResult;
         try {
             result = await syncAndPublish({
@@ -405,6 +422,7 @@ export class SyncStorefrontCommand extends BaseCommand {
                 daLiveToken,
                 githubRepo,
                 skipCommit: true,
+                onStep: stepOn(progress),
             });
         } catch (err) {
             if (err instanceof HelixApiError) {

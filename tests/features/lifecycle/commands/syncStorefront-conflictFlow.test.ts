@@ -148,8 +148,11 @@ describe('the manual conflict flow', () => {
         });
         expect(report).toHaveBeenCalledWith({ message: 'Finishing the merge' });
         expect(git).toContainEqual(['-C', STOREFRONT, 'rebase', '--continue']);
-        expect(report).toHaveBeenCalledWith({ message: 'Pushing to GitHub' });
         expect(syncAndPublishMock).toHaveBeenCalledTimes(2);
+        // The re-push names its own steps (the service is mocked here): what it
+        // names reaches the notification.
+        syncAndPublishMock.mock.calls[1][0].onStep('Pushing to GitHub');
+        expect(report).toHaveBeenLastCalledWith({ message: 'Pushing to GitHub' });
     });
 
     it('falls back to the prompt when git cannot even list the conflicts', async () => {

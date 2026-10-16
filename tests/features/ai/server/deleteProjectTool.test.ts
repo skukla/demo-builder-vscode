@@ -251,7 +251,7 @@ describe('what it says while it runs', () => {
             s.call({ name: 'alpha', confirm: true, confirmName: 'alpha' })
         );
 
-        expect(seen).toEqual(['Removing the project files']);
+        expect(seen).toEqual(['Removing project files']);
         expect(deleteProjectFilesMock).toHaveBeenCalled();
     });
 });

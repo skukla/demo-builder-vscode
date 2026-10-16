@@ -255,3 +255,89 @@ describe('refreshBlockLibraryHeadless', () => {
         expect(pipelineMock).toHaveBeenCalledTimes(1);
     });
 });
+
+/**
+ * The step each pipeline message belongs to (progress vocabulary slice 2, owner
+ * 2026-10-16). Refresh Blocks is three steps an SC can name; its messages are what
+ * each is doing, the line under it.
+ */
+describe('refreshBlockLibraryHeadless — its steps', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ensureAuthMock.mockResolvedValue({ authenticated: true });
+    });
+
+    /** The pipeline as it runs a library-only rebuild, by the operations it reports. */
+    function pipelineReporting(messages: Array<{ operation: string; message: string }>): void {
+        pipelineMock.mockImplementation(
+            async (_params: unknown, _services: unknown, onProgress: (info: { operation: string; message: string }) => void) => {
+                messages.forEach((info) => onProgress(info));
+                return { success: true, contentFilesCopied: 0, libraryPaths: ['/.da/library/blocks.json'] };
+            },
+        );
+    }
+
+    it('puts each message under the step its operation is', async () => {
+        pipelineReporting([
+            { operation: 'block-library', message: 'Building block library' },
+            { operation: 'block-library', message: 'Building block library: 5 blocks' },
+            { operation: 'eds-settings', message: 'Applying DA.live settings' },
+            { operation: 'library-publish', message: 'Publishing the block list: 2 pages' },
+            { operation: 'library-publish', message: 'Publishing the block list: checking it is live' },
+        ]);
+        const onStep = jest.fn();
+
+        await refreshBlockLibraryHeadless(deps({ onStep }));
+
+        expect(onStep.mock.calls).toStrictEqual([
+            ['Building block library', 'Building block library'],
+            ['Building block library', 'Building block library: 5 blocks'],
+            ['Applying DA.live settings', 'Applying DA.live settings'],
+            ['Publishing the block list', 'Publishing the block list: 2 pages'],
+            ['Publishing the block list', 'Publishing the block list: checking it is live'],
+        ]);
+    });
+
+    // A step it does not name (a code patch, brand assets) is part of the one before.
+    it('keeps a message of an operation it does not name under the step before it', async () => {
+        pipelineReporting([
+            { operation: 'block-library', message: 'Building block library' },
+            { operation: 'block-code-patches', message: 'Patching 2 blocks' },
+        ]);
+        const onStep = jest.fn();
+
+        await refreshBlockLibraryHeadless(deps({ onStep }));
+
+        expect(onStep).toHaveBeenLastCalledWith('Building block library', 'Patching 2 blocks');
+    });
+
+    it('says the DA.live sign-in ran out under the step it ran out in', async () => {
+        pipelineMock
+            .mockImplementationOnce(
+                async (_p: unknown, _s: unknown, onProgress: (info: { operation: string; message: string }) => void) => {
+                    onProgress({ operation: 'eds-settings', message: 'Applying DA.live settings' });
+                    throw new DaLiveAuthError('DA.live token expired');
+                },
+            )
+            .mockResolvedValueOnce({ success: true, contentFilesCopied: 0, libraryPaths: [] });
+        const onStep = jest.fn();
+
+        await refreshBlockLibraryHeadless(deps({ onStep }));
+
+        expect(onStep).toHaveBeenCalledWith(
+            'Applying DA.live settings',
+            'DA.live session expired. Please re-authenticate',
+        );
+    });
+
+    // Configure's Republish shows the whole rebuild under its own step and reads the
+    // plain messages, as it did.
+    it('still hands every plain message to onProgress', async () => {
+        pipelineReporting([{ operation: 'block-library', message: 'Building block library: 5 blocks' }]);
+        const onProgress = jest.fn();
+
+        await refreshBlockLibraryHeadless(deps({ onProgress }));
+
+        expect(onProgress.mock.calls).toStrictEqual([['Building block library: 5 blocks']]);
+    });
+});
