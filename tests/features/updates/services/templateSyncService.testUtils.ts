@@ -13,7 +13,7 @@ import { TemplateSyncService } from '@/features/updates/services/templateSyncSer
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
 
 export const mockExecute = jest.fn();
 export const mockReadFile = jest.fn();
@@ -69,7 +69,7 @@ export function edsProject(metadataOverrides: Record<string, unknown> = {}): Pro
 
 export function service(logger = createMockLogger()): TemplateSyncService {
     return new TemplateSyncService(
-        createMockSecretStorage({ githubToken: 'gh-token' }).secrets,
+        createMockSecretStorage(githubTokenSecret('gh-token')).secrets,
         logger,
         createMockCommandExecutor({ execute: (...a: unknown[]) => mockExecute(...a) }),
     );

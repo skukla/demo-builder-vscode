@@ -14,7 +14,7 @@ import {
 } from '@/features/updates/services/githubApiClient';
 
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
 describe('githubApiClient', () => {
     const mockFetch = global.fetch as jest.Mock;
 
@@ -25,10 +25,10 @@ describe('githubApiClient', () => {
     describe('buildGitHubHeaders', () => {
         it('should include auth token when available', async () => {
             // Keyed, not blanket. The old fake resolved its token for ANY key, so
-            // a rename of `githubToken` in production would not have failed here —
+            // a rename of `github-token` in production would not have failed here —
             // a fake more generous than the real thing, which is the shape this
             // repo has been bitten by.
-            const mockSecrets = createMockSecretStorage({ githubToken: 'my-token' }).secrets;
+            const mockSecrets = createMockSecretStorage(githubTokenSecret('my-token')).secrets;
 
             const headers = await buildGitHubHeaders(mockSecrets);
 
@@ -45,6 +45,16 @@ describe('githubApiClient', () => {
 
             expect(headers['Authorization']).toBeUndefined();
             expect(headers['Accept']).toBe('application/vnd.github.v3+json');
+        });
+
+        it('should omit auth header when the stored value is not token JSON', async () => {
+            // A bare string under the key is not what `storeToken` writes; sending
+            // it as a token would only earn a 401.
+            const mockSecrets = createMockSecretStorage({ 'github-token': 'bare' }).secrets;
+
+            const headers = await buildGitHubHeaders(mockSecrets);
+
+            expect(headers['Authorization']).toBeUndefined();
         });
     });
 
@@ -107,7 +117,7 @@ describe('githubApiClient', () => {
     });
 
     describe('getLatestBranchCommit', () => {
-        const mockSecrets = createMockSecretStorage({ githubToken: 'tok' }).secrets;
+        const mockSecrets = createMockSecretStorage(githubTokenSecret('tok')).secrets;
 
         it('should return commit SHA on success', async () => {
             mockFetch.mockResolvedValueOnce({
@@ -152,7 +162,7 @@ describe('githubApiClient', () => {
     });
 
     describe('getLatestRelease', () => {
-        const mockSecrets = createMockSecretStorage({ githubToken: 'tok' }).secrets;
+        const mockSecrets = createMockSecretStorage(githubTokenSecret('tok')).secrets;
 
         it('should return tag + version on success and strip a v-prefix', async () => {
             mockFetch.mockResolvedValueOnce({
@@ -242,7 +252,7 @@ describe('githubApiClient', () => {
     });
 
     describe('compareCommits', () => {
-        const mockSecrets = createMockSecretStorage({ githubToken: 'tok' }).secrets;
+        const mockSecrets = createMockSecretStorage(githubTokenSecret('tok')).secrets;
 
         it('should return comparison data on success', async () => {
             mockFetch.mockResolvedValueOnce({

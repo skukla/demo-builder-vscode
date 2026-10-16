@@ -1,17 +1,7 @@
 import * as vscode from 'vscode';
-import { GITHUB_API_BASE, fetchWithTimeout } from './githubApiClient';
+import { GITHUB_API_BASE, fetchWithTimeout, readGitHubToken } from './githubApiClient';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-
-/**
- * EDS stores the GitHub OAuth token under this key as JSON
- * `{ token, tokenType, scopes }` — see
- * src/features/eds/services/github/githubTokenService.ts (`GITHUB_TOKEN_KEY` + the two storage writes)
- * (type at src/features/eds/services/types.ts:11-17).
- * We read it directly (not via the EDS service) to respect the
- * features-import rule (updates must not import from features/eds).
- */
-const EDS_TOKEN_KEY = 'github-token';
 
 /** Repo whose collaborators may use the early-access channel. */
 const EA_OWNER = 'skukla';
@@ -26,18 +16,6 @@ let cache: CacheEntry | null = null;
 /** Test/maintenance hook to force a fresh check. */
 export function clearCollaboratorCache(): void {
     cache = null;
-}
-
-async function readEdsToken(secrets: vscode.SecretStorage): Promise<string | null> {
-    const stored = await secrets.get(EDS_TOKEN_KEY);
-    if (!stored) return null;
-    try {
-        const parsed = JSON.parse(stored) as { token?: unknown };
-        // An empty string is returned as-is: the caller's `!token` check rejects it.
-        return typeof parsed.token === 'string' ? parsed.token : null;
-    } catch {
-        return null;
-    }
 }
 
 function authHeaders(token: string): Record<string, string> {
@@ -69,7 +47,7 @@ async function computeIsCollaborator(
     logger: Logger,
 ): Promise<boolean> {
     try {
-        const token = await readEdsToken(secrets);
+        const token = await readGitHubToken(secrets);
         if (!token) {
             logger.debug(
                 '[Updates] Early-access gate: no GitHub token; treating as non-collaborator',

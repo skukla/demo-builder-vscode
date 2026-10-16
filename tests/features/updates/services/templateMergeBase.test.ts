@@ -38,7 +38,7 @@ import type { Project } from '@/types/base';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
 
 // The service reads its GitHub token through the shared service cache; only getToken is called.
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
@@ -186,7 +186,7 @@ function storefrontProject(lastSyncedCommit: string | undefined): Project {
 
 function merge(fx: Fixture, lastSyncedCommit: string | undefined, strategy: 'merge' | 'reset' = 'merge') {
     const svc = new TemplateSyncService(
-        createMockSecretStorage({ githubToken: 'gh-token' }).secrets,
+        createMockSecretStorage(githubTokenSecret('gh-token')).secrets,
         createMockLogger(),
         realGitExecutor(fx),
     );
