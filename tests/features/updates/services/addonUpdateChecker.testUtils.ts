@@ -10,7 +10,7 @@
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
 
 export function makeLibrary(overrides: Partial<InstalledBlockLibrary> = {}): InstalledBlockLibrary {
     return {
@@ -28,9 +28,9 @@ export function makeProject(overrides: Partial<Project> = {}): Project {
 }
 
 /**
- * Keyed store rather than a blanket `get`: production reads `githubToken`, and a
+ * Keyed store rather than a blanket `get`: production reads `github-token`, and a
  * fake that answers to every key cannot notice if that name changes.
  */
 export function makeCheckerSecrets(): ReturnType<typeof createMockSecretStorage>['secrets'] {
-    return createMockSecretStorage({ githubToken: 'fake-github-token' }).secrets;
+    return createMockSecretStorage(githubTokenSecret('fake-github-token')).secrets;
 }

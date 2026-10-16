@@ -6,9 +6,10 @@
  * fails closed (returns false) on ANY error. Never logs the token.
  */
 
-// Mock the shared GitHub client so we control fetch behavior
+// Mock only fetch on the shared GitHub client; the token read stays real so the
+// key and stored shape are exercised, not assumed.
 jest.mock('@/features/updates/services/githubApiClient', () => ({
-    GITHUB_API_BASE: 'https://api.github.com',
+    ...jest.requireActual('@/features/updates/services/githubApiClient'),
     fetchWithTimeout: jest.fn(),
 }));
 

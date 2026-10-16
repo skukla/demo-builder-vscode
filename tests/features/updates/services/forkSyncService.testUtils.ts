@@ -8,7 +8,7 @@
 
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
 
 global.fetch = jest.fn();
 
@@ -28,7 +28,7 @@ export function createForkSyncHarness(): {
     logger: ReturnType<typeof createMockLogger>;
 } {
     const logger = createMockLogger();
-    const secrets = createMockSecretStorage({ githubToken: 'test-github-token' }).secrets;
+    const secrets = createMockSecretStorage(githubTokenSecret('test-github-token')).secrets;
     return { service: new ForkSyncService(secrets, logger), logger };
 }
 
