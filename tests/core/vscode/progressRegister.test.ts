@@ -11,7 +11,7 @@
  */
 
 import * as vscode from 'vscode';
-import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { hasActivePhaseSinks, reportPhase, withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import {
     cardInFlightLabel,
     timedSteps,
@@ -145,6 +145,36 @@ describe('withProgressRegister', () => {
  * — so this helper must NOT stack a second notification on that path. The
  * owner counted three cards for one deploy.
  */
+// Found on the 2026-10-16 release walk: Sync Storefront and Refresh Blocks started
+// from the dashboard without its modal opened TWO notifications, the dashboard's and
+// the command's own, because nothing told the command one was already narrating.
+describe('withProgressRegister — work nested inside it', () => {
+    it('is told a notification is narrating, so nested work reports into it', async () => {
+        const { report } = stubWithProgress();
+        let nestedSawNarrator = false;
+
+        await withProgressRegister({ title: 'Syncing the storefront' }, async () => {
+            // What a nested command's own progress checks before opening one.
+            nestedSawNarrator = hasActivePhaseSinks();
+            reportPhase('Pushing to GitHub');
+        });
+
+        expect(nestedSawNarrator).toBe(true);
+        expect(report).toHaveBeenCalledWith({ message: 'Pushing to GitHub' });
+        expect(vscode.window.withProgress).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports its own steps once, not twice', async () => {
+        const { report } = stubWithProgress();
+
+        await withProgressRegister({ title: 'Syncing the storefront' }, async (step) => {
+            step('Saving your changes');
+        });
+
+        expect(report.mock.calls).toEqual([[{ message: 'Saving your changes' }]]);
+    });
+});
+
 describe('withProgressRegister — inside an agent tool call', () => {
     it('opens NO notification of its own; steps flow to the phase sinks', async () => {
         const { report } = stubWithProgress();

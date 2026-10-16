@@ -35,7 +35,7 @@
  */
 
 import * as vscode from 'vscode';
-import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
+import { hasActivePhaseSinks, reportPhase, withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { formatDuration } from '@/core/utils/timeFormatting';
 
 /**
@@ -163,12 +163,17 @@ export async function withProgressRegister<T>(
         },
         async (progress) => {
             if (pushCardStatus) pushCardStatus(cardLabel ?? '');
-            result = await run((message) => {
-                progress.report({ message });
-                // Same step, second destination — the chat, via the MCP sink.
-                // A no-op outside an agent tool call.
-                reportPhase(message);
-            });
+            // This notification is the narrator, so it is registered as the phase
+            // sink: work nested inside (a command's own `withProgress`) sees a
+            // narrator and reports here instead of opening a second notification.
+            // Sync Storefront and Refresh Blocks, started from the dashboard without
+            // its modal, opened two until 2026-10-16. No outer sink exists on this
+            // path (the agent case returned above), so nothing is lost.
+            // The run's own steps go straight to the notification; only NESTED work
+            // reaches it through the sink, so a step is never reported twice and a
+            // report made outside the run's async context still lands.
+            const narrate = (message: string): void => progress.report({ message });
+            result = await withPhaseSinks([narrate], () => run(narrate));
         },
     );
 
