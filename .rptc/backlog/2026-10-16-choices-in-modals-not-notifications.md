@@ -43,3 +43,8 @@ design decision; the rest is applying the existing patterns.
 ## Children
 
 - PL-80: Check for Updates in a modal, with the updates already ticked.
+
+## Shipped so far
+
+- 2026-10-16  docs(walk): record row 3.6 and the inventory of choices asked in notifications (`ab605495c`)
+- 2026-10-16  docs(backlog): file PL-80 and PL-81, choices asked in modals; record walk results (`5c162c373`)

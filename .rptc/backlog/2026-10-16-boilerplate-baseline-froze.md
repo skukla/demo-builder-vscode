@@ -46,6 +46,9 @@ workflow only runs inside `adobe-commerce/boilerplate-b2b-template` and skipped 
 - 2026-10-16  `skukla/eds-demo-patches@1fa2046`: the gate publishes the release after a
   green run, and moves only when canonical's files change (`canonical_moved`); both
   proven against the live repos with a positive control
+- 2026-10-16  docs(adr-006): re-anchoring, per-ledger exact retirement, and the PR permission (`e63f8edb9`)
+- 2026-10-16  feat(patches): a watchdog for the patches release, and the docs for automatic releases (`e7967a5da`)
+- 2026-10-16  fix(updates): a template compare that fails is "could not check", not "up to date" (`b95bb50e7`)
 
 ## Still open
 

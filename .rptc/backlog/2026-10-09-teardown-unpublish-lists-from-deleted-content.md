@@ -64,3 +64,5 @@ and says so, and the live check still stops it claiming the site is down.
 - 2026-10-09  docs(backlog): EDS-33 built, logs its commit (`9ded02d82`)
 - 2026-10-09  fix(eds): a reset keeps the site up and unpublishes leftovers after republishing (`e6470fa0f`)
 - 2026-10-09  docs(backlog): EDS-33 logs the reset commit (`b641e4658`)
+- 2026-10-16  fix(reset): a trailing slash is the same page, so the cleanup no longer removes live pages (`a97f5dbcd`)
+- 2026-10-16  fix(reset): warnings land in the open modal, and cleanup never removes a page DA.live still has (`15310d4d5`)

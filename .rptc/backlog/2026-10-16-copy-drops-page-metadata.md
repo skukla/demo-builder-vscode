@@ -42,3 +42,7 @@ responses (`tests/fixtures/eds/page-metadata/README.md` names each source).
 - The home page of the four commerce sources carries Adobe's
   `google-site-verification` value onto the SC's copy (authored on that page, so kept).
   Harmless; decide whether to drop that one name.
+
+## Shipped so far
+
+- 2026-10-16  fix(eds): copied pages keep their own page settings (`1b2e4f1aa`)

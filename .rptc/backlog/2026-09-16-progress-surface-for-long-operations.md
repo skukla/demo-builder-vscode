@@ -130,3 +130,4 @@ because it holds the credential-APIs fix that develop does not have.
 - 2026-09-23  docs(backlog): the wording rule for merging develop into the ERP branch (`65a804404`)
 - 2026-10-03  Reconciled 2026-10-03 (second pass): the 'Open: the shape' section is answered: the progress modal is built and phase 1 shipped in beta.148.
 - 2026-10-09  fix(integrations): a card action's notes and its confirms stay in the progress modal (`c105f7599`)
+- 2026-10-16  feat(progress): one clock for the whole run, and "Took ..." at the end (`bdad15739`)
