@@ -30,6 +30,16 @@ waits on it, and `EDS-1` (multisite) specifies ACO catalog views per locale.
   tool and has `executeAcoIngestion` (`import:aco`) and `executeAcoCleanup`
   (`delete:aco`). Nothing calls the import; the cleanup runs only when a backend type of
   `aco` is set, and nothing sets it. `skipTools` is set from the add-on and read nowhere.
+- **The ingestion tool has two sources and no update path** (checked 2026-10-16).
+  `toolManager.ts` (`TOOL_CONFIG`) clones `skukla/commerce-demo-ingestion` at `main`, unpinned;
+  that repo's only release is `v1.0.0-beta.1`. The `tools.commerce-demo-ingestion` catalog
+  entry in `components.json` names a different repo, `PMET-public/commerce-demo-ingestion`
+  at tag `v1.0.0`, which `gh` cannot resolve. Nothing installs from that entry. Its
+  only reader is `componentRepositoryResolver`, and the update check reaches it only for a
+  project's `componentInstances`, which the tool never joins. So an installed copy is
+  never checked for updates. If finishing ACO keeps the tool, it needs one source of
+  truth, a pinned version, and an update check. If not, delete both the catalog entry and
+  `toolManager.ts`.
 - **Configure.** A service group exists for the ACO fields; the configure-field-grouping
   research found it never renders, and editing ACO credentials after creation is an open
   question (`.rptc/complete/2026-08-11-project-level-facts-stored-per-component.md`).
