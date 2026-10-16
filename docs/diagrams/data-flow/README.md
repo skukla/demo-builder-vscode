@@ -20,9 +20,9 @@ never by repository or host.
 
 ## Lucid docs
 
-Not built yet. These diagrams wait for the tech-case-engine's Lucid builder
-(`docs/diagrams/builder-handoff.md` in that repo), so they are drawn by the shared
-tool rather than a one-off script here.
+Not built yet. These diagrams wait for the tech-case-engine's Lucid builder (its
+builder handoff document, docs/diagrams/builder-handoff.md in that repository), so
+they are drawn by the shared tool rather than a one-off script here.
 
 | # | Lucid URL | Built from commit |
 |---|---|---|
