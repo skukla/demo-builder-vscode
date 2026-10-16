@@ -386,7 +386,11 @@ describe('handleUpdateAppBuilderComponent — started from the integrations scre
 
         await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration', progress: 'modal' });
 
-        expect(mockSendOperationProgress).toHaveBeenNthCalledWith(1, { id: 'erp-integration', state: 'running' });
+        expect(mockSendOperationProgress).toHaveBeenNthCalledWith(1, {
+            id: 'erp-integration',
+            state: 'running',
+            startedAt: expect.any(Number),
+        });
         expect(mockSendOperationProgress).toHaveBeenLastCalledWith(
             expect.objectContaining({ id: 'erp-integration', state: 'succeeded' }),
         );
@@ -441,6 +445,8 @@ describe('handleUpdateAppBuilderComponent — started from the integrations scre
             id: 'erp-integration',
             state: 'failed',
             error: '"erp-integration" is not deployed; deploy it instead of updating it.',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 });

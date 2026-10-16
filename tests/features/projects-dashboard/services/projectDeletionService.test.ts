@@ -591,7 +591,12 @@ describe('where a delete narrates', () => {
 
         // One surface per operation (PL-59 R1): no notification beside the modal.
         expect(mockWithProgressOptions).not.toHaveBeenCalled();
-        expect(pushed.at(-1)).toStrictEqual({ id: 'screen-op-1', state: 'succeeded' });
+        expect(pushed.at(-1)).toStrictEqual({
+            id: 'screen-op-1',
+            state: 'succeeded',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
+        });
     });
 
     it("the cleanup's own step reaches the notification ahead of the file removal", async () => {

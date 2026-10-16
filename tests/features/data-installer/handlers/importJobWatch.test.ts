@@ -181,6 +181,7 @@ describe('the shared progress channel', () => {
             state: 'running',
             stage: 'Importing the sample data',
             position: { index: 1, total: 3 },
+            startedAt: expect.any(Number),
         });
     });
 
@@ -228,6 +229,7 @@ describe('the shared progress channel', () => {
             id: DATAPACK_OPERATION_ID,
             state: 'running',
             stage: 'Importing the sample data',
+            startedAt: expect.any(Number),
         });
     });
 

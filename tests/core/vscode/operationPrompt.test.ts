@@ -159,6 +159,7 @@ describe('a modal is hosting the operation', () => {
             state: 'running',
             stage: 'Checking requirements',
             step: 'Your DA.live sign-in',
+            startedAt: expect.any(Number),
         });
     });
 

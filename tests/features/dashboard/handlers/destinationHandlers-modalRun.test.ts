@@ -68,7 +68,11 @@ describe('a destination change run in the screen\'s modal', () => {
 
         const { pushes } = await runFromScreen(context, 'screen-op-7');
 
-        expect(pushes[0]).toStrictEqual({ id: 'screen-op-7', state: 'running' });
+        expect(pushes[0]).toStrictEqual({
+            id: 'screen-op-7',
+            state: 'running',
+            startedAt: expect.any(Number),
+        });
         expect(pushes.at(-1)).toMatchObject({ id: 'screen-op-7', state: 'succeeded' });
         expect(pushes).toContainEqual(
             expect.objectContaining({ id: 'screen-op-7', stage: 'Saving the new destination' }),

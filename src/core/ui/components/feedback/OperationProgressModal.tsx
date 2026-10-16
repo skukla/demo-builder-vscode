@@ -30,18 +30,14 @@
  * @module core/ui/components/feedback/OperationProgressModal
  */
 
-import { DialogContainer, Flex, Text } from '@adobe/react-spectrum';
+import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef } from 'react';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { OperationPromptForm } from '@/core/ui/components/feedback/OperationPromptForm';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { OperationProgressBody } from '@/core/ui/components/feedback/OperationProgressBody';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
-import { useElapsedClock } from '@/core/ui/hooks/useElapsedClock';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { OperationOffer, OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationOffer, OperationProgressPayload } from '@/types/webviewPayloads';
 
 /** The operation a progress modal shows: which one, and what it is called. */
 export interface ProgressModalOperation {
@@ -86,16 +82,6 @@ export interface OperationProgressModalProps {
      * button. `next` wins when both are there: it is the screen's own.
      */
     offerStep?: (offer: OperationOffer) => ProgressModalNextStep | undefined;
-}
-
-/**
- * Row 3: what to expect, and how long this stage has actually been running.
- * Never empty — the row holds its height whether or not either is known, so the
- * modal does not resize as stages come and go.
- */
-function helperLine(expectation?: string, elapsed?: string): string {
-    const parts = [expectation, elapsed].filter(Boolean);
-    return parts.length > 0 ? parts.join(' · ') : '\u00A0';
 }
 
 /**
@@ -146,75 +132,6 @@ function failureButtons(failed: boolean, onRetry: () => void): ActionButton[] {
     ];
 }
 
-interface ProgressBodyProps {
-    prompt?: OperationPrompt;
-    failed: boolean;
-    succeeded: boolean;
-    failureTitle: string;
-    successTitle: string;
-    /** The success view's second line: the run's warning or note, then what is left to do. */
-    successMessage?: string;
-    /** The run succeeded with a warning: the view is a warning's, not a green tick. A note keeps the tick. */
-    warned: boolean;
-    progress?: OperationProgressPayload | null;
-    elapsed?: string;
-    /** Every keystroke in a question's fields, for the buttons to hand back. */
-    onTyped: (values: Record<string, string>) => void;
-}
-
-/** The one row that changes: a question, a failure, or where the work has got to. */
-function ProgressBody({
-    prompt,
-    failed,
-    succeeded,
-    failureTitle,
-    successTitle,
-    successMessage,
-    warned,
-    progress,
-    elapsed,
-    onTyped,
-}: ProgressBodyProps): React.ReactElement {
-    if (prompt?.fields?.length) {
-        // The question and what it needs typed, together: the modal owns the form
-        // rather than handing off to a VS Code input box (owner, 2026-09-20).
-        return (
-            <Flex direction="column" gap="size-200" width="100%">
-                <Text>{prompt.message}</Text>
-                <OperationPromptForm fields={prompt.fields} onChange={onTyped} />
-            </Flex>
-        );
-    }
-    if (prompt) {
-        return <StatusDisplay variant="warning" title="Waiting for you" message={prompt.message} />;
-    }
-    if (failed) {
-        return <StatusDisplay variant="error" title={failureTitle} message={progress?.error} />;
-    }
-    if (succeeded) {
-        return (
-            // Centred under the centred tick and title (owner, 2026-10-16). A failure's
-            // message stays left-aligned: it can run to several lines.
-            <StatusDisplay
-                variant={warned ? 'warning' : 'success'}
-                title={successTitle}
-                message={successMessage}
-                centerMessage
-            />
-        );
-    }
-    // Size L, as every other progress display here: M left-aligns and shrinks
-    // the text (ImportDatapackModal).
-    return (
-        <LoadingDisplay
-            size="L"
-            message={progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting'}
-            subMessage={progress?.step}
-            helperText={helperLine(progress?.expectation, elapsed)}
-        />
-    );
-}
-
 /** The progress modal for one operation. */
 export function OperationProgressModal({
     operation,
@@ -235,10 +152,6 @@ export function OperationProgressModal({
     // modal is where the SC is looking, and a notification beside it asks twice
     // (owner, 2026-09-20: republishing Bodea showed both at once).
     const prompt = failed || succeeded ? undefined : progress?.prompt;
-    // Restarts on every new stage, so the clock times the stage in progress and
-    // not the whole run. It is the only thing that moves while a step waits on
-    // Adobe (owner, 2026-09-19: "I wasn't happy with the frequency of updates").
-    const elapsed = useElapsedClock(failed ? null : progress?.stage);
 
     // What the SC has typed into the question's fields, if it has any. A ref, not
     // state: every keystroke would otherwise re-render the modal around the field
@@ -321,7 +234,7 @@ export function OperationProgressModal({
                 {/* One fixed height for every state, so the modal never resizes as
                         stages come and go or it turns into a failure. */}
                 <div className="modal-progress-body">
-                    <ProgressBody
+                    <OperationProgressBody
                         prompt={prompt}
                         failed={failed}
                         succeeded={succeeded}
@@ -332,7 +245,6 @@ export function OperationProgressModal({
                         }
                         warned={Boolean(warning)}
                         progress={progress}
-                        elapsed={elapsed}
                         onTyped={onTyped}
                     />
                 </div>

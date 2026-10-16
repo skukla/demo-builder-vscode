@@ -257,6 +257,8 @@ describe('handleResetErpRecords', () => {
             id: 'erp-integration',
             state: 'succeeded',
             warning,
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
@@ -282,6 +284,8 @@ describe('handleResetErpRecords', () => {
             id: 'erp-integration',
             state: 'succeeded',
             note,
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 

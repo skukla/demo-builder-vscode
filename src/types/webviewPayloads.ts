@@ -430,6 +430,14 @@ export interface OperationProgressPayload {
     prompt?: OperationPrompt;
     /** A next step a run that succeeded offers on its success view (AB-74). */
     offer?: OperationOffer;
+    /**
+     * When the run began, in ms since the epoch, on every push of it. Stamped where
+     * progress is pushed (`pushOperationProgress`), so a modal opened mid-run still
+     * counts the whole run, not just what it watched.
+     */
+    startedAt?: number;
+    /** How long the whole run took, in ms, on its last push (succeeded or failed). */
+    tookMs?: number;
 }
 
 /**

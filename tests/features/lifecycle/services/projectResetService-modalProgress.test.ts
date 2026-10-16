@@ -48,7 +48,12 @@ describe('resetProjectWithUI — started from a screen (progress: modal)', () =>
 
         // One surface per operation: no notification beside the modal.
         expect(withProgress).not.toHaveBeenCalled();
-        expect(pushed.at(-1)).toStrictEqual({ id: 'screen-reset-1', state: 'succeeded' });
+        expect(pushed.at(-1)).toStrictEqual({
+            id: 'screen-reset-1',
+            state: 'succeeded',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
+        });
     });
 
     it('a failure is answered, not repeated as an error notification beside the modal', async () => {

@@ -87,6 +87,8 @@ describe('handleLoadErpDemoData — prices', () => {
             state: 'succeeded',
             warning:
                 'Demo data loaded; prices were not published: ERP prices answered 500: Commerce did not answer. Load demo data again to retry.',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
@@ -124,6 +126,8 @@ describe('handleLoadErpDemoData — prices', () => {
             id: 'erp-integration',
             state: 'succeeded',
             note: STILL_PUBLISHING,
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
@@ -161,6 +165,8 @@ describe('handleLoadErpDemoData — prices', () => {
         expect(mockContext.sendMessage).toHaveBeenLastCalledWith('operationProgress', {
             id: 'erp-integration',
             state: 'succeeded',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 

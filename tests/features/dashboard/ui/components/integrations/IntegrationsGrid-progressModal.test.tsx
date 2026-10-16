@@ -84,12 +84,15 @@ describe('the progress modal', () => {
     });
 
     // The stage line can hold still for two minutes while Adobe works, and a modal
-    // that never changes reads as a hang (owner, 2026-09-19).
-    it('counts the seconds the stage has been running, beside the expectation', async () => {
+    // that never changes reads as a hang (owner, 2026-09-19). The clock times the
+    // whole run from the start the extension stamped, so a new stage does not restart
+    // it (owner, 2026-10-16).
+    it('counts the seconds the whole run has been going, beside the expectation', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
-        push(RUNNING);
+        const startedAt = Date.now();
+        push({ ...RUNNING, startedAt });
 
         act(() => {
             jest.advanceTimersByTime(12000);
@@ -98,6 +101,13 @@ describe('the progress modal', () => {
         expect(
             within(modal).getByText('Usually 1–2 minutes · 12 seconds'),
         ).toBeInTheDocument();
+
+        push({ ...RUNNING, startedAt, stage: 'Subscribing APIs', expectation: 'Usually a minute' });
+        act(() => {
+            jest.advanceTimersByTime(3000);
+        });
+
+        expect(within(modal).getByText('Usually a minute · 15 seconds')).toBeInTheDocument();
     });
 
     it("shows the pair count in the stage line", async () => {

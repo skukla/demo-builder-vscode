@@ -50,8 +50,14 @@ describe('started from a button on a screen (R1)', () => {
             stage: STAGE.label,
             step: STAGE.detail,
             expectation: STAGE.expectation,
+            startedAt: expect.any(Number),
         });
-        expect(modalPayloads().at(-1)).toEqual({ id: ID, state: 'succeeded' });
+        expect(modalPayloads().at(-1)).toEqual({
+            id: ID,
+            state: 'succeeded',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
+        });
     });
 
     // AB-26z: a fill that stood while its prices were not published said so only in the

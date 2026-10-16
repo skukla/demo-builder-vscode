@@ -75,6 +75,8 @@ describe('runConfigureRepublish — with the Configure screen open', () => {
             id: CONFIGURE_REPUBLISH_OPERATION_ID,
             state: 'succeeded',
             note: ADDED.text,
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
         expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
         expect(vscode.window.withProgress).not.toHaveBeenCalled();

@@ -236,7 +236,12 @@ describe('started from a button on a screen', () => {
                 step: 'Validating configuration',
             })
         );
-        expect(modal().at(-1)).toEqual({ id: 'eds-accs-mesh', state: 'succeeded' });
+        expect(modal().at(-1)).toEqual({
+            id: 'eds-accs-mesh',
+            state: 'succeeded',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
+        });
     });
 
     it('ends the modal with a reason a person can act on, not a tool instruction', async () => {

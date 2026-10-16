@@ -102,10 +102,13 @@ describe('dashboardHandlers - handleDeployMesh', () => {
             expect(mockContext.sendMessage).toHaveBeenCalledWith('operationProgress', {
                 id: 'mesh-row-7',
                 state: 'running',
+                startedAt: expect.any(Number),
             });
             expect(mockContext.sendMessage).toHaveBeenCalledWith('operationProgress', {
                 id: 'mesh-row-7',
                 state: 'succeeded',
+                startedAt: expect.any(Number),
+                tookMs: expect.any(Number),
             });
         });
 
@@ -118,6 +121,7 @@ describe('dashboardHandlers - handleDeployMesh', () => {
             expect(mockContext.sendMessage).toHaveBeenCalledWith('operationProgress', {
                 id: 'mesh',
                 state: 'running',
+                startedAt: expect.any(Number),
             });
         });
 

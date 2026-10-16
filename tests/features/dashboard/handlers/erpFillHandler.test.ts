@@ -374,6 +374,8 @@ describe('handleLoadErpDemoData — mapping', () => {
             id: 'erp-integration',
             state: 'succeeded',
             warning,
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 

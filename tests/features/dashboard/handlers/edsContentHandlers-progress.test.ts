@@ -61,6 +61,8 @@ describe('sync storefront', () => {
             id: 'sync-storefront',
             state: 'failed',
             error: 'push rejected',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
@@ -72,7 +74,12 @@ describe('sync storefront', () => {
 
         await handleSyncStorefront(context(), { id: 'sync-storefront', progress: 'modal' });
 
-        expect(pushes().at(-1)).toEqual({ id: 'sync-storefront', state: 'succeeded' });
+        expect(pushes().at(-1)).toEqual({
+            id: 'sync-storefront',
+            state: 'succeeded',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
+        });
     });
 
     it('opens a notification when no screen asked for the modal', async () => {
@@ -98,6 +105,8 @@ describe('refresh block library', () => {
             id: 'block-library',
             state: 'failed',
             error: 'DA.live refused',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 });

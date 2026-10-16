@@ -39,6 +39,24 @@ type SendToScreen = HandlerContext['sendMessage'];
 
 const latest = new Map<string, OperationProgressPayload>();
 const screens = new Map<string, SendToScreen>();
+/** When each running operation began: its first `running` push after the last end. */
+const startedAt = new Map<string, number>();
+
+/**
+ * The payload with its run's timing: when it began on every push, and how long it
+ * took on the last one. The modal's own clock times the STAGE and restarts with each,
+ * so without this nothing could say how long a whole reset took (owner, 2026-10-16).
+ */
+function withTiming(payload: OperationProgressPayload): OperationProgressPayload {
+    if (payload.state === 'running') {
+        const began = startedAt.get(payload.id) ?? Date.now();
+        startedAt.set(payload.id, began);
+        return { ...payload, startedAt: began };
+    }
+    const began = startedAt.get(payload.id);
+    startedAt.delete(payload.id);
+    return began === undefined ? payload : { ...payload, startedAt: began, tookMs: Date.now() - began };
+}
 
 /**
  * Begin a modal-hosted run: from here on, this operation's progress goes to `send`.
@@ -47,6 +65,8 @@ const screens = new Map<string, SendToScreen>();
  */
 export function startModalRun(id: string, send: SendToScreen): void {
     screens.set(id, send);
+    // A new run: a start left by one that never sent its end must not time this one.
+    startedAt.delete(id);
 }
 
 /**
@@ -66,8 +86,9 @@ export function heldProgress(id: string): OperationProgressPayload | undefined {
  * @param payload - the operation's current state
  */
 export async function pushOperationProgress(
-    payload: OperationProgressPayload,
+    reported: OperationProgressPayload,
 ): Promise<void> {
+    const payload = withTiming(reported);
     if (payload.state === 'succeeded') {
         latest.delete(payload.id);
     } else {

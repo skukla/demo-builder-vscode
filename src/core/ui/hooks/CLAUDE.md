@@ -39,7 +39,7 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | `useSelectableDefault` | Select-all-on-focus for fields holding a replaceable default |
 | `useVerificationMessage` | Status value → formatted `info`/`success`/`warning`/`error` message |
 | `useElapsedStage` | Advance a sub-message as a wait drags, so a slow fetch does not read as frozen |
-| `useElapsedClock` | How long the current stage has run ("1m 12s"), restarting on each new stage — the progress modal's proof that a long wait is still alive |
+| `useRunClock` | How long the whole run has been going, from the start the extension stamps — the progress modal's proof that a long wait is still alive; `tookLine` says how long it took at the end |
 | `useOperationRunner` | Which long operation a screen's progress modal is showing: start it, open on the first report (VS Code asks first), reopen the running one, Retry |
 | `useOperationProgress` | Follow one long operation's progress for its modal, asking where it is when reopened mid-run (PL-59) |
 | `useShowWhenStartedElsewhere` | Open a screen's progress modal for an operation something else started (Configure's Republish, from a save's prompt): on its first step, once per run |

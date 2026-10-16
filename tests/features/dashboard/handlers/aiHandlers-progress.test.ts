@@ -166,6 +166,7 @@ describe('handleRegenerateAiFiles — creationProgress payloads', () => {
             stage,
             step,
             position: { index, total: 4 },
+            startedAt: expect.any(Number),
         });
         expect(pushed).toStrictEqual([
             running('Writing AGENTS.md', 1),
@@ -173,7 +174,12 @@ describe('handleRegenerateAiFiles — creationProgress payloads', () => {
             running('Writing skills', 3, 'four skills'),
             running('Finalizing', 4, 'Refreshing AI capability inventory'),
             // The end: a modal closes on it, a backgrounded run says it is done.
-            { id: AI_FILES_OPERATION_ID, state: 'succeeded' },
+            {
+                id: AI_FILES_OPERATION_ID,
+                state: 'succeeded',
+                startedAt: expect.any(Number),
+                tookMs: expect.any(Number),
+            },
         ]);
     });
 });

@@ -512,6 +512,8 @@ describe('handleAddErp', () => {
             id: 'erp-integration',
             state: 'succeeded',
             note,
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
@@ -535,6 +537,8 @@ describe('handleAddErp', () => {
                 name: 'Brand B ERP',
                 message: 'Next: Brand B ERP owns no products yet. Assign products to it.',
             },
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
@@ -573,6 +577,8 @@ describe('handleAddErp', () => {
             id: 'erp-integration',
             state: 'succeeded',
             warning,
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
@@ -627,6 +633,8 @@ describe('handleAddErp', () => {
                 id: 'erp-integration',
                 state: 'succeeded',
                 warning,
+                startedAt: expect.any(Number),
+                tookMs: expect.any(Number),
             });
         });
 

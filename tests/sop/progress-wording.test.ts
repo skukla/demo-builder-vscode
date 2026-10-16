@@ -88,7 +88,7 @@ const KINDS = [
  * wizard's install-step detail, which has no modal to time it.
  */
 const CLOCK_OWNERS = [
-    'src/core/ui/hooks/useElapsedClock.ts',
+    'src/core/ui/hooks/useRunClock.ts',
     'src/core/utils/progressUnifier/ProgressUnifier.ts',
     'src/core/utils/timeFormatting.ts',
 ];

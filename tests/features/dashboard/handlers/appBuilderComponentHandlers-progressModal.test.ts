@@ -64,6 +64,7 @@ describe('withComponentProgress — started from the integrations screen', () =>
             stage: STAGE.label,
             step: 'Running aio app deploy',
             expectation: STAGE.expectation,
+            startedAt: expect.any(Number),
         });
     });
 
@@ -171,6 +172,7 @@ describe('a modal-hosted request always ends', () => {
         expect(mockSendOperationProgress).toHaveBeenNthCalledWith(1, {
             id: 'erp-sync',
             state: 'running',
+            startedAt: expect.any(Number),
         });
     });
 
@@ -184,6 +186,8 @@ describe('a modal-hosted request always ends', () => {
             id: 'erp-sync',
             state: 'failed',
             error: 'No project found',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
@@ -200,6 +204,8 @@ describe('a modal-hosted request always ends', () => {
             id: 'erp-sync',
             state: 'failed',
             error: 'The operation stopped unexpectedly. Details are in Debug Logs.',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
@@ -215,7 +221,7 @@ describe('a modal-hosted request always ends', () => {
 
         await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync', progress: 'modal' });
 
-        expect(held).toStrictEqual({ id: 'erp-sync', state: 'running' });
+        expect(held).toStrictEqual({ id: 'erp-sync', state: 'running', startedAt: expect.any(Number) });
     });
 
     it('sends nothing to a modal for a request that did not ask for one', async () => {

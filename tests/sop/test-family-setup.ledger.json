@@ -4,6 +4,7 @@
     "families": [],
     "adjudicated": {
         "tests/types/typeGuards": "Eight suites, and not one has a beforeEach or a jest.mock — these are pure predicates and accessors split by concern (project, mesh, App Builder, EDS, utility). There is no setup to share; the two that need a Project already use the canonical projectFake helper, which is the shared thing.",
+        "tests/core/vscode/operationProgress": "Two suites with nothing to share (2026-10-16): the background suite mocks VS Code's notification API, the timing suite drives the module with no mocks at all.",
         "tests/features/project-creation/handlers/executor": "Eleven suites covering separate creation flows. No module is mocked by even half of them and five mock nothing at all, so a shared preamble would be a union nobody needs. The two component-loading suites do overlap; that is a pair, and the Rule of Three says leave it.",
         "tests/features/project-creation/ui/wizard/wizardHelpers": "Four suites over pure helpers — navigation, state-config, store structure — with zero module mocks between them. Nothing to extract.",
         "tests/core/utils/projectDisplayName": "Two suites over a pure formatter. No mocks, no beforeEach; the split is by input class, and each case is its own arrange line.",
