@@ -136,11 +136,12 @@ export async function applyPendingBlockLibraryWork(
             storefrontChanged ||= outcome.removedBlockIds.length > 0;
             lines.push({
                 level: removalLevel(outcome),
-                text: describeUninstallOutcome(outcome, project.name),
+                // The progress modal's own screen names the project, so the short form.
+                text: describeUninstallOutcome(outcome),
             });
         } catch (error) {
             deps.uninstall.logger.error(`[Configure] Block library removal failed: ${library.name}`, error as Error);
-            lines.push(failure(`remove ${library.name} from ${project.name}`, error));
+            lines.push(failure(`remove ${library.name}`, error));
         }
     }
     for (const library of install) {
@@ -149,10 +150,10 @@ export async function applyPendingBlockLibraryWork(
             const outcome = await applyBlockLibraryInstall({ project, library }, deps.updateContext);
             storefrontChanged ||= outcome.blockIds.length > 0;
             addedBlockIds.push(...outcome.blockIds);
-            lines.push({ level: 'info', text: describeInstallOutcome(outcome, project.name) });
+            lines.push({ level: 'info', text: describeInstallOutcome(outcome) });
         } catch (error) {
             deps.updateContext.logger.error(`[Configure] Block library install failed: ${library.name}`, error as Error);
-            lines.push(failure(`install ${library.name} in ${project.name}`, error));
+            lines.push(failure(`install ${library.name}`, error));
         }
     }
     return { lines, storefrontChanged, addedBlockIds };

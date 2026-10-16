@@ -20,6 +20,7 @@
  */
 
 import * as vscode from 'vscode';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { describeUpdateLeftOut } from '@/features/eds/services/addedEntriesRecord';
 import { shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
@@ -305,7 +306,7 @@ async function applyBlockLibraryInstalls(
         try {
             const outcome = await applyBlockLibraryInstall(item, ctx);
             result.successCount++;
-            (result.installed ??= []).push(describeInstallOutcome(outcome, item.project.name));
+            (result.installed ??= []).push(describeInstallOutcome(outcome, getProjectDisplayName(item.project)));
         } catch (error) {
             result.failCount++;
             result.errors.push(`${item.library.name}: ${sanitizeErrorForLogging(error as Error)}`);

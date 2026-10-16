@@ -270,19 +270,33 @@ function describeLeftBlock(block: LeftBlock): string {
 }
 
 /**
+ * The first sentence: what went. With a project's display name where the line may be one
+ * of several projects'; without one (the short form) where the screen already names it.
+ */
+function removedSentence(name: string, count: number, projectName: string | undefined): string {
+    const blocks = `${count} block${count === 1 ? '' : 's'}`;
+    if (!projectName) {
+        return count === 0 ? `${name} had no blocks left to remove.` : `Removed ${name} (${blocks}).`;
+    }
+    return count === 0
+        ? `${name} had no blocks left to remove from ${projectName}.`
+        : `Removed ${blocks} that ${name} added to ${projectName}.`;
+}
+
+/**
  * What the SC is told after a removal ran: what went, and every block or entry
  * left in place with the reason.
+ *
+ * @param outcome - what the removal did
+ * @param projectName - the project's display name, or omitted for the short form
+ * @returns the sentences
  */
 export function describeUninstallOutcome(
     outcome: BlockLibraryUninstallOutcome,
-    projectName: string,
+    projectName?: string,
 ): string {
     const count = outcome.removedBlockIds.length;
-    const sentences = [
-        count === 0
-            ? `${outcome.name} had no blocks left to remove from ${projectName}.`
-            : `Removed ${count} block${count === 1 ? '' : 's'} that ${outcome.name} added to ${projectName}.`,
-    ];
+    const sentences = [removedSentence(outcome.name, count, projectName)];
     if (outcome.leftBlocks.length > 0) {
         sentences.push(
             `Left ${outcome.leftBlocks.length} in place: ${outcome.leftBlocks.map(describeLeftBlock).join(', ')}.`,

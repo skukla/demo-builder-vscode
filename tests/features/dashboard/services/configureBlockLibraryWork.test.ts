@@ -238,7 +238,7 @@ describe('applyPendingBlockLibraryWork', () => {
             expect.objectContaining({ name: DEMO_TEAM.name, blockIds: ['cards'] }),
         ]);
         expect(lines).toEqual([
-            { level: 'info', text: `Added 1 block from ${DEMO_TEAM.name} to demo.` },
+            { level: 'info', text: `Added ${DEMO_TEAM.name} (1 block).` },
         ]);
     });
 
@@ -258,7 +258,7 @@ describe('applyPendingBlockLibraryWork', () => {
         );
         expect(project.installedBlockLibraries).toStrictEqual(installed());
         expect(lines).toEqual([
-            { level: 'info', text: `Removed 1 block that ${DEMO_TEAM.name} added to demo.` },
+            { level: 'info', text: `Removed ${DEMO_TEAM.name} (1 block).` },
         ]);
     });
 
@@ -295,7 +295,7 @@ describe('applyPendingBlockLibraryWork', () => {
             {
                 level: 'warning',
                 text:
-                    `${DEMO_TEAM.name} had no blocks left to remove from demo. ` +
+                    `${DEMO_TEAM.name} had no blocks left to remove. ` +
                     'Left 1 in place: hero (changed since it was added).',
             },
         ]);
@@ -339,8 +339,8 @@ describe('applyPendingBlockLibraryWork', () => {
         const { lines } = await applyPendingBlockLibraryWork(project, makeDeps());
 
         expect(lines).toEqual([
-            { level: 'error', text: 'Failed to remove My Blocks from demo: main is protected' },
-            { level: 'info', text: `Added 1 block from ${DEMO_TEAM.name} to demo.` },
+            { level: 'error', text: 'Failed to remove My Blocks: main is protected' },
+            { level: 'info', text: `Added ${DEMO_TEAM.name} (1 block).` },
         ]);
     });
 

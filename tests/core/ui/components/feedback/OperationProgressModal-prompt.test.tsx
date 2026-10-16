@@ -54,8 +54,8 @@ jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
 }));
 
 jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
-    StatusDisplay: ({ variant, title, message }: any) => (
-        <div data-testid="status" data-variant={variant}>
+    StatusDisplay: ({ variant, title, message, centerMessage }: any) => (
+        <div data-testid="status" data-variant={variant} data-centred={String(Boolean(centerMessage))}>
             <span>{title}</span>
             <span>{message}</span>
         </div>
@@ -256,6 +256,22 @@ describe('the end of a run', () => {
         });
 
         expect(onClose).toHaveBeenCalled();
+    });
+
+    // Centred under the centred tick and title (owner, 2026-10-16); a failure's reason
+    // can run to several lines, so it stays left-aligned.
+    it('centres the success message', () => {
+        progress = { id: OPERATION.id, state: 'succeeded', note: 'Added Demo Team Block Collection (9 blocks).' };
+        renderModal();
+
+        expect(screen.getByTestId('status')).toHaveAttribute('data-centred', 'true');
+    });
+
+    it("leaves a failure's reason left-aligned — control", () => {
+        progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
+        renderModal();
+
+        expect(screen.getByTestId('status')).toHaveAttribute('data-centred', 'false');
     });
 
     // A failure has a reason to read and a Retry to press, so it waits.

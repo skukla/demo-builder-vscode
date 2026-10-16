@@ -108,15 +108,25 @@ export function describePendingInstall(library: BlockLibraryEntry): string {
 }
 
 /**
- * The line both surfaces show after an install ran: one short sentence. Which blocks it
- * added go to the log, not the notification.
+ * The line shown after an install ran: one short sentence. Which blocks it added go to
+ * the log, not the notification.
+ *
+ * @param outcome - what the install did
+ * @param projectName - the project's DISPLAY name, where the line may be one of several
+ *   projects' (Check for Updates); omitted where the screen already names the project
+ *   (Configure's progress modal), for the short form
+ * @returns the sentence
  */
-export function describeInstallOutcome(outcome: BlockLibraryInstallOutcome, projectName: string): string {
+export function describeInstallOutcome(outcome: BlockLibraryInstallOutcome, projectName?: string): string {
     const count = outcome.blockIds.length;
+    const blocks = `${count} block${count === 1 ? '' : 's'}`;
+    if (!projectName) {
+        return count === 0 ? `${outcome.name} was already there.` : `Added ${outcome.name} (${blocks}).`;
+    }
     if (count === 0) {
         return `${outcome.name} is already in ${projectName}.`;
     }
-    return `Added ${count} block${count === 1 ? '' : 's'} from ${outcome.name} to ${projectName}.`;
+    return `Added ${blocks} from ${outcome.name} to ${projectName}.`;
 }
 
 /**

@@ -11,6 +11,7 @@
 
 import * as vscode from 'vscode';
 import type { BlockLibraryInstallItem } from './updateTypes';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import {
     applyBlockLibraryInstall,
@@ -25,7 +26,7 @@ export async function performBlockLibraryInstalls(
     for (const { project, library } of selections) {
         try {
             const outcome = await applyBlockLibraryInstall({ project, library }, ctx);
-            vscode.window.showInformationMessage(describeInstallOutcome(outcome, project.name));
+            vscode.window.showInformationMessage(describeInstallOutcome(outcome, getProjectDisplayName(project)));
         } catch (error) {
             const sanitizedError = sanitizeErrorForLogging(error as Error);
             ctx.logger.error(

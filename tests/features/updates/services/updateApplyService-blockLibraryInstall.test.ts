@@ -76,6 +76,23 @@ describe('computeProjectUpdateSelections — block library installs', () => {
 });
 
 describe('applyUpdatesHeadless — block library installs', () => {
+    // A line that may be one of several projects' names its project, by the title the SC
+    // typed rather than its folder name (owner, 2026-10-16).
+    it("names the project by its title in what it says was added", async () => {
+        const project = edsProject({ selectedBlockLibraries: ['demo-team-blocks'], title: 'My Commerce Demo' });
+        mockInstallBlockLibraryFiles.mockResolvedValue({
+            success: true,
+            blocksCount: 1,
+            blockIds: ['commerce-nav'],
+            libraryVersions: [{ ...LIBRARY, commitSha: 'src-1', blockIds: ['commerce-nav'] }],
+        });
+        const sel = { ...emptySelections(), blockLibraryInstall: [{ project, library: LIBRARY }] };
+
+        const res = await applyUpdatesHeadless(sel, makeCtx(), jest.fn());
+
+        expect(res.blockLibraryInstall?.installed).toEqual([`Added 1 block from ${LIBRARY.name} to My Commerce Demo.`]);
+    });
+
     it('hands the installer the project and library, records the result, and says what was added', async () => {
         const ctx = makeCtx();
         const onProgress = jest.fn();

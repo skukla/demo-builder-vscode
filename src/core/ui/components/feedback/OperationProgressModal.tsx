@@ -193,10 +193,13 @@ function ProgressBody({
     }
     if (succeeded) {
         return (
+            // Centred under the centred tick and title (owner, 2026-10-16). A failure's
+            // message stays left-aligned: it can run to several lines.
             <StatusDisplay
                 variant={warned ? 'warning' : 'success'}
                 title={successTitle}
                 message={successMessage}
+                centerMessage
             />
         );
     }
