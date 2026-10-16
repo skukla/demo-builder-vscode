@@ -578,6 +578,7 @@
         "docs:adr-index": "node scripts/generate-adr-index.mjs",
         "docs:adr-check": "node scripts/generate-adr-index.mjs --check",
         "health": "node scripts/healthSnapshot.mjs",
+        "patches:released": "node scripts/patchesReleased.mjs",
         "health:write": "node scripts/healthSnapshot.mjs --write",
         "codemod:selftest": "node scripts/codemod/selftest.mjs",
         "test:electron": "node tests/electron/runTest.js",

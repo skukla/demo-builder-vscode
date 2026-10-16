@@ -181,7 +181,7 @@ red, and so is a registry entry for something deleted.
 | per-jest-run | 60 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
-| periodic | 13 scripted checks + 10 guided reviews | **`npm run sweep`** |
+| periodic | 14 scripted checks + 10 guided reviews | **`npm run sweep`** |
 | overnight | 2 Stryker runs — the stale-row re-measure (`npm run test:mutation:sweep -- --stale --minutes 480`) and the pilot. Never inside the sweep | a person, when no other test run needs the machine |
 
 The sweep REPORTS and never starts Stryker: it lists stale mutation rows, and the
@@ -254,7 +254,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 128 of them, 127 with an enforcer that fails the build — and
+this codebase holds itself to — 129 of them, 128 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent

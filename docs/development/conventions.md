@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **128** conventions, **127** enforced
+- **129** conventions, **128** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -68,6 +68,7 @@ it means the rule rests on somebody noticing.
 | A setting that receives credentials is scoped to the user, never the workspace. |  |  | `credential-sink-settings-scoped.test.ts` |
 | Whoever names a content site names its index path. The catalog, the project row and a description file all state where a site lists its pages; every reader (the copy step, the import path, the reset door) takes the stated path from `contentIndex.ts` and none guesses one. Only the Add a demo package probe looks a path up, for a repository that names a site with no path, and it records what it found. |  |  | `content-index-path.test.ts` |
 | Demo Builder states no Node version of its own. Each component declares the Node it accepts in its own repo (`engines.node`); `npm run node:resolve` reads them all at a release cut and writes the one Node they accept to `node-version.generated.json`, and every reader asks `core/shell/demoBuilderNode.ts`. The only other Node is one a custom integration needs, worked out when it is added. |  |  | `node-versions-from-components.test.ts` |
+| The boilerplate storefronts are built from moves forward when Adobe moves it, not when someone remembers. The patches repo's daily drift gate verifies each new boilerplate against our patches and, when every patch holds, publishes the release Demo Builder reads (ADR-006). No step waits on a release cut by hand. |  |  | *named in prose* |
 
 ## 5. What survives between calls
 

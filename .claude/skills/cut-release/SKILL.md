@@ -33,6 +33,13 @@ branch-protection notice, **not** a failure.
    (it names the components that block). Out of date: run `npm run node:resolve`, review
    the changed Node and its sources, and commit it before cutting. A conflict is fixed in
    the component's own repo, never by editing the generated file (PR-1a).
+6. **Storefronts build from a current boilerplate:** `npm run patches:released` (seconds, no
+   credentials). The extension reads the patches repo at its latest RELEASE, and since
+   2026-10-16 its daily drift gate publishes one after every green run. A FAIL means that
+   stopped: open the gate's latest run in `skukla/eds-demo-patches` and fix what it names.
+   Do not cut a release by hand to make this pass; that hides a broken gate. Until this
+   step existed, no patches release was cut for seven weeks and nothing noticed (ADR-006,
+   amended 2026-10-16).
 
 ## Out-of-band passes (offer BEFORE cutting, once the tree is clean)
 

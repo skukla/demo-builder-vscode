@@ -325,6 +325,17 @@ check says so and names the file.
 > cannot drift from the components it describes.
 > Enforced by `tests/sop/node-versions-from-components.test.ts`.
 
+> **Convention.** The boilerplate storefronts are built from moves forward when Adobe moves
+> it, not when someone remembers. The patches repo's daily drift gate verifies each new
+> boilerplate against our patches and, when every patch holds, publishes the release Demo
+> Builder reads (ADR-006). No step waits on a release cut by hand.
+> *Why:* Demo Builder reads the boilerplate pointer at the patches repo's latest release,
+> never its `main`. While releases were cut by hand, none was cut from 2026-08-28 to
+> 2026-10-16: every new project started on, and Check for Updates compared against, a
+> seven-week-old boilerplate while the gate verified 73 newer commits and every check passed.
+> Checked by `npm run patches:released` in the periodic sweep, which fails when verified work
+> on `main` is two days older than any release.
+
 ## 5. What survives between calls
 
 **Position.** Anything cached exists once per session, is built on first use, and can be
@@ -1760,7 +1771,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 128 conventions. 127 of them are enforced; 1 is not.**
+**This handbook states 129 conventions. 128 of them are enforced; 1 is not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
