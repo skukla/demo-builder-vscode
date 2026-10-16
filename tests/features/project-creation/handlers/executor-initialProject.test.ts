@@ -37,8 +37,7 @@ describe('buildInitialProject', () => {
 
         expect(project.name).toBe('demo');
         expect(project.path).toBe(PROJECT_PATH);
-        // A new project reads "creating" until finalization marks it ready (PL-82).
-        expect(project.status).toBe('creating');
+        expect(project.status).toBe('created');
         expect(project.componentInstances).toStrictEqual({});
         expect(project.componentSelections?.appBuilder).toStrictEqual([]);
     });
@@ -50,12 +49,6 @@ describe('buildInitialProject', () => {
         const project = buildInitialProject(config(), PROJECT_PATH, existing);
 
         expect(project.created).toBe(created);
-    });
-
-    it('an edit keeps the created status: an existing project is not being created', () => {
-        const project = buildInitialProject(config(), PROJECT_PATH, createMockProject());
-
-        expect(project.status).toBe('created');
     });
 
     describe('additionalConsoleApis (retired by attribution step 07)', () => {

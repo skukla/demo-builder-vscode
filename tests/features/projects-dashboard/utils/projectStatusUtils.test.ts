@@ -88,11 +88,15 @@ describe('projectStatusUtils', () => {
             expect(result).toBe('Stopped');
         });
 
-        it('says a creation did not finish for error status', () => {
-            // Nothing but an unfinished creation sets a project to error (PL-82).
+        it('should return "Error" for error status', () => {
+            // Given: Error status
             const status: ProjectStatus = 'error';
 
-            expect(getStatusText(status)).toBe("Creation didn't finish");
+            // When: Getting status text
+            const result = getStatusText(status);
+
+            // Then: Should say Error
+            expect(result).toBe('Error');
         });
 
         it('says Creating while a project is being created, EDS or not', () => {
@@ -258,14 +262,11 @@ describe('projectStatusUtils', () => {
     });
 
     describe('getStatusText with isEds', () => {
-        it('should return "Published" for EDS projects at rest', () => {
+        it('should return "Published" for EDS projects regardless of status', () => {
             expect(getStatusText('running', 3000, true)).toBe('Published');
             expect(getStatusText('stopped', undefined, true)).toBe('Published');
             expect(getStatusText('ready', undefined, true)).toBe('Published');
-        });
-
-        it('an EDS project whose creation did not finish says so instead of Published', () => {
-            expect(getStatusText('error', undefined, true)).toBe("Creation didn't finish");
+            expect(getStatusText('error', undefined, true)).toBe('Published');
         });
 
         it('should return normal status text when isEds is false', () => {
@@ -275,15 +276,15 @@ describe('projectStatusUtils', () => {
     });
 
     describe('getStatusVariant with isEds', () => {
-        it('should return "success" for EDS projects at rest', () => {
+        it('should return "success" for EDS projects regardless of status', () => {
             expect(getStatusVariant('running', true)).toBe('success');
             expect(getStatusVariant('stopped', true)).toBe('success');
+            expect(getStatusVariant('error', true)).toBe('success');
         });
 
-        it('creating is a warning and an unfinished creation an error, EDS or not', () => {
+        it('creating is a warning, EDS or not (PL-82)', () => {
             expect(getStatusVariant('creating', true)).toBe('warning');
             expect(getStatusVariant('creating', false)).toBe('warning');
-            expect(getStatusVariant('error', true)).toBe('error');
         });
 
         it('should return normal variant when isEds is false', () => {

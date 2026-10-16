@@ -47,3 +47,7 @@ Each fix was undone in turn and its tests confirmed red (8 of 8), then restored.
 
 A storefront (GitHub repository, DA.live content) provisioned before a failed creation
 stays, in both doors. The wizard never removed it, and the agent's re-run reuses it.
+
+## Shipped so far
+
+- 2026-10-16  fix(ai): create_project refuses a taken or unsafe name, and cleans up when it fails (`15df43067`)

@@ -178,8 +178,9 @@ describe('copy_project — the copy reaches creation whole, minus what never tra
             repoName: 'bodea-copy',
             daLiveOrg: 'steve',
             daLiveSite: 'bodea-copy',
-            accsEndpoint: 'https://accs.example/graphql',
         });
+        // The endpoint reaches creation as accsHost, the field it reads.
+        expect(capturedWizardState().edsConfig.accsHost).toBe('https://accs.example/graphql');
         expect(JSON.stringify(payload)).not.toContain('fake-test-pw-not-a-secret');
     });
 

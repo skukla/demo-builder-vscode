@@ -541,7 +541,10 @@ without the check an agent reusing a name deleted that project (AI-73). When cre
 then fails, `cleanupFailedCreation` removes the half-built project and any API Mesh the
 creation made, as the wizard does. A mesh the workspace already had is never counted
 as made, so it is never removed. A storefront provisioned before the failure stays, as
-it does in the wizard, so a re-run reuses it.
+it does in the wizard. A re-run uses it by passing `adoptExisting:true`: the repository
+(`githubOwner`/`repoName`) and DA.live site (`daLiveOrg`/`daLiveSite`) are taken as they
+are, the wizard's "use existing" choice for both, with no reset of the code and no new
+copy of the content. The same flag rebuilds a deleted project whose storefront survived.
 
 ### Creating from an exported file (2026-10-03)
 

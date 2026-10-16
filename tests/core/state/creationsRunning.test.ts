@@ -1,10 +1,16 @@
 /**
  * creationsRunning — which project creations are running in this window (PL-82).
- * The projects list reads it to tell a project being created from one whose
- * creation failed or was cut off, so the list must be cleared on BOTH outcomes.
+ * The projects list reads it to show a tile as "Creating"; a project's status is
+ * never written to its file, so nothing else can say so. It must be cleared on BOTH
+ * outcomes, survive a nested listing of the same path, and say when it changes.
  */
 
-import { isCreationRunning, whileCreating } from '@/core/state/creationsRunning';
+import {
+    isCreationRunning,
+    onCreationsChanged,
+    runningCreations,
+    whileCreating,
+} from '@/core/state/creationsRunning';
 
 describe('whileCreating', () => {
     it('lists the project as running only while its creation runs', async () => {
@@ -32,7 +38,37 @@ describe('whileCreating', () => {
         await expect(whileCreating('/p/x', async () => 42)).resolves.toBe(42);
     });
 
-    it('says nothing about a project that is not being created', () => {
-        expect(isCreationRunning('/p/never')).toBe(false);
+    it('keeps the outer run listed when an inner listing of the same path ends', async () => {
+        // The agent lists its whole run; the creation step inside lists the path again.
+        let afterInner = false;
+
+        await whileCreating('/p/nested', async () => {
+            await whileCreating('/p/nested', async () => undefined);
+            afterInner = isCreationRunning('/p/nested');
+        });
+
+        expect(afterInner).toBe(true);
+        expect(isCreationRunning('/p/nested')).toBe(false);
+    });
+
+    it('lists every running path', async () => {
+        await whileCreating('/p/a', async () => {
+            expect(runningCreations()).toEqual(['/p/a']);
+        });
+        expect(runningCreations()).toStrictEqual([]);
+    });
+
+    it('says when a creation starts and when it ends, until told to stop', async () => {
+        const heard = jest.fn();
+        const subscription = onCreationsChanged(heard);
+
+        await whileCreating('/p/told', async () => {
+            expect(heard).toHaveBeenCalledTimes(1);
+        });
+        expect(heard).toHaveBeenCalledTimes(2);
+
+        subscription.dispose();
+        await whileCreating('/p/told', async () => undefined);
+        expect(heard).toHaveBeenCalledTimes(2);
     });
 });

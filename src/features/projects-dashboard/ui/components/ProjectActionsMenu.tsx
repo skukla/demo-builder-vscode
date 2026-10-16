@@ -270,7 +270,10 @@ export function ProjectActionsMenu({
         onPinToggle,
     ]);
 
-    // Nothing to show — render no trigger at all.
+    // Nothing to show — render no trigger at all. A project still being created has
+    // nothing to act on yet, and deleting it mid-run would pull the folder out from
+    // under the creation (PL-82).
+    if (project.status === 'creating') return null;
     if (groups.use.length === 0 && groups.manage.length === 0 && !onDelete) {
         return null;
     }

@@ -13,6 +13,7 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
+import { onCreationsChanged } from '@/core/state/creationsRunning';
 import { readViewModeSetting, VIEW_MODE_SETTING } from '@/core/state/viewModePreference';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -92,7 +93,8 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
     }
 
     /**
-     * Reload the list whenever a project's file is created, changed or removed.
+     * Reload the list whenever a project's file is created, changed or removed, or
+     * a creation in this window starts or ends.
      *
      * The list used to reload only when opened or brought to the front, so a
      * project an agent created (or renamed, copied, deleted) while the list was
@@ -121,6 +123,9 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
         watcher.onDidChange(reloadSoon);
         watcher.onDidDelete(reloadSoon);
         this.disposables.add(watcher);
+        // A creation starting or ending changes a tile with no file write to watch:
+        // an Edge Delivery project has no file until its storefront is set up (PL-82).
+        this.disposables.add(onCreationsChanged(reloadSoon));
         this.disposables.add({ dispose: () => pending && clearTimeout(pending) });
     }
 

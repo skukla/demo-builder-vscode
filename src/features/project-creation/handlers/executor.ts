@@ -122,9 +122,7 @@ export function buildInitialProject(
         created: existingProject?.created || new Date(), // Preserve original creation date in edit mode
         lastModified: new Date(),
         path: projectPath,
-        // A new project reads "creating" until finalization marks it ready, so the
-        // projects list can show it being built (PL-82). An edit keeps 'created'.
-        status: existingProject ? 'created' : 'creating',
+        status: 'created',
         adobe: typedConfig.adobe,
         componentInstances: {},
         componentSelections: {

@@ -15,7 +15,7 @@ import type { StateManager } from '@/types/state';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /** Why a name was refused: the short line, and the line that says what to do. */
-export interface NameProblem {
+interface NameProblem {
     summary: string;
     detail: string;
     /** The validator's error, when the name itself is unsafe. */

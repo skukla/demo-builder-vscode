@@ -18,16 +18,13 @@ import { getComponentInstanceValues, isEdsProject } from '@/types/typeGuards';
 export type StatusVariant = 'success' | 'neutral' | 'warning' | 'error';
 
 /**
- * What a project at rest never shows, so it always gets a line: work in flight, and a
- * creation that never finished. The projects list loads a `creating` project whose
- * creation is not running as `error` (`loadProjectsForList`), and nothing else sets a
- * project's status to `error`, so that is what it means (PL-82).
+ * Work in flight, which every project shows, EDS or not. `creating` is set by the
+ * projects list for a creation running in this window (`loadProjectsForList`, PL-82).
  */
 const UNSETTLED_TEXT: Partial<Record<ProjectStatus, string>> = {
     creating: 'Creating',
     resetting: 'Resetting',
     republishing: 'Republishing',
-    error: "Creation didn't finish",
 };
 
 /**
@@ -51,6 +48,8 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
             return 'Starting';
         case 'stopping':
             return 'Stopping';
+        case 'error':
+            return 'Error';
         default:
             return 'Stopped';
     }
@@ -64,11 +63,12 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
  * @returns StatusDot variant for color coding
  */
 export function getStatusVariant(status: ProjectStatus, isEds?: boolean): StatusVariant {
-    if (status === 'error') return 'error';
     // Yellow/orange during transitional operations
-    if (UNSETTLED_TEXT[status] || status === 'starting' || status === 'stopping') return 'warning';
+    if (UNSETTLED_TEXT[status]) return 'warning';
     // EDS projects show "success" (green) unless something is unsettled
     if (isEds) return 'success';
+    if (status === 'starting' || status === 'stopping') return 'warning';
+    if (status === 'error') return 'error';
     return status === 'running' ? 'success' : 'neutral';
 }
 

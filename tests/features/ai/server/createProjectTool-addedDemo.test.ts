@@ -182,7 +182,7 @@ describe("create_project — an added demo's Commerce endpoint (EDS-22)", () => 
         const res = await toolServer().call({ ...EDS, stack: 'eds-accs', package: 'added:kmanns/justrite' });
 
         expect(res.created).toBe(true);
-        expect(capturedWizardState().edsConfig).toMatchObject({ accsEndpoint: SHARER_ENDPOINT });
+        expect(capturedWizardState().edsConfig).toMatchObject({ accsHost: SHARER_ENDPOINT });
         expect(capturedWizardState().componentConfigs).toStrictEqual({
             'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: SHARER_ENDPOINT },
         });
@@ -196,6 +196,6 @@ describe("create_project — an added demo's Commerce endpoint (EDS-22)", () => 
             accsEndpoint: 'https://mine.example/graphql',
         });
 
-        expect(capturedWizardState().edsConfig).toMatchObject({ accsEndpoint: 'https://mine.example/graphql' });
+        expect(capturedWizardState().edsConfig).toMatchObject({ accsHost: 'https://mine.example/graphql' });
     });
 });

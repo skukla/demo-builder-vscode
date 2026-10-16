@@ -175,14 +175,10 @@ describe('getRuntimeSummary — the local axis only', () => {
         expect(getRuntimeSummary(eds({ status: 'resetting' }))?.text).toBe('Resetting');
     });
 
-    it('shows an EDS project being created, and one whose creation never finished (PL-82)', () => {
+    it('shows an EDS project being created (PL-82)', () => {
         expect(getRuntimeSummary(eds({ status: 'creating' }))).toEqual({
             text: 'Creating',
             variant: 'warning',
-        });
-        expect(getRuntimeSummary(eds({ status: 'error' }))).toEqual({
-            text: "Creation didn't finish",
-            variant: 'error',
         });
     });
 

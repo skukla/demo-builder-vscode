@@ -36,22 +36,31 @@ must not leave a tile stuck on "Creating…" forever.
 
 - **Part 1:** the projects list watches `*/.demo-builder.json` under the projects root
   and reloads once after a burst of writes.
-- **Part 2:** a new project is saved with status `creating` (`buildInitialProject`;
-  an edit keeps `created`) until finalization marks it `ready`. The tile says
-  "Creating". `whileCreating` (`src/core/state/creationsRunning.ts`) lists the
-  creations running in this window. The list's one loader (`loadProjectsForList`,
-  now shared by `handleGetProjects` and the file-watch reload, which were two
-  copies of the same loop) shows a `creating` project that is not running as
-  `error`, which the tile reads as "Creation didn't finish". Nothing else sets a
-  project's status to `error`.
+- **Part 2, first attempt (`13cf5a4f2`), did not work.** It saved a new project as
+  `creating` and read that back. A project's status is never written to its file:
+  `projectFileLoader` sets `stopped` (or `running`) on every load. So no tile could
+  ever say "Creating", and the "Creation didn't finish" reading of `error` was
+  unreachable. The unit tests passed because they faked the loader with a status the
+  real one never returns. Found the same evening, when the owner watched an agent
+  recreate the canary and asked when the tile would appear.
+- **Part 2, as rebuilt.** The running creations (`creationsRunning.ts`, counted per
+  path, with a change signal) are the truth. The agent's `runProjectCreation` lists
+  its whole run, storefront included; the creation step lists itself too. The list's
+  one loader (`loadProjectsForList`) shows a running creation's project as `creating`,
+  and gives a creation with no project file yet (an Edge Delivery storefront still
+  being set up) a tile of its own. The list reloads when a creation starts or ends.
+  A tile being created cannot be opened, renamed or deleted. The failed parts are
+  removed: nothing is saved as `creating`, and `error` reads as before.
 
 ## Still open
 
 - ~~An agent's failed creation leaves its folder behind; the wizard's does not.~~
   Owner, 2026-10-16: clean up the way the wizard does. Done under [[AI-73]], which
   also found the agent door could delete an existing project.
-- A creation running in ANOTHER window shows as "Creation didn't finish" in this one,
-  because the running list is per window. Its own finalization still marks it ready.
+- A creation running in ANOTHER window shows no "Creating" in this one: the running
+  list is per window. Its tile appears, as an idle project, once its file is written.
+- A creation cut off by a closed window leaves its project behind with no marker; it
+  shows as an idle project. Rare, and the SC can delete it.
 
 ## Shipped so far
 

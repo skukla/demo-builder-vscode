@@ -48,6 +48,7 @@ import {
 import { ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { isMeshComponentId } from '@/core/constants';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
+import { whileCreating } from '@/core/state/creationsRunning';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import {
     getAutoSelectedOptionalDependencies,
@@ -62,6 +63,7 @@ import { probeStoreViewProducts } from '@/features/eds/services/storeViewProduct
 import { cleanupFailedCreation } from '@/features/project-creation/handlers/creationFailureCleanup';
 import { projectNameProblem } from '@/features/project-creation/handlers/creationNameCheck';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
+import { creationPath } from '@/features/project-creation/handlers/executorPreflight';
 import {
     buildProjectConfig,
     type ProjectConfigSource,
@@ -72,6 +74,7 @@ import type { HandlerContext } from '@/types/handlers';
 import type { AddedDemo } from '@/types/projectFile';
 import type { WizardState } from '@/types/webview';
 import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
+import type { StorefrontSetupStartPayload } from '@/types/webviewRequests';
 
 /** Project a possibly-undefined org down to the lean `{ id, name }` surfaced on a mismatch. */
 function leanOrg(
@@ -279,6 +282,8 @@ interface CreateArgs {
     storeScope?: StoreScope;
     /** The user accepted Demo Builder's fixes for an added demo (EDS-13f). */
     applyFixes?: boolean;
+    /** EDS: the repository and DA.live site already exist; use them as they are. */
+    adoptExisting?: boolean;
     /** Added to a successful answer (what a file brought, what is still needed). */
     report?: Record<string, unknown>;
 }
@@ -450,13 +455,21 @@ async function createEds(
     const events: CapturedEvent[] = [];
     const capturing = withCapturedProgress(ctx, events);
 
-    const edsConfigInput = {
+    const edsConfigInput: StorefrontSetupStartPayload['edsConfig'] = {
         repoName: args.repoName,
-        repoMode: 'new' as const,
+        // The wizard's "use existing" choice for both: the repository is used as it
+        // is (no reset to the template) and the site's content is not copied over
+        // again, because a selected site with no reset keeps its content.
+        ...(args.adoptExisting
+            ? {
+                  repoMode: 'existing' as const,
+                  existingRepo: `${githubOwner}/${args.repoName}`,
+                  selectedSite: { id: args.daLiveSite, name: args.daLiveSite },
+              }
+            : { repoMode: 'new' as const }),
         githubOwner,
         daLiveOrg: args.daLiveOrg,
         daLiveSite: args.daLiveSite,
-        accsEndpoint: args.accsEndpoint,
         templateOwner: storefront.templateOwner,
         templateRepo: storefront.templateRepo,
         contentSource: storefront.contentSource,
@@ -497,7 +510,9 @@ async function createEds(
             error: setupRes.error ?? 'Storefront setup did not complete.',
             phases: toPhaseTimeline(events),
             rerunSafe: true,
-            hint: 'Fix the cause (e.g. re-auth via sign_in) and call create_project again — already-created resources (the repo) are skipped on retry.',
+            hint:
+                'Fix the cause (e.g. re-auth via sign_in) and call create_project again. If this run already ' +
+                'created the repository, add adoptExisting:true so the retry uses it rather than failing on its name.',
         });
     }
     // The completion payload names the repository `githubRepo` (typed on
@@ -558,7 +573,9 @@ async function createEds(
             error: err instanceof Error ? err.message : String(err),
             phases: toPhaseTimeline(events),
             rerunSafe: true,
-            hint: 'The storefront was provisioned but project finalization failed. Re-run create_project — provisioning is skipped on retry.',
+            hint:
+                'The storefront was provisioned but project finalization failed. Call create_project again ' +
+                'with adoptExisting:true, which uses the repository and site this run made.',
         });
     }
 
@@ -615,6 +632,8 @@ interface CreationRequest {
     storeScope?: StoreScope;
     /** The user accepted Demo Builder's fixes for an added demo (EDS-13f); never defaulted on. */
     applyFixes?: boolean;
+    /** EDS: the repository and DA.live site already exist; use them as they are. */
+    adoptExisting?: boolean;
     seed?: CreationSeed;
     report?: Record<string, unknown>;
 }
@@ -629,11 +648,21 @@ interface CreationRequest {
  * @returns the tool result
  */
 export async function runProjectCreation(ctx: HandlerContext, request: CreationRequest) {
-    const { pkgId, stackId, link, ...rest } = request;
+    const { projectName } = request;
     // The wizard's name check, before anything is built: creation removes whatever
     // folder already has this name, so a reused name deleted that project (AI-73).
-    const problem = await projectNameProblem(ctx.stateManager, { projectName: rest.projectName });
+    const problem = await projectNameProblem(ctx.stateManager, { projectName });
     if (problem) return asText({ created: false, error: problem.detail });
+    // Listed as running for the whole run, storefront included, so the projects list
+    // shows the tile from the start rather than once the project file appears (PL-82).
+    return whileCreating(creationPath({ projectName }), () =>
+        resolveAndCreate(ctx, request),
+    );
+}
+
+/** The run itself, once the name is known to be usable. */
+async function resolveAndCreate(ctx: HandlerContext, request: CreationRequest) {
+    const { pkgId, stackId, link, ...rest } = request;
     const resolved = await resolvePackage(ctx, { pkgId, stackId, link });
     if ('error' in resolved) return asText(resolved.error);
     const { pkg, storefront, packages, demo } = resolved;
@@ -694,6 +723,12 @@ export function registerCreateProjectTool(
                     ),
                 daLiveOrg: z.string().optional().describe('EDS only: DA.live organization'),
                 daLiveSite: z.string().optional().describe('EDS only: DA.live site name'),
+                adoptExisting: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        'EDS only: the repo (githubOwner/repoName) and DA.live site (daLiveOrg/daLiveSite) already exist — use them as they are, code and content untouched, instead of creating them. For rebuilding a deleted project whose storefront survived.',
+                    ),
                 accsEndpoint: z
                     .string()
                     .optional()
@@ -749,6 +784,7 @@ export function registerCreateProjectTool(
                 accsEndpoint: args.accsEndpoint ? String(args.accsEndpoint) : undefined,
                 storeScope: scope.storeScope,
                 ...(args.applyFixes === true ? { applyFixes: true } : {}),
+                ...(args.adoptExisting === true ? { adoptExisting: true } : {}),
             });
         },
     );

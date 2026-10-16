@@ -378,8 +378,8 @@ describe('create_project', () => {
             await s.call({ ...EDS, stack: 'eds-accs', accsEndpoint: 'https://commerce.example' });
 
             expect(storefrontSetup).toHaveBeenCalled();
+            // accsHost is the field creation reads (buildProjectEdsConfig).
             expect(capturedWizardState().edsConfig).toMatchObject({
-                accsEndpoint: 'https://commerce.example',
                 accsHost: 'https://commerce.example',
             });
         });

@@ -10,6 +10,8 @@
  * a folder under the real home directory.
  */
 
+import { isCreationRunning, onCreationsChanged } from '@/core/state/creationsRunning';
+import { creationPath } from '@/features/project-creation/handlers/executorPreflight';
 import {
     EDS,
     HEADLESS,
@@ -99,5 +101,46 @@ describe('create_project — a creation that fails is cleaned up', () => {
 
         expect(executeProjectCreation).toHaveBeenCalled();
         expect(cleanupFailedCreation).not.toHaveBeenCalled();
+    });
+});
+
+describe('create_project — the projects list sees the creation from its start (PL-82)', () => {
+    const pathOf = (name: string) => creationPath({ projectName: name });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        defaultStorefrontSetup();
+    });
+
+    it('lists an Edge Delivery creation as running while its storefront is set up, before any project file', async () => {
+        let duringStorefront = false;
+        storefrontSetup.mockImplementationOnce(async (ctx) => {
+            duringStorefront = isCreationRunning(pathOf(EDS.projectName));
+            await ctx.sendMessage('storefront-setup-complete', { githubRepo: 'https://github.com/o/r' });
+            return { success: true };
+        });
+
+        await toolServer().call(EDS);
+
+        expect(duringStorefront).toBe(true);
+        expect(isCreationRunning(pathOf(EDS.projectName))).toBe(false);
+    });
+
+    it('unlists a creation that fails', async () => {
+        (executeProjectCreation as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+
+        await toolServer().call(HEADLESS);
+
+        expect(isCreationRunning(pathOf(HEADLESS.projectName))).toBe(false);
+    });
+
+    it('never lists a name it refused', async () => {
+        const heard = jest.fn();
+        const subscription = onCreationsChanged(heard);
+
+        await toolServer().call({ ...HEADLESS, projectName: '../outside' });
+
+        subscription.dispose();
+        expect(heard).not.toHaveBeenCalled();
     });
 });

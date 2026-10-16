@@ -2,26 +2,40 @@
  * Every project, as the projects list shows it.
  *
  * The list loads in two places: when the webview asks (`handleGetProjects`) and when
- * a project file changes under it (`ShowProjectsListCommand`). Both read through
- * here, so the two cannot disagree about what a project looks like.
+ * a project file or a running creation changes under it (`ShowProjectsListCommand`).
+ * Both read through here, so the two cannot disagree about what a project looks like.
  *
  * @module features/projects-dashboard/services/loadProjectsForList
  */
 
-import { isCreationRunning } from '@/core/state/creationsRunning';
+import * as path from 'path';
+import { isCreationRunning, runningCreations } from '@/core/state/creationsRunning';
 import type { Project } from '@/types/base';
 import type { StateManager } from '@/types/state';
 
+/** The tile for a creation whose project file does not exist yet. */
+function beingCreated(projectPath: string): Project {
+    const now = new Date();
+    return {
+        name: path.basename(projectPath),
+        path: projectPath,
+        status: 'creating',
+        created: now,
+        lastModified: now,
+    };
+}
+
 /**
  * Load every project, read-only (nothing is written back), dropping any that will
- * not load.
+ * not load, and show each creation running in this window as `creating` (PL-82).
  *
- * A project still marked `creating` whose creation is not running in this window
- * failed or was cut off, so it is shown as `error` rather than as being created
- * forever (PL-82). Only the copy shown changes; the file is left as it is.
+ * The status is decided here, not read from the file: a project's status is never
+ * written to it. An Edge Delivery creation has no file at all until its storefront
+ * is set up, so it gets a tile of its own until then.
  *
  * @param stateManager - where the projects are read from
- * @returns the projects, in the order the state manager lists them
+ * @returns the projects in the order the state manager lists them, then any
+ *          creation that has no file yet
  */
 export async function loadProjectsForList(
     stateManager: Pick<StateManager, 'getAllProjects' | 'loadProjectFromPath'>,
@@ -32,10 +46,12 @@ export async function loadProjectsForList(
             persistAfterLoad: false,
         });
         if (!project) continue;
-        if (project.status === 'creating' && !isCreationRunning(project.path)) {
-            project.status = 'error';
-        }
+        if (isCreationRunning(project.path)) project.status = 'creating';
         projects.push(project);
+    }
+    const listed = new Set(projects.map((p) => p.path));
+    for (const projectPath of runningCreations()) {
+        if (!listed.has(projectPath)) projects.push(beingCreated(projectPath));
     }
     return projects;
 }

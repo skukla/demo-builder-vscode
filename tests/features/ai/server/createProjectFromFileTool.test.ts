@@ -277,9 +277,7 @@ describe('create_project_from_file — an Edge Delivery file', () => {
     it('takes the Commerce endpoint from the file when the call names none', async () => {
         await create();
 
-        expect(storefrontSetup.mock.calls[0][1].edsConfig.accsEndpoint).toBe(
-            'https://accs.example/graphql',
-        );
+        // accsHost is the field creation reads; storefront setup reads no endpoint.
         expect(capturedWizardState().edsConfig.accsHost).toBe('https://accs.example/graphql');
     });
 

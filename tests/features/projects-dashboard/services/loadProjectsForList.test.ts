@@ -1,28 +1,31 @@
 /**
  * loadProjectsForList — the one load both projects-list paths share (PL-82).
+ *
+ * A project's status is never written to its file (the real loader sets `stopped`
+ * or `running`), so "being created" is decided here from the creations running in
+ * this window. The fake loader below answers `stopped`, as the real one does.
  */
 
 import { whileCreating } from '@/core/state/creationsRunning';
 import { loadProjectsForList } from '@/features/projects-dashboard/services/loadProjectsForList';
-import type { Project, ProjectStatus } from '@/types/base';
+import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-function stateWith(projects: Array<{ path: string; status: ProjectStatus } | null>) {
+function stateWith(paths: Array<string | null>) {
     const stateManager = createMockStateManager();
     stateManager.getAllProjects.mockResolvedValue(
-        projects.map((p, i) => ({ name: `p${i}`, path: p?.path ?? `/p/missing-${i}`, lastModified: new Date(0) })),
+        paths.map((p, i) => ({ name: `p${i}`, path: p ?? `/p/missing-${i}`, lastModified: new Date(0) })),
     );
-    stateManager.loadProjectFromPath.mockImplementation(async (path: string) => {
-        const found = projects.find((p) => p?.path === path);
-        return found ? createMockProject({ name: path, path, status: found.status }) : null;
-    });
+    stateManager.loadProjectFromPath.mockImplementation(async (path: string) =>
+        paths.includes(path) ? createMockProject({ name: path, path, status: 'stopped' }) : null,
+    );
     return stateManager;
 }
 
 describe('loadProjectsForList', () => {
     it('loads each project read-only and drops one that will not load', async () => {
-        const stateManager = stateWith([{ path: '/p/a', status: 'ready' }, null]);
+        const stateManager = stateWith(['/p/a', null]);
 
         const projects = await loadProjectsForList(stateManager);
 
@@ -30,34 +33,40 @@ describe('loadProjectsForList', () => {
         expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/a', undefined, {
             persistAfterLoad: false,
         });
-    });
-
-    it('keeps a project whose creation is running as creating', async () => {
-        const stateManager = stateWith([{ path: '/p/new', status: 'creating' }]);
-
-        const projects = await whileCreating('/p/new', () => loadProjectsForList(stateManager));
-
-        expect(projects[0].status).toBe('creating');
-    });
-
-    it('shows a creating project whose creation is not running as error', async () => {
-        // Failed, or cut off by a closed window: it is not being created any more.
-        const stateManager = stateWith([{ path: '/p/dead', status: 'creating' }]);
-
-        const projects = await loadProjectsForList(stateManager);
-
-        expect(projects[0].status).toBe('error');
         expect(stateManager.saveProject).not.toHaveBeenCalled();
     });
 
-    it('leaves every other status alone', async () => {
-        const stateManager = stateWith([
-            { path: '/p/r', status: 'running' },
-            { path: '/p/s', status: 'resetting' },
-        ]);
+    it('shows a project whose creation is running as creating', async () => {
+        const stateManager = stateWith(['/p/new']);
+
+        const projects = await whileCreating('/p/new', () => loadProjectsForList(stateManager));
+
+        expect(projects.map((p: Project) => p.status)).toEqual(['creating']);
+    });
+
+    it('leaves a project alone once its creation is over', async () => {
+        const stateManager = stateWith(['/p/done']);
 
         const projects = await loadProjectsForList(stateManager);
 
-        expect(projects.map((p: Project) => p.status)).toEqual(['running', 'resetting']);
+        expect(projects[0].status).toBe('stopped');
+    });
+
+    it('gives a running creation with no project file yet a tile of its own', async () => {
+        // An Edge Delivery project has no file until its storefront is set up.
+        const stateManager = stateWith(['/p/other']);
+
+        const projects = await whileCreating('/projects/canary', () => loadProjectsForList(stateManager));
+
+        expect(projects).toHaveLength(2);
+        expect(projects[1]).toMatchObject({ name: 'canary', path: '/projects/canary', status: 'creating' });
+    });
+
+    it('never lists a running creation twice once its file exists', async () => {
+        const stateManager = stateWith(['/p/new']);
+
+        const projects = await whileCreating('/p/new', () => loadProjectsForList(stateManager));
+
+        expect(projects).toHaveLength(1);
     });
 });

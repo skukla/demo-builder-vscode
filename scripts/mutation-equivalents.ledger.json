@@ -8957,7 +8957,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 221,
+            "line": 224,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -8970,7 +8970,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 236,
+            "line": 239,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -9953,7 +9953,7 @@
             "line": 256,
             "mutants": 1,
             "category": "branch",
-            "reason": "This call is only reached for an EDS project whose status is in UNSETTLED_TEXT ('creating', 'resetting', 'republishing', 'error') \u2014 the guard above returns null for anything else. getStatusText answers from UNSETTLED_TEXT for those before it looks at isEds, so the flag cannot change the text here. Re-checked 2026-10-16 when 'creating' and 'error' joined the guard (PL-82).",
+            "reason": "This call is only reached for an EDS project whose status is in UNSETTLED_TEXT ('creating', 'resetting', 'republishing') \u2014 the guard above returns null for anything else. getStatusText answers from UNSETTLED_TEXT for those before it looks at isEds, so the flag cannot change the text here. Re-checked 2026-10-16 when 'creating' joined the guard (PL-82).",
             "decision": "none \u2014 passing true states that this branch is the EDS one, which the reader needs",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -9966,7 +9966,7 @@
             "line": 257,
             "mutants": 1,
             "category": "branch",
-            "reason": "This call is only reached for an EDS project whose status is in UNSETTLED_TEXT ('creating', 'resetting', 'republishing', 'error') \u2014 the guard above returns null for anything else. getStatusVariant answers 'error' for error and 'warning' for the other three before it looks at isEds, so the flag cannot change the variant here. Re-checked 2026-10-16 when 'creating' and 'error' joined the guard (PL-82).",
+            "reason": "This call is only reached for an EDS project whose status is in UNSETTLED_TEXT ('creating', 'resetting', 'republishing') \u2014 the guard above returns null for anything else. getStatusVariant answers 'warning' for all three before it looks at isEds, so the flag cannot change the variant here. Re-checked 2026-10-16 when 'creating' joined the guard (PL-82).",
             "decision": "none \u2014 passing true states that this branch is the EDS one, which the reader needs",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"

@@ -23,6 +23,7 @@ jest.mock('@/core/handlers/dispatchHandler', () => ({
 import * as vscode from 'vscode';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { whileCreating } from '@/core/state/creationsRunning';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
@@ -347,6 +348,19 @@ describe('ShowProjectsListCommand — reloading when a project file changes', ()
         jest.advanceTimersByTime(TIMEOUTS.UI.PROJECT_LIST_SETTLE);
 
         expect(refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('reloads when a creation starts and when it ends, with no file to watch', async () => {
+        // An Edge Delivery project has no file until its storefront is set up (PL-82).
+        const { refresh } = wireWithWatcher();
+
+        await whileCreating('/p/canary', async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.PROJECT_LIST_SETTLE);
+            expect(refresh).toHaveBeenCalledTimes(1);
+        });
+        jest.advanceTimersByTime(TIMEOUTS.UI.PROJECT_LIST_SETTLE);
+
+        expect(refresh).toHaveBeenCalledTimes(2);
     });
 
     it('stops watching, and drops a pending reload, when the panel goes', () => {

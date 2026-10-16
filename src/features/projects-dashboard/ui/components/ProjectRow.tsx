@@ -80,7 +80,7 @@ export function ProjectRow({
                     <InlineRenameField
                         name={getProjectDisplayName(project)}
                         textClassName="project-row-name"
-                        disabled={isRunning || !actions.onRenameSubmit}
+                        disabled={isRunning || project.status === 'creating' || !actions.onRenameSubmit}
                         // No `normalize`: the field takes the TITLE as typed.
                         // `renameProjectCore` derives the slug from it and moves
                         // the folder to match, so rewriting keystrokes to hyphens
