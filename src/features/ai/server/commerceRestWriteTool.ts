@@ -65,7 +65,8 @@ export function registerCommerceRestWriteTool(
             title: 'Write Commerce REST',
             description:
                 "POST, PUT or DELETE one path of this project's Commerce REST API (/V1), signed with " +
-                'the workspace credential the ERP integration deploys with: create or change customers, ' +
+                'the workspace credential the ERP integration deploys with (no Adobe workspace: the ' +
+                "user's own sign-in): create or change customers, " +
                 'companies, credit limits, orders, products, stock, or delete a record. Changes LIVE ' +
                 'store data; a DELETE cannot be undone. Requires confirm:true and raises a dialog for the ' +
                 'user. Read the record first with run_commerce_rest (with fields= to keep it small). ' +

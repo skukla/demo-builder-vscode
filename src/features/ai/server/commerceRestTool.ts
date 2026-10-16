@@ -1,6 +1,7 @@
 /**
  * run_commerce_rest — a GET against this project's Commerce REST API, signed with
- * the workspace credential the project's integrations already deploy with.
+ * the workspace credential the project's integrations already deploy with, or with
+ * the SC's own Adobe sign-in when the project has no Adobe workspace (AI-72).
  *
  * ## Why it exists (AB-29, 2026-09-24)
  *
@@ -45,7 +46,8 @@ export function registerCommerceRestTool(
             description:
                 "GET one path of this project's Commerce REST API (the /V1 endpoints: customers, " +
                 'company, companyCredits, orders, products, inventory), signed with the workspace ' +
-                'credential the ERP integration deploys with. Reads what GraphQL cannot: B2B ' +
+                'credential the ERP integration deploys with (no Adobe workspace: the user\'s own sign-in). ' +
+                'Reads what GraphQL cannot: B2B ' +
                 'companies and credit, customer records, orders. Read-only; ACCS backends only for now. ' +
                 'Keep answers small: add fields= (e.g. "orders/6?fields=increment_id,status,ext_order_id"), ' +
                 'and a searchCriteria[pageSize] on searches — a search without one gets pageSize 20 and ' +

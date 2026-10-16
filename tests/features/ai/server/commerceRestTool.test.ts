@@ -260,6 +260,69 @@ describe('the signed GET (args pinned)', () => {
     });
 });
 
+describe('a project with no Adobe workspace signs as the SC (AI-72)', () => {
+    // A storefront-only project (EDS + ACCS, no mesh, no integration) has no workspace
+    // to take a credential from. Measured 2026-10-16 on the CitiSignal sandbox: the
+    // store's admin API answered 200 to the SC's own sign-in with no client id, and
+    // 401 to the same token with one. So the call carries the token and no client id.
+    const STOREFRONT_ONLY = { ...ACCS_PROJECT, adobe: undefined, appBuilderComponents: {} };
+    const inspectToken = jest.fn();
+
+    function serveSignedInAs(token: string | undefined) {
+        inspectToken.mockResolvedValue({ valid: Boolean(token), expiresIn: 60, token });
+        const s = fakeServer();
+        registerCommerceRestTool(
+            s,
+            () => {
+                const context = ctx();
+                Object.assign(context.authManager as object, {
+                    getTokenManager: () => ({ inspectToken }),
+                });
+                return context;
+            },
+            fetchMock as unknown as typeof fetch,
+        );
+        return s;
+    }
+
+    beforeEach(() => {
+        getCurrentProject.mockResolvedValue(STOREFRONT_ONLY);
+        fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '[]' });
+    });
+
+    it('sends the SC token with no client id or org header, and mints nothing', async () => {
+        const out = await serveSignedInAs('sc-token').raw({ path: 'store/storeViews' });
+
+        expect(getS2SDeployCredentials).not.toHaveBeenCalled();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        const [url, init] = fetchMock.mock.calls[0];
+        expect(url).toBe('https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/V1/store/storeViews');
+        expect(init.headers).toEqual({
+            Authorization: 'Bearer sc-token',
+            Accept: 'application/json',
+            Store: 'bodea_us',
+        });
+        expect(out).toBe('[]');
+    });
+
+    it('with no token to send, hands back the sign_in step', async () => {
+        const out = await serveSignedInAs(undefined).raw({ path: 'store/storeViews' });
+
+        expect(out).toContain('sign_in(provider:"adobe"');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('a 401 says it was the SC sign-in that was refused, not a workspace credential', async () => {
+        fetchMock = jest.fn().mockResolvedValue({ ok: false, status: 401, text: async () => '{"title":"ErrInvalidOauthToken"}' });
+
+        const out = await serveSignedInAs('sc-token').raw({ path: 'store/storeViews' });
+
+        expect(out).toContain('HTTP 401');
+        expect(out).toContain('your own Adobe sign-in');
+        expect(out).not.toContain('ACCS-REST-API');
+    });
+});
+
 describe('refusals, each before any call', () => {
     it('a PaaS backend is refused with the reason', async () => {
         getCurrentProject.mockResolvedValue(PAAS_PROJECT);

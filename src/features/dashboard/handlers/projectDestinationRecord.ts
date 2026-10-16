@@ -22,6 +22,8 @@ import type { DestinationRef } from '@/types/webviewRequests';
  * token can address. Left empty, the destination looked complete while every
  * credential read refused it: "no Adobe org, project and workspace to take a
  * credential from" (2026-09-30, a project pointed at a fresh Console project).
+ * (The Commerce REST tools no longer refuse that way; with no workspace they sign
+ * as the SC, AI-72. The destination still needs its org.)
  */
 async function orgOf(
     project: Project,

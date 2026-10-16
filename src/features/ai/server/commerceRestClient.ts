@@ -88,9 +88,13 @@ export interface RestTarget {
     /** The tenant's REST base, e.g. https://na1-sandbox.api.commerce.adobe.com/<tenant> */
     base: string;
     token: string;
-    /** The credential's client id and org: the `x-api-key` and `x-gw-ims-org-id` headers. */
-    clientId: string;
-    imsOrgCode: string;
+    /**
+     * The credential's client id and org: the `x-api-key` and `x-gw-ims-org-id` headers.
+     * Absent when the call is signed as the SC (a project with no Adobe workspace): the
+     * SC's own token is refused WITH a client id and accepted without one (AI-72).
+     */
+    clientId?: string;
+    imsOrgCode?: string;
     storeView?: string;
 }
 
@@ -238,16 +242,21 @@ export async function resolveRestTargetFor(
     if (!base) return { refusal: 'Error: this project has no ACCS Commerce endpoint configured.' };
     const signedIn = await authManager?.isAuthenticated().catch(() => false);
     if (!authManager || !signedIn) return { refusal: SIGN_IN_TEXT };
+    const storeView =
+        typeof storeViewArg === 'string' && storeViewArg ? storeViewArg : facts.headers.all?.Store;
     const { organization, projectId } = project.adobe ?? {};
     const workspaceId = restWorkspaceId(project);
     if (!organization || !projectId || !workspaceId) {
-        return {
-            refusal:
-                'Error: the project has no Adobe org, project and workspace to take a credential from.',
-        };
+        // A storefront-only project has no Adobe workspace to take a credential from.
+        // The store's admin API also accepts the SC's own sign-in, measured 2026-10-16
+        // (AI-72): 200 with no client id, 401 with one. So sign as the SC.
+        const inspection = await authManager
+            .getTokenManager()
+            .inspectToken()
+            .catch(() => undefined);
+        if (!inspection?.token) return { refusal: SIGN_IN_TEXT };
+        return { base, token: inspection.token, storeView };
     }
-    const storeView =
-        typeof storeViewArg === 'string' && storeViewArg ? storeViewArg : facts.headers.all?.Store;
     try {
         const fromConsole = async (): Promise<RestCredential> =>
             (await authManager.getEntityServices()).credentials.getS2SDeployCredentials(
@@ -315,11 +324,19 @@ async function signOnce(workspaceId: string, mint: () => Promise<string>): Promi
 /** Commerce's ACL refusal — the one 403 that IS about the credential. */
 const ACL_REFUSAL = /isn't authorized to access/u;
 
-export function explainStatus(status: number, body: string): string {
+export function explainStatus(status: number, body: string, signedAsSc = false): string {
     // A 403 is only a credential problem when Commerce says so. Its other 403s carry
     // their own reason — "Adding a new gallery entry has been disabled by AEM Assets
     // Integration" (2026-09-30) — and blaming the credential for those sent the reader
     // to reinstall an integration that was fine.
+    if (signedAsSc && (status === 401 || (status === 403 && ACL_REFUSAL.test(body)))) {
+        return (
+            `Error: Commerce REST answered HTTP ${status}. This project has no Adobe workspace, so ` +
+            'the call was signed with your own Adobe sign-in, and this instance did not accept it. ' +
+            "Sign in to the org that owns the instance, with a Commerce admin role. " +
+            body.slice(0, 300)
+        );
+    }
     if (status === 401 || (status === 403 && ACL_REFUSAL.test(body))) {
         return (
             `Error: Commerce REST answered HTTP ${status}. The workspace credential is not accepted ` +
@@ -381,8 +398,8 @@ export async function requestRest(
             method,
             headers: {
                 Authorization: `Bearer ${target.token}`,
-                'x-api-key': target.clientId,
-                'x-gw-ims-org-id': target.imsOrgCode,
+                ...(target.clientId ? { 'x-api-key': target.clientId } : {}),
+                ...(target.imsOrgCode ? { 'x-gw-ims-org-id': target.imsOrgCode } : {}),
                 Accept: 'application/json',
                 ...(target.storeView ? { Store: target.storeView } : {}),
                 ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
@@ -414,7 +431,7 @@ export async function sendRest(
     const answer = await requestRest(method, target, bounded.path, body, fetchImpl, route);
     if ('failed' in answer) return `Error: the request failed — ${answer.failed}`;
     const { text } = answer;
-    if (!answer.ok) return explainStatus(answer.status, text);
+    if (!answer.ok) return explainStatus(answer.status, text, !target.clientId);
     const notes = [bounded.note];
     if (route?.bulk) {
         notes.push(

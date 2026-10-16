@@ -164,7 +164,9 @@ export async function setupCheckReader(
         if ('refusal' in target) return target.refusal;
         const answer = await requestRest('GET', target, path, undefined, fetchImpl);
         if ('failed' in answer) return `Error: the request failed — ${answer.failed}`;
-        return answer.ok ? answer.text : explainStatus(answer.status, answer.text);
+        return answer.ok
+            ? answer.text
+            : explainStatus(answer.status, answer.text, !target.clientId);
     };
     // The project's store, for a check of one website's own setting (Payment on Account).
     return { read, scope: { websiteCode: buildCommerceEndpoints(project).scope.websiteCode } };
