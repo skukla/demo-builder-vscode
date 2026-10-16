@@ -14,7 +14,69 @@ import type { EdsResetResult } from './edsResetParams';
 /** The reset result's button to the storefront report, where the fixes that fit are offered. */
 const SEE_REPORT = 'See the storefront report';
 
-/** Show result notifications after reset completes. */
+/** The storefront report's command title, as the Command Palette shows it. */
+const REPORT_TITLE = 'Storefront Report';
+
+/** One warning a successful reset ends with. */
+interface ResetWarning {
+    message: string;
+    /** The demo's fixes are on offer in the storefront report. */
+    offersReport?: boolean;
+}
+
+/**
+ * What a successful reset could not do, in the order the SC should read it. One
+ * list for both surfaces: notifications without a modal, the modal's last view
+ * with one (found on the 2026-10-16 release walk, where a reset in the modal
+ * finished clean and its warning arrived in the corner).
+ */
+function successWarnings(result: EdsResetResult): ResetWarning[] {
+    const warnings: ResetWarning[] = [];
+    // Not a progress line: `report()` writes to a line the steps after it
+    // overwrite within seconds, so the remedy was gone before it could be read.
+    if (result.errorType === 'CONFIG_WRITE_FAILED') {
+        warnings.push({ message: result.error ?? 'Site configuration incomplete.' });
+    }
+    if (result.errorType === 'MESH_REDEPLOY_FAILED') {
+        warnings.push({
+            message: `${result.error} Commerce features may not work until mesh is manually redeployed.`,
+        });
+    }
+    // The fix pass's lines for an added demo (D23, EDS-13f): the same sentences the
+    // wizard's completion card shows. When fixes fit, the one door to accept them is
+    // the storefront report.
+    if (result.demoCaveats?.length) {
+        warnings.push({
+            message: `A few things to know about this demo: ${result.demoCaveats.join(' ')}`,
+            offersReport: !!result.demoFixes?.offered?.length,
+        });
+    }
+    // Pages from before the reset that are, or may be, still live (EDS-33).
+    if (result.leftoverPages && LEFTOVERS_MAY_REMAIN.has(result.leftoverPages.status)) {
+        warnings.push({ message: result.leftoverPages.summary });
+    }
+    // Pages the source has that this storefront does not serve (EDS-40): the copy is
+    // done and the SC would otherwise meet them as blank pages.
+    if (result.missingPages) warnings.push({ message: result.missingPages });
+    return warnings;
+}
+
+/**
+ * A reset's result for the modal that ran it: its warnings joined onto the modal's
+ * last view, where the SC is looking, instead of notifications beside it.
+ *
+ * @param result - the reset's result
+ * @returns the result, with `warning` when a success has any
+ */
+export function withModalWarning(result: EdsResetResult): EdsResetResult {
+    if (!result.success) return result;
+    const sentences = successWarnings(result).map(({ message, offersReport }) =>
+        offersReport ? `${message} ${REPORT_TITLE} offers fixes for this.` : message,
+    );
+    return sentences.length > 0 ? { ...result, warning: sentences.join(' ') } : result;
+}
+
+/** Show result notifications after reset completes; in a modal, only what it cannot show. */
 export async function showResetResultNotifications(
     vscode: typeof import('vscode'),
     result: EdsResetResult,
@@ -24,46 +86,17 @@ export async function showResetResultNotifications(
 ): Promise<void> {
     if (result.success) {
         // No timed success toast: a success closes the modal, and the notification
-        // it may have handed over to ends with "— done" (PL-59 R6). It used to sit
-        // on screen for its own timer after the work had finished.
-        if (result.errorType === 'CONFIG_WRITE_FAILED') {
-            // A dialog, not a progress line: `report()` writes to the single-line
-            // notification that steps 8-11 overwrite within seconds, so the
-            // remedy was gone before it could be read.
-            vscode.window.showWarningMessage(result.error ?? 'Site configuration incomplete.');
-        }
-
-        if (result.errorType === 'MESH_REDEPLOY_FAILED') {
-            vscode.window.showWarningMessage(
-                `${result.error} Commerce features may not work until mesh is manually redeployed.`,
-            );
-        }
-
-        // The fix pass's lines for an added demo (D23, EDS-13f): the same sentences
-        // the wizard's completion card shows, on the reset's own surface. When fixes
-        // fit, the one door to accept them is the storefront report.
-        if (result.demoCaveats?.length) {
-            const message = `A few things to know about this demo: ${result.demoCaveats.join(' ')}`;
-            if (result.demoFixes?.offered?.length) {
-                void vscode.window.showWarningMessage(message, SEE_REPORT).then((choice) => {
-                    if (choice === SEE_REPORT) void vscode.commands.executeCommand('demoBuilder.storefrontReport');
-                });
-            } else {
+        // it may have handed over to ends with "— done" (PL-59 R6). In a modal the
+        // warnings are on its last view (`withModalWarning`).
+        if (inModal) return;
+        for (const { message, offersReport } of successWarnings(result)) {
+            if (!offersReport) {
                 vscode.window.showWarningMessage(message);
+                continue;
             }
-        }
-
-        // Pages from before the reset that are, or may be, still live (EDS-33). A
-        // dialog for the same reason as the config remedy: the progress line that
-        // said it is overwritten by the steps after it.
-        if (result.leftoverPages && LEFTOVERS_MAY_REMAIN.has(result.leftoverPages.status)) {
-            vscode.window.showWarningMessage(result.leftoverPages.summary);
-        }
-
-        // Pages the source has that this storefront does not serve (EDS-40): the
-        // copy is done and the SC would otherwise meet them as blank pages.
-        if (result.missingPages) {
-            vscode.window.showWarningMessage(result.missingPages);
+            void vscode.window.showWarningMessage(message, SEE_REPORT).then((choice) => {
+                if (choice === SEE_REPORT) void vscode.commands.executeCommand('demoBuilder.storefrontReport');
+            });
         }
     } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
         const selection = await vscode.window.showErrorMessage(

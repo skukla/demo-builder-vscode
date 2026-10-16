@@ -8,7 +8,7 @@
  */
 
 import type { UnpublishPagesResult } from '@/features/eds/services/helix/helixPageDeletion';
-import { unpublishLeftoverPages } from '@/features/eds/services/storefront/leftoverPages';
+import { pageInSource, unpublishLeftoverPages } from '@/features/eds/services/storefront/leftoverPages';
 import type { UnpublishHelix } from '@/features/eds/services/storefront/storefrontUnpublish';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -185,5 +185,93 @@ describe('unpublishLeftoverPages', () => {
 
         expect(helix.unpublishPages).not.toHaveBeenCalled();
         expect(result).toEqual({ status: 'none', removed: 0, summary: `No pages from before the reset were left on ${HOST}.` });
+    });
+});
+
+// Found on the 2026-10-16 release walk: a reset's publish missed three pages DA.live
+// had (/customer/account and two requisition-list pages), so this step read them as
+// left over and took them off a working storefront. "Left over" means the source no
+// longer has it, so the source is asked before anything is taken off.
+describe('unpublishLeftoverPages — a page DA.live still has is never taken off', () => {
+    const run = (helix: HelixFake, inSource: (path: string) => Promise<boolean | undefined>) =>
+        unpublishLeftoverPages(
+            SITE,
+            { republished: ['/'], alsoPublished: [] },
+            { helix, logger: createMockLogger(), inSource },
+        );
+
+    it('keeps the pages the source still has and hands them back to be published', async () => {
+        const helix = helixFake(['/index', '/old-campaign', '/customer/account']);
+
+        const result = await run(helix, async (path) => path === '/customer/account');
+
+        expect(unpublished(helix)).toEqual(['/old-campaign']);
+        expect(result.kept).toEqual(['/customer/account']);
+        expect(result.summary).toBe(`Took 1 page from before the reset off ${HOST}.`);
+    });
+
+    it('keeps a page when DA.live could not say whether it has it', async () => {
+        const helix = helixFake(['/index', '/customer/account']);
+
+        const result = await run(helix, async () => undefined);
+
+        expect(helix.unpublishPages).not.toHaveBeenCalled();
+        expect(result.kept).toEqual(['/customer/account']);
+        expect(result.status).toBe('none');
+    });
+
+    it('hands nothing back when the source has none of them', async () => {
+        const helix = helixFake(['/index', '/old-campaign']);
+
+        const result = await run(helix, async () => false);
+
+        expect(unpublished(helix)).toEqual(['/old-campaign']);
+        expect(result).not.toHaveProperty('kept');
+    });
+});
+
+describe('pageInSource', () => {
+    type Read = (org: string, site: string, path: string, maxBytes?: number) => Promise<{ status: number }>;
+    /** DA.live answers `status` for each source path in `answers`, 404 for any other. */
+    function source(answers: Record<string, number>) {
+        const readSource = jest.fn<ReturnType<Read>, Parameters<Read>>(async (_o, _s, path) => ({
+            status: answers[path] ?? 404,
+        }));
+        return { readSource };
+    }
+
+    it("reads the page's document on the DA.live org and site", async () => {
+        const ops = source({ '/customer/account.html': 200 });
+
+        await expect(pageInSource(ops, 'org', 'site')('/customer/account')).resolves.toBe(true);
+        expect(ops.readSource).toHaveBeenCalledWith('org', 'site', '/customer/account.html', 0);
+    });
+
+    it("finds a folder's index page", async () => {
+        const ops = source({ '/sales/order/view/index.html': 200 });
+
+        await expect(pageInSource(ops, 'org', 'site')('/sales/order/view')).resolves.toBe(true);
+    });
+
+    it('reads the home page as index', async () => {
+        const ops = source({ '/index.html': 200 });
+
+        await expect(pageInSource(ops, 'org', 'site')('/')).resolves.toBe(true);
+    });
+
+    it('says no only when DA.live says not found', async () => {
+        await expect(pageInSource(source({}), 'org', 'site')('/gone')).resolves.toBe(false);
+    });
+
+    it('cannot say when DA.live answers with an error', async () => {
+        const ops = source({ '/flaky.html': 503 });
+
+        await expect(pageInSource(ops, 'org', 'site')('/flaky')).resolves.toBeUndefined();
+    });
+
+    it('cannot say when the read throws', async () => {
+        const ops = { readSource: jest.fn().mockRejectedValue(new Error('offline')) };
+
+        await expect(pageInSource(ops, 'org', 'site')('/a')).resolves.toBeUndefined();
     });
 });

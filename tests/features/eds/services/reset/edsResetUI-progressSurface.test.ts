@@ -148,6 +148,46 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
         expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
     });
 
+    // Found on the 2026-10-16 release walk: a reset run from the dashboard finished
+    // in its modal with a clean success, and its warning arrived as a notification
+    // in the corner instead.
+    it("puts a success's warnings on the modal's last view, not in notifications", async () => {
+        const leftover = 'Pages from before the reset may still be live on h. Reset again to remove them.';
+        const missing = '3 pages the source has are missing from this storefront: /a, /b, /c';
+
+        const result = await run(
+            {
+                success: true,
+                leftoverPages: { status: 'not-listed', removed: 0, summary: leftover },
+                missingPages: missing,
+            },
+            { progress: 'modal' },
+        );
+
+        expect(result.warning).toBe(`${leftover} ${missing}`);
+        // The confirmation is the only one.
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('points at the storefront report in the modal when the demo has fixes on offer', async () => {
+        const result = await run(
+            { success: true, demoCaveats: ['Product links may not work.'], demoFixes: { offered: ['pdp'] } },
+            { progress: 'modal' },
+        );
+
+        expect(result.warning).toBe(
+            'A few things to know about this demo: Product links may not work. ' +
+                'Storefront Report offers fixes for this.',
+        );
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('adds no warning to a clean success in a modal', async () => {
+        const result = await run({ success: true }, { progress: 'modal' });
+
+        expect(result).not.toHaveProperty('warning');
+    });
+
     it('raises the failure toast when no modal is showing the reason', async () => {
         await run({ success: false, error: 'pipeline died' });
 

@@ -21,7 +21,7 @@ import type { GitHubAppService } from '../github/githubAppService';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { checkDemoSource, type DemoSourceCheck } from './demoSourceCheck';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
-import { showResetResultNotifications } from './edsResetNotifications';
+import { showResetResultNotifications, withModalWarning } from './edsResetNotifications';
 import {
     extractResetParams,
     type EdsResetParams,
@@ -347,6 +347,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     showLogsOnError,
                     options.progress === 'modal',
                 );
+                if (options.progress === 'modal') return withModalWarning(result);
             }
             return result;
         };

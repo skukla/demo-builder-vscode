@@ -150,6 +150,11 @@ export interface EdsResetResult extends HandlerResponse {
      * everything arrived, or when nothing was copied.
      */
     missingPages?: string;
+    /**
+     * A success's warnings as one line, for the progress modal's last view: set only
+     * when the reset ran in a modal (`withModalWarning`).
+     */
+    warning?: string;
     /** Additional error details */
     errorDetails?: Record<string, unknown>;
 }

@@ -38,11 +38,14 @@ type ProgressCall = { operation: string; message: string; subMessage?: string };
 describe('executeEdsPipeline - pages left over after a reset', () => {
     let helix: {
         purgeCacheAll: jest.Mock;
+        previewAndPublishPage: jest.Mock;
         publishAllSiteContent: jest.Mock;
         listPublishedPaths: jest.Mock;
         unpublishPages: jest.Mock;
     };
     let services: EdsPipelineServices;
+    /** DA.live's source reads: not found unless a test says otherwise. */
+    let readSource: jest.Mock;
     let logger: ReturnType<typeof createMockLogger>;
     let progress: ProgressCall[];
     /** What a storefront reset hands the pipeline: clear, copy, republish. */
@@ -55,6 +58,7 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
         mockPrewarmCatalog.mockResolvedValue({ skipped: false, succeeded: 2, attempted: 2 });
         helix = {
             purgeCacheAll: jest.fn().mockResolvedValue(undefined),
+            previewAndPublishPage: jest.fn().mockResolvedValue(undefined),
             // The pages the republish worked from.
             publishAllSiteContent: jest.fn().mockResolvedValue(['/', '/about']),
             // What Helix says is published once the republish is done.
@@ -69,6 +73,7 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
                 previewFailed: 0,
             })),
         };
+        readSource = jest.fn().mockResolvedValue({ status: 404 });
         services = pipelineServices({
             daLiveContentOps: {
                 sourceOps: {
@@ -77,6 +82,7 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
                         deletedCount: 3,
                         deletedPaths: ['/index.html', '/about.html', '/old-campaign.html'],
                     }),
+                    readSource,
                 },
                 copyOps: {
                     copyContentFromSource: jest
@@ -129,6 +135,21 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
             removed: 1,
             summary: 'Took 1 page from before the reset off main--test-repo--test-owner.aem.live.',
         });
+    });
+
+    // Found on the 2026-10-16 release walk: the republish missed three pages DA.live
+    // had, and this step took them off a working storefront.
+    it('keeps and publishes a page the republish missed that DA.live still has', async () => {
+        readSource.mockImplementation(async (_o: string, _s: string, path: string) => ({
+            status: path === '/old-campaign.html' ? 200 : 404,
+        }));
+
+        const result = await run();
+
+        expect(readSource).toHaveBeenCalledWith('test-org', 'test-site', '/old-campaign.html', 0);
+        expect(helix.unpublishPages).not.toHaveBeenCalled();
+        expect(helix.previewAndPublishPage).toHaveBeenCalledWith('test-owner', 'test-repo', '/old-campaign');
+        expect(result.leftoverPages?.kept).toEqual(['/old-campaign']);
     });
 
     it('runs before the catalog pre-warm, so the pages it publishes are never in the list', async () => {

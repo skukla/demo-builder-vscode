@@ -53,6 +53,64 @@ export interface LeftoverPagesResult {
     removed: number;
     /** One or two plain sentences, for the SC and the agent. */
     summary: string;
+    /**
+     * Pages the republish missed that DA.live still has (or could not say it does not):
+     * left on, for the caller to publish. Absent when there were none.
+     */
+    kept?: string[];
+}
+
+/** Whether DA.live still has a page's document: undefined when it could not say. */
+export type PageInSource = (webPath: string) => Promise<boolean | undefined>;
+
+/** The source read `pageInSource` needs. */
+interface SourceReader {
+    readSource(org: string, site: string, path: string, maxBytes?: number): Promise<{ status: number }>;
+}
+
+/** The documents a web path can come from: `/a` is `a.html` or `a/index.html`. */
+function documentsFor(webPath: string): string[] {
+    if (webPath === '/') return ['/index.html'];
+    return [`${webPath}.html`, `${webPath}/index.html`];
+}
+
+/**
+ * Ask DA.live whether it still has a page. Only a not-found is a no: an error, or a
+ * read that throws, is "cannot say", which keeps the page on (the unpublish it guards
+ * is the step that cannot be taken back).
+ *
+ * @param source - DA.live source reads
+ * @param org - the DA.live org
+ * @param site - the DA.live site
+ * @returns the check, for one web path at a time
+ */
+export function pageInSource(source: SourceReader, org: string, site: string): PageInSource {
+    return async (webPath) => {
+        let unsure = false;
+        for (const document of documentsFor(webPath)) {
+            try {
+                const { status } = await source.readSource(org, site, document, 0);
+                if (status === 200) return true;
+                if (status !== 404) unsure = true;
+            } catch {
+                unsure = true;
+            }
+        }
+        return unsure ? undefined : false;
+    };
+}
+
+/** Split the candidates into those the source no longer has and those it may still have. */
+async function bySource(
+    paths: string[],
+    inSource: PageInSource | undefined,
+): Promise<{ gone: string[]; kept: string[] }> {
+    if (!inSource) return { gone: paths, kept: [] };
+    const answers = await Promise.all(paths.map((path) => inSource(path)));
+    return {
+        gone: paths.filter((_, i) => answers[i] === false),
+        kept: paths.filter((_, i) => answers[i] !== false),
+    };
 }
 
 /** The statuses that leave old pages live, or may. Said as a warning, never as done. */
@@ -139,10 +197,10 @@ async function unpublish(
 export async function unpublishLeftoverPages(
     site: { owner: string; repo: string },
     kept: { republished: readonly string[] | undefined; alsoPublished: readonly string[] },
-    deps: { helix: UnpublishHelix; logger: Logger },
+    deps: { helix: UnpublishHelix; logger: Logger; inSource?: PageInSource },
 ): Promise<LeftoverPagesResult> {
     const host = aemLiveBaseUrl(site.owner, site.repo).replace(/^https:\/\//, '');
-    const result = await findAndUnpublish(site, kept, host, deps.helix);
+    const result = await findAndUnpublish(site, kept, host, deps);
     const log = LEFTOVERS_MAY_REMAIN.has(result.status) ? deps.logger.warn : deps.logger.info;
     log.call(deps.logger, `[EdsPipeline] ${result.summary}`);
     return result;
@@ -152,7 +210,7 @@ async function findAndUnpublish(
     site: { owner: string; repo: string },
     kept: { republished: readonly string[] | undefined; alsoPublished: readonly string[] },
     host: string,
-    helix: UnpublishHelix,
+    { helix, inSource }: { helix: UnpublishHelix; inSource?: PageInSource },
 ): Promise<LeftoverPagesResult> {
     if (!kept.republished) {
         return {
@@ -176,9 +234,15 @@ async function findAndUnpublish(
         };
     }
     const keep = new Set([...kept.republished, ...kept.alsoPublished].map(comparable));
-    const paths = leftovers(listed, keep);
-    if (paths.length === 0) {
-        return { status: 'none', removed: 0, summary: `No pages from before the reset were left on ${host}.` };
+    const { gone, kept: stillInSource } = await bySource(leftovers(listed, keep), inSource);
+    const handBack = stillInSource.length > 0 ? { kept: stillInSource } : {};
+    if (gone.length === 0) {
+        return {
+            status: 'none',
+            removed: 0,
+            summary: `No pages from before the reset were left on ${host}.`,
+            ...handBack,
+        };
     }
-    return unpublish(site, paths, host, helix);
+    return { ...(await unpublish(site, gone, host, helix)), ...handBack };
 }

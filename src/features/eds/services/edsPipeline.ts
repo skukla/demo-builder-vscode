@@ -35,6 +35,7 @@ import { applyBlockCodePatches } from './patches/codePatchPipelineHelpers';
 import { createPatchReport, addCodeResult, type PatchReport } from './patches/patchReportHelper';
 import {
     LEFTOVERS_MAY_REMAIN,
+    pageInSource,
     unpublishLeftoverPages,
     type LeftoverPagesResult,
 } from './storefront/leftoverPages';
@@ -948,14 +949,40 @@ async function pipelineUnpublishLeftovers({ params, services, ctx, onProgress }:
         message: 'Removing old pages',
         subMessage: `${params.repoOwner}/${params.repoName}`,
     });
+    const site = { owner: params.repoOwner, repo: params.repoName };
     const result = await unpublishLeftoverPages(
-        { owner: params.repoOwner, repo: params.repoName },
+        site,
         { republished: ctx.republishedPages, alsoPublished: ctx.libraryPaths },
-        { helix: services.helixService, logger: services.logger },
+        {
+            helix: services.helixService,
+            logger: services.logger,
+            inSource: pageInSource(services.daLiveContentOps.sourceOps, params.daLiveOrg, params.daLiveSite),
+        },
     );
+    if (result.kept) await publishMissedPages(site, result.kept, services);
     ctx.leftoverPages = result;
     const message = LEFTOVERS_MAY_REMAIN.has(result.status) ? `⚠️ ${result.summary}` : result.summary;
     onProgress?.({ operation: 'leftover-pages', message });
+}
+
+/**
+ * The pages the content publish missed that DA.live has: published one at a time, so
+ * the page check after this reads them as served. Never throws; a page that fails
+ * stays for the page check to name.
+ */
+async function publishMissedPages(
+    site: { owner: string; repo: string },
+    paths: string[],
+    { helixService, logger }: EdsPipelineServices,
+): Promise<void> {
+    logger.warn(`[EdsPipeline] The publish missed ${paths.length} page(s) DA.live has; publishing: ${paths.join(' ')}`);
+    for (const path of paths) {
+        try {
+            await helixService.previewAndPublishPage(site.owner, site.repo, path);
+        } catch (error) {
+            logger.warn(`[EdsPipeline] Could not publish ${path}: ${(error as Error).message}`);
+        }
+    }
 }
 
 /**
