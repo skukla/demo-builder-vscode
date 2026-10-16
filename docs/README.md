@@ -90,6 +90,12 @@ Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must 
   answers "I want to add X — what do I write and where".
 - [architecture/overview.md](architecture/overview.md) — start here if the system is
   new to you.
+- [diagrams/data-flow/README.md](diagrams/data-flow/README.md) — how data moves, as
+  four diagram outlines: [d1 overview](diagrams/data-flow/d1-overview-sketch.md) ·
+  [d2 creating a project](diagrams/data-flow/d2-create-project-sketch.md) ·
+  [d3 storefront](diagrams/data-flow/d3-storefront-sketch.md) ·
+  [d4 App Builder](diagrams/data-flow/d4-app-builder-sketch.md). The outlines are the
+  source the Lucid diagrams are drawn from; edit an outline first.
 
 ## Subsystems
 
