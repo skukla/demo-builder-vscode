@@ -16,7 +16,7 @@ import { resolveViewMode } from '@/core/state/viewModePreference';
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
 import { determineMeshStatus } from '@/features/mesh/services/meshStatusResolver';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import type { Project } from '@/types/base';
+import { loadProjectsForList } from '@/features/projects-dashboard/services/loadProjectsForList';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
 
@@ -30,19 +30,8 @@ export const handleGetProjects: MessageHandler = async (
     context: HandlerContext,
 ): Promise<HandlerResponse> => {
     try {
-        // Get list of project paths
-        const projectList = await context.stateManager.getAllProjects();
-
         // Load full project data for each (read-only, don't persist)
-        const projects: Project[] = [];
-        for (const item of projectList) {
-            const project = await context.stateManager.loadProjectFromPath(item.path, undefined, {
-                persistAfterLoad: false,
-            });
-            if (project) {
-                projects.push(project);
-            }
-        }
+        const projects = await loadProjectsForList(context.stateManager);
 
         // Enrich projects with mesh staleness status (full fidelity check)
         for (const project of projects) {

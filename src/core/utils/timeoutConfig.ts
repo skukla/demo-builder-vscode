@@ -89,6 +89,13 @@ export const TIMEOUTS = {
          * auto-closes — only a success, where there is nothing to act on.
          */
         RESULT_GLANCE: 1500,
+
+        /**
+         * How long the projects list waits after a project file changes before it
+         * reloads. Creation writes the file several times in a burst; one reload
+         * after the burst is enough.
+         */
+        PROJECT_LIST_SETTLE: 500,
     },
 
     // =========================================================================

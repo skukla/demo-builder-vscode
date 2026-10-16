@@ -14,7 +14,10 @@ import { WebviewCommunicationManager } from '@/core/communication/webviewCommuni
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { readViewModeSetting, VIEW_MODE_SETTING } from '@/core/state/viewModePreference';
+import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
+import { loadProjectsForList } from '@/features/projects-dashboard/services/loadProjectsForList';
 import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -78,10 +81,47 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
         const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
             if (e.affectsConfiguration(`demoBuilder.${VIEW_MODE_SETTING.projects}`)) {
                 const projectsViewMode = readViewModeSetting('projects');
-                this.sendMessage('configChanged', { projectsViewMode } satisfies ConfigChangedPayload);
+                this.sendMessage('configChanged', {
+                    projectsViewMode,
+                } satisfies ConfigChangedPayload);
             }
         });
         this.disposables.add(configListener);
+
+        this.watchProjectFiles();
+    }
+
+    /**
+     * Reload the list whenever a project's file is created, changed or removed.
+     *
+     * The list used to reload only when opened or brought to the front, so a
+     * project an agent created (or renamed, copied, deleted) while the list was
+     * showing never appeared until the SC navigated away and back (owner,
+     * 2026-10-16). Those changes come from many writers, including other windows,
+     * so the project files themselves are the one place that sees all of them.
+     * Creation writes the file several times in a burst; one reload after the
+     * burst settles is enough.
+     */
+    private watchProjectFiles(): void {
+        const watcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(
+                vscode.Uri.file(resolveProjectsRoot()),
+                '*/.demo-builder.json',
+            ),
+        );
+        let pending: ReturnType<typeof setTimeout> | undefined;
+        const reloadSoon = (): void => {
+            if (pending) clearTimeout(pending);
+            pending = setTimeout(() => {
+                pending = undefined;
+                void this.refreshProjectsList();
+            }, TIMEOUTS.UI.PROJECT_LIST_SETTLE);
+        };
+        watcher.onDidCreate(reloadSoon);
+        watcher.onDidChange(reloadSoon);
+        watcher.onDidDelete(reloadSoon);
+        this.disposables.add(watcher);
+        this.disposables.add({ dispose: () => pending && clearTimeout(pending) });
     }
 
     // ============================================================================
@@ -145,7 +185,9 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
         }
 
         const projectsViewMode = readViewModeSetting('projects');
-        await this.sendMessage('configChanged', { projectsViewMode } satisfies ConfigChangedPayload);
+        await this.sendMessage('configChanged', {
+            projectsViewMode,
+        } satisfies ConfigChangedPayload);
     }
 
     /**
@@ -158,20 +200,12 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
         }
 
         try {
-            // Load all projects (read-only, do not persist after load)
-            const projectList = await this.stateManager.getAllProjects();
-            const projects = [];
-            for (const item of projectList) {
-                const project = await this.stateManager.loadProjectFromPath(item.path, undefined, {
-                    persistAfterLoad: false,
-                });
-                if (project) {
-                    projects.push(project);
-                }
-            }
+            const projects = await loadProjectsForList(this.stateManager);
 
             // Send to webview
-            await this.sendMessage('projectsUpdated', { projects } satisfies ProjectsUpdatedPayload);
+            await this.sendMessage('projectsUpdated', {
+                projects,
+            } satisfies ProjectsUpdatedPayload);
         } catch (error) {
             this.logger.error('[ProjectsList] Failed to refresh projects list', error as Error);
         }

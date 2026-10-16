@@ -49,6 +49,10 @@ workflow only runs inside `adobe-commerce/boilerplate-b2b-template` and skipped 
 - 2026-10-16  docs(adr-006): re-anchoring, per-ledger exact retirement, and the PR permission (`e63f8edb9`)
 - 2026-10-16  feat(patches): a watchdog for the patches release, and the docs for automatic releases (`e7967a5da`)
 - 2026-10-16  fix(updates): a template compare that fails is "could not check", not "up to date" (`b95bb50e7`)
+- 2026-10-16  feat(patches): the watchdog runs daily and catches a switched-off drift gate (`c716ef379`)
+- 2026-10-16  docs(adr-006): Claude drafts rewrites of patches upstream broke (`df4d52519`)
+- 2026-10-16  docs(adr-006): the end-to-end test of automatic patch upkeep, and what it fixed (`fda7e7457`)
+- 2026-10-16  docs(adr-006): the patches repo now lets its workflow open PRs (`9d346d164`)
 
 ## Still open
 

@@ -17,7 +17,6 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
 import { creationReporter, creationSteps } from './creationProgress';
 import {
@@ -34,11 +33,17 @@ import {
 } from './executorEditMode';
 import { populateEdsMetadata, syncEdsConfigToRemote, setupEdsContent } from './executorEdsPhase';
 import { executeMeshPhase, populateMeshComponentConfigs } from './executorMeshPhase';
-import { handlePortConflicts, cleanupOrphanedDirectory, refuseSecondErpIntegration } from './executorPreflight';
+import {
+    creationPath,
+    handlePortConflicts,
+    cleanupOrphanedDirectory,
+    refuseSecondErpIntegration,
+} from './executorPreflight';
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { whileCreating } from '@/core/state/creationsRunning';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
@@ -117,7 +122,9 @@ export function buildInitialProject(
         created: existingProject?.created || new Date(), // Preserve original creation date in edit mode
         lastModified: new Date(),
         path: projectPath,
-        status: 'created',
+        // A new project reads "creating" until finalization marks it ready, so the
+        // projects list can show it being built (PL-82). An edit keeps 'created'.
+        status: existingProject ? 'created' : 'creating',
         adobe: typedConfig.adobe,
         componentInstances: {},
         componentSelections: {
@@ -162,7 +169,20 @@ export function buildInitialProject(
     };
 }
 
+/**
+ * Create a project, or rebuild an edited one.
+ *
+ * Listed as running for as long as it runs, so the projects list can tell a project
+ * being created from one whose creation never finished (PL-82).
+ */
 export async function executeProjectCreation(
+    context: HandlerContext,
+    config: ProjectCreationConfig,
+): Promise<void> {
+    return whileCreating(creationPath(config), () => createOrRebuild(context, config));
+}
+
+async function createOrRebuild(
     context: HandlerContext,
     config: ProjectCreationConfig,
 ): Promise<void> {
@@ -187,10 +207,7 @@ export async function executeProjectCreation(
 
     // Determine project path based on edit mode (editProjectPath presence signals edit)
     const isEditMode = Boolean(typedConfig.editProjectPath);
-    const projectPath =
-        isEditMode && typedConfig.editProjectPath
-            ? typedConfig.editProjectPath
-            : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
+    const projectPath = creationPath(typedConfig);
 
     // Load existing project state if in edit mode (to preserve creation date);
     // otherwise clean up any orphaned/invalid directory (new project only).

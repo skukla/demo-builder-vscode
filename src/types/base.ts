@@ -547,6 +547,7 @@ export type ProjectTemplate = 'commerce-paas' | 'commerce-saas' | 'aem-commerce'
 
 export type ProjectStatus =
     | 'created'
+    | 'creating' // Transitional: a new project is being created (PL-82)
     | 'configuring'
     | 'ready'
     | 'starting' // Transitional: demo is starting up

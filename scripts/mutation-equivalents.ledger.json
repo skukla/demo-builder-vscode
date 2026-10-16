@@ -3462,18 +3462,6 @@
         {
             "module": "src/features/project-creation/handlers/executor.ts",
             "anchors": [
-                "isEditMode && typedConfig.editProjectPath"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "isEditMode is Boolean(typedConfig.editProjectPath) on the line above, so the two operands always share their truthiness. With a path set both && and || are truthy and the ternary takes the edit branch; with none set both are falsy and it takes the home-directory branch. The && is there because TypeScript needs the second operand narrowed to a string, not because the two can disagree.",
-            "decision": "none \u2014 the two operands are the same condition, one of them narrowed for the compiler",
-            "recorded": "2026-09-04",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/project-creation/handlers/executor.ts",
-            "anchors": [
                 "if (isEditMode && tempComponentsDir) {"
             ],
             "mutants": 1,
@@ -7495,7 +7483,7 @@
             "anchors": [
                 "} catch (openError) {"
             ],
-            "line": 193,
+            "line": 182,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.error call \u2014 emptying it leaves the same swallowed error and the same returned success, so the only observable difference is which log line prints. The classifier reads the 'catch (openError) {' line, which carries no logger token.",
@@ -9925,7 +9913,7 @@
             "anchors": [
                 "].filter((concern): concern is DeploymentConcern => concern !== null);"
             ],
-            "line": 228,
+            "line": 211,
             "mutants": 2,
             "category": "branch",
             "reason": "Both survivors here let nulls stay in the concerns array, and a null cannot change the answer: the winner is chosen with CONCERN_ORDER.find(c => concerns.includes(c)), and CONCERN_ORDER holds only the four real concerns, so a null matches nothing. When every source is null the array is non-empty but the find still returns undefined, and the guard below returns null exactly as the length check would have.",
@@ -9962,10 +9950,10 @@
             "anchors": [
                 "text: getStatusText(project.status, undefined, true),"
             ],
-            "line": 274,
+            "line": 256,
             "mutants": 1,
             "category": "branch",
-            "reason": "This call is only reached for an EDS project whose status is 'resetting' or 'republishing' \u2014 the in-flight guard three lines above returns null for anything else. getStatusText answers 'Resetting...' and 'Republishing...' for both of those whether isEds is true or false, because its EDS branch and its switch spell those two states identically. So the flag cannot change the text here.",
+            "reason": "This call is only reached for an EDS project whose status is in UNSETTLED_TEXT ('creating', 'resetting', 'republishing', 'error') \u2014 the guard above returns null for anything else. getStatusText answers from UNSETTLED_TEXT for those before it looks at isEds, so the flag cannot change the text here. Re-checked 2026-10-16 when 'creating' and 'error' joined the guard (PL-82).",
             "decision": "none \u2014 passing true states that this branch is the EDS one, which the reader needs",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -9975,10 +9963,10 @@
             "anchors": [
                 "variant: getStatusVariant(project.status, true),"
             ],
-            "line": 275,
+            "line": 257,
             "mutants": 1,
             "category": "branch",
-            "reason": "This call is only reached for an EDS project whose status is 'resetting' or 'republishing' \u2014 the in-flight guard three lines above returns null for anything else. getStatusVariant answers 'warning' for both of those whether isEds is true or false, because its EDS branch and its switch agree on the transitional states. So the flag cannot change the variant here.",
+            "reason": "This call is only reached for an EDS project whose status is in UNSETTLED_TEXT ('creating', 'resetting', 'republishing', 'error') \u2014 the guard above returns null for anything else. getStatusVariant answers 'error' for error and 'warning' for the other three before it looks at isEds, so the flag cannot change the variant here. Re-checked 2026-10-16 when 'creating' and 'error' joined the guard (PL-82).",
             "decision": "none \u2014 passing true states that this branch is the EDS one, which the reader needs",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"

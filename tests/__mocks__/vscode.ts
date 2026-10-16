@@ -93,7 +93,7 @@ export const window = {
     showQuickPick: jest.fn(),
     showInputBox: jest.fn(),
     showOpenDialog: jest.fn(),
-        showSaveDialog: jest.fn(),
+    showSaveDialog: jest.fn(),
     createQuickPick: jest.fn(),
     terminals: [],
     activeColorTheme: {
@@ -183,6 +183,13 @@ export const QuickPickItemKind = {
     Separator: -1,
     Default: 0,
 };
+
+export class RelativePattern {
+    constructor(
+        public readonly baseUri: unknown,
+        public readonly pattern: string
+    ) {}
+}
 
 export class EventEmitter {
     private _listeners: Array<(data: any) => void> = [];

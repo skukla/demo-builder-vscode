@@ -55,6 +55,9 @@ jest.mock('fs/promises', () => ({
 }));
 
 jest.mock('@/features/project-creation/handlers/executorPreflight', () => ({
+    // Pure: where the project is built. The real one, not a fake.
+    creationPath: jest.requireActual('@/features/project-creation/handlers/executorPreflight')
+        .creationPath,
     handlePortConflicts: jest.fn().mockResolvedValue(undefined),
     refuseSecondErpIntegration: jest.fn().mockResolvedValue(undefined),
     cleanupOrphanedDirectory: jest.fn().mockResolvedValue(undefined),

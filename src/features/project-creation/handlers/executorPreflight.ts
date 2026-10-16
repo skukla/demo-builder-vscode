@@ -9,6 +9,8 @@
  * @module features/project-creation/handlers/executorPreflight
  */
 
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { selectedEntry } from './executorAppBuilderPhase';
 import type { ProgressTracker } from './shared';
@@ -25,6 +27,13 @@ import { loadOtherProjects } from '@/features/dashboard/handlers/replaceDeployed
 import type { HandlerContext } from '@/types/handlers';
 import { getProjectFrontendPort, getComponentConfigPort } from '@/types/typeGuards';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
+
+/** Where creation builds the project: the edited project's own folder, else a new one. */
+export function creationPath(config: ProjectCreationConfig): string {
+    return config.editProjectPath
+        ? config.editProjectPath
+        : path.join(os.homedir(), '.demo-builder', 'projects', config.projectName);
+}
 
 export async function handlePortConflicts(
     context: HandlerContext,

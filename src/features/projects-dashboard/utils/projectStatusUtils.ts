@@ -18,6 +18,19 @@ import { getComponentInstanceValues, isEdsProject } from '@/types/typeGuards';
 export type StatusVariant = 'success' | 'neutral' | 'warning' | 'error';
 
 /**
+ * What a project at rest never shows, so it always gets a line: work in flight, and a
+ * creation that never finished. The projects list loads a `creating` project whose
+ * creation is not running as `error` (`loadProjectsForList`), and nothing else sets a
+ * project's status to `error`, so that is what it means (PL-82).
+ */
+const UNSETTLED_TEXT: Partial<Record<ProjectStatus, string>> = {
+    creating: 'Creating',
+    resetting: 'Resetting',
+    republishing: 'Republishing',
+    error: "Creation didn't finish",
+};
+
+/**
  * Gets the human-readable display text for a project status
  *
  * @param status - The project status
@@ -26,16 +39,10 @@ export type StatusVariant = 'success' | 'neutral' | 'warning' | 'error';
  * @returns Human-readable status text
  */
 export function getStatusText(status: ProjectStatus, port?: number, isEds?: boolean): string {
-    // EDS projects show "Published" unless they're in a transitional state
-    if (isEds) {
-        if (status === 'resetting') {
-            return 'Resetting';
-        }
-        if (status === 'republishing') {
-            return 'Republishing';
-        }
-        return 'Published';
-    }
+    const unsettled = UNSETTLED_TEXT[status];
+    if (unsettled) return unsettled;
+    // EDS projects show "Published" unless something is unsettled
+    if (isEds) return 'Published';
 
     switch (status) {
         case 'running':
@@ -44,15 +51,6 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
             return 'Starting';
         case 'stopping':
             return 'Stopping';
-        case 'resetting':
-            return 'Resetting';
-        case 'republishing':
-            return 'Republishing';
-        case 'stopped':
-        case 'ready':
-            return 'Stopped';
-        case 'error':
-            return 'Error';
         default:
             return 'Stopped';
     }
@@ -66,27 +64,12 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
  * @returns StatusDot variant for color coding
  */
 export function getStatusVariant(status: ProjectStatus, isEds?: boolean): StatusVariant {
-    // EDS projects show "success" (green) unless they're in a transitional state
-    if (isEds) {
-        if (status === 'resetting' || status === 'republishing') {
-            return 'warning'; // Yellow/orange during transitional operations
-        }
-        return 'success';
-    }
-
-    switch (status) {
-        case 'running':
-            return 'success';
-        case 'starting':
-        case 'stopping':
-        case 'resetting':
-        case 'republishing':
-            return 'warning';
-        case 'error':
-            return 'error';
-        default:
-            return 'neutral';
-    }
+    if (status === 'error') return 'error';
+    // Yellow/orange during transitional operations
+    if (UNSETTLED_TEXT[status] || status === 'starting' || status === 'stopping') return 'warning';
+    // EDS projects show "success" (green) unless something is unsettled
+    if (isEds) return 'success';
+    return status === 'running' ? 'success' : 'neutral';
 }
 
 /**
@@ -268,8 +251,7 @@ export function getDeploymentSummary(project: Project): DeploymentSummary | null
  */
 export function getRuntimeSummary(project: Project): DeploymentSummary | null {
     if (isEdsProject(project)) {
-        const inFlight = project.status === 'resetting' || project.status === 'republishing';
-        if (!inFlight) return null;
+        if (!UNSETTLED_TEXT[project.status]) return null;
         return {
             text: getStatusText(project.status, undefined, true),
             variant: getStatusVariant(project.status, true),
