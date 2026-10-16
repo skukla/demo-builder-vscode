@@ -966,16 +966,16 @@ async function pipelineUnpublishLeftovers({ params, services, ctx, onProgress }:
 }
 
 /**
- * The pages the content publish missed that DA.live has: published one at a time, so
- * the page check after this reads them as served. Never throws; a page that fails
- * stays for the page check to name.
+ * Pages the leftover check listed that DA.live still has: published one at a time
+ * rather than removed, so the page check after this reads them as served. Never
+ * throws; a page that fails stays for the page check to name.
  */
 async function publishMissedPages(
     site: { owner: string; repo: string },
     paths: string[],
     { helixService, logger }: EdsPipelineServices,
 ): Promise<void> {
-    logger.warn(`[EdsPipeline] The publish missed ${paths.length} page(s) DA.live has; publishing: ${paths.join(' ')}`);
+    logger.warn(`[EdsPipeline] DA.live still has ${paths.length} page(s) the leftover check listed; publishing, not removing: ${paths.join(' ')}`);
     for (const path of paths) {
         try {
             await helixService.previewAndPublishPage(site.owner, site.repo, path);

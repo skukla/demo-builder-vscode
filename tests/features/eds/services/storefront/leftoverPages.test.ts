@@ -188,6 +188,25 @@ describe('unpublishLeftoverPages', () => {
     });
 });
 
+// The real cause behind the 2026-10-16 walk's three lost pages: Helix lists them with
+// a trailing slash (/customer/account/), the republish without one. Compared as text,
+// each read as left over, and unpublishing /customer/account/ took /customer/account
+// down. Measured twice: the reset's own result named them with the slash.
+describe('unpublishLeftoverPages — a trailing slash is the same page', () => {
+    it('does not treat /x/ as left over when /x was republished', async () => {
+        const helix = helixFake(['/index', '/customer/account/', '/old-campaign/']);
+
+        const result = await unpublishLeftoverPages(
+            SITE,
+            { republished: ['/', '/customer/account'], alsoPublished: [] },
+            { helix, logger: createMockLogger() },
+        );
+
+        expect(unpublished(helix)).toEqual(['/old-campaign/']);
+        expect(result.removed).toBe(1);
+    });
+});
+
 // Found on the 2026-10-16 release walk: a reset's publish missed three pages DA.live
 // had (/customer/account and two requisition-list pages), so this step read them as
 // left over and took them off a working storefront. "Left over" means the source no
@@ -245,6 +264,12 @@ describe('pageInSource', () => {
 
         await expect(pageInSource(ops, 'org', 'site')('/customer/account')).resolves.toBe(true);
         expect(ops.readSource).toHaveBeenCalledWith('org', 'site', '/customer/account.html', 0);
+    });
+
+    it('reads /x/ as the page /x', async () => {
+        const ops = source({ '/customer/account.html': 200 });
+
+        await expect(pageInSource(ops, 'org', 'site')('/customer/account/')).resolves.toBe(true);
     });
 
     it("finds a folder's index page", async () => {

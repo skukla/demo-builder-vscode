@@ -54,8 +54,8 @@ export interface LeftoverPagesResult {
     /** One or two plain sentences, for the SC and the agent. */
     summary: string;
     /**
-     * Pages the republish missed that DA.live still has (or could not say it does not):
-     * left on, for the caller to publish. Absent when there were none.
+     * Pages the leftover check listed that DA.live still has (or could not say it does
+     * not): left on, for the caller to publish. Absent when there were none.
      */
     kept?: string[];
 }
@@ -70,8 +70,9 @@ interface SourceReader {
 
 /** The documents a web path can come from: `/a` is `a.html` or `a/index.html`. */
 function documentsFor(webPath: string): string[] {
-    if (webPath === '/') return ['/index.html'];
-    return [`${webPath}.html`, `${webPath}/index.html`];
+    const page = webPath.replace(/\/+$/, '');
+    if (page === '') return ['/index.html'];
+    return [`${page}.html`, `${page}/index.html`];
 }
 
 /**
@@ -127,9 +128,16 @@ const AGAIN = 'Reset again to remove them.';
 const rawOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 const pagesWord = (n: number): string => `${n} ${n === 1 ? 'page' : 'pages'}`;
 
-/** Lower case, a leading slash, and a folder `index` as the folder itself. */
+/**
+ * Lower case, a leading slash, no trailing slash, and a folder `index` as the folder
+ * itself. The trailing slash matters: Helix can list a page as `/customer/account/`
+ * while the republish names it `/customer/account`, and Helix serves both as one page
+ * (the slash form redirects). Compared as text, the page read as left over, and its
+ * unpublish took the real page down (2026-10-16 release walk, three account pages).
+ */
 function comparable(path: string): string {
-    const absolute = (path.startsWith('/') ? path : `/${path}`).toLowerCase();
+    const slashed = (path.startsWith('/') ? path : `/${path}`).toLowerCase();
+    const absolute = slashed.length > 1 ? slashed.replace(/\/+$/, '') || '/' : slashed;
     if (absolute === '/index') return '/';
     return absolute.endsWith('/index') ? absolute.slice(0, -'/index'.length) : absolute;
 }
