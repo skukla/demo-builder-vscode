@@ -277,7 +277,10 @@ describe('DaLiveContentCopy.copyContentFromSource', () => {
 
             const result = await h.copy.copyContentFromSource(SOURCE, 'dest-org', 'dest-site');
 
-            expect(calls.filter((c) => c.url === `${LIVE}/nav`)).toHaveLength(0);
+            // The backfill probe is a HEAD; the copy's own GET of the page (for
+            // its page metadata) is not a probe.
+            const probes = calls.filter((c) => c.url === `${LIVE}/nav` && c.init?.method === 'HEAD');
+            expect(probes).toHaveLength(0);
             expect(result.copiedFiles).toContain('/nav');
         });
 

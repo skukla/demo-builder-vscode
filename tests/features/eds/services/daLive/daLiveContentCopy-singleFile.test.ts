@@ -264,6 +264,8 @@ describe('DaLiveContentCopy.copySingleFile', () => {
             let attempts = 0;
             mockFetch.mockImplementation(async (url: string, init?: RequestInit) => {
                 if (init?.method === 'HEAD') return mockResponse(404);
+                // Only the source read retries; the page-metadata read is separate.
+                if (!url.endsWith('.plain.html')) return mockResponse(404);
                 attempts += 1;
                 if (attempts === 1) throw new Error('socket hang up');
                 return mockResponse(200, '<p/>', 'text/html');

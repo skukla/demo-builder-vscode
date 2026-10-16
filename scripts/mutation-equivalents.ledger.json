@@ -4874,7 +4874,7 @@
             "anchors": [
                 "try {"
             ],
-            "line": 203,
+            "line": 211,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this inner try leaves errorDetail as the empty string it was initialised to, and errorDetail is read in exactly one place: the warn line that reports a failed copy. The function returns false either way, nothing is written, and the caller sees the same boolean. The try exists only so an unreadable response body cannot turn a reported failure into a thrown one, and that IS tested - a response whose text() rejects still returns false.",
@@ -4887,7 +4887,7 @@
             "anchors": [
                 "return false;"
             ],
-            "line": 281,
+            "line": 289,
             "mutants": 1,
             "category": "branch",
             "reason": "This is the return after the retry for-loop, and it is unreachable: every iteration either returns or hits the catch, and the catch's last attempt (attempt === MAX_RETRY_ATTEMPTS) returns false rather than continuing. TypeScript cannot see that the loop always exits by return, so it requires a terminal return here; deleting it does not compile. Stryker reports it as NoCoverage for the same reason no test can reach it.",

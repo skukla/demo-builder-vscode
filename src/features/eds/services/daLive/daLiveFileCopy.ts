@@ -27,6 +27,7 @@ import type { DaLiveApiClient } from './daLiveApiClient';
 import { DA_LIVE_BASE_URL, MAX_RETRY_ATTEMPTS, getRetryDelay } from './daLiveConstants';
 import { transformHtmlForDaLive, buildSourceUrl, resolveDaPath } from './daLiveContentHelpers';
 import { extractReferencedPaths } from './daLiveContentReferences';
+import { appendMetadataBlock, readAuthoredPageMetadata } from './daLivePageMetadata';
 import { copySpreadsheetFile, isSpreadsheetPath, sheetWebPath } from './daLiveSpreadsheetCopy';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -91,7 +92,8 @@ async function processHtmlContent(
     copy: SingleFileCopy,
 ): Promise<Blob> {
     const { sourcePath, contentPatchIds, contentPatchSource, patchReport, discoveredPaths } = copy;
-    let htmlText = await sourceResponse.text();
+    const sourceHtml = await sourceResponse.text();
+    let htmlText = sourceHtml;
 
     // Collect internal document references (e.g. the /customer/nav fragment
     // embedded by the account page) so the copy loop can pull them from
@@ -124,6 +126,12 @@ async function processHtmlContent(
             }
         }
     }
+
+    // `.plain.html` carries no page metadata (the renderer moves it into <head>),
+    // so put the page's own back as a metadata block. Read against the source as
+    // published, not the patched text.
+    const metadata = await readAuthoredPageMetadata(sourceBaseUrl, sourcePath, sourceHtml, logger);
+    htmlText = appendMetadataBlock(htmlText, metadata);
 
     const transformedHtml = transformHtmlForDaLive(htmlText, sourceBaseUrl);
     return new Blob([transformedHtml], { type: 'text/html' });
