@@ -440,7 +440,7 @@ each item's own file; what has already landed against an item is in its
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 | `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | active |
 
-### platform  (84)
+### platform  (86)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -528,6 +528,8 @@ each item's own file; what has already landed against an item is in its
 | `PL-77` | feature | [Edit switches a project's Adobe org](2026-10-13-edit-switches-adobe-org.md) | PL-75 | med | backlog |
 | `PL-78` | feature | [Edit switches a project's Commerce backend](2026-10-13-edit-switches-backend.md) | PL-75 | med | backlog |
 | `PL-79` | feature | [Edit switches a project's stack](2026-10-13-edit-switches-stack.md) | PL-75 | med | backlog |
+| `PL-81` | epic | [Every choice the SC makes is asked in a modal, not a notification](2026-10-16-choices-in-modals-not-notifications.md) | — | med | backlog |
+| `PL-80` | feature | └ [Check for Updates in a modal, with the updates already ticked](2026-10-16-update-picker-as-a-modal-with-updates-preselected.md) | — | med | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -676,7 +678,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*276 item(s) sit outside the A–G chain.*
+*278 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
