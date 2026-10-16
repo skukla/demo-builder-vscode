@@ -1,5 +1,5 @@
 /**
- * EDS Reset Service — what steps 0 through 11 HAND their collaborators.
+ * EDS Reset Service — what its steps HAND their collaborators.
  *
  * The name migration, the repo reset, the code sync, the permission grant, the
  * config step and the content pipeline, each asserted by the arguments it
@@ -28,6 +28,7 @@ import {
 } from './edsResetService.orchestrationHarness';
 import { mockEnsureDaLiveAuth } from './edsResetService.sharedMocks';
 
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { CodePatchResult } from '@/features/eds/services/patches/codePatchRegistry';
 
 import { lostGrantsMessage } from '@/features/eds/services/configService/lostGrantsMessage';
@@ -99,7 +100,7 @@ describe('executeEdsReset - storefront name migration', () => {
 });
 
 // =============================================================================
-// Steps 1, 4, 5, 7: repo reset, code sync, permissions, config step
+// Steps 1-2: repo reset, then code sync, permissions and the config step
 // =============================================================================
 
 describe('executeEdsReset - repo, code sync and permissions', () => {
@@ -126,11 +127,15 @@ describe('executeEdsReset - repo, code sync and permissions', () => {
         );
         expect(mockPreviewCode).toHaveBeenCalledWith('test-owner', 'test-repo', '/*');
         expect(progress).toContainEqual({
-            step: 4,
+            step: RESET_STEP.publishingCodeAndSettings,
             totalSteps: 11,
             message: 'Publishing the code',
         });
-        expect(progress).toContainEqual({ step: 4, totalSteps: 11, message: 'Code published' });
+        expect(progress).toContainEqual({
+            step: RESET_STEP.publishingCodeAndSettings,
+            totalSteps: 11,
+            message: 'Code published',
+        });
     });
 
     it('carries on past a failed code sync, reporting it as pending', async () => {
@@ -140,7 +145,7 @@ describe('executeEdsReset - repo, code sync and permissions', () => {
 
         expect(result.success).toBe(true);
         expect(progress).toContainEqual({
-            step: 4,
+            step: RESET_STEP.publishingCodeAndSettings,
             totalSteps: 11,
             message: 'Waiting for the publish',
         });
@@ -152,7 +157,7 @@ describe('executeEdsReset - repo, code sync and permissions', () => {
         const { context, progress } = await runReset();
 
         expect(progress).toContainEqual({
-            step: 5,
+            step: RESET_STEP.publishingCodeAndSettings,
             totalSteps: 11,
             message: 'Setting site permissions',
         });
@@ -193,7 +198,7 @@ describe('executeEdsReset - repo, code sync and permissions', () => {
 });
 
 // =============================================================================
-// Steps 8-11: the content pipeline
+// Steps 3-11: the content pipeline
 // =============================================================================
 
 describe('executeEdsReset - content pipeline', () => {
@@ -306,15 +311,17 @@ describe('executeEdsReset - content pipeline', () => {
         expect(result).toStrictEqual({ success: false, error: 'Content pipeline failed' });
     });
 
-    it('reports the session expiry and the resume on step 8 around a DA.live re-auth', async () => {
+    it('reports the session expiry and the resume on the content-copy step around a DA.live re-auth', async () => {
         mockExecuteEdsPipeline
             .mockRejectedValueOnce(new DaLiveAuthError('expired'))
             .mockResolvedValueOnce({ success: true, contentFilesCopied: 3, libraryPaths: [] });
 
         const { progress } = await runReset();
 
-        const stepEight = progress.filter((p) => p.step === 8).map((p) => p.message);
-        expect(stepEight).toStrictEqual(['Sign in to DA.live again', 'Resuming the content copy']);
+        const copying = progress
+            .filter((p) => p.step === RESET_STEP.copyingContent)
+            .map((p) => p.message);
+        expect(copying).toStrictEqual(['Sign in to DA.live again', 'Resuming the content copy']);
     });
 
     it('names the operation in the cancellation error', async () => {
@@ -549,28 +556,32 @@ describe('executeEdsReset - category pages and the catalog menu (EDS-24)', () =>
 });
 
 describe('executeEdsReset - pipeline progress mapping', () => {
-    it.each([
-        ['content-clear', 8],
-        ['content-copy', 8],
-        ['block-library', 9],
-        ['eds-settings', 10],
-        ['cache-purge', 11],
-        ['sheet-publish', 11],
-        ['library-publish', 11],
-        ['leftover-pages', 11],
-        ['page-check', 11],
-        ['catalog-prewarm', 11],
-        ['something-new', 8],
-    ])('maps %s to step %i with the message unchanged', async (operation, step) => {
+    // 'something-new' stands for any operation the map does not name: it falls back
+    // to the content-copy step (`edsResetContentStep.ts`).
+    it.each<[string, keyof typeof RESET_STEP]>([
+        ['content-clear', 'clearingOldContent'],
+        ['content-copy', 'copyingContent'],
+        ['block-library', 'settingUpAuthoring'],
+        ['eds-settings', 'settingUpAuthoring'],
+        ['cache-purge', 'publishingPages'],
+        ['sheet-publish', 'publishingPages'],
+        ['library-publish', 'publishingPages'],
+        ['leftover-pages', 'removingOldPages'],
+        ['page-check', 'checkingCopiedPages'],
+        ['catalog-prewarm', 'warmingProductPages'],
+        ['something-new', 'copyingContent'],
+    ])('maps %s to the %s step with the message unchanged', async (operation, stage) => {
         const { progress } = await runReset();
         progress.length = 0;
 
         pipelineProgressCallback()({ operation, message: 'Working', current: 2, total: 9 });
 
-        expect(progress).toStrictEqual([{ step, totalSteps: 11, message: 'Working' }]);
+        expect(progress).toStrictEqual([
+            { step: RESET_STEP[stage], totalSteps: 11, message: 'Working' },
+        ]);
     });
 
-    it('rewrites content-publish progress as a page count on step 11', async () => {
+    it('rewrites content-publish progress as a page count on the publishing step', async () => {
         const { progress } = await runReset();
         progress.length = 0;
 
@@ -582,7 +593,11 @@ describe('executeEdsReset - pipeline progress mapping', () => {
         });
 
         expect(progress).toStrictEqual([
-            { step: 11, totalSteps: 11, message: 'Publishing to CDN (3/10 pages)' },
+            {
+                step: RESET_STEP.publishingPages,
+                totalSteps: 11,
+                message: 'Publishing to CDN (3/10 pages)',
+            },
         ]);
     });
 
@@ -599,6 +614,8 @@ describe('executeEdsReset - pipeline progress mapping', () => {
             ...counts,
         });
 
-        expect(progress).toStrictEqual([{ step: 11, totalSteps: 11, message: 'Publishing' }]);
+        expect(progress).toStrictEqual([
+            { step: RESET_STEP.publishingPages, totalSteps: 11, message: 'Publishing' },
+        ]);
     });
 });

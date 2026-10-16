@@ -26,6 +26,7 @@ import type { HelixCodePreview } from '../helix/helixCapabilities';
 import { HelixService } from '../helix/helixService';
 import { DaLiveAuthError } from '../types';
 import type { EdsResetParams } from './edsResetParams';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -93,7 +94,7 @@ export async function publishConfigAndRegisterSite(
     // pinning a site admin, which sets `requireAuth: "auto"` and makes Helix
     // admin refuse anything but the DA.live bearer. Without it this 401s and
     // the CDN keeps serving a stale config.json (seen live 2026-08-15).
-    report(6, 'Publishing the settings');
+    report(RESET_STEP.publishingCodeAndSettings, 'Publishing the settings');
     logger.info(`[EdsReset] Publishing config.json to CDN for ${repoOwner}/${repoName}`);
     const makeHelix =
         services?.makeHelix ??
@@ -102,16 +103,16 @@ export async function publishConfigAndRegisterSite(
     try {
         await helixServiceForCode.previewCode(repoOwner, repoName, '/config.json');
         logger.info('[EdsReset] config.json published to CDN');
-        report(6, 'Settings published');
+        report(RESET_STEP.publishingCodeAndSettings, 'Settings published');
     } catch (configError) {
         logger.warn(`[EdsReset] Failed to publish config.json: ${(configError as Error).message}`);
-        report(6, 'Settings publish failed');
+        report(RESET_STEP.publishingCodeAndSettings, 'Settings publish failed');
     }
 
     // Step 7: Update Configuration Service with current content source.
     // Folder mapping is intentionally NOT configured — deprecated by Adobe
     // (see aem.live/developer/byom). CitiSignal handles /products/{sku} via client-side routing.
-    report(7, 'Updating the site config');
+    report(RESET_STEP.publishingCodeAndSettings, 'Updating the site config');
     // Same telegraph as the create path: state access before the write that
     // depends on it, so a reset log explains itself.
     await logConfigAccessState(tokenProvider, { owner: repoOwner, repo: repoName }, logger);
@@ -131,10 +132,10 @@ export async function publishConfigAndRegisterSite(
             tokenProvider,
             logger,
             retryOn403: true,
-            onProgress: (message) => report(7, message),
+            onProgress: (message) => report(RESET_STEP.publishingCodeAndSettings, message),
         });
         if (outcome.lostGrants?.length) {
-            report(7, `⚠️ ${lostGrantsMessage(outcome.lostGrants, 'Site configuration updated')}`);
+            report(RESET_STEP.publishingCodeAndSettings, `⚠️ ${lostGrantsMessage(outcome.lostGrants, 'Site configuration updated')}`);
         }
         const configResult = {
             success: outcome.registered,
@@ -146,7 +147,7 @@ export async function publishConfigAndRegisterSite(
         configWritten = configResult.success;
         if (configResult.success) {
             logger.info('[EdsReset] Configuration Service updated');
-            report(7, 'Site config updated');
+            report(RESET_STEP.publishingCodeAndSettings, 'Site config updated');
         } else if (byomOverlayUrl) {
             // The overlay rides in this same config write. A failure here leaves
             // PDPs resolving against da.live (404). Log-only helper (headless-safe);
@@ -159,7 +160,7 @@ export async function publishConfigAndRegisterSite(
             // GitHub App", the remedy the constant was written to replace). Two
             // remedy texts one line apart is the drift, not the fix for it.
             surfaceOverlayRegistrationFailure(logger, undefined, configResult.statusCode);
-            report(7, `⚠️ ${byomRegistrationFailureMessage(configResult.statusCode)}`);
+            report(RESET_STEP.publishingCodeAndSettings, `⚠️ ${byomRegistrationFailureMessage(configResult.statusCode)}`);
         } else {
             logger.warn(`[EdsReset] Configuration Service update warning: ${configResult.error}`);
         }
@@ -178,7 +179,7 @@ export async function publishConfigAndRegisterSite(
         if (configError instanceof DaLiveAuthError) {
             logger.warn(`[EdsReset] DA.live session expired before the site config write`);
             report(
-                7,
+                RESET_STEP.publishingCodeAndSettings,
                 '⚠️ Your DA.live session expired before the site configuration was written. ' +
                     'The reset will continue — afterwards, sign in and run ' +
                     '"Demo Builder: Repair Site Configuration" to finish it.',
@@ -190,7 +191,7 @@ export async function publishConfigAndRegisterSite(
             // exactly the advice this batch exists to replace — a reset repeats
             // the same write with the same identity.
             surfaceOverlayRegistrationFailure(logger);
-            report(7, `⚠️ ${byomRegistrationFailureMessage()}`);
+            report(RESET_STEP.publishingCodeAndSettings, `⚠️ ${byomRegistrationFailureMessage()}`);
         } else {
             logger.warn(
                 `[EdsReset] Configuration Service update skipped: ${(configError as Error).message}`,

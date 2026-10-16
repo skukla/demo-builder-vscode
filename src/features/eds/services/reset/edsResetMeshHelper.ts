@@ -11,6 +11,7 @@
 import type { EdsResetResult } from './edsResetParams';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { updateMeshState } from '@/features/mesh/services/meshDeployBaseline';
 import { deployMeshCreateOrUpdate } from '@/features/mesh/services/meshRedeploy';
@@ -43,7 +44,7 @@ async function deployMeshAndPersist(
     contentCopied: number,
     deps: MeshRedeployDeps,
 ): Promise<EdsResetResult | null> {
-    report(12, 'Redeploying the mesh');
+    report(RESET_STEP.redeployingMesh, 'Redeploying the mesh');
     context.logger.info(`[EdsReset] Redeploying mesh for ${repoOwner}/${repoName}`);
 
     try {
@@ -55,7 +56,7 @@ async function deployMeshAndPersist(
             meshComponent.path as string,
             deps.commandManager,
             context.logger,
-            (msg, sub) => report(12, sub || msg),
+            (msg, sub) => report(RESET_STEP.redeployingMesh, sub || msg),
         );
 
         if (meshDeployResult.success && meshDeployResult.data?.endpoint) {
@@ -107,7 +108,7 @@ export async function redeployApiMesh(
 
     const authService = deps.authManager;
 
-    report(12, 'Checking Adobe access');
+    report(RESET_STEP.redeployingMesh, 'Checking Adobe access');
     const { ensureProjectAdobeContext } = await import(
         '@/features/authentication/services/ensureProjectAdobeContext'
     );

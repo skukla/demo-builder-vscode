@@ -27,6 +27,7 @@ import {
     resetEdsProjectWithUI,
     vscode,
 } from './edsResetUI.testUtils';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { GitHubAppService } from '@/features/eds/services/github/githubAppService';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -223,8 +224,10 @@ describe('resetEdsProjectWithUI — inside the progress window', () => {
         ]);
 
         const onProgress = mockedReset.mock.calls[0][4]!;
-        onProgress({ step: 3, totalSteps: 11, message: 'Syncing repository' });
-        expect(report).toHaveBeenLastCalledWith({ message: 'Syncing repository (3 of 11)' });
+        onProgress({ step: RESET_STEP.publishingCodeAndSettings, totalSteps: 11, message: 'Publishing the code' });
+        // The notification's one line is the step's own name and position (since
+        // 2026-10-16); the step's passing messages are for the modal's second row.
+        expect(report).toHaveBeenLastCalledWith({ message: 'Publishing code, settings (2 of 11)' });
     });
 
     it('hands the org gate the auth manager, the project and the logger', async () => {

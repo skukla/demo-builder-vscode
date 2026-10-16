@@ -9,6 +9,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import { readCatalogMenuRecord } from '@/features/eds/services/catalogMenu/catalogMenuRecord';
 import { putBackCatalogMenu, takeOutCatalogMenu } from '@/features/eds/services/reset/edsResetCatalogMenu';
 import type { EdsResetParams } from '@/features/eds/services/reset/edsResetParams';
@@ -78,7 +79,7 @@ function params(p: Project): EdsResetParams {
 }
 
 describe('takeOutCatalogMenu', () => {
-    it('removes exactly what the record claims, shows it on step 8, and returns the site for the put-back', async () => {
+    it('removes exactly what the record claims, shows it while clearing old content, and returns the site for the put-back', async () => {
         const p = project();
         p.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!.catalogMenu = {
             pages: [{ path: '/signs', hash: 'stale-hash' }],
@@ -91,7 +92,10 @@ describe('takeOutCatalogMenu', () => {
 
         // The page changed since it was written, so it is the SC's now: left in place.
         expect(pages.get('/signs')).toBe('<body>edited</body>');
-        expect(report).toHaveBeenCalledWith(8, expect.stringContaining('because you edited it'));
+        expect(report).toHaveBeenCalledWith(
+            RESET_STEP.clearingOldContent,
+            expect.stringContaining('because you edited it'),
+        );
         expect(typeof site.hasBlock).toBe('function');
     });
 
@@ -103,7 +107,7 @@ describe('takeOutCatalogMenu', () => {
 });
 
 describe('putBackCatalogMenu', () => {
-    it('re-applies on the site from the take-out and reports on step 11', async () => {
+    it('re-applies on the site from the take-out and reports on the catalog-menu step', async () => {
         const p = project();
         const pages = new Map([['/nav', NAV]]);
         const c = clients(pages, false);

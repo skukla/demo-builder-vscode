@@ -41,6 +41,7 @@ import {
 import { executeEdsReset } from './edsResetService';
 import { resetOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { resetStageLabel } from '@/core/utils/resetStages';
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -110,6 +111,7 @@ export interface EdsResetWithUIOptions {
     /** The published-index probe for the demo's content site; defaults to global fetch. */
     fetchImpl?: typeof fetch;
 }
+
 
 // ==========================================================
 // Main Entry Point
@@ -336,7 +338,8 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
             // front and rides the stage as "(4 of 12)" — the one shape a count
             // is allowed to take (PL-59 wording rules).
             const result = await executeEdsReset(resetParams, context, tokenProvider, options.meshDeps, (p) => {
-                report(p.message, undefined, { index: p.step, total: p.totalSteps });
+                const stage = resetStageLabel(p.step);
+                report(stage ?? p.message, stage ? p.message : undefined, { index: p.step, total: p.totalSteps });
             });
 
             if (!withinEdit) {

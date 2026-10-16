@@ -20,6 +20,7 @@ import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import type { EdsResetParams } from './edsResetParams';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { Logger } from '@/types/logger';
 
 /** The clients reset already holds. */
@@ -63,7 +64,7 @@ export async function takeOutCatalogMenu(
         helix: new HelixService(logger, clients.githubTokenService, clients.tokenProvider),
         github: clients.githubFileOps,
     });
-    say(await removeCatalogMenuStep(params.project, site.pages), 8, logger, report);
+    say(await removeCatalogMenuStep(params.project, site.pages), RESET_STEP.clearingOldContent, logger, report);
     return site;
 }
 
@@ -80,6 +81,6 @@ export async function putBackCatalogMenu(
     report: Report,
 ): Promise<string | undefined> {
     const summary = await applyCatalogMenuStep(params.project, site);
-    say(summary, 11, logger, report);
+    say(summary, RESET_STEP.addingCatalogMenu, logger, report);
     return summary;
 }

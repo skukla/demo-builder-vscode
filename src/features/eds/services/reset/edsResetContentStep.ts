@@ -20,21 +20,22 @@ import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/pa
 import { writeBrokenLinks } from '../storefront/brokenLinksRecord';
 import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import type { EdsResetParams } from './edsResetParams';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Maps EDS pipeline operation names to wizard step numbers for progress reporting. */
 const PIPELINE_STEP_MAP: Record<string, number> = {
-    'content-clear': 8,
-    'content-copy': 8,
-    'block-library': 9,
-    'eds-settings': 10,
-    'cache-purge': 11,
-    'content-publish': 11,
-    'sheet-publish': 11,
-    'library-publish': 11,
-    'leftover-pages': 11,
-    'page-check': 11,
-    'catalog-prewarm': 11,
+    'content-clear': RESET_STEP.clearingOldContent,
+    'content-copy': RESET_STEP.copyingContent,
+    'block-library': RESET_STEP.settingUpAuthoring,
+    'eds-settings': RESET_STEP.settingUpAuthoring,
+    'cache-purge': RESET_STEP.publishingPages,
+    'content-publish': RESET_STEP.publishingPages,
+    'sheet-publish': RESET_STEP.publishingPages,
+    'library-publish': RESET_STEP.publishingPages,
+    'leftover-pages': RESET_STEP.removingOldPages,
+    'page-check': RESET_STEP.checkingCopiedPages,
+    'catalog-prewarm': RESET_STEP.warmingProductPages,
 };
 
 /** Map a pipeline progress event to the wizard step number and format the message. */
@@ -46,7 +47,7 @@ function mapPipelineProgress(
     if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
         message = `Publishing to CDN (${info.current}/${info.total} pages)`;
     }
-    report(PIPELINE_STEP_MAP[info.operation] ?? 8, message);
+    report(PIPELINE_STEP_MAP[info.operation] ?? RESET_STEP.copyingContent, message);
 }
 
 /** What the content pipeline hands back to the reset. */
@@ -170,8 +171,8 @@ export async function runContentPipeline(
         {
             logPrefix: '[EdsReset]',
             operationLabel: 'Reset',
-            onExpired: async () => report(8, 'Sign in to DA.live again'),
-            onBeforeRetry: async () => report(8, 'Resuming the content copy'),
+            onExpired: async () => report(RESET_STEP.copyingContent, 'Sign in to DA.live again'),
+            onBeforeRetry: async () => report(RESET_STEP.copyingContent, 'Resuming the content copy'),
         },
     );
 }

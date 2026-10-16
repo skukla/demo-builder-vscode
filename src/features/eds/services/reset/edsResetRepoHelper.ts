@@ -22,6 +22,7 @@ import { resolveTemplateCommitSha } from '../templateCommitResolver';
 import type { GitHubTreeInput } from '../types';
 import { buildResetFileOverrides } from './edsResetFileOverrides';
 import { type EdsResetParams } from './edsResetParams';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import {
     getBlockLibrarySource,
     getBlockLibraryContentSource,
@@ -95,7 +96,7 @@ async function installWithBlockLibraries(
     report: (step: number, message: string) => void,
 ): Promise<string[]> {
     report(
-        2,
+        RESET_STEP.resettingCode,
         `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}`,
     );
     const blockResult = await installBlockCollections(
@@ -125,7 +126,7 @@ async function installInspectorOnly(
     logger: Logger,
     report: (step: number, message: string) => void,
 ): Promise<void> {
-    report(3, 'Installing the inspector');
+    report(RESET_STEP.resettingCode, 'Installing the inspector');
     const inspectorResult = await installInspectorTagging(
         githubFileOps,
         repoOwner,
@@ -159,7 +160,7 @@ async function reinstallBlockLibraries(
     blockCollectionIds?: string[];
     libraryContentSources: Array<{ org: string; site: string }>;
 }> {
-    report(2, 'Preparing block libraries');
+    report(RESET_STEP.resettingCode, 'Preparing block libraries');
 
     // Generate inspector tree entries (always, for consistency with storefront setup)
     let inspectorEntries: GitHubTreeInput[] = [];
@@ -257,7 +258,7 @@ export async function resetRepoToTemplate(
         codePatchSource,
     } = params;
 
-    report(1, 'Resetting the repository');
+    report(RESET_STEP.resettingCode, 'Resetting the repository');
     context.logger.info(`[EdsReset] Resetting repo using bulk tree operations`);
 
     const fileOverrides = await buildResetFileOverrides(params, githubFileOps, context.logger);
@@ -319,7 +320,7 @@ export async function resetRepoToTemplate(
     context.logger.info(
         `[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`,
     );
-    report(1, `Reset ${resetResult.fileCount} files`);
+    report(RESET_STEP.resettingCode, `Reset ${resetResult.fileCount} files`);
 
     // An added demo's fix pass re-runs on every reset (D23, EDS-13f): a saved package
     // gets its fixes back where they fit, a colleague's storefront with our lineage
@@ -369,7 +370,7 @@ export async function resetRepoToTemplate(
             `[EdsReset] Smart-404 handler not installed: ${smart404.reason ?? 'unknown reason'}`,
         );
         report(
-            1,
+            RESET_STEP.resettingCode,
             '⚠️ Smart-404 handler not installed — product pages may not recover on first visit',
         );
     }

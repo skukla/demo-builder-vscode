@@ -21,7 +21,8 @@ import type { OperationPrompt, OperationProgressPayload } from '@/types/webviewP
 /**
  * Row 3: what to expect, and how long the whole run has been going. Never empty — the
  * row holds its height whether or not either is known, so the modal does not resize
- * as stages come and go.
+ * as stages come and go. The middle dot between the two is deliberate, the one place
+ * this UI joins two phrases with one (owner, 2026-10-16; handbook, progress).
  */
 function helperLine(expectation?: string, total?: string): string {
     const parts = [expectation, total].filter(Boolean);

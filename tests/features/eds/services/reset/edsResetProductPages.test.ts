@@ -10,6 +10,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { EdsResetParams } from '@/features/eds/services/reset/edsResetParams';
 import { takeOutProductPages, withPageSentences } from '@/features/eds/services/reset/edsResetProductPages';
 import type { Project } from '@/types/base';
@@ -105,8 +106,11 @@ describe('takeOutProductPages', () => {
         await run();
 
         expect(report.mock.calls).toStrictEqual([
-            [8, 'Removing the old product pages'],
-            [8, 'Removed 1 product page from skukla/kukla-justrite, live and preview.'],
+            [RESET_STEP.clearingOldContent, 'Removing the old product pages'],
+            [
+                RESET_STEP.clearingOldContent,
+                'Removed 1 product page from skukla/kukla-justrite, live and preview.',
+            ],
         ]);
     });
 

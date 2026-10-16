@@ -29,6 +29,7 @@ import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import { removeProductPages, type ProductPageHelix } from '../storefront/productPageRemoval';
 import { productPageRemovalDepsFor } from '../storefront/projectProductPages';
 import type { EdsResetParams } from './edsResetParams';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 
@@ -59,7 +60,7 @@ export async function takeOutProductPages(
 ): Promise<string | undefined> {
     const { logger, stateManager } = context;
     const { repoOwner, repoName, daLiveOrg, daLiveSite, project } = params;
-    report(8, 'Removing the old product pages');
+    report(RESET_STEP.clearingOldContent, 'Removing the old product pages');
     const result = await removeProductPages(
         { repoOwner, repoName },
         productPageRemovalDepsFor({
@@ -73,7 +74,7 @@ export async function takeOutProductPages(
     );
     if (result.status === 'nothing') return undefined;
     logger.info(`[EdsReset] Product pages: ${result.summary}`);
-    report(8, result.summary);
+    report(RESET_STEP.clearingOldContent, result.summary);
     return result.summary;
 }
 

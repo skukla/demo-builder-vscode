@@ -1,6 +1,6 @@
 /**
- * edsResetConfigStep — reset steps 6–7, where most of the reset's error
- * nuance lives.
+ * edsResetConfigStep — the settings half of reset step 2 (publishing code and
+ * settings), where most of the reset's error nuance lives.
  *
  * WRITTEN 2026-08-28 as phase-2 of the ADR-015 convergence. The module had NO
  * test despite its own docblock saying "all of it is load-bearing", and its
@@ -12,7 +12,7 @@
  *     were dead
  *  2. the tokenProvider reaches HelixService — without it the CDN keeps
  *     serving a stale config.json (401, seen live 2026-08-15)
- *  3. a config.json publish failure is NON-fatal; step 7 still runs
+ *  3. a config.json publish failure is NON-fatal; the registration still runs
  *  4. registration goes through `registerSiteConfig` WITH the tokenProvider
  *     and retryOn403 — that call carries the publish-key re-mint a reset used
  *     to destroy
@@ -69,6 +69,7 @@ jest.mock('@/features/eds/services/configService/lostGrantsMessage', () => ({
 jest.mock('@/features/eds/services/configService/siteConfigRegistrar', () => ({
     registerSiteConfig: (...a: unknown[]) => mockRegisterSiteConfig(...a),
 }));
+import { RESET_STEP } from '@/core/utils/resetStages';
 import { publishConfigAndRegisterSite } from '@/features/eds/services/reset/edsResetConfigStep';
 import type { ConfigStepServices } from '@/features/eds/services/reset/edsResetConfigStep';
 import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOperations';
@@ -76,6 +77,9 @@ import type { GitHubTokenService } from '@/features/eds/services/github/githubTo
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+
+/** Settings publish and site registration both report on the code-and-settings step. */
+const CODE_AND_SETTINGS = RESET_STEP.publishingCodeAndSettings;
 
 const PARAMS = {
     repoOwner: 'skukla',
@@ -175,19 +179,23 @@ describe('publishConfigAndRegisterSite — the happy path', () => {
         );
     });
 
-    it('reports the publish and the registration on the progress channel, in step order', async () => {
+    it('reports the publish and the registration on the progress channel, publish first', async () => {
         const report = jest.fn();
 
         await run({}, report);
 
-        expect(report).toHaveBeenCalledWith(6, 'Settings published');
-        expect(report).toHaveBeenCalledWith(7, 'Site config updated');
+        expect(report).toHaveBeenCalledWith(CODE_AND_SETTINGS, 'Settings published');
+        expect(report).toHaveBeenCalledWith(CODE_AND_SETTINGS, 'Site config updated');
+        const messages = report.mock.calls.map(([, message]) => message);
+        expect(messages.indexOf('Settings published')).toBeLessThan(
+            messages.indexOf('Site config updated'),
+        );
         // A success is NOT also a BYOM failure: the overlay advice stays silent.
         expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
         expect(mockLostGrantsMessage).not.toHaveBeenCalled();
     });
 
-    it('relays the registrar’s progress onto step 7 of the progress channel', async () => {
+    it('relays the registrar’s progress onto the code-and-settings step', async () => {
         const report = jest.fn();
 
         await run({}, report);
@@ -196,7 +204,7 @@ describe('publishConfigAndRegisterSite — the happy path', () => {
             onProgress: (message: string) => void;
         };
         onProgress('Waiting for admin role to propagate...');
-        expect(report).toHaveBeenCalledWith(7, 'Waiting for admin role to propagate...');
+        expect(report).toHaveBeenCalledWith(CODE_AND_SETTINGS, 'Waiting for admin role to propagate...');
     });
 
     it('telegraphs config access for THIS repo before the write', async () => {
@@ -221,20 +229,20 @@ describe('publishConfigAndRegisterSite — the happy path', () => {
 
         await run({}, report);
 
-        expect(report).toHaveBeenCalledWith(7, expect.stringContaining('lost: admin'));
+        expect(report).toHaveBeenCalledWith(CODE_AND_SETTINGS, expect.stringContaining('lost: admin'));
     });
 });
 
 describe('publishConfigAndRegisterSite — the failure nuances', () => {
-    it('a config.json publish failure is NON-fatal: step 7 still runs', async () => {
+    it('a config.json publish failure is NON-fatal: the registration still runs', async () => {
         mockPreviewCode.mockRejectedValue(new Error('helix 500'));
         const report = jest.fn();
 
         await expect(run({}, report)).resolves.toEqual({ configWritten: true });
         expect(mockRegisterSiteConfig).toHaveBeenCalled();
         // The SC is told the publish failed and that the reset carries on.
-        expect(report).toHaveBeenCalledWith(6, 'Settings publish failed');
-        expect(report).not.toHaveBeenCalledWith(6, 'Settings published');
+        expect(report).toHaveBeenCalledWith(CODE_AND_SETTINGS, 'Settings publish failed');
+        expect(report).not.toHaveBeenCalledWith(CODE_AND_SETTINGS, 'Settings published');
     });
 
     it('a failed registration WITHOUT an overlay warns and stays silent about BYOM', async () => {
@@ -248,7 +256,7 @@ describe('publishConfigAndRegisterSite — the failure nuances', () => {
 
         expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
         expect(mockByomFailureMessage).not.toHaveBeenCalled();
-        expect(report).not.toHaveBeenCalledWith(7, 'Site config updated');
+        expect(report).not.toHaveBeenCalledWith(CODE_AND_SETTINGS, 'Site config updated');
         // The one thing this branch does is warn — once, for the registration.
         expect(logger.warn).toHaveBeenCalledTimes(1);
     });
@@ -266,7 +274,7 @@ describe('publishConfigAndRegisterSite — the failure nuances', () => {
         await run({}, report);
 
         expect(mockSurfaceOverlayFailure).toHaveBeenCalledWith(expect.anything(), undefined, 403);
-        expect(report).toHaveBeenCalledWith(7, expect.stringContaining('byom advice'));
+        expect(report).toHaveBeenCalledWith(CODE_AND_SETTINGS, expect.stringContaining('byom advice'));
     });
 
     it('an expired DA.live session does NOT rethrow, and does NOT take the BYOM branch', async () => {
@@ -277,7 +285,7 @@ describe('publishConfigAndRegisterSite — the failure nuances', () => {
         // content came back — a half-reset storefront.
         await expect(run({}, report)).resolves.toEqual({ configWritten: false });
         expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
-        expect(report).toHaveBeenCalledWith(7, expect.stringContaining('DA.live session expired'));
+        expect(report).toHaveBeenCalledWith(CODE_AND_SETTINGS, expect.stringContaining('DA.live session expired'));
     });
 
     it('a non-auth throw with an overlay still surfaces the advice and reports false', async () => {
@@ -288,7 +296,7 @@ describe('publishConfigAndRegisterSite — the failure nuances', () => {
         // No status code: the throw carried none, and the advice must not invent one.
         expect(mockSurfaceOverlayFailure).toHaveBeenCalledWith(expect.anything());
         expect(mockByomFailureMessage).toHaveBeenCalledWith();
-        expect(report).toHaveBeenCalledWith(7, '⚠️ byom advice');
+        expect(report).toHaveBeenCalledWith(CODE_AND_SETTINGS, '⚠️ byom advice');
     });
 
     it('a non-auth throw WITHOUT an overlay warns, stays silent about BYOM, and reports false', async () => {
@@ -302,7 +310,7 @@ describe('publishConfigAndRegisterSite — the failure nuances', () => {
 
         expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
         expect(mockByomFailureMessage).not.toHaveBeenCalled();
-        expect(report).not.toHaveBeenCalledWith(7, expect.stringContaining('⚠️'));
+        expect(report).not.toHaveBeenCalledWith(CODE_AND_SETTINGS, expect.stringContaining('⚠️'));
         expect(logger.warn).toHaveBeenCalledTimes(1);
     });
 

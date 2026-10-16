@@ -472,6 +472,15 @@ meant.
 > table: a palette command's own `progress.report` messages follow it too (owner,
 > 2026-09-19).
 >
+> The progress modal says the same thing on three lines under the title: the STEP (the
+> stage name, with "(n of N)" when the total is known), what that step is doing right now
+> (its message, counts included), and the step's expectation with the run's total clock
+> ("Usually about a minute · 3 minutes, 43 seconds"). A step is one job the SC can name;
+> the messages of its parts go on the second line, never in the step's place (owner,
+> 2026-10-16, after a reset showed nine different jobs as nine stages). The middle dot
+> between expectation and clock is the one place this UI joins two phrases with a dot,
+> kept deliberately (owner, 2026-10-16).
+>
 > 16 titles and 40 messages predate the rule and are ledgered; they are reworded slice
 > by slice in `.rptc/plans/operation-progress/extension-wide.md`. Stage names are held
 > separately by `operationStages.test.ts`. Enforced by

@@ -13,6 +13,7 @@ import { updateStorefrontState } from '../storefront/storefrontStalenessDetector
 import { redeployApiMesh, type MeshRedeployDeps } from './edsResetMeshHelper';
 import type { EdsResetParams, EdsResetResult } from './edsResetParams';
 import { COMPONENT_IDS } from '@/core/constants';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -62,13 +63,13 @@ export async function finalizeReset(
     const { repoOwner, repoName, project, verifyCdn = false, redeployMesh = false } = params;
 
     if (verifyCdn) {
-        report(11, 'Checking the settings');
+        report(RESET_STEP.checkingSettings, 'Checking the settings');
         const verification = await verifyCdnResources(repoOwner, repoName, context.logger);
         if (verification.configVerified) {
-            report(11, 'Settings checked');
+            report(RESET_STEP.checkingSettings, 'Settings checked');
             context.logger.info('[EdsReset] config.json verified on CDN');
         } else {
-            report(11, 'Waiting for the settings');
+            report(RESET_STEP.checkingSettings, 'Waiting for the settings');
             context.logger.warn(
                 '[EdsReset] config.json CDN verification timed out - may need more time to propagate',
             );

@@ -19,6 +19,7 @@
  * Correct them from those logs as more runs are read.
  */
 
+import { RESET_STAGES } from './resetStages';
 import { STOREFRONT_STAGES } from './storefrontStages';
 
 export interface OperationStage {
@@ -190,6 +191,7 @@ export const OPERATION_STAGES = {
     },
     // The storefront's stages (republish, and the pages after a store change).
     ...STOREFRONT_STAGES,
+    ...RESET_STAGES,
     removingWorkspace: {
         label: 'Removing the workspace',
         expectation: 'Up to a couple of minutes',

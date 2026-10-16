@@ -47,6 +47,7 @@ import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import type { EdsResetParams, EdsResetProgress, EdsResetResult } from './edsResetParams';
 import { takeOutProductPages, withLeftoverPages, withPageSentences } from './edsResetProductPages';
 import { resetRepoToTemplate } from './edsResetRepoHelper';
+import { RESET_BASE_STEPS } from '@/core/utils/resetStages';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -93,7 +94,7 @@ export async function executeEdsReset(
 ): Promise<EdsResetResult> {
     const { redeployMesh = false } = params;
 
-    const baseSteps = 11;
+    const baseSteps = RESET_BASE_STEPS;
     const totalSteps = redeployMesh ? baseSteps + 1 : baseSteps;
     const report = (step: number, message: string) => {
         onProgress?.({ step, totalSteps, message });

@@ -17,6 +17,7 @@ import {
     vscode,
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -140,6 +141,39 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
             ['Checking requirements', 'The Adobe organization'],
             ['Checking requirements', 'The GitHub app on your repo'],
         ]);
+    });
+
+    // Found on the 2026-10-16 release walk: every message from inside a step was shown
+    // AS the stage, with the step's position glued on, so "Publishing block library
+    // (11 of 11)" read as eleven of eleven library items. A step's stage is its own
+    // name; what it is doing right now is the line under it.
+    it("shows a step's own name as the stage and its current work as the line under it", async () => {
+        mockedReset.mockImplementation(async (_params, _context, _tokens, _mesh, onProgress) => {
+            onProgress?.({
+                step: RESET_STEP.publishingPages,
+                totalSteps: 11,
+                message: 'Publishing block library',
+            });
+            onProgress?.({ step: RESET_STEP.resettingCode, totalSteps: 11, message: 'Reset 3448 files' });
+            return { success: true };
+        });
+
+        await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project: createProject(),
+            context: createContext(),
+            progress: 'modal',
+        });
+
+        expect(mockReport).toHaveBeenCalledWith('Publishing the pages', 'Publishing block library', {
+            index: RESET_STEP.publishingPages,
+            total: 11,
+        });
+        expect(mockReport).toHaveBeenCalledWith('Resetting the code', 'Reset 3448 files', {
+            index: RESET_STEP.resettingCode,
+            total: 11,
+        });
     });
 
     it('raises no failure toast in a modal, which already shows the reason', async () => {

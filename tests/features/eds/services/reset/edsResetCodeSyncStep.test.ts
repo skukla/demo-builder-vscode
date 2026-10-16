@@ -1,6 +1,7 @@
 /**
- * Reset steps 4-5, driven directly: publish the code, then grant the signed-in
- * user on the DA.live site.
+ * Reset step 2 (publishing code and settings), its code-and-permissions half,
+ * driven directly: publish the code, then grant the signed-in user on the DA.live
+ * site. The settings half is `edsResetConfigStep.test.ts`.
  *
  * The same behaviour is also pinned through `executeEdsReset` in
  * `edsResetService-orchestration.test.ts`; this suite is the step's own, so a
@@ -23,6 +24,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import {
     configureDaLivePermissions,
     getDaLiveAuthService,
@@ -60,7 +62,7 @@ beforeEach(() => {
     mockGetUserEmail.mockResolvedValue('sc@example.com');
 });
 
-describe('syncCodeAndPermissions — step 4, the code', () => {
+describe('syncCodeAndPermissions — the code', () => {
     it('previews the whole repo through a Helix service built on the DA.live token provider', async () => {
         const { context } = await run();
 
@@ -68,31 +70,31 @@ describe('syncCodeAndPermissions — step 4, the code', () => {
         expect(mockPreviewCode).toHaveBeenCalledWith('acme', 'storefront', '/*');
     });
 
-    it('reports the publish, then that it landed, then step 5', async () => {
+    it('reports the publish, then that it landed, then the permissions, all on one step', async () => {
         const { steps } = await run();
 
         expect(steps).toStrictEqual([
-            [4, 'Publishing the code'],
-            [4, 'Code published'],
-            [5, 'Setting site permissions'],
+            [RESET_STEP.publishingCodeAndSettings, 'Publishing the code'],
+            [RESET_STEP.publishingCodeAndSettings, 'Code published'],
+            [RESET_STEP.publishingCodeAndSettings, 'Setting site permissions'],
         ]);
     });
 
-    it('carries on to step 5 past a failed code sync, reporting it as pending', async () => {
+    it('carries on to the permissions past a failed code sync, reporting it as pending', async () => {
         mockPreviewCode.mockRejectedValue(new Error('helix down'));
 
         const { steps } = await run();
 
         expect(steps).toStrictEqual([
-            [4, 'Publishing the code'],
-            [4, 'Waiting for the publish'],
-            [5, 'Setting site permissions'],
+            [RESET_STEP.publishingCodeAndSettings, 'Publishing the code'],
+            [RESET_STEP.publishingCodeAndSettings, 'Waiting for the publish'],
+            [RESET_STEP.publishingCodeAndSettings, 'Setting site permissions'],
         ]);
         expect(configureDaLivePermissions).toHaveBeenCalledTimes(1);
     });
 });
 
-describe('syncCodeAndPermissions — step 5, the permissions', () => {
+describe('syncCodeAndPermissions — the permissions', () => {
     it('grants the signed-in user on the DA.live org and site', async () => {
         const { context } = await run();
 

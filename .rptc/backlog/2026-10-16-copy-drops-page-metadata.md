@@ -36,8 +36,10 @@ responses (`tests/fixtures/eds/page-metadata/README.md` names each source).
 
 ## Still open
 
-- Prove it on a real copy: after the next Reset, `/customer/account` should carry
-  template "My Account, Columns" in DA.live and in its served head.
+- ~~Prove it on a real copy~~ Proven 2026-10-16 (Reset of the scratch storefront on
+  build `df4d52519+`): DA.live's `/customer/account` carries the metadata block (Title,
+  Template "My Account, Columns", Robots), and the served head of account, orders,
+  cart, checkout and search matches Adobe's live pages exactly.
 - If it does, test whether the `account-page-column-layout` patch can retire.
 - The home page of the four commerce sources carries Adobe's
   `google-site-verification` value onto the SC's copy (authored on that page, so kept).

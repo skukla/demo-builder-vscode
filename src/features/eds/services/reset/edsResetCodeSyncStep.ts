@@ -13,6 +13,7 @@ import type { TokenProvider } from '../daLive/daLiveOrgOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import type { EdsResetParams } from './edsResetParams';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -27,7 +28,7 @@ export async function syncCodeAndPermissions(
 ): Promise<void> {
     const { repoOwner, repoName, daLiveOrg, daLiveSite } = params;
     // Step 4: Sync code to CDN
-    report(4, 'Publishing the code');
+    report(RESET_STEP.publishingCodeAndSettings, 'Publishing the code');
     // tokenProvider required: DA.live auth headers needed for unpublish during bulk sync
     const helixServiceForCodeSync = new HelixService(
         context.logger,
@@ -37,16 +38,16 @@ export async function syncCodeAndPermissions(
     try {
         await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
         context.logger.info('[EdsReset] Code synced to CDN');
-        report(4, 'Code published');
+        report(RESET_STEP.publishingCodeAndSettings, 'Code published');
     } catch (codeSyncError) {
         context.logger.warn(
             `[EdsReset] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`,
         );
-        report(4, 'Waiting for the publish');
+        report(RESET_STEP.publishingCodeAndSettings, 'Waiting for the publish');
     }
 
     // Step 5: Configure site permissions
-    report(5, 'Setting site permissions');
+    report(RESET_STEP.publishingCodeAndSettings, 'Setting site permissions');
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const userEmail = await daLiveAuthService.getUserEmail();
     if (userEmail) {
