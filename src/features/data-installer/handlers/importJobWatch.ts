@@ -17,10 +17,12 @@
 import type { DataInstallerWriteClient, ImportRequest } from '../services/dataInstallerWriteClient';
 import { watchImportJob } from '../services/importJobRunner';
 import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
+import { progressLabel, progressStep, summarizeProgress } from '../ui/importProgress';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import { pushOperationProgress } from '@/core/vscode/operationProgress';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -29,21 +31,19 @@ import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 export const JOB_KEY = 'dataInstaller.import.current';
 
 /**
- * The stage line a datapack job shows on the SHARED progress channel: the verb,
- * and how far through the types it is. The modal shows each type; a notification
- * has room for one line (PL-59 wording).
+ * What a datapack job shows on the SHARED progress channel, the notification the
+ * modal hands it to: the stage table's step, as creation names it, and the types
+ * finished and in flight on the line under it, as the modal words them (progress
+ * vocabulary slice 5, owner 2026-10-16). It was "Importing the sample data (3 of 14)":
+ * a count of types shown as the step's position, under a name creation did not use.
  */
 function datapackStage(
-    operation: ImportJobRecord['operation'],
+    record: ImportJobRecord,
     perType: ImportJobRecord['perType'],
-): { stage: string; position?: { index: number; total: number } } {
-    const total = Object.keys(perType ?? {}).length;
-    // Entries are the bare status strings the runner reports. This read
-    // `.status` off each one until 2026-10-08, so `done` was always 0 and the
-    // notification said "1 of N" for the whole job.
-    const done = Object.values(perType ?? {}).filter((entry) => entry === 'success').length;
-    const stage = operation === 'reset' ? 'Removing the sample data' : 'Importing the sample data';
-    return total > 0 ? { stage, position: { index: Math.max(1, done), total } } : { stage };
+): { stage: string; step: string; expectation?: string } {
+    const stage = progressStep(record.operation === 'reset' ? 'reset' : 'import');
+    const step = progressLabel(summarizeProgress(perType ?? {}, record.dataTypes)) ?? detailFor(stage) ?? '';
+    return { stage, step, expectation: expectationFor(stage) };
 }
 
 /**
@@ -97,7 +97,7 @@ async function watchAndRecord(
                 void pushOperationProgress({
                     id: DATAPACK_OPERATION_ID,
                     state: 'running',
-                    ...datapackStage(record.operation, perType),
+                    ...datapackStage(record, perType),
                 });
             },
         });

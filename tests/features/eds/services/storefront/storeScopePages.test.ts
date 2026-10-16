@@ -225,7 +225,9 @@ describe('replaceStoreScopePages', () => {
     // Named as the same jobs are everywhere else (progress vocabulary slice 3, owner
     // 2026-10-16): the category pages ARE the catalog menu, and publishing a page per
     // product is the warm-up Reset and Republish already call "Warming product pages".
-    it('reports one stage per step, in order, with the product pages counted', async () => {
+    // A count is never a position (progress vocabulary slice 5, owner 2026-10-16):
+    // "(1 of 39)" on line 1 read as the run's first of 39 steps. Counts go on line 2.
+    it('reports one stage per step, in order, with the product pages counted on line 2', async () => {
         const p = project();
         const { deps } = await setUp(p);
         const report = jest.fn();
@@ -238,14 +240,10 @@ describe('replaceStoreScopePages', () => {
             OPERATION_STAGES.updatingCatalogMenu.label,
             OPERATION_STAGES.warmingProductPages.label,
         ]);
-        expect(report).toHaveBeenCalledWith(
-            OPERATION_STAGES.removingProductPages.label,
-            "Removing the old store's product pages (30)",
-        );
-        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.warmingProductPages.label, 'Warming product pages: 1 of 39 pages', {
-            index: 1,
-            total: 39,
-        });
+        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.removingProductPages.label, '30 pages');
+        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.warmingProductPages.label, 'Warming product pages: 1 of 39 pages');
+        const positions = report.mock.calls.filter((call) => call.length > 2 && call[2] !== undefined);
+        expect(positions).toStrictEqual([]);
     });
 
 });

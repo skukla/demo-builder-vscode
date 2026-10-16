@@ -98,6 +98,21 @@ export function reportPhase(message: string): void {
 }
 
 /**
+ * A sink that reports to the sinks in scope where it is made, wherever it is called
+ * from later. For a scope that takes the lines from deeper in (`withPhaseSinks` replaces
+ * the sinks around it) and still has to tell the agent listening outside it: creation's
+ * integration deploys, 2026-10-16.
+ *
+ * @returns the sink; a no-op when made outside any scope
+ */
+export function phaseSinkHere(): PhaseSink {
+    const sinks = storage.getStore() ?? [];
+    return (message) => {
+        void storage.run(sinks, async () => reportPhase(message));
+    };
+}
+
+/**
  * `reportPhase` as an `onProgress` callback, for the many services that already
  * accept one (`(message, subMessage?) => void`). The sub-message is dropped: it
  * is detail for a progress BAR, and a chat line wants one clause.

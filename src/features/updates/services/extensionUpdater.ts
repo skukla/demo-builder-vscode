@@ -2,8 +2,15 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { numberedSteps } from '@/core/utils/numberedSteps';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { withProgressRegister } from '@/core/vscode/progressRegister';
 import type { Logger } from '@/types/logger';
+
+/** An extension update's steps, in order. */
+const STEPS = [OPERATION_STAGES.downloadingUpdate.label, OPERATION_STAGES.installingUpdate.label];
 
 export class ExtensionUpdater {
     private logger: Logger;
@@ -18,17 +25,14 @@ export class ExtensionUpdater {
     async updateExtension(downloadUrl: string, newVersion: string): Promise<void> {
         this.logger.debug(`[Updates] Starting extension update to v${newVersion}`);
 
-        await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: `Updating Demo Builder to v${newVersion}`,
-            cancellable: false,
-        }, async (progress) => {
-            // Download VSIX
-            progress.report({ message: 'Downloading update' });
+        // Through the shared register, so an agent hears the steps too; two steps from
+        // the stage table, numbered.
+        await withProgressRegister({ title: `Updating Demo Builder to v${newVersion}` }, async (narrate) => {
+            const step = numberedSteps(STEPS, (stage, _step, at) => narrate(stageLine(stage, at)));
+            step(OPERATION_STAGES.downloadingUpdate.label);
             const vsixPath = await this.downloadVsix(downloadUrl, newVersion);
-      
-            // Install via VS Code command
-            progress.report({ message: 'Installing' });
+
+            step(OPERATION_STAGES.installingUpdate.label);
             this.logger.debug(`[Updates] Installing extension from ${vsixPath}`);
             await vscode.commands.executeCommand(
                 'workbench.extensions.installExtension',

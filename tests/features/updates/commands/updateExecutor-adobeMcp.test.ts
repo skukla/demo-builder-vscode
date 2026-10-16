@@ -13,6 +13,7 @@
 
 import { captureProgress } from './updateExecutor.testUtils';
 import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import {
     performAdobeMcpUpdates,
     type UpdateContext,
@@ -69,27 +70,28 @@ describe('performAdobeMcpUpdates', () => {
         report = captureProgress();
     });
 
-    it('shows a non-cancellable notification titled Updating Adobe MCP', async () => {
+    it('shows a non-cancellable notification titled Applying updates', async () => {
         await performAdobeMcpUpdates([makeItem()], makeCtx());
 
         expect(withProgressMock).toHaveBeenCalledWith(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Updating Adobe MCP',
+                title: 'Applying updates',
                 cancellable: false,
             },
             expect.any(Function),
         );
     });
 
-    it('reports package, version and project with an even share of the bar per project', async () => {
+    // The step, never the package and project in its place (progress vocabulary slice 7).
+    it('reports the step with an even share of the bar per project', async () => {
         await performAdobeMcpUpdates(
             [makeItem({ name: 'a', path: '/p/a' }), makeItem({ name: 'b', path: '/p/b' })],
             makeCtx(),
         );
 
-        expect(report).toHaveBeenNthCalledWith(1, { message: `${PKG} → 2.0.0 in a`, increment: 50 });
-        expect(report).toHaveBeenNthCalledWith(2, { message: `${PKG} → 2.0.0 in b`, increment: 50 });
+        expect(report).toHaveBeenNthCalledWith(1, { message: S.updatingAiTools.label, increment: 50 });
+        expect(report).toHaveBeenNthCalledWith(2, { message: S.updatingAiTools.label, increment: 50 });
     });
 
     it('a running project whose demo the user keeps is dropped, and alone it means no progress bar', async () => {
@@ -115,7 +117,7 @@ describe('performAdobeMcpUpdates', () => {
 
         expect(coreMock).toHaveBeenCalledTimes(1);
         expect(coreMock).toHaveBeenCalledWith(idle.project, PKG, '2.0.0', ctx);
-        expect(report).toHaveBeenCalledWith({ message: `${PKG} → 2.0.0 in b`, increment: 100 });
+        expect(report).toHaveBeenCalledWith({ message: S.updatingAiTools.label, increment: 100 });
     });
 
     it('counts successes and failures separately in the summary', async () => {

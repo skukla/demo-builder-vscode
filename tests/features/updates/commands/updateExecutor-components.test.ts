@@ -10,7 +10,9 @@
  */
 
 import { captureProgress, makeUpdateContext } from './updateExecutor.testUtils';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import * as vscode from 'vscode';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import {
     performAddonUpdates,
     performComponentUpdates,
@@ -89,14 +91,13 @@ describe('performComponentUpdates', () => {
         expect(updateComponent).toHaveBeenCalledTimes(2);
         expect(ctx.stateManager.saveProject).toHaveBeenCalledTimes(1);
         expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
-        expect(report).toHaveBeenNthCalledWith(1, { message: 'api-mesh in demo', increment: 50 });
-        expect(report).toHaveBeenNthCalledWith(2, {
-            message: 'eds-storefront in demo',
-            increment: 50,
-        });
+        // The step, never the item: "api-mesh in demo" is not a step (progress vocabulary
+        // slice 7, owner 2026-10-16). The bar still moves a share per component.
+        expect(report).toHaveBeenNthCalledWith(1, { message: S.updatingComponents.label, increment: 50 });
+        expect(report).toHaveBeenNthCalledWith(2, { message: S.updatingComponents.label, increment: 50 });
     });
 
-    it('shows a non-cancellable notification titled Updating Components', async () => {
+    it('shows a non-cancellable notification titled Applying updates', async () => {
         const ctx = makeUpdateContext();
 
         await performComponentUpdates([makeItem(createMockProject())], ctx);
@@ -104,11 +105,24 @@ describe('performComponentUpdates', () => {
         expect(withProgressMock).toHaveBeenCalledWith(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Updating Components',
+                title: 'Applying updates',
                 cancellable: false,
             },
             expect.any(Function),
         );
+    });
+
+    // Under an agent its notifier narrates: no second notification, and the agent
+    // hears the step.
+    it('tells an agent the step, and opens no notification of its own under one', async () => {
+        const heard: string[] = [];
+
+        await withPhaseSinks([(line) => heard.push(line)], () =>
+            performComponentUpdates([makeItem(createMockProject())], makeUpdateContext()),
+        );
+
+        expect(heard).toStrictEqual([S.updatingComponents.label]);
+        expect(withProgressMock).not.toHaveBeenCalled();
     });
 
     it('a selection without release info is skipped — but its project is still saved', async () => {
@@ -149,7 +163,7 @@ describe('performComponentUpdates', () => {
 
         expect(updateComponent).toHaveBeenCalledTimes(1);
         expect(updateComponent).toHaveBeenCalledWith(idle, 'api-mesh', RELEASE.downloadUrl, '2.0.0');
-        expect(report).toHaveBeenCalledWith({ message: 'api-mesh in b', increment: 100 });
+        expect(report).toHaveBeenCalledWith({ message: S.updatingComponents.label, increment: 100 });
     });
 
     it('all succeed: no warning summary', async () => {

@@ -15068,18 +15068,6 @@
             "source": "EDS-8 reset split, edsResetPreflight first focus run"
         },
         {
-            "module": "src/features/eds/services/reset/edsResetSampleData.ts",
-            "anchors": [
-                "sd.processing.length > 0 ? sd.processing.join(', ') : undefined,"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The two survivors make the empty case pass `''` (an empty join) where the code passes undefined. Both surfaces read those the same: a screen's modal shows `step || detailFor(stage)`, so an empty step falls back to the stage's own detail exactly as an absent one does, and a notification drops the step entirely. The non-empty case, the join separator and the position are pinned by the modal-narration test in edsResetSampleData-removalReporting.",
-            "decision": "none \u2014 undefined says there is no step; the mutant only changes how nothing is spelled",
-            "recorded": "2026-10-08",
-            "source": "EDS-8 reset split, edsResetSampleData first focus run"
-        },
-        {
             "module": "src/features/eds/services/configGenerator.ts",
             "anchors": [
                 "const label = `package: ${resolved?.package.id ?? params.selectedPackage}`;"
@@ -15719,18 +15707,6 @@
             "decision": "none \u2014 kept for the same reason as its four neighbours: it states intent and keeps the field list reading consistently",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-05, 2026-10-10"
-        },
-        {
-            "module": "src/features/project-creation/handlers/executorAppBuilderPhase.ts",
-            "anchors": [
-                "if (current) show(current.stage, message, current.name);"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing the guard true makes a plain line that arrives before any stage read `current.stage` off undefined, which throws. The line reaches this sink only through reportPhase (agentPhaseChannel.ts), which calls every sink inside a try/catch and discards what it throws, so the throw never leaves the channel and the progress tracker is not called either way: the guarded return and the swallowed throw produce the same screen. Verified by planting the mutation on 2026-10-10: all 13 tests in executorAppBuilderPhase-integrations still passed, including 'drops a plain line that arrives before any stage has started', which drives exactly that case and asserts the tracker's full call list.",
-            "decision": "none \u2014 the guard states the intent and the compiler needs it; the channel's catch makes its absence unobservable",
-            "recorded": "2026-10-10",
-            "source": "PL-70 batch MUT-07"
         },
         {
             "module": "src/features/ai/server/adobeResourceTools.ts",

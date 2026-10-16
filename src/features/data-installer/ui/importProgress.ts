@@ -13,8 +13,10 @@
  * @module features/data-installer/ui/importProgress
  */
 
+import { typesLine } from '../services/datapackTypesLine';
 import type { DataTypeStatus } from '../types';
 import { dataTypeLabel } from './dataTypeLabel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 /** A type the service has finished with, whether or not it went well. */
 const TERMINAL: readonly DataTypeStatus[] = ['success', 'error'];
@@ -24,8 +26,8 @@ export interface ImportProgress {
     done: number;
     /** How many the REQUEST named. */
     total: number;
-    /** The type being worked on right now, when the service names one. */
-    current?: string;
+    /** The types being worked on right now, in request order (often one). */
+    processing: string[];
     /** 0–100, never beyond. */
     percent: number;
 }
@@ -45,39 +47,42 @@ export function summarizeProgress(
     const done = requestedTypes.filter((type) => TERMINAL.includes(perType[type])).length;
     // Scanned in REQUEST order, not map order: object key order is an accident
     // of how the service serialised its response, and the line would jitter.
-    const current = requestedTypes.find((type) => perType[type] === 'processing');
+    const processing = requestedTypes.filter((type) => perType[type] === 'processing');
 
     return {
         done,
         total,
-        ...(current ? { current } : {}),
+        processing,
         percent: total === 0 ? 0 : Math.min(100, Math.round((done / total) * 100)),
     };
 }
 
 /**
- * The spinner's subMessage, or nothing when there is nothing honest to say.
+ * The step the job is, from the stage table: the same name creation and the
+ * notification it hands over to show.
+ *
+ * "Removing", not "Resetting": the button that starts a removal says "Remove data",
+ * and a project RESET restores the pack. The `reset` operation id is the wire, not
+ * the wording.
+ */
+export function progressStep(operation: 'import' | 'reset' = 'import'): string {
+    return operation === 'reset'
+        ? OPERATION_STAGES.removingDatapack.label
+        : OPERATION_STAGES.installingDatapack.label;
+}
+
+/**
+ * The line under the step, or nothing when there is nothing honest to say: the types
+ * finished and the ones in flight ("5 of 14 data types: Customer groups"), worded as
+ * every datapack surface words it (`datapackTypesLine`).
  *
  * Before the first poll lands, no type has reported and no count is meaningful;
- * "0 of 14 done" beside a spinner reads as stalled rather than starting.
+ * "0 of 14" beside a spinner reads as stalled rather than starting.
  */
-export function progressLabel(
-    progress: ImportProgress,
-    operation: 'import' | 'reset' = 'import',
-): string | undefined {
-    const { done, total, current } = progress;
-    const count = `${done} of ${total} done`;
-
-    if (current) {
-        // "Removing", not "Resetting": the button that starts this says
-        // "Remove data", and a project RESET now restores the pack — so
-        // "Resetting" here named the one thing this is not. The `reset`
-        // operation ID stays; it is the wire, not the wording.
-        const verb = operation === 'reset' ? 'Removing' : 'Importing';
-        return `${verb} ${dataTypeLabel(current)} · ${count}`;
-    }
-    if (done === 0) {
+export function progressLabel(progress: ImportProgress): string | undefined {
+    const { done, total, processing } = progress;
+    if (done === 0 && processing.length === 0) {
         return undefined;
     }
-    return count;
+    return typesLine(done, total, processing.map(dataTypeLabel));
 }

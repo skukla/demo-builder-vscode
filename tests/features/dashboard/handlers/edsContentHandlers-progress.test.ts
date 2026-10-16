@@ -235,9 +235,10 @@ function playsSteps(storeChanged: boolean): void {
         if (storeChanged) {
             step(S.removingProductPages.label);
             step(S.updatingCatalogMenu.label);
-            // The store-change service passes its COUNT as a position; the step's
-            // position is where it sits in the run, and the count is the line under it.
-            step(S.warmingProductPages.label, 'Warming product pages: 1 of 39 pages', { index: 1, total: 39 });
+            // The store-change service's count is the line under the step, never a
+            // position (progress vocabulary slice 5): the step's position is where it
+            // sits in the run.
+            step(S.warmingProductPages.label, 'Warming product pages: 1 of 39 pages');
         } else {
             step(S.updatingCatalogMenu.label);
             step(S.warmingProductPages.label);

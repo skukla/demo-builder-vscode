@@ -64,7 +64,8 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { reportPhase, withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { creationReporter } from '@/features/project-creation/handlers/creationProgress';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -263,14 +264,32 @@ describe('executeAppBuilderIntegrationsPhase', () => {
         ).rejects.toThrow('clone failed');
     });
 
-    describe("the runner's stages reach the creation screen (2026-10-07)", () => {
+    // Folded into one numbered step (owner, 2026-10-16: "Fold"): line 1 is the step
+    // creation is on, and each integration's own step is line 2, under its name.
+    describe('integration deploys fold into the one creation step', () => {
         type Report = (stage: string, step?: string, position?: { index: number; total: number; name?: string }) => void;
+        const runnerReport = (): Report => (mockBuildDefaultRunnerDeps.mock.calls[0] as unknown[])[1] as Report;
 
-        it('shows each stage as the heading, and the step under it with the ERP it is on', async () => {
+        it("shows the integration's own step on line 2, under its name", async () => {
             mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
             mockAddAppBuilderComponent.mockImplementation(async () => {
-                const report = (mockBuildDefaultRunnerDeps.mock.calls[0] as unknown[])[1] as Report;
-                report(OPERATION_STAGES.installingIntoCommerce.label, 'Registering webhooks', {
+                runnerReport()(OPERATION_STAGES.deployingApp.label);
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            expect(progressTracker).toHaveBeenLastCalledWith(
+                OPERATION_STAGES.deployingIntegrations.label,
+                expect.any(Number),
+                `${INTEGRATION_ENTRY.name}: ${OPERATION_STAGES.deployingApp.label}`,
+            );
+        });
+
+        it('names the member of a pair the runner is on, and the moment it reports', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                runnerReport()(OPERATION_STAGES.installingIntoCommerce.label, 'Registering webhooks', {
                     index: 2,
                     total: 2,
                     name: 'Justrite ERP',
@@ -278,61 +297,89 @@ describe('executeAppBuilderIntegrationsPhase', () => {
                 return { success: true };
             });
 
-            await executeAppBuilderIntegrationsPhase(
-                context,
-                project,
-                config({ selectedAppBuilderComponents: ['erp-sync'] }),
-                progressTracker
-            );
-
-            expect(progressTracker).toHaveBeenCalledWith(
-                OPERATION_STAGES.installingIntoCommerce.label,
-                expect.any(Number),
-                'Justrite ERP: Registering webhooks'
-            );
-        });
-
-        it('shows a plain line from deeper in as the step of the stage in progress', async () => {
-            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
-            mockAddAppBuilderComponent.mockImplementation(async () => {
-                const report = (mockBuildDefaultRunnerDeps.mock.calls[0] as unknown[])[1] as Report;
-                report(OPERATION_STAGES.loadingErpDemoData.label);
-                reportPhase('Reading Commerce companies');
-                return { success: true };
-            });
-
-            await executeAppBuilderIntegrationsPhase(
-                context,
-                project,
-                config({ selectedAppBuilderComponents: ['erp-sync'] }),
-                progressTracker
-            );
+            await executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
 
             expect(progressTracker).toHaveBeenLastCalledWith(
-                OPERATION_STAGES.loadingErpDemoData.label,
+                OPERATION_STAGES.deployingIntegrations.label,
                 expect.any(Number),
-                'Reading Commerce companies'
+                'Justrite ERP: Registering webhooks',
             );
         });
 
-        it('drops a plain line that arrives before any stage has started', async () => {
+        it('shows a plain line from deeper in under the integration it is for', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                runnerReport()(OPERATION_STAGES.loadingErpDemoData.label);
+                reportPhase('Reading Commerce companies');
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            expect(progressTracker).toHaveBeenLastCalledWith(
+                OPERATION_STAGES.deployingIntegrations.label,
+                expect.any(Number),
+                `${INTEGRATION_ENTRY.name}: Reading Commerce companies`,
+            );
+        });
+
+        it('never reports a step other than the one creation is on', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                runnerReport()(OPERATION_STAGES.subscribingApis.label);
+                runnerReport()(OPERATION_STAGES.deployingApp.label, 'Running aio app deploy');
+                reportPhase('Uploading actions');
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            const steps = new Set(progressTracker.mock.calls.map((call) => call[0]));
+            expect([...steps]).toStrictEqual([OPERATION_STAGES.deployingIntegrations.label]);
+        });
+
+        it('drops a plain line that arrives before any step has started', async () => {
             mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
             mockAddAppBuilderComponent.mockImplementation(async () => {
                 reportPhase('Reading Commerce companies');
                 return { success: true };
             });
 
-            await executeAppBuilderIntegrationsPhase(
-                context,
-                project,
-                config({ selectedAppBuilderComponents: ['erp-sync'] }),
-                progressTracker
-            );
+            await executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
 
-            // No stage to file it under, so the screen keeps the phase's own two lines.
+            // Nothing to file it under, so the screen keeps the phase's own two lines.
             expect(progressTracker.mock.calls.map((call) => call[2])).toStrictEqual([
                 'Enabling API access',
                 'Deploying ERP Sync',
+            ]);
+        });
+
+        // With creation's own reporter, which also tells an agent: what it tells the
+        // agent must not come back round as a line from deeper in.
+        it('numbers the step on the creation screen, and tells the agent each line once', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                runnerReport()(OPERATION_STAGES.deployingApp.label);
+                return { success: true };
+            });
+            const sendMessage = jest.fn().mockResolvedValue(undefined);
+            const creation = creationReporter(sendMessage, 0);
+            creation.numberFrom([OPERATION_STAGES.settingUpProject.label, OPERATION_STAGES.deployingIntegrations.label]);
+            const agent: string[] = [];
+
+            await withPhaseSinks([(line) => agent.push(line)], () =>
+                executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), creation.report),
+            );
+
+            expect(sendMessage).toHaveBeenLastCalledWith('creationProgress', expect.objectContaining({
+                currentOperation: OPERATION_STAGES.deployingIntegrations.label,
+                message: `${INTEGRATION_ENTRY.name}: ${OPERATION_STAGES.deployingApp.label}`,
+                position: { index: 2, total: 2 },
+            }));
+            expect(agent).toStrictEqual([
+                'Deploying integrations (2 of 2) — Enabling API access',
+                'Deploying integrations (2 of 2) — Deploying ERP Sync',
+                `Deploying integrations (2 of 2) — ${INTEGRATION_ENTRY.name}: ${OPERATION_STAGES.deployingApp.label}`,
             ]);
         });
     });

@@ -20,6 +20,7 @@ import {
     setupDefaultMocks,
 } from './checkUpdates.testUtils';
 import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -151,20 +152,22 @@ describe('CheckUpdatesCommand — check phase', () => {
             );
         });
 
-        it('reports each phase to the progress bar, in order', async () => {
+        // Each phase a step from the stage table, numbered from the fixed list (progress
+        // vocabulary slice 7, owner 2026-10-16). The first one said the title again.
+        it('reports each phase to the progress bar as a numbered step, in order', async () => {
             await command.execute();
 
             const messages = harness.mockProgress.report.mock.calls.map(([p]) => p.message);
             expect(messages.slice(0, 8)).toEqual([
-                'Checking for updates',
-                'Checking all projects',
-                'Checking source repos',
+                `${S.checkingExtension.label} (1 of 8)`,
+                `${S.checkingAllProjects.label} (2 of 8)`,
+                `${S.checkingSourceRepos.label} (3 of 8)`,
                 // Phase 3 ran across every project and said nothing (slice 9).
-                'Checking components',
-                'Checking EDS templates',
-                'Checking add-ons',
-                'Checking the AI tools',
-                'Checking integrations',
+                `${S.checkingComponents.label} (4 of 8)`,
+                `${S.checkingTemplates.label} (5 of 8)`,
+                `${S.checkingAddOns.label} (6 of 8)`,
+                `${S.checkingAiTools.label} (7 of 8)`,
+                `${S.checkingIntegrations.label} (8 of 8)`,
             ]);
         });
 

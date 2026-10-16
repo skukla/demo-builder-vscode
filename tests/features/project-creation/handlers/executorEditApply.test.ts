@@ -32,6 +32,7 @@ jest.mock('@/features/dashboard/handlers/appBuilderComponentAdd', () => ({
 }));
 
 import * as vscode from 'vscode';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { addWithSteps, refuseAdd } from '@/features/dashboard/handlers/appBuilderComponentAdd';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentGuards';
 import { removeWithCleanup } from '@/features/dashboard/handlers/appBuilderComponentRemove';
@@ -405,5 +406,45 @@ describe('finishEditWithoutRebuild — the package changed on Edge Delivery', ()
 
         expect(handled).toBe(false);
         expect(planPackageChange).not.toHaveBeenCalled();
+    });
+});
+
+// One step on line 1 while integrations go and come, each one's own step on line 2
+// under its name, as creation folds them (owner, 2026-10-16: "Fold").
+describe('finishEditWithoutRebuild — what the progress screen shows', () => {
+    type Report = (stage: string, step?: string) => void;
+
+    it('shows an add under the one deploying step, with its own step under its name', async () => {
+        const { context, progress, ask } = setup();
+        (addWithSteps as jest.Mock).mockImplementationOnce(async (_c, _p, _e, report: Report) => {
+            report(OPERATION_STAGES.deployingApp.label);
+            return { success: true };
+        });
+
+        await finishEditWithoutRebuild(context, ADD_ERP, progress, ask);
+
+        const entry = (addWithSteps as jest.Mock).mock.calls[0][2] as { name: string };
+        expect(progress).toHaveBeenCalledWith(
+            OPERATION_STAGES.deployingIntegrations.label,
+            expect.any(Number),
+            `${entry.name}: ${OPERATION_STAGES.deployingApp.label}`,
+        );
+    });
+
+    it('shows a removal under the one removing step, with its own step under its name', async () => {
+        const { context, progress, ask } = setup();
+        (removeWithCleanup as jest.Mock).mockImplementationOnce(async (_c, _p, _id, report: Report) => {
+            report(OPERATION_STAGES.removing.label);
+            return { success: true };
+        });
+
+        await finishEditWithoutRebuild(context, REMOVE_KIT, progress, ask);
+
+        expect(progress).toHaveBeenCalledWith(
+            OPERATION_STAGES.removingIntegrations.label,
+            expect.any(Number),
+            `Starter Kit: ${OPERATION_STAGES.removing.label}`,
+        );
+        expect(progress).not.toHaveBeenCalledWith(OPERATION_STAGES.removing.label, expect.anything(), expect.anything());
     });
 });

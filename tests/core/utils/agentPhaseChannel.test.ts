@@ -5,7 +5,9 @@
  */
 
 import {
+    phaseSinkHere,
     reportHandBack,
+    reportPhase,
     stepPhaseReporter,
     withHandBackSinks,
     withPhaseSinks,
@@ -78,5 +80,34 @@ describe('stepPhaseReporter', () => {
 
     it('says nothing outside an agent call', () => {
         expect(() => stepPhaseReporter()('Publishing the settings')).not.toThrow();
+    });
+});
+
+describe('phaseSinkHere', () => {
+    // A scope that takes the lines from deeper in, and still has to tell the agent
+    // listening outside it (creation's integration deploys, 2026-10-16).
+    it('reports to the sinks in scope where it was made, from inside another scope', async () => {
+        const outer: string[] = [];
+        const inner: string[] = [];
+
+        await withPhaseSinks([(line) => outer.push(line)], async () => {
+            const toOuter = phaseSinkHere();
+            await withPhaseSinks([(line) => inner.push(line)], async () => {
+                reportPhase('from deeper in');
+                toOuter('for the agent');
+            });
+        });
+
+        expect(outer).toStrictEqual(['for the agent']);
+        expect(inner).toStrictEqual(['from deeper in']);
+    });
+
+    it('reports nowhere when made outside any scope, even called from inside one', async () => {
+        const inner: string[] = [];
+        const toNobody = phaseSinkHere();
+
+        await withPhaseSinks([(line) => inner.push(line)], async () => toNobody('nobody listening'));
+
+        expect(inner).toStrictEqual([]);
     });
 });

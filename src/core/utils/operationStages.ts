@@ -22,6 +22,7 @@
 import { CREATION_STAGES } from './creationStages';
 import { RESET_STAGES } from './resetStages';
 import { STOREFRONT_STAGES } from './storefrontStages';
+import { UPDATE_STAGES } from './updateStages';
 
 export interface OperationStage {
     /** What is happening, as the SC reads it. */
@@ -221,6 +222,8 @@ export const OPERATION_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'Running npm install',
     },
+    // Check for Updates and applying what it found (`updateStages.ts`).
+    ...UPDATE_STAGES,
 } as const satisfies Record<string, OperationStage>;
 
 const BY_LABEL: ReadonlyMap<string, OperationStage> = new Map(

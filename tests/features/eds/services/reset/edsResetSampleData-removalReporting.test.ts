@@ -158,15 +158,13 @@ describe('the removal narration', () => {
         );
 
         const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
-        // The count rides the stage in the house shape, and what is being worked
-        // on is the step under it.
+        // A notification shows the step alone: the count of types is the line under
+        // it, never the step's position (progress vocabulary slice 5, 2026-10-16).
         relay({ verb: 'Removing', done: 1, total: 3, processing: ['Products', 'Categories'] });
-        expect(report).toHaveBeenLastCalledWith({
-            message: 'Removing the sample data (1 of 3)',
-        });
+        expect(report).toHaveBeenLastCalledWith({ message: 'Removing the sample data' });
 
         relay({ verb: 'Removing', done: 3, total: 3, processing: [] });
-        expect(report).toHaveBeenLastCalledWith({ message: 'Removing the sample data (3 of 3)' });
+        expect(report).toHaveBeenLastCalledWith({ message: 'Removing the sample data' });
     });
 });
 
@@ -175,7 +173,7 @@ describe('the removal narration', () => {
 // a screen's modal shows (a notification shows the stage line alone), so no test
 // above could see it.
 describe('the removal narration in a screen\'s modal', () => {
-    it('shows the types being removed right now as the step under the stage', async () => {
+    it('shows the types removed and in flight as the line under the step, never as its position', async () => {
         const send = jest.fn().mockResolvedValue(undefined);
         startModalRun('reset-modal', send);
 
@@ -196,10 +194,10 @@ describe('the removal narration in a screen\'s modal', () => {
                 id: 'reset-modal',
                 state: 'running',
                 stage: 'Removing the sample data',
-                step: 'Products, Categories',
-                position: { index: 1, total: 3 },
+                step: '1 of 3 data types: Products, Categories',
             }),
         );
+        expect(send.mock.calls.filter(([, payload]) => (payload as { position?: unknown })?.position)).toStrictEqual([]);
     });
 });
 

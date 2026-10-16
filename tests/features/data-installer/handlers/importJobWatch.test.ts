@@ -25,6 +25,7 @@ import {
 } from './importHandlers.testUtils';
 import * as vscode from 'vscode';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { startModalRun } from '@/core/vscode/operationProgress';
 
 beforeEach(() => {
@@ -142,7 +143,8 @@ describe('the detached watch', () => {
  *
  * Unconstrained from 2026-09-20 (when the push landed) until the watch was
  * measured on its own in the 2026-10-08 split — the stage counter read `.status`
- * off entries that are plain status strings, and nothing could see it.
+ * off entries that are plain status strings, and nothing could see it. The count is
+ * the line under the step since 2026-10-16, never its position.
  */
 describe('the shared progress channel', () => {
     const settleWatch = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
@@ -170,41 +172,42 @@ describe('the shared progress channel', () => {
         return onProgress!;
     }
 
-    it('narrates an import as a running stage with how many types are done', async () => {
+    // The step is the stage table's, as creation names it, and the count of types is
+    // the line under it (progress vocabulary slice 5, owner 2026-10-16). It used to be
+    // "Importing the sample data (1 of 3)": a count shown as the step's position.
+    it("narrates an import as the table's datapack step, with the types on the line under it", async () => {
         const onProgress = await progressOf('start-datapack-import');
 
-        onProgress({ categories: 'success', products: 'processing', orders: 'pending' });
+        onProgress({ categories: 'success', products: 'processing' });
         await settleWatch();
 
         expect(pushes()).toContainEqual({
             id: DATAPACK_OPERATION_ID,
             state: 'running',
-            stage: 'Importing the sample data',
-            position: { index: 1, total: 3 },
+            stage: OPERATION_STAGES.installingDatapack.label,
+            step: '1 of 2 data types: Products',
+            expectation: OPERATION_STAGES.installingDatapack.expectation,
             startedAt: expect.any(Number),
         });
     });
 
-    it('counts every finished type, not only the first', async () => {
+    it('counts every finished type, whether or not it went well', async () => {
         const onProgress = await progressOf('start-datapack-import');
 
-        onProgress({ categories: 'success', products: 'success', orders: 'processing' });
+        onProgress({ categories: 'success', products: 'error' });
         await settleWatch();
 
-        expect(pushes()).toContainEqual(
-            expect.objectContaining({ position: { index: 2, total: 3 } }),
-        );
+        expect(pushes()).toContainEqual(expect.objectContaining({ step: '2 of 2 data types' }));
     });
 
-    it('never says 0 of N — the first type counts from one', async () => {
+    it('never shows a count of types as the position of the step', async () => {
         const onProgress = await progressOf('start-datapack-import');
 
-        onProgress({ categories: 'processing', products: 'pending' });
+        onProgress({ categories: 'success', products: 'processing' });
+        onProgress({ categories: 'success', products: 'success' });
         await settleWatch();
 
-        expect(pushes()).toContainEqual(
-            expect.objectContaining({ position: { index: 1, total: 2 } }),
-        );
+        expect(pushes().filter((p) => 'position' in p)).toStrictEqual([]);
     });
 
     it('words a reset as removing, not importing', async () => {
@@ -214,11 +217,15 @@ describe('the shared progress channel', () => {
         await settleWatch();
 
         expect(pushes()).toContainEqual(
-            expect.objectContaining({ state: 'running', stage: 'Removing the sample data' }),
+            expect.objectContaining({
+                state: 'running',
+                stage: OPERATION_STAGES.removingDatapack.label,
+                step: '0 of 2 data types: Categories',
+            }),
         );
     });
 
-    it('gives no position before the runner has named any type', async () => {
+    it("shows the step's own detail before the runner has named any type", async () => {
         const onProgress = await progressOf('start-datapack-import');
 
         onProgress({});
@@ -228,7 +235,9 @@ describe('the shared progress channel', () => {
         expect(running).toEqual({
             id: DATAPACK_OPERATION_ID,
             state: 'running',
-            stage: 'Importing the sample data',
+            stage: OPERATION_STAGES.installingDatapack.label,
+            step: OPERATION_STAGES.installingDatapack.detail,
+            expectation: OPERATION_STAGES.installingDatapack.expectation,
             startedAt: expect.any(Number),
         });
     });

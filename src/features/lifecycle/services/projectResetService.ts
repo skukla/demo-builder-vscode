@@ -17,7 +17,9 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { numberedSteps } from '@/core/utils/numberedSteps';
 import { resetOperationId } from '@/core/utils/operationIds';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import {
     withOperationProgress,
     type ReportStage,
@@ -32,17 +34,33 @@ import type { Project } from '@/types/base';
 import type { ComponentRegistry, TransformedComponentDefinition } from '@/types/components';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { Stack } from '@/types/stacks';
+import { getMeshComponentInstance } from '@/types/typeGuards';
 
 // ==========================================================
 // Types
 // ==========================================================
 
 /**
- * The reset's steps are a fixed list, so a count is known up front and may ride
- * the stage as "(4 of 6)" — the one shape a count is allowed to take (PL-59).
+ * The reset's steps, known before it starts, so each shows its place as "(4 of 7)".
+ * Named from the stage table as creation names the same jobs (progress vocabulary
+ * slice 6, owner 2026-10-16); the mesh adds its access check and its redeploy.
+ *
+ * ORDER IS LOAD-BEARING: a step's number is its index here, so the list follows
+ * `runResetSteps`.
+ *
+ * @param project - the project being reset
+ * @returns the step names
  */
-const RESET_STEPS = 6;
-const at = (index: number): { index: number; total: number } => ({ index, total: RESET_STEPS });
+function projectResetSteps(project: Project): string[] {
+    return [
+        S.loadingComponents.label,
+        S.removingComponents.label,
+        S.downloadingComponents.label,
+        S.installingComponents.label,
+        S.writingConfigFiles.label,
+        ...(getMeshComponentInstance(project)?.path ? [S.checkingRequirements.label, S.redeployingMesh.label] : []),
+    ];
+}
 
 /** The SC's door: the reset's own needs plus where its progress shows. */
 export interface ResetWithUIOptions extends ProjectResetDeps {
@@ -257,7 +275,7 @@ async function rebuildComponents(
 ): Promise<void> {
     const { project, context, logPrefix = '[ProjectReset]', commandManager } = deps;
 
-    report('Removing the old components', undefined, at(2));
+    report(S.removingComponents.label);
     const componentsDir = path.join(project.path, 'components');
     const kept = integrationIds(project);
     try {
@@ -273,7 +291,7 @@ async function rebuildComponents(
         Object.entries(project.componentInstances ?? {}).filter(([id]) => kept.has(id)),
     );
 
-    report('Downloading the components', undefined, at(3));
+    report(S.downloadingComponents.label);
     const { cloneAllComponents, installAllComponents } = await import(
         '@/features/project-creation/services/componentInstallationOrchestrator'
     );
@@ -281,7 +299,7 @@ async function rebuildComponents(
         project,
         componentDefinitions: loaded.componentDefinitions,
         progressTracker: ((_phase: string, _pct: number, msg: string) => {
-            report('Downloading the components', msg, at(3));
+            report(S.downloadingComponents.label, msg);
         }) as import('@/features/project-creation/handlers/shared').ProgressTracker,
         logger: context.logger,
         saveProject: () => context.stateManager.saveProject(project),
@@ -289,24 +307,25 @@ async function rebuildComponents(
     };
     await cloneAllComponents(installContext);
 
-    report('Installing dependencies', undefined, at(4));
+    report(S.installingComponents.label);
     await installAllComponents(installContext);
 
-    report('Writing the settings back', undefined, at(5));
+    report(S.writingConfigFiles.label);
     const { regenerateProjectEnvFiles } = await import(
         '@/features/project-creation/helpers/envFileRegeneration'
     );
     await regenerateProjectEnvFiles(project, loaded.registry, context.logger, context.context.secrets);
 }
 
-/** The six steps, reported through `report`. Throws on failure; the caller decides who hears. */
-async function runResetSteps(deps: ProjectResetDeps, report: ReportStage): Promise<ProjectResetOutcome> {
+/** The steps, numbered and reported through `show`. Throws on failure; the caller decides who hears. */
+async function runResetSteps(deps: ProjectResetDeps, show: ReportStage): Promise<ProjectResetOutcome> {
     const { project, context, logPrefix = '[ProjectReset]', commandManager, authManager } = deps;
     const vscode = await import('vscode');
     context.logger.info(`${logPrefix} Resetting project: ${project.name}`);
+    const report: ReportStage = numberedSteps(projectResetSteps(project), show);
 
     // Step 1: Load component definitions from saved project state
-    report('Reading what this project has', undefined, at(1));
+    report(S.loadingComponents.label);
     const loaded = await loadComponentDefinitionsFromProject(project, context);
     if (loaded.componentDefinitions.size === 0) {
         return { success: false, error: 'No components found for this project stack' };
@@ -315,7 +334,7 @@ async function runResetSteps(deps: ProjectResetDeps, report: ReportStage): Promi
 
     await rebuildComponents(deps, loaded, report);
 
-    // Step 6: Redeploy API Mesh (if project has mesh)
+    // Steps 6–7: check Adobe access, redeploy the API Mesh (if project has mesh)
     const mesh = await handleMeshRedeployment(
         project,
         context,
@@ -377,7 +396,7 @@ function asHandlerResponse({ success, error }: ProjectResetOutcome): HandlerResp
  * 1. Confirmation dialog
  * 2. Stop demo if running
  * 3. Set status to 'resetting'
- * 4. The six steps of {@link executeProjectReset}'s core, narrated to the
+ * 4. The steps of {@link executeProjectReset}'s core, narrated to the
  *    notification or the progress modal
  * 5. Restore status, show the error notification on failure
  */

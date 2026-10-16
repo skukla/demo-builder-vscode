@@ -13,8 +13,8 @@ import { buildDeployOrgTarget } from './executorMeshPhase';
 import type { ProgressTracker } from './shared';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { withOrgContext } from '@/core/shell/orgContextEnv';
-import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
-import { OPERATION_STAGES, detailFor } from '@/core/utils/operationStages';
+import { phaseSinkHere, withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
@@ -148,7 +148,7 @@ export async function executeAppBuilderIntegrationsPhase(
     const { replaceDeployedElsewhere } = await import(
         '@/features/dashboard/handlers/replaceDeployedElsewhere'
     );
-    const { report, nested } = integrationProgress(progressTracker);
+    const { report, nested, start } = integrationProgress(progressTracker);
     const services = {
         authManager: ServiceLocator.getAuthenticationService(),
         commandManager: ServiceLocator.getCommandExecutor(),
@@ -165,6 +165,7 @@ export async function executeAppBuilderIntegrationsPhase(
         const replaced = await replaceDeployedElsewhere(context, project, entry, services, report);
         if (replaced) throw new Error(replaced.error);
         progressTracker(OPERATION_STAGES.deployingIntegrations.label, 70, `Deploying ${entry.name}`);
+        start(entry.name);
         const result = await withPhaseSinks([nested], () => addAppBuilderComponent(project, entry, deps));
         if (!result.success) {
             throw new Error(result.error || 'App Builder integration deployment failed');
@@ -173,34 +174,59 @@ export async function executeAppBuilderIntegrationsPhase(
 }
 
 /**
- * The runner's own stage reports, onto the creation screen (owner, 2026-10-07).
+ * An integration's own steps, folded into the one step creation (or an Edit) is on.
  *
- * The runner names each stage as it starts ("Adding Adobe services", "Installing
- * into Commerce", "Loading ERP demo data") with the step under it and which ERP
- * of a pair it is on, and the Integrations screen's progress window shows all of
- * that. Creation passed no reporter, so a ten-minute ERP add read "Deploying ERP
- * Integration" throughout. Same stages here: the stage is the heading (so the
- * screen's expectation line is the stage's own), and the step, prefixed with the
- * ERP's name when there is one, is the line under it. Plain lines from deeper in
- * (the Commerce installer's steps) arrive through the phase sink as the step of the
- * stage in progress, as they do in the progress window.
+ * Line 1 stays `step` ("Deploying integrations (6 of 9)") however many steps each
+ * integration runs, and line 2 is the integration's own step under its name
+ * ("Northwind ERP: Deploying the app"), as every other flow keeps one numbered step
+ * with its parts under it (owner, 2026-10-16: "Fold"). When the runner names the moment
+ * ("Registering webhooks"), or a line arrives from deeper in (the Commerce installer's),
+ * that is the part line 2 shows. A pair names the member it is on.
+ *
+ * The reporter creation hands in also tells an agent, through the same channel the
+ * lines from deeper in arrive on. What it tells the agent goes on to the agent, not
+ * back round as a line from deeper in: until 2026-10-16 each came round again until
+ * the stack ran out, sending the screen a thousand growing lines per step.
+ *
+ * @param progressTracker - the creation screen's reporter
+ * @param step - the step on line 1 while these run
+ * @returns the runner's reporter, the sink for lines from deeper in, and `start`, which
+ *   names the integration the next steps are for
  */
-export function integrationProgress(progressTracker: ProgressTracker): {
+export function integrationProgress(
+    progressTracker: ProgressTracker,
+    step: string = OPERATION_STAGES.deployingIntegrations.label,
+): {
     report: (stage: string, step?: string, position?: OperationPosition) => void;
     nested: (message: string) => void;
+    start: (name: string) => void;
 } {
-    let current: { stage: string; name?: string } | undefined;
-    const show = (stage: string, step: string | undefined, name: string | undefined): void => {
-        const line = step || detailFor(stage);
-        progressTracker(stage, 70, name && line ? `${name}: ${line}` : (line ?? name));
+    let integration = '';
+    let current: { stage: string; name: string } | undefined;
+    let showing = false;
+    // Made here, outside the scope the deploys run in, so it reaches the agent.
+    const toAgent = phaseSinkHere();
+    const show = (part: string): void => {
+        if (!current) return;
+        showing = true;
+        try {
+            progressTracker(step, 70, current.name ? `${current.name}: ${part}` : part);
+        } finally {
+            showing = false;
+        }
     };
     return {
-        report: (stage, step, position) => {
-            current = { stage, name: position?.name };
-            show(stage, step, position?.name);
+        report: (stage, detail, position) => {
+            current = { stage, name: position?.name ?? integration };
+            show(detail || stage);
         },
         nested: (message) => {
-            if (current) show(current.stage, message, current.name);
+            if (showing) toAgent(message);
+            else show(message);
+        },
+        start: (name) => {
+            integration = name;
+            current = undefined;
         },
     };
 }

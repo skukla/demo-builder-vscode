@@ -44,6 +44,7 @@ import {
 import type { ProgressTracker } from './shared';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { addWithSteps, refuseAdd } from '@/features/dashboard/handlers/appBuilderComponentAdd';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentGuards';
 import type { GuardableResult } from '@/features/dashboard/handlers/appBuilderComponentOperation';
@@ -149,14 +150,17 @@ async function applyInPlace(
 
     // Removals first, so what goes is not moved; the move next, so what is added
     // deploys to the new destination.
-    const warnings = await runEach(delta.removed, progressTracker, (id, report) =>
-        removeWithCleanup(context, project, id, report),
-    );
+    const removing = integrationProgress(progressTracker, OPERATION_STAGES.removingIntegrations.label);
+    const warnings = await runEach(delta.removed, removing, {
+        nameOf: (id) => getAppBuilderComponent(project, id)?.name ?? id,
+        run: (id, report) => removeWithCleanup(context, project, id, report),
+    });
     await applyDestinationChange(context, project, destination, progressTracker);
     warnings.push(
-        ...(await runEach(delta.added, progressTracker, (id, report) =>
-            addOne(context, project, config, id, report),
-        )),
+        ...(await runEach(delta.added, integrationProgress(progressTracker), {
+            nameOf: (id) => selectedEntry(config, id)?.name ?? id,
+            run: (id, report) => addOne(context, project, config, id, report),
+        })),
     );
     // After the integrations, as in creation: a pack lands on the finished project.
     await applyDatapackChange(context, project, config, datapack, progressTracker, packageChange.resets);
@@ -174,19 +178,20 @@ type Report = (stage: string, step?: string, position?: OperationPosition) => vo
 
 /**
  * Run an add or a removal for each id, in order, onto the wizard's progress screen
- * the way creation's integration phase reports, stopping at the first that fails.
+ * the way creation's integration phase reports (one step, each one's own steps under
+ * its name), stopping at the first that fails.
  *
  * @returns what they warned about, to tell the SC
  */
 async function runEach(
     ids: string[],
-    progressTracker: ProgressTracker,
-    run: (id: string, report: Report) => Promise<GuardableResult>,
+    progress: ReturnType<typeof integrationProgress>,
+    each: { nameOf: (id: string) => string; run: (id: string, report: Report) => Promise<GuardableResult> },
 ): Promise<string[]> {
-    const { report, nested } = integrationProgress(progressTracker);
     const warnings: string[] = [];
     for (const id of ids) {
-        const result = await withPhaseSinks([nested], () => run(id, report));
+        progress.start(each.nameOf(id));
+        const result = await withPhaseSinks([progress.nested], () => each.run(id, progress.report));
         if (!result.success) throw new Error(result.error ?? `${id}: nothing was changed.`);
         warnings.push(...(result.warnings ?? []));
     }

@@ -11,6 +11,7 @@
 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
+import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -147,12 +148,8 @@ export async function removeProjectSampleData(
             buildSampleDataDeps(
                 context,
                 project,
-                (sd) =>
-                    report(
-                        OPERATION_STAGES.removingDatapack.label,
-                        sd.processing.length > 0 ? sd.processing.join(', ') : undefined,
-                        { index: sd.done, total: sd.total },
-                    ),
+                // The count of types is the line under the step, never its position.
+                (sd) => report(OPERATION_STAGES.removingDatapack.label, typesLine(sd.done, sd.total, sd.processing)),
                 'remove',
             ),
         );

@@ -18,6 +18,7 @@
  *    directory removed, and the final status/result
  */
 
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import type { Project } from '@/types/base';
 import {
     FRONTEND_DEF,
@@ -407,9 +408,9 @@ describe('resetProjectWithUI — the rebuild itself', () => {
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
 
         installContext.progressTracker('clone', 40, 'Cloning citisignal…');
-        // The clone's own line rides under the stage, which keeps its count.
+        // The clone's own line rides under the step, which keeps its position.
         expect(progressReport).toHaveBeenCalledWith({
-            message: 'Downloading the components (3 of 6)',
+            message: `${S.downloadingComponents.label} (3 of 5)`,
         });
     });
 
@@ -440,15 +441,35 @@ describe('resetProjectWithUI — the rebuild itself', () => {
         );
     });
 
-    it('reports each phase to the notification in order', async () => {
+    // Steps from the stage table, named as creation names the same jobs (progress
+    // vocabulary slice 6, owner 2026-10-16), numbered from a list known up front.
+    it('reports each step to the notification in order, numbered from the run it is', async () => {
         await run();
 
         expect(progressReport.mock.calls.map((c) => c[0].message)).toEqual([
-            'Reading what this project has (1 of 6)',
-            'Removing the old components (2 of 6)',
-            'Downloading the components (3 of 6)',
-            'Installing dependencies (4 of 6)',
-            'Writing the settings back (5 of 6)',
+            `${S.loadingComponents.label} (1 of 5)`,
+            `${S.removingComponents.label} (2 of 5)`,
+            `${S.downloadingComponents.label} (3 of 5)`,
+            `${S.installingComponents.label} (4 of 5)`,
+            `${S.writingConfigFiles.label} (5 of 5)`,
+        ]);
+    });
+
+    // With a mesh the run is two steps longer, and N says so from the start: it read
+    // "(5 of 6)" at the end of a reset with no mesh.
+    it('adds the access check and the mesh redeploy as steps when there is a mesh', async () => {
+        mockGetMeshComponentInstance.mockReturnValue({ path: '/projects/demo/components/mesh' });
+
+        await run();
+
+        expect(progressReport.mock.calls.map((c) => c[0].message)).toEqual([
+            `${S.loadingComponents.label} (1 of 7)`,
+            `${S.removingComponents.label} (2 of 7)`,
+            `${S.downloadingComponents.label} (3 of 7)`,
+            `${S.installingComponents.label} (4 of 7)`,
+            `${S.writingConfigFiles.label} (5 of 7)`,
+            `${S.checkingRequirements.label} (6 of 7)`,
+            `${S.redeployingMesh.label} (7 of 7)`,
         ]);
     });
 });
@@ -548,11 +569,11 @@ describe('executeProjectReset — the same reset with no dialog and no notificat
         await outcome;
 
         expect(report.mock.calls.map((c) => [c[0], c[2]])).toEqual([
-            ['Reading what this project has', { index: 1, total: 6 }],
-            ['Removing the old components', { index: 2, total: 6 }],
-            ['Downloading the components', { index: 3, total: 6 }],
-            ['Installing dependencies', { index: 4, total: 6 }],
-            ['Writing the settings back', { index: 5, total: 6 }],
+            [S.loadingComponents.label, { index: 1, total: 5 }],
+            [S.removingComponents.label, { index: 2, total: 5 }],
+            [S.downloadingComponents.label, { index: 3, total: 5 }],
+            [S.installingComponents.label, { index: 4, total: 5 }],
+            [S.writingConfigFiles.label, { index: 5, total: 5 }],
         ]);
     });
 

@@ -14,7 +14,7 @@ import type { ImportJobRecord } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useImportProgress } from '../hooks/useImportProgress';
 import type { ImportScopes } from '../hooks/useImportScopes';
-import { progressLabel, summarizeProgress } from '../importProgress';
+import { progressLabel, progressStep, summarizeProgress } from '../importProgress';
 import { ImportForm } from './ImportForm';
 import type { ResultContent } from './importResult';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
@@ -170,24 +170,23 @@ function WatchProgress({
     record: ImportJobRecord;
     watching: boolean;
 }): React.JSX.Element {
-    // `op` is the WIRE value, passed to progressLabel. `noun` is what the user
+    // `op` is the WIRE value, passed to progressStep. `noun` is what the user
     // reads — they diverged when this surface stopped saying "reset", and one
     // variable serving both is how "The reset continues on the server" survived.
     const op = record.operation === 'reset' ? 'reset' : 'import';
     const noun = record.operation === 'reset' ? 'removal' : 'import';
-    const active = record.operation === 'reset' ? 'Removing' : 'Importing';
 
     // The LIVE map, pushed each poll. `record.perType` is empty for the whole
     // run — it is only written when the watch settles — so reading it here is
     // what left the spinner saying nothing for minutes at a time.
     const live = useImportProgress(record.activationId);
     const progress = summarizeProgress(live?.perType ?? record.perType, record.dataTypes);
-    const label = progressLabel(progress, op);
+    const label = progressLabel(progress);
 
     return (
         <LoadingDisplay
             size="L"
-            message={watching ? active : 'Stopped watching.'}
+            message={watching ? progressStep(op) : 'Stopped watching.'}
             subMessage={label}
             // Determinate only once something has reported. A ring pinned at 0
             // reads as stalled, where the indeterminate spinner reads as starting.

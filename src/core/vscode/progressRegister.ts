@@ -94,10 +94,11 @@ export interface ProgressRegisterOptions {
      * The card's single in-flight line — build it with {@link cardInFlightLabel}.
      *
      * OPTIONAL: project-scoped operations have no card. Changing the Adobe deploy
-     * destination was passing `''` with a no-op push purely to satisfy the type,
-     * and the update notifications reach past this helper to raw
-     * `vscode.window.withProgress` for the same reason. The register's value is
-     * the step→notification half; the card half belongs to surfaces that have one.
+     * destination was passing `''` with a no-op push purely to satisfy the type, and
+     * the update notifications reached past this helper to raw
+     * `vscode.window.withProgress` for the same reason until 2026-10-16. The
+     * register's value is the step→notification half; the card half belongs to
+     * surfaces that have one.
      */
     cardLabel?: string;
     /**
@@ -125,13 +126,14 @@ export interface ProgressRegisterOptions {
  * silent. Every step the work reports goes to the notification.
  *
  * @param options - notification title, the card's line, the card's channel
- * @param run - the work; call its `report` per step (steps reach the NOTIFICATION)
+ * @param run - the work; call its `report` per step (steps reach the NOTIFICATION),
+ *   with the share of the bar the step completes when the run has one
  * @returns whatever `run` resolves to, captured from inside the task so the
  *          caller gets it regardless of what the notification does
  */
 export async function withProgressRegister<T>(
     options: ProgressRegisterOptions,
-    run: (report: (message: string) => void) => Promise<T>,
+    run: (report: (message: string, increment?: number) => void) => Promise<T>,
 ): Promise<T> {
     const { title, cardLabel, pushCardStatus, inModal } = options;
 
@@ -172,7 +174,10 @@ export async function withProgressRegister<T>(
             // The run's own steps go straight to the notification; only NESTED work
             // reaches it through the sink, so a step is never reported twice and a
             // report made outside the run's async context still lands.
-            const narrate = (message: string): void => progress.report({ message });
+            // `increment` moves the notification's bar a share per item, where the run
+            // has items to share it between; nothing else has a bar to move.
+            const narrate = (message: string, increment?: number): void =>
+                progress.report(increment === undefined ? { message } : { message, increment });
             result = await withPhaseSinks([narrate], () => run(narrate));
         },
     );

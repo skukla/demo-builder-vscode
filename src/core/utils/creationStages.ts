@@ -1,6 +1,6 @@
 /**
  * Project creation's own steps, in the one stage table (`operationStages.ts`, which
- * spreads them into `OPERATION_STAGES`), with an Edit's. Kept in their own file so the
+ * spreads them into `OPERATION_STAGES`), with an Edit's and a headless project reset's. Kept in their own file so the
  * table stays under the util size limit. The same rules hold: a label of at most 25
  * characters, an expectation and a detail.
  *
@@ -34,6 +34,14 @@ export const CREATION_STAGES = {
         expectation: 'Usually a few seconds',
         detail: 'What this stack is made of',
     },
+    // A headless project's reset, before it downloads them again (`projectResetService`);
+    // its other steps are creation's. FIRST ESTIMATE, NOT MEASURED: no reset of a
+    // headless project is in the logs. It deletes one folder per component.
+    removingComponents: {
+        label: 'Removing components',
+        expectation: 'Usually a few seconds',
+        detail: 'Integrations stay where they are',
+    },
     downloadingComponents: {
         label: 'Downloading components',
         expectation: 'Usually a few seconds',
@@ -45,12 +53,19 @@ export const CREATION_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'Running npm install for each',
     },
-    // FIRST ESTIMATE, NOT MEASURED in a creation: the runner's own stages show while
-    // each integration deploys, with their own expectations.
+    // One step however many integrations: each one's own steps show under it, by name
+    // (owner, 2026-10-16: "Fold"). FIRST ESTIMATE, NOT MEASURED in a creation.
     deployingIntegrations: {
         label: 'Deploying integrations',
         expectation: 'Usually 1–2 minutes each',
         detail: 'Onto Adobe I/O Runtime',
+    },
+    // An Edit that unticks integrations, the same way. FIRST ESTIMATE from one removal
+    // (3 minutes, 39 seconds on 2026-09-21, `operationStages.ts`).
+    removingIntegrations: {
+        label: 'Removing integrations',
+        expectation: 'A few minutes each',
+        detail: 'Off Adobe I/O Runtime and Commerce',
     },
     writingConfigFiles: {
         label: 'Writing config files',

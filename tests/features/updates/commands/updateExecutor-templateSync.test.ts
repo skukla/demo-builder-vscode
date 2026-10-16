@@ -10,6 +10,7 @@
 
 import { captureProgress, makeUpdateContext } from './updateExecutor.testUtils';
 import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { RESET_TO_TEMPLATE } from '@/features/updates/commands/templateConflictPrompt';
@@ -160,7 +161,7 @@ describe('performTemplateUpdates', () => {
 
             expect(syncWithTemplate).toHaveBeenCalledTimes(1);
             expect(syncWithTemplate).toHaveBeenCalledWith(idle, { strategy: 'merge' });
-            expect(report).toHaveBeenCalledWith({ message: 'b', increment: 100 });
+            expect(report).toHaveBeenCalledWith({ message: S.updatingTemplate.label, increment: 100 });
             expect(result).toEqual(new Set(['/p/b']));
         });
     });
@@ -176,7 +177,7 @@ describe('performTemplateUpdates', () => {
             expect(syncWithTemplate).toHaveBeenCalledWith(project, { strategy: 'merge' });
         });
 
-        it('shows a non-cancellable notification titled Syncing Templates', async () => {
+        it('shows a non-cancellable notification titled Applying updates', async () => {
             const ctx = makeUpdateContext();
 
             await performTemplateUpdates([makeItem(createMockProject())], ctx);
@@ -184,22 +185,23 @@ describe('performTemplateUpdates', () => {
             expect(withProgressMock).toHaveBeenCalledWith(
                 {
                     location: vscode.ProgressLocation.Notification,
-                    title: 'Syncing Templates',
+                    title: 'Applying updates',
                     cancellable: false,
                 },
                 expect.any(Function),
             );
         });
 
-        it('reports each project by name with an even share of the bar', async () => {
+        // The step, never the project's name in its place (progress vocabulary slice 7).
+        it('reports the step for each project with an even share of the bar', async () => {
             const ctx = makeUpdateContext();
             const a = createMockProject({ name: 'a', path: '/p/a' });
             const b = createMockProject({ name: 'b', path: '/p/b' });
 
             await performTemplateUpdates([makeItem(a), makeItem(b)], ctx);
 
-            expect(report).toHaveBeenNthCalledWith(1, { message: 'a', increment: 50 });
-            expect(report).toHaveBeenNthCalledWith(2, { message: 'b', increment: 50 });
+            expect(report).toHaveBeenNthCalledWith(1, { message: S.updatingTemplate.label, increment: 50 });
+            expect(report).toHaveBeenNthCalledWith(2, { message: S.updatingTemplate.label, increment: 50 });
         });
 
         it('on success records the synced commit through the state manager', async () => {

@@ -6,7 +6,11 @@
  *
  * Coverage areas:
  * - Progress message display
- * - 1500ms delay before GitHub API call (ensures user sees "Checking for updates" message)
+ * - 1500ms delay before GitHub API call (ensures user sees the first step)
+ *
+ * The notification opens through the shared progress register (progress vocabulary
+ * slice 7, 2026-10-16), a few awaits deeper than VS Code's own call: the flushes
+ * advance no time, so "before the delay" still means before any time passes.
  * - Message content verification
  * - Timing verification
  * - Error handling
@@ -17,6 +21,7 @@
 import * as vscode from 'vscode';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { UpdateManager } from '@/features/updates/services/updateManager';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
@@ -26,6 +31,9 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // Mock UpdateManager
 jest.mock('@/features/updates/services/updateManager');
+
+/** The check's first step: the extension's own release, the first of eight. */
+const FIRST_STEP = `${OPERATION_STAGES.checkingExtension.label} (1 of 8)`;
 
 // Mock ComponentUpdater and ExtensionUpdater
 jest.mock('@/features/updates/services/componentUpdater');
@@ -81,7 +89,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
     });
 
     describe('Happy Path', () => {
-        it('should show "Checking for updates" progress message', async () => {
+        it('should show the first step as its progress message', async () => {
             // Arrange
             const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
             mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
@@ -95,11 +103,11 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
             const executePromise = command.execute();
 
             // Flush microtasks to allow promise chain to start
-            await Promise.resolve();
+            await jest.advanceTimersByTimeAsync(0); // Flush microtasks, no time passes
 
             // Assert - progress.report should be called immediately
             expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Checking for updates',
+                message: FIRST_STEP,
             });
 
             // Complete the test
@@ -120,7 +128,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
 
             // Act
             const executePromise = command.execute();
-            await Promise.resolve(); // Flush microtasks
+            await jest.advanceTimersByTimeAsync(0); // Flush microtasks, no time passes
 
             // Assert: Progress message shown
             expect(mockProgress.report).toHaveBeenCalled();
@@ -153,7 +161,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
 
             // Act
             const executePromise = command.execute();
-            await Promise.resolve();
+            await jest.advanceTimersByTimeAsync(0); // Flush microtasks, no time passes
 
             // Fast-forward through all timers
             await jest.runAllTimersAsync();
@@ -195,7 +203,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
 
             // Act
             const executePromise = command.execute();
-            await Promise.resolve();
+            await jest.advanceTimersByTimeAsync(0); // Flush microtasks, no time passes
 
             // Assert: Progress reported immediately
             expect(progressReportCalled).toBe(true);
@@ -229,7 +237,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
 
             // Act
             const executePromise = command.execute();
-            await Promise.resolve();
+            await jest.advanceTimersByTimeAsync(0); // Flush microtasks, no time passes
 
             // Fast-forward all timers
             await jest.runAllTimersAsync();
@@ -244,7 +252,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
     });
 
     describe('Message Content', () => {
-        it('should display correct message text "Checking for updates"', async () => {
+        it('should display the first step, numbered, as the message', async () => {
             // Arrange
             const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
             mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
@@ -256,11 +264,11 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
 
             // Act
             const executePromise = command.execute();
-            await Promise.resolve();
+            await jest.advanceTimersByTimeAsync(0); // Flush microtasks, no time passes
 
             // Assert
             expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Checking for updates',
+                message: FIRST_STEP,
             });
 
             // Complete test
@@ -287,11 +295,11 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
 
             // Act
             const executePromise = command.execute();
-            await Promise.resolve();
+            await jest.advanceTimersByTimeAsync(0); // Flush microtasks, no time passes
 
             // Assert: Progress message shown before error
             expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Checking for updates',
+                message: FIRST_STEP,
             });
 
             // Advance timers to trigger API call and error

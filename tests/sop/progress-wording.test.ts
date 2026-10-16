@@ -123,9 +123,11 @@ describe('progress-notification wording', () => {
         // reports stage names from the table instead of writing a message here:
         // 30 -> 20 when the resets and the delete moved (PL-59 slices 2 and 3);
         // 20 -> 15 when Sync Storefront and the delete's cleanup reported their steps
-        // from the table (progress vocabulary slice 2, 2026-10-16: 20 sites left).
+        // from the table (progress vocabulary slice 2, 2026-10-16: 20 sites left);
+        // 15 -> 5 when Check for Updates and applying updates moved onto the shared
+        // register with steps from the table (progress vocabulary slice 7: 6 left).
         // It still has to find a real corpus, or the scan above proves nothing.
-        expect(sites(MESSAGE_SITES).length).toBeGreaterThan(15);
+        expect(sites(MESSAGE_SITES).length).toBeGreaterThan(5);
         expect(titleProblem('Deploying API Mesh')).toBeUndefined();
         expect(titleProblem('Demo Builder')).toBeDefined();
         // Deliberately BAD examples: they prove the scan can tell. A wording

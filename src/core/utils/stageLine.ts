@@ -2,9 +2,9 @@
  * An operation's three progress lines as the SC reads them: the stage (line 1), what
  * it is doing now (line 2), and what to expect with the run's clock (line 3).
  *
- * Line 1 carries the part it is on when it works through several: named when the part
- * has a name ("Deploying the app · Northwind ERP"), else counted ("Importing the data
- * (3 of 5)").
+ * Line 1 carries the step's place in the run when the run's steps are known up front
+ * ("Copying the content (4 of 9)"), or the member of a pair it is on ("Deploying the
+ * app · Northwind ERP"). Never a count of items: that is the line under it.
  *
  * One formatter for every place a stage shows, the progress modal and the wizard's
  * creation and storefront-setup screens (webview) and the notification it hands over

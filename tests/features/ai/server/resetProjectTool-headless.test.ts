@@ -44,6 +44,7 @@ jest.mock('@/core/utils/agentPhaseChannel', () => ({
     reportPhase: (...a: unknown[]) => mockReportPhase(...a),
 }));
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
@@ -117,9 +118,9 @@ describe('reset_project on a headless project', () => {
                 _deps: unknown,
                 report: (stage: string, step?: string, at?: { index: number; total: number }) => void,
             ) => {
-                report('Reading what this project has', undefined, { index: 1, total: 6 });
-                report('Downloading the components', undefined, { index: 3, total: 6 });
-                report('Downloading the components', 'Cloning citisignal', { index: 3, total: 6 });
+                report(OPERATION_STAGES.loadingComponents.label, undefined, { index: 1, total: 5 });
+                report(OPERATION_STAGES.downloadingComponents.label, undefined, { index: 3, total: 5 });
+                report(OPERATION_STAGES.downloadingComponents.label, 'Cloning citisignal', { index: 3, total: 5 });
                 return { success: true, meshRedeployed: false };
             },
         );
@@ -172,13 +173,13 @@ describe('reset_project on a headless project', () => {
             kind: 'headless',
             meshRedeployed: false,
             phases: [
-                { step: 1, totalSteps: 6, message: 'Reading what this project has' },
-                { step: 3, totalSteps: 6, message: 'Downloading the components' },
+                { step: 1, totalSteps: 5, message: OPERATION_STAGES.loadingComponents.label },
+                { step: 3, totalSteps: 5, message: OPERATION_STAGES.downloadingComponents.label },
             ],
         });
         // Live, in the words the button's notification uses.
-        expect(mockReportPhase).toHaveBeenCalledWith('Reading what this project has (1 of 6)');
-        expect(mockReportPhase).toHaveBeenCalledWith('Downloading the components (3 of 6)');
+        expect(mockReportPhase).toHaveBeenCalledWith(`${OPERATION_STAGES.loadingComponents.label} (1 of 5)`);
+        expect(mockReportPhase).toHaveBeenCalledWith(`${OPERATION_STAGES.downloadingComponents.label} (3 of 5)`);
     });
 
     it.each(['running', 'starting'] as const)(

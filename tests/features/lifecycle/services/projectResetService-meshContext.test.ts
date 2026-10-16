@@ -8,6 +8,7 @@
  * AIO_CONSOLE_* env — without clobbering concurrent processes.
  */
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -290,10 +291,11 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         expect(mockEnsureAdobeIOAuth.mock.invocationCallOrder[0]).toBeLessThan(
             mockWithOrgContext.mock.invocationCallOrder[0]
         );
+        // The access check is its own step from the table, as Reset's is; the reset
+        // numbers it (progress vocabulary slice 6, 2026-10-16).
         expect(report).toHaveBeenCalledWith(
-            'Redeploying the mesh',
-            'Checking your Adobe access',
-            { index: 6, total: 6 },
+            OPERATION_STAGES.checkingRequirements.label,
+            'Your Adobe sign-in and organization',
         );
     });
 
@@ -318,7 +320,7 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             expect.any(Function),
             'mesh-123'
         );
-        expect(report).toHaveBeenCalledWith('Redeploying the mesh', undefined, { index: 6, total: 6 });
+        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.redeployingMesh.label);
     });
 
     it('relays the deploy\'s own progress into the reset\'s step line, preferring the sub-message', async () => {
@@ -337,15 +339,9 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
             subMessage?: string
         ) => void;
         onProgress('Deploying the mesh', 'Provisioning…');
-        expect(report).toHaveBeenLastCalledWith('Redeploying the mesh', 'Provisioning…', {
-            index: 6,
-            total: 6,
-        });
+        expect(report).toHaveBeenLastCalledWith(OPERATION_STAGES.redeployingMesh.label, 'Provisioning…');
         onProgress('Deploying the mesh', undefined);
-        expect(report).toHaveBeenLastCalledWith('Redeploying the mesh', 'Deploying the mesh', {
-            index: 6,
-            total: 6,
-        });
+        expect(report).toHaveBeenLastCalledWith(OPERATION_STAGES.redeployingMesh.label, 'Deploying the mesh');
     });
 
     describe('when the deploy fails', () => {

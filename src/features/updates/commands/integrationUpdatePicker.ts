@@ -14,7 +14,10 @@
 
 import * as vscode from 'vscode';
 import { toIntegrationUpdateItem, type IntegrationUpdateItem } from './updateTypes';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { APPLYING_UPDATES } from '@/core/utils/updateStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { hasIntegrationsToCheck } from '@/features/app-builder/services/integrationUpdateCheck';
 import {
@@ -81,15 +84,15 @@ export async function performIntegrationUpdates(
     selections: IntegrationUpdateItem[],
     ctx: UpdateContext,
 ): Promise<void> {
-    const result = await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: 'Updating Integrations', cancellable: false },
-        (progress) =>
-            applyIntegrationUpdates(
-                selections.map((item) => item.update),
-                ctx,
-                (message) => progress.report({ message }),
-            ),
-    );
+    // The step, from the stage table, whatever each pair says it is doing: "Updating X
+    // in P: <its step>" was the message, cut off at the notification's width.
+    const result = await withProgressRegister({ title: APPLYING_UPDATES }, (report) => {
+        report(OPERATION_STAGES.updatingIntegrations.label);
+        return applyIntegrationUpdates(
+            selections.map((item) => item.update),
+            ctx,
+        );
+    });
     for (const line of result.applied ?? []) vscode.window.showInformationMessage(line);
     for (const line of result.deferred ?? []) vscode.window.showInformationMessage(line);
     for (const error of result.errors) vscode.window.showErrorMessage(error);

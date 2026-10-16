@@ -17,9 +17,12 @@ import {
     type ProjectUpdateItem,
     type TemplateUpdateItem,
 } from './updateTypes';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { APPLYING_UPDATES } from '@/core/utils/updateStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { describeUpdateLeftOut } from '@/features/eds/services/addedEntriesRecord';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
@@ -145,13 +148,9 @@ export async function performTemplateUpdates(
         return succeededPaths;
     }
 
-    const { successCount, failCount, keptCount } = await vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Syncing Templates',
-            cancellable: false,
-        },
-        async (progress) => {
+    const { successCount, failCount, keptCount } = await withProgressRegister(
+        { title: APPLYING_UPDATES },
+        async (report) => {
             const templateSyncService = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
             let successCount = 0;
             let failCount = 0;
@@ -160,10 +159,7 @@ export async function performTemplateUpdates(
             for (const selection of filtered) {
                 const project = selection.project;
 
-                progress.report({
-                    message: `${project.name}`,
-                    increment: 100 / filtered.length,
-                });
+                report(OPERATION_STAGES.updatingTemplate.label, 100 / filtered.length);
 
                 try {
                     const outcome = await syncTemplateWithConflictPrompt(project, templateSyncService);
@@ -245,13 +241,9 @@ export async function performComponentUpdates(
 
     const totalUpdates = Array.from(projectUpdates.values()).reduce((sum, u) => sum + u.length, 0);
 
-    const { successCount, failCount } = await vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Updating Components',
-            cancellable: false,
-        },
-        async (progress) => {
+    const { successCount, failCount } = await withProgressRegister(
+        { title: APPLYING_UPDATES },
+        async (report) => {
             const componentUpdater = new ComponentUpdater(ctx.logger, ctx.extensionPath, ctx.commandManager);
             let successCount = 0;
             let failCount = 0;
@@ -262,10 +254,7 @@ export async function performComponentUpdates(
                 for (const update of updates) {
                     if (!update.releaseInfo) continue;
 
-                    progress.report({
-                        message: `${update.componentId} in ${project.name}`,
-                        increment: 100 / totalUpdates,
-                    });
+                    report(OPERATION_STAGES.updatingComponents.label, 100 / totalUpdates);
 
                     try {
                         await componentUpdater.updateComponent(
@@ -314,8 +303,8 @@ export async function performComponentUpdates(
  * Apply the Adobe MCP package update in each selected project via the shared
  * `applyAdobeMcpUpdate` core (npm update in the isolated tools dir →
  * regenerate AI context files → persist the freshness stamp). This function
- * owns only the UI shell — running-demo guard per project,
- * `vscode.window.withProgress`, per-project error isolation — mirroring
+ * owns only the UI shell — running-demo guard per project, the progress
+ * notification (`withProgressRegister`), per-project error isolation — mirroring
  * `performComponentUpdates`.
  *
  * No storefront-path guard here: `AdobeMcpUpdateItem`s only exist because
@@ -341,23 +330,16 @@ export async function performAdobeMcpUpdates(
     if (byProject.size === 0) return;
 
     const total = byProject.size;
-    const { successCount, failCount } = await vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Updating Adobe MCP',
-            cancellable: false,
-        },
-        async (progress) => {
+    const { successCount, failCount } = await withProgressRegister(
+        { title: APPLYING_UPDATES },
+        async (report) => {
             let successCount = 0;
             let failCount = 0;
 
             for (const [, item] of byProject.entries()) {
                 const { project, packageName, latestVersion } = item;
 
-                progress.report({
-                    message: `${packageName} → ${latestVersion} in ${project.name}`,
-                    increment: 100 / total,
-                });
+                report(OPERATION_STAGES.updatingAiTools.label, 100 / total);
 
                 try {
                     await applyAdobeMcpUpdate(project, packageName, latestVersion, ctx);

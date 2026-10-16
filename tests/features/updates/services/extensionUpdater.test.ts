@@ -5,6 +5,7 @@
 
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -105,8 +106,9 @@ describe('ExtensionUpdater', () => {
                 }),
                 expect.any(Function),
             );
-            expect(mockProgress.report).toHaveBeenCalledWith({ message: 'Downloading update' });
-            expect(mockProgress.report).toHaveBeenCalledWith({ message: 'Installing' });
+            // Steps from the stage table, numbered (progress vocabulary slice 7).
+            expect(mockProgress.report).toHaveBeenCalledWith({ message: `${S.downloadingUpdate.label} (1 of 2)` });
+            expect(mockProgress.report).toHaveBeenCalledWith({ message: `${S.installingUpdate.label} (2 of 2)` });
         });
 
         it('should validate GitHub URL before downloading', async () => {

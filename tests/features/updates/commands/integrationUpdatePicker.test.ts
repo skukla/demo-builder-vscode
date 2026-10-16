@@ -7,6 +7,7 @@
  */
 
 import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import {
     integrationUpdateProbe,
@@ -185,12 +186,31 @@ describe('performIntegrationUpdates', () => {
         await performIntegrationUpdates([row(pairProject())], ctx);
 
         expect(withProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Updating Integrations' }),
+            expect.objectContaining({ title: 'Applying updates' }),
             expect.any(Function),
         );
         expect(ctx.updateIntegrationPair).toHaveBeenCalledWith(expect.anything(), 'demo-erp', expect.any(Function));
         expect(showInfo).toHaveBeenCalledWith('Updated from a to b.');
         expect(showError).not.toHaveBeenCalled();
+    });
+
+    // The step from the stage table, never "Updating X in P: <its step>" in its place
+    // (progress vocabulary slice 7, owner 2026-10-16).
+    it('shows the step on the notification, however each pair reports its own', async () => {
+        const report = jest.fn();
+        withProgress.mockImplementationOnce(async (_options: unknown, task: (p: { report: jest.Mock }) => Promise<unknown>) =>
+            task({ report }),
+        );
+        const ctx = makeCtx(
+            jest.fn(async (_p: unknown, _id: string, step: (m: string, s?: string) => void) => {
+                step('Deploying the app', 'Running aio app deploy');
+                return { success: true };
+            }),
+        );
+
+        await performIntegrationUpdates([row(pairProject())], ctx);
+
+        expect(report.mock.calls.map(([p]) => p.message)).toStrictEqual([S.updatingIntegrations.label]);
     });
 
     it('a failed update is reported in plain words, and nothing else pretends it worked', async () => {

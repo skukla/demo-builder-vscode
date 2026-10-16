@@ -8,8 +8,9 @@
  * given (the stack, the mesh, the integrations, the datapack). A step with nothing to do
  * when it comes (no product pages to warm, no catalog-menu block) is skipped and the
  * count moves on, as Reset's does. Steps outside the list show without a number: the
- * folder cleanup before a run, the runner's own stages while an integration deploys,
- * and the content copy that runs only when the storefront has none.
+ * folder cleanup before a run, and the content copy that runs only when the storefront
+ * has none. Each integration's own steps are not steps of the run: they show on line 2
+ * of 'Deploying integrations', under its name (`integrationProgress`).
  *
  * Split out of `executor.ts`, which sat at its size limit.
  *

@@ -1,5 +1,6 @@
 /**
- * The mesh leg of a headless project reset: step 6 of `projectResetService`.
+ * The mesh leg of a headless project reset: its last two steps, the access check and
+ * the redeploy (`projectResetSteps`, which numbers them).
  *
  * Split out of `projectResetService.ts` on 2026-10-03, when the reset gained a
  * headless core for the `reset_project` agent tool and the service grew past its
@@ -11,13 +12,11 @@
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-
-/** Step 6 of 6: the mesh redeploy is the reset's last step. */
-const MESH_STEP = { index: 6, total: 6 };
 
 // ==========================================================
 // Mesh Redeployment
@@ -73,7 +72,7 @@ async function runTargetedMeshDeploy(
     vscode: typeof import('vscode'),
     commandManager: CommandExecutor,
 ): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse }> {
-    report('Redeploying the mesh', undefined, MESH_STEP);
+    report(OPERATION_STAGES.redeployingMesh.label);
     context.logger.info(`${logPrefix} Redeploying mesh`);
 
     try {
@@ -84,7 +83,7 @@ async function runTargetedMeshDeploy(
             meshPath,
             commandManager,
             context.logger,
-            (stage, step) => report('Redeploying the mesh', step || stage, MESH_STEP),
+            (stage, step) => report(OPERATION_STAGES.redeployingMesh.label, step || stage),
         );
 
         if (meshResult.success && meshResult.data?.endpoint) {
@@ -128,7 +127,8 @@ export async function handleMeshRedeployment(
 
     if (!meshComponent?.path) return null;
 
-    report('Redeploying the mesh', 'Checking your Adobe access', MESH_STEP);
+    // Its own step, as Reset's sign-in checks are, with what it checks under it.
+    report(OPERATION_STAGES.checkingRequirements.label, 'Your Adobe sign-in and organization');
     const ready = await ensureAdobeContext(project, context, logPrefix, authService);
 
     if (!ready) {

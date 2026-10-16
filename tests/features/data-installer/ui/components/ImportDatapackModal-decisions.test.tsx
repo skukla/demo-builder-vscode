@@ -27,6 +27,7 @@ import {
     mockPostMessage,
 } from './ImportDatapackModal.testUtils';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 const STATUS = 'get-datapack-import-status';
 
@@ -166,8 +167,8 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await settle();
 
-            expect(await screen.findByText('Removing')).toBeInTheDocument();
-            expect(screen.getByText(/Removing Categories · 0 of 2 done/)).toBeInTheDocument();
+            expect(await screen.findByText(OPERATION_STAGES.removingDatapack.label)).toBeInTheDocument();
+            expect(screen.getByText('0 of 2 data types: Categories')).toBeInTheDocument();
         });
 
         it('CONTROL — narrates a running import as an import', async () => {
@@ -175,8 +176,8 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await settle();
 
-            expect(await screen.findByText('Importing')).toBeInTheDocument();
-            expect(screen.getByText(/Importing Categories · 0 of 2 done/)).toBeInTheDocument();
+            expect(await screen.findByText(OPERATION_STAGES.installingDatapack.label)).toBeInTheDocument();
+            expect(screen.getByText('0 of 2 data types: Categories')).toBeInTheDocument();
         });
 
         it('says the REMOVAL continues on the server once watching stops', async () => {
@@ -203,7 +204,7 @@ describe('ImportDatapackModal — decisions', () => {
             withStatus(runningRecord({ perType: { categories: 'success' } }));
             renderModal();
             await settle();
-            await screen.findByText('Importing');
+            await screen.findByText(OPERATION_STAGES.installingDatapack.label);
 
             expect(screen.getByRole('progressbar')).toHaveAttribute('value', '50');
         });

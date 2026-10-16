@@ -499,7 +499,8 @@ describe('ImportDatapackModal — job lifecycle', () => {
          * The WORDING changed deliberately. This used to dump every type and its
          * raw state ("categories: success · products: processing"), a line that
          * grew as the job ran and answered neither "how far along" nor "what is
-         * happening now". It is a count and the type in hand instead.
+         * happening now". It is a count and the type in hand instead, in the words
+         * every datapack surface uses (progress vocabulary slice 5, 2026-10-16).
          */
         it('shows a count and the type being worked on while running', async () => {
             withStatus({
@@ -510,7 +511,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             });
             renderModal();
 
-            expect(await screen.findByText(/Importing Products · 1 of 2 done/i)).toBeInTheDocument();
+            expect(await screen.findByText('1 of 2 data types: Products')).toBeInTheDocument();
         });
 
         /** Before any type reports there is no honest count, so the line stays away. */
@@ -524,7 +525,7 @@ describe('ImportDatapackModal — job lifecycle', () => {
             renderModal();
 
             await screen.findByRole('button', { name: /stop watching/i });
-            expect(screen.queryByText(/of 2 done/i)).not.toBeInTheDocument();
+            expect(screen.queryByText(/of 2 data types/i)).not.toBeInTheDocument();
         });
 
         // There is NO cancel endpoint. Both strings are pinned, because softening

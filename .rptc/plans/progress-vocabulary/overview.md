@@ -80,3 +80,10 @@ Mesh, App Builder, ERP and AI-files steps already come from the table and keep t
   them. A wording change is a contract change there: audit mocks, not only callers.
 - Log lines are not progress: leave `logger.*` text alone unless a test pins it for the UI.
 - Labels max 25 chars; a duplicate label across the table is a test failure (BY_LABEL map).
+
+## Decisions during the work
+
+- 2026-10-16 (owner): **fold** integration deploys during project creation into the one
+  numbered step "Deploying integrations (n of N)"; each integration's own steps go on line 2.
+  This reverses the 2026-10-07 choice to keep them as their own unnumbered line-1 steps,
+  for consistency with every other flow.

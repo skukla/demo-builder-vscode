@@ -33,8 +33,13 @@ import {
 import { BaseCommand } from '@/core/base/baseCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ExecutionLock } from '@/core/utils/executionLock';
+import { numberedSteps } from '@/core/utils/numberedSteps';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { sleep } from '@/core/utils/sleep';
+import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { UPDATE_CHECK_STEPS } from '@/core/utils/updateStages';
+import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import {
@@ -65,14 +70,15 @@ export class CheckUpdatesCommand extends BaseCommand {
 
         await CheckUpdatesCommand.lock.run(async () => {
             try {
-                const { extensionUpdate, sources, currentProject, hasUpdates } = await vscode.window.withProgress(
-                    {
-                        location: vscode.ProgressLocation.Notification,
-                        title: 'Checking for updates',
-                        cancellable: false,
-                    },
-                    async (progress) => {
-                        progress.report({ message: 'Checking for updates' });
+                // Through the shared register, so an agent hears the steps too; each a
+                // step from the stage table, numbered from the fixed list.
+                const { extensionUpdate, sources, currentProject, hasUpdates } = await withProgressRegister(
+                    { title: 'Checking for updates' },
+                    async (narrate) => {
+                        const step = numberedSteps(UPDATE_CHECK_STEPS, (stage, _step, at) =>
+                            narrate(stageLine(stage, at)),
+                        );
+                        step(S.checkingExtension.label);
 
                         // Wait to ensure message is visible before making GitHub API call
                         await sleep(TIMEOUTS.UPDATE_MESSAGE_DELAY);
@@ -84,7 +90,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                         const extensionUpdate = await updateManager.checkExtensionUpdate();
 
                         // Load ALL projects
-                        progress.report({ message: 'Checking all projects' });
+                        step(S.checkingAllProjects.label);
                         const projectMetadata = await this.stateManager.getAllProjects();
                         const allProjects: Project[] = [];
 
@@ -107,17 +113,17 @@ export class CheckUpdatesCommand extends BaseCommand {
                         );
 
                         // Phase 2: Check fork sync for source repos
-                        progress.report({ message: 'Checking source repos' });
+                        step(S.checkingSourceRepos.label);
                         const forkSyncItems = await this.checkForkSyncUpdates(allProjects);
 
                         // Phase 3: Check component updates across all projects
-                        progress.report({ message: 'Checking components' });
+                        step(S.checkingComponents.label);
                         const multiProjectUpdates = allProjects.length > 0
                             ? await updateManager.checkAllProjectsForUpdates(allProjects)
                             : [];
 
                         // Check template updates for EDS projects
-                        progress.report({ message: 'Checking EDS templates' });
+                        step(S.checkingTemplates.label);
                         const templateUpdateChecker = new TemplateUpdateChecker(this.context.secrets, this.logger);
                         const templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }> = [];
 
@@ -129,18 +135,18 @@ export class CheckUpdatesCommand extends BaseCommand {
                         }
 
                         // Phase 4: Check add-on updates
-                        progress.report({ message: 'Checking add-ons' });
+                        step(S.checkingAddOns.label);
                         const { blockLibraryItems, inspectorItems } = await this.checkAddonUpdates(
                             allProjects, currentProject ?? null,
                         );
 
                         // Phase 5: Check Adobe MCP package updates per storefront
-                        progress.report({ message: 'Checking the AI tools' });
+                        step(S.checkingAiTools.label);
                         const adobeMcpItems = await this.checkAdobeMcpUpdates(
                             allProjects, currentProject ?? null,
                         );
 
-                        progress.report({ message: 'Checking integrations' });
+                        step(S.checkingIntegrations.label);
                         const integrationItems = await integrationCheck;
 
                         const sources: UpdatePickerSources = {
@@ -150,9 +156,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                         const hasUpdates = extensionUpdate.hasUpdate || hasPickerRows(sources);
 
                         if (!hasUpdates) {
-                            progress.report({
-                                message: `Up to date (v${extensionUpdate.current})`,
-                            });
+                            narrate(`Up to date (v${extensionUpdate.current})`);
                             await sleep(TIMEOUTS.UPDATE_RESULT_DISPLAY);
                         }
 

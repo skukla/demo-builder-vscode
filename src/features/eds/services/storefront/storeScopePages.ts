@@ -38,10 +38,10 @@ import {
 } from './productPageRemoval';
 import { clearCatalogPagesPending } from './storeScopeChange';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { itemCount } from '@/core/utils/storefrontJobs';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-import type { OperationPosition } from '@/types/webviewPayloads';
 
 export interface StoreScopePagesDeps {
     /** The Helix site, by GitHub owner and repository. */
@@ -57,8 +57,11 @@ export interface StoreScopePagesDeps {
     logger: Logger;
 }
 
-/** Report a stage as it starts, with the step under it and a count when there is one. */
-export type StoreScopeReport = (stage: string, step?: string, position?: OperationPosition) => void;
+/**
+ * Report a stage as it starts, with the line under it: a count of its items, when there
+ * is one, goes there ("30 pages"), never as a position on the stage.
+ */
+export type StoreScopeReport = (stage: string, step?: string) => void;
 
 export interface StoreScopePagesResult {
     /** One sentence for the SC: where the storefront is now, and what changed. */
@@ -125,9 +128,9 @@ async function publishProductPages(deps: StoreScopePagesDeps, report: StoreScope
     report(STAGE.publish);
     const started = Date.now();
     try {
-        const result = await deps.publishProductPages((p) =>
-            report(STAGE.publish, p.message, p.current && p.total ? { index: p.current, total: p.total } : undefined),
-        );
+        // The count is in the message ("Warming product pages: 37 of 300 pages"), for line
+        // 2. Never a position: "(37 of 300)" on line 1 reads as a step of the run.
+        const result = await deps.publishProductPages((p) => report(STAGE.publish, p.message));
         deps.logger.info(
             `[StoreScopePages] Publishing ${result.attempted} product pages took ${formatDuration(Date.now() - started)}`,
         );
@@ -167,7 +170,7 @@ export async function replaceStoreScopePages(
     try {
         report(STAGE.remove);
         const removal = await removeProductPages(deps.site, deps.productPages);
-        if (removal.found > 0) report(STAGE.remove, `Removing the old store's product pages (${removal.found})`);
+        if (removal.found > 0) report(STAGE.remove, itemCount(removal.found, 'page'));
 
         report(STAGE.categories);
         const categories = await replaceCatalogMenuStep(project, deps.catalogMenu);
