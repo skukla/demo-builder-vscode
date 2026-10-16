@@ -47,6 +47,7 @@ import {
     applyDaLiveOrgConfigSettings,
     configureDaLivePermissions,
 } from '@/features/eds/handlers/edsHelpers';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { PREVIEW_CODE_APP_NOT_ON_REPO_ERROR } from '../../../../helpers/helixAdminFixtures';
 import { fakeHelix, helixCalls } from './storefrontContentRepublishService.testUtils';
@@ -175,10 +176,10 @@ describe('republishStorefrontContent', () => {
             expect(mockApplyCatalogMenuStep.mock.invocationCallOrder[0]).toBeGreaterThan(publishOrder);
         });
 
-        it('carries the sentence on the result, shows it, and keeps the record on the project', async () => {
+        it('carries the sentence on the result, shows it under its step, and keeps the record on the project', async () => {
             mockApplyCatalogMenuStep.mockResolvedValue('Wrote and published 1 category page.');
-            const onProgress = jest.fn();
-            const p = params({ onProgress });
+            const onStage = jest.fn();
+            const p = params({ onStage });
 
             const res = await republishStorefrontContent(p);
 
@@ -187,7 +188,10 @@ describe('republishStorefrontContent', () => {
                 cdnVerified: true,
                 catalogMenu: 'Wrote and published 1 category page.',
             });
-            expect(onProgress).toHaveBeenCalledWith('Wrote and published 1 category page.');
+            expect(onStage).toHaveBeenCalledWith(
+                OPERATION_STAGES.updatingCatalogMenu.label,
+                'Wrote and published 1 category page.',
+            );
             expect(p.persist).toHaveBeenCalledWith(p.project);
         });
 
@@ -224,43 +228,55 @@ describe('republishStorefrontContent', () => {
         });
 
         it('skips the permissions, and still publishes, when nobody is signed in by email', async () => {
+            const onStage = jest.fn();
             const res = await republishStorefrontContent(
-                params({ daLiveAuthService: { getUserEmail: jest.fn(async () => undefined) } }),
+                params({ daLiveAuthService: { getUserEmail: jest.fn(async () => undefined) }, onStage }),
             );
             expect(configureDaLivePermissions).not.toHaveBeenCalled();
             expect(mockPublishAllSiteContent).toHaveBeenCalled();
             expect(res).toStrictEqual({ success: true, cdnVerified: true });
+            // A step with nothing to do is not shown; the next one keeps its own number.
+            expect(onStage.mock.calls.map(([stage]) => stage)).not.toContain(
+                OPERATION_STAGES.settingSitePermissions.label,
+            );
         });
 
-        it('tells the SC each step in order, the publish and prewarm progress included', async () => {
+        // Progress vocabulary slice 3 (owner, 2026-10-16): each part is a STEP from the
+        // stage table, named as the same job is everywhere else, with what it is doing
+        // under it. It used to be one line after another, each shown as if it were the
+        // step: "Syncing code to CDN", "Purging stale cache", "Verifying CDN".
+        it('reports each step as it starts, in order, with what it is doing under it', async () => {
             mockPublishAllSiteContent.mockImplementationOnce(async (...a: unknown[]) => {
                 const onStep = a[4] as (i: { message: string }) => void;
-                onStep({ message: 'Published 3 of 3 pages' });
+                onStep({ message: 'Publishing the pages: 3 of 3 pages' });
                 return undefined;
             });
             (prewarmCatalog as jest.Mock).mockImplementationOnce(
                 async (...a: unknown[]) => {
                     const onStep = a[6] as (p: { message: string }) => void;
-                    onStep({ message: 'Loaded 2 of 2 product pages' });
+                    onStep({ message: 'Warming product pages: 2 of 2 pages' });
                     return { attempted: 2, succeeded: 2, failed: 0, skipped: false };
                 },
             );
-            const onProgress = jest.fn();
+            const onStage = jest.fn();
 
-            await republishStorefrontContent(params({ onProgress }));
+            await republishStorefrontContent(params({ onStage }));
 
-            expect(onProgress.mock.calls.map(([m]) => m)).toStrictEqual([
-                'Applying EDS configuration',
-                'Regenerating storefront configuration',
-                'Extracting configuration',
-                'Syncing code to CDN',
-                'Configuring site permissions',
-                'Purging stale cache',
-                'Publishing content to CDN',
-                'Published 3 of 3 pages',
-                'Loading the product pages so they are quick for visitors',
-                'Loaded 2 of 2 product pages',
-                'Verifying CDN',
+            const S = OPERATION_STAGES;
+            expect(onStage.mock.calls).toStrictEqual([
+                [S.applyingDaLiveSettings.label],
+                [S.publishingSettings.label],
+                // The real config step, which stops early for a project with no storefront.
+                [S.publishingSettings.label, 'Publishing the settings: reading the project settings'],
+                [S.publishingCode.label],
+                [S.settingSitePermissions.label],
+                [S.clearingCache.label],
+                [S.publishingPages.label],
+                [S.publishingPages.label, 'Publishing the pages: 3 of 3 pages'],
+                [S.updatingCatalogMenu.label],
+                [S.warmingProductPages.label],
+                [S.warmingProductPages.label, 'Warming product pages: 2 of 2 pages'],
+                [S.checkingSettings.label],
             ]);
         });
     });

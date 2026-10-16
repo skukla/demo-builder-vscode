@@ -295,8 +295,11 @@ describe('republishStorefrontConfig — each step and what it answers', () => {
             repoName: 'shop',
             logger,
             secrets,
-            onProgress,
+            onProgress: expect.any(Function),
         });
+        // The push's own line is this job's line too.
+        mockSync.mock.calls[0][0].onProgress('Waiting for the CDN');
+        expect(onProgress).toHaveBeenLastCalledWith('Publishing the settings: Waiting for the CDN');
         expect(project).toHaveProperty('edsStorefrontStatusSummary', 'published');
     });
 
@@ -358,15 +361,18 @@ describe('republishStorefrontConfig — each step and what it answers', () => {
         expect(await run().result).toStrictEqual({ success: false, error: 'kaboom' });
     });
 
-    it('tells the SC each step in order', async () => {
+    // One job, one name, wherever it runs (progress vocabulary slice 3, owner
+    // 2026-10-16): every caller shows these under its "Publishing the settings" step,
+    // which strips the name, so the line under it reads "writing config.json".
+    it('tells the SC what the settings publish is doing, under its one name', async () => {
         const onProgress = jest.fn();
         await run({ onProgress }).result;
 
         expect(onProgress.mock.calls.map(([m]) => m)).toStrictEqual([
-            'Extracting configuration',
-            'Generating config.json',
-            'Writing config.json',
-            'Syncing to GitHub and CDN',
+            'Publishing the settings: reading the project settings',
+            'Publishing the settings: building config.json',
+            'Publishing the settings: writing config.json',
+            'Publishing the settings: sending it to GitHub and the live site',
         ]);
     });
 });

@@ -313,7 +313,7 @@ describe('republishing the storefront after a deploy', () => {
 
         expect(republishStorefront).toHaveBeenCalledWith(input.project);
         expect(report).toHaveBeenCalledWith(
-            expect.objectContaining({ message: OPERATION_STAGES.republishingStorefront.label })
+            expect.objectContaining({ message: OPERATION_STAGES.publishingSettings.label })
         );
         // Strict: a republish that landed adds NO `storefrontNotRepublished` key.
         // `toEqual` reads an undefined one as absent, and callers test for the key.

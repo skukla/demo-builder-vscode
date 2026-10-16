@@ -25,6 +25,7 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { lostGrantsMessage } from '@/features/eds/services/configService/lostGrantsMessage';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
 import type { RepairSiteConfigResult } from '@/features/eds/services/configService/repairSiteConfigHeadless';
@@ -81,14 +82,15 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
                 title: 'Repairing site configuration',
                 cancellable: false,
             },
-            (progress) =>
-                repairSiteConfigForProject(
-                    project,
-                    this.context,
-                    this.logger,
-                    (p) => this.stateManager.saveProject(p),
-                    (message) => progress.report({ message }),
-                ),
+            // Each half names its step, as the same job is named everywhere else
+            // (progress vocabulary slice 3, owner 2026-10-16), under one title. A
+            // notification shows one line, so the work's own lines stay out of it.
+            (progress) => {
+                progress.report({ message: OPERATION_STAGES.updatingSiteConfig.label });
+                return repairSiteConfigForProject(project, this.context, this.logger, (p) =>
+                    this.stateManager.saveProject(p),
+                );
+            },
         );
     }
 
@@ -102,17 +104,18 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
         const result = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Republishing storefront',
+                title: 'Repairing site configuration',
                 cancellable: false,
             },
-            (progress) =>
-                republishStorefrontConfig({
+            (progress) => {
+                progress.report({ message: OPERATION_STAGES.publishingSettings.label });
+                return republishStorefrontConfig({
                     persist: (p) => this.stateManager.saveProject(p),
                     project,
                     secrets: this.context.secrets,
                     logger: this.logger,
-                    onProgress: (message) => progress.report({ message }),
-                }),
+                });
+            },
         );
 
         if (result.success) {

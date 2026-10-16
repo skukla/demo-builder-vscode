@@ -26,7 +26,7 @@ function push(payload: Record<string, unknown>): void {
     act(() => webviewClientHandlers.get('operationProgress')?.(payload));
 }
 
-const running = { id: OPERATION.id, state: 'running', stage: 'Publishing the config' };
+const running = { id: OPERATION.id, state: 'running', stage: 'Publishing the settings' };
 
 beforeEach(() => {
     jest.clearAllMocks();

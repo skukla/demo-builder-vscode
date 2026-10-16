@@ -329,7 +329,7 @@ describe('ConfigureProjectWebviewCommand - env file reads and writes', () => {
 
             await files(command).republishStorefront(projectWith({}));
 
-            expect(report).toHaveBeenCalledWith({ message: 'Publishing the config' });
+            expect(report).toHaveBeenCalledWith({ message: 'Publishing the settings' });
         });
 
         it('persists through the `persist` seam the service is handed', async () => {

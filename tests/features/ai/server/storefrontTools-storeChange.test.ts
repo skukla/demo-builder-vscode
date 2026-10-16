@@ -41,6 +41,8 @@ jest.mock('@/features/eds/services/storefront/storeScopePagesDeps', () => ({
 }));
 
 import { COMPONENT_IDS } from '@/core/constants';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
@@ -183,5 +185,60 @@ describe('sync_content', () => {
         expect((republishStorefrontContent as jest.Mock).mock.calls[0][0].stateManager).toBe(stateManager);
         expect(answer).toMatchObject({ success: true, storePages: SENTENCE });
         expectWithinCeiling('sync_content', JSON.stringify(answer));
+    });
+});
+
+// Every flow names its steps the same way (progress vocabulary slice 3, owner
+// 2026-10-16). Under an agent each step reaches the agent's notification and the chat
+// once, by its table name, as it starts; the lines under a step are the modal's detail
+// and stay out of the chat.
+describe('the steps an agent is told', () => {
+    const S = OPERATION_STAGES;
+
+    async function phasesOf(tool: string): Promise<string[]> {
+        const phases: string[] = [];
+        await withPhaseSinks([(m) => phases.push(m)], () => server()(tool));
+        return phases;
+    }
+
+    it('republish: the settings, then the store-change steps', async () => {
+        getCurrentProject.mockResolvedValue(storefront(true));
+        mockReplaceStoreScopePages.mockImplementation(
+            async (_p: Project, _d: unknown, report: (stage: string, step?: string, at?: unknown) => void) => {
+                report(S.removingProductPages.label);
+                report(S.removingProductPages.label, "Removing the old store's product pages (30)");
+                report(S.updatingCatalogMenu.label);
+                report(S.warmingProductPages.label);
+                report(S.warmingProductPages.label, 'Warming product pages: 1 of 39 pages', { index: 1, total: 39 });
+                return { sentence: SENTENCE, counts: { categoryPages: 11, productPages: 39, oldProductPagesRemoved: 30 } };
+            },
+        );
+
+        expect(await phasesOf('republish')).toStrictEqual([
+            S.publishingSettings.label,
+            S.removingProductPages.label,
+            S.updatingCatalogMenu.label,
+            S.warmingProductPages.label,
+        ]);
+    });
+
+    it('sync_content: each step of the content publish, once', async () => {
+        getCurrentProject.mockResolvedValue(storefront(false));
+        (republishStorefrontContent as jest.Mock).mockImplementation(
+            async (params: { onStage?: (stage: string, step?: string) => void }) => {
+                params.onStage?.(S.publishingSettings.label);
+                params.onStage?.(S.publishingSettings.label, 'Publishing the settings: writing config.json');
+                params.onStage?.(S.publishingPages.label);
+                params.onStage?.(S.publishingPages.label, 'Publishing the pages: 32 of 64 pages');
+                params.onStage?.(S.checkingSettings.label);
+                return { success: true, cdnVerified: true };
+            },
+        );
+
+        expect(await phasesOf('sync_content')).toStrictEqual([
+            S.publishingSettings.label,
+            S.publishingPages.label,
+            S.checkingSettings.label,
+        ]);
     });
 });

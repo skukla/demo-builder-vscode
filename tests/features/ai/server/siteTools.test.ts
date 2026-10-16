@@ -40,6 +40,7 @@ import {
     mockFindStorefrontNameMismatch,
     mockMigrateStorefrontNameForProject,
 } from './siteTools.testUtils';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 
 beforeEach(() => {
     resetSiteToolsMocks();
@@ -234,6 +235,25 @@ describe('repair_site_configuration', () => {
         const persist = mockRepairSiteConfigForProject.mock.calls[0][3] as (p: unknown) => unknown;
         persist(project);
         expect(saveProject).toHaveBeenCalledWith(project);
+    });
+
+    // Every flow names its steps from the one table (owner, 2026-10-16): the agent
+    // hears the step once, not each raw line ("Re-registering me/shop") under it.
+    it("tells the agent its step by the table's name, once", async () => {
+        mockRepairSiteConfigForProject.mockImplementation(
+            async (_p: unknown, _c: unknown, _l: unknown, _s: unknown, report: (m: string) => void) => {
+                report('Re-registering me/shop');
+                report('Reading the site configuration');
+                return { status: 'repaired', verified: true };
+            },
+        );
+        const phases: string[] = [];
+
+        await withPhaseSinks([(m) => phases.push(m)], () =>
+            harness().call('repair_site_configuration', { confirm: true }),
+        );
+
+        expect(phases).toEqual(['Updating the site config']);
     });
 
     it('does not republish', async () => {

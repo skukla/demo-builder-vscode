@@ -145,7 +145,7 @@ export async function republishFromConfigure(
     // Block libraries first (EDS-39): remove what is not selected, add what is.
     const libraryLines = await runPendingBlockLibraryWork(project, parts, report);
 
-    const stage = OPERATION_STAGES.publishingConfig.label;
+    const stage = OPERATION_STAGES.publishingSettings.label;
     report(stage);
     const published = await republishStorefrontConfig({
         persist: (p) => stateManager.saveProject(p),

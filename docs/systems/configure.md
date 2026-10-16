@@ -72,8 +72,8 @@ replaced with the new store's." The buttons are the same (Republish, Later). The
 mesh and storefront prompt says it too.
 
 Republish then runs in the house progress notification (`withOperationProgress`), one
-stage per step: Publishing the config, Removing product pages, Updating category pages,
-Publishing product pages (counted). It ends with one sentence, for example "Now on
+stage per step: Publishing the settings, Removing product pages, Updating the catalog
+menu, Warming product pages (counted). It ends with one sentence, for example "Now on
 CitiSignal: 11 category pages and 39 product pages published. 30 old product pages
 removed." A category page the SC edited is kept and named ("Kept "/phones": you edited
 it."). Another local project on the same repository stops the product-page removal, and

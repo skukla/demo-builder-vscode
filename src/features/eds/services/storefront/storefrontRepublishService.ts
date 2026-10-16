@@ -16,6 +16,7 @@ import type { PhaseProgressCallback } from '../types';
 import { updateStorefrontState } from './storefrontStalenessDetector';
 import { catalogPagesPendingAfter } from './storeScopeChange';
 import { COMPONENT_IDS } from '@/core/constants';
+import { STOREFRONT_JOBS, jobLine } from '@/core/utils/storefrontJobs';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -33,7 +34,11 @@ export interface RepublishParams {
     secrets: vscode.SecretStorage;
     /** Logger instance */
     logger: Logger;
-    /** Optional progress callback */
+    /**
+     * Optional progress callback. Each line is "Publishing the settings: <what it is
+     * doing>" (progress vocabulary slice 3): one job, one name, wherever it runs, so a
+     * caller showing the "Publishing the settings" step shows only what follows it.
+     */
     onProgress?: PhaseProgressCallback;
     /**
      * Ask for the DA.live sign-in before the CDN publish, when there is someone
@@ -93,6 +98,9 @@ export interface RepublishResult {
 /** What `cdnError` says when the SC declined (or nobody could answer) the sign-in. */
 export const NO_DALIVE_SESSION_MESSAGE =
     'No DA.live session — sign in to DA.live and republish from the dashboard.';
+
+/** What the settings publish is doing, under its one name. */
+const settingsLine = (detail: string): string => jobLine(STOREFRONT_JOBS.publishingSettings, detail);
 
 // ==========================================================
 // Parameter Extraction
@@ -217,7 +225,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
 
     try {
         // Step 1: Extract EDS metadata
-        onProgress?.('Extracting configuration');
+        onProgress?.(settingsLine('reading the project settings'));
         logger.debug('[StorefrontRepublish] Starting republish for project:', project.name);
 
         const extractResult = extractRepublishParams(project);
@@ -231,7 +239,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         const { repoOwner, repoName, componentPath } = extractResult;
 
         // Step 2: Generate config.json
-        onProgress?.('Generating config.json');
+        onProgress?.(settingsLine('building config.json'));
         logger.debug('[StorefrontRepublish] Generating config.json');
 
         // Snapshot the configs THIS publish is generated from, before the push.
@@ -264,7 +272,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         // That seam is scoped to the generated AI BUNDLE (`aiBundle/`), which lands in a
         // project people then edit. Reaching for it here would be applying the right rule
         // to the wrong file.
-        onProgress?.('Writing config.json');
+        onProgress?.(settingsLine('writing config.json'));
         const configJsonPath = path.join(componentPath, 'config.json');
 
         try {
@@ -287,7 +295,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         }
 
         // Step 5: Sync to GitHub and CDN
-        onProgress?.('Syncing to GitHub and CDN');
+        onProgress?.(settingsLine('sending it to GitHub and the live site'));
         logger.info(`[StorefrontRepublish] Syncing config.json to ${repoOwner}/${repoName}`);
 
         const syncResult = await syncConfigToRemote({
@@ -296,7 +304,8 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
             repoName,
             logger,
             secrets,
-            onProgress,
+            // Its own lines ("Waiting for the CDN") are this job's too.
+            onProgress: onProgress && ((line) => onProgress(settingsLine(line))),
         });
 
         if (!syncResult.success) {

@@ -37,8 +37,9 @@ import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import { republishStorefrontConfig } from './storefrontRepublishService';
 import { hasCatalogPagesPending } from './storeScopeChange';
-import { replaceStoreScopePages, reportAsLines, type StoreScopeReport } from './storeScopePages';
+import { replaceStoreScopePages, type StoreScopeReport } from './storeScopePages';
 import { createStoreScopePagesDeps } from './storeScopePagesDeps';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
@@ -65,12 +66,12 @@ export interface RepublishContentParams {
     githubTokenService: GitHubTokenService;
     /** Reads the storefront repository: whether it has the catalog-menu block (EDS-24). */
     githubFiles: Pick<GitHubFileOperations, 'getFileContent'>;
-    /** Optional per-step progress callback. */
-    onProgress?: (message: string) => void;
     /**
-     * Where the store-change steps report their STAGES (EDS-44), when the caller shows
-     * stages — the dashboard's progress modal. Without it they reach `onProgress` as
-     * plain lines.
+     * Where each STEP is reported as it starts, and then what it is doing, as the line
+     * under it (progress vocabulary slice 3, owner 2026-10-16). Every step is a name
+     * from the stage table (`republishSteps.ts` lists them in order); the store-change
+     * steps (EDS-44) arrive the same way. The dashboard numbers them; an agent hears
+     * each name once.
      */
     onStage?: StoreScopeReport;
     /** Where the other local projects are read from: the shared-repository check (EDS-44). */
@@ -107,6 +108,8 @@ interface PageClients {
     daLiveTokenProvider: TokenProvider;
 }
 
+const S = OPERATION_STAGES;
+
 const targetOf = (params: RepublishContentParams) => ({
     repoOwner: params.repoOwner,
     repoName: params.repoName,
@@ -122,9 +125,10 @@ const targetOf = (params: RepublishContentParams) => ({
 async function refreshCatalogPages(
     params: RepublishContentParams,
     clients: PageClients,
-    report: (message: string) => void,
+    step: StoreScopeReport,
 ): Promise<{ catalogMenu?: string }> {
     const { project, logger, persist, daLiveOrg, daLiveSite } = params;
+    step(S.updatingCatalogMenu.label);
     const catalogMenu = await applyCatalogMenuStep(
         project,
         createCatalogMenuSite({
@@ -136,7 +140,7 @@ async function refreshCatalogPages(
         }),
     );
     if (catalogMenu !== undefined) {
-        report(catalogMenu);
+        step(S.updatingCatalogMenu.label, catalogMenu);
         logger.info(`[Republish] Catalog menu: ${catalogMenu}`);
         await persist(project);
     }
@@ -150,7 +154,7 @@ async function refreshCatalogPages(
     try {
         const overlayUrl = resolveByomOverlayConfig(undefined, daLiveOrg, daLiveSite);
         if (overlayUrl) {
-            report('Loading the product pages so they are quick for visitors');
+            step(S.warmingProductPages.label);
             const prewarm = await prewarmCatalog(
                 project,
                 overlayUrl,
@@ -158,7 +162,7 @@ async function refreshCatalogPages(
                 daLiveSite,
                 clients.helixService,
                 logger,
-                (p) => report(p.message),
+                (p) => step(S.warmingProductPages.label, p.message),
             );
             if (!prewarm.skipped) {
                 logger.info(
@@ -174,11 +178,14 @@ async function refreshCatalogPages(
     return catalogMenu === undefined ? {} : { catalogMenu };
 }
 
-/** After a store change (EDS-44): the old store's pages out, the new store's in. */
+/**
+ * After a store change (EDS-44): the old store's pages out, the new store's in. The
+ * service reports its own steps; its sentence is the run's last word, not a step's line.
+ */
 async function replaceStorePages(
     params: RepublishContentParams,
     clients: PageClients,
-    report: (message: string) => void,
+    step: StoreScopeReport,
 ): Promise<string> {
     const { project, logger } = params;
     const deps = createStoreScopePagesDeps({
@@ -192,9 +199,7 @@ async function replaceStorePages(
         helixService: clients.helixService,
         daLiveSourceOps: clients.daLiveContentOps.sourceOps,
     });
-    const onStage = params.onStage ?? reportAsLines(report);
-    const { sentence } = await replaceStoreScopePages(project, deps, onStage);
-    report(sentence);
+    const { sentence } = await replaceStoreScopePages(project, deps, step);
     return sentence;
 }
 
@@ -223,7 +228,7 @@ export async function republishStorefrontContent(
         githubTokenService,
         persist,
     } = params;
-    const report = (message: string): void => params.onProgress?.(message);
+    const step: StoreScopeReport = params.onStage ?? (() => undefined);
 
     try {
         const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
@@ -233,7 +238,7 @@ export async function republishStorefrontContent(
         const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, logger);
 
         // Step 1: Apply EDS site config (AEM Assets, authoring experience).
-        report('Applying EDS configuration');
+        step(S.applyingDaLiveSettings.label);
         const experience = resolveProjectAuthoringExperience(project);
         await applyDaLiveOrgConfigSettings(
             daLiveContentOps,
@@ -244,12 +249,12 @@ export async function republishStorefrontContent(
         );
 
         // Step 2: Regenerate + sync config.json (picks up env var changes).
-        report('Regenerating storefront configuration');
+        step(S.publishingSettings.label);
         const configResult = await republishStorefrontConfig({
             project,
             secrets,
             logger,
-            onProgress: report,
+            onProgress: (line) => step(S.publishingSettings.label, line),
             persist,
         });
         if (!configResult.success) {
@@ -257,11 +262,11 @@ export async function republishStorefrontContent(
         }
 
         // Step 3: Sync code to CDN + configure site permissions.
-        report('Syncing code to CDN');
+        step(S.publishingCode.label);
         await helixService.previewCode(repoOwner, repoName, '/*');
         const userEmail = await daLiveAuthService.getUserEmail();
         if (userEmail) {
-            report('Configuring site permissions');
+            step(S.settingSitePermissions.label);
             await configureDaLivePermissions(
                 daLiveTokenProvider,
                 daLiveOrg,
@@ -274,15 +279,15 @@ export async function republishStorefrontContent(
         }
 
         // Step 4: Purge stale cache + publish all content.
-        report('Purging stale cache');
+        step(S.clearingCache.label);
         await helixService.purgeCacheAll(repoOwner, repoName, 'main');
-        report('Publishing content to CDN');
+        step(S.publishingPages.label);
         await helixService.publishAllSiteContent(
             `${repoOwner}/${repoName}`,
             'main',
             daLiveOrg,
             daLiveSite,
-            (info) => report(info.message),
+            (info) => step(S.publishingPages.label, info.message),
         );
 
         // Steps 4b-5: the catalog's pages. After a store change whose config reached the
@@ -292,11 +297,11 @@ export async function republishStorefrontContent(
         const storeChanged =
             hasCatalogPagesPending(project) && configResult.success && !configResult.cdnError;
         const sentences = storeChanged
-            ? { storePages: await replaceStorePages(params, clients, report) }
-            : await refreshCatalogPages(params, clients, report);
+            ? { storePages: await replaceStorePages(params, clients, step) }
+            : await refreshCatalogPages(params, clients, step);
 
         // Step 6: Verify config.json on the CDN (best-effort).
-        report('Verifying CDN');
+        step(S.checkingSettings.label);
         const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, logger);
         return { success: true, cdnVerified, ...sentences };
     } catch (error) {

@@ -222,6 +222,9 @@ describe('replaceStoreScopePages', () => {
         expect(result.sentence).toContain('Product pages were not published (Catalog Service timed out).');
     });
 
+    // Named as the same jobs are everywhere else (progress vocabulary slice 3, owner
+    // 2026-10-16): the category pages ARE the catalog menu, and publishing a page per
+    // product is the warm-up Reset and Republish already call "Warming product pages".
     it('reports one stage per step, in order, with the product pages counted', async () => {
         const p = project();
         const { deps } = await setUp(p);
@@ -232,14 +235,14 @@ describe('replaceStoreScopePages', () => {
         const stages = [...new Set(report.mock.calls.map(([stage]) => stage))];
         expect(stages).toEqual([
             OPERATION_STAGES.removingProductPages.label,
-            OPERATION_STAGES.updatingCategoryPages.label,
-            OPERATION_STAGES.publishingProductPages.label,
+            OPERATION_STAGES.updatingCatalogMenu.label,
+            OPERATION_STAGES.warmingProductPages.label,
         ]);
         expect(report).toHaveBeenCalledWith(
             OPERATION_STAGES.removingProductPages.label,
             "Removing the old store's product pages (30)",
         );
-        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.publishingProductPages.label, 'Warming product pages: 1 of 39 pages', {
+        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.warmingProductPages.label, 'Warming product pages: 1 of 39 pages', {
             index: 1,
             total: 39,
         });

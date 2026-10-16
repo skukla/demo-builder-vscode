@@ -136,12 +136,15 @@ describe('republishFromConfigure', () => {
 
         const outcome = await republishFromConfigure(project, parts, report);
 
-        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.publishingConfig.label);
+        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.publishingSettings.label);
         const [params] = mockRepublishConfig.mock.calls[0];
         expect(params.project).toBe(project);
         expect(params.secrets).toBe(context.secrets);
-        params.onProgress('Generating config.json');
-        expect(report).toHaveBeenLastCalledWith(OPERATION_STAGES.publishingConfig.label, 'Generating config.json');
+        params.onProgress('Publishing the settings: building config.json');
+        expect(report).toHaveBeenLastCalledWith(
+            OPERATION_STAGES.publishingSettings.label,
+            'Publishing the settings: building config.json',
+        );
         expect(await params.ensureDaLiveSession()).toBe(SESSION);
         expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith({ context, logger }, '[Configure]');
         expect(outcome).toMatchObject({ success: true });

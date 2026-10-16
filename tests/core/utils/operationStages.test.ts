@@ -48,6 +48,12 @@ const STAGE_REPORTERS = [
     // every line was a literal shown as the step until then.
     'src/features/projects-dashboard/services/projectDeletionService.ts',
     'src/features/projects-dashboard/services/edsExternalCleanup.ts',
+    // The dashboard's Republish and the settings publish every republish runs
+    // (progress vocabulary slice 3, 2026-10-16): one catch-all literal stage, and the
+    // service's own lines shown as if each were the step, until then.
+    'src/features/dashboard/handlers/edsContentHandlers.ts',
+    'src/features/eds/services/storefront/storefrontContentRepublishService.ts',
+    'src/features/eds/services/storefront/storefrontRepublishService.ts',
 ];
 
 /** A progress call whose FIRST argument is a string or template literal. */

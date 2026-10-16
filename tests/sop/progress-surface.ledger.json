@@ -3,8 +3,8 @@
     "directProgress": {
         "src/commands/commandManager.ts:398": "Adobe sign-in, started from the palette, a dashboard button and a wizard step. It is not an operation with stages \u2014 one title, one spinner, nothing to report \u2014 and the router would have nothing to route.",
         "src/commands/migrateStorefrontNames.ts:157": "A one-off maintenance command run from the palette. R2 already says one notification, which is what this opens; nothing else narrates it.",
-        "src/commands/repairSiteConfiguration.ts:102": "The republish half of the same palette command. Moving it alone would split one command across two surfaces.",
-        "src/commands/repairSiteConfiguration.ts:78": "Palette maintenance command, reads the site's configuration. One notification is the right surface; it predates the router.",
+        "src/commands/repairSiteConfiguration.ts:104": "The republish half of the same palette command. Moving it alone would split one command across two surfaces.",
+        "src/commands/repairSiteConfiguration.ts:79": "Palette maintenance command, reads the site's configuration. One notification is the right surface; it predates the router.",
         "src/core/utils/browserUtils.ts:52": "Covers the second or two Chrome takes to start a private window. There is no operation to narrate and nothing can fail slowly. The two screens that open a live site used to write this out separately; they now call it here.",
         "src/features/authentication/handlers/deleteAdobeProjectHandler.ts:143": "Reports stages through stageLine into its own notification. A candidate for the router \u2014 it has stages and a screen behind it \u2014 and the reason it has not moved is that its teardown reports a step/total shape the ReportStage signature takes differently.",
         "src/features/authentication/services/ensureProjectOrgContext.ts:96": "Telegraphs the browser launch during a forced sign-in. Not an operation: the work is in the browser, and the notification exists so the delay is not silent.",

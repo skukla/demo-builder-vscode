@@ -13,10 +13,11 @@ import * as vscode from 'vscode';
 import { confirmPlainDelete, showCleanupConfirmation, type CleanupOptions } from './deletionConfirmation';
 import { edsCleanupSteps, performEdsCleanup, type DeletionServices } from './edsExternalCleanup';
 import { deleteProjectFiles } from './projectFilesDeletion';
+import { numberedSteps } from '@/core/utils/numberedSteps';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { deleteOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
+import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import {
     extractEdsMetadata,
     formatCleanupResults,
@@ -30,24 +31,6 @@ export interface DeleteProgressOptions {
     progress?: 'modal';
     /** The id that screen named the operation by. */
     operationId?: string;
-}
-
-/**
- * A delete's steps, numbered: the list is known once the SC has said what to remove,
- * so each step shows "(n of N)" (progress vocabulary slice 2, owner 2026-10-16). One
- * step alone is not numbered. A step that is skipped (a sign-in declined) leaves its
- * number unused and the count moves on.
- *
- * @param steps - every step the delete will report, in order
- * @param report - the progress surface's reporter
- * @returns a reporter that adds each step's position
- */
-function numberedSteps(steps: string[], report: ReportStage): (stage: string, step?: string) => void {
-    return (stage, step) => {
-        const index = steps.indexOf(stage) + 1;
-        const numbered = index > 0 && steps.length > 1;
-        report(stage, step, numbered ? { index, total: steps.length } : undefined);
-    };
 }
 
 /**
@@ -112,6 +95,9 @@ export async function deleteProject(
         },
         async (report) => {
             const online = edsMetadata && cleanupOptions ? edsCleanupSteps(edsMetadata, cleanupOptions) : [];
+            // Numbered "(n of N)": the list is known once the SC has said what to remove
+            // (progress vocabulary slice 2, owner 2026-10-16). A step that is skipped (a
+            // sign-in declined) leaves its number unused and the count moves on.
             const step = numberedSteps([...online, OPERATION_STAGES.removingProjectFiles.label], report);
 
             // EDS cleanup: Perform external resource cleanup first

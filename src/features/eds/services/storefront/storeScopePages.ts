@@ -38,7 +38,6 @@ import {
 } from './productPageRemoval';
 import { clearCatalogPagesPending } from './storeScopeChange';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { stageLine } from '@/core/utils/stageLine';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -61,17 +60,6 @@ export interface StoreScopePagesDeps {
 /** Report a stage as it starts, with the step under it and a count when there is one. */
 export type StoreScopeReport = (stage: string, step?: string, position?: OperationPosition) => void;
 
-/**
- * The stages as plain lines, for a caller that shows lines rather than stages (an
- * agent's chat, a pipeline's `onProgress`): the step when there is one, else the stage
- * with its count.
- *
- * @param line - where each line goes
- */
-export function reportAsLines(line: (message: string) => void): StoreScopeReport {
-    return (stage, step, position) => line(step ?? stageLine(stage, position));
-}
-
 export interface StoreScopePagesResult {
     /** One sentence for the SC: where the storefront is now, and what changed. */
     sentence: string;
@@ -80,8 +68,10 @@ export interface StoreScopePagesResult {
 
 const STAGE = {
     remove: OPERATION_STAGES.removingProductPages.label,
-    categories: OPERATION_STAGES.updatingCategoryPages.label,
-    publish: OPERATION_STAGES.publishingProductPages.label,
+    // The vocabulary's names for these jobs (progress vocabulary slice 3): the category
+    // pages are the catalog menu, and a page per product is the warm-up Reset runs too.
+    categories: OPERATION_STAGES.updatingCatalogMenu.label,
+    publish: OPERATION_STAGES.warmingProductPages.label,
 };
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));

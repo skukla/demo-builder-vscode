@@ -11,29 +11,52 @@
 import { STOREFRONT_JOBS } from './storefrontJobs';
 
 export const STOREFRONT_STAGES = {
-    // A mesh redeploy that changed its address left the storefront on the old one
-    // until someone republished by hand (2026-09-21).
-    republishingStorefront: {
-        label: 'Republishing storefront',
+    // config.json, published: ONE job wherever it runs (progress vocabulary slice 3,
+    // owner 2026-10-16). The dashboard's and Configure's Republish, the mesh deploy's
+    // follow-up (a redeploy that changed the mesh's address left the storefront on the
+    // old one until someone republished by hand, 2026-09-21) and Repair Site
+    // Configuration each named it differently until then. Measured from five config
+    // publishes in the Debug Logs (2026-10-12 and 15): 8 to 9 seconds from the push to
+    // the CDN check, under a second when config.json had not changed.
+    publishingSettings: {
+        label: STOREFRONT_JOBS.publishingSettings,
+        expectation: 'Usually about 10 seconds',
+        detail: 'config.json, which the storefront reads',
+    },
+    // The Configuration Service entry Repair Site Configuration writes again. Measured
+    // from one reset (2026-10-16): 13 seconds, an Admin API key made on the way.
+    updatingSiteConfig: {
+        label: STOREFRONT_JOBS.updatingSiteConfig,
         expectation: 'Usually under a minute',
-        detail: 'So it reads the mesh at its current address',
+        detail: "The site's entry in the Configuration Service",
+    },
+    // Republish's steps between the code and the pages. Measured in two resets of the
+    // scratch storefront (2026-10-16), which run the same calls: the permissions in
+    // under a second, the cache purge in about half a second.
+    settingSitePermissions: {
+        label: STOREFRONT_JOBS.settingSitePermissions,
+        expectation: 'Usually a few seconds',
+        detail: 'Your access to edit the site in DA.live',
+    },
+    clearingCache: {
+        label: STOREFRONT_JOBS.clearingCache,
+        expectation: 'Usually a few seconds',
+        detail: 'So the live site serves the new pages',
     },
     // A republish after the store changed (EDS-44): the config, then the old store's
-    // product pages out, the category pages swapped, the new store's product pages in.
-    publishingConfig: {
-        label: 'Publishing the config',
-        expectation: 'Usually under a minute',
-        detail: 'Publishing the configuration',
-    },
+    // product pages out, the catalog menu swapped, the new store's product pages warmed
+    // (`warmingProductPages`, Reset's step for the same job).
     removingProductPages: {
         label: STOREFRONT_JOBS.removingProductPages,
         expectation: 'Usually under a minute',
         detail: "Removing the old store's product pages",
     },
-    updatingCategoryPages: {
-        label: 'Updating category pages',
+    // Republish refreshes the catalog menu, or swaps it after a store change. Measured
+    // from one reset (2026-10-16): 47 seconds for 11 category pages.
+    updatingCatalogMenu: {
+        label: STOREFRONT_JOBS.updatingCatalogMenu,
         expectation: 'Usually under a minute',
-        detail: "The new store's categories; pages you edited are kept",
+        detail: 'A page per category; pages you edited are kept',
     },
     // Configure's Republish with block library work pending (EDS-39): the libraries
     // unticked go first, then the ones ticked, then the DA.live block list follows.
@@ -51,11 +74,6 @@ export const STOREFRONT_STAGES = {
         label: STOREFRONT_JOBS.publishingBlockList,
         expectation: 'Usually under a minute',
         detail: 'So DA.live offers the blocks the storefront has',
-    },
-    publishingProductPages: {
-        label: 'Publishing product pages',
-        expectation: 'A few minutes for a large catalog',
-        detail: "One page per product in the new store's catalog",
     },
 
     // Sync Storefront (progress vocabulary slice 2, owner 2026-10-16): save, push,
@@ -88,6 +106,8 @@ export const STOREFRONT_STAGES = {
         expectation: 'Usually a few seconds',
         detail: 'Sending your commit to the repository',
     },
+    // Republish's step too, where it publishes the whole code tree: about a second in
+    // two resets of the scratch storefront (2026-10-16), which make the same call.
     publishingCode: {
         label: STOREFRONT_JOBS.publishingCode,
         expectation: 'Usually a few seconds',

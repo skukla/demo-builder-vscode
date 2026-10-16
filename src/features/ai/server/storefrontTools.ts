@@ -29,7 +29,8 @@ import { requireDaLive, requireEdsProject, requireGitHub } from './edsToolGuards
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { COMPONENT_IDS } from '@/core/constants';
-import { phaseReporter } from '@/core/utils/agentPhaseChannel';
+import { stepPhaseReporter } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { describeCdnPropagation } from '@/features/eds/services/configSyncService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
@@ -41,7 +42,7 @@ import {
     type RepublishResult,
 } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { hasCatalogPagesPending } from '@/features/eds/services/storefront/storeScopeChange';
-import { replaceStoreScopePages, reportAsLines } from '@/features/eds/services/storefront/storeScopePages';
+import { replaceStoreScopePages } from '@/features/eds/services/storefront/storeScopePages';
 import { createStoreScopePagesDeps } from '@/features/eds/services/storefront/storeScopePagesDeps';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -75,6 +76,7 @@ async function replacePagesAfterStoreChange(
     ctx: HandlerContext,
     project: Project,
     published: RepublishResult,
+    step: (stage: string) => void,
 ): Promise<string | undefined> {
     if (!published.success || published.cdnError || !hasCatalogPagesPending(project)) return undefined;
     const target = edsTargets(project);
@@ -90,7 +92,7 @@ async function replacePagesAfterStoreChange(
         persist: (p) => ctx.stateManager.saveProject(p),
         logger: ctx.logger,
     });
-    const { sentence } = await replaceStoreScopePages(project, deps, reportAsLines(phaseReporter()));
+    const { sentence } = await replaceStoreScopePages(project, deps, step);
     return sentence;
 }
 
@@ -150,6 +152,14 @@ export function registerStorefrontTools(
             if (daLive) return asText(daLive);
 
             try {
+                // Each step by its table name, once, in the agent's notification and
+                // the chat (progress vocabulary slice 3, owner 2026-10-16), as the
+                // dashboard names it. Until a callback was passed here the chat sat
+                // silent through the whole publish; the DASHBOARD path is a different
+                // function (edsContentHandlers), and wiring that one does nothing for
+                // the agent, a mistake already made once here.
+                const step = stepPhaseReporter();
+                step(OPERATION_STAGES.publishingSettings.label);
                 // Run under the stored session org context so any `aio` work
                 // targets the selected org via env (no global mutation).
                 const result = await runWithAdobeTarget(() =>
@@ -158,17 +168,9 @@ export function registerStorefrontTools(
                         project,
                         secrets: ctx.context.secrets,
                         logger: ctx.logger,
-                        // The service already emits "Extracting configuration…",
-                        // "Generating config.json…" and two more. Without this
-                        // the tool passed no callback, so every one was computed
-                        // and dropped and the chat sat silent through the whole
-                        // publish. The DASHBOARD path is a different function
-                        // (edsContentHandlers) — wiring that one does nothing for
-                        // the agent, which is a mistake already made once here.
-                        onProgress: phaseReporter(),
                     }),
                 );
-                const storePages = await replacePagesAfterStoreChange(ctx, project, result);
+                const storePages = await replacePagesAfterStoreChange(ctx, project, result, step);
                 return asText({
                     success: result.success,
                     githubPushed: result.githubPushed,
@@ -248,7 +250,8 @@ export function registerStorefrontTools(
                         daLiveSite: targets.daLiveSite,
                         secrets: ctx.context.secrets,
                         logger: ctx.logger,
-                        onProgress: phaseReporter(),
+                        // Each step by its table name, once, as the dashboard names it.
+                        onStage: stepPhaseReporter(),
                         daLiveAuthService,
                         githubTokenService,
                         githubFiles,

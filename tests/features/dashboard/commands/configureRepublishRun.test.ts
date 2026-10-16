@@ -43,7 +43,7 @@ function project(): Project {
 function publishedWithLibrary(): void {
     mockRepublishFromConfigure.mockImplementation(async (_p: Project, _parts: unknown, report: ReportStage) => {
         report('Adding block libraries', 'Demo Team Block Collection');
-        report('Publishing the config');
+        report('Publishing the settings');
         return {
             success: true,
             published: { success: true, cdnPublished: true },
@@ -69,7 +69,7 @@ describe('runConfigureRepublish — with the Configure screen open', () => {
         const pushes = sendToScreen.mock.calls
             .filter(([type]) => type === 'operationProgress')
             .map(([, payload]) => payload);
-        expect(pushes.map((p) => p.stage).filter(Boolean)).toEqual(['Adding block libraries', 'Publishing the config']);
+        expect(pushes.map((p) => p.stage).filter(Boolean)).toEqual(['Adding block libraries', 'Publishing the settings']);
         expect(pushes.every((p) => p.id === CONFIGURE_REPUBLISH_OPERATION_ID)).toBe(true);
         expect(pushes[pushes.length - 1]).toEqual({
             id: CONFIGURE_REPUBLISH_OPERATION_ID,

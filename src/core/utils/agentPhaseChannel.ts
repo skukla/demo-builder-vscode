@@ -107,6 +107,22 @@ export function phaseReporter(): (message: string, subMessage?: string) => void 
 }
 
 /**
+ * An operation's STEPS as an agent hears them: each step's name once, as it starts
+ * (progress vocabulary slice 3, owner 2026-10-16). A step reports again for every line
+ * under it; those lines are a progress modal's detail, and passing each one on would
+ * repeat the step's name in the chat for every page published. A step returned to
+ * after another is said again.
+ */
+export function stepPhaseReporter(): (stage: string) => void {
+    let last: string | undefined;
+    return (stage) => {
+        if (stage === last) return;
+        last = stage;
+        reportPhase(stage);
+    };
+}
+
+/**
  * Report that the operation in flight is waiting on the user.
  *
  * Reaches the hand-back sinks (a toast with the action's button) AND the phase

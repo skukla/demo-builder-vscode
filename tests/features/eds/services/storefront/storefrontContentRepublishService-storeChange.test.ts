@@ -51,6 +51,7 @@ jest.mock('@/features/eds/services/storefront/storeScopePagesDeps', () => ({
     createStoreScopePagesDeps: (...a: unknown[]) => mockCreateStoreScopePagesDeps(...a),
 }));
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
 import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontContentRepublishService';
 import type { Project } from '@/types/base';
@@ -154,6 +155,25 @@ it('hands the service the caller\'s stage reporter when there is one', async () 
     await run(storefront(true), { onStage });
 
     expect(mockReplaceStoreScopePages.mock.calls[0][2]).toBe(onStage);
+});
+
+// The store-change service reports its own three steps through the same reporter; the
+// pipeline does not report the catalog menu or the product pages a second time, and its
+// one sentence is the run's last word (the dashboard's note), not a line under a step.
+it('leaves the page steps to the store-change service, then checks the settings', async () => {
+    const onStage = jest.fn();
+
+    await run(storefront(true), { onStage });
+
+    expect(onStage.mock.calls.map(([stage]) => stage)).toStrictEqual([
+        OPERATION_STAGES.applyingDaLiveSettings.label,
+        OPERATION_STAGES.publishingSettings.label,
+        OPERATION_STAGES.publishingCode.label,
+        OPERATION_STAGES.settingSitePermissions.label,
+        OPERATION_STAGES.clearingCache.label,
+        OPERATION_STAGES.publishingPages.label,
+        OPERATION_STAGES.checkingSettings.label,
+    ]);
 });
 
 it('does its usual catalog refresh, and no replacement, when the store did not change', async () => {

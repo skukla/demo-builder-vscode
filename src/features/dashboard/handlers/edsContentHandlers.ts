@@ -10,6 +10,7 @@
 import * as vscode from 'vscode';
 import { handleRequestStatus } from './statusHandlers';
 import { COMPONENT_IDS } from '@/core/constants';
+import { numberedSteps } from '@/core/utils/numberedSteps';
 import {
     BLOCK_LIBRARY_OPERATION_ID,
     REPUBLISH_OPERATION_ID,
@@ -18,6 +19,7 @@ import {
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import { republishSteps } from '@/features/eds/services/storefront/republishSteps';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
 import { isEdsProject } from '@/types/typeGuards';
@@ -165,10 +167,14 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
             inModal: progressSurfaceOf(payload) === 'modal',
         },
         async (report) => {
+            // Each part is a step from the stage table, numbered "(n of N)": the list
+            // is known before the run starts (progress vocabulary slice 3, owner
+            // 2026-10-16). What a step is doing is the line under it.
+            const step = numberedSteps(republishSteps(project), report);
             try {
                 context.logger.info(`[Dashboard] Republishing content for ${repoFullName}`);
 
-                report(OPERATION_STAGES.checkingRequirements.label, 'Your DA.live sign-in');
+                step(OPERATION_STAGES.checkingRequirements.label, 'Your DA.live sign-in');
                 const { ensureDaLiveAuth, getDaLiveAuthService, getGitHubServices } = await import(
                     '@/features/eds/handlers/edsHelpers'
                 );
@@ -188,7 +194,6 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
                     context.context.secrets,
                 );
 
-                report('Republishing the content');
                 const { republishStorefrontContent } = await import(
                     '@/features/eds/services/storefront/storefrontContentRepublishService'
                 );
@@ -205,9 +210,7 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
                     githubTokenService,
                     githubFiles,
                     stateManager: context.stateManager,
-                    onProgress: (message: string) => report('Republishing the content', message),
-                    // After a store change, the page steps are stages of their own (EDS-44).
-                    onStage: report,
+                    onStage: step,
                 });
 
                 if (!contentResult.success) {

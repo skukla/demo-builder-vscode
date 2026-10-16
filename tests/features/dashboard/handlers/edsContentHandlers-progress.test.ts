@@ -8,20 +8,47 @@
  * reports there instead (R7) — what these pin is that the handler asks for the
  * modal at all, and that it ends on what the command answered rather than on
  * "the command returned".
+ *
+ * Republish runs its service directly and names its own steps (progress vocabulary
+ * slice 3, owner 2026-10-16). Until then it showed ONE step, "Republishing the
+ * content", over every line the service said ("Syncing code to CDN", "Purging stale
+ * cache", "Verifying CDN"), and only a store change's pages had steps of their own.
+ * Each part is now a step from the stage table, named as the same job is everywhere
+ * else, numbered "(n of N)" because the list is known before the run starts: ten
+ * steps, eleven when the store changed. The service is walled here and plays its steps
+ * in the order it runs them (its own order is pinned in
+ * `storefrontContentRepublishService.test.ts`); what this pins is what the SC sees.
  */
+
+const mockEnsureDaLiveAuth = jest.fn();
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    ensureDaLiveAuth: (...args: unknown[]) => mockEnsureDaLiveAuth(...args),
+    getDaLiveAuthService: jest.fn(() => ({})),
+    getGitHubServices: jest.fn(() => ({ tokenService: {}, fileOperations: {} })),
+}));
+const mockRepublishContent = jest.fn();
+jest.mock('@/features/eds/services/storefront/storefrontContentRepublishService', () => ({
+    republishStorefrontContent: (...args: unknown[]) => mockRepublishContent(...args),
+}));
+jest.mock('@/features/dashboard/handlers/statusHandlers', () => ({
+    handleRequestStatus: jest.fn(async () => undefined),
+}));
 
 import * as vscode from 'vscode';
 import {
     handleRefreshBlockLibrary,
+    handleRepublishContent,
     handleSyncStorefront,
 } from '@/features/dashboard/handlers/edsContentHandlers';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { reportStep } from '@/core/utils/operationStepChannel';
 import { startModalRun } from '@/core/vscode/operationProgress';
+import type { StoreScopeReport } from '@/features/eds/services/storefront/storeScopePages';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 const executeCommand = vscode.commands.executeCommand as jest.Mock;
@@ -57,6 +84,7 @@ function running(): Array<[unknown, unknown]> {
 beforeEach(() => {
     jest.clearAllMocks();
     executeCommand.mockResolvedValue({ success: true });
+    mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 });
 
 describe('sync storefront', () => {
@@ -156,5 +184,139 @@ describe('refresh block library', () => {
             startedAt: expect.any(Number),
             tookMs: expect.any(Number),
         });
+    });
+});
+
+const OP = 'republish-op';
+const S = OPERATION_STAGES;
+
+function storefront(storeChanged: boolean): Project {
+    return createMockProject({
+        name: 'shop',
+        path: '/p/shop',
+        componentInstances: {
+            'eds-storefront': {
+                id: 'eds-storefront',
+                name: 'EDS Storefront',
+                type: 'frontend',
+                status: 'ready',
+                metadata: { githubRepo: 'me/shop', daLiveOrg: 'acme', daLiveSite: 'shop' },
+            },
+        },
+        edsStorefrontState: {
+            envVars: {},
+            lastPublished: '2026-10-15T00:00:00.000Z',
+            ...(storeChanged
+                ? { catalogPagesPending: { fromWebsiteCode: 'base', fromStoreCode: 'main', fromStoreViewCode: 'default' } }
+                : {}),
+        },
+    });
+}
+
+function republishContext(project: Project): HandlerContext {
+    return createMockHandlerContext({
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+        sendMessage: screen,
+    });
+}
+
+/** The service's steps, each as it starts and with a line under some of them. */
+function playsSteps(storeChanged: boolean): void {
+    mockRepublishContent.mockImplementation(async (params: { onStage?: StoreScopeReport }) => {
+        const step = params.onStage ?? (() => undefined);
+        step(S.applyingDaLiveSettings.label);
+        step(S.publishingSettings.label);
+        step(S.publishingSettings.label, 'Publishing the settings: writing config.json');
+        step(S.publishingCode.label);
+        step(S.settingSitePermissions.label);
+        step(S.clearingCache.label);
+        step(S.publishingPages.label);
+        step(S.publishingPages.label, 'Publishing the pages: 32 of 64 pages');
+        if (storeChanged) {
+            step(S.removingProductPages.label);
+            step(S.updatingCatalogMenu.label);
+            // The store-change service passes its COUNT as a position; the step's
+            // position is where it sits in the run, and the count is the line under it.
+            step(S.warmingProductPages.label, 'Warming product pages: 1 of 39 pages', { index: 1, total: 39 });
+        } else {
+            step(S.updatingCatalogMenu.label);
+            step(S.warmingProductPages.label);
+        }
+        step(S.checkingSettings.label);
+        return { success: true, cdnVerified: true };
+    });
+}
+
+/** The modal's lines while a step runs: [line 1, its position, line 2]. */
+function runningAt(): Array<[unknown, unknown, unknown]> {
+    return pushes()
+        .filter((p) => p.state === 'running' && p.stage !== undefined)
+        .map((p) => [p.stage, p.position, p.step]);
+}
+
+const at = (index: number, total: number) => ({ index, total });
+
+describe('republish, in the progress modal', () => {
+    it('numbers the ten steps of a republish, each with what it is doing under it', async () => {
+        playsSteps(false);
+        startModalRun(OP, screen);
+
+        await handleRepublishContent(republishContext(storefront(false)), { id: OP, progress: 'modal' });
+
+        expect(runningAt()).toStrictEqual([
+            [S.checkingRequirements.label, at(1, 10), 'Your DA.live sign-in'],
+            [S.applyingDaLiveSettings.label, at(2, 10), S.applyingDaLiveSettings.detail],
+            [S.publishingSettings.label, at(3, 10), S.publishingSettings.detail],
+            [S.publishingSettings.label, at(3, 10), 'writing config.json'],
+            [S.publishingCode.label, at(4, 10), S.publishingCode.detail],
+            [S.settingSitePermissions.label, at(5, 10), S.settingSitePermissions.detail],
+            [S.clearingCache.label, at(6, 10), S.clearingCache.detail],
+            [S.publishingPages.label, at(7, 10), S.publishingPages.detail],
+            [S.publishingPages.label, at(7, 10), '32 of 64 pages'],
+            [S.updatingCatalogMenu.label, at(8, 10), S.updatingCatalogMenu.detail],
+            [S.warmingProductPages.label, at(9, 10), S.warmingProductPages.detail],
+            [S.checkingSettings.label, at(10, 10), S.checkingSettings.detail],
+        ]);
+    });
+
+    // Whether the store changed is on the project before the run starts, so the list
+    // is still known up front: one step more, the old store's product pages.
+    it('counts eleven steps after a store change, the count of pages under its step', async () => {
+        playsSteps(true);
+        startModalRun(OP, screen);
+
+        await handleRepublishContent(republishContext(storefront(true)), { id: OP, progress: 'modal' });
+
+        expect(runningAt().slice(-4)).toStrictEqual([
+            [S.removingProductPages.label, at(8, 11), S.removingProductPages.detail],
+            [S.updatingCatalogMenu.label, at(9, 11), S.updatingCatalogMenu.detail],
+            [S.warmingProductPages.label, at(10, 11), '1 of 39 pages'],
+            [S.checkingSettings.label, at(11, 11), S.checkingSettings.detail],
+        ]);
+    });
+});
+
+describe('republish, in a notification', () => {
+    // The notification's one line is the step and its position, never a count.
+    it('shows each step with its position', async () => {
+        const report = jest.fn();
+        (vscode.window.withProgress as jest.Mock).mockImplementation(async (_o, task) => task({ report }));
+        playsSteps(false);
+
+        await handleRepublishContent(republishContext(storefront(false)), undefined);
+
+        const lines = [...new Set(report.mock.calls.map(([update]) => (update as { message?: string }).message))];
+        expect(lines).toStrictEqual([
+            'Checking requirements (1 of 10)',
+            'Applying DA.live settings (2 of 10)',
+            'Publishing the settings (3 of 10)',
+            'Publishing the code (4 of 10)',
+            'Setting site permissions (5 of 10)',
+            'Clearing the cache (6 of 10)',
+            'Publishing the pages (7 of 10)',
+            'Updating the catalog menu (8 of 10)',
+            'Warming product pages (9 of 10)',
+            'Checking the settings (10 of 10)',
+        ]);
     });
 });

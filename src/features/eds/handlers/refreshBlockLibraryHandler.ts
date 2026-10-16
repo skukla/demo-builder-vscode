@@ -9,7 +9,7 @@
  * notification + toasts) — this is the agent-facing path.
  */
 
-import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { stepPhaseReporter } from '@/core/utils/agentPhaseChannel';
 import { refreshBlockLibraryHeadless } from '@/features/eds/services/refreshBlockLibraryHeadless';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler } from '@/types/handlers';
@@ -38,7 +38,7 @@ export const handleRefreshBlockLibraryHeadless: MessageHandler = async (context)
         logger: context.logger,
         // Each step by its table name, for an agent's notification and chat
         // (a no-op outside an agent call), as every other flow names it.
-        onStep: (stage) => reportPhase(stage),
+        onStep: stepPhaseReporter(),
     });
 
     if (result.success) {

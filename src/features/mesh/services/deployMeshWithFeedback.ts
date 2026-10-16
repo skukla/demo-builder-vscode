@@ -162,7 +162,7 @@ async function republishAfterDeploy(
     if (!deps.republishStorefront || !(STOREFRONT_READS in getProvidedEnvVars(deps.project))) {
         return undefined;
     }
-    report(OPERATION_STAGES.republishingStorefront.label);
+    report(OPERATION_STAGES.publishingSettings.label);
     try {
         const published = await deps.republishStorefront(deps.project);
         if (!published.success) return published.error ?? 'the republish did not finish';
