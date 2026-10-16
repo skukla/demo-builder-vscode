@@ -188,9 +188,10 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
             async (progress) => {
                 outcome = await deleteDaLiveSites(orgName, siteNames, repoBySite, {
                     logger,
-                    onSite: (index, siteName) =>
+                    onSite: (_index, siteName) =>
                         progress.report({
-                            message: `${index + 1}/${siteNames.length}: ${siteName}`,
+                            // Which site; how many is a count, never a position (handbook, progress).
+                            message: siteName,
                             increment: 100 / siteNames.length,
                         }),
                     tearDown: (target) =>

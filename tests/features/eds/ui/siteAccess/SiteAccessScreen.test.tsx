@@ -16,6 +16,7 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 // Below the mock on purpose — see webview-test-authoring §3.
 import { SiteAccessScreen } from '@/features/eds/ui/siteAccess/SiteAccessScreen';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { SITE_ACCESS_PROGRESS_MESSAGE } from '@/types/messages';
 import type { SiteAccessChangeResult, SiteAccessView } from '@/types/webviewPayloads';
 
@@ -221,9 +222,14 @@ describe('SiteAccessScreen', () => {
         expect(screen.queryByRole('button', { name: 'Give access' })).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', { name: /check access/ }));
-        expect(await screen.findByText('Waiting for site access')).toBeInTheDocument();
-        act(() => webviewClientHandlers.get(SITE_ACCESS_PROGRESS_MESSAGE)?.({ message: 'Checking access 2 of 4' }));
-        expect(await screen.findByText('Checking access 2 of 4')).toBeInTheDocument();
+        // The wait is a table step: its name, its detail until the first check, its expectation.
+        expect(await screen.findByText(OPERATION_STAGES.waitingForSiteAccess.label)).toBeInTheDocument();
+        expect(screen.getByText(OPERATION_STAGES.waitingForSiteAccess.detail)).toBeInTheDocument();
+        expect(screen.getByText(OPERATION_STAGES.waitingForSiteAccess.expectation)).toBeInTheDocument();
+        act(() =>
+            webviewClientHandlers.get(SITE_ACCESS_PROGRESS_MESSAGE)?.({ message: '2 of 4 checks done, waiting for the next' }),
+        );
+        expect(await screen.findByText('2 of 4 checks done, waiting for the next')).toBeInTheDocument();
 
         await act(async () =>
             finishWait({

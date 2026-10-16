@@ -17,7 +17,7 @@
 import * as vscode from 'vscode';
 import { openUrl } from '@/core/utils/browserUtils';
 import { maskEmail } from '@/core/utils/maskEmail';
-import { stageLine } from '@/core/utils/stageLine';
+import { countLine } from '@/core/utils/storefrontJobs';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsServiceCache';
 import { waitForConfigAccess } from '@/features/eds/services/configService/configAccessRecovery';
 import { GITHUB_APP_SETTINGS_URL } from '@/features/eds/services/configService/noAdminRoleRemedy';
@@ -203,8 +203,10 @@ export const siteAccessHandlers = defineHandlers({
             site,
             context.logger,
             (attempt, total) =>
+                // Line 2 under the screen's step ("Waiting for site access"): the checks
+                // are a count, never the step's position.
                 context.sendMessage(SITE_ACCESS_PROGRESS_MESSAGE, {
-                    message: stageLine('Checking access', { index: attempt, total }),
+                    message: `${countLine(attempt, total, 'check')} done, waiting for the next`,
                 }),
         );
         if (outcome === 'granted') return ok({ notice: ACCESS_CONFIRMED, view: await readView(context, project) });

@@ -1,5 +1,8 @@
 # One progress vocabulary and structure for every flow
 
+**Status: all eight slices done (2026-10-16).** Slices 1 to 7 are committed (`dd3710d91`
+to `7461e9409`); slice 8 is in the working tree, uncommitted.
+
 Owner, 2026-10-16 (release walk): "Everything should be consistent. Republish and project
 creation. Every flow." Approved plan and order the same day.
 
@@ -56,22 +59,22 @@ label is line 2. Counts are appended on line 2 as ": 32 of 64 pages".
 
 Mesh, App Builder, ERP and AI-files steps already come from the table and keep their names.
 
-## Slices (each: TDD, gate, one commit)
+## Slices (each: TDD, gate, one commit) — all done
 
-1. **Shared emitters** — `edsPipeline.ts`, `helixSiteContent.ts`, `catalogPrewarmService.ts`,
+1. **[done `dd3710d91`] Shared emitters** — `edsPipeline.ts`, `helixSiteContent.ts`, `catalogPrewarmService.ts`,
    `daLive` copy: emit the vocabulary names; counts as ": n of N <unit>". Every flow that
    runs the pipeline inherits it.
-2. **Sync Storefront, Refresh Blocks, Project delete** — real steps from the table; line 2
+2. **[done `7960ce701`, `3a53974bc`] Sync Storefront, Refresh Blocks, Project delete** — real steps from the table; line 2
    carries their messages (today the first message freezes as the step, or every message
    is a step).
-3. **Republish (dashboard + agent)** — steps from the vocabulary, not one catch-all stage.
-4. **Project creation + storefront setup (wizard)** — steps from the table (no Title Case,
+3. **[done `86f05ed9f`] Republish (dashboard + agent)** — steps from the vocabulary, not one catch-all stage.
+4. **[done `ccf71ef1a`] Project creation + storefront setup (wizard)** — steps from the table (no Title Case,
    no counts on line 1), storefront setup's raw messages to line 2, setup groups reuse
    Reset's group names where the work is the same.
-5. **Counts misused as positions** — store-change product pages, datapack watcher.
-6. **Edit keeps Reset's position; generic project reset steps into the table.**
-7. **Check for Updates / apply** — onto the shared progress routing.
-8. **Enforcer** — a `tests/sop` suite: every step reported is a table label; no step
+5. **[done `7461e9409`] Counts misused as positions** — store-change product pages, datapack watcher.
+6. **[done `7461e9409`] Edit keeps Reset's position; generic project reset steps into the table.**
+7. **[done `7461e9409`] Check for Updates / apply** — onto the shared progress routing.
+8. **[done, uncommitted] Enforcer** — a `tests/sop` suite: every step reported is a table label; no step
    carries a count that is not a position. Handbook convention + count bumps.
 
 ## Watch-outs
@@ -87,3 +90,32 @@ Mesh, App Builder, ERP and AI-files steps already come from the table and keep t
   numbered step "Deploying integrations (n of N)"; each integration's own steps go on line 2.
   This reverses the 2026-10-07 choice to keep them as their own unnumbered line-1 steps,
   for consistency with every other flow.
+
+## Done
+
+Every flow now reports line 1 from the stage table, "(n of N)" only as a step's
+position, counts on line 2. Slice 8 closed the last gaps and added the enforcer:
+
+- **Site Access** "check access": its wait is a table step ("Waiting for site access")
+  with its detail and expectation; the checks made are a count on line 2
+  ("1 of 4 checks done, waiting for the next"), no longer "Checking access (1 of 4)".
+- **Check for Updates**: "Up to date" is the outcome notification after the run
+  ("Demo Builder is up to date (v1.2.3)"), not a last progress line.
+- **The agent's apply_updates**: the dashboard's step names, plus two the dashboard's
+  apply never reports ("Syncing source repos", "Updating add-ons") and the republish's
+  "Adding block libraries"; the item goes on line 2 and into the tool's `phases`
+  record; the agent hears each step once. **The agent's reset** now hears the reset's
+  table steps too, not the service's own messages.
+- `SampleDataProgress.verb` deleted, with its writer.
+- Found by the enforcer and fixed: two literal steps in the Adobe destination change
+  (now "Saving the destination", "Moving the integrations" in the table); counts
+  written as positions in the Node sweep, the Configuration Service retry, the
+  storefront-name migration, the DA.live site cleanup and the GitHub repo cleanup.
+- Enforcer: `tests/sop/progress-steps.test.ts`, no ledger (zero offenders). Handbook
+  convention added (130 conventions, 61 enforcer suites).
+
+Not covered by the scan: a step passed through a variable, an `onProgress` (line 1 in
+some services, line 2 in others), and a reporter that takes a step number first. The
+Adobe project teardown is the known one of the last kind: its four steps
+('Finding workspaces', 'Checking credentials', 'Removing event setup', 'Deleting the
+project') are literals outside the table.

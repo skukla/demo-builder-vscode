@@ -216,24 +216,10 @@ describe('buildSampleDataDeps — watch', () => {
  * no message: it is trusted.
  */
 describe('buildSampleDataDeps — progress wording', () => {
-    // Since 2026-08-22 the report is STRUCTURED (verb/done/total/processing)
-    // and each surface composes its own line — the invariants below are the
-    // same ones the old string assertions guarded.
+    // Since 2026-08-22 the report is STRUCTURED (done/total/processing) and each
+    // surface composes its own line under its own step; the wording that says
+    // Installing or Removing is that step's, from the stage table (2026-10-16).
     const perType: Record<string, DataTypeStatus> = { categories: 'success', products: 'pending' };
-
-    it('says Removing when built for a removal', () => {
-        const report = jest.fn();
-        buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'remove').onProgress?.(perType);
-
-        expect(report).toHaveBeenCalledWith(expect.objectContaining({ verb: 'Removing' }));
-    });
-
-    it('CONTROL — still says Installing for an install', () => {
-        const report = jest.fn();
-        buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'install').onProgress?.(perType);
-
-        expect(report).toHaveBeenCalledWith(expect.objectContaining({ verb: 'Installing' }));
-    });
 
     it('counts finished types, not pending ones', () => {
         const report = jest.fn();

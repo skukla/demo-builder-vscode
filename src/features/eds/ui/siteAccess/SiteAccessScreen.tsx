@@ -35,6 +35,7 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import type { SiteAccessInitialData, SiteAccessNotice, SiteAccessView } from '@/types/webviewPayloads';
 
 export type SiteAccessScreenProps = Partial<SiteAccessInitialData>;
@@ -137,7 +138,15 @@ export function SiteAccessScreen({ projectName, hasStorefront }: SiteAccessScree
                             <SiteAccessNoticeView notice={shown} {...noticeActions} />
                         </View>
                     ))}
-                    {busy && <LoadingDisplay message={busy} subMessage={progress ?? undefined} />}
+                    {busy && (
+                        // A table step shows its detail until the work says more, and
+                        // its expectation; the quick busy lines have neither.
+                        <LoadingDisplay
+                            message={busy}
+                            subMessage={progress ?? detailFor(busy)}
+                            helperText={expectationFor(busy)}
+                        />
+                    )}
                     {view && (
                         <>
                             <View marginBottom="size-200">

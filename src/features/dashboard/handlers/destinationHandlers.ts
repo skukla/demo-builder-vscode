@@ -194,7 +194,7 @@ export async function applyDestination(
     // project back. Nothing undeploys from it — a move only ever deploys.
     const previous = project.adobe ? { ...project.adobe } : undefined;
 
-    report('Saving the new destination');
+    report(OPERATION_STAGES.savingDestination.label);
     await recordDestination(context, project, nextProject, nextWorkspace);
 
     if (movingIds.length === 0) {
@@ -211,7 +211,7 @@ export async function applyDestination(
         name: project.appBuilderComponents?.[id]?.name ?? id,
     });
     let moving = movingIds[0] ?? '';
-    report('Moving the integrations', undefined, at(moving));
+    report(OPERATION_STAGES.movingIntegrations.label, undefined, at(moving));
     const deps = buildDefaultRunnerDeps(
         await buildRunnerDepsContext(context, project, {
             authManager: ServiceLocator.getAuthenticationService(),
@@ -221,7 +221,7 @@ export async function applyDestination(
         // a multi-minute move reads as progress rather than a stalled notification.
         (message, subMessage) =>
             report(
-                'Moving the integrations',
+                OPERATION_STAGES.movingIntegrations.label,
                 subMessage ? `${message} — ${subMessage}` : message,
                 at(moving),
             ),

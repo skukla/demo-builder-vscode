@@ -23,6 +23,7 @@ import {
 } from './destinationHandlers.testUtils';
 import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 type Context = ReturnType<typeof makeContextWithComponents>['context'];
 
@@ -75,7 +76,7 @@ describe('a destination change run in the screen\'s modal', () => {
         });
         expect(pushes.at(-1)).toMatchObject({ id: 'screen-op-7', state: 'succeeded' });
         expect(pushes).toContainEqual(
-            expect.objectContaining({ id: 'screen-op-7', stage: 'Saving the new destination' }),
+            expect.objectContaining({ id: 'screen-op-7', stage: OPERATION_STAGES.savingDestination.label }),
         );
     });
 });
@@ -88,7 +89,7 @@ describe('which integration the move says is in flight', () => {
 
         expect(pushes).toContainEqual(
             expect.objectContaining({
-                stage: 'Moving the integrations',
+                stage: OPERATION_STAGES.movingIntegrations.label,
                 position: { index: 1, total: 2, name: 'erp-sync' },
             }),
         );

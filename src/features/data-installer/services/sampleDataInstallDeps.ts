@@ -36,34 +36,24 @@ export interface SampleDataProject {
 /** What this deps set is being built for. */
 export type SampleDataMode = 'install' | 'remove';
 
-/** The progress line's verb per job. */
-const PROGRESS_VERB: Record<SampleDataMode, string> = {
-    install: 'Installing',
-    remove: 'Removing',
-};
-
 /**
  * Build the dependency set for one sample-data job.
  *
  * `mode` exists because this builder serves BOTH `installSampleData` and
- * `removeSampleData`, and two things it produces are phrased: the progress line
- * a user reads, and the name the poller logs.
+ * `removeSampleData`, and the name the poller logs is phrased by it.
  *
- * Both used to be hardcoded to the install wording, so a reset's REMOVAL
- * reported `Installing sample data — 2 of 14 types done` on the progress bar
- * while deleting, and logged `data-installer import <id>` on every poll. Found
- * 2026-08-17 when that progress line was read as evidence that reset reinstalls
- * data — it does not, and a backlog item was nearly written around the label.
+ * It used to be hardcoded to the install wording, so a reset's REMOVAL logged
+ * `data-installer import <id>` on every poll, and its progress bar said
+ * "Installing" while deleting (found 2026-08-17). The progress line's wording now
+ * comes from each surface's step in the stage table ("Installing the datapack",
+ * Reset's removal step), so the report below carries only the counts.
  */
 /**
  * One live progress update for a sample-data job. Callers compose it for
- * their surface: the wizard puts the count in the loading title and the
- * processing types in the detail row (the three-row contract); the reset
- * notification flattens it to one line.
+ * their surface (`typesLine`): the types done and the ones processing go on
+ * the line under the surface's step.
  */
 export interface SampleDataProgress {
-    /** 'Installing' or 'Removing' — phrased by the job mode. */
-    verb: string;
     /** Types finished (success or error). */
     done: number;
     /** Total types in the job. */
@@ -158,7 +148,6 @@ export function buildSampleDataDeps(
         onProgress: (perType) => {
             const entries = Object.entries(perType);
             report({
-                verb: PROGRESS_VERB[mode],
                 done: entries.filter(
                     ([, state]) => state === 'success' || state === 'error',
                 ).length,

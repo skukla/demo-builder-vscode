@@ -20,7 +20,7 @@
  */
 export const CHECK_RESULT_MESSAGE = 'checkResult';
 
-/** The Site access webview's progress push while it waits for an admin role ("Checking access 2 of 4"). */
+/** The Site access webview's line 2 while it waits for an admin role ("1 of 4 checks done, ..."). */
 export const SITE_ACCESS_PROGRESS_MESSAGE = 'siteAccessProgress';
 
 /**

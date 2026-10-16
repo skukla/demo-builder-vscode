@@ -16,6 +16,7 @@
  */
 
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { componentNameOf, pairUpdateOrder } from '@/features/app-builder/services/integrationPairUpdate';
 import {
@@ -135,14 +136,16 @@ export function describeIntegrationUpdate(update: IntegrationPairUpdate): string
  *
  * @param items - the pairs to update
  * @param ctx - the update context; `updateIntegrationPair` runs the pair
- * @param onProgress - where each step goes (a progress bar, or the agent's phases)
+ * @param onProgress - where each report goes: the step from the stage table, and
+ *   which pair (with its own step) for the line under it
  * @returns the category result, with `applied` lines for what each update did
  */
 export async function applyIntegrationUpdates(
     items: IntegrationPairUpdate[],
     ctx: UpdateContext,
-    onProgress?: (message: string) => void,
+    onProgress?: (stage: string, item?: string) => void,
 ): Promise<CategoryResult> {
+    const stage = OPERATION_STAGES.updatingIntegrations.label;
     const result = emptyResult();
     for (const item of items) {
         const where = `${item.label} in ${item.project.name}`;
@@ -155,10 +158,10 @@ export async function applyIntegrationUpdates(
             result.errors.push(`${where} did not update: ${NOT_AVAILABLE}`);
             continue;
         }
-        onProgress?.(`Updating ${where}`);
+        onProgress?.(stage, where);
         try {
             const updated = await ctx.updateIntegrationPair(item.project, item.componentId, (message, subMessage) =>
-                onProgress?.(`${where}: ${subMessage ?? message}`),
+                onProgress?.(stage, `${where}: ${subMessage ?? message}`),
             );
             if (updated.success) {
                 result.successCount++;

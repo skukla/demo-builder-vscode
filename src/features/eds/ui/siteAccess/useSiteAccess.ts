@@ -11,6 +11,7 @@
 import { useCallback, useState } from 'react';
 import { useVSCodeMessage } from '@/core/ui/hooks/useVSCodeMessage';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { HandlerResponse } from '@/types/handlers';
 import { SITE_ACCESS_PROGRESS_MESSAGE } from '@/types/messages';
 import type {
@@ -36,7 +37,7 @@ export interface SiteAccessState {
     notice: SiteAccessNotice | null;
     /** What is running, in words; null when idle. */
     busy: string | null;
-    /** The wait's own progress line ("Checking access 2 of 4"). */
+    /** The wait's line 2: the checks made so far ("1 of 4 checks done, ..."). */
     progress: string | null;
     load: (target?: SiteTarget) => Promise<void>;
     change: (type: ChangeType, email: string, target?: SiteTarget) => Promise<boolean>;
@@ -105,7 +106,7 @@ export function useSiteAccess(): SiteAccessState {
     );
 
     const waitForAccess = useCallback(async (): Promise<void> => {
-        await settle('Waiting for site access', () =>
+        await settle(OPERATION_STAGES.waitingForSiteAccess.label, () =>
             ask<SiteAccessChangeResult>('waitForSiteAccess', undefined, WAIT_TIMEOUT_MS),
         );
     }, [settle]);

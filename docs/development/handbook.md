@@ -486,6 +486,30 @@ meant.
 > separately by `operationStages.test.ts`. Enforced by
 > `tests/sop/progress-wording.test.ts` against a shrink-only ledger.
 
+> **Convention.** Every flow's progress uses one vocabulary and one shape. Line 1 is a
+> step from the stage table (`OPERATION_STAGES`), passed by reference, never written as
+> a literal. "(n of N)" follows it only as that step's position in a run whose steps are
+> known before it starts. A count of pages, types, attempts or projects is a count, and
+> counts go on line 2 ("Copying the content: 32 of 64 pages", `countLine`). Line 3 is the
+> step's expectation and the run's clock, joined by the one middle dot this UI keeps on
+> purpose. A surface with one line (a notification, an agent's chat) shows the step
+> alone, and a count it has no line 2 for is left out rather than moved up.
+> *Why:* the same job was called three things depending on which flow ran it, and counts
+> sat where the step goes: "Publishing block library (11 of 11)" read as eleven
+> libraries, and Site Access's "Checking access (2 of 4)" read as step two of four
+> (owner, 2026-10-16: "Everything should be consistent. Every flow."). A literal step
+> also has no expectation line, and drifts from the table the day either is reworded.
+> A result is not a step either: "Up to date" is the outcome after the run.
+>
+> The scan reads every step report in `src/` (102 when it landed) and every position
+> written or built from values; the few places that build a position from a step
+> number are named in the suite with what they count. It cannot see a step passed
+> through a variable, or one reported by number ("report(1, …)"). No sites predate it:
+> the ones it found were fixed the day it landed. The table's own rules (25 characters,
+> no label twice) are `operationStages.test.ts`. Plan:
+> `.rptc/plans/progress-vocabulary/overview.md`. Enforced by
+> `tests/sop/progress-steps.test.ts`.
+
 > **Convention.** A field with a fallback rule is read through that rule, everywhere.
 > *Why:* two fields carry one — the DA.live org IS the GitHub namespace, the site
 > name IS the repo name — and the loader STRIPS a stored site that merely duplicates
@@ -1777,11 +1801,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 60 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 61 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 129 conventions. 128 of them are enforced; 1 is not.**
+**This handbook states 130 conventions. 129 of them are enforced; 1 is not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

@@ -15,6 +15,7 @@ import {
     type IntegrationPairUpdate,
     type IntegrationUpdateProbe,
 } from '@/features/updates/services/integrationUpdates';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import type { IntegrationPairUpdater } from '@/features/updates/services/updateCore';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -187,10 +188,11 @@ describe('applyIntegrationUpdates', () => {
         const result = await applyIntegrationUpdates([item], ctx, onProgress);
 
         expect(ctx.updateIntegrationPair).toHaveBeenCalledWith(item.project, 'demo-erp', expect.any(Function));
-        expect(onProgress.mock.calls.map(([m]) => m)).toEqual([
-            'Updating ERP Integration and Justrite ERP in Justrite',
-            'ERP Integration and Justrite ERP in Justrite: Fetching the update',
-            'ERP Integration and Justrite ERP in Justrite: Running aio app deploy',
+        // The step from the stage table on line 1; which pair, and its own step, under it.
+        expect(onProgress.mock.calls).toEqual([
+            [S.updatingIntegrations.label, 'ERP Integration and Justrite ERP in Justrite'],
+            [S.updatingIntegrations.label, 'ERP Integration and Justrite ERP in Justrite: Fetching the update'],
+            [S.updatingIntegrations.label, 'ERP Integration and Justrite ERP in Justrite: Running aio app deploy'],
         ]);
         expect(result).toEqual({ successCount: 1, failCount: 0, errors: [], applied: ['Updated from a to b.'] });
     });

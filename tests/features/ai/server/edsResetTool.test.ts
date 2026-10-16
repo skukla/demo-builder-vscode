@@ -49,6 +49,7 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { RESET_STAGES } from '@/core/utils/resetStages';
 import { executeProjectReset } from '@/features/lifecycle/services/projectResetService';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
@@ -263,7 +264,13 @@ describe('reset_project on an Edge Delivery project', () => {
 
         await withPhaseSinks([(line) => lines.push(line)], () => s.call({ confirm: true }));
 
-        expect(lines).toStrictEqual(['Resetting repo (1 of 2)', 'Publishing (2 of 2)']);
+        // The step from the stage table, as the button's modal shows it (progress
+        // vocabulary slice 8): the service's own message is the line under it, which
+        // a one-line agent surface does not have.
+        expect(lines).toStrictEqual([
+            `${RESET_STAGES.resettingCode.label} (1 of 2)`,
+            `${RESET_STAGES.publishingCodeAndSettings.label} (2 of 2)`,
+        ]);
     });
 
     it("passes the SC's yes to Demo Builder's fixes, and says what was applied and what was offered (EDS-13f)", async () => {

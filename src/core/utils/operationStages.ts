@@ -204,6 +204,20 @@ export const OPERATION_STAGES = {
         expectation: 'Usually under a minute, longer if Commerce asks for a retry',
         detail: "Through Commerce's App Management",
     },
+    // Changing a project's Adobe destination (AB-23). Both were literals until the
+    // progress vocabulary's enforcer found them (slice 8, 2026-10-16), and the first
+    // read "Saving the new destination", one character over the 25.
+    // FIRST ESTIMATES, NOT MEASURED.
+    savingDestination: {
+        label: 'Saving the destination',
+        expectation: 'Usually a few seconds',
+        detail: "The project's new Adobe project and workspace",
+    },
+    movingIntegrations: {
+        label: 'Moving the integrations',
+        expectation: 'Usually 1–2 minutes each',
+        detail: 'Deploying each one to the new destination',
+    },
     // A bound pair (the ERP integration and the ERP it uses): the system goes first.
     addingSystem: {
         label: 'Adding the system it uses',

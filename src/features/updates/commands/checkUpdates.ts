@@ -155,11 +155,6 @@ export class CheckUpdatesCommand extends BaseCommand {
                         };
                         const hasUpdates = extensionUpdate.hasUpdate || hasPickerRows(sources);
 
-                        if (!hasUpdates) {
-                            narrate(`Up to date (v${extensionUpdate.current})`);
-                            await sleep(TIMEOUTS.UPDATE_RESULT_DISPLAY);
-                        }
-
                         return { extensionUpdate, sources, currentProject, hasUpdates };
                     },
                 );
@@ -170,7 +165,9 @@ export class CheckUpdatesCommand extends BaseCommand {
                 await this.maybeOfferGraduation(extensionUpdate.current);
 
                 if (!hasUpdates) {
-                    this.logger.info('[Updates] ✓ No updates available - Demo Builder is up to date');
+                    // A result, so it is the outcome once the progress closes, never a
+                    // progress line (progress vocabulary slice 8).
+                    await this.showSuccessMessage(`Demo Builder is up to date (v${extensionUpdate.current})`);
                     return;
                 }
 

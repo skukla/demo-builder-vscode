@@ -22,8 +22,6 @@ import {
 import * as vscode from 'vscode';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { performForkSyncUpdates } from '@/features/updates/commands/updateExecutor';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
@@ -38,7 +36,6 @@ const showQuickPickMock = vscode.window.showQuickPick as jest.Mock;
 const showInfoMock = vscode.window.showInformationMessage as jest.Mock;
 const showErrorMock = vscode.window.showErrorMessage as jest.Mock;
 const withProgressMock = vscode.window.withProgress as jest.Mock;
-const sleepMock = sleep as jest.Mock;
 const MockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
 const MockForkSync = ForkSyncService as jest.MockedClass<typeof ForkSyncService>;
 const MockAddonChecker = AddonUpdateChecker as jest.MockedClass<typeof AddonUpdateChecker>;
@@ -136,7 +133,9 @@ describe('CheckUpdatesCommand — check phase', () => {
             const second = command.execute();
             await Promise.all([first, second]);
 
-            expect(withProgressMock).toHaveBeenCalledTimes(1);
+            // One check ran (its outcome notification is a second withProgress call).
+            const checks = withProgressMock.mock.calls.filter(([options]) => options.title === 'Checking for updates');
+            expect(checks).toHaveLength(1);
         });
 
         it('runs under a non-cancellable notification titled Checking for updates', async () => {
@@ -219,11 +218,18 @@ describe('CheckUpdatesCommand — check phase', () => {
     });
 
     describe('what counts as an update', () => {
-        it('nothing: shows Up to date with the version, holds it, logs once, opens no picker', async () => {
+        it('nothing: says up to date with the version as the outcome, logs once, opens no picker', async () => {
             await command.execute();
 
-            expect(harness.mockProgress.report).toHaveBeenLastCalledWith({ message: 'Up to date (v1.0.0)' });
-            expect(sleepMock).toHaveBeenCalledWith(TIMEOUTS.UPDATE_RESULT_DISPLAY);
+            // A result, not a step: the outcome notification after the run, never a
+            // progress line (progress vocabulary slice 8).
+            expect(harness.mockProgress.report).not.toHaveBeenCalledWith({
+                message: expect.stringContaining('Up to date'),
+            });
+            expect(withProgressMock).toHaveBeenLastCalledWith(
+                expect.objectContaining({ title: 'Demo Builder is up to date (v1.0.0)' }),
+                expect.any(Function),
+            );
             expect(harness.mockLogger.info).toHaveBeenCalledTimes(1);
             expect(showQuickPickMock).not.toHaveBeenCalled();
             expect(showInfoMock).not.toHaveBeenCalled();
@@ -242,10 +248,10 @@ describe('CheckUpdatesCommand — check phase', () => {
 
             expect(showQuickPickMock).toHaveBeenCalledTimes(1);
             expect(pickerItems()).toHaveLength(1);
-            expect(harness.mockProgress.report).not.toHaveBeenCalledWith({
-                message: expect.stringContaining('Up to date'),
-            });
-            expect(sleepMock).not.toHaveBeenCalledWith(TIMEOUTS.UPDATE_RESULT_DISPLAY);
+            expect(withProgressMock).not.toHaveBeenCalledWith(
+                expect.objectContaining({ title: expect.stringContaining('up to date') }),
+                expect.any(Function),
+            );
         });
     });
 

@@ -56,6 +56,13 @@ export const UPDATE_STAGES = {
         expectation: 'Usually a few seconds',
         detail: 'Whether each deployed pair has newer code',
     },
+    // FIRST ESTIMATE, NOT MEASURED: a fork sync is one GitHub call per repo. Only the
+    // agent's apply (`updateApplyService.ts`) reports it; the picker's runs silently.
+    syncingSourceRepos: {
+        label: 'Syncing source repos',
+        expectation: 'Usually a few seconds',
+        detail: 'Bringing each fork level with its upstream',
+    },
     updatingTemplate: {
         label: 'Updating the template',
         expectation: 'Usually under a minute',
@@ -72,6 +79,13 @@ export const UPDATE_STAGES = {
         label: 'Updating the AI tools',
         expectation: 'Usually under a minute',
         detail: 'The Adobe MCP package, then the AI files',
+    },
+    // FIRST ESTIMATE, NOT MEASURED: a block library update is one commit; the
+    // Inspector SDK only records its new commit. Reported by the agent's apply.
+    updatingAddOns: {
+        label: 'Updating add-ons',
+        expectation: 'Usually under a minute',
+        detail: 'Block libraries and the Inspector SDK',
     },
     // FIRST ESTIMATE, NOT MEASURED: no integration update is in the logs. Each pair
     // redeploys, so it is the deploy's 1–2 minutes.

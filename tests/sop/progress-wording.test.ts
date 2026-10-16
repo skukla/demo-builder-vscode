@@ -125,9 +125,11 @@ describe('progress-notification wording', () => {
         // 20 -> 15 when Sync Storefront and the delete's cleanup reported their steps
         // from the table (progress vocabulary slice 2, 2026-10-16: 20 sites left);
         // 15 -> 5 when Check for Updates and applying updates moved onto the shared
-        // register with steps from the table (progress vocabulary slice 7: 6 left).
+        // register with steps from the table (progress vocabulary slice 7: 6 left);
+        // 5 -> 3 when the DA.live site and GitHub repo cleanups stopped writing a count
+        // of sites as a position (slice 8: 4 left).
         // It still has to find a real corpus, or the scan above proves nothing.
-        expect(sites(MESSAGE_SITES).length).toBeGreaterThan(5);
+        expect(sites(MESSAGE_SITES).length).toBeGreaterThan(3);
         expect(titleProblem('Deploying API Mesh')).toBeUndefined();
         expect(titleProblem('Demo Builder')).toBeDefined();
         // Deliberately BAD examples: they prove the scan can tell. A wording

@@ -39,6 +39,7 @@ import { createMockAuthenticationService } from '../../../helpers/authentication
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 beforeEach(() => {
     resetDestinationMocks();
@@ -353,7 +354,7 @@ describe('handleSetProjectDestination — telegraph and guards', () => {
             expect.any(Function)
         );
         expect(mockProgressReport).toHaveBeenCalledWith(
-            expect.objectContaining({ message: 'Saving the new destination' })
+            expect.objectContaining({ message: OPERATION_STAGES.savingDestination.label })
         );
     });
 

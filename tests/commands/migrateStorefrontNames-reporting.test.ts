@@ -72,9 +72,10 @@ describe('MigrateStorefrontNamesCommand — the progress notification', () => {
         );
     });
 
-    // The increment is a SHARE of the bar, so it divides by the count; the
-    // message is a 1-based position, so it adds to the index.
-    it('reports an equal share of the bar and a 1-based position for each project', async () => {
+    // The increment is a SHARE of the bar, so it divides by the count. The message
+    // names the storefront: how many there are is a count, never a position, and a
+    // notification has no line under it to carry one (progress vocabulary slice 8).
+    it('reports an equal share of the bar and the storefront for each project', async () => {
         const sm = projectsOnDisk({
             '/a': mismatchedProject('a-store'),
             '/b': mismatchedProject('b-store'),
@@ -83,8 +84,8 @@ describe('MigrateStorefrontNamesCommand — the progress notification', () => {
         await migrateCommand(sm).execute();
 
         expect(progressReports).toStrictEqual([
-            { increment: 50, message: 'a-store (1/2)' },
-            { increment: 50, message: 'b-store (2/2)' },
+            { increment: 50, message: 'a-store' },
+            { increment: 50, message: 'b-store' },
         ]);
     });
 });

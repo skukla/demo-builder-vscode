@@ -5,10 +5,6 @@
  * the check or apply mechanics.
  */
 
-jest.mock('@/core/utils/agentPhaseChannel', () => ({
-    reportPhase: jest.fn(),
-}));
-
 jest.mock('@/features/updates/services/updateApplyService', () => ({
     applyUpdatesHeadless: jest.fn(),
 }));
@@ -25,7 +21,8 @@ jest.mock('@/features/dashboard/handlers/integrationUpdateHandlers', () => ({
 
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { updateIntegrationPairFor } from '@/features/dashboard/handlers/integrationUpdateHandlers';
-import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
     computeProjectUpdateSelections,
@@ -39,7 +36,6 @@ import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake'
 const computeMock = computeProjectUpdateSelections as jest.Mock;
 const applyMock = applyUpdatesHeadless as jest.Mock;
 const countMock = countSelections as jest.Mock;
-const reportPhaseMock = reportPhase as jest.Mock;
 
 const EMPTY = { forkSync: [], template: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [], integration: [] };
 
@@ -257,13 +253,16 @@ describe('apply_updates', () => {
         expect(applyMock.mock.calls[0][0]).toBe(selections);
     });
 
-    it('both records each phase for the agent and reports it live', async () => {
-        // The array is the after-the-fact record; reportPhase is what the user sees
-        // while the wait is happening, which is when they care. Dropping either
-        // leaves one of the two audiences with nothing.
-        applyMock.mockImplementationOnce(async (_sel: unknown, _ctx: unknown, report: (m: string) => void) => {
-            report('Syncing fork');
-            report('Updating components');
+    it('records each item for the agent and reports each step live, once', async () => {
+        // The array is the after-the-fact record, an item per line; the live phase
+        // is what the user sees while the wait is happening: the step's name from
+        // the stage table, once as it starts, as the dashboard apply shows it
+        // (progress vocabulary slice 8). Dropping either leaves one audience with nothing.
+        type Report = (stage: string, item?: string) => void;
+        applyMock.mockImplementationOnce(async (_sel: unknown, _ctx: unknown, report: Report) => {
+            report(S.syncingSourceRepos.label, 'me/a');
+            report(S.syncingSourceRepos.label, 'me/b');
+            report(S.updatingComponents.label, 'mesh in demo');
             return {
                 forkSync: { successCount: 0, failCount: 0, errors: [] },
                 template: { successCount: 0, failCount: 0, errors: [] },
@@ -277,13 +276,15 @@ describe('apply_updates', () => {
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
-        const res = await s.call({ confirm: true });
+        const heard: string[] = [];
+        const res = await withPhaseSinks([(m) => heard.push(m)], () => s.call({ confirm: true }));
 
-        expect(res.phases).toStrictEqual(['Syncing fork', 'Updating components']);
-        expect(reportPhaseMock.mock.calls).toStrictEqual([
-            ['Syncing fork'],
-            ['Updating components'],
+        expect(res.phases).toStrictEqual([
+            `${S.syncingSourceRepos.label}: me/a`,
+            `${S.syncingSourceRepos.label}: me/b`,
+            `${S.updatingComponents.label}: mesh in demo`,
         ]);
+        expect(heard).toStrictEqual([S.syncingSourceRepos.label, S.updatingComponents.label]);
     });
 });
 

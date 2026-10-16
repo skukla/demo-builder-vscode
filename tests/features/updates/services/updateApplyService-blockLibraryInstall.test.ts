@@ -20,6 +20,7 @@ import {
     resetFakes,
 } from './updateApplyService.testUtils';
 import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import blockLibraries from '@/features/components/config/block-libraries.json';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
@@ -110,7 +111,7 @@ describe('applyUpdatesHeadless — block library installs', () => {
 
         expect(mockInstallBlockLibraryFiles).toHaveBeenCalledTimes(1);
         expect(mockInstallBlockLibraryFiles).toHaveBeenCalledWith({ project, library: LIBRARY }, ctx);
-        expect(onProgress).toHaveBeenCalledWith(`Installing block library ${LIBRARY.name}`);
+        expect(onProgress).toHaveBeenCalledWith(S.addingBlockLibraries.label, LIBRARY.name);
         expect(project.installedBlockLibraries).toEqual([
             ...recordsBefore,
             {

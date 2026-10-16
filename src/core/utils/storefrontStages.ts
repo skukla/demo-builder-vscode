@@ -176,4 +176,11 @@ export const STOREFRONT_STAGES = {
         expectation: 'Usually a few seconds',
         detail: 'Its folder on this computer',
     },
+    // Site Access's "check access": a poll of about two minutes (`waitForConfigAccess`
+    // sleeps 30s, 30s, 45s). The checks it has made are a count, on the line under it.
+    waitingForSiteAccess: {
+        label: 'Waiting for site access',
+        expectation: 'Up to about two minutes',
+        detail: 'Checking whether the admin role has landed',
+    },
 } as const satisfies Record<string, { label: string; expectation: string; detail: string }>;

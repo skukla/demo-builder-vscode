@@ -48,14 +48,28 @@ describe('sweepOntoDemoBuilderNode', () => {
 
         const result = await sweepOntoDemoBuilderNode(d);
 
-        // The notification: an -ing title, then the stage alone with a count (handbook).
+        // The notification: an -ing title, then each step alone (handbook, progress).
         expect(titles).toStrictEqual(['Updating to Node 26']);
-        expect(progressLines).toStrictEqual(['Preparing Node', 'Reinstalling packages (1 of 1)']);
+        expect(progressLines).toStrictEqual(['Preparing Node', 'Reinstalling packages']);
         expect(d.ensureNode).toHaveBeenCalledWith('26');
         expect(d.reinstall).toHaveBeenCalledWith('headless', project.componentInstances?.headless, '26');
         expect(project.componentInstances?.headless.metadata?.nodeVersion).toBe('26');
         expect(d.saveProject).toHaveBeenCalledWith(project);
         expect(result).toStrictEqual({ ran: true, moved: ['citisignal: headless'], failed: [], running: [] });
+    });
+
+    // How many components is a count, not the step's position, and a notification
+    // has no line 2 to carry it (progress vocabulary slice 8): the step shows once.
+    it('shows the reinstall step once, never a count of components as its position', async () => {
+        const project = createMockProject({
+            componentInstances: { headless: component('headless', '24'), mesh: component('mesh', '24') },
+        });
+        const { d, progressLines } = deps([project]);
+
+        await sweepOntoDemoBuilderNode(d);
+
+        expect(progressLines).toStrictEqual(['Preparing Node', 'Reinstalling packages']);
+        expect(d.reinstall).toHaveBeenCalledTimes(2);
     });
 
     it('does nothing and shows nothing when the Node is ready and nothing is behind', async () => {

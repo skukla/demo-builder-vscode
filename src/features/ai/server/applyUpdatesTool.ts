@@ -22,7 +22,8 @@ import { z } from 'zod';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { stepPhaseReporter } from '@/core/utils/agentPhaseChannel';
+import { jobLine } from '@/core/utils/storefrontJobs';
 import {
     integrationUpdateProbe,
     updateIntegrationPairFor,
@@ -118,6 +119,7 @@ export function registerApplyUpdatesTool(
             }
 
             const phases: string[] = [];
+            const sayStep = stepPhaseReporter();
             const result = await applyUpdatesHeadless(
                 selections,
                 {
@@ -134,11 +136,13 @@ export function registerApplyUpdatesTool(
                         updateIntegrationPairFor(ctx, project, id, report),
                 },
                 // Collected for the RESULT and reported LIVE. The array is the
-                // agent's after-the-fact record; reportPhase is what the user
-                // sees while the wait is happening, which is when they care.
-                (m) => {
-                    phases.push(m);
-                    reportPhase(m);
+                // agent's after-the-fact record, an item per line; the live phase
+                // is what the user sees while the wait is happening: the step's
+                // name once, as the dashboard's apply shows it (progress vocabulary
+                // slice 8).
+                (stage, item) => {
+                    phases.push(item ? jobLine(stage, item) : stage);
+                    sayStep(stage);
                 },
                 // `args` is present here: a call without confirm:true returned above.
                 { templateConflicts: args.resetTemplateOnConflict === true ? 'reset' : 'stop' },

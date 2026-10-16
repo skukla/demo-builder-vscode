@@ -207,9 +207,6 @@ export const TIMEOUTS = {
     /** Update message delay (2 seconds) */
     UPDATE_MESSAGE_DELAY: 2000,
 
-    /** Update result display time (3 seconds) */
-    UPDATE_RESULT_DISPLAY: 3000,
-
     /** Demo stop wait time (2 seconds) */
     DEMO_STOP_WAIT: 2000,
 

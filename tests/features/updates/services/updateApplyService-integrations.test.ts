@@ -12,6 +12,7 @@ import {
     recordsIntegrationProbe,
     resetFakes,
 } from './updateApplyService.testUtils';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
     computeProjectUpdateSelections,
@@ -105,7 +106,7 @@ describe('applyUpdatesHeadless — integrations', () => {
         expect(ctx.updateIntegrationPair).toHaveBeenCalledWith(project, 'demo-erp', expect.any(Function));
         expect(res.integration).toEqual({ successCount: 1, failCount: 0, errors: [], applied: ['Updated from a to b.'] });
         expect(res.totalApplied).toBe(1);
-        expect(onProgress).toHaveBeenCalledWith('Updating ERP Integration and Justrite ERP in Justrite');
+        expect(onProgress).toHaveBeenCalledWith(S.updatingIntegrations.label, 'ERP Integration and Justrite ERP in Justrite');
     });
 
     it('a failed pair counts as failed, in words', async () => {

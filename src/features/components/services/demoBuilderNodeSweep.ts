@@ -24,10 +24,8 @@
  */
 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { stageLine } from '@/core/utils/stageLine';
 import type { ComponentInstance, Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
-import type { OperationPosition } from '@/types/webviewPayloads';
 
 export interface NodeSweepDeps {
     projects: Project[];
@@ -78,14 +76,10 @@ function componentsBehind(project: Project, node: string): Array<[string, Compon
 async function moveProject(
     project: Project,
     deps: NodeSweepDeps,
-    show: (position: OperationPosition) => void,
-    counter: { index: number; total: number },
     result: NodeSweepResult,
 ): Promise<void> {
     let changed = false;
     for (const [id, component] of componentsBehind(project, deps.node)) {
-        counter.index += 1;
-        show({ index: counter.index, total: counter.total });
         const label = `${project.name}: ${component.name || id}`;
         deps.log(`Reinstalling ${label} on Node ${deps.node}`);
         const error = await deps.reinstall(id, component, deps.node);
@@ -104,9 +98,9 @@ async function moveProject(
 
 /**
  * Prepare Demo Builder's Node and move every project's components onto it, when
- * anything needs it. The notification shows only the stage and a count (handbook:
- * the stage name alone, 25 characters at most); which component, and any error,
- * go to the log.
+ * anything needs it. The notification shows only each step (handbook: the stage
+ * name alone, 25 characters at most); which component, and any error, go to the
+ * log.
  *
  * @returns what ran, what moved, what failed and why, and which projects were running
  */
@@ -130,14 +124,11 @@ export async function sweepOntoDemoBuilderNode(deps: NodeSweepDeps): Promise<Nod
             deps.log(`${project.name} is running; it moves to Node ${deps.node} after it stops`);
             return false;
         });
-        const counter = {
-            index: 0,
-            total: stopped.reduce((sum, project) => sum + componentsBehind(project, deps.node).length, 0),
-        };
-        const show = (position: OperationPosition) =>
-            progress(stageLine(OPERATION_STAGES.reinstallingPackages.label, position));
+        // The step once: how many components is a count, not its position, and a
+        // notification has no line 2 to carry it (progress vocabulary slice 8).
+        if (stopped.length > 0) progress(OPERATION_STAGES.reinstallingPackages.label);
         for (const project of stopped) {
-            await moveProject(project, deps, show, counter, result);
+            await moveProject(project, deps, result);
         }
         return result;
     });

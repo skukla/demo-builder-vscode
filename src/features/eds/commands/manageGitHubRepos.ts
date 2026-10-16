@@ -185,7 +185,8 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
                 for (let i = 0; i < reposToDelete.length; i++) {
                     const repo = reposToDelete[i];
                     progress.report({
-                        message: `${i + 1}/${reposToDelete.length}: ${repo}`,
+                        // Which repository; how many is a count, never a position (handbook, progress).
+                        message: repo,
                         increment: 100 / reposToDelete.length,
                     });
 

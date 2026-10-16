@@ -149,7 +149,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
             await executePromise;
         });
 
-        it('should show progress result after update check completes', async () => {
+        it('should say up to date as the outcome once the check closes', async () => {
             // Arrange
             const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
             mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
@@ -166,10 +166,14 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
             // Fast-forward through all timers
             await jest.runAllTimersAsync();
 
-            // Assert: Should show "up to date" message
-            expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Up to date (v1.0.0)',
+            // Assert: "up to date" is the outcome after the run, not a progress line
+            expect(mockProgress.report).not.toHaveBeenCalledWith({
+                message: expect.stringContaining('Up to date'),
             });
+            expect(vscode.window.withProgress).toHaveBeenLastCalledWith(
+                expect.objectContaining({ title: 'Demo Builder is up to date (v1.0.0)' }),
+                expect.any(Function),
+            );
 
             await executePromise;
         });

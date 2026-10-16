@@ -160,10 +160,10 @@ describe('the removal narration', () => {
         const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
         // A notification shows the step alone: the count of types is the line under
         // it, never the step's position (progress vocabulary slice 5, 2026-10-16).
-        relay({ verb: 'Removing', done: 1, total: 3, processing: ['Products', 'Categories'] });
+        relay({ done: 1, total: 3, processing: ['Products', 'Categories'] });
         expect(report).toHaveBeenLastCalledWith({ message: 'Removing the sample data' });
 
-        relay({ verb: 'Removing', done: 3, total: 3, processing: [] });
+        relay({ done: 3, total: 3, processing: [] });
         expect(report).toHaveBeenLastCalledWith({ message: 'Removing the sample data' });
     });
 });
@@ -186,7 +186,7 @@ describe('the removal narration in a screen\'s modal', () => {
             operationId: 'reset-modal',
         });
         const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
-        relay({ verb: 'Removing', done: 1, total: 3, processing: ['Products', 'Categories'] });
+        relay({ done: 1, total: 3, processing: ['Products', 'Categories'] });
 
         expect(send).toHaveBeenLastCalledWith(
             'operationProgress',

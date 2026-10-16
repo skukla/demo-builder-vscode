@@ -19,7 +19,8 @@ import { runWithAdobeTarget } from './adobeTargetStore';
 import { requireDaLive, requireGitHub } from './edsToolGuards';
 import { asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { stepPhaseReporter } from '@/core/utils/agentPhaseChannel';
+import { resetStageLabel } from '@/core/utils/resetStages';
 import { stageLine } from '@/core/utils/stageLine';
 import {
     getDaLiveAuthService,
@@ -93,6 +94,7 @@ export async function runEdsReset(
     }
 
     const phases: Array<{ step: number; totalSteps: number; message: string }> = [];
+    const sayStep = stepPhaseReporter();
     const tokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context));
     try {
         // VS Code setting `demoBuilder.byom.overlayUrl` wins over
@@ -123,19 +125,20 @@ export async function runEdsReset(
                 },
                 // Collected for the RESULT and reported LIVE. Reset runs
                 // for minutes; the array is the agent's record afterwards,
-                // reportPhase is what the user sees during the wait.
+                // the step reported live is what the user sees during the wait.
                 (p) => {
                     phases.push({
                         step: p.step,
                         totalSteps: p.totalSteps,
                         message: p.message,
                     });
-                    // The same shape the button's modal and notification
-                    // show — "Resetting the repository (1 of 12)" — not a
-                    // second dialect for the same run (PL-59 slice 7).
-                    reportPhase(
-                        stageLine(p.message, { index: p.step, total: p.totalSteps }),
-                    );
+                    // The same step the button's modal and notification show,
+                    // from the stage table: "Resetting the code (1 of 12)", once
+                    // as it starts. The service's own message is the line under
+                    // it, which a one-line agent surface does not have (progress
+                    // vocabulary slice 8; PL-59 slice 7 before it).
+                    const stage = resetStageLabel(p.step);
+                    sayStep(stage ? stageLine(stage, { index: p.step, total: p.totalSteps }) : p.message);
                 },
             ),
         );

@@ -215,8 +215,9 @@ describe('waitForSiteAccess', () => {
             context.logger,
             expect.any(Function),
         );
+        // Line 2 under the screen's step: the checks are a count, never a step position.
         expect(context.sendMessage).toHaveBeenCalledWith(SITE_ACCESS_PROGRESS_MESSAGE, {
-            message: expect.stringContaining('Checking access'),
+            message: '1 of 4 checks done, waiting for the next',
         });
         expect((result.data as SiteAccessChangeResult).notice.offerRepair).toBe(true);
     });

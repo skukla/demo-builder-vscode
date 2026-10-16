@@ -20,6 +20,7 @@
  */
 
 import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { describeUpdateLeftOut } from '@/features/eds/services/addedEntriesRecord';
@@ -49,7 +50,13 @@ import {
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
 
-type OnProgress = (message: string) => void;
+/**
+ * Where a category reports: the step from the stage table, the same names the
+ * dashboard's apply shows (`updateStages.ts`), and the item it is on for the line
+ * under it. Until slice 8 of the progress vocabulary (2026-10-16) each item was its
+ * own long message ("Updating eds-storefront in My Demo").
+ */
+type OnProgress = (stage: string, item?: string) => void;
 
 // ==========================================================
 // Per-category apply cores (modal-free)
@@ -64,7 +71,7 @@ async function applyForkSync(
     if (items.length === 0) return result;
     const svc = new ForkSyncService(ctx.secrets, ctx.logger);
     for (const item of items) {
-        onProgress?.(`Syncing fork ${item.owner}/${item.repo}`);
+        onProgress?.(S.syncingSourceRepos.label, `${item.owner}/${item.repo}`);
         try {
             const r = await svc.syncFork(item.owner, item.repo, item.branch);
             if (r.success) {
@@ -122,7 +129,7 @@ async function applyTemplate(
     if (items.length === 0) return { result, succeededPaths };
     const svc = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
     for (const { project } of items) {
-        onProgress?.(`Syncing template for ${project.name}`);
+        onProgress?.(S.updatingTemplate.label, project.name);
         try {
             const r = await syncTemplateHeadless(svc, project, policy);
             if (r.success) {
@@ -162,7 +169,7 @@ async function applyComponents(
     for (const { project, items: updates } of byProject.values()) {
         for (const update of updates) {
             if (!update.downloadUrl) continue;
-            onProgress?.(`Updating ${update.componentId} in ${project.name}`);
+            onProgress?.(S.updatingComponents.label, `${update.componentId} in ${project.name}`);
             try {
                 await updater.updateComponent(
                     project,
@@ -203,7 +210,7 @@ async function applyAdobeMcp(
     // in the STOREFRONT dir — a silent no-op that re-offered the same update
     // forever. The shared core is what makes that drift impossible now.)
     for (const { project, packageName, latestVersion } of items) {
-        onProgress?.(`Updating ${packageName} → ${latestVersion} in ${project.name}`);
+        onProgress?.(S.updatingAiTools.label, `${packageName} ${latestVersion} in ${project.name}`);
         try {
             await applyAdobeMcpUpdate(project, packageName, latestVersion, ctx);
             result.successCount++;
@@ -242,7 +249,7 @@ async function applyAddons(
             );
             continue;
         }
-        onProgress?.(`Updating block library ${item.library.name}`);
+        onProgress?.(S.updatingAddOns.label, item.library.name);
         try {
             const leftOut = await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
             const note = describeUpdateLeftOut(item, leftOut);
@@ -265,7 +272,7 @@ async function applyAddons(
     }
 
     for (const item of inspector) {
-        onProgress?.(`Updating Inspector SDK in ${item.project.name}`);
+        onProgress?.(S.updatingAddOns.label, `Inspector SDK in ${item.project.name}`);
         try {
             await updateCommitShaWithRollback(
                 item.project.installedInspectorSdk,
@@ -302,7 +309,7 @@ async function applyBlockLibraryInstalls(
 ): Promise<CategoryResult> {
     const result = emptyResult();
     for (const item of items) {
-        onProgress?.(`Installing block library ${item.library.name}`);
+        onProgress?.(S.addingBlockLibraries.label, item.library.name);
         try {
             const outcome = await applyBlockLibraryInstall(item, ctx);
             result.successCount++;
