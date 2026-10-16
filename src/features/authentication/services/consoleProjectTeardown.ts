@@ -32,6 +32,7 @@ import type { IoEventsClient } from './ioEventsClient';
 import type { EventsAuth } from './ioEventsTransport';
 import type { WorkspaceS2SCredentialIds } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 /** Progress steps reported to `onProgress`. */
 const TOTAL_STEPS = 4;
@@ -293,7 +294,7 @@ export async function teardownConsoleProject(
         onProgress?.({ step, totalSteps: TOTAL_STEPS, message });
     };
 
-    report(1, 'Finding workspaces');
+    report(1, OPERATION_STAGES.findingWorkspaces.label);
     const prep = await prepareTeardown(deps, target, items);
     if (!prep) {
         debugLogger.debug('[Teardown] preparation failed — aborting before any deletion');
@@ -301,7 +302,7 @@ export async function teardownConsoleProject(
     }
     debugLogger.debug(`[Teardown] found ${prep.workspaces.length} workspace(s)`);
 
-    report(2, 'Checking credentials');
+    report(2, OPERATION_STAGES.checkingCredentials.label);
     const ctx: TeardownContext = {
         deps,
         target,
@@ -317,19 +318,20 @@ export async function teardownConsoleProject(
             `${firstCredential ? '' : ' — skipping event-entity sweep'}`,
     );
     if (firstCredential) {
-        report(3, 'Removing event setup');
+        report(3, OPERATION_STAGES.removingEventSetup.label);
         // A failed sweep records a failed item, which the gate below aborts on.
         await teardownEventEntities(ctx, prep.workspaces, firstCredential);
     } else {
-        // Keep the reported steps monotonic and complete even on the fast path.
-        report(3, 'Nothing to remove');
+        // Nothing to remove: the step is skipped and the count moves on, as in every
+        // other flow (it used to report a step 3 called "Nothing to remove").
+        debugLogger.debug('[Teardown] step 3 skipped: no event setup to remove');
         skipAllWorkspaces(items, prep.workspaces);
     }
 
     if (items.some((item) => item.outcome === 'failed')) {
         return buildResult(items, false);
     }
-    report(4, 'Deleting the project');
+    report(4, OPERATION_STAGES.deletingAdobeProject.label);
     const result = await deleteProject(deps, target, items);
     debugLogger.debug(
         `[Teardown] done — projectDeleted=${result.projectDeleted}, ${result.items.length} item(s)`,

@@ -19,6 +19,7 @@
  * Correct them from those logs as more runs are read.
  */
 
+import { ADOBE_PROJECT_STAGES } from './adobeProjectStages';
 import { CREATION_STAGES } from './creationStages';
 import { RESET_STAGES } from './resetStages';
 import { STOREFRONT_STAGES } from './storefrontStages';
@@ -194,6 +195,7 @@ export const OPERATION_STAGES = {
     // The storefront's stages (republish, and the pages after a store change).
     ...STOREFRONT_STAGES,
     ...RESET_STAGES,
+    ...ADOBE_PROJECT_STAGES,
     removingWorkspace: {
         label: 'Removing the workspace',
         expectation: 'Up to a couple of minutes',

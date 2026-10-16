@@ -39,8 +39,9 @@
  * assigned to; a reporter under another name than the ones above (an `onProgress`
  * carries line 1 in some services and line 2 in others, so it is not read here;
  * `operationStages.test.ts` holds the App Builder files where it is line 1); and a
- * reporter that takes the step's NUMBER first, like the Adobe project teardown's
- * `report(1, 'Finding workspaces')`.
+ * reporter that takes the step's NUMBER first (`report(1, label)`). The one such
+ * reporter, the Adobe project teardown, names its steps from the table since
+ * 2026-10-16 (`adobeProjectStages.ts`); a new one would not be caught here.
  *
  * No ledger: when this suite landed (2026-10-16) every offender it found was fixed,
  * so a new one fails outright.
