@@ -509,6 +509,7 @@
         "validate:tsc-blindspots": "node scripts/check-tsc-blindspots.js",
         "validate:source-duplication": "node scripts/check-source-duplication.mjs",
         "gate": "npm run lint && npx tsc --noEmit && npm run typecheck:tests && npm run validate:tsc-blindspots && npm run validate:test-file-sizes && npx jest --no-coverage && npm run validate:source-duplication && bash .claude/skills/dead-code-scan/scan.sh src",
+        "gate:docs": "npx jest --no-coverage tests/sop tests/hooks tests/templates tests/features/ai/server/toolPromptCoverage.test.ts",
         "analyze": "ANALYZE=true npm run compile:webview",
         "package": "vsce package",
         "publish": "vsce publish",
