@@ -1,0 +1,49 @@
+name: Patches release watchdog
+
+# Daily: is the boilerplate storefronts are built from still moving forward?
+# Runs `scripts/patchesReleased.mjs` (npm run patches:released), which fails when
+# the patches repo's daily drift gate is switched off, has not run for two days, or
+# holds verified work no release carries. A failed scheduled run emails the repo
+# owner: that is the alarm.
+#
+# Why it exists: from 2026-08-28 to 2026-10-16 no patches release was cut, every
+# project was built on, and Check for Updates compared against, a seven-week-old
+# boilerplate, and nothing said so (ADR-006, EDS-48). The same check runs in the
+# periodic sweep and before every release cut; this is the one that runs whether or
+# not anybody is looking.
+#
+# Lives HERE, not in the patches repo: GitHub switches off a public repo's
+# scheduled workflows after 60 days with no commit, and the patches repo now commits
+# only when upstream really changes, so an alarm there could be switched off along
+# with the thing it watches. This repo is committed to daily.
+#
+# Scheduled workflows run from the DEFAULT branch only (master here), so this starts
+# running once it reaches master.
+
+on:
+  schedule:
+    # 09:23 UTC: two hours after the drift gate (07:17 UTC), off the top of the hour.
+    - cron: '23 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  watchdog:
+    name: Patches are released
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # No npm install: the script uses Node's own fetch and fs only.
+      - name: Check the patches release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/patchesReleased.mjs

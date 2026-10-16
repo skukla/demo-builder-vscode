@@ -23,6 +23,8 @@ interface Facts {
     mainSha: string;
     unreleased: Array<{ sha: string; date: string }>;
     gateConclusion: string | null;
+    gateState?: string;
+    gateLastRun?: string | null;
 }
 
 let dir: string;
@@ -49,6 +51,8 @@ const released = (sha: string): Facts => ({
     mainSha: sha,
     unreleased: [],
     gateConclusion: 'success',
+    gateState: 'active',
+    gateLastRun: '2026-10-16T07:20:00Z',
 });
 
 describe('patchesReleased', () => {
@@ -111,5 +115,27 @@ describe('patchesReleased', () => {
         const { code } = check([released('abc'), stale]);
 
         expect(code).toBe(1);
+    });
+
+    // Since 2026-10-16 the gate commits only when upstream's files change, so a
+    // quiet stretch can pass 60 days without a commit, and GitHub then switches the
+    // scheduled workflow off (it did exactly that to bodea-source's sync). Nothing
+    // would be unreleased, so the release check alone would say OK forever.
+    it('fails when GitHub has switched the daily check off', () => {
+        const { code, out } = check([{ ...released('abc'), gateState: 'disabled_inactivity' }]);
+
+        expect(code).toBe(1);
+        expect(out).toContain('the daily drift gate is switched off (disabled_inactivity)');
+    });
+
+    it('fails when the daily check has not run for more than two days', () => {
+        const { code, out } = check([{ ...released('abc'), gateLastRun: '2026-10-13T07:20:00Z' }]);
+
+        expect(code).toBe(1);
+        expect(out).toContain('the daily drift gate last ran 76h ago');
+    });
+
+    it('passes when the daily check ran this morning — control', () => {
+        expect(check([released('abc')]).code).toBe(0);
     });
 });

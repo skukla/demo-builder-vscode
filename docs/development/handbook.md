@@ -333,8 +333,9 @@ check says so and names the file.
 > never its `main`. While releases were cut by hand, none was cut from 2026-08-28 to
 > 2026-10-16: every new project started on, and Check for Updates compared against, a
 > seven-week-old boilerplate while the gate verified 73 newer commits and every check passed.
-> Checked by `npm run patches:released` in the periodic sweep, which fails when verified work
-> on `main` is two days older than any release.
+> Checked by `npm run patches:released`, daily by `.github/workflows/patches-released.yml` (a
+> failed run emails the owner) and in the periodic sweep. It fails when the gate is switched off,
+> has not run for two days, or holds verified work two days older than any release.
 
 ## 5. What survives between calls
 

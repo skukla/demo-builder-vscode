@@ -16,8 +16,10 @@
  * Since 2026-10-16 the gate publishes the release itself. This is the check that it
  * keeps doing so.
  *
- * THE RULE. FAIL when `main` holds a commit older than STALE_AFTER_HOURS that no release
- * carries. A green daily run releases within a day, so anything older means the gate is
+ * THE RULE. FAIL when the daily gate is switched off or has not run on schedule within
+ * STALE_AFTER_HOURS (GitHub switches off a public repo's schedule after 60 days with no
+ * commit, and since 2026-10-16 the gate commits only on real upstream changes), or when
+ * `main` holds a commit older than STALE_AFTER_HOURS that no release carries. A green daily run releases within a day, so anything older means the gate is
  * red (its run says why) or is not running. Commits younger than that are the normal
  * wait for the next run, reported but not failed.
  *
@@ -49,6 +51,8 @@ const API = 'https://api.github.com';
  */
 function releaseVerdict(facts, now) {
     const { repo, release, mainSha, unreleased, gateConclusion } = facts;
+    const gateProblem = gateVerdict(facts, now);
+    if (gateProblem) return { ok: false, line: `${repo}: ${gateProblem}` };
     if (!release) {
         return { ok: false, line: `${repo}: no release at all, so Demo Builder reads main unpinned` };
     }
@@ -73,6 +77,25 @@ function releaseVerdict(facts, now) {
     };
 }
 
+/**
+ * Whether the daily gate itself is alive: switched on, and run on schedule within
+ * the window. Since 2026-10-16 the gate commits only when upstream's files change, so
+ * a quiet stretch can go 60 days without a commit, and GitHub then switches a
+ * scheduled workflow off (it did that to bodea-source's sync). With nothing
+ * unreleased, the release check alone would read that as fine forever.
+ *
+ * @returns the problem in words, or null when the gate is alive or the facts do not say
+ */
+function gateVerdict({ gateState, gateLastRun }, now) {
+    if (gateState !== undefined && gateState !== 'active') {
+        return `the daily drift gate is switched off (${gateState}): enable "LKG drift gate" in the repo's Actions tab`;
+    }
+    if (gateLastRun === undefined) return null;
+    if (gateLastRun === null) return 'the daily drift gate has never run on its schedule';
+    const hours = Math.floor((now - Date.parse(gateLastRun)) / HOUR_MS);
+    return hours >= STALE_AFTER_HOURS ? `the daily drift gate last ran ${hours}h ago, so it has stopped running` : null;
+}
+
 /** Every patches repo a demo package names, once. */
 function patchRepos() {
     const packages = JSON.parse(readFileSync(PACKAGES, 'utf8'));
@@ -88,8 +111,14 @@ function patchRepos() {
 }
 
 async function getJson(path) {
+    // Signed when a token is present (the scheduled job passes its own): GitHub's
+    // shared runners exhaust the unauthenticated rate limit. Reads only either way.
+    const token = process.env.GITHUB_TOKEN;
     const response = await fetch(`${API}${path}`, {
-        headers: { Accept: 'application/vnd.github+json' },
+        headers: {
+            Accept: 'application/vnd.github+json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
     });
     if (response.status === 404) return null;
     if (!response.ok) throw new Error(`GET ${path} answered ${response.status}`);
@@ -101,9 +130,16 @@ async function factsFor(repo) {
     const latest = await getJson(`/repos/${repo}/releases/latest`);
     const main = await getJson(`/repos/${repo}/commits/main`);
     if (!main) throw new Error(`${repo} has no main branch, or cannot be read`);
+    const workflow = await getJson(`/repos/${repo}/actions/workflows/lkg-gate.yml`);
+    if (!workflow) throw new Error(`${repo} has no lkg-gate.yml workflow, or it cannot be read`);
     const runs = await getJson(`/repos/${repo}/actions/workflows/lkg-gate.yml/runs?event=schedule&per_page=1`);
-    const gateConclusion = (runs && runs.workflow_runs && runs.workflow_runs[0]?.conclusion) || null;
-    if (!latest) return { repo, release: null, mainSha: main.sha, unreleased: [], gateConclusion };
+    const lastRun = runs && runs.workflow_runs ? runs.workflow_runs[0] : undefined;
+    const gate = {
+        gateConclusion: (lastRun && lastRun.conclusion) || null,
+        gateState: workflow.state,
+        gateLastRun: lastRun ? lastRun.created_at : null,
+    };
+    if (!latest) return { repo, release: null, mainSha: main.sha, unreleased: [], ...gate };
     const released = await getJson(`/repos/${repo}/commits/${latest.tag_name}`);
     const compare = await getJson(`/repos/${repo}/compare/${latest.tag_name}...main`);
     const unreleased = ((compare && compare.commits) || []).map((c) => ({
@@ -115,7 +151,7 @@ async function factsFor(repo) {
         release: { tag: latest.tag_name, sha: released ? released.sha : '' },
         mainSha: main.sha,
         unreleased,
-        gateConclusion,
+        ...gate,
     };
 }
 

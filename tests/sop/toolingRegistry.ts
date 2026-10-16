@@ -145,7 +145,7 @@ const PERIODIC: readonly Instrument[] = [
         kind: 'npm-script',
         cadence: 'periodic',
         resultKind: 'gate',
-        what: "the patches repo's verified boilerplate is in a release, so new projects and Check for Updates get it (seven weeks without one went unseen until 2026-10-16)",
+        what: "the patches repo's daily gate is switched on, has run, and its verified boilerplate is in a release, so new projects and Check for Updates get it (seven weeks without one went unseen until 2026-10-16). Also runs daily as .github/workflows/patches-released.yml",
         runs: 'npm run patches:released',
     },
     {
