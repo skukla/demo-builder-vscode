@@ -184,19 +184,7 @@ export class TemplateUpdateChecker {
 
         // LKG advanced. Use canonical commit comparison for the
         // commits-behind count (same N-commits-behind UX as forked).
-        const comparison = await compareCommits(
-            this.secrets, templateOwner, templateRepo,
-            lastSyncedCommit, currentLkg,
-        );
-        const commitsBehind = comparison?.ahead_by ?? 0;
-        return {
-            hasUpdates: commitsBehind > 0,
-            currentCommit: lastSyncedCommit,
-            latestCommit: currentLkg,
-            commitsBehind,
-            templateOwner,
-            templateRepo,
-        };
+        return this.compareTo(templateOwner, templateRepo, lastSyncedCommit, currentLkg);
     }
 
     /**
@@ -228,15 +216,36 @@ export class TemplateUpdateChecker {
             };
         }
 
-        const comparison = await compareCommits(
-            this.secrets, templateOwner, templateRepo,
-            lastSyncedCommit, latestCommit,
-        );
-        const commitsBehind = comparison?.ahead_by ?? 0;
+        return this.compareTo(templateOwner, templateRepo, lastSyncedCommit, latestCommit);
+    }
+
+    /**
+     * How far `current` is behind `latest`, from GitHub's compare.
+     *
+     * A compare that fails is "could not check", never "0 behind": the B2B template
+     * re-makes its top commits nightly, so the commit a project recorded leaves the
+     * template's history, and if GitHub ever stops answering for it, a 0 here would
+     * tell every such project it is up to date.
+     */
+    private async compareTo(
+        templateOwner: string,
+        templateRepo: string,
+        current: string,
+        latest: string,
+    ): Promise<TemplateUpdateResult | null> {
+        const comparison = await compareCommits(this.secrets, templateOwner, templateRepo, current, latest);
+        if (!comparison) {
+            this.logger.warn(
+                `[TemplateUpdates] Could not compare ${current.slice(0, 7)} with ${latest.slice(0, 7)} `
+                    + `on ${templateOwner}/${templateRepo} — skipping update check`,
+            );
+            return null;
+        }
+        const commitsBehind = comparison.ahead_by;
         return {
             hasUpdates: commitsBehind > 0,
-            currentCommit: lastSyncedCommit,
-            latestCommit,
+            currentCommit: current,
+            latestCommit: latest,
             commitsBehind,
             templateOwner,
             templateRepo,
