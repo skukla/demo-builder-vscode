@@ -28,7 +28,7 @@ import { withProgressRegister } from './progressRegister';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import { withStepSink } from '@/core/utils/operationStepChannel';
-import { stageLine } from '@/core/utils/stageLine';
+import { stageLine, stepUnder } from '@/core/utils/stageLine';
 import type { OperationOffer, OperationPosition, OperationProgressPayload } from '@/types/webviewPayloads';
 
 /** What an operation answers when it ends. */
@@ -92,16 +92,6 @@ function endOf(id: string, result: OperationOutcome): OperationProgressPayload {
     };
 }
 
-/**
- * The line under a stage. When the stage IS the job reporting ("Copying the content"
- * over "Copying the content: 40 of 103 files"), it is only what follows the name:
- * the name shows once (progress vocabulary, owner 2026-10-16).
- */
-function stepUnder(stage: string, step: string): string {
-    const prefix = `${stage}: `;
-    return step.startsWith(prefix) ? step.slice(prefix.length) : step;
-}
-
 /** R1 and R7: every stage — and every step of anything nested — to the modal. */
 async function runInModal<T extends OperationOutcome>(
     id: string,
@@ -116,7 +106,7 @@ async function runInModal<T extends OperationOutcome>(
             stage,
             position,
             // Row 2 is never blank: a stage that names no step shows its own detail.
-            step: step ? stepUnder(stage, step) : detailFor(stage),
+            step: stepUnder(stage, step) ?? detailFor(stage),
             expectation: expectationFor(stage),
         });
     };

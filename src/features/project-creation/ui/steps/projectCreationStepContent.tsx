@@ -18,9 +18,11 @@ import type { StepPhase } from '../hooks/useCreationProgressPhase';
 import type { GitHubAppInstallData } from '../hooks/useGitHubAppPreflight';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { expectationFor } from '@/core/utils/operationStages';
+import { expectationLine, stageLine } from '@/core/utils/stageLine';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppInstallDialog';
-import { WizardState } from '@/types/webview';
+import type { CreationProgress, WizardState } from '@/types/webview';
 
 /** Success completion content */
 function SuccessContent({ isOpeningProject, isEdit }: { isOpeningProject: boolean; isEdit: boolean }) {
@@ -77,6 +79,33 @@ function ErrorContent({
     );
 }
 
+/** What the screen expects of a stage the table does not name. */
+const WHOLE_RUN_ESTIMATE = 'This could take up to 3 minutes';
+
+/**
+ * The running view: the same three lines as every progress surface (progress
+ * vocabulary, owner 2026-10-16). The step with its place in the run, "(4 of 9)";
+ * what it is doing now; the step's expectation with the whole run's clock.
+ */
+function RunningContent({ progress }: { progress: CreationProgress }) {
+    const clock = useRunClock(progress.startedAt);
+    const stage = progress.currentOperation;
+    return (
+        <CenteredFeedbackContainer>
+            <LoadingDisplay
+                size="L"
+                message={stage ? stageLine(stage, progress.position) : 'Processing'}
+                subMessage={progress.message}
+                // The stage's OWN expectation where the shared table names it, so
+                // this screen says what every other surface says about the same
+                // work; the whole-run estimate is the fallback for a stage the
+                // table does not name (PL-59 slice 8).
+                helperText={expectationLine(expectationFor(stage) ?? WHOLE_RUN_ESTIMATE, clock)}
+            />
+        </CenteredFeedbackContainer>
+    );
+}
+
 /** Main content area - renders the appropriate content for each phase */
 export function StepContentArea(props: {
     phase: StepPhase;
@@ -117,24 +146,7 @@ export function StepContentArea(props: {
     }
 
     if (isActive && progress) {
-        return (
-            <CenteredFeedbackContainer>
-                <LoadingDisplay
-                    size="L"
-                    message={progress.currentOperation || 'Processing'}
-                    subMessage={progress.message}
-                    // The stage's OWN expectation where the shared table names
-                    // it, so this screen says what every other surface says
-                    // about the same work; the whole-run estimate is the
-                    // fallback for a stage the table does not name (PL-59
-                    // slice 8).
-                    helperText={
-                        expectationFor(progress.currentOperation ?? '') ??
-                        'This could take up to 3 minutes'
-                    }
-                />
-            </CenteredFeedbackContainer>
-        );
+        return <RunningContent progress={progress} />;
     }
 
     if (isCompleted && !progress?.error) {

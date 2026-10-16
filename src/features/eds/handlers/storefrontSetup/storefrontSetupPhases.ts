@@ -35,6 +35,13 @@ import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
 import { executePhaseCodeSync } from './storefrontSetupPhase3';
+import {
+    buildPipelineProgressCallback,
+    sendSessionExpired,
+    storefrontSetupSteps,
+    withSetupSteps,
+    type PipelineProgressInfo,
+} from './storefrontSetupProgress';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getBlockLibraryContentSource } from '@/features/components/services/blockLibraryLoader';
@@ -43,10 +50,7 @@ import { projectTargetsStorefront } from '@/features/eds/services/storefrontIden
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-import type {
-    StorefrontSetupProgressPayload,
-    StorefrontSetupProgressPhase,
-} from '@/types/webviewPayloads';
+import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 // Public type re-exports
 export type { StorefrontSetupResult } from './storefrontSetupTypes';
@@ -95,75 +99,6 @@ function buildLibraryContentSources(
     return sources;
 }
 
-type PipelineProgressInfo = {
-    operation: string;
-    message: string;
-    subMessage?: string;
-    percentage?: number;
-    current?: number;
-    total?: number;
-};
-
-const PIPELINE_PROGRESS = {
-    CONTENT_CLEAR: 49,
-    CONTENT_COPY_START: 50,
-    CONTENT_COPY_END: 58, // 50 + 8 (0.08 × 100)
-    BLOCK_LIBRARY: 59,
-    EDS_SETTINGS: 63,
-    CACHE_PURGE: 66,
-    CONTENT_PUBLISH_START: 67,
-    CONTENT_PUBLISH_END: 94, // 67 + 27
-    LIBRARY_PUBLISH: 95, // after content-publish completes — must be > CONTENT_PUBLISH_END (94)
-} as const;
-
-/** Build the progress callback for the EDS content pipeline */
-function buildPipelineProgressCallback(
-    context: HandlerContext,
-): (info: PipelineProgressInfo) => void {
-    return (info) => {
-        const mapping: Record<string, { phase: StorefrontSetupProgressPhase; progress: number }> = {
-            'content-clear': { phase: 'content', progress: PIPELINE_PROGRESS.CONTENT_CLEAR },
-            'content-copy': { phase: 'content', progress: PIPELINE_PROGRESS.CONTENT_COPY_START },
-            'block-library': { phase: 'block-library', progress: PIPELINE_PROGRESS.BLOCK_LIBRARY },
-            'eds-settings': { phase: 'block-library', progress: PIPELINE_PROGRESS.EDS_SETTINGS },
-            'cache-purge': { phase: 'publish', progress: PIPELINE_PROGRESS.CACHE_PURGE },
-            'content-publish': {
-                phase: 'publish',
-                progress: PIPELINE_PROGRESS.CONTENT_PUBLISH_START,
-            },
-            'sheet-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
-            'library-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
-            'leftover-pages': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
-            'page-check': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
-            'catalog-prewarm': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
-        };
-        // Fallback for an operation the mapping doesn't know. It used to push
-        // the raw operation string as the phase — a value outside the phase
-        // vocabulary that the webview's bookkeeping silently ignored.
-        const m = mapping[info.operation] ?? {
-            phase: 'content' as const,
-            progress: PIPELINE_PROGRESS.CONTENT_COPY_START,
-        };
-        let progress = m.progress;
-        if (info.operation === 'content-copy' && info.percentage !== undefined) {
-            progress = PIPELINE_PROGRESS.CONTENT_COPY_START + Math.round(info.percentage * 0.08);
-        }
-        if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
-            const span =
-                PIPELINE_PROGRESS.CONTENT_PUBLISH_END - PIPELINE_PROGRESS.CONTENT_PUBLISH_START;
-            progress =
-                PIPELINE_PROGRESS.CONTENT_PUBLISH_START +
-                Math.round((info.current / info.total) * span);
-        }
-        context.sendMessage('storefront-setup-progress', {
-            phase: m.phase,
-            message: info.message,
-            subMessage: info.subMessage,
-            progress,
-        } satisfies StorefrontSetupProgressPayload);
-    };
-}
-
 /**
  * Run Phase 2 (Helix config) and Phase 3 (code sync) with DA.live auth recovery.
  * Returns blockCollectionIds and any early-return result.
@@ -201,12 +136,7 @@ async function runConfigCodeSyncPhases(
             maxAttempts: MAX_REAUTH_ATTEMPTS,
             logPrefix: '[Storefront Setup]',
             operationLabel: 'Setup',
-            onExpired: () =>
-                context.sendMessage('storefront-setup-progress', {
-                    phase: 'auth-recovery',
-                    message: 'DA.live session expired. Please re-authenticate to continue.',
-                    progress: -1,
-                } satisfies StorefrontSetupProgressPayload),
+            onExpired: () => sendSessionExpired(context),
             onBeforeRetry: async () => {
                 context.logger.info(
                     '[Storefront Setup] DA.live re-authenticated, resuming configuration',
@@ -311,12 +241,7 @@ async function runEdsPipelineWithRecovery(
             maxAttempts: MAX_REAUTH_ATTEMPTS,
             logPrefix: '[Storefront Setup]',
             operationLabel: 'Setup',
-            onExpired: () =>
-                context.sendMessage('storefront-setup-progress', {
-                    phase: 'auth-recovery',
-                    message: 'DA.live session expired. Please re-authenticate to continue.',
-                    progress: -1,
-                } satisfies StorefrontSetupProgressPayload),
+            onExpired: () => sendSessionExpired(context),
             onBeforeRetry: async () => {
                 logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
                 await context.sendMessage('storefront-setup-progress', {
@@ -351,13 +276,13 @@ async function runEdsPipelineWithRecovery(
  * @returns Setup result with repo details
  */
 export async function executeStorefrontSetupPhases(
-    context: HandlerContext,
+    runContext: HandlerContext,
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     signal: AbortSignal,
     options?: BlockLibraryOptions,
     servicesOverride?: Partial<SetupServices>,
 ): Promise<StorefrontSetupResult> {
-    const logger = context.logger;
+    const logger = runContext.logger;
     /**
      * One seam for the whole bundle, rather than one per service.
      *
@@ -371,11 +296,17 @@ export async function executeStorefrontSetupPhases(
     // Merged, not replaced: a caller (in practice a suite) supplies only the
     // collaborators it cares about and the rest are built as usual. An all-or-nothing
     // override forced every caller to stand in for eight services to steer one.
-    const services: SetupServices = { ...createSetupServices(context), ...servicesOverride };
+    const services: SetupServices = { ...createSetupServices(runContext), ...servicesOverride };
 
     const wantsToResetContent = Boolean(edsConfig.resetSiteContent);
     const skipContent =
         !edsConfig.contentSource || (Boolean(edsConfig.selectedSite) && !wantsToResetContent);
+    // Every progress push as a numbered step with its line under it (`storefrontSetupProgress.ts`).
+    const steps = storefrontSetupSteps({
+        clearsContent: wantsToResetContent,
+        copiesContent: !skipContent,
+    });
+    const context = withSetupSteps(runContext, steps);
     logger.info(
         `[Storefront Setup] Content: skipContent=${skipContent}, selectedSite=${Boolean(edsConfig.selectedSite)}, resetContent=${wantsToResetContent}`,
     );

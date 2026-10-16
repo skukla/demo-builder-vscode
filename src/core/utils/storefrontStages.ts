@@ -128,6 +128,24 @@ export const STOREFRONT_STAGES = {
         detail: "This site's DA.live editor settings",
     },
 
+    // The wizard's storefront setup, before the work it shares with Reset (whose steps
+    // it shows for that part: 'Publishing code, settings', 'Copying the content',
+    // 'Setting up authoring', 'Publishing the pages' and the rest). Measured from five
+    // setups in the Debug Logs (2026-10-12, four new repositories, and 2026-10-15, an
+    // existing one): 19 to 35 seconds from the start to the content source being
+    // connected for a new repository, about a second for an existing one; the code
+    // step 21 seconds with two block libraries.
+    settingUpRepository: {
+        label: 'Setting up the repository',
+        expectation: 'Usually under a minute',
+        detail: 'Your GitHub repository, from the template',
+    },
+    settingUpCode: {
+        label: 'Setting up the code',
+        expectation: 'Usually under a minute',
+        detail: 'The content source, block libraries and inspector tagging',
+    },
+
     // Deleting a project: the storefront taken down (`storefrontTeardown.ts`), its
     // repository, then the project's own files. Measured from two deletes in the
     // Debug Logs (2026-10-09, 119 pages: about 50 seconds unpublishing, 21 for 49

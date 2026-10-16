@@ -18,10 +18,12 @@ import {
     getHelperText,
     initialSetupState,
     isActivePhase,
+    setupLines,
     toStartEdsConfig,
     type StorefrontSetupPhase,
     type StorefrontSetupState,
 } from '@/features/eds/ui/helpers/storefrontSetupState';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { EDSConfig } from '@/types/webview';
 import type { StorefrontGitHubAppRequiredPayload } from '@/types/webviewPayloads';
 
@@ -62,27 +64,55 @@ describe('initialSetupState', () => {
     });
 });
 
+// The working phases name a step, whose expectation comes from the stage table
+// (`setupLines`); these two never do, so they keep their own.
 describe('getHelperText', () => {
     it.each<[StorefrontSetupPhase, string]>([
-        ['repository', 'Usually under 30 seconds'],
-        ['storefront-code', 'Usually about a minute'],
-        ['code-sync', 'Usually under a minute'],
-        ['site-config', 'Usually under a minute'],
-        ['content', 'Usually 1–2 minutes'],
-        ['block-library', 'Usually under 30 seconds'],
-        ['publish', 'Usually 2–3 minutes'],
         ['auth-recovery', 'Waiting for you to finish signing in'],
         ['cancelling', 'Usually a moment'],
     ])('%s gives the SC an expectation', (phase, expected) => {
         expect(getHelperText(phase)).toBe(expected);
     });
 
-    it.each<StorefrontSetupPhase>(['idle', 'github-app', 'completed', 'error', 'complete'])(
-        '%s has no expectation line',
+    it.each<StorefrontSetupPhase>(['idle', 'repository', 'content', 'github-app', 'completed', 'error', 'complete'])(
+        '%s has no expectation of its own',
         (phase) => {
             expect(getHelperText(phase)).toBeUndefined();
         },
     );
+});
+
+// The same three lines as every progress surface (progress vocabulary, owner
+// 2026-10-16): the step with its place in the run, what it is doing now, the step's
+// expectation.
+describe('setupLines', () => {
+    it('shows the step, numbered, over what it is doing, with its expectation', () => {
+        const lines = setupLines(
+            runningState({
+                stage: OPERATION_STAGES.copyingContent.label,
+                position: { index: 4, total: 7 },
+                message: '40 of 103 files',
+            }),
+        );
+
+        expect(lines).toStrictEqual({
+            message: 'Copying the content (4 of 7)',
+            subMessage: '40 of 103 files',
+            expectation: OPERATION_STAGES.copyingContent.expectation,
+        });
+    });
+
+    it('shows a push with no step as it came: the sign-in wait', () => {
+        const lines = setupLines(
+            runningState({ phase: 'auth-recovery', message: 'DA.live session expired', subMessage: undefined }),
+        );
+
+        expect(lines).toStrictEqual({
+            message: 'DA.live session expired',
+            subMessage: undefined,
+            expectation: 'Waiting for you to finish signing in',
+        });
+    });
 });
 
 describe('isActivePhase', () => {
@@ -152,6 +182,33 @@ describe('applyProgress', () => {
             ...runningState().partialState,
             contentCopied: false,
         });
+    });
+
+    it("keeps the push's step, its number and the run's start", () => {
+        const next = applyProgress(runningState(), {
+            phase: 'content',
+            stage: OPERATION_STAGES.copyingContent.label,
+            position: { index: 4, total: 7 },
+            message: '40 of 103 files',
+            progress: 54,
+            startedAt: 1_760_000_000_000,
+        });
+
+        expect(next).toMatchObject({
+            stage: OPERATION_STAGES.copyingContent.label,
+            position: { index: 4, total: 7 },
+            startedAt: 1_760_000_000_000,
+        });
+    });
+
+    it('drops the step for a push with none, and keeps the clock running', () => {
+        const running = runningState({ stage: 'Copying the content', startedAt: 1_760_000_000_000 });
+
+        const next = applyProgress(running, { phase: 'auth-recovery', message: 'Sign in again', progress: -1 });
+
+        expect(next.stage).toBeUndefined();
+        expect(next.position).toBeUndefined();
+        expect(next.startedAt).toBe(1_760_000_000_000);
     });
 
     it('records the repo for cleanup when a push carries it', () => {

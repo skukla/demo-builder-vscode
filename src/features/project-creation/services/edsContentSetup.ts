@@ -16,6 +16,8 @@
 
 import * as vscode from 'vscode';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { STOREFRONT_JOBS, countLine, jobLine } from '@/core/utils/storefrontJobs';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { LibraryPublishHelix } from '@/features/eds/handlers/blockLibraryPublish';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
@@ -152,7 +154,8 @@ async function contentExistsInDaLive(
 export async function ensureEdsContent(
     config: EdsContentConfig,
     deps: EdsContentDeps,
-    onProgress?: (message: string, subMessage?: string) => void,
+    /** A step from the stage table (Reset's, for the same work) and the job under it. */
+    onProgress?: (stage: string, step?: string) => void,
 ): Promise<boolean> {
     const { logger } = deps;
 
@@ -184,7 +187,10 @@ export async function ensureEdsContent(
     }
 
     logger.info('[EDS Content] Content not found in DA.live, copying from template source');
-    onProgress?.('Setting up the content', 'Copying content from template');
+    // Reset's steps for the same work, each job on the line under its step
+    // (progress vocabulary, owner 2026-10-16).
+    const { org: sourceOrg, site: sourceSite } = config.contentSource;
+    onProgress?.(S.copyingContent.label, `from ${sourceOrg}/${sourceSite}`);
 
     const contentSource = config.contentSource;
 
@@ -205,8 +211,9 @@ export async function ensureEdsContent(
         config.daLiveOrg,
         config.daLiveSite,
         (progress) => {
-            const msg = progress.message || `Copying content (${progress.processed}/${progress.total})`;
-            onProgress?.('Setting up the content', msg);
+            const count = countLine(progress.processed, progress.total, 'file');
+            const msg = progress.message || jobLine(STOREFRONT_JOBS.copyingContent, count);
+            onProgress?.(S.copyingContent.label, msg);
         },
         config.contentPatches,
         config.contentPatchSource,
@@ -222,7 +229,7 @@ export async function ensureEdsContent(
     // Hybrid packages: overlay the B2B account chrome (/customer/* + /customer/nav)
     // from the canonical B2B content site on top of the brand content.
     if (config.accountContentSource) {
-        onProgress?.('Setting up the content', 'Adding B2B account experience');
+        onProgress?.(S.copyingContent.label, 'Adding the B2B account pages');
         const overlay = await daLiveContentOps.copyOps.overlayAccountChrome(
             config.accountContentSource, config.daLiveOrg, config.daLiveSite, patchReport,
         );
@@ -249,7 +256,7 @@ export async function ensureEdsContent(
     const helixService = makeHelix(logger, githubTokenService, daLiveTokenProvider);
 
     // DA.live permissions (non-fatal)
-    onProgress?.('Setting site permissions', 'Granting DA.live access');
+    onProgress?.(S.settingUpAuthoring.label, STOREFRONT_JOBS.settingSitePermissions);
     await nonFatal('Permissions setup', logger, async () => {
         const userEmail = await daLiveAuthService.getUserEmail();
         if (!userEmail) {
@@ -264,7 +271,7 @@ export async function ensureEdsContent(
     // Block library from template (non-fatal, skip if no template info)
     let libraryPaths: string[] = [];
     if (config.templateOwner && config.templateRepo) {
-        onProgress?.('Setting up the blocks', 'Setting up block library from template');
+        onProgress?.(S.settingUpAuthoring.label, STOREFRONT_JOBS.buildingBlockLibrary);
         await nonFatal('Block library setup', logger, async () => {
             const { GitHubFileOperations } = await import('@/features/eds/services/github/githubFileOperations');
             const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
@@ -283,30 +290,32 @@ export async function ensureEdsContent(
     }
 
     // EDS settings — AEM Assets / Universal Editor (non-fatal)
-    onProgress?.('Applying the settings', 'Configuring AEM Assets and Universal Editor');
+    onProgress?.(S.settingUpAuthoring.label, STOREFRONT_JOBS.applyingDaLiveSettings);
     await nonFatal('EDS settings', logger, () =>
         applyDaLiveOrgConfigSettings(daLiveContentOps, config.daLiveOrg, config.daLiveSite, logger),
     );
 
     // Cache purge before publishing (non-fatal)
-    onProgress?.('Publishing the content', 'Clearing the old cache');
+    onProgress?.(S.publishingPages.label, STOREFRONT_JOBS.clearingCache);
     await nonFatal('Cache purge', logger, () =>
         helixService.purgeCacheAll(repoInfo.owner, repoInfo.repo, 'main'),
     );
 
     // Publish content to CDN (preview + live)
-    onProgress?.('Publishing the content', 'Making the content live');
+    onProgress?.(S.publishingPages.label);
 
     await helixService.publishAllSiteContent(
         `${repoInfo.owner}/${repoInfo.repo}`,
         'main',
         config.daLiveOrg,
         config.daLiveSite,
+        (info) => onProgress?.(S.publishingPages.label, info.message),
     );
 
     // Publish the sheets the copy wrote, by path (non-fatal). publishAllSiteContent
     // publishes pages only, so a copied sheet is served only once this runs.
     if (contentResult.sheetPaths.length > 0) {
+        onProgress?.(S.publishingPages.label, STOREFRONT_JOBS.publishingSheets);
         await nonFatal('Sheet publish', logger, async () => {
             await publishSheetPaths(
                 helixService, repoInfo.owner, repoInfo.repo, contentResult.sheetPaths, logger,
@@ -316,6 +325,7 @@ export async function ensureEdsContent(
 
     // Publish block library paths (non-fatal, may be missed by publishAllSiteContent)
     if (libraryPaths.length > 0) {
+        onProgress?.(S.publishingPages.label, STOREFRONT_JOBS.publishingBlockList);
         await nonFatal('Block library publish', logger, async () => {
             await publishLibraryPaths(helixService, repoInfo.owner, repoInfo.repo, libraryPaths, logger);
             // The publish reporting success proves nothing — see verifyLibraryPreviewed.

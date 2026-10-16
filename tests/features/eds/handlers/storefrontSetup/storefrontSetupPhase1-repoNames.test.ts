@@ -224,8 +224,7 @@ describe('the reset path', () => {
 
         expect(sentPayloads(context)[1]).toEqual({
             phase: 'repository',
-            message: 'Resetting repository to template',
-            subMessage: 'acme/store',
+            message: 'Resetting the repository: acme/store',
             progress: 6,
         });
     });
@@ -300,14 +299,13 @@ describe('creating a brand-new repo', () => {
         const { context } = await run(config({ repoMode: 'new' }), makeServices(), { ...NEW });
 
         expect(sentPayloads(context).map((p) => p.message)).toEqual([
-            'Creating GitHub repository from template',
+            'Creating the repository: brand-new',
             'Waiting for repository content',
             'Repository ready',
         ]);
         expect(sentPayloads(context)[0]).toEqual({
             phase: 'repository',
-            message: 'Creating GitHub repository from template',
-            subMessage: 'brand-new',
+            message: 'Creating the repository: brand-new',
             progress: 5,
         });
         expect(sentPayloads(context)[1]).toMatchObject({

@@ -62,9 +62,11 @@ export const RESET_STAGES = {
         expectation: 'Usually about a minute',
         detail: 'So product pages open fast the first time',
     },
+    // Project creation writes every page new: 50 seconds for 11 category pages
+    // (2026-10-15), where a reset that keeps them takes seconds.
     addingCatalogMenu: {
         label: 'Adding the catalog menu',
-        expectation: 'Usually a few seconds',
+        expectation: 'Usually under a minute',
         detail: "A page for each of the store's categories",
     },
     checkingSettings: {
@@ -79,12 +81,30 @@ export const RESET_STAGES = {
     },
 } as const;
 
-type ResetStageKey = keyof typeof RESET_STAGES;
+export type ResetStageKey = keyof typeof RESET_STAGES;
 
 /** A reset step's position: 1-based, in run order. The mesh is last and only when there is one. */
 export const RESET_STEP = Object.fromEntries(
     Object.keys(RESET_STAGES).map((key, index) => [key, index + 1]),
 ) as Readonly<Record<ResetStageKey, number>>;
+
+/**
+ * The reset step each of the shared content pipeline's operations (`edsPipeline.ts`)
+ * belongs to. Storefront setup runs the same pipeline and shows the same steps for it.
+ */
+export const PIPELINE_RESET_STAGE: Readonly<Record<string, ResetStageKey>> = {
+    'content-clear': 'clearingOldContent',
+    'content-copy': 'copyingContent',
+    'block-library': 'settingUpAuthoring',
+    'eds-settings': 'settingUpAuthoring',
+    'cache-purge': 'publishingPages',
+    'content-publish': 'publishingPages',
+    'sheet-publish': 'publishingPages',
+    'library-publish': 'publishingPages',
+    'leftover-pages': 'removingOldPages',
+    'page-check': 'checkingCopiedPages',
+    'catalog-prewarm': 'warmingProductPages',
+};
 
 /** Steps every reset runs; the mesh redeploy adds one. */
 export const RESET_BASE_STEPS = Object.keys(RESET_STAGES).length - 1;

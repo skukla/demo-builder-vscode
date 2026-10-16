@@ -149,7 +149,8 @@ export async function syncEdsConfigToRemote(
         return;
     }
 
-    progressTracker(OPERATION_STAGES.syncingConfig.label, 92, 'Pushing config.json to GitHub');
+    // Republish's step for the same job (progress vocabulary, owner 2026-10-16).
+    progressTracker(OPERATION_STAGES.publishingSettings.label, 92, 'Pushing config.json to GitHub');
 
     const repoUrl = typedConfig.edsConfig?.repoUrl;
     if (!repoUrl) {
@@ -174,7 +175,8 @@ export async function syncEdsConfigToRemote(
         logger: context.logger,
         secrets: context.context.secrets,
         authManager: context.authManager,
-        onProgress: (message) => progressTracker(OPERATION_STAGES.syncingConfig.label, 94, message),
+        onProgress: (message) =>
+            progressTracker(OPERATION_STAGES.publishingSettings.label, 94, message),
         verifyBlockLibrary: true,
     });
 
@@ -306,8 +308,9 @@ export async function setupEdsContent(
                     if (project) writeBrokenLinks(project, links);
                 },
             },
-            (message, subMessage) =>
-                progressTracker(OPERATION_STAGES.settingUpContent.label, 95, subMessage || message),
+            // Reset's steps for the same work; they have no place in creation's own
+            // count, because they run only when the storefront has no content yet.
+            (stage, step) => progressTracker(stage, 95, step),
         );
 
         if (contentCopied) {

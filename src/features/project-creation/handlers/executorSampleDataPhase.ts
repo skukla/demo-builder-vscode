@@ -10,6 +10,7 @@
 
 import type { ProgressTracker } from './shared';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { countLine } from '@/core/utils/storefrontJobs';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -53,13 +54,13 @@ export async function executeSampleDataPhase(
         const result = await installSampleData(
             project,
             buildSampleDataDeps(context, project, (sd) =>
-                // Three-row contract: count in the title, the types being
-                // installed right now in the detail row (pack name until the
-                // first type starts).
+                // The step stays the step; how far it has got, and the types being
+                // installed right now, go on the line under it (progress vocabulary,
+                // owner 2026-10-16).
                 progressTracker(
-                    `Installing Datapack (${sd.done}/${sd.total})`,
+                    OPERATION_STAGES.installingDatapack.label,
                     94,
-                    sd.processing.join(', ') || chosen.name,
+                    typesLine(sd.done, sd.total, sd.processing),
                 ),
             ),
         );
@@ -81,6 +82,12 @@ export async function executeSampleDataPhase(
             `Datapack could not be installed \u2014 ${reason}`,
         );
     }
+}
+
+/** "3 of 14 data types: Products, Categories", the count alone between types. */
+function typesLine(done: number, total: number, processing: readonly string[]): string {
+    const count = countLine(done, total, 'data type');
+    return processing.length > 0 ? `${count}: ${processing.join(', ')}` : count;
 }
 
 /** One line for the build log, honest about which of the three outcomes it was. */

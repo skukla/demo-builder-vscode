@@ -40,6 +40,7 @@ jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () =
     updateStorefrontState: jest.fn(),
 }));
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { syncEdsConfigToRemote } from '@/features/project-creation/handlers/executorEdsPhase';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -114,6 +115,24 @@ describe('a failed config.json sync stops project creation', () => {
         });
 
         await expect(runPhase5(createMockHandlerContext())).resolves.toBeUndefined();
+    });
+});
+
+// The same job Republish runs, under the same step, with what it is doing under it
+// (progress vocabulary, owner 2026-10-16).
+describe("the step creation shows for it", () => {
+    it("is Republish's 'Publishing the settings', the service's own lines under it", async () => {
+        mockSyncConfigToRemote.mockImplementation(async (params: { onProgress?: (m: string) => void }) => {
+            params.onProgress?.('Waiting for the CDN');
+            return { success: true, githubPushed: true, cdnPublished: true };
+        });
+        const progress = jest.fn();
+
+        await syncEdsConfigToRemote(createMockHandlerContext(), createMockProject(), readyConfig(), true, EDS_PATH, progress);
+
+        const step = OPERATION_STAGES.publishingSettings.label;
+        expect(progress).toHaveBeenCalledWith(step, 92, 'Pushing config.json to GitHub');
+        expect(progress).toHaveBeenCalledWith(step, 94, 'Waiting for the CDN');
     });
 });
 

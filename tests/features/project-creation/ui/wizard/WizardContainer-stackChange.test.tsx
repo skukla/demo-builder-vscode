@@ -153,6 +153,10 @@ jest.mock('@/features/project-creation/ui/steps/WelcomeStep', () => ({
                 <span data-testid="progress">
                     {state.creationProgress?.currentOperation ?? 'none'}
                 </span>
+                <span data-testid="progress-position">
+                    {JSON.stringify(state.creationProgress?.position ?? null)}
+                </span>
+                <span data-testid="progress-started">{String(state.creationProgress?.startedAt)}</span>
                 <button onClick={() => setCanProceed(false)}>block</button>
                 <button onClick={() => updateState({ selectedPackage: 'second-hidden' })}>
                     switch-package
@@ -420,6 +424,25 @@ describe('WizardContainer', () => {
             await waitFor(() =>
                 expect(screen.getByTestId('progress')).toHaveTextContent('Cloning components')
             );
+        });
+    });
+
+    describe('the creation screen’s step count and clock', () => {
+        it("keeps the step's position and the run's start from the push", async () => {
+            await renderWizard();
+
+            await waitFor(() =>
+                listenerFor('creationProgress')({
+                    currentOperation: 'Installing components',
+                    position: { index: 4, total: 9 },
+                    startedAt: 1_760_000_000_000,
+                })
+            );
+
+            await waitFor(() =>
+                expect(screen.getByTestId('progress-position')).toHaveTextContent('{"index":4,"total":9}')
+            );
+            expect(screen.getByTestId('progress-started')).toHaveTextContent('1760000000000');
         });
     });
 

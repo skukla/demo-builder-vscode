@@ -15,19 +15,8 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { OperationPromptForm } from '@/core/ui/components/feedback/OperationPromptForm';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { tookLine, useRunClock } from '@/core/ui/hooks/useRunClock';
-import { stageLine } from '@/core/utils/stageLine';
+import { expectationLine, stageLine } from '@/core/utils/stageLine';
 import type { OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
-
-/**
- * Row 3: what to expect, and how long the whole run has been going. Never empty — the
- * row holds its height whether or not either is known, so the modal does not resize
- * as stages come and go. The middle dot between the two is deliberate, the one place
- * this UI joins two phrases with one (owner, 2026-10-16; handbook, progress).
- */
-function helperLine(expectation?: string, total?: string): string {
-    const parts = [expectation, total].filter(Boolean);
-    return parts.length > 0 ? parts.join(' · ') : '\u00A0';
-}
 
 export interface OperationProgressBodyProps {
     prompt?: OperationPrompt;
@@ -97,7 +86,7 @@ export function OperationProgressBody({
             size="L"
             message={progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting'}
             subMessage={progress?.step}
-            helperText={helperLine(progress?.expectation, total)}
+            helperText={expectationLine(progress?.expectation, total)}
         />
     );
 }

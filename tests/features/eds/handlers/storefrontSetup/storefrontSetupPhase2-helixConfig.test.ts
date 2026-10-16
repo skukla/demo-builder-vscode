@@ -170,13 +170,12 @@ describe('executePhaseHelixConfig — progress', () => {
             {
                 phase: 'storefront-code',
                 message: 'Configuring Edge Delivery Services',
-                subMessage: 'acme/shop',
                 progress: 20,
             },
             {
+                // Line 2 under 'Setting up the code': where the content comes from.
                 phase: 'storefront-code',
-                message: 'Connecting content source',
-                subMessage: 'fstab.yaml → acme/shop',
+                message: 'Connecting the content source: acme/shop',
                 progress: 25,
             },
             {

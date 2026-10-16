@@ -52,7 +52,8 @@ import {
 } from './storefrontSetupPhases.testUtils';
 import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
-import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
+import type { StorefrontBrokenLink, StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
@@ -105,7 +106,7 @@ async function reportProgress(info: ProgressInfo) {
         (context.sendMessage as jest.Mock).mock.calls.find(
             ([type]) => type === 'storefront-setup-progress'
         ) ?? [];
-    return payload as { phase?: string; progress?: number; message?: string; subMessage?: string };
+    return payload as StorefrontSetupProgressPayload;
 }
 
 beforeEach(() => {
@@ -163,15 +164,46 @@ describe('every pipeline operation maps to a wizard phase and a bar position', (
         expect(payload.progress).toBe(50);
     });
 
-    it('passes the pipeline own words through untouched', async () => {
+    it("puts the pipeline's own words under the step, the step's name said once", async () => {
         const payload = await reportProgress({
             operation: 'content-copy',
-            message: 'Copying content',
-            subMessage: 'demo-org/demo-site',
+            message: 'Copying the content: 40 of 103 files',
+            subMessage: '/products/index',
         });
 
-        expect(payload.message).toBe('Copying content');
-        expect(payload.subMessage).toBe('demo-org/demo-site');
+        expect(payload.stage).toBe(OPERATION_STAGES.copyingContent.label);
+        expect(payload.message).toBe('40 of 103 files');
+    });
+});
+
+// Reset runs the same pipeline and names its steps for what an SC recognises; setup
+// shows the same step for the same work (progress vocabulary, owner 2026-10-16).
+describe("every pipeline operation shows under Reset's step for the same work", () => {
+    it.each([
+        ['content-clear', OPERATION_STAGES.clearingOldContent.label],
+        ['content-copy', OPERATION_STAGES.copyingContent.label],
+        ['block-library', OPERATION_STAGES.settingUpAuthoring.label],
+        ['eds-settings', OPERATION_STAGES.settingUpAuthoring.label],
+        ['cache-purge', OPERATION_STAGES.publishingPages.label],
+        ['content-publish', OPERATION_STAGES.publishingPages.label],
+        ['sheet-publish', OPERATION_STAGES.publishingPages.label],
+        ['library-publish', OPERATION_STAGES.publishingPages.label],
+        ['leftover-pages', OPERATION_STAGES.removingOldPages.label],
+        ['page-check', OPERATION_STAGES.checkingCopiedPages.label],
+        ['catalog-prewarm', OPERATION_STAGES.warmingProductPages.label],
+    ])('%s → %s', async (operation, stage) => {
+        const payload = await reportProgress({ operation, message: 'working' });
+
+        expect(payload.stage).toBe(stage);
+    });
+
+    // The default setup copies no content (no content source): five steps, the
+    // authoring setup the fourth.
+    it("numbers the step from the run's own list", async () => {
+        const payload = await reportProgress({ operation: 'block-library', message: 'Building block library' });
+
+        expect(payload.position).toEqual({ index: 4, total: 5 });
+        expect(payload.startedAt).toEqual(expect.any(Number));
     });
 });
 

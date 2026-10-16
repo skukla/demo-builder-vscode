@@ -16,6 +16,7 @@
  * @module features/project-creation/services/catalogMenuPhase
  */
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { catalogMenuSiteFor, storefrontTarget } from '@/features/ai/server/storefrontPages';
 import {
     isEmptyRecord,
@@ -36,7 +37,6 @@ import type { ProgressReporter } from '@/features/project-creation/services/cata
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
-const STAGE = 'Writing Category Pages';
 const PERCENT = 97;
 
 /**
@@ -68,7 +68,8 @@ export async function executeCatalogMenuPhase(
     existingProject?: Project,
     makeSite?: (target: CatalogMenuTarget) => CatalogMenuSite,
 ): Promise<void> {
-    await runCatalogMenu(context, project, progressTracker, makeSite, (target) =>
+    const say = sayer(context, progressTracker, OPERATION_STAGES.addingCatalogMenu.label);
+    await runCatalogMenu(context, project, say, makeSite, (target) =>
         carryRecord(project, existingProject, target),
     );
 }
@@ -91,23 +92,31 @@ export async function rewriteCatalogMenuPhase(
     progressTracker: ProgressReporter,
     makeSite?: (target: CatalogMenuTarget) => CatalogMenuSite,
 ): Promise<void> {
-    await runCatalogMenu(context, project, progressTracker, makeSite, undefined, async (site) => {
+    // A swap: Republish's step for the same job after a store change.
+    const say = sayer(context, progressTracker, OPERATION_STAGES.updatingCatalogMenu.label);
+    await runCatalogMenu(context, project, say, makeSite, undefined, async (site) => {
         const removed = await removeCatalogMenuStep(project, site.pages);
-        if (removed !== undefined) say(context, progressTracker, removed);
+        if (removed !== undefined) say(removed);
     });
 }
 
-/** Log and show one catalog menu sentence. */
-function say(context: HandlerContext, progressTracker: ProgressReporter, summary: string): void {
-    context.logger.info(`[Catalog Menu] ${summary}`);
-    progressTracker(STAGE, PERCENT, summary);
+/** Logs and shows one catalog menu sentence under `step`. */
+function sayer(
+    context: HandlerContext,
+    progressTracker: ProgressReporter,
+    step: string,
+): (summary: string) => void {
+    return (summary) => {
+        context.logger.info(`[Catalog Menu] ${summary}`);
+        progressTracker(step, PERCENT, summary);
+    };
 }
 
 /** Resolve the site, run what comes first, then the write. Never throws. */
 async function runCatalogMenu(
     context: HandlerContext,
     project: Project,
-    progressTracker: ProgressReporter,
+    say: (summary: string) => void,
     makeSite: ((target: CatalogMenuTarget) => CatalogMenuSite) | undefined,
     beforeSite?: (target: CatalogMenuTarget) => void,
     beforeWrite?: (site: CatalogMenuSite) => Promise<void>,
@@ -120,7 +129,7 @@ async function runCatalogMenu(
         if (!site) return;
         await beforeWrite?.(site);
         const summary = await applyCatalogMenuStep(project, site);
-        if (summary !== undefined) say(context, progressTracker, summary);
+        if (summary !== undefined) say(summary);
     } catch (error) {
         // Belt and braces: the step already swallows its own failures.
         context.logger.warn(`[Catalog Menu] Phase failed: ${(error as Error).message}`);

@@ -29,9 +29,21 @@ export function numberedSteps(
     steps: readonly string[],
     report: PositionedReport,
 ): (stage: string, step?: string) => void {
-    return (stage, step) => {
-        const index = steps.indexOf(stage) + 1;
-        const numbered = index > 0 && steps.length > 1;
-        report(stage, step, numbered ? { index, total: steps.length } : undefined);
-    };
+    return (stage, step) => report(stage, step, stepPosition(steps, stage));
+}
+
+/**
+ * Where a step sits in its run.
+ *
+ * @param steps - every step the run will report, in order
+ * @param stage - the step being reported
+ * @returns its 1-based position and the run's length; undefined for a step the list
+ *   does not name, or a run of one step
+ */
+export function stepPosition(
+    steps: readonly string[],
+    stage: string,
+): OperationPosition | undefined {
+    const index = steps.indexOf(stage) + 1;
+    return index > 0 && steps.length > 1 ? { index, total: steps.length } : undefined;
 }

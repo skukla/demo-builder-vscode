@@ -9,6 +9,7 @@ import {
     finalizeProject,
     type FinalizationContext,
 } from '@/features/project-creation/services/projectFinalizationService';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { Project } from '@/types/base';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
@@ -263,11 +264,8 @@ describe('projectFinalizationService', () => {
 
             await generateEnvironmentFiles(context);
 
-            expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Configuring Environment',
-                85,
-                'Generating environment files'
-            );
+            // The step names nothing more: the screen shows its detail from the table.
+            expect(mockProgressTracker).toHaveBeenCalledWith(OPERATION_STAGES.writingConfigFiles.label, 85);
         });
 
         it('should log debug messages', async () => {
@@ -487,11 +485,7 @@ describe('projectFinalizationService', () => {
 
             await finalizeProject(context);
 
-            expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Finalizing Project',
-                95,
-                'Saving project state'
-            );
+            expect(mockProgressTracker).toHaveBeenCalledWith(OPERATION_STAGES.finishingProject.label, 95);
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Project Created',
                 100,

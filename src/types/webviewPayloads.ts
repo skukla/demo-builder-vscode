@@ -779,11 +779,23 @@ export type StorefrontSetupProgressPhase =
     /** The pipeline's own final push; the `storefront-setup-complete` channel follows. */
     | 'complete';
 
-/** `storefront-setup-progress` — pipeline step progress for the wizard. */
+/**
+ * `storefront-setup-progress` — pipeline step progress for the wizard.
+ *
+ * With a `stage` (every working phase, `storefrontSetupProgress.ts`), the stage is line
+ * 1 and `message` is line 2, what it is doing now. Without one (the sign-in wait, the
+ * cancel), `message` is line 1 and `subMessage` line 2.
+ */
 export interface StorefrontSetupProgressPayload {
     phase: StorefrontSetupProgressPhase;
+    /** Line 1: the step, a label from the stage table. */
+    stage?: string;
+    /** The step's place in the run, "(4 of 7)". */
+    position?: OperationPosition;
     message: string;
     subMessage?: string;
+    /** When the run began, in ms since the epoch: the screen's clock counts from it. */
+    startedAt?: number;
     /** 0-100, or -1 while paused for auth recovery. */
     progress: number;
     /** Repo identity, included once known — drives the webview's cancel-cleanup bookkeeping. */

@@ -46,6 +46,9 @@ export function useMessageListeners({ setState }: UseMessageListenersProps): voi
                     message: data.message || '',
                     logs: data.logs || [],
                     error: data.error,
+                    // The step's "(4 of 9)" and the run's start, for the screen's clock.
+                    position: data.position,
+                    startedAt: data.startedAt,
                 },
             }));
         });

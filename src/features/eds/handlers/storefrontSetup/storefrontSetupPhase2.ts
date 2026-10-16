@@ -30,6 +30,8 @@ import { type GitHubTreeInput } from '../../services/types';
 import { addPdpCaveat, describeSmart404Skip } from '../edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices } from './storefrontSetupTypes';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { jobLine } from '@/core/utils/storefrontJobs';
 import {
     getBlockLibraryName,
     getBlockLibrarySource,
@@ -85,7 +87,6 @@ export async function executePhaseHelixConfig(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
         message: 'Configuring Edge Delivery Services',
-        subMessage: `${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
         progress: 20,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -188,8 +189,10 @@ async function pushFstabToGitHub(
 ): Promise<void> {
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
-        message: 'Connecting content source',
-        subMessage: `fstab.yaml → ${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
+        message: jobLine(
+            'Connecting the content source',
+            `${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
+        ),
         progress: 25,
     } satisfies StorefrontSetupProgressPayload);
     const fstabContent = generateFstabContent({
@@ -292,8 +295,11 @@ async function installBlockCollectionsWithTracking(
     if (allLibraries.length > 0) {
         await context.sendMessage('storefront-setup-progress', {
             phase: 'storefront-code',
-            message: `Installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}`,
-            subMessage: allLibraries.map((lib) => lib.name).join(', '),
+            // Configure's step for the same job, named by the libraries it adds.
+            message: jobLine(
+                S.addingBlockLibraries.label,
+                allLibraries.map((lib) => lib.name).join(', '),
+            ),
             progress: 28,
         } satisfies StorefrontSetupProgressPayload);
         const result = await installBlockCollections(

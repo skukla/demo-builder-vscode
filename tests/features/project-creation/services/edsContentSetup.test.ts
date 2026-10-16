@@ -6,6 +6,8 @@
  */
 
 import * as vscode from 'vscode';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { STOREFRONT_JOBS } from '@/core/utils/storefrontJobs';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { EdsContentHelix } from '@/features/project-creation/services/edsContentSetup';
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
@@ -238,7 +240,8 @@ describe('ensureEdsContent', () => {
             'test-owner/test-repo',
             'main',
             'test-org',
-            'test-site'
+            'test-site',
+            expect.any(Function)
         );
         expect(mockPublishLibraryPaths).toHaveBeenCalledTimes(1);
     });
@@ -457,12 +460,12 @@ describe('ensureEdsContent — the calls it makes', () => {
             reportProgress({ message: 'Copying /products/index', processed: 3, total: 9 });
 
             expect(onProgress).toHaveBeenCalledWith(
-                'Setting up the content',
+                OPERATION_STAGES.copyingContent.label,
                 'Copying /products/index'
             );
         });
 
-        it('counts pages when the copy reports no message', async () => {
+        it('counts files when the copy reports no message', async () => {
             const onProgress = jest.fn();
             await ensureEdsContent(makeConfig(), makeDeps(), onProgress);
             onProgress.mockClear();
@@ -470,8 +473,42 @@ describe('ensureEdsContent — the calls it makes', () => {
             reportProgress({ processed: 3, total: 9 });
 
             expect(onProgress).toHaveBeenCalledWith(
-                'Setting up the content',
-                'Copying content (3/9)'
+                OPERATION_STAGES.copyingContent.label,
+                'Copying the content: 3 of 9 files'
+            );
+        });
+
+        // Reset's steps for the same work, each job on the line under its step
+        // (progress vocabulary, owner 2026-10-16).
+        it("reports Reset's steps in the order it runs them, each job named the one way", async () => {
+            const onProgress = jest.fn();
+            mockPublishAllSiteContent.mockImplementation(
+                async (_r: string, _b: string, _o: string, _s: string, cb: (i: { message: string }) => void) => {
+                    cb({ message: 'Publishing the pages: 5 of 64 pages' });
+                }
+            );
+
+            await ensureEdsContent(
+                makeConfig({ templateOwner: 'tmpl-owner', templateRepo: 'tmpl-repo' }),
+                makeDeps(),
+                onProgress
+            );
+
+            const steps = onProgress.mock.calls.map(([stage]) => stage as string);
+            expect([...new Set(steps)]).toStrictEqual([
+                OPERATION_STAGES.copyingContent.label,
+                OPERATION_STAGES.settingUpAuthoring.label,
+                OPERATION_STAGES.publishingPages.label,
+            ]);
+            expect(onProgress.mock.calls.map(([, step]) => step)).toEqual(
+                expect.arrayContaining([
+                    STOREFRONT_JOBS.settingSitePermissions,
+                    STOREFRONT_JOBS.buildingBlockLibrary,
+                    STOREFRONT_JOBS.applyingDaLiveSettings,
+                    STOREFRONT_JOBS.clearingCache,
+                    'Publishing the pages: 5 of 64 pages',
+                    STOREFRONT_JOBS.publishingBlockList,
+                ])
             );
         });
 

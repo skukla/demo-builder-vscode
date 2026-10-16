@@ -26,6 +26,7 @@
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
 import { checkGitHubAppForExistingRepo } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhaseHelpers';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type {
     RepoInfo,
     SetupServices,
@@ -494,8 +495,10 @@ describe('checkGitHubAppForExistingRepo — an inner 400 that says nothing', () 
         const progress = (context.sendMessage as jest.Mock).mock.calls
             .filter((c) => c[0] === 'storefront-setup-progress')
             .map((c) => c[1] as { phase: string; message: string; progress: number });
+        // The check runs while the repository is set up, whatever its phase says.
         expect(progress[progress.length - 1]).toEqual({
             phase: 'storefront-code',
+            stage: OPERATION_STAGES.settingUpRepository.label,
             message: expect.stringMatching(/checked again when the code is published/i),
             progress: 28,
         });

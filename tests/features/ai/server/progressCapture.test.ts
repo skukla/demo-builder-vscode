@@ -75,6 +75,26 @@ describe('progressCapture', () => {
         expect(lines).toStrictEqual(['Verifying AEM Code Sync — acme/shop']);
     });
 
+    // The agent hears what the wizard shows: the step with its place in the run, then
+    // what it is doing (progress vocabulary, owner 2026-10-16).
+    it('names the step and its number to the agent, the line under it after', async () => {
+        const base = createMockHandlerContext({ sendMessage: jest.fn(async () => undefined) });
+        const lines: string[] = [];
+        const ctx = withCapturedProgress(base, []);
+
+        await withPhaseSinks([(m) => lines.push(m)], async () => {
+            await ctx.sendMessage('storefront-setup-progress', {
+                phase: 'content',
+                stage: 'Copying the content',
+                position: { index: 4, total: 7 },
+                message: '40 of 103 files',
+                progress: 54,
+            });
+        });
+
+        expect(lines).toStrictEqual(['Copying the content (4 of 7) — 40 of 103 files']);
+    });
+
     it('shows the wait in the timeline the agent reads, as a progress line', () => {
         expect(toPhaseTimeline([{ type: 'storefront-setup-github-app-required', data: APP_REQUIRED }])).toEqual([
             {
@@ -110,6 +130,30 @@ describe('progressCapture', () => {
             { phase: 'repo', status: 'progress', message: 'creating', progress: 10 },
             { phase: 'dalive', status: 'error', message: 'boom' },
             { phase: 'complete', status: 'complete' },
+        ]);
+    });
+
+    it("puts a step's name and number before its line, as the wizard shows them", () => {
+        const events: CapturedEvent[] = [
+            {
+                type: 'storefront-setup-progress',
+                data: {
+                    phase: 'content',
+                    stage: 'Copying the content',
+                    position: { index: 4, total: 7 },
+                    message: '40 of 103 files',
+                    progress: 54,
+                },
+            },
+        ];
+
+        expect(toPhaseTimeline(events)).toEqual([
+            {
+                phase: 'content',
+                status: 'progress',
+                message: 'Copying the content (4 of 7) — 40 of 103 files',
+                progress: 54,
+            },
         ]);
     });
 

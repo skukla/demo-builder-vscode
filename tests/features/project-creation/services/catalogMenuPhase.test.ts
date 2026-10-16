@@ -6,6 +6,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { readCatalogMenuRecord } from '@/features/eds/services/catalogMenu/catalogMenuRecord';
 import type { StorefrontPages } from '@/features/eds/services/catalogMenu/catalogMenuService';
 import type { CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuStep';
@@ -62,7 +63,7 @@ describe('executeCatalogMenuPhase', () => {
         expect(s.pages.get('/signs')).toContain('<h1>Signs and Labels</h1>');
         expect(readCatalogMenuRecord(project).navSwitch).toBe(true);
         expect(progress).toHaveBeenCalledWith(
-            'Writing Category Pages',
+            OPERATION_STAGES.addingCatalogMenu.label,
             97,
             expect.stringContaining('Wrote and published 1 category page.'),
         );
@@ -176,6 +177,21 @@ describe('rewriteCatalogMenuPhase — after an Edit removed the old datapack (PL
         await executeCatalogMenuPhase(createMockHandlerContext(), project, jest.fn(), undefined, () => newPack(s.port));
 
         expect(s.pages.get('/signs')).toBeDefined();
+    });
+
+    // A swap, Republish's step for the same job after a store change.
+    it("shows the swap as Republish's 'Updating the catalog menu'", async () => {
+        const { project, s } = await withOldPack();
+        const progress = jest.fn();
+
+        await rewriteCatalogMenuPhase(createMockHandlerContext(), project, progress, () => newPack(s.port));
+
+        expect(progress).toHaveBeenCalledWith(
+            OPERATION_STAGES.updatingCatalogMenu.label,
+            97,
+            expect.any(String),
+        );
+        expect(progress).not.toHaveBeenCalledWith(OPERATION_STAGES.addingCatalogMenu.label, 97, expect.anything());
     });
 
     it('never removes a page the SC edited since', async () => {

@@ -50,6 +50,9 @@ const BUILDERS: Record<string, string> = {
     // Derives a new context from one handed in — it adds no managers of its own,
     // so it cannot fall behind the factory.
     'progressCapture.ts': 'deriver',
+    // The same shape for the storefront setup: wraps the run's context so each progress
+    // push goes out as a numbered step (progress vocabulary slice 4, 2026-10-16).
+    'storefrontSetupProgress.ts': 'deriver',
 };
 
 /** Every .ts/.tsx file under src/. */

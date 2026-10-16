@@ -13,6 +13,7 @@
  */
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
     deployNewMesh,
@@ -364,16 +365,14 @@ describe('meshSetupService deployNewMesh', () => {
 
             await deployNewMesh(buildContext(), {});
 
+            // One step, 'Deploying the mesh'; the deploy's own stages are the line under it.
+            const deploying = OPERATION_STAGES.deployingMesh.label;
             expect(progressTracker).toHaveBeenCalledWith(
-                'Deploying API Mesh',
+                deploying,
                 80,
-                'Uploading schema'
+                'Deploying mesh: Uploading schema'
             );
-            expect(progressTracker).toHaveBeenCalledWith(
-                'Deploying API Mesh',
-                80,
-                'Verifying mesh'
-            );
+            expect(progressTracker).toHaveBeenCalledWith(deploying, 80, 'Verifying mesh');
             expect(phasesOfStatus('verifying')[0]).toEqual({
                 status: 'verifying',
                 attempt: 1,

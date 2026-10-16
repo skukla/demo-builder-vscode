@@ -22,8 +22,11 @@
  * @module features/eds/ui/helpers/storefrontSetupState
  */
 
+import { expectationFor } from '@/core/utils/operationStages';
+import { stageLine } from '@/core/utils/stageLine';
 import type { WizardState } from '@/types/webview';
 import type {
+    OperationPosition,
     StorefrontGitHubAppRequiredPayload,
     StorefrontSetupCompletePayload,
     StorefrontSetupErrorPayload,
@@ -57,8 +60,15 @@ export type StorefrontSetupPhase =
  */
 export interface StorefrontSetupState {
     phase: StorefrontSetupPhase;
+    /** Line 1 while the run works: the step, from the stage table. */
+    stage?: string;
+    /** The step's place in the run, "(4 of 7)". */
+    position?: OperationPosition;
+    /** With a step, line 2: what it is doing now. Without one, line 1. */
     message: string;
     subMessage?: string;
+    /** When the run began, for the screen's clock. */
+    startedAt?: number;
     progress: number;
     error?: string;
     /**
@@ -92,39 +102,35 @@ export function initialSetupState(message: string): StorefrontSetupState {
 }
 
 /**
- * Row 3 of the loading display: a STATIC expectation for the phase — how long
- * it usually takes, or what it is waiting on. Never a phase description: that
- * is the title's job, and a description here read as a second, slower status
- * (the 2026-08-22 loading-message audit). Every phase gets a value so the
- * block never reflows between phases.
- *
- * Worded as the shared stage table words an expectation — "Usually …" — so this
- * screen and every notification, modal and wizard row say the same kind of
- * thing about the same kind of wait (PL-59 slice 8).
+ * Row 3 for the two phases that name no step: what the SC is waiting on. Every
+ * working phase names a step (`storefrontSetupProgress.ts` on the extension side),
+ * whose expectation comes from the shared stage table instead.
  */
 export function getHelperText(phase: StorefrontSetupPhase): string | undefined {
-    switch (phase) {
-        case 'repository':
-            return 'Usually under 30 seconds';
-        case 'storefront-code':
-            return 'Usually about a minute';
-        case 'code-sync':
-            return 'Usually under a minute';
-        case 'site-config':
-            return 'Usually under a minute';
-        case 'content':
-            return 'Usually 1–2 minutes';
-        case 'block-library':
-            return 'Usually under 30 seconds';
-        case 'publish':
-            return 'Usually 2–3 minutes';
-        case 'auth-recovery':
-            return 'Waiting for you to finish signing in';
-        case 'cancelling':
-            return 'Usually a moment';
-        default:
-            return undefined;
+    if (phase === 'auth-recovery') return 'Waiting for you to finish signing in';
+    if (phase === 'cancelling') return 'Usually a moment';
+    return undefined;
+}
+
+/**
+ * The loader's three lines (progress vocabulary, owner 2026-10-16): the step with its
+ * place in the run, what it is doing now, and the step's expectation, worded as every
+ * other surface words the same work. A push with no step shows as it came.
+ */
+export function setupLines(state: StorefrontSetupState): {
+    message: string;
+    subMessage?: string;
+    expectation?: string;
+} {
+    if (!state.stage) {
+        const { message, subMessage } = state;
+        return { message, subMessage, expectation: getHelperText(state.phase) };
     }
+    return {
+        message: stageLine(state.stage, state.position),
+        subMessage: state.message,
+        expectation: expectationFor(state.stage) ?? getHelperText(state.phase),
+    };
 }
 
 /**
@@ -205,9 +211,14 @@ export function applyProgress(
     return {
         ...prev,
         phase: data.phase,
+        // A push with no step (the sign-in wait) drops the last one; the clock
+        // keeps counting the whole run.
+        stage: data.stage,
+        position: data.position,
         message: data.message,
         subMessage: data.subMessage,
         progress: data.progress,
+        startedAt: data.startedAt ?? prev.startedAt,
         partialState: newPartialState,
     };
 }

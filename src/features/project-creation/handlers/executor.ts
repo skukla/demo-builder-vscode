@@ -19,6 +19,7 @@
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import { creationReporter, creationSteps } from './creationProgress';
 import {
     executeAppBuilderIntegrationsPhase,
     ensureWorkspaceRuntimeReady,
@@ -38,7 +39,6 @@ import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
@@ -51,8 +51,6 @@ import { fillCreationDefaults } from '@/features/project-creation/services/creat
 import { finalizeProject, generateEnvironmentFiles, sendCompletionAndCleanup } from '@/features/project-creation/services/projectFinalizationService';
 import { HandlerContext } from '@/types/handlers';
 import { isEdsStackId } from '@/types/typeGuards';
-import type { MeshPhaseState } from '@/types/webview';
-import type { CreationProgressPayload } from '@/types/webviewPayloads';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 // ============================================================================
@@ -174,27 +172,9 @@ export async function executeProjectCreation(
         `[Project Creation] Received config: selectedPackage=${typedConfig.selectedPackage}, selectedStack=${typedConfig.selectedStack}`,
     );
 
-    let currentMeshPhase: MeshPhaseState | undefined; // for the progress messages
-
-    // Create progress tracker (includes mesh phase state when present)
-    const progressTracker: ProgressTracker = (
-        currentOperation: string,
-        progress: number,
-        message?: string,
-    ) => {
-        const payload: CreationProgressPayload = {
-            currentOperation,
-            progress,
-            message: message || '',
-            logs: [],
-            meshPhase: currentMeshPhase,
-        };
-        context.sendMessage('creationProgress', payload);
-        // ...and to an AGENT, which has no wizard screen to send to. A
-        // `create_project` used to announce itself and then say nothing for two
-        // minutes (PL-59 R3, slice 7).
-        reportPhase(message ? `${currentOperation} — ${message}` : currentOperation);
-    };
+    // One reporter for the wizard's screen and an agent (`creationProgress.ts`).
+    const progress = creationReporter(context.sendMessage);
+    const progressTracker: ProgressTracker = progress.report;
 
     // ========================================================================
     // PRE-FLIGHT CHECKS
@@ -220,6 +200,8 @@ export async function executeProjectCreation(
     } else {
         await cleanupOrphanedDirectory(projectPath, context, progressTracker, fsPromises);
     }
+    // From here the run's steps are known, so each shows "(n of N)".
+    progress.numberFrom(creationSteps(typedConfig, existingProject));
 
     // ========================================================================
     // PROJECT INITIALIZATION

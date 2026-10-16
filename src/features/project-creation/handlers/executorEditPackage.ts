@@ -101,7 +101,11 @@ export async function applyPackageChange(
         },
         includeBlockLibrary: true,
         verifyCdn: true,
-        withinEdit: { report: (stage, step) => progressTracker(stage, 80, step ?? '') },
+        // Reset's steps with Reset's count: the creation screen shows "(4 of 11)" as the
+        // dashboard's progress modal does.
+        withinEdit: {
+            report: (stage, step, position) => progressTracker(stage, 80, step, position),
+        },
     });
     if (reset.cancelled) {
         throw new Error('Storefront reset cancelled by user. The new package is saved; use Reset to finish.');

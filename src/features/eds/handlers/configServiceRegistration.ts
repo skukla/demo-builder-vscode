@@ -31,6 +31,7 @@ import {
 } from './edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetup/storefrontSetupHandlers';
 import type { RepoInfo, SetupServices } from './storefrontSetup/storefrontSetupTypes';
+import { STOREFRONT_JOBS } from '@/core/utils/storefrontJobs';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
@@ -54,8 +55,7 @@ export async function registerConfigurationService(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
-        message: 'Registering site with Configuration Service',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+        message: STOREFRONT_JOBS.updatingSiteConfig,
         progress: 46,
     } satisfies StorefrontSetupProgressPayload);
 

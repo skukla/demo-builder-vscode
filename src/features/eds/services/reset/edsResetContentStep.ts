@@ -20,23 +20,8 @@ import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/pa
 import { writeBrokenLinks } from '../storefront/brokenLinksRecord';
 import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import type { EdsResetParams } from './edsResetParams';
-import { RESET_STEP } from '@/core/utils/resetStages';
+import { PIPELINE_RESET_STAGE, RESET_STEP } from '@/core/utils/resetStages';
 import type { HandlerContext } from '@/types/handlers';
-
-/** Maps EDS pipeline operation names to wizard step numbers for progress reporting. */
-const PIPELINE_STEP_MAP: Record<string, number> = {
-    'content-clear': RESET_STEP.clearingOldContent,
-    'content-copy': RESET_STEP.copyingContent,
-    'block-library': RESET_STEP.settingUpAuthoring,
-    'eds-settings': RESET_STEP.settingUpAuthoring,
-    'cache-purge': RESET_STEP.publishingPages,
-    'content-publish': RESET_STEP.publishingPages,
-    'sheet-publish': RESET_STEP.publishingPages,
-    'library-publish': RESET_STEP.publishingPages,
-    'leftover-pages': RESET_STEP.removingOldPages,
-    'page-check': RESET_STEP.checkingCopiedPages,
-    'catalog-prewarm': RESET_STEP.warmingProductPages,
-};
 
 /** Map a pipeline progress event to the wizard step number and format the message. */
 function mapPipelineProgress(
@@ -46,7 +31,7 @@ function mapPipelineProgress(
     // The pipeline's own message is already the job's line, with real counts. This
     // used to rewrite the publish's message from its progress numbers, which are
     // HALF-way numbers during the preview, shown as pages published (2026-10-16).
-    report(PIPELINE_STEP_MAP[info.operation] ?? RESET_STEP.copyingContent, info.message);
+    report(RESET_STEP[PIPELINE_RESET_STAGE[info.operation] ?? 'copyingContent'], info.message);
 }
 
 /** What the content pipeline hands back to the reset. */

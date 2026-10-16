@@ -138,7 +138,16 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
         );
 
         // Then: ensureDaLiveAuth should have been called
-        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(mockContext, '[Storefront Setup]');
+        // The run's own context: the same one, its progress pushes numbered as steps
+        // on the way out (`withSetupSteps`).
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(
+            expect.objectContaining({
+                context: mockContext.context,
+                logger: mockContext.logger,
+                stateManager: mockContext.stateManager,
+            }),
+            '[Storefront Setup]',
+        );
         expect(result.success).toBe(true);
     });
 
@@ -367,7 +376,16 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
 
         // Then: Should succeed after recovery
         expect(result.success).toBe(true);
-        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(mockContext, '[Storefront Setup]');
+        // The run's own context: the same one, its progress pushes numbered as steps
+        // on the way out (`withSetupSteps`).
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(
+            expect.objectContaining({
+                context: mockContext.context,
+                logger: mockContext.logger,
+                stateManager: mockContext.stateManager,
+            }),
+            '[Storefront Setup]',
+        );
         // configureDaLivePermissions called twice (fail + retry)
         expect(mockConfigurePerms).toHaveBeenCalledTimes(2);
     });

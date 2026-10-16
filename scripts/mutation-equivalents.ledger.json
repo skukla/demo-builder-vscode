@@ -4276,10 +4276,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 135,
+            "line": 137,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still returns false, so the copy runs anyway \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs. Re-anchored 2026-09-10 (142 -> 128): the probe moved into contentExistsInDaLive when ensureEdsContent was decomposed. Same code, new line.",
+            "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still returns false, so the copy runs anyway \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs. Re-anchored 2026-09-10 (142 -> 128): the probe moved into contentExistsInDaLive when ensureEdsContent was decomposed. Same code, new line. Re-anchored 2026-10-16 (135 -> 137): unchanged code; the progress lines above it now import the vocabulary (progress vocabulary slice 4).",
             "decision": "none \u2014 the debug line is what tells a pasted log why the copy ran",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
@@ -4301,10 +4301,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 218,
+            "line": 225,
             "mutants": 1,
             "category": "block",
-            "reason": "The else body is one logger.info reporting the copied file count. Emptying it removes that line and changes nothing else \u2014 same reasoning as the condition above. Re-anchored 2026-09-10 (177 -> 207): unchanged code, shifted by the decomposition of ensureEdsContent.",
+            "reason": "The else body is one logger.info reporting the copied file count. Emptying it removes that line and changes nothing else \u2014 same reasoning as the condition above. Re-anchored 2026-09-10 (177 -> 207): unchanged code, shifted by the decomposition of ensureEdsContent. Re-anchored 2026-10-16 (218 -> 225): unchanged code; the copy now reports in the vocabulary (progress vocabulary slice 4).",
             "decision": "none \u2014 the count is the only record of how much content was copied",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
@@ -6472,30 +6472,6 @@
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
         },
         {
-            "module": "src/features/eds/ui/helpers/storefrontSetupState.ts",
-            "anchors": [
-                "case 'code-sync':"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Stryker empties the case body, so 'code-sync' falls through to the next arm, case 'site-config', which returns the SAME string: 'Usually under a minute'. The two phases deliberately share one expectation, so the mutated switch produces byte-identical output for every phase the component can be in. Killing it would mean giving code-sync wording that differs from site-config, which is a copy decision about what the SC is told, not a test. Re-homed 2026-10-09 by the EDS-8 split of StorefrontSetupStep.tsx, which moved this code here unchanged.",
-            "decision": "none \u2014 two adjacent phases share one expectation on purpose",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-01, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/ui/helpers/storefrontSetupState.ts",
-            "anchors": [
-                "default:"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Emptying the switch's default arm leaves getHelperText falling off the end and returning undefined, which is exactly what the arm it deleted returns. The arm is written out so the 'no expectation' case is stated rather than implied; no phase, present or future, can observe the difference while the arm returns undefined. Re-homed 2026-10-09 by the EDS-8 split of StorefrontSetupStep.tsx, which moved this code here unchanged.",
-            "decision": "none \u2014 an explicit arm that returns the implicit value",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-01, 2026-09-05"
-        },
-        {
             "module": "src/features/eds/ui/hooks/useStorefrontSetup.ts",
             "anchors": [
                 "setSetupState((prev) => applyProgress(prev, data));",
@@ -6614,10 +6590,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 234,
+            "line": 237,
             "mutants": 1,
             "category": "block",
-            "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload.",
+            "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload. Re-anchored 2026-10-16 (234 -> 237): unchanged code; the progress line above it now names the libraries in the vocabulary (progress vocabulary slice 4).",
             "decision": "none \u2014 a log-only else",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"
@@ -6627,10 +6603,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 355,
+            "line": 361,
             "mutants": 1,
             "category": "block",
-            "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log.",
+            "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log. Re-anchored 2026-10-16 (355 -> 361): unchanged code; the progress lines above it are reworded (progress vocabulary slice 4).",
             "decision": "none \u2014 a log-only else",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"
@@ -6851,10 +6827,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 84,
+            "line": 82,
             "mutants": 1,
             "category": "block",
-            "reason": "The else arm of the user-email check contains only a logger.warn saying no email was available. Emptying it leaves the phase doing exactly the same thing: no permissions call, straight on to registerConfigurationService. That the permissions call is genuinely skipped, and that the phase still completes, is pinned by 'skips permissions when no email is known anywhere' and 'skips permissions when the GitHub record carries no user', both of which assert the collaborator was not called.",
+            "reason": "The else arm of the user-email check contains only a logger.warn saying no email was available. Emptying it leaves the phase doing exactly the same thing: no permissions call, straight on to registerConfigurationService. That the permissions call is genuinely skipped, and that the phase still completes, is pinned by 'skips permissions when no email is known anywhere' and 'skips permissions when the GitHub record carries no user', both of which assert the collaborator was not called. Re-anchored 2026-10-16 (84 -> 82): unchanged code; the progress lines above it dropped their repository detail (progress vocabulary slice 4).",
             "decision": "none \u2014 the warning is what explains a storefront whose DA.live permissions were never opened up, and the skip itself is asserted",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
@@ -14881,18 +14857,6 @@
             "category": "string",
             "reason": "The phase written here is the one the step already holds: the initial phase is 'creating', and the only other value the pre-flight assigns ('github-app-install') returns before this line. When progress has already moved the phase on (a completed event at mount), the phase effect re-derives it from progress on the next commit whatever this writes, so a blanked or unchanged value renders the same settled screen.",
             "decision": "none \u2014 the write re-affirms the value the step starts in, and the phase effect owns every later value.",
-            "recorded": "2026-10-08",
-            "source": "EDS-8 ProjectCreationStep cut"
-        },
-        {
-            "module": "src/features/project-creation/ui/steps/projectCreationStepContent.tsx",
-            "anchors": [
-                "expectationFor(progress.currentOperation ?? '') ??"
-            ],
-            "mutants": 1,
-            "category": "string",
-            "reason": "CreationProgress.currentOperation is a required string (src/types/webview.ts), so the nullish fallback is never taken and the empty string it supplies is never looked up. Reaching it needs a fixture that violates the type.",
-            "decision": "none \u2014 the type makes the fallback unreachable; it is reported as uncovered, not survived.",
             "recorded": "2026-10-08",
             "source": "EDS-8 ProjectCreationStep cut"
         },

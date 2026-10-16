@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import { ProgressTracker } from '../handlers/shared';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
 import { isMeshComponentId } from '@/core/constants';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { generateComponentConfigFiles } from '@/features/project-creation/helpers/componentConfigFiles';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
@@ -34,7 +35,7 @@ export async function generateEnvironmentFiles(context: FinalizationContext): Pr
     const { setupContext, componentDefinitions, progressTracker } = context;
     const { project, logger } = setupContext;
 
-    progressTracker('Configuring Environment', 85, 'Generating environment files');
+    progressTracker(OPERATION_STAGES.writingConfigFiles.label, 85);
     logger.debug('[Project Creation] Phase 4: Generating environment configuration');
 
     // Generate all config files for all non-mesh components
@@ -65,7 +66,7 @@ export async function finalizeProject(context: FinalizationContext): Promise<voi
     const { setupContext, progressTracker, saveProject } = context;
     const { project, logger } = setupContext;
 
-    progressTracker('Finalizing Project', 95, 'Saving project state');
+    progressTracker(OPERATION_STAGES.finishingProject.label, 95);
 
     logger.debug(
         `[Project Creation] Saving project: ${project.name} (${getEntryCount(project.componentInstances)} components)`,

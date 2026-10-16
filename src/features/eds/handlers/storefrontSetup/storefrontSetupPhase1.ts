@@ -16,6 +16,7 @@ import { seedIfEmpty } from './adoptEmptyRepo';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import { STOREFRONT_JOBS, jobLine } from '@/core/utils/storefrontJobs';
 import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
@@ -53,8 +54,7 @@ export async function executePhaseGitHubRepo(
         );
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
-            message: 'Using repository',
-            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            message: `Using ${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 10,
             ...repoInfo,
         } satisfies StorefrontSetupProgressPayload);
@@ -132,7 +132,6 @@ async function announcePinAndComplete(
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
             message: 'Pinning to verified canonical state',
-            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 12,
         } satisfies StorefrontSetupProgressPayload);
     }
@@ -148,7 +147,6 @@ async function announcePinAndComplete(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Repository ready',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 15,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -257,8 +255,7 @@ async function executePhaseExistingRepo(
     logger.info(`[Storefront Setup] ${usingMessage}: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: usingMessage,
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+        message: jobLine(usingMessage, `${repoInfo.repoOwner}/${repoInfo.repoName}`),
         progress: 5,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -301,8 +298,10 @@ async function executePhaseExistingRepo(
         logger.info('[Storefront Setup] Resetting repository to template');
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
-            message: 'Resetting repository to template',
-            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            message: jobLine(
+                STOREFRONT_JOBS.resettingRepository,
+                `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            ),
             progress: 6,
         } satisfies StorefrontSetupProgressPayload);
 
@@ -347,7 +346,6 @@ async function executePhaseExistingRepo(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Repository ready',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 15,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -434,8 +432,7 @@ async function executePhaseNewRepo(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: 'Creating GitHub repository from template',
-        subMessage: repoInfo.repoName,
+        message: jobLine(STOREFRONT_JOBS.creatingRepository, repoInfo.repoName),
         progress: 5,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -475,7 +472,6 @@ async function executePhaseNewRepo(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Waiting for repository content',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 10,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);

@@ -32,6 +32,7 @@ import {
 } from '@/features/project-creation/handlers/executorEditPackage';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import type { Project } from '@/types/base';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -117,6 +118,24 @@ describe('applyPackageChange', () => {
         );
         expect(order).toStrictEqual(['env', 'reset']);
         expect(generateAIContextFiles).toHaveBeenCalledWith(project.path, project, context.context.extensionPath);
+    });
+
+    // Reset's own steps, counted Reset's way, on the creation screen (PL-75): the
+    // count used to be dropped on the way through.
+    it("passes each of Reset's steps on with its position and the line under it", async () => {
+        const { project, context, progress } = setup();
+        (resetEdsProjectWithUI as jest.Mock).mockImplementationOnce(
+            async (options: { withinEdit: { report: ReportStage } }) => {
+                options.withinEdit.report('Copying the content', '40 of 103 files', { index: 4, total: 11 });
+                options.withinEdit.report('Checking requirements');
+                return { success: true };
+            },
+        );
+
+        await applyPackageChange(context, project, toBodea, { resets: true }, progress);
+
+        expect(progress).toHaveBeenCalledWith('Copying the content', 80, '40 of 103 files', { index: 4, total: 11 });
+        expect(progress).toHaveBeenCalledWith('Checking requirements', 80, undefined, undefined);
     });
 
     it('says the package is saved and how to finish when the reset fails', async () => {

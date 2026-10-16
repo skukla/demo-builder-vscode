@@ -40,6 +40,7 @@ jest.mock('@/features/eds/services/appInstallationResolver', () => ({
 }));
 
 import { executePhaseCodeSync } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase3';
+import { STOREFRONT_JOBS } from '@/core/utils/storefrontJobs';
 import { configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import type {
@@ -112,7 +113,6 @@ const progressPayloads = (context: HandlerContext): unknown[] =>
 
 const mockConfigurePermissions = configureDaLivePermissions as jest.Mock;
 
-const REPO_LABEL = 'skukla/kukla-bodea';
 
 const sentTypes = (context: HandlerContext): string[] =>
     (context.sendMessage as unknown as jest.Mock).mock.calls.map((c) => c[0] as string);
@@ -294,7 +294,9 @@ describe('who can actually fix it', () => {
  * nothing about whether the call was well formed.
  */
 describe('what the phase reports and calls', () => {
-    it('reports each step in order, naming the repo it is working on', async () => {
+    // Line 2 under 'Publishing code, settings' (progress vocabulary, owner 2026-10-16):
+    // the jobs in the vocabulary's words; the repository was named on the step before.
+    it('reports each step in order, each job in the vocabulary', async () => {
         const context = makeContext();
 
         await run(context, makeServices());
@@ -303,13 +305,11 @@ describe('what the phase reports and calls', () => {
             {
                 phase: 'code-sync',
                 message: expect.stringContaining('Verifying code synchronization'),
-                subMessage: REPO_LABEL,
                 progress: 40,
             },
             {
                 phase: 'code-sync',
-                message: expect.stringContaining('Publishing code to CDN'),
-                subMessage: REPO_LABEL,
+                message: STOREFRONT_JOBS.publishingCode,
                 progress: 43,
             },
             {
@@ -319,14 +319,12 @@ describe('what the phase reports and calls', () => {
             },
             {
                 phase: 'site-config',
-                message: expect.stringContaining('Configuring site permissions'),
-                subMessage: REPO_LABEL,
+                message: STOREFRONT_JOBS.settingSitePermissions,
                 progress: 46,
             },
             {
                 phase: 'site-config',
                 message: expect.stringContaining('Verifying AEM Code Sync'),
-                subMessage: REPO_LABEL,
                 progress: 48,
             },
             {

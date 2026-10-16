@@ -16,6 +16,7 @@ import {
     waitForAppInstallation,
 } from '../../services/appInstallationResolver';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontGitHubAppRequiredPayload, StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
@@ -42,6 +43,8 @@ export async function checkGitHubAppForExistingRepo(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
+        // Part of setting up the repository, whatever its phase has always said.
+        stage: OPERATION_STAGES.settingUpRepository.label,
         message: 'Verifying GitHub App installation',
         progress: 28,
     } satisfies StorefrontSetupProgressPayload);
@@ -147,7 +150,12 @@ export async function checkGitHubAppForExistingRepo(
                 installUrl,
                 message: 'The AEM Code Sync GitHub App must be installed to continue.',
             },
-            { signal: options.signal, phase: 'storefront-code', progress: 28 },
+            {
+                signal: options.signal,
+                phase: 'storefront-code',
+                stage: OPERATION_STAGES.settingUpRepository.label,
+                progress: 28,
+            },
         );
     }
 
@@ -172,6 +180,7 @@ export async function checkGitHubAppForExistingRepo(
 async function continueWithoutVerdict(context: HandlerContext, message: string): Promise<null> {
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
+        stage: OPERATION_STAGES.settingUpRepository.label,
         message,
         progress: 28,
     } satisfies StorefrontSetupProgressPayload);
@@ -186,6 +195,8 @@ export interface GitHubAppPauseOptions {
     phase: StorefrontSetupProgressPayload['phase'];
     /** The progress value the pause interrupts; the resume line reuses it. */
     progress: number;
+    /** The step the pause interrupts, when its phase alone would name another. */
+    stage?: string;
     /** What ends the wait, when `/status` cannot. See `WaitForAppInstallationOptions.probe`. */
     probe?: () => Promise<boolean>;
 }
@@ -237,8 +248,8 @@ export async function pauseForGitHubApp(
     context.logger.info(`[Storefront Setup] AEM Code Sync installed on ${repo} — resuming setup`);
     await context.sendMessage('storefront-setup-progress', {
         phase: options.phase,
+        ...(options.stage ? { stage: options.stage } : {}),
         message: 'AEM Code Sync verified — resuming setup',
-        subMessage: repo,
         progress: options.progress,
     } satisfies StorefrontSetupProgressPayload);
     return null;

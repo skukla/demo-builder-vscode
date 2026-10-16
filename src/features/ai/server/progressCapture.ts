@@ -13,9 +13,13 @@
  */
 
 import { reportHandBack, reportPhase, type HandBack } from '@/core/utils/agentPhaseChannel';
+import { stageLine } from '@/core/utils/stageLine';
 import { CODE_SYNC_INSTALL_ACTION } from '@/features/eds/ui/helpers/codeSyncInstallContent';
 import type { HandlerContext } from '@/types/handlers';
-import type { StorefrontGitHubAppRequiredPayload } from '@/types/webviewPayloads';
+import type {
+    StorefrontGitHubAppRequiredPayload,
+    StorefrontSetupProgressPayload,
+} from '@/types/webviewPayloads';
 
 /**
  * The one event a storefront setup sends when it needs a PERSON: the AEM Code Sync
@@ -37,12 +41,24 @@ const GITHUB_APP_REQUIRED = 'storefront-setup-github-app-required';
  */
 const STOREFRONT_SETUP_PROGRESS = 'storefront-setup-progress';
 
-/** The phase line a storefront-setup progress event carries, or undefined. */
+/**
+ * The phase line a storefront-setup progress event carries, or undefined. A push that
+ * names its step reads as the wizard shows it: the step with its place in the run,
+ * then what it is doing (progress vocabulary, owner 2026-10-16).
+ */
 function storefrontPhaseOf(type: string, data: unknown): string | undefined {
     if (type !== STOREFRONT_SETUP_PROGRESS) return undefined;
-    const d = (data ?? {}) as { message?: unknown; subMessage?: unknown };
+    const d = (data ?? {}) as Partial<StorefrontSetupProgressPayload>;
     if (typeof d.message !== 'string' || !d.message) return undefined;
+    const step = stepLineOf(d);
+    if (step) return step;
     return typeof d.subMessage === 'string' && d.subMessage ? `${d.message} — ${d.subMessage}` : d.message;
+}
+
+/** "Copying the content (4 of 7) — 40 of 103 files" for a push that names its step. */
+function stepLineOf(d: Partial<StorefrontSetupProgressPayload>): string | undefined {
+    if (typeof d.stage !== 'string' || !d.stage || typeof d.message !== 'string') return undefined;
+    return `${stageLine(d.stage, d.position)} — ${d.message}`;
 }
 
 /** The hand-back an event carries, or undefined when it is not one. */
@@ -112,10 +128,11 @@ export function toPhaseTimeline(events: CapturedEvent[]): PhaseEntry[] {
     for (const { type, data } of events) {
         const d = (data ?? {}) as Record<string, unknown>;
         if (type.endsWith('-progress')) {
+            const plain = typeof d.message === 'string' ? d.message : undefined;
             timeline.push({
                 phase: String(d.phase ?? d.operation ?? ''),
                 status: 'progress',
-                message: typeof d.message === 'string' ? d.message : undefined,
+                message: stepLineOf(d as Partial<StorefrontSetupProgressPayload>) ?? plain,
                 progress: typeof d.progress === 'number' ? d.progress : undefined,
             });
         } else if (type === GITHUB_APP_REQUIRED) {

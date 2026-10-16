@@ -30,7 +30,7 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
  * selections are excluded (the mesh phase installs them). This is the set
  * that will `aio app deploy`, so it also gates the Runtime pre-flight.
  */
-function deployableAppIntegrationEntries(
+export function deployableAppIntegrationEntries(
     typedConfig: ProjectCreationConfig,
 ): AppBuilderComponentCatalogEntry[] {
     return (typedConfig.selectedAppBuilderComponents ?? [])

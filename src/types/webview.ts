@@ -5,7 +5,7 @@ import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs } from './components';
 import type { ErrorCode } from './errorCodes';
 import type { AddedDemo } from './projectFile';
-import type { PrerequisitePluginState, GitHubUser } from './webviewPayloads';
+import type { OperationPosition, PrerequisitePluginState, GitHubUser } from './webviewPayloads';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -319,13 +319,17 @@ export interface MeshPhaseState {
 }
 
 export interface CreationProgress {
+    /** Line 1: the step, a label from the stage table. */
     currentOperation: string;
     progress: number;
+    /** Line 2: what the step is doing now. */
     message: string;
     logs: string[];
     error?: string;
-    /** Mesh deployment state - present during Phase 3 when mesh is being deployed */
-    meshPhase?: MeshPhaseState;
+    /** The step's place in the run, "(3 of 9)", when the run's steps are known. */
+    position?: OperationPosition;
+    /** When the run began, in ms since the epoch: the screen's clock counts from it. */
+    startedAt?: number;
 }
 
 export interface FormValidation {

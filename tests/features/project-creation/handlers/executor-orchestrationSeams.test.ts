@@ -201,12 +201,16 @@ describe('executeProjectCreation — the progress it reports', () => {
 
         await executeProjectCreation(context, config());
 
+        // An EDS stack with no mesh, integrations or datapack, and a storefront setup
+        // that did not finish: eight steps, this the first, with the run's start for
+        // the screen's clock.
         expect(sendMessage).toHaveBeenCalledWith('creationProgress', {
             currentOperation: OPERATION_STAGES.settingUpProject.label,
             progress: 10,
             message: 'Creating project directory structure',
             logs: [],
-            meshPhase: undefined,
+            position: { index: 1, total: 8 },
+            startedAt: expect.any(Number),
         });
     });
 });
@@ -420,8 +424,8 @@ describe('executeProjectCreation — what an agent and the wizard are told', () 
             'creationProgress',
             expect.objectContaining({ progress: 20, message: 'Preparing component definitions' })
         );
-        expect(reportPhase).toHaveBeenCalledWith(`${setUp} — Creating project directory structure`);
-        expect(reportPhase).toHaveBeenCalledWith(`${loading} — Preparing component definitions`);
+        expect(reportPhase).toHaveBeenCalledWith(`${setUp} (1 of 8) — Creating project directory structure`);
+        expect(reportPhase).toHaveBeenCalledWith(`${loading} (2 of 8) — Preparing component definitions`);
     });
 
     it('sends an empty message, and the bare stage to the agent, when a step names none', async () => {
@@ -439,7 +443,7 @@ describe('executeProjectCreation — what an agent and the wizard are told', () 
             progress: 30,
             message: '',
             logs: [],
-            meshPhase: undefined,
+            startedAt: expect.any(Number),
         });
         expect(reportPhase).toHaveBeenCalledWith('Cloning');
     });

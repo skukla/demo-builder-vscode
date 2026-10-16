@@ -145,7 +145,7 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
         );
 
         expect(services.githubRepoLifecycle.createFromTemplate).toHaveBeenCalled();
-        expect(messages(context)).not.toContain('Using existing repository');
+        expect(messages(context).filter((m) => m.startsWith('Using existing repository'))).toStrictEqual([]);
     });
 
     it('creates a new repo when the mode is existing but no repo was named', async () => {
@@ -161,7 +161,7 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
             config({ repoMode: 'new', createdRepo: CREATED_REPO }),
         );
 
-        expect(messages(context)).toContain('Using repository');
+        expect(messages(context)).toContain('Using skukla/made-by-the-wizard');
         expect(repoInfo).toEqual({
             repoOwner: 'skukla',
             repoName: 'made-by-the-wizard',
@@ -181,8 +181,8 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
             }),
         );
 
-        expect(messages(context)).toContain('Using existing repository');
-        expect(messages(context)).not.toContain('Using repository');
+        expect(messages(context)).toContain('Using existing repository: acme/storefront-demo');
+        expect(messages(context)).not.toContain('Using skukla/made-by-the-wizard');
         expect(services.githubRepoLifecycle.createFromTemplate).not.toHaveBeenCalled();
     });
 
@@ -197,8 +197,8 @@ describe('executePhaseGitHubRepo — which branch runs', () => {
             }),
         );
 
-        expect(messages(context)).toContain('Using your new repository');
-        expect(messages(context)).not.toContain('Using existing repository');
+        expect(messages(context)).toContain('Using your new repository: skukla/made-by-the-wizard');
+        expect(messages(context).filter((m) => m.startsWith('Using existing repository'))).toStrictEqual([]);
     });
 });
 
@@ -216,7 +216,7 @@ describe('executePhaseGitHubRepo — the pre-created branch', () => {
         );
 
         expect(messages(context)).toEqual([
-            'Using repository',
+            'Using skukla/made-by-the-wizard',
             'Pinning to verified canonical state',
             'Repository ready',
         ]);
@@ -230,8 +230,7 @@ describe('executePhaseGitHubRepo — the pre-created branch', () => {
         const sent = (context.sendMessage as jest.Mock).mock.calls.map(([, p]) => p);
         expect(sent[0]).toEqual({
             phase: 'repository',
-            message: 'Using repository',
-            subMessage: 'skukla/made-by-the-wizard',
+            message: 'Using skukla/made-by-the-wizard',
             progress: 10,
             repoOwner: 'skukla',
             repoName: 'made-by-the-wizard',
@@ -240,7 +239,6 @@ describe('executePhaseGitHubRepo — the pre-created branch', () => {
         expect(sent[1]).toEqual({
             phase: 'repository',
             message: 'Pinning to verified canonical state',
-            subMessage: 'skukla/made-by-the-wizard',
             progress: 12,
         });
         expect(sent[2]).toMatchObject({

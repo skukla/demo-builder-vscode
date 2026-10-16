@@ -115,6 +115,37 @@ describe('StepContentArea', () => {
             expect(screen.queryByText('This could take up to 3 minutes')).not.toBeInTheDocument();
         });
 
+        // The same three lines as every progress surface (progress vocabulary, owner
+        // 2026-10-16): the step with its place in the run, what it is doing, and the
+        // step's expectation with the whole run's clock.
+        it('numbers the step and joins its expectation to the run clock', () => {
+            const startedAt = 1_760_000_000_000;
+            jest.setSystemTime(startedAt + 65_000);
+
+            renderContent({
+                isActive: true,
+                progress: progressOf({
+                    currentOperation: 'Installing components',
+                    message: 'Running npm install for each',
+                    position: { index: 4, total: 9 },
+                    startedAt,
+                }),
+            });
+
+            expect(screen.getByText('Installing components (4 of 9)')).toBeInTheDocument();
+            expect(screen.getByText('Running npm install for each')).toBeInTheDocument();
+            expect(screen.getByText('Usually under a minute · 1 minute, 5 seconds')).toBeInTheDocument();
+        });
+
+        it('shows no number for a step outside the run’s list', () => {
+            renderContent({
+                isActive: true,
+                progress: progressOf({ currentOperation: 'Preparing the project', message: 'Removing old files' }),
+            });
+
+            expect(screen.getByText('Preparing the project')).toBeInTheDocument();
+        });
+
         it('falls back to the whole-run estimate for a stage the table does not name', () => {
             renderContent({
                 isActive: true,

@@ -21,6 +21,7 @@ import {
     subscribedMessageTypes,
 } from './StorefrontSetupStep.driver.testUtils';
 import { screen } from '@testing-library/react';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { StorefrontSetupProgressPhase } from '@/types/webviewPayloads';
 
@@ -75,17 +76,33 @@ describe('StorefrontSetupStep — the loader rows', () => {
         expect(loader()).toHaveAttribute('data-progress', '70');
     });
 
-    // Row 3 is a STATIC expectation per phase. Each phase gets its own value so
-    // the block never reflows; a phase falling through to its neighbour's arm is
-    // exactly what these cases catch.
+    // Every working phase arrives as a STEP (progress vocabulary, owner 2026-10-16):
+    // line 1 the step with its place in the run, line 2 what it is doing, line 3 the
+    // step's expectation from the shared table with the whole run's clock.
+    it('shows the step, numbered, over what it is doing, with its expectation and the run clock', () => {
+        const startedAt = 1_760_000_000_000;
+        jest.setSystemTime(startedAt + 125_000);
+        renderStep();
+
+        pushProgress({
+            phase: 'content',
+            stage: OPERATION_STAGES.copyingContent.label,
+            position: { index: 4, total: 7 },
+            message: '40 of 103 files',
+            progress: 54,
+            startedAt,
+        });
+
+        expect(loader()).toHaveTextContent('Copying the content (4 of 7)');
+        expect(loader()).toHaveAttribute('data-sub-message', '40 of 103 files');
+        expect(loader()).toHaveAttribute(
+            'data-helper-text',
+            `${OPERATION_STAGES.copyingContent.expectation} · 2 minutes, 5 seconds`
+        );
+    });
+
+    // The two phases that name no step keep what they are waiting on.
     const HELPER_TEXT: Array<[StorefrontSetupProgressPhase, string]> = [
-        ['repository', 'Usually under 30 seconds'],
-        ['storefront-code', 'Usually about a minute'],
-        ['code-sync', 'Usually under a minute'],
-        ['site-config', 'Usually under a minute'],
-        ['content', 'Usually 1–2 minutes'],
-        ['block-library', 'Usually under 30 seconds'],
-        ['publish', 'Usually 2–3 minutes'],
         ['auth-recovery', 'Waiting for you to finish signing in'],
         ['cancelling', 'Usually a moment'],
     ];

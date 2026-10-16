@@ -18,6 +18,7 @@ import { configureDaLivePermissions } from '../edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { pauseForGitHubApp } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import { STOREFRONT_JOBS } from '@/core/utils/storefrontJobs';
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
@@ -37,14 +38,12 @@ export async function executePhaseCodeSync(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
         message: 'Verifying code synchronization',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 40,
     } satisfies StorefrontSetupProgressPayload);
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
-        message: 'Publishing code to CDN',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+        message: STOREFRONT_JOBS.publishingCode,
         progress: 43,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -58,8 +57,7 @@ export async function executePhaseCodeSync(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
-        message: 'Configuring site permissions',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+        message: STOREFRONT_JOBS.settingSitePermissions,
         progress: 46,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -212,7 +210,6 @@ async function confirmCodeSync(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
         message: 'Verifying AEM Code Sync',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 48,
     } satisfies StorefrontSetupProgressPayload);
 

@@ -210,23 +210,22 @@ describe('executePhaseHelixConfig — custom block libraries', () => {
             { source: ISLE5_SOURCE, name: 'Isle5 Blocks' },
             { source: good, name: 'Demo Team Blocks' },
         ]);
+        // Configure's name for the same job, the libraries it adds after it.
         expect(progressPushes(sendMessage)).toContainEqual({
             phase: 'storefront-code',
-            message: 'Installing blocks from 2 libraries',
-            subMessage: 'Isle5 Blocks, Demo Team Blocks',
+            message: 'Adding block libraries: Isle5 Blocks, Demo Team Blocks',
             progress: 28,
         });
     });
 
-    it('says "library", not "libraries", for a single one', async () => {
+    it('names a single library the same way', async () => {
         const { sendMessage } = await runPhase({
             customBlockLibraries: [custom({ owner: 'demo-team', repo: 'blocks', branch: 'main' })],
         });
 
         expect(progressPushes(sendMessage)).toContainEqual({
             phase: 'storefront-code',
-            message: 'Installing blocks from 1 library',
-            subMessage: 'Demo Team Blocks',
+            message: 'Adding block libraries: Demo Team Blocks',
             progress: 28,
         });
     });

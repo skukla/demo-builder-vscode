@@ -21,8 +21,10 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay, type StatusVariant } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { useRunClock } from '@/core/ui/hooks/useRunClock';
+import { expectationLine } from '@/core/utils/stageLine';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppInstallDialog';
-import { getHelperText, isActivePhase } from '@/features/eds/ui/helpers/storefrontSetupState';
+import { isActivePhase, setupLines } from '@/features/eds/ui/helpers/storefrontSetupState';
 import { useStorefrontSetup } from '@/features/eds/ui/hooks/useStorefrontSetup';
 import type { WizardState } from '@/types/webview';
 
@@ -97,6 +99,11 @@ export function StorefrontSetupStep({
     // run is active (closing the wizard must still cancel it), but the progress
     // line would only sit behind the dialog saying the same thing.
     const showsProgress = isActivePhase(setupState.phase) && setupState.phase !== 'github-app';
+    // The same three lines as every progress surface: the step with its place in the
+    // run, what it is doing now, its expectation with the whole run's clock.
+    const lines = setupLines(setupState);
+    const clock = useRunClock(showsProgress ? setupState.startedAt : undefined);
+    const helperText = lines.expectation || clock ? expectationLine(lines.expectation, clock) : undefined;
 
     return (
         <div className="flex-column h-full w-full">
@@ -110,9 +117,9 @@ export function StorefrontSetupStep({
                         <CenteredFeedbackContainer fill>
                             <LoadingDisplay
                                 size="L"
-                                message={setupState.message}
-                                subMessage={setupState.subMessage}
-                                helperText={getHelperText(setupState.phase)}
+                                message={lines.message}
+                                subMessage={lines.subMessage}
+                                helperText={helperText}
                                 progress={setupState.progress}
                             />
                         </CenteredFeedbackContainer>
