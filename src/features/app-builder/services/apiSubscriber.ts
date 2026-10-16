@@ -231,7 +231,7 @@ export async function subscribeRequiredApis(
     // Said only when it happens: an add skips the check (a new workspace holds
     // nothing), and announcing it anyway flashed a 0ms step (2026-09-21).
     if (!observe?.skipCoverageCheck) {
-        observe?.onStep?.('Checking what subscriptions the workspace already has');
+        observe?.onStep?.('Checking its existing subscriptions');
     }
     // Started BEFORE the credential read, not after it: the full path always
     // needs this catalog, and the read can spend its whole budget answering

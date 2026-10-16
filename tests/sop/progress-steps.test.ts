@@ -9,9 +9,12 @@
  * - **"(n of N)" is only ever a step's position.** A count of pages, types, attempts or
  *   projects is a COUNT, and counts go on line 2 ("32 of 64 pages", `countLine`).
  *
- * The table's own rules (a label of at most 25 characters, no label twice) are held by
- * `tests/core/utils/operationStages.test.ts` and not repeated here; nor is its list of
- * files that report stages by reference, which this scan widens to all of `src/`.
+ * The table's own rules (a label of at most 25 characters, a detail of 40, an
+ * expectation of 25, no label twice) are held by
+ * `tests/core/utils/operationStages.test.ts` and not repeated here; the line-2 text
+ * written at call sites is the last suite below (`progressLineScan.ts`). Nor is the
+ * table's list of files that report stages by reference repeated, which this scan
+ * widens to all of `src/`.
  *
  * HOW A STEP SITE IS FOUND. By the TypeScript parser, file by file:
  * - calls to `reportStep(…)`, `stageLine(…)` and `onStage`. Not `onStep`: in the
@@ -51,6 +54,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import * as ts from 'typescript';
 import { workingTreeFiles } from './architectureScan';
+import { line2Sites, tooLong } from './progressLineScan';
 
 const ROOT = join(__dirname, '..', '..');
 
@@ -318,5 +322,54 @@ describe('SOP: a position is only ever a step position', () => {
 
     it('no position in src/ is built from a count', () => {
         expect(scan(countPositions).map(where)).toStrictEqual([]);
+    });
+});
+
+// Line 2 is short by design: 40 characters of text we write (owner, 2026-10-16: "Why
+// should we need lines that are so long?"). The scan, and what it reads, is
+// `progressLineScan.ts`.
+const LINE_2_SITES = SOURCES.flatMap(({ file, source }) => line2Sites(file, source));
+
+describe('SOP: line 2 text we write is 40 characters at most', () => {
+    it('CONTROL: finds each kind of site, and measures only what we wrote', () => {
+        const planted = [
+            "jobLine(STOREFRONT_JOBS.copyingContent, 'Finding every page the template has, to copy them');",
+            "settingsLine('Reading the project settings from the storefront repository');",
+            "report(S.copyingContent.label, `From ${org}/${site}, the template's content source`);",
+            "onStep('Running aio app deploy against the workspace this app is in');",
+            "onProgress?.({ subMessage: ok ? 'Done' : 'Waiting for Adobe to say the mesh is deployed' });",
+            "jobLine(S.x.label, `${itemCount(n, 'page')} published`);",
+            "progressTracker(S.settingUpProject.label, 10, 'Creating the project directory structure on disk');",
+        ].join('\n');
+        const sites = line2Sites('a.ts', planted);
+        expect(sites.map((s) => s.length)).toStrictEqual([49, 59, 37, 59, 45, 10, 48]);
+        expect(tooLong(sites).map((s) => s.split(' | ')[1])).toStrictEqual(['49', '59', '59', '45', '48']);
+    });
+
+    it('CONTROL: leaves names, counts and line 1 alone', () => {
+        const allowed = [
+            'jobLine(STOREFRONT_JOBS.resettingRepository, `${owner}/${repo}`);',
+            "report(S.copyingContent.label, countLine(done, total, 'file'));",
+            "reportStep('A step literal is progress-steps.test.ts\\'s business, not this one');",
+            "sendMessage('auth-status', { subMessage: 'An error explained in a sentence, which is not progress' });",
+        ].join('\n');
+        // A template that is all placeholders is measured as 0: it is a name.
+        expect(tooLong(line2Sites('a.ts', allowed))).toStrictEqual([]);
+    });
+
+    // The census: how many line-2 sites the scan reads across src/. If it stops
+    // finding them, the empty list below proves nothing.
+    it('CONTROL: finds the real corpus of line-2 text', () => {
+        expect(LINE_2_SITES.length).toBeGreaterThan(40);
+        expect(LINE_2_SITES.map((s) => s.file)).toEqual(
+            expect.arrayContaining([
+                'src/features/eds/services/helix/helixSiteContent.ts',
+                'src/features/eds/services/storefront/storefrontRepublishService.ts',
+            ]),
+        );
+    });
+
+    it('every line-2 text written in src/ fits', () => {
+        expect(tooLong(LINE_2_SITES)).toStrictEqual([]);
     });
 });

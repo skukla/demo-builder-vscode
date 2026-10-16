@@ -307,6 +307,19 @@ describe('components', () => {
         expect(onProgress).toHaveBeenCalledWith(S.updatingComponents.label, 'mesh in demo');
     });
 
+    // Line 2 names the component as the SC knows it, not by its id (owner, 2026-10-16).
+    it("names the component on line 2 by its display name, not its id", async () => {
+        const onProgress = jest.fn();
+
+        await applyUpdatesHeadless(
+            { ...emptySelections(), component: [item(edsProject(), 'eds-storefront')] },
+            makeCtx(),
+            onProgress
+        );
+
+        expect(onProgress).toHaveBeenCalledWith(S.updatingComponents.label, 'EDS Storefront in demo');
+    });
+
     it('does not build the updater or save anything when nothing is selected', async () => {
         const ctx = makeCtx();
 

@@ -142,6 +142,7 @@ export function SiteAccessScreen({ projectName, hasStorefront }: SiteAccessScree
                         // A table step shows its detail until the work says more, and
                         // its expectation; the quick busy lines have neither.
                         <LoadingDisplay
+                            steady
                             message={busy}
                             subMessage={progress ?? detailFor(busy)}
                             helperText={expectationFor(busy)}

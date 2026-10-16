@@ -493,7 +493,9 @@ meant.
 > counts go on line 2 ("Copying the content: 32 of 64 pages", `countLine`). Line 3 is the
 > step's expectation and the run's clock, joined by the one middle dot this UI keeps on
 > purpose. A surface with one line (a notification, an agent's chat) shows the step
-> alone, and a count it has no line 2 for is left out rather than moved up.
+> alone, and a count it has no line 2 for is left out rather than moved up. The lines
+> are short by design: line 1 at most 25 characters, line 2 at most 40 of text we
+> write, line 3's expectation at most 25 with the clock after it.
 > *Why:* the same job was called three things depending on which flow ran it, and counts
 > sat where the step goes: "Publishing block library (11 of 11)" read as eleven
 > libraries, and Site Access's "Checking access (2 of 4)" read as step two of four
@@ -505,10 +507,23 @@ meant.
 > written or built from values; the few places that build a position from a step
 > number are named in the suite with what they count. It cannot see a step passed
 > through a variable, or one reported by number ("report(1, …)"). No sites predate it:
-> the ones it found were fixed the day it landed. The table's own rules (25 characters,
-> no label twice) are `operationStages.test.ts`. Plan:
+> the ones it found were fixed the day it landed. The table's own rules (the lengths
+> below, no label twice) are `operationStages.test.ts`. Plan:
 > `.rptc/plans/progress-vocabulary/overview.md`. Enforced by
 > `tests/sop/progress-steps.test.ts`.
+>
+> The limits keep each line to one line on the progress displays, so nothing jumps as
+> the lines change (owner, 2026-10-16: "Why should we need lines that are so long?").
+> Say what the work does in few words; why an expectation is what it is goes in a code
+> comment beside the stage, not on the screen. The displays also cut a line that does
+> not fit with an ellipsis and show it whole on hover (`LoadingDisplay`'s `steady`),
+> but that is only a backstop for names we do not write: a repository, an ERP, a
+> project, a file. The stage table's columns (detail 40, expectation 25) are held by
+> `tests/core/utils/operationStages.test.ts`; the line-2 text written at call sites
+> (job details, a stage's line, a progress push's `subMessage` and `message`) by the
+> progress-steps suite named above, through `progressLineScan.ts`, which measures only
+> the text in the code: a template's placeholders are counts or names, and count as
+> nothing. It cannot see text assigned to a variable first. No sites predate it.
 
 > **Convention.** A field with a fallback rule is read through that rule, everywhere.
 > *Why:* two fields carry one — the DA.live org IS the GitHub namespace, the site

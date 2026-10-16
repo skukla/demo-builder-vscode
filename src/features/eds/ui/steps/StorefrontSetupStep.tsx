@@ -117,6 +117,7 @@ export function StorefrontSetupStep({
                         <CenteredFeedbackContainer fill>
                             <LoadingDisplay
                                 size="L"
+                                steady
                                 message={lines.message}
                                 subMessage={lines.subMessage}
                                 helperText={helperText}

@@ -312,7 +312,7 @@ async function pipelineCopyContent(
     onProgress?.({
         operation: 'content-copy',
         message: STOREFRONT_JOBS.copyingContent,
-        subMessage: `from ${contentSource.org}/${contentSource.site}`,
+        subMessage: `From ${contentSource.org}/${contentSource.site}`,
     });
 
     // The brand source has no /customer/* pages by design when an account
@@ -913,7 +913,7 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
     );
     onProgress?.({
         operation: 'library-publish',
-        message: jobLine(STOREFRONT_JOBS.publishingBlockList, 'checking it is live'),
+        message: jobLine(STOREFRONT_JOBS.publishingBlockList, 'Checking the block list is live'),
         subMessage: site,
     });
     const previewed = await verifyLibraryPreviewed(

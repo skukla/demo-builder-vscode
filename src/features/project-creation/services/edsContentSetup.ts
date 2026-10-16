@@ -190,7 +190,7 @@ export async function ensureEdsContent(
     // Reset's steps for the same work, each job on the line under its step
     // (progress vocabulary, owner 2026-10-16).
     const { org: sourceOrg, site: sourceSite } = config.contentSource;
-    onProgress?.(S.copyingContent.label, `from ${sourceOrg}/${sourceSite}`);
+    onProgress?.(S.copyingContent.label, `From ${sourceOrg}/${sourceSite}`);
 
     const contentSource = config.contentSource;
 

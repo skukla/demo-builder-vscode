@@ -226,7 +226,7 @@ function playsSteps(storeChanged: boolean): void {
         const step = params.onStage ?? (() => undefined);
         step(S.applyingDaLiveSettings.label);
         step(S.publishingSettings.label);
-        step(S.publishingSettings.label, 'Publishing the settings: writing config.json');
+        step(S.publishingSettings.label, 'Publishing the settings: Writing config.json');
         step(S.publishingCode.label);
         step(S.settingSitePermissions.label);
         step(S.clearingCache.label);
@@ -268,7 +268,7 @@ describe('republish, in the progress modal', () => {
             [S.checkingRequirements.label, at(1, 10), 'Your DA.live sign-in'],
             [S.applyingDaLiveSettings.label, at(2, 10), S.applyingDaLiveSettings.detail],
             [S.publishingSettings.label, at(3, 10), S.publishingSettings.detail],
-            [S.publishingSettings.label, at(3, 10), 'writing config.json'],
+            [S.publishingSettings.label, at(3, 10), 'Writing config.json'],
             [S.publishingCode.label, at(4, 10), S.publishingCode.detail],
             [S.settingSitePermissions.label, at(5, 10), S.settingSitePermissions.detail],
             [S.clearingCache.label, at(6, 10), S.clearingCache.detail],

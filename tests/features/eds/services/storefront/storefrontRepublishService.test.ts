@@ -363,16 +363,16 @@ describe('republishStorefrontConfig — each step and what it answers', () => {
 
     // One job, one name, wherever it runs (progress vocabulary slice 3, owner
     // 2026-10-16): every caller shows these under its "Publishing the settings" step,
-    // which strips the name, so the line under it reads "writing config.json".
+    // which strips the name, so the line under it reads "Writing config.json".
     it('tells the SC what the settings publish is doing, under its one name', async () => {
         const onProgress = jest.fn();
         await run({ onProgress }).result;
 
         expect(onProgress.mock.calls.map(([m]) => m)).toStrictEqual([
-            'Publishing the settings: reading the project settings',
-            'Publishing the settings: building config.json',
-            'Publishing the settings: writing config.json',
-            'Publishing the settings: sending it to GitHub and the live site',
+            'Publishing the settings: Reading the project settings',
+            'Publishing the settings: Building config.json',
+            'Publishing the settings: Writing config.json',
+            'Publishing the settings: Pushing config.json, then publishing it',
         ]);
     });
 });

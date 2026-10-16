@@ -28,7 +28,7 @@ export const STOREFRONT_STAGES = {
     updatingSiteConfig: {
         label: STOREFRONT_JOBS.updatingSiteConfig,
         expectation: 'Usually under a minute',
-        detail: "The site's entry in the Configuration Service",
+        detail: "The site's Configuration Service entry",
     },
     // Republish's steps between the code and the pages. Measured in two resets of the
     // scratch storefront (2026-10-16), which run the same calls: the permissions in
@@ -56,14 +56,14 @@ export const STOREFRONT_STAGES = {
     updatingCatalogMenu: {
         label: STOREFRONT_JOBS.updatingCatalogMenu,
         expectation: 'Usually under a minute',
-        detail: 'A page per category; pages you edited are kept',
+        detail: 'A page per category, keeping your edits',
     },
     // Configure's Republish with block library work pending (EDS-39): the libraries
     // unticked go first, then the ones ticked, then the DA.live block list follows.
     removingBlockLibraries: {
         label: 'Removing block libraries',
         expectation: 'Usually under a minute',
-        detail: 'Taking their blocks out of the storefront',
+        detail: 'Their blocks, out of the storefront',
     },
     addingBlockLibraries: {
         label: 'Adding block libraries',
@@ -73,7 +73,7 @@ export const STOREFRONT_STAGES = {
     publishingBlockList: {
         label: STOREFRONT_JOBS.publishingBlockList,
         expectation: 'Usually under a minute',
-        detail: 'So DA.live offers the blocks the storefront has',
+        detail: "So DA.live lists the storefront's blocks",
     },
 
     // Sync Storefront (progress vocabulary slice 2, owner 2026-10-16): save, push,
@@ -84,16 +84,16 @@ export const STOREFRONT_STAGES = {
     savingChanges: {
         label: 'Saving your changes',
         expectation: 'Usually a few seconds',
-        detail: 'Committing what you changed in the storefront',
+        detail: 'Committing your storefront changes',
     },
     mergingChanges: {
         label: 'Merging their work in',
         expectation: 'Usually a few seconds',
-        detail: 'GitHub has work you do not, so it comes in first',
+        detail: "Work on GitHub that you don't have yet",
     },
     waitingForMerge: {
         label: 'Waiting for your merge',
-        expectation: 'Until you finish it in Source Control',
+        expectation: 'Until you finish merging',
         detail: 'Resolve each conflict in Source Control',
     },
     finishingMerge: {
@@ -138,12 +138,12 @@ export const STOREFRONT_STAGES = {
     settingUpRepository: {
         label: 'Setting up the repository',
         expectation: 'Usually under a minute',
-        detail: 'Your GitHub repository, from the template',
+        detail: 'Your repository, from the template',
     },
     settingUpCode: {
         label: 'Setting up the code',
         expectation: 'Usually under a minute',
-        detail: 'The content source, block libraries and inspector tagging',
+        detail: 'Content source, blocks, inspector tags',
     },
 
     // Deleting a project: the storefront taken down (`storefrontTeardown.ts`), its
@@ -164,7 +164,7 @@ export const STOREFRONT_STAGES = {
     clearingSiteSettings: {
         label: 'Clearing site settings',
         expectation: 'Usually a few seconds',
-        detail: "The site's DA.live permissions and config",
+        detail: 'DA.live permissions and config',
     },
     deletingRepository: {
         label: 'Deleting the repository',
@@ -181,6 +181,6 @@ export const STOREFRONT_STAGES = {
     waitingForSiteAccess: {
         label: 'Waiting for site access',
         expectation: 'Up to about two minutes',
-        detail: 'Checking whether the admin role has landed',
+        detail: 'Checking the admin role has landed',
     },
 } as const satisfies Record<string, { label: string; expectation: string; detail: string }>;

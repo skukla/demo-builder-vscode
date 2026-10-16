@@ -267,7 +267,7 @@ describe('republishStorefrontContent', () => {
                 [S.applyingDaLiveSettings.label],
                 [S.publishingSettings.label],
                 // The real config step, which stops early for a project with no storefront.
-                [S.publishingSettings.label, 'Publishing the settings: reading the project settings'],
+                [S.publishingSettings.label, 'Publishing the settings: Reading the project settings'],
                 [S.publishingCode.label],
                 [S.settingSitePermissions.label],
                 [S.clearingCache.label],

@@ -154,6 +154,8 @@ describe('post-undeploy runtime verification', () => {
     it('deletes a leftover Runtime refused once on the next attempt, and the removal finishes', async () => {
         const owPackage = deriveOwPackage(ID);
         const deps = createDeps();
+        const lines: Array<string | undefined> = [];
+        deps.onProgress = (_stage: string, line?: string) => lines.push(line);
         let refusals = 0;
         (deps.commandManager.execute as jest.Mock).mockImplementation(async (command: string) => {
             if (command.includes('package list')) return { code: 0, stdout: JSON.stringify([{ name: owPackage }]), stderr: '' };
@@ -164,6 +166,8 @@ describe('post-undeploy runtime verification', () => {
         const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
         expect(deps.wait).toHaveBeenCalledWith(10_000);
+        // Line 2 while it waits: short, and counted in words (owner, 2026-10-16).
+        expect(lines).toContain('Retrying: Runtime still has 1 item');
         expect(result.success).toBe(true);
         expect(result.runtimeCleanup).toEqual({ verified: true, deleted: [owPackage], failed: [] });
     });
@@ -375,7 +379,7 @@ describe('post-undeploy runtime verification', () => {
             [OPERATION_STAGES.removing.label, 'Undeploying Custom Integration'],
             [
                 OPERATION_STAGES.checkingLeftovers.label,
-                'Reading its Runtime namespace for packages, actions, triggers and rules still deployed',
+                'Looking for anything still in Runtime',
             ],
         ]);
     });

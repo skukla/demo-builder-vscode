@@ -94,6 +94,7 @@ function RunningContent({ progress }: { progress: CreationProgress }) {
         <CenteredFeedbackContainer>
             <LoadingDisplay
                 size="L"
+                steady
                 message={stage ? stageLine(stage, progress.position) : 'Processing'}
                 subMessage={progress.message}
                 // The stage's OWN expectation where the shared table names it, so

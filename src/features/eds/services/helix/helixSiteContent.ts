@@ -16,7 +16,7 @@
 
 import type { HelixBulkPublish } from './helixBulkPublish';
 import type { HelixPageDiscovery } from './helixPageDiscovery';
-import { STOREFRONT_JOBS, countLine, jobLine } from '@/core/utils/storefrontJobs';
+import { STOREFRONT_JOBS, countLine, itemCount, jobLine } from '@/core/utils/storefrontJobs';
 import type { Logger } from '@/types/logger';
 
 /** Default branch for Helix operations */
@@ -106,7 +106,7 @@ export class HelixSiteContent {
         // Report: Discovering content (still needed to get page count for progress)
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.DISCOVERING,
-            message: jobLine(STOREFRONT_JOBS.publishingPages, 'finding them'),
+            message: jobLine(STOREFRONT_JOBS.publishingPages, 'Finding the pages to publish'),
         });
 
         // List all publishable pages from DA.live to get count for progress reporting
@@ -202,7 +202,7 @@ export class HelixSiteContent {
         // Report completion
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.COMPLETE,
-            message: jobLine(STOREFRONT_JOBS.publishingPages, `${pages.length} published`),
+            message: jobLine(STOREFRONT_JOBS.publishingPages, `${itemCount(pages.length, 'page')} published`),
             current: pages.length,
             total: pages.length,
         });
@@ -256,12 +256,10 @@ export class HelixSiteContent {
         );
 
         // Report completion
+        const noContent = skippedCount > 0 ? `, ${skippedCount} had no content` : '';
         onProgress?.({
             phase: SITE_PUBLISH_PHASES.COMPLETE,
-            message: jobLine(
-                STOREFRONT_JOBS.publishingPages,
-                `${publishedCount} published${skippedCount > 0 ? `, ${skippedCount} had no content` : ''}`,
-            ),
+            message: jobLine(STOREFRONT_JOBS.publishingPages, `${itemCount(publishedCount, 'page')} published${noContent}`),
             current: pages.length,
             total: pages.length,
         });

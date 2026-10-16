@@ -169,7 +169,9 @@ async function applyComponents(
     for (const { project, items: updates } of byProject.values()) {
         for (const update of updates) {
             if (!update.downloadUrl) continue;
-            onProgress?.(S.updatingComponents.label, `${update.componentId} in ${project.name}`);
+            // Its display name, not its id: line 2 reads as a phrase (owner, 2026-10-16).
+            const shown = project.componentInstances?.[update.componentId]?.name ?? update.componentId;
+            onProgress?.(S.updatingComponents.label, `${shown} in ${project.name}`);
             try {
                 await updater.updateComponent(
                     project,

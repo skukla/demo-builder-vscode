@@ -93,7 +93,7 @@ describe('what the subscribe says while it runs', () => {
         // The service list answered while the credentials were read, so waiting on
         // it is not a step — announcing it anyway flashed a 0ms line (2026-09-21).
         expect(steps).toEqual([
-            'Checking what subscriptions the workspace already has',
+            'Checking its existing subscriptions',
             'Adding 3 services to your workspace',
         ]);
     });
@@ -128,7 +128,7 @@ describe('what the subscribe says while it runs', () => {
             skipCoverageCheck: true,
         });
 
-        expect(steps).not.toContain('Checking what subscriptions the workspace already has');
+        expect(steps).not.toContain('Checking its existing subscriptions');
         expect(fake.listCredentialIds).not.toHaveBeenCalled();
     });
 
@@ -145,7 +145,7 @@ describe('what the subscribe says while it runs', () => {
             log: (message) => log.push(message),
         });
 
-        expect(steps).toEqual(['Checking what subscriptions the workspace already has', 'Everything needed is already there']);
+        expect(steps).toEqual(['Checking its existing subscriptions', 'Everything needed is already there']);
         expect(log.join(' ')).toContain('skipping the subscribe');
     });
 });

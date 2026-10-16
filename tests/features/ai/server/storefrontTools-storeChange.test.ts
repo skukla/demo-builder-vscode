@@ -227,7 +227,7 @@ describe('the steps an agent is told', () => {
         (republishStorefrontContent as jest.Mock).mockImplementation(
             async (params: { onStage?: (stage: string, step?: string) => void }) => {
                 params.onStage?.(S.publishingSettings.label);
-                params.onStage?.(S.publishingSettings.label, 'Publishing the settings: writing config.json');
+                params.onStage?.(S.publishingSettings.label, 'Publishing the settings: Writing config.json');
                 params.onStage?.(S.publishingPages.label);
                 params.onStage?.(S.publishingPages.label, 'Publishing the pages: 32 of 64 pages');
                 params.onStage?.(S.checkingSettings.label);

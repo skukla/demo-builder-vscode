@@ -140,10 +140,10 @@ describe('republishFromConfigure', () => {
         const [params] = mockRepublishConfig.mock.calls[0];
         expect(params.project).toBe(project);
         expect(params.secrets).toBe(context.secrets);
-        params.onProgress('Publishing the settings: building config.json');
+        params.onProgress('Publishing the settings: Building config.json');
         expect(report).toHaveBeenLastCalledWith(
             OPERATION_STAGES.publishingSettings.label,
-            'Publishing the settings: building config.json',
+            'Publishing the settings: Building config.json',
         );
         expect(await params.ensureDaLiveSession()).toBe(SESSION);
         expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith({ context, logger }, '[Configure]');

@@ -294,7 +294,7 @@ export class DaLiveContentCopy {
             processed: 0,
             total: 0,
             percentage: 0,
-            message: jobLine(STOREFRONT_JOBS.copyingContent, 'finding the pages'),
+            message: jobLine(STOREFRONT_JOBS.copyingContent, 'Finding the pages to copy'),
             currentFile: `${source.org}/${source.site}`,
         });
 
@@ -310,7 +310,7 @@ export class DaLiveContentCopy {
             processed: 0,
             total: 0,
             percentage: 0,
-            message: jobLine(STOREFRONT_JOBS.copyingContent, 'getting ready'),
+            message: jobLine(STOREFRONT_JOBS.copyingContent, 'Getting ready'),
             currentFile: `${contentPaths.length} pages from ${source.org}/${source.site}`,
         });
 

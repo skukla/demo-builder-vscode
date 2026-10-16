@@ -186,6 +186,7 @@ function WatchProgress({
     return (
         <LoadingDisplay
             size="L"
+            steady
             message={watching ? progressStep(op) : 'Stopped watching.'}
             subMessage={label}
             // Determinate only once something has reported. A ring pinned at 0

@@ -88,7 +88,7 @@ describe('the step line', () => {
             }),
         ).rejects.toThrow('504');
 
-        expect(steps).toStrictEqual(['Checking what subscriptions the workspace already has']);
+        expect(steps).toStrictEqual(['Checking its existing subscriptions']);
     });
 });
 

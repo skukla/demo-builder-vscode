@@ -151,7 +151,7 @@ export async function prewarmCatalog(
 
     onProgress?.({
         operation: 'catalog-prewarm',
-        message: jobLine(STOREFRONT_JOBS.warmingProductPages, 'reading the catalog'),
+        message: jobLine(STOREFRONT_JOBS.warmingProductPages, 'Reading the catalog'),
     });
 
     let skuPaths: SkuPath[];

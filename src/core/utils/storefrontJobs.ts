@@ -44,15 +44,25 @@ export const STOREFRONT_JOBS = {
     installingDatapack: 'Installing the datapack',
 } as const;
 
+/** A detail that opens with a lowercase word and goes on: a phrase, not a name. */
+const LOWERCASE_PHRASE = /^[a-z]+ /;
+
 /**
  * A job's name with what it is doing now.
  *
+ * The detail is often shown ALONE: line 2 drops the job's name when line 1 already
+ * says it (`stepUnder`). So a phrase starts with a capital here, and none can reach
+ * a screen as a lowercase fragment (owner, 2026-10-16). Write it to stand on its own
+ * too: "Finding the pages to copy", not "finding them". A name is left as spelled:
+ * an owner/repository, a site or an org has no spaces, and a capital would misspell it.
+ *
  * @param name - the job's name, from {@link STOREFRONT_JOBS}
- * @param detail - a count or a short phrase: "40 of 103 files", "finding the pages"
+ * @param detail - a count, a name, or a phrase: "40 of 103 files", "Finding the pages to copy"
  * @returns "Copying the content: 40 of 103 files"
  */
 export function jobLine(name: string, detail: string): string {
-    return `${name}: ${detail}`;
+    const shown = LOWERCASE_PHRASE.test(detail) ? detail[0].toUpperCase() + detail.slice(1) : detail;
+    return `${name}: ${shown}`;
 }
 
 /**

@@ -219,7 +219,8 @@ async function undeployAndCheck(
     if (!app) return undefined;
     deps.onProgress?.(
         OPERATION_STAGES.checkingLeftovers.label,
-        'Reading its Runtime namespace for packages, actions, triggers and rules still deployed',
+        // Packages, actions, triggers and rules: whatever is still deployed.
+        'Looking for anything still in Runtime',
     );
     const checked = await checkRuntimeLeftovers(targetFor(project, deps, id), id, declared, shownName, deps);
     const registration = await checkRegistration(

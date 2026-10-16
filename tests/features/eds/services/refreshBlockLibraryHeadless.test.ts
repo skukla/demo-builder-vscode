@@ -283,7 +283,7 @@ describe('refreshBlockLibraryHeadless — its steps', () => {
             { operation: 'block-library', message: 'Building block library: 5 blocks' },
             { operation: 'eds-settings', message: 'Applying DA.live settings' },
             { operation: 'library-publish', message: 'Publishing the block list: 2 pages' },
-            { operation: 'library-publish', message: 'Publishing the block list: checking it is live' },
+            { operation: 'library-publish', message: 'Publishing the block list: Checking the block list is live' },
         ]);
         const onStep = jest.fn();
 
@@ -294,7 +294,7 @@ describe('refreshBlockLibraryHeadless — its steps', () => {
             ['Building block library', 'Building block library: 5 blocks'],
             ['Applying DA.live settings', 'Applying DA.live settings'],
             ['Publishing the block list', 'Publishing the block list: 2 pages'],
-            ['Publishing the block list', 'Publishing the block list: checking it is live'],
+            ['Publishing the block list', 'Publishing the block list: Checking the block list is live'],
         ]);
     });
 

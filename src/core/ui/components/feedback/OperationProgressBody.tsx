@@ -84,6 +84,7 @@ export function OperationProgressBody({
     return (
         <LoadingDisplay
             size="L"
+            steady
             message={progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting'}
             subMessage={progress?.step}
             helperText={expectationLine(progress?.expectation, total)}

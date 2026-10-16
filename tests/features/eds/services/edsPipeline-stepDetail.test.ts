@@ -118,7 +118,7 @@ describe('executeEdsPipeline - step detail', () => {
             expect(progress[0]).toEqual({
                 operation: 'content-copy',
                 message: 'Copying the content',
-                subMessage: 'from src-org/src-site',
+                subMessage: 'From src-org/src-site',
             });
         });
 
@@ -532,7 +532,7 @@ describe('executeEdsPipeline - step detail', () => {
 
             expect(progress).toContainEqual({
                 operation: 'library-publish',
-                message: 'Publishing the block list: checking it is live',
+                message: 'Publishing the block list: Checking the block list is live',
                 subMessage: 'test-owner/test-repo',
             });
         });

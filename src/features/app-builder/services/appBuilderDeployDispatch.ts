@@ -215,7 +215,8 @@ async function deleteLeftBehindActions(
     if (!deps.deleteUndeclaredActions) return undefined;
     deps.onProgress?.(
         OPERATION_STAGES.checkingLeftovers.label,
-        'Deleting code the app no longer declares from its Runtime namespace',
+        // In its Runtime namespace: the stage's detail says so.
+        'Deleting code the app no longer declares',
     );
     const sharing = entriesInSameWorkspace(deps.catalog, project, entry)
         .map((other) => project.componentInstances?.[other.id]?.path)

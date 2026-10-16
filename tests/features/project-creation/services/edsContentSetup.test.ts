@@ -465,6 +465,14 @@ describe('ensureEdsContent — the calls it makes', () => {
             );
         });
 
+        // Line 2 on its own, under "Copying the content": a phrase, not a fragment.
+        it('names the source it copies from, starting with a capital', async () => {
+            const onProgress = jest.fn();
+            await ensureEdsContent(makeConfig(), makeDeps(), onProgress);
+
+            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.copyingContent.label, 'From source-org/source-site');
+        });
+
         it('counts files when the copy reports no message', async () => {
             const onProgress = jest.fn();
             await ensureEdsContent(makeConfig(), makeDeps(), onProgress);

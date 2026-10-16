@@ -10,6 +10,7 @@ import {
     OPERATION_STAGES,
     detailFor,
     expectationFor,
+    type OperationStage,
 } from '@/core/utils/operationStages';
 
 const ROOT = join(__dirname, '..', '..', '..');
@@ -80,6 +81,38 @@ describe('OPERATION_STAGES', () => {
             .filter((label) => label.length > 25);
 
         expect(long).toStrictEqual([]);
+    });
+
+    // Lines are SHORT BY DESIGN (owner, 2026-10-16: "Why should we need lines that are
+    // so long?"). The detail is line 2 when the work names nothing of its own, 40
+    // characters at most; the expectation is line 3 with the run's clock appended
+    // after it, 25 at most. Why an expectation is what it is goes in a comment beside
+    // the entry, not on the screen. The display's ellipsis is only a backstop for
+    // names we do not write (a repository, an ERP, a project).
+    const tooLong = (
+        field: 'detail' | 'expectation',
+        max: number,
+        stages: readonly OperationStage[] = Object.values(OPERATION_STAGES),
+    ) =>
+        stages.map((stage) => stage[field]).filter((text) => text.length > max);
+
+    it('CONTROL: the length checks flag a planted long line and pass one at the limit', () => {
+        const planted: OperationStage[] = [
+            { label: 'L', detail: 'x'.repeat(41), expectation: 'y'.repeat(26) },
+            { label: 'L', detail: 'x'.repeat(40), expectation: 'y'.repeat(25) },
+        ];
+        expect(tooLong('detail', 40, planted)).toStrictEqual(['x'.repeat(41)]);
+        expect(tooLong('expectation', 25, planted)).toStrictEqual(['y'.repeat(26)]);
+        // And it reads the real table: the whole table, not an empty list.
+        expect(Object.values(OPERATION_STAGES).length).toBeGreaterThan(90);
+    });
+
+    it('keeps every detail to 40 characters', () => {
+        expect(tooLong('detail', 40)).toStrictEqual([]);
+    });
+
+    it('keeps every expectation to 25 characters, leaving room for the clock', () => {
+        expect(tooLong('expectation', 25)).toStrictEqual([]);
     });
 
     it('never gives two stages the same label, so a lookup is unambiguous', () => {

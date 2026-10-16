@@ -20,12 +20,12 @@ export const RESET_STAGES = {
     resettingCode: {
         label: 'Resetting the code',
         expectation: 'Usually about a minute',
-        detail: 'Putting the template code back in your repository',
+        detail: 'Template code, back in your repository',
     },
     publishingCodeAndSettings: {
         label: 'Publishing code, settings',
         expectation: 'Usually under a minute',
-        detail: 'The code, its permissions and the site configuration',
+        detail: 'Code, permissions and site config',
     },
     clearingOldContent: {
         label: 'Clearing old content',
@@ -45,39 +45,39 @@ export const RESET_STAGES = {
     publishingPages: {
         label: 'Publishing the pages',
         expectation: 'Usually about a minute',
-        detail: 'Pages, sheets and the block library, to the live site',
+        detail: 'Pages, sheets and the block library',
     },
     removingOldPages: {
         label: 'Removing old pages',
         expectation: 'Usually a few seconds',
-        detail: 'Pages from before the reset that are still live',
+        detail: 'Live pages from before the reset',
     },
     checkingCopiedPages: {
         label: 'Checking copied pages',
         expectation: 'Usually a few seconds',
-        detail: 'That the live site serves every page the demo has',
+        detail: 'The live site serves every demo page',
     },
     warmingProductPages: {
         label: 'Warming product pages',
         expectation: 'Usually about a minute',
-        detail: 'So product pages open fast the first time',
+        detail: 'So the first visit to a product is fast',
     },
     // Project creation writes every page new: 50 seconds for 11 category pages
     // (2026-10-15), where a reset that keeps them takes seconds.
     addingCatalogMenu: {
         label: 'Adding the catalog menu',
         expectation: 'Usually under a minute',
-        detail: "A page for each of the store's categories",
+        detail: 'A page for each store category',
     },
     checkingSettings: {
         label: 'Checking the settings',
         expectation: 'Usually a few seconds',
-        detail: 'That the live site has the new configuration',
+        detail: 'The live site has the new config',
     },
     redeployingMesh: {
         label: 'Redeploying the mesh',
         expectation: 'Usually a few minutes',
-        detail: 'So the storefront reads the store through it',
+        detail: 'So the storefront can read the store',
     },
 } as const;
 

@@ -30,6 +30,7 @@ import {
 import { withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { sleep } from '@/core/utils/sleep';
+import { itemCount } from '@/core/utils/storefrontJobs';
 import { toError } from '@/types/typeGuards';
 
 /**
@@ -136,7 +137,7 @@ async function retryRefused(
         if (failing.length === 0) break;
         deps.onProgress?.(
             OPERATION_STAGES.checkingLeftovers.label,
-            `Trying again: ${failing.length} item(s) Runtime would not delete yet`,
+            `Retrying: Runtime still has ${itemCount(failing.length, 'item')}`,
         );
         await wait(pause);
         const still = await withOrgContext(target, () => present(deps, env, byKind(failing))).catch(() => failing);

@@ -420,7 +420,7 @@ describe('prewarmCatalog — the skip reason it reports', () => {
 
         expect(onProgress).toHaveBeenCalledWith({
             operation: 'catalog-prewarm',
-            message: 'Warming product pages: reading the catalog',
+            message: 'Warming product pages: Reading the catalog',
         });
     });
 });

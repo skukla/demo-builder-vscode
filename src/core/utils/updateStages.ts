@@ -39,7 +39,7 @@ export const UPDATE_STAGES = {
     checkingTemplates: {
         label: 'Checking EDS templates',
         expectation: 'Usually a few seconds',
-        detail: 'Whether each storefront template has new code',
+        detail: 'New code in each storefront template',
     },
     checkingAddOns: {
         label: 'Checking add-ons',
@@ -54,25 +54,25 @@ export const UPDATE_STAGES = {
     checkingIntegrations: {
         label: 'Checking integrations',
         expectation: 'Usually a few seconds',
-        detail: 'Whether each deployed pair has newer code',
+        detail: 'Newer code for each deployed pair',
     },
     // FIRST ESTIMATE, NOT MEASURED: a fork sync is one GitHub call per repo. Only the
     // agent's apply (`updateApplyService.ts`) reports it; the picker's runs silently.
     syncingSourceRepos: {
         label: 'Syncing source repos',
         expectation: 'Usually a few seconds',
-        detail: 'Bringing each fork level with its upstream',
+        detail: 'Bringing each fork up to its upstream',
     },
     updatingTemplate: {
         label: 'Updating the template',
         expectation: 'Usually under a minute',
-        detail: "Merging the template's new code into the storefront",
+        detail: "Merging the template's new code",
     },
     // FIRST ESTIMATE, NOT MEASURED: no component update is in the logs.
     updatingComponents: {
         label: 'Updating components',
-        expectation: 'Usually under a minute each',
-        detail: 'Downloading each release and installing it',
+        expectation: 'Under a minute each',
+        detail: 'Downloading and installing each release',
     },
     // FIRST ESTIMATE, NOT MEASURED: no Adobe MCP update is in the logs.
     updatingAiTools: {
@@ -92,7 +92,7 @@ export const UPDATE_STAGES = {
     updatingIntegrations: {
         label: 'Updating integrations',
         expectation: 'Usually 1–2 minutes each',
-        detail: 'Redeploying each pair with its newer code',
+        detail: "Redeploying each pair's newer code",
     },
     // FIRST ESTIMATE, NOT MEASURED: no extension update is in the logs.
     downloadingUpdate: {

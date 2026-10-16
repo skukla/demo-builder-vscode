@@ -152,12 +152,12 @@ describe('HelixSiteContent.publishAllSiteContent', () => {
             await site.publishAllSiteContent('owner/repo', 'main', undefined, undefined, onProgress);
 
             expect(onProgress.mock.calls.map(([info]) => info.message)).toStrictEqual([
-                'Publishing the pages: finding them',
+                'Publishing the pages: Finding the pages to publish',
                 'Previewing the pages: 0 of 3 pages',
                 'Previewing the pages: 2 of 3 pages',
                 'Publishing the pages: 0 of 3 pages',
                 'Publishing the pages: 3 of 3 pages',
-                'Publishing the pages: 3 published',
+                'Publishing the pages: 3 pages published',
             ]);
         });
 
@@ -166,7 +166,7 @@ describe('HelixSiteContent.publishAllSiteContent', () => {
 
             expect(onProgress).toHaveBeenLastCalledWith({
                 phase: SITE_PUBLISH_PHASES.COMPLETE,
-                message: 'Publishing the pages: 3 published',
+                message: 'Publishing the pages: 3 pages published',
                 current: 3,
                 total: 3,
             });
@@ -235,7 +235,7 @@ describe('HelixSiteContent.publishAllSiteContent', () => {
             ]);
             expect(onProgress).toHaveBeenLastCalledWith({
                 phase: SITE_PUBLISH_PHASES.COMPLETE,
-                message: 'Publishing the pages: 3 published',
+                message: 'Publishing the pages: 3 pages published',
                 current: 3,
                 total: 3,
             });
@@ -254,7 +254,7 @@ describe('HelixSiteContent.publishAllSiteContent', () => {
             expect(onProgress).toHaveBeenLastCalledWith(
                 expect.objectContaining({
                     phase: SITE_PUBLISH_PHASES.COMPLETE,
-                    message: 'Publishing the pages: 2 published, 1 had no content',
+                    message: 'Publishing the pages: 2 pages published, 1 had no content',
                 }),
             );
         });

@@ -54,7 +54,7 @@ beforeEach(() => {
         return { status: 'repaired', verified: true, site: 'me/shop' };
     });
     mockRepublishConfig.mockImplementation(async (params: { onProgress?: (m: string) => void }) => {
-        params.onProgress?.('Publishing the settings: writing config.json');
+        params.onProgress?.('Publishing the settings: Writing config.json');
         return { success: true };
     });
 });

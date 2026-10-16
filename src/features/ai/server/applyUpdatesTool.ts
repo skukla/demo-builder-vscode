@@ -23,7 +23,6 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { stepPhaseReporter } from '@/core/utils/agentPhaseChannel';
-import { jobLine } from '@/core/utils/storefrontJobs';
 import {
     integrationUpdateProbe,
     updateIntegrationPairFor,
@@ -139,9 +138,12 @@ export function registerApplyUpdatesTool(
                 // agent's after-the-fact record, an item per line; the live phase
                 // is what the user sees while the wait is happening: the step's
                 // name once, as the dashboard's apply shows it (progress vocabulary
-                // slice 8).
+                // slice 8). The item is written as the updater names it, not
+                // through jobLine: it can open with a repository ("me/a") or, for a
+                // component with no display name, its id, and jobLine capitalises a
+                // phrase.
                 (stage, item) => {
-                    phases.push(item ? jobLine(stage, item) : stage);
+                    phases.push(item ? `${stage}: ${item}` : stage);
                     sayStep(stage);
                 },
                 // `args` is present here: a call without confirm:true returned above.

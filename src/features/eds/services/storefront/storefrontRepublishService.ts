@@ -225,7 +225,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
 
     try {
         // Step 1: Extract EDS metadata
-        onProgress?.(settingsLine('reading the project settings'));
+        onProgress?.(settingsLine('Reading the project settings'));
         logger.debug('[StorefrontRepublish] Starting republish for project:', project.name);
 
         const extractResult = extractRepublishParams(project);
@@ -239,7 +239,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         const { repoOwner, repoName, componentPath } = extractResult;
 
         // Step 2: Generate config.json
-        onProgress?.(settingsLine('building config.json'));
+        onProgress?.(settingsLine('Building config.json'));
         logger.debug('[StorefrontRepublish] Generating config.json');
 
         // Snapshot the configs THIS publish is generated from, before the push.
@@ -272,7 +272,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         // That seam is scoped to the generated AI BUNDLE (`aiBundle/`), which lands in a
         // project people then edit. Reaching for it here would be applying the right rule
         // to the wrong file.
-        onProgress?.(settingsLine('writing config.json'));
+        onProgress?.(settingsLine('Writing config.json'));
         const configJsonPath = path.join(componentPath, 'config.json');
 
         try {
@@ -295,7 +295,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         }
 
         // Step 5: Sync to GitHub and CDN
-        onProgress?.(settingsLine('sending it to GitHub and the live site'));
+        onProgress?.(settingsLine('Pushing config.json, then publishing it'));
         logger.info(`[StorefrontRepublish] Syncing config.json to ${repoOwner}/${repoName}`);
 
         const syncResult = await syncConfigToRemote({
