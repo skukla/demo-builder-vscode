@@ -311,7 +311,9 @@ export class DaLiveBlockDocPages {
     /**
      * Check which blocks have documentation pages on DA.live
      *
-     * Performs HEAD requests to determine which blocks have doc pages.
+     * Performs HEAD requests to determine which blocks have doc pages, in batches
+     * like the stub pages are written. One at a time, a 48-block library took the
+     * four calls a rebuild makes ~20s (measured 2026-10-15).
      * Used to filter the block library to only include usable blocks.
      *
      * @param org - Organization name
@@ -325,23 +327,29 @@ export class DaLiveBlockDocPages {
         blocks: Array<{ id: string }>,
     ): Promise<string[]> {
         const token = await this.apiClient.getImsToken();
-        const existingIds: string[] = [];
-
-        for (const block of blocks) {
+        const hasDoc = async (block: { id: string }): Promise<boolean> => {
             try {
                 const blockDocUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/.da/library/blocks/${block.id}.html`;
                 const response = await this.apiClient.fetchWithRetry(blockDocUrl, {
                     method: 'HEAD',
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                if (response.ok) {
-                    existingIds.push(block.id);
-                }
+                return response.ok;
             } catch {
                 // Block doc doesn't exist or network error — skip this block
+                return false;
             }
-        }
+        };
 
+        const existingIds: string[] = [];
+        for (let i = 0; i < blocks.length; i += CONTENT_COPY_BATCH_SIZE) {
+            const batch = blocks.slice(i, i + CONTENT_COPY_BATCH_SIZE);
+            const found = await Promise.all(batch.map(hasDoc));
+            // In the blocks' own order, as the one-at-a-time loop answered.
+            batch.forEach((block, index) => {
+                if (found[index]) existingIds.push(block.id);
+            });
+        }
         return existingIds;
     }
 }

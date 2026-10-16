@@ -123,13 +123,23 @@ describe('refreshBlockLibraryHeadless', () => {
         const params = pipelineMock.mock.calls[0][0];
         expect(params.includeBlockLibrary).toBe(true);
         expect(params.skipContent).toBe(true);
-        expect(params.skipPublish).toBe(false);
+        // The site's pages are untouched by a block list change; the library's own
+        // pages publish whatever this says (2026-10-15).
+        expect(params.skipPublish).toBe(true);
         expect(params.blockCollectionIds).toStrictEqual([]);
+        // The full rebuild: every doc page, unless a caller names the blocks it added.
+        expect(params).not.toHaveProperty('publishLibraryBlocksOnly');
 
         expect(result).toEqual({
             success: true,
             libraryPaths: ['/.da/library/blocks/hero'],
         });
+    });
+
+    it('publishes only the blocks a caller names, when it names them', async () => {
+        await refreshBlockLibraryHeadless({ ...deps(), publishOnlyBlocks: ['cards', 'hero'] });
+
+        expect(pipelineMock.mock.calls[0][0].publishLibraryBlocksOnly).toEqual(['cards', 'hero']);
     });
 
     it('forwards pipeline progress through onProgress', async () => {

@@ -30,6 +30,23 @@ export const STOREFRONT_STAGES = {
         expectation: 'Usually under a minute',
         detail: "The new store's categories; pages you edited are kept",
     },
+    // Configure's Republish with block library work pending (EDS-39): the libraries
+    // unticked go first, then the ones ticked, then the DA.live block list follows.
+    removingBlockLibraries: {
+        label: 'Removing block libraries',
+        expectation: 'Usually under a minute',
+        detail: 'Taking their blocks out of the storefront',
+    },
+    addingBlockLibraries: {
+        label: 'Adding block libraries',
+        expectation: 'Usually under a minute',
+        detail: 'Copying their blocks into the storefront',
+    },
+    publishingBlockList: {
+        label: 'Publishing the block list',
+        expectation: 'Usually under a minute',
+        detail: 'So DA.live offers the blocks the storefront has',
+    },
     publishingProductPages: {
         label: 'Publishing product pages',
         expectation: 'A few minutes for a large catalog',

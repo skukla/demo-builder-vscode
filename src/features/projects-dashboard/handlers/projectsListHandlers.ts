@@ -33,9 +33,9 @@ import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import {
     handleBackgroundOperation,
     handleGetOperationProgress,
+    handleOpenDebugLogs,
 } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
-import { handleOpenDebugLogs } from '@/features/dashboard/handlers/panelNavigationHandlers';
 import { defineHandlers } from '@/types/handlers';
 
 /**

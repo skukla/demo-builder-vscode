@@ -36,8 +36,10 @@ import { useConfigureFieldValues } from './hooks/useConfigureFieldValues';
 import { useConfigureSave } from './hooks/useConfigureSave';
 import { useConfigureSections } from './hooks/useConfigureSections';
 import { useProjectNameField } from './hooks/useProjectNameField';
+import { useRepublishProgress } from './hooks/useRepublishProgress';
 import { useSelectedComponents } from './hooks/useSelectedComponents';
 import { useServiceGroups } from './hooks/useServiceGroups';
+import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 // Direct paths, not the barrels: several Configure suites mock `components/layout`
@@ -147,6 +149,9 @@ export function ConfigureScreen({
         blockLibrarySelection: changedSelection,
     });
 
+    // The storefront Republish a save offers, told in this screen's progress modal.
+    const republish = useRepublishProgress();
+
     // Get all selected components with their data (using extracted hook)
     const selectedComponents = useSelectedComponents({ project, componentsData });
 
@@ -248,6 +253,11 @@ export function ConfigureScreen({
                     />
                 </div>
             </View>
+            <OperationProgressModal
+                operation={republish.open}
+                onRetry={republish.retry}
+                onClose={republish.close}
+            />
         </div>
     );
 }

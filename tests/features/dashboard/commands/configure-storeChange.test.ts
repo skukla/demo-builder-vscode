@@ -83,6 +83,7 @@ it('ends the Republish with the store-change sentence', async () => {
         success: true,
         published: { success: true, cdnPublished: true },
         storePages: SENTENCE,
+        libraryLines: [],
     });
     const success = jest.spyOn(command, 'showSuccessMessage').mockResolvedValue(undefined);
 
@@ -92,7 +93,7 @@ it('ends the Republish with the store-change sentence', async () => {
 });
 
 it('keeps the usual success line when no pages were replaced', async () => {
-    mockRepublishFromConfigure.mockResolvedValue({ success: true, published: { success: true } });
+    mockRepublishFromConfigure.mockResolvedValue({ success: true, published: { success: true }, libraryLines: [] });
     const success = jest.spyOn(command, 'showSuccessMessage').mockResolvedValue(undefined);
 
     await command.republishStorefront(storeChangedProject());

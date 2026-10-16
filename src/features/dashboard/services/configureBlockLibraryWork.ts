@@ -19,6 +19,7 @@
  * @module features/dashboard/services/configureBlockLibraryWork
  */
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import type { BlockLibraryEntry } from '@/features/eds/services/blockCollectionHelpers';
 import {
@@ -65,6 +66,8 @@ export interface BlockLibraryWorkResult {
      * longer matches the storefront until it is refreshed.
      */
     storefrontChanged: boolean;
+    /** The blocks the installs added: the only doc pages the DA.live refresh must publish. */
+    addedBlockIds: string[];
 }
 
 /** The block library work this project has pending. */
@@ -113,20 +116,21 @@ function failure(verb: string, error: unknown): BlockLibraryWorkLine {
  *
  * @param project - the project (its `installedBlockLibraries` is updated and saved)
  * @param deps - the installer's context and the remover's collaborators
- * @param onProgress - told what is running, for a progress notification
- * @returns one line per library, and whether any block was added or removed
+ * @param onProgress - told each stage as it starts, with the library it is on
+ * @returns one line per library, whether any block was added or removed, and which were added
  */
 export async function applyPendingBlockLibraryWork(
     project: Project,
     deps: BlockLibraryWorkDeps,
-    onProgress?: (message: string) => void,
+    onProgress?: (stage: string, step: string) => void,
 ): Promise<BlockLibraryWorkResult> {
     const { install, remove } = findPendingBlockLibraryWork(project);
     const lines: BlockLibraryWorkLine[] = [];
+    const addedBlockIds: string[] = [];
     let storefrontChanged = false;
 
     for (const library of remove) {
-        onProgress?.(`Removing ${library.name}`);
+        onProgress?.(OPERATION_STAGES.removingBlockLibraries.label, library.name);
         try {
             const outcome = await applyBlockLibraryUninstall({ project, library }, deps.uninstall);
             storefrontChanged ||= outcome.removedBlockIds.length > 0;
@@ -140,15 +144,16 @@ export async function applyPendingBlockLibraryWork(
         }
     }
     for (const library of install) {
-        onProgress?.(`Adding ${library.name}`);
+        onProgress?.(OPERATION_STAGES.addingBlockLibraries.label, library.name);
         try {
             const outcome = await applyBlockLibraryInstall({ project, library }, deps.updateContext);
             storefrontChanged ||= outcome.blockIds.length > 0;
+            addedBlockIds.push(...outcome.blockIds);
             lines.push({ level: 'info', text: describeInstallOutcome(outcome, project.name) });
         } catch (error) {
             deps.updateContext.logger.error(`[Configure] Block library install failed: ${library.name}`, error as Error);
             lines.push(failure(`install ${library.name} in ${project.name}`, error));
         }
     }
-    return { lines, storefrontChanged };
+    return { lines, storefrontChanged, addedBlockIds };
 }

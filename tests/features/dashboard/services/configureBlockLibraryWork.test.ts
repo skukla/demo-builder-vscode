@@ -220,9 +220,11 @@ describe('applyPendingBlockLibraryWork', () => {
         });
         const project = edsProject({ selectedBlockLibraries: ['demo-team-blocks'] });
 
-        const { lines, storefrontChanged } = await applyPendingBlockLibraryWork(project, makeDeps());
+        const { lines, storefrontChanged, addedBlockIds } = await applyPendingBlockLibraryWork(project, makeDeps());
 
         expect(storefrontChanged).toBe(true);
+        // The only doc page the DA.live refresh then publishes (2026-10-15).
+        expect(addedBlockIds).toEqual(['cards']);
         expect(fileOps.commitTreeToBranch).toHaveBeenCalledTimes(1);
         expect(fileOps.commitTreeToBranch).toHaveBeenCalledWith(
             'me',
@@ -355,9 +357,10 @@ describe('applyPendingBlockLibraryWork', () => {
 
         await applyPendingBlockLibraryWork(project, makeDeps(), onProgress);
 
+        // A named stage each, with the library as its step.
         expect(onProgress.mock.calls).toEqual([
-            ['Removing My Blocks'],
-            [`Adding ${DEMO_TEAM.name}`],
+            ['Removing block libraries', 'My Blocks'],
+            ['Adding block libraries', DEMO_TEAM.name],
         ]);
     });
 });

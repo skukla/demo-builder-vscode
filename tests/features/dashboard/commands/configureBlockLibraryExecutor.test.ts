@@ -2,9 +2,9 @@
  * The Configure shell around pending block library work (EDS-39).
  *
  * This file is the boundary: it fetches the collaborators, asks for a DA.live
- * sign-in when a removal needs one, and shows each result line. So what it is
- * tested on is what it HANDS the service — which GitHub object, which DA.live
- * object or none — and which notification each line becomes.
+ * sign-in when a removal needs one, and answers each result line for its caller to
+ * say. So what it is tested on is what it HANDS the service — which GitHub object,
+ * which DA.live object or none — and the lines it answers.
  */
 
 const SHARED_FILE_OPS = { origin: 'shared-github-file-operations' };
@@ -186,52 +186,50 @@ describe('runPendingBlockLibraryWork', () => {
         expect(daLiveContentOpsCtor).not.toHaveBeenCalled();
     });
 
-    it('shows each line as the notification its level names', async () => {
-        mockApply.mockResolvedValue({
-            storefrontChanged: false,
-            lines: [
-                { level: 'info', text: 'Added 2 blocks.' },
-                { level: 'warning', text: 'Left 1 in place: hero.' },
-                { level: 'error', text: 'Failed to remove X.' },
-            ],
-        });
+    it('answers each line, and shows none itself: the caller says them', async () => {
+        const lines = [
+            { level: 'info', text: 'Added 2 blocks.' },
+            { level: 'warning', text: 'Left 1 in place: hero.' },
+            { level: 'error', text: 'Failed to remove X.' },
+        ];
+        mockApply.mockResolvedValue({ storefrontChanged: false, lines });
 
-        await runPendingBlockLibraryWork(withInstallPending(), makeParts(), jest.fn());
+        const answered = await runPendingBlockLibraryWork(withInstallPending(), makeParts(), jest.fn());
 
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Added 2 blocks.');
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('Left 1 in place: hero.');
-        expect(vscode.window.showErrorMessage).toHaveBeenCalledWith('Failed to remove X.');
+        expect(answered).toEqual(lines);
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
     });
 
-    it('refreshes the DA.live block list after a library was added or removed, before showing the result', async () => {
-        const order: string[] = [];
+    it('refreshes the DA.live block list after a library was added or removed, under its own stage', async () => {
         mockApply.mockResolvedValue({
             storefrontChanged: true,
             lines: [{ level: 'info', text: 'Added 2 blocks.' }],
-        });
-        mockRefresh.mockImplementation(async () => {
-            order.push('refresh');
-            return { success: true };
-        });
-        (vscode.window.showInformationMessage as jest.Mock).mockImplementation(() => {
-            order.push('result shown');
+            addedBlockIds: ['cards', 'hero'],
         });
         const parts = makeParts();
         const project = withInstallPending();
         const report = jest.fn();
 
-        await runPendingBlockLibraryWork(project, parts, report);
+        const answered = await runPendingBlockLibraryWork(project, parts, report);
 
-        // The existing refresh, handed THIS project and the command's own context.
+        // The existing refresh, handed THIS project and the command's own context, and
+        // told to publish only the doc pages of the blocks just added.
         expect(mockRefresh).toHaveBeenCalledTimes(1);
-        expect(mockRefresh).toHaveBeenCalledWith({
-            project,
-            context: parts.context,
-            logger: parts.logger,
-            onProgress: report,
-        });
-        expect(order).toEqual(['refresh', 'result shown']);
-        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(mockRefresh).toHaveBeenCalledWith(
+            expect.objectContaining({
+                project,
+                context: parts.context,
+                logger: parts.logger,
+                publishOnlyBlocks: ['cards', 'hero'],
+            }),
+        );
+        expect(report).toHaveBeenCalledWith('Publishing the block list');
+        // Its own progress lines are steps under that stage.
+        mockRefresh.mock.calls[0][0].onProgress('Publishing 9 library paths');
+        expect(report).toHaveBeenLastCalledWith('Publishing the block list', 'Publishing 9 library paths');
+        expect(answered).toEqual([{ level: 'info', text: 'Added 2 blocks.' }]);
     });
 
     it('does not refresh when nothing was added or removed', async () => {
@@ -252,24 +250,32 @@ describe('runPendingBlockLibraryWork', () => {
         });
         mockRefresh.mockResolvedValue({ success: false, error: 'DA.live answered 503' });
 
-        await runPendingBlockLibraryWork(withInstallPending(), makeParts(), jest.fn());
+        const answered = await runPendingBlockLibraryWork(withInstallPending(), makeParts(), jest.fn());
 
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('Added 2 blocks.');
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'The storefront files were changed, but the DA.live block list was not refreshed ' +
-                '(DA.live answered 503). Run Refresh Block Library from the dashboard.',
-        );
+        expect(answered).toEqual([
+            { level: 'info', text: 'Added 2 blocks.' },
+            {
+                level: 'warning',
+                text:
+                    'The storefront files were changed, but the DA.live block list was not refreshed ' +
+                    '(DA.live answered 503). Run Refresh Block Library from the dashboard.',
+            },
+        ]);
     });
 
     it('says the same when the refresh throws', async () => {
         mockApply.mockResolvedValue({ storefrontChanged: true, lines: [] });
         mockRefresh.mockRejectedValue(new Error('network down'));
 
-        await runPendingBlockLibraryWork(withInstallPending(), makeParts(), jest.fn());
+        const answered = await runPendingBlockLibraryWork(withInstallPending(), makeParts(), jest.fn());
 
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'The storefront files were changed, but the DA.live block list was not refreshed ' +
-                '(network down). Run Refresh Block Library from the dashboard.',
-        );
+        expect(answered).toEqual([
+            {
+                level: 'warning',
+                text:
+                    'The storefront files were changed, but the DA.live block list was not refreshed ' +
+                    '(network down). Run Refresh Block Library from the dashboard.',
+            },
+        ]);
     });
 });

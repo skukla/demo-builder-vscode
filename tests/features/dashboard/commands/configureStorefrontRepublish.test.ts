@@ -122,7 +122,7 @@ describe('republishFromConfigure', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockRunPendingBlockLibraryWork.mockResolvedValue(undefined);
+        mockRunPendingBlockLibraryWork.mockResolvedValue([]);
         mockRepublishConfig.mockResolvedValue({ success: true, cdnPublished: true });
         mockReplaceStoreScopePages.mockResolvedValue({
             sentence: SENTENCE,
@@ -177,7 +177,10 @@ describe('republishFromConfigure', () => {
 
     it('runs the block library work first, then the config, then the pages', async () => {
         const order: string[] = [];
-        mockRunPendingBlockLibraryWork.mockImplementation(async () => order.push('block libraries'));
+        mockRunPendingBlockLibraryWork.mockImplementation(async () => {
+            order.push('block libraries');
+            return [];
+        });
         mockRepublishConfig.mockImplementation(async () => {
             order.push('config');
             return { success: true };
@@ -200,5 +203,51 @@ describe('republishFromConfigure', () => {
 
         expect(mockReplaceStoreScopePages).not.toHaveBeenCalled();
         expect(failed).toMatchObject({ success: false, error: 'push rejected' });
+    });
+});
+
+// The progress modal's last word (2026-10-15): each library's line used to arrive as a
+// notification of its own, on top of the progress one.
+describe('republishFromConfigure — the last word', () => {
+    const parts = { context: createMockExtensionContext(), stateManager: createMockStateManager(), logger: createMockLogger() };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockRepublishConfig.mockResolvedValue({ success: true, cdnPublished: true });
+    });
+
+    it('says what the libraries did as its note, and what went wrong as its warning', async () => {
+        mockRunPendingBlockLibraryWork.mockResolvedValue([
+            { level: 'info', text: 'Added 9 blocks from Demo Team Block Collection to shop.' },
+            { level: 'warning', text: 'Left 1 in place: hero.' },
+        ]);
+
+        const outcome = await republishFromConfigure(storefront(MAIN, MAIN), parts, jest.fn());
+
+        expect(outcome).toMatchObject({
+            success: true,
+            note: 'Added 9 blocks from Demo Team Block Collection to shop.',
+            warning: 'Left 1 in place: hero.',
+        });
+    });
+
+    it('warns that the live storefront still serves the old config when only GitHub took it', async () => {
+        mockRunPendingBlockLibraryWork.mockResolvedValue([]);
+        mockRepublishConfig.mockResolvedValue({ success: true, cdnError: 'HTTP 401' });
+
+        const outcome = await republishFromConfigure(storefront(MAIN, MAIN), parts, jest.fn());
+
+        expect(outcome.warning).toBe(
+            'The storefront configuration reached GitHub, but the live storefront still serves the previous one: HTTP 401',
+        );
+    });
+
+    it('says nothing extra when there was nothing to add — control', async () => {
+        mockRunPendingBlockLibraryWork.mockResolvedValue([]);
+
+        const outcome = await republishFromConfigure(storefront(MAIN, MAIN), parts, jest.fn());
+
+        expect(outcome).not.toHaveProperty('note');
+        expect(outcome).not.toHaveProperty('warning');
     });
 });

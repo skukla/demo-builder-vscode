@@ -46,7 +46,6 @@ import {
 import {
     handleConfigure,
     handleNavigateBack,
-    handleOpenDebugLogs,
     handleOpenIntegrations,
     handleShowProjectDashboard,
 } from './panelNavigationHandlers';
@@ -63,6 +62,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     handleBackgroundOperation,
     handleGetOperationProgress,
+    handleOpenDebugLogs,
     narrateOutcomeToModal,
     progressSurfaceOf,
 } from '@/core/vscode/operationProgress';
@@ -162,7 +162,6 @@ export {
 export {
     handleConfigure,
     handleNavigateBack,
-    handleOpenDebugLogs,
     handleOpenIntegrations,
     handleShowProjectDashboard,
 } from './panelNavigationHandlers';

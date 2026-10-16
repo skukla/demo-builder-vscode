@@ -13,6 +13,7 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import type * as vscode from 'vscode';
+import { configAlreadyLive } from './configAlreadyLive';
 import { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTokenService } from './github/githubTokenService';
 import type { HelixCodePreview } from './helix/helixCapabilities';
@@ -84,6 +85,8 @@ export interface ConfigSyncResult {
     cdnError?: string;
     /** Whether block library CDN was verified (if verifyBlockLibrary was true) */
     blockLibraryVerified?: boolean;
+    /** GitHub and the live storefront had this config.json already: nothing was pushed or published. */
+    unchanged?: boolean;
 }
 
 // ==========================================================
@@ -150,6 +153,10 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
                 'config.json',
             );
             logger.debug(`[ConfigSync] Existing file SHA: ${existingFile?.sha || 'not found'}`);
+            if (await configAlreadyLive(configContent, existingFile, repoOwner, repoName)) {
+                logger.info('[ConfigSync] config.json unchanged on GitHub and already live; nothing to publish');
+                return { ...result, success: true, cdnVerified: true, unchanged: true };
+            }
 
             // Push config.json to GitHub
             logger.debug(

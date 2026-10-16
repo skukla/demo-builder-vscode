@@ -17,6 +17,7 @@ import {
     type EdsPipelineServices,
 } from './edsPipeline.testUtils';
 import { createMockProject } from '../../../helpers/projectFake';
+import { publishLibraryPaths } from '@/features/eds/handlers/edsHelpers';
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: jest.fn().mockResolvedValue(undefined),
@@ -249,6 +250,48 @@ describe('executeEdsPipeline - step gating', () => {
             const result = await executeEdsPipeline(prewarmable(), services);
 
             expect(result.success).toBe(true);
+        });
+    });
+
+    // Configure's block library change (2026-10-15): the site's pages were published
+    // again on every refresh (17s), and every doc page with them (37s).
+    describe('a block library refresh', () => {
+        const LIBRARY = ['/.da/library/blocks.json', '/.da/library/blocks/hero', '/.da/library/blocks/cards'];
+
+        beforeEach(() => {
+            mockCreateBlockLibrary.mockResolvedValue({ success: true, blocksCount: 2, paths: LIBRARY });
+            params = {
+                ...basePipelineParams(),
+                includeBlockLibrary: true,
+                skipContent: true,
+                skipPublish: true,
+                blockCollectionIds: [],
+            };
+        });
+
+        it("publishes the library's pages and none of the site's", async () => {
+            await executeEdsPipeline(params, services);
+
+            expect(mockPublishAllSiteContent).not.toHaveBeenCalled();
+            expect(publishLibraryPaths).toHaveBeenCalledWith(expect.anything(), 'test-owner', 'test-repo', LIBRARY, expect.anything());
+        });
+
+        it('publishes only the block list and the named blocks, when named', async () => {
+            await executeEdsPipeline({ ...params, publishLibraryBlocksOnly: ['cards'] }, services);
+
+            expect(publishLibraryPaths).toHaveBeenCalledWith(
+                expect.anything(),
+                'test-owner',
+                'test-repo',
+                ['/.da/library/blocks.json', '/.da/library/blocks/cards'],
+                expect.anything(),
+            );
+        });
+
+        it('publishes just the block list when no block was added (a removal)', async () => {
+            await executeEdsPipeline({ ...params, publishLibraryBlocksOnly: [] }, services);
+
+            expect((publishLibraryPaths as jest.Mock).mock.calls[0][3]).toEqual(['/.da/library/blocks.json']);
         });
     });
 });

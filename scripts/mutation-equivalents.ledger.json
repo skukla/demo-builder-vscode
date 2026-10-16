@@ -5298,7 +5298,7 @@
             "anchors": [
                 "if (!result.success) {"
             ],
-            "line": 226,
+            "line": 233,
             "mutants": 4,
             "category": "branch",
             "reason": "publishBrandAssets never throws \u2014 fetch and write failures come back as a partly-successful result \u2014 and this guard's whole body is a logger.warn naming the targets that did not land. Nothing downstream reads result: the pipeline proceeds to the next step either way, deliberately, because an incomplete brand set degrades to an unbranded storefront rather than a failed run (proceed-and-warn, ADR-006 D1). Forcing the guard either way, or emptying it, changes only whether that warn prints.",
@@ -6763,7 +6763,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 336,
+            "line": 343,
             "mutants": 1,
             "category": "block",
             "reason": "The else arm of the response.ok check contains a single logger.debug naming the status that came back. Emptying it leaves the loop doing the same thing: no assignment, no return, straight on to the between-attempts sleep and the next fetch. That a non-OK status does not end the loop early is pinned by 'does not accept a body served under a non-OK status', which counts all ten attempts; the arm's remaining content is the status number in a debug line.",
@@ -6776,7 +6776,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 341,
+            "line": 348,
             "mutants": 1,
             "category": "block",
             "reason": "This catch exists to swallow a failed fetch so the loop keeps trying; its body is one logger.debug naming the attempt and the error. Emptying it removes the log and nothing else \u2014 control still leaves the try, still hits the between-attempts sleep, still comes back for the next attempt. 'waits between attempts but not after the last one' drives ten rejected fetches through this exact path and pins the ten attempts and the nine waits; what the empty block loses is the message, not a decision.",
@@ -7272,7 +7272,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
             ],
-            "line": 104,
+            "line": 101,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",

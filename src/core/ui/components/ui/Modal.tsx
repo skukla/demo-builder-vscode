@@ -48,24 +48,6 @@ export interface ModalProps {
 }
 
 /**
- * The dialog's opt-in size overrides, as one class string.
- *
- * A helper rather than two ternaries inline: chained ternaries are on the
- * project's avoid list and the SOP scan fails on them. Returns undefined when
- * neither applies, so the default Dialog keeps a clean class list.
- */
-function dialogClassName(fitContent: boolean, wide: boolean): string | undefined {
-    const classes: string[] = [];
-    if (fitContent) {
-        classes.push('modal-fit-content');
-    }
-    if (wide) {
-        classes.push('modal-wide');
-    }
-    return classes.length > 0 ? classes.join(' ') : undefined;
-}
-
-/**
  * Focusable button wrapper to ensure buttons are in the same tab order
  * as custom focusable elements (tabIndex={0}) in the modal content.
  * Spectrum's ButtonGroup is excluded from focus trap with custom elements.
@@ -132,7 +114,16 @@ export function Modal({
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
 
     return (
-        <Dialog size={dialogSize} UNSAFE_className={dialogClassName(fitContent, wide)}>
+        // The opt-in size overrides as literals, so the stylesheet scan can read them in
+        // every bundle that renders a modal; empty → undefined keeps the default Dialog's
+        // class list clean. (A helper built this string until 2026-10-15, which the scan
+        // counted unreadable once per bundle.)
+        <Dialog
+            size={dialogSize}
+            UNSAFE_className={
+                cn(fitContent && 'modal-fit-content', wide && 'modal-wide') || undefined
+            }
+        >
             <Heading>{title}</Heading>
             <Divider />
             <Content UNSAFE_className="modal-content">

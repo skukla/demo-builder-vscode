@@ -90,8 +90,12 @@ export interface OperationRunnerControls {
      * being waited for.
      */
     startWhenItBegins: (operation: StartableOperation, onSettled?: () => void) => void;
-    /** Show the modal for an operation something else has already started. */
-    show: (operation: StartableOperation) => void;
+    /**
+     * Show the modal for an operation something else has already started. `resume`
+     * when its first steps have already gone by, so the modal asks where it is; not
+     * when shown as it is sent, where asking could pick up an earlier run's failure.
+     */
+    show: (operation: StartableOperation, resume?: boolean) => void;
     /** Reopen the modal for the operation last started here. `false` for any other id. */
     reopen: (id: string) => boolean;
     /** Run the last operation again. */
@@ -129,7 +133,7 @@ export function useOperationRunner(): OperationRunnerControls {
     );
 
     const show = useCallback(
-        (operation: StartableOperation): void => openModal(operation, false),
+        (operation: StartableOperation, resume = false): void => openModal(operation, resume),
         [openModal],
     );
 

@@ -61,7 +61,7 @@ describe('ConfigureProjectWebviewCommand - storefront republish resets notificat
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockRunPendingBlockLibraryWork.mockResolvedValue(undefined);
+        mockRunPendingBlockLibraryWork.mockResolvedValue([]);
         mockContext = createMockExtensionContext();
         mockStateManager = createMockStateManager();
         mockLogger = createMockLogger() as unknown as Logger;
@@ -82,6 +82,7 @@ describe('ConfigureProjectWebviewCommand - storefront republish resets notificat
         const order: string[] = [];
         mockRunPendingBlockLibraryWork.mockImplementation(async () => {
             order.push('block libraries');
+            return [];
         });
         mockRepublishStorefrontConfig.mockImplementation(async () => {
             order.push('republish');

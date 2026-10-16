@@ -111,7 +111,7 @@ describe('configureHandlers', () => {
             expect(hasHandler(configureHandlers, 'get-components-data')).toBe(false);
         });
 
-        it('should have exactly 7 handlers', () => {
+        it('should have exactly 11 handlers', () => {
             const types = getRegisteredTypes(configureHandlers) as Array<
                 keyof typeof configureHandlers
             >;
@@ -126,7 +126,10 @@ describe('configureHandlers', () => {
             // 6 → 7: check-store-view-products added 2026-10-15 (EDS-46) — Configure
             // renders the same store pickers as the wizard, and they warn when the
             // chosen store view shows guests no products.
-            expect(types).toHaveLength(7);
+            // 7 → 11: getOperationProgress, answerOperationPrompt, backgroundOperation and
+            // openDebugLogs added 2026-10-15 — the storefront Republish is told in this
+            // screen's progress modal, which sends all four.
+            expect(types).toHaveLength(11);
         });
 
         it('should NOT include AI handlers (they live in aiHandlers.ts)', () => {

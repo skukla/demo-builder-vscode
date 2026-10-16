@@ -1038,9 +1038,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'confirm:true.',
         map: edsHandlers,
         type: 'refresh-block-library',
-        // Gated on the same rule as promote/remove_block_from_library: it runs
-        // with skipPublish: false (refreshBlockLibraryHeadless.ts:109), so a full
-        // re-sync reaches the live site. The dashboard kebab path is unaffected —
+        // Gated on the same rule as promote/remove_block_from_library: the rebuild
+        // publishes the block library's pages (the pipeline's library step), so a
+        // full re-sync reaches the live site. The dashboard kebab path is unaffected —
         // this gate lives in the descriptor row, not the handler.
         confirm: true,
     },

@@ -23,6 +23,7 @@
  * @module core/vscode/operationProgress
  */
 
+import * as vscode from 'vscode';
 import {
     closeBackgroundNotice,
     forwardToBackgroundNotice,
@@ -178,5 +179,15 @@ export const handleBackgroundOperation: MessageHandler<{ id?: string; title?: st
     if (current?.state === 'running') {
         openBackgroundNotice(title, current, () => latest.get(id)?.state === 'running');
     }
+    return { success: true };
+};
+
+/**
+ * Handle `openDebugLogs` — show the Debug Logs channel, where an operation's full
+ * detail goes. The progress modal's failure state offers it (PL-59), so every screen
+ * that hosts the modal answers it; it lives with the modal's other messages.
+ */
+export const handleOpenDebugLogs: MessageHandler = async () => {
+    await vscode.commands.executeCommand('demoBuilder.showDebugLogs');
     return { success: true };
 };

@@ -18,6 +18,12 @@
 
 import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation/URLValidator';
+import {
+    handleBackgroundOperation,
+    handleGetOperationProgress,
+    handleOpenDebugLogs,
+} from '@/core/vscode/operationProgress';
+import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
 import { handleCheckStoreViewProducts } from '@/features/eds/handlers/storeViewProductsHandler';
@@ -158,4 +164,11 @@ export const configureHandlers = defineHandlers({
     'check-credential-service': handleCheckCredentialService,
     // The same store pickers as the wizard, so the same no-products warning (EDS-46).
     'check-store-view-products': handleCheckStoreViewProducts,
+    // The Republish progress modal (CONFIGURE_REPUBLISH_OPERATION_ID): where the run is
+    // when the modal opens after its first step, the SC's answer to a question the run
+    // asks there (a DA.live sign-in), "Run in background", and the failure view's logs.
+    getOperationProgress: handleGetOperationProgress,
+    answerOperationPrompt: handleAnswerOperationPrompt,
+    backgroundOperation: handleBackgroundOperation,
+    openDebugLogs: handleOpenDebugLogs,
 });

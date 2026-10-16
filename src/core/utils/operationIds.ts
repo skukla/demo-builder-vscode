@@ -52,6 +52,12 @@ export const CONSOLE_APIS_OPERATION_ID = 'console-apis';
 /** Regenerating a project's AI files. */
 export const AI_FILES_OPERATION_ID = 'ai-files';
 
+/**
+ * Configure's storefront Republish. Started from the prompt a save raises, and told
+ * in the Configure screen's progress modal while that screen is open.
+ */
+export const CONFIGURE_REPUBLISH_OPERATION_ID = 'configure-republish-storefront';
+
 /** A project deletion, keyed by the project being deleted. */
 export function deleteOperationId(projectName: string): string {
     return `delete:${projectName}`;

@@ -5,17 +5,20 @@
  *
  * The work itself is `services/configureBlockLibraryWork.ts`. This file is the
  * boundary: it fetches the collaborators that work needs, asks for the DA.live
- * session a removal uses, refreshes the DA.live block list when a block was
- * added or removed, and shows each result line. It lives beside
+ * session a removal uses, and refreshes the DA.live block list when a block was
+ * added or removed. Its result lines go back to the caller, which says them in
+ * the progress modal or, with Configure closed, as notifications. It lives beside
  * `configure.ts` rather than in it because that file is far past its size limit.
  *
  * Nothing here runs until the SC presses the apply notification's action:
  * `ConfigureProjectWebviewCommand.republishStorefront` is the only caller.
  */
 
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import {
     applyPendingBlockLibraryWork,
     findPendingBlockLibraryWork,
@@ -59,18 +62,30 @@ async function daLiveBlockList(
  * Rebuild the DA.live block list from the storefront's `component-definition.json`
  * and publish it — the dashboard's Refresh Block Library, not a second one. An
  * install needs it (nothing else puts the new blocks in the DA.live picker); a
- * removal needs it to republish the list its rows were just taken out of.
+ * removal needs it to republish the list its rows were just taken out of. Only the
+ * added blocks' doc pages are published with it; the rest are live already.
  *
  * A failure is a line, never a throw: the files are already committed.
  */
 async function refreshDaLiveBlockList(
     project: Project,
     { context, logger }: BlockLibraryWorkParts,
-    report: (message: string) => void,
+    report: ReportStage,
+    addedBlockIds: string[],
 ): Promise<BlockLibraryWorkLine | undefined> {
+    const stage = OPERATION_STAGES.publishingBlockList.label;
+    report(stage);
     let reason: string | undefined;
     try {
-        const result = await refreshBlockLibraryHeadless({ project, context, logger, onProgress: report });
+        const result = await refreshBlockLibraryHeadless({
+            project,
+            context,
+            logger,
+            onProgress: (message) => report(stage, message),
+            // The other doc pages are live already; publishing them all again was
+            // the slow half of the refresh (2026-10-15, 37s for 49 pages).
+            publishOnlyBlocks: addedBlockIds,
+        });
         if (result.success) return undefined;
         reason = result.error;
     } catch (error) {
@@ -85,32 +100,23 @@ async function refreshDaLiveBlockList(
     };
 }
 
-function show(line: BlockLibraryWorkLine): void {
-    if (line.level === 'error') {
-        vscode.window.showErrorMessage(line.text);
-    } else if (line.level === 'warning') {
-        vscode.window.showWarningMessage(line.text);
-    } else {
-        vscode.window.showInformationMessage(line.text);
-    }
-}
-
 /**
  * Install the block libraries the project selects and its storefront lacks,
- * remove the ones it has and no longer selects, and tell the SC what happened.
+ * remove the ones it has and no longer selects, and answer what happened.
  * Does nothing when no library work is pending.
  *
  * @param project - the project being configured
  * @param parts - the command's context, state manager and logger
- * @param report - progress messages, for the notification already on screen
+ * @param report - each stage as it starts, with the step under it
+ * @returns one line per library, and one more when the DA.live block list was not refreshed
  */
 export async function runPendingBlockLibraryWork(
     project: Project,
     parts: BlockLibraryWorkParts,
-    report: (message: string) => void,
-): Promise<void> {
+    report: ReportStage,
+): Promise<BlockLibraryWorkLine[]> {
     const pending = findPendingBlockLibraryWork(project);
-    if (pending.install.length + pending.remove.length === 0) return;
+    if (pending.install.length + pending.remove.length === 0) return [];
 
     const { context, stateManager, logger } = parts;
     const deps: BlockLibraryWorkDeps = {
@@ -132,12 +138,10 @@ export async function runPendingBlockLibraryWork(
         },
     };
 
-    const { lines, storefrontChanged } = await applyPendingBlockLibraryWork(project, deps, report);
-    // Before the result is shown, so "Added 2 blocks" is true of the DA.live picker too.
+    const { lines, storefrontChanged, addedBlockIds } = await applyPendingBlockLibraryWork(project, deps, report);
+    // Before the result is told, so "Added 2 blocks" is true of the DA.live picker too.
     const refreshFailure = storefrontChanged
-        ? await refreshDaLiveBlockList(project, parts, report)
+        ? await refreshDaLiveBlockList(project, parts, report, addedBlockIds)
         : undefined;
-    for (const line of refreshFailure ? [...lines, refreshFailure] : lines) {
-        show(line);
-    }
+    return refreshFailure ? [...lines, refreshFailure] : lines;
 }

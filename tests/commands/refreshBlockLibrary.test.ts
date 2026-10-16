@@ -2,7 +2,7 @@
  * RefreshBlockLibraryCommand tests
  *
  * Covers the dashboard kebab "Refresh Block Library" command (EDS-only):
- *   1. Pipeline invoked with { includeBlockLibrary: true, skipContent: true, skipPublish: false }
+ *   1. Pipeline invoked with { includeBlockLibrary: true, skipContent: true, skipPublish: true }
  *   2. Progress messages surfaced through vscode.window.withProgress
  *   3. DaLiveAuthError → re-authenticate once, then retry the pipeline
  */
@@ -149,7 +149,7 @@ describe('RefreshBlockLibraryCommand', () => {
         );
     });
 
-    it('calls executeEdsPipeline with includeBlockLibrary=true, skipContent=true, skipPublish=false', async () => {
+    it('calls executeEdsPipeline with includeBlockLibrary=true, skipContent=true, skipPublish=true', async () => {
         const cmd = new RefreshBlockLibraryCommand(
             makeContext(),
             makeStateManager(EDS_PROJECT),
@@ -164,7 +164,8 @@ describe('RefreshBlockLibraryCommand', () => {
         const params = callArgs[0] as Record<string, unknown>;
         expect(params.includeBlockLibrary).toBe(true);
         expect(params.skipContent).toBe(true);
-        expect(params.skipPublish).toBe(false);
+        // Not the site's pages (2026-10-15); the library's publish runs regardless.
+        expect(params.skipPublish).toBe(true);
         // Load-bearing: an empty (truthy) blockCollectionIds array signals the
         // pipeline to read component-definition.json from the USER's repo so
         // MCP-promoted blocks survive the destructive rebuild.

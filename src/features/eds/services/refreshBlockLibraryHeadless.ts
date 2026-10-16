@@ -5,7 +5,12 @@
  * `component-definition.json` (the destructive full-rebuild path, for users who
  * hand-edit `component-definition.json` outside the AI promote flow). Runs
  * `executeEdsPipeline` with `includeBlockLibrary: true` / `skipContent: true` /
- * `skipPublish: false`, retrying once on a mid-pipeline DA.live token expiry.
+ * `skipPublish: true`, retrying once on a mid-pipeline DA.live token expiry.
+ *
+ * `skipPublish: true` skips the SITE's pages, never the library's: the library
+ * publish runs whenever the rebuild produced library paths. It was `false` until
+ * 2026-10-15, which re-published every page of the site (86 on the measured run,
+ * 17s) on each refresh, for a change that touches none of them.
  *
  * Two callers share this core:
  *   - `RefreshBlockLibraryCommand` — the dashboard kebab action, which wraps it
@@ -63,6 +68,12 @@ export interface RefreshBlockLibraryHeadlessDeps {
      * optional field and removes a module wall.
      */
     helixService?: HelixService;
+    /**
+     * Publish only these blocks' doc pages and the block list: the blocks a caller
+     * just added. Absent publishes every doc page, the full rebuild the dashboard's
+     * Refresh Block Library is for.
+     */
+    publishOnlyBlocks?: string[];
 }
 
 /**
@@ -121,7 +132,8 @@ export async function refreshBlockLibraryHeadless(
                     templateRepo: params.templateRepo,
                     includeBlockLibrary: true,
                     skipContent: true,
-                    skipPublish: false,
+                    skipPublish: true,
+                    ...(deps.publishOnlyBlocks ? { publishLibraryBlocksOnly: deps.publishOnlyBlocks } : {}),
                     // Load-bearing: pass an empty array (truthy in JS) so
                     // executeEdsPipeline rebuilds from the USER's repo's
                     // component-definition.json — not the template's. Blocks

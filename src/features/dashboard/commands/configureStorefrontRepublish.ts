@@ -17,6 +17,7 @@
 import { runPendingBlockLibraryWork, type BlockLibraryWorkParts } from './configureBlockLibraryExecutor';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { OperationOutcome, ReportStage } from '@/core/vscode/withOperationProgress';
+import type { BlockLibraryWorkLine } from '@/features/dashboard/services/configureBlockLibraryWork';
 import { ensureDaLiveAuth, getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import {
@@ -63,6 +64,36 @@ export interface ConfigureRepublishOutcome extends OperationOutcome {
     published: RepublishResult;
     /** After a store change: the one sentence on the new store's pages. */
     storePages?: string;
+    /** One line per block library added or removed, in the order they ran. */
+    libraryLines: BlockLibraryWorkLine[];
+}
+
+/** The config reached GitHub and the live storefront still serves the old one. */
+export function cdnLagWarning(cdnError: string): string {
+    return (
+        'The storefront configuration reached GitHub, but the live storefront still ' +
+        `serves the previous one: ${cdnError}`
+    );
+}
+
+/**
+ * The run's last word, as the progress modal says it: what went wrong but did not
+ * stop the run as its warning, and what it did as its note — the libraries added or
+ * removed, and after a store change the sentence on the new store's pages.
+ */
+function lastWord(
+    published: RepublishResult,
+    libraryLines: BlockLibraryWorkLine[],
+    storePages: string | undefined,
+): Pick<OperationOutcome, 'warning' | 'note'> {
+    const problems = libraryLines.filter((line) => line.level !== 'info').map((line) => line.text);
+    if (published.success && published.cdnError) problems.push(cdnLagWarning(published.cdnError));
+    const done = libraryLines.filter((line) => line.level === 'info').map((line) => line.text);
+    if (storePages) done.push(storePages);
+    return {
+        ...(problems.length > 0 ? { warning: problems.join(' ') } : {}),
+        ...(done.length > 0 ? { note: done.join(' ') } : {}),
+    };
 }
 
 /** After a store change whose config the CDN took: the old store's pages out, the new store's in. */
@@ -111,8 +142,8 @@ export async function republishFromConfigure(
     report: ReportStage,
 ): Promise<ConfigureRepublishOutcome> {
     const { context, stateManager, logger } = parts;
-    // Block libraries first (EDS-39): add what is selected, remove what is not.
-    await runPendingBlockLibraryWork(project, parts, (line) => report(line));
+    // Block libraries first (EDS-39): remove what is not selected, add what is.
+    const libraryLines = await runPendingBlockLibraryWork(project, parts, report);
 
     const stage = OPERATION_STAGES.publishingConfig.label;
     report(stage);
@@ -133,5 +164,7 @@ export async function republishFromConfigure(
         ...(published.error ? { error: published.error } : {}),
         published,
         ...(storePages ? { storePages } : {}),
+        libraryLines,
+        ...lastWord(published, libraryLines, storePages),
     };
 }

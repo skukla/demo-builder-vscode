@@ -114,6 +114,13 @@ export interface EdsPipelineParams {
     blockCollectionIds?: string[];
     /** DA.live content sources for block library doc pages (.da/library/blocks/) */
     libraryContentSources?: Array<{ org: string; site: string }>;
+    /**
+     * Publish only these blocks' doc pages, and the block list itself. For a caller
+     * that knows which blocks it just added (Configure's block libraries): the other
+     * doc pages are already live, and publishing ~50 of them one at a time is the
+     * slow half of the step. Absent publishes them all — the full rebuild.
+     */
+    publishLibraryBlocksOnly?: string[];
 
     // Publish
     purgeCache?: boolean;
@@ -864,6 +871,16 @@ async function pipelinePublishSheets({ params, services, ctx, onProgress }: Pipe
 }
 
 /**
+ * The library paths to publish: all of them, or the block list and the named blocks'
+ * doc pages (`publishLibraryBlocksOnly`).
+ */
+function libraryPathsToPublish(paths: string[], onlyBlocks: string[] | undefined): string[] {
+    if (!onlyBlocks) return paths;
+    const wanted = new Set(onlyBlocks.map((id) => `/.da/library/blocks/${id}`));
+    return paths.filter((path) => path === '/.da/library/blocks.json' || wanted.has(path));
+}
+
+/**
  * Step 6 body: publish the installed library paths, then verify they actually
  * previewed. Say it landed only if it landed — the bulk job reports success for
  * paths that matched nothing, which is how a library that could not preview a
@@ -871,6 +888,7 @@ async function pipelinePublishSheets({ params, services, ctx, onProgress }: Pipe
  */
 async function pipelinePublishLibrary({ params, services, ctx, onProgress }: PipelineStepEnv) {
     const { helixService, daLiveContentOps, logger } = services;
+    const toPublish = libraryPathsToPublish(ctx.libraryPaths, params.publishLibraryBlocksOnly);
     // The subMessage slot is carried end-to-end (pipeline callback →
     // storefront-setup-progress → the wizard's progress view) but this step
     // never filled it — a 2-minute spinner with a static hint (user-asked
@@ -878,9 +896,7 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
     onProgress?.({
         operation: 'library-publish',
         message: 'Publishing block library',
-        subMessage: `Publishing ${ctx.libraryPaths.length} library ${
-            ctx.libraryPaths.length === 1 ? 'path' : 'paths'
-        }`,
+        subMessage: `Publishing ${toPublish.length} library ${toPublish.length === 1 ? 'path' : 'paths'}`,
     });
 
     const { publishLibraryPaths, verifyLibraryPreviewed } = await import('../handlers/edsHelpers');
@@ -888,7 +904,7 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
         helixService,
         params.repoOwner,
         params.repoName,
-        ctx.libraryPaths,
+        toPublish,
         logger,
     );
     onProgress?.({

@@ -224,6 +224,29 @@ describe('ConfigureScreen - Operations', () => {
     });
 
     /**
+     * The storefront Republish is started from the prompt a save raises, and told in
+     * this screen's progress modal (2026-10-15): it opens on the run's first step.
+     */
+    describe('Republish progress', () => {
+        it('opens the progress modal when the Republish starts, titled by it', () => {
+            renderWithProvider(
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
+            );
+            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+            act(() => {
+                webviewClientHandlers.get('operationProgress')?.({
+                    id: 'configure-republish-storefront',
+                    state: 'running',
+                    stage: 'Adding block libraries',
+                });
+            });
+
+            expect(screen.getByRole('dialog')).toHaveTextContent('Republishing storefront');
+        });
+    });
+
+    /**
      * The extension pushes `deployment-status` while a mesh or storefront deploy
      * is running, and Configure has to hold BOTH buttons until it clears — a save
      * landing mid-deploy is what the push exists to prevent.

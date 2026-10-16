@@ -27,6 +27,8 @@ import '@/core/ui/styles/utilities.css';
 // store view." line (EDS-46) is an InlineNotice, and this screen renders the
 // same pickers as the wizard.
 import '@/core/ui/styles/inline-controls.css';
+// .modal-* — the storefront Republish is told in the shared progress modal.
+import '@/core/ui/styles/modal.css';
 // The block library cards on the Block Libraries tab are the wizard's picker (EDS-39),
 // and a sheet reaches only the bundles whose entry imports it. `.choice-*` is the
 // cards. wizard-misc.css is here for ONE rule, `.settings-link`, the picker's

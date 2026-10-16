@@ -353,7 +353,9 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
             });
 
             expect(getRegisteredTypes).toHaveBeenCalled();
-            expect(registered).toEqual(['cancel', 'openExternal', 'save-configuration']);
+            // `republish-storefront` is the Republish progress modal's Retry, inline
+            // like save-configuration because it runs the command's own republish.
+            expect(registered).toEqual(['cancel', 'openExternal', 'save-configuration', 'republish-storefront']);
         });
 
         it('dispatches a registered message to the handler map under its own type', async () => {
