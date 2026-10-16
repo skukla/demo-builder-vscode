@@ -333,6 +333,24 @@ describe('meshSetupService deployNewMesh', () => {
 
             expect(onMeshCreated).toHaveBeenCalledWith(undefined);
         });
+
+        // A failed creation deletes the mesh it reports as created. A mesh the
+        // workspace already had was only updated, and is not the creation's to
+        // delete: the agent's create_project has no other guard (2026-10-16).
+        it('does not report a mesh the workspace already had as created', async () => {
+            describeReturns({ meshId: 'already-there' });
+
+            await deployNewMesh(buildContext(), undefined);
+
+            expect(onMeshCreated).not.toHaveBeenCalled();
+            expect(project.componentInstances?.[MESH_ID].status).toBe('deployed');
+        });
+
+        it('nor one the wizard config already names', async () => {
+            await deployNewMesh(buildContext(), { meshId: 'from-wizard' });
+
+            expect(onMeshCreated).not.toHaveBeenCalled();
+        });
     });
 
     describe('mesh phase pushes', () => {

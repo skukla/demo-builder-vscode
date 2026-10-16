@@ -47,11 +47,12 @@ must not leave a tile stuck on "Creating…" forever.
 
 ## Still open
 
-- **An agent's failed creation leaves its folder behind; the wizard's does not.**
-  `createHandler` runs `cleanupOnFailure` (partial folder, orphaned mesh) on failure;
-  `createProjectTool` only returns the error. The tile now says "Creation didn't
-  finish", and the SC can delete it, but the two doors disagree. Owner decision:
-  should the agent door clean up the same way? Cleanup can delete a mesh, which is a
-  cloud operation.
+- ~~An agent's failed creation leaves its folder behind; the wizard's does not.~~
+  Owner, 2026-10-16: clean up the way the wizard does. Done under [[AI-73]], which
+  also found the agent door could delete an existing project.
 - A creation running in ANOTHER window shows as "Creation didn't finish" in this one,
   because the running list is per window. Its own finalization still marks it ready.
+
+## Shipped so far
+
+- 2026-10-16  fix(projects-dashboard): show projects an agent is building, and refresh on change (`13cf5a4f2`)

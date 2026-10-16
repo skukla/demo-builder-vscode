@@ -59,6 +59,8 @@ import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { mapBackendToEnvironmentType } from '@/features/eds/services/storefrontConfigParams';
 import { probeStoreViewProducts } from '@/features/eds/services/storeViewProducts';
+import { cleanupFailedCreation } from '@/features/project-creation/handlers/creationFailureCleanup';
+import { projectNameProblem } from '@/features/project-creation/handlers/creationNameCheck';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import {
     buildProjectConfig,
@@ -374,6 +376,8 @@ async function createHeadless(
         // targets the selected org/workspace via env (no global mutation).
         await runWithAdobeTarget(() => executeProjectCreation(ctx, config));
     } catch (err) {
+        // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
+        await cleanupFailedCreation(ctx, config);
         if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
         return asText({ created: false, error: err instanceof Error ? err.message : String(err) });
     }
@@ -544,6 +548,9 @@ async function createEds(
     try {
         await runWithAdobeTarget(() => executeProjectCreation(capturing, config));
     } catch (err) {
+        // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
+        // The storefront it provisioned first stays, as it does in the wizard.
+        await cleanupFailedCreation(capturing, config);
         if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
         return asText({
             created: false,
@@ -623,6 +630,10 @@ interface CreationRequest {
  */
 export async function runProjectCreation(ctx: HandlerContext, request: CreationRequest) {
     const { pkgId, stackId, link, ...rest } = request;
+    // The wizard's name check, before anything is built: creation removes whatever
+    // folder already has this name, so a reused name deleted that project (AI-73).
+    const problem = await projectNameProblem(ctx.stateManager, { projectName: rest.projectName });
+    if (problem) return asText({ created: false, error: problem.detail });
     const resolved = await resolvePackage(ctx, { pkgId, stackId, link });
     if ('error' in resolved) return asText(resolved.error);
     const { pkg, storefront, packages, demo } = resolved;

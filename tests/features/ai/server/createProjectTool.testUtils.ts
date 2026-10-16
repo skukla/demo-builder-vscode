@@ -17,6 +17,7 @@ import { registerCreateProjectTool, runProjectCreation } from '@/features/ai/ser
 import { getAdobeTarget, runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
+import { cleanupFailedCreation } from '@/features/project-creation/handlers/creationFailureCleanup';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getGitHubServices, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
@@ -35,6 +36,11 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/features/project-creation/handlers/executor', () => ({
     executeProjectCreation: jest.fn(async () => undefined),
+}));
+// The real cleanup deletes a folder under the real home directory. Creation is a
+// fake here, so its cleanup must be too; suites assert what it is handed.
+jest.mock('@/features/project-creation/handlers/creationFailureCleanup', () => ({
+    cleanupFailedCreation: jest.fn(async () => undefined),
 }));
 jest.mock('@/features/project-creation/ui/wizard/wizardHelpers', () => ({
     buildProjectConfig: jest.fn(() => ({ projectName: 'assembled' })),
@@ -93,6 +99,7 @@ export {
     runWithAdobeTarget,
     buildProjectConfig,
     executeProjectCreation,
+    cleanupFailedCreation,
     edsHandlers,
     getGitHubServices,
     getDaLiveAuthService,
@@ -171,12 +178,17 @@ export const authManager = poolUnits({
 /** The logger every headless context carries (`headlessHandlerContext.ts`). */
 export const toolLogger = createMockLogger();
 
+/** The projects already on disk, as the state manager lists them. Empty unless a suite adds one. */
+export const projectsOnDisk: Array<{ name: string; path: string; lastModified: Date }> = [];
+
 export const ctxFactory = (): HandlerContext =>
     ({
         authManager,
         context: {},
         logger: toolLogger,
         sendMessage: jest.fn(async () => undefined),
+        stateManager: { getAllProjects: jest.fn(async () => projectsOnDisk) },
+        sharedState: { isAuthenticating: false },
     }) as unknown as HandlerContext;
 
 /** A complete MCP-session Adobe target — org, project AND workspace all chosen. */

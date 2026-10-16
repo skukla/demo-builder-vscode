@@ -531,6 +531,18 @@ refused a headless project. The headless half refuses a running demo and names
 when there is a mesh to redeploy. Nothing undoes a reset — it is the return to
 zero — which is why it is consent-gated (`reversibility.ledger.json`).
 
+### A creation's name, and a creation that fails (2026-10-16)
+
+`runProjectCreation` — which `create_project`, `create_project_from_file` and
+`copy_project` all end in — first runs the wizard's own name check
+(`projectNameProblem`): an unsafe name, or one a project already has, is refused before
+anything is built. Creation removes whatever folder already has the new name, so
+without the check an agent reusing a name deleted that project (AI-73). When creation
+then fails, `cleanupFailedCreation` removes the half-built project and any API Mesh the
+creation made, as the wizard does. A mesh the workspace already had is never counted
+as made, so it is never removed. A storefront provisioned before the failure stays, as
+it does in the wizard, so a re-run reuses it.
+
 ### Creating from an exported file (2026-10-03)
 
 `create_project_from_file` takes an absolute PATH to a file `export_project_settings`

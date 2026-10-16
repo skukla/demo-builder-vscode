@@ -3812,7 +3812,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/project-creation/handlers/createHandler.ts",
+            "module": "src/features/project-creation/handlers/creationFailureCleanup.ts",
             "anchors": [
                 "if (isEditMode) {"
             ],
@@ -3824,7 +3824,7 @@
             "source": "PL-22 batch MUT-01"
         },
         {
-            "module": "src/features/project-creation/handlers/createHandler.ts",
+            "module": "src/features/project-creation/handlers/creationFailureCleanup.ts",
             "anchors": [
                 "} else if (workspace && context.sharedState.meshExistedBeforeSession) {"
             ],
@@ -8957,7 +8957,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 219,
+            "line": 221,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -8970,7 +8970,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 234,
+            "line": 236,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",

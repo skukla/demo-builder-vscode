@@ -43,3 +43,7 @@ when the project has no Adobe org, project and workspace. `requestRest` sends
 `x-api-key` / `x-gw-ims-org-id` only when a credential supplied them. A 401/403 on
 such a call says the SC's own sign-in was refused, instead of naming the
 ACCS-REST-API subscription. Both tool descriptions say which sign-in they use.
+
+## Shipped so far
+
+- 2026-10-16  fix(ai): sign Commerce REST calls as the SC when a project has no Adobe workspace (`9a9627fb6`)

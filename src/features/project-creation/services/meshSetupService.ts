@@ -289,7 +289,12 @@ export async function deployNewMesh(
                     commandManager: context.commandManager,
                     meshDeployResult, apiMeshConfig, startTime, attempt,
                     setupContext, project, meshComponent, meshComponentId,
-                    onMeshCreated, updateMeshPhase, logger,
+                    // "Created" only when it was: an update of a mesh already in the
+                    // workspace is not this creation's to delete if creation then fails.
+                    // The wizard also guards this (meshExistedBeforeSession); the
+                    // agent's create_project has no such check (2026-10-16).
+                    onMeshCreated: existingMeshId ? undefined : onMeshCreated,
+                    updateMeshPhase, logger,
                 });
                 return; // Success, exit the retry loop
             } else {
