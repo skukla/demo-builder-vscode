@@ -239,7 +239,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-74` | feature | [An agent can rebuild a project on a repository and site that already exist](2026-10-16-create-project-adopt-existing.md) | — | med | active |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
-### eds  (58)
+### eds  (59)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -297,12 +297,13 @@ each item's own file; what has already landed against an item is in its
 | `EDS-46` | feature | [The store step warns about a website with no products](2026-10-15-store-step-warns-about-a-website-with-no-products.md) | — | low | built |
 | `EDS-47` | feature | [Grant a B2B website's categories to its shared catalogs](2026-10-15-grant-categories-to-b2b-shared-catalogs.md) | — | med | backlog |
 | `EDS-48` | fix | [Storefronts stopped receiving Adobe's boilerplate updates after 2026-08-28](2026-10-16-boilerplate-baseline-froze.md) | — | high | active |
-| `EDS-49` | feature | [A storefront canary: check that the patched boilerplate still WORKS, not just that patches fit](2026-10-16-patch-behaviour-canary.md) | EDS-48 | high | backlog |
+| `EDS-49` | feature | [A storefront canary: check that the patched boilerplate still WORKS, not just that patches fit](2026-10-16-patch-behaviour-canary.md) | EDS-48 | high | active |
 | `EDS-50` | fix | [Copied pages lose their own page settings (template, robots, cache-control)](2026-10-16-copy-drops-page-metadata.md) | — | med | active |
 | `EDS-51` | fix | [Updates bring a storefront to the TESTED version, and keep Demo Builder's layer on it](2026-10-16-thin-layer-updates-tested-version.md) | — | high | active |
+| `EDS-52` | fix | [The new-category offer reads the SAVED store, before it is published](2026-10-17-category-offer-after-store-switch.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (122)
+### app-builder  (123)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -427,6 +428,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-76` | feature | [The ERP setup checklist follows each ERP's ownership mode](2026-10-09-erp-setup-checklist-follows-the-ownership-mode.md) | — | low | backlog |
 | `AB-77` | feature | [Prepare this store: the ERP setup steps the extension can apply, not only check](2026-10-10-prepare-this-store-for-the-erp-integration.md) | — | high | built |
 | `AB-78` | feature | [One Commerce instance runs one ERP integration](2026-10-15-second-erp-on-a-shared-commerce-backend.md) | — | med | built |
+| `AB-79` | fix | [The mesh's "redeploy needed" flag only ever turns on](2026-10-17-mesh-stale-flag-never-clears.md) | — | low | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (4)
@@ -686,7 +688,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*286 item(s) sit outside the A–G chain.*
+*288 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
