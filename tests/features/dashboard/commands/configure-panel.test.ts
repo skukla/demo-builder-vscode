@@ -101,6 +101,13 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
         );
     });
 
+    // Configure used to open only beside the dashboard. Since Edit can hand over to
+    // it, it can be the only screen open, so closing it has to land somewhere
+    // (owner, 2026-10-17). extension.ts decides where; this is the opt-in.
+    it('asks to be followed by another screen when it closes', () => {
+        expect(internals(command).shouldReopenWelcomeOnDispose()).toBe(true);
+    });
+
     describe('execute', () => {
         beforeEach(() => {
             internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(undefined);

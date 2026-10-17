@@ -144,6 +144,17 @@ export function isBlockLibraryAvailableForPackage(libraryId: string, packageId: 
 }
 
 /**
+ * Whether a library comes with every storefront (`alwaysIncluded`): never offered
+ * in the picker, so never counted as chosen either (the Build Your Project summary).
+ *
+ * @param libraryId - The block library ID
+ * @returns True for an always-included library
+ */
+export function isAlwaysIncludedBlockLibrary(libraryId: string): boolean {
+    return config.libraries.some((lib) => lib.id === libraryId && lib.alwaysIncluded === true);
+}
+
+/**
  * Resolve a block library ID to its source configuration.
  *
  * @param libraryId - The block library ID (e.g., "isle5")

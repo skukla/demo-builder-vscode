@@ -2,10 +2,10 @@
  * editLocks — what Edit leaves to Configure.
  *
  * Edit changes what a project is built from; Configure changes its settings.
- * The project name, the Commerce settings and the block libraries used to be
- * changeable in both, with different results. In Edit they are now shown and
- * not changeable, and the Commerce settings and block libraries come back when
- * the package or backend changes (that change resets them).
+ * The Commerce settings and the block libraries used to be changeable in both,
+ * with different results. In Edit they are not changeable, and come back when
+ * the package or backend changes (that change resets them). The project name
+ * was locked the same way until Edit could rename with Configure's own rename.
  *
  * The Commerce gates are asserted through the real `commerceSections` and
  * `tileStatus`, because a lock that only the notice honoured would still leave
@@ -16,12 +16,7 @@ import {
     commerceSectionStates,
     isCommerceStepComplete,
 } from '@/features/project-creation/ui/steps/commerceSections';
-import {
-    isNameSetInConfigure,
-    isSetInConfigure,
-    projectNameDescription,
-    RENAME_IN_CONFIGURE,
-} from '@/features/project-creation/ui/steps/editLocks';
+import { isSetInConfigure, projectNameDescription } from '@/features/project-creation/ui/steps/editLocks';
 import { isCommerceConfigured } from '@/features/project-creation/ui/steps/tileStatus';
 import type { WizardState } from '@/types/webview';
 import { PAAS, state } from './commerceSections.testUtils';
@@ -40,14 +35,6 @@ function editing(overrides: Partial<WizardState> = {}): WizardState {
 }
 
 describe('which mode leaves what to Configure', () => {
-    it.each([
-        ['create', false],
-        ['import', false],
-        ['edit', true],
-    ] as const)('%s: name locked = %s', (wizardMode, locked) => {
-        expect(isNameSetInConfigure({ wizardMode })).toBe(locked);
-    });
-
     it('locks the Commerce settings and block libraries in Edit', () => {
         expect(isSetInConfigure({ wizardMode: 'edit' })).toBe(true);
     });
@@ -63,38 +50,27 @@ describe('which mode leaves what to Configure', () => {
 });
 
 describe('the line under the project name', () => {
-    it('points to Configure in Edit', () => {
-        expect(projectNameDescription({ wizardMode: 'edit', projectName: 'bodea' })).toBe(
-            RENAME_IN_CONFIGURE,
-        );
-    });
-
-    it('names the folder otherwise', () => {
-        expect(projectNameDescription({ wizardMode: 'create', projectName: 'bodea' })).toBe(
-            'Folder: bodea',
-        );
+    // Edit used to say "Rename in Configure." and lock the field; it now renames with
+    // the same rename Configure uses (owner, 2026-10-17), so it names the folder too.
+    it('names the folder, in Edit as when creating', () => {
+        expect(projectNameDescription({ projectName: 'bodea' })).toBe('Folder: bodea');
     });
 
     it('says nothing before a name is typed', () => {
-        expect(projectNameDescription({ wizardMode: 'create', projectName: '' })).toBeUndefined();
+        expect(projectNameDescription({ projectName: '' })).toBeUndefined();
     });
 });
 
 describe('the Commerce strip in Edit', () => {
-    it('shows the three settings steps as done, with no form verdict', () => {
+    // They used to be three steps that each said only "Changed in Configure", walked
+    // through with three Continues (owner, 2026-10-17). The summary still shows them.
+    it('leaves the three settings steps out of the strip', () => {
         const sections = commerceSectionStates(editing(), PAAS_CTX);
 
         expect(sections.map((s) => [s.id, s.status])).toEqual([
             ['backend', 'done'],
-            ['connection', 'done'],
-            ['business-structure', 'done'],
-            ['catalog', 'done'],
             ['sample-data', 'done'],
         ]);
-    });
-
-    it.each(CONFIG_STEPS)('lets Continue past %s without the form', (step) => {
-        expect(isCommerceStepComplete(editing(), step, PAAS_CTX)).toBe(true);
     });
 
     it('counts the Commerce area as configured', () => {
@@ -114,6 +90,12 @@ describe('the Commerce strip in Edit', () => {
 
 describe('the Commerce strip once the backend or package changed', () => {
     const changed = editing({ foundationChanged: true });
+
+    it('puts the three settings steps back in the strip', () => {
+        const ids = commerceSectionStates(changed, PAAS_CTX).map((s) => s.id);
+
+        expect(ids).toEqual(expect.arrayContaining([...CONFIG_STEPS]));
+    });
 
     it('asks for the connection again', () => {
         const connection = commerceSectionStates(changed, PAAS_CTX).find(

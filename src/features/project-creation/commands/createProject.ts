@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
@@ -17,6 +18,7 @@ import { projectCreationHandlers } from '@/features/project-creation/handlers/Pr
 import { formatGroupName as formatGroupNameHelper } from '@/features/project-creation/helpers/formatters';
 import { ADDED_DEMOS_SETTING, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
+import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import { parseJSON } from '@/types/typeGuards';
 import type { ComponentSelection } from '@/types/webview';
@@ -52,6 +54,9 @@ function formatComponentDefaults(defaults: ComponentSelection | null): string {
     const depCount = defaults.dependencies?.length || 0;
     return `frontend=${frontend}, backend=${backend}, ${depCount} dependencies`;
 }
+
+/** The confirm button when leaving an Edit that has changes for Configure. */
+const DISCARD_AND_OPEN = 'Discard and open';
 
 export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardInitialData> {
     protected readonly bundleName = 'wizard';
@@ -209,7 +214,7 @@ export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardIniti
 
     // Implement abstract methods from BaseWebviewCommand
     protected getWebviewId(): string {
-        return 'demoBuilderWizard';
+        return WIZARD_WEBVIEW_ID;
     }
 
     protected getWebviewTitle(): string {
@@ -410,6 +415,29 @@ export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardIniti
             return { success: true };
         });
 
+        // Edit's line under the backend cards: the Commerce settings change in
+        // Configure, so it links there, and Configure takes Edit's place rather than
+        // opening beside it as a second screen that saves the same project. An Edit
+        // with changes asks before they are thrown away (owner, 2026-10-17).
+        comm.on('open-configure', async (payload?: { discardsEdits?: boolean }) => {
+            if (payload?.discardsEdits) {
+                const choice = await vscode.window.showWarningMessage(
+                    'Discard your changes in Edit and open project configuration?',
+                    { modal: true },
+                    DISCARD_AND_OPEN,
+                );
+                if (choice !== DISCARD_AND_OPEN) return { success: true };
+            }
+            // The dashboard, then Configure on top: what the dashboard's Configure button
+            // leaves, so closing Configure lands on the dashboard.
+            await swapWebviewSurface(
+                this.getWebviewId(),
+                'demoBuilder.showProjectDashboard',
+                'demoBuilder.configureProject',
+            );
+            return { success: true };
+        });
+
         // Auto-register all handlers from projectCreationHandlers object literal
         // This eliminates boilerplate by automatically discovering and registering
         // all message handlers.
@@ -456,7 +484,7 @@ export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardIniti
      * Used to reset the wizard when switching modes (e.g., Create while Edit is open).
      */
     public static disposeActivePanel(): void {
-        const panel = BaseWebviewCommand.getActivePanel('demoBuilderWizard');
+        const panel = BaseWebviewCommand.getActivePanel(WIZARD_WEBVIEW_ID);
         if (panel) {
             try {
                 panel.dispose();

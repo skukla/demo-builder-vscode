@@ -405,6 +405,9 @@ export interface ProjectCreationConfig {
     // Edit mode: the choices the SC changed (PL-75; `editChangesOf`). Empty: Finish
     // only saves. Absent: unknown, so Finish rebuilds.
     editChanges?: string[];
+    // Edit mode: the new name the SC typed, applied after the Edit by the shared
+    // rename (`renameAfterEdit`). The name fields above keep the original meanwhile.
+    editRenameTo?: string;
     // EDS-specific configuration (for Edge Delivery Services stacks)
     edsConfig?: {
         repoName: string;

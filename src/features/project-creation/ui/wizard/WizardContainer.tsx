@@ -2,6 +2,7 @@ import { View, Heading, Text } from '@adobe/react-spectrum';
 import React, { useEffect, useRef } from 'react';
 import { buildArchitectureChangeHandler } from './architectureChange';
 import { buildAreaWalk } from './buildAreaWalk';
+import { stepSubtitle } from './stepSubtitle';
 import { WizardFooter } from './wizardFooter';
 import {
     getCompletedStepIndices,
@@ -193,7 +194,11 @@ export function WizardContainer({
 
     const currentStepIndex = getCurrentStepIndex();
     const isLastStep = state.currentStep === 'create-project';
-    const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
+    const currentStepName = stepSubtitle(
+        state.currentStep,
+        WIZARD_STEPS[currentStepIndex]?.name,
+        state.wizardMode,
+    );
 
     // Timeline state — derived from local wizard state, no sidebar messaging.
     const timelineSteps: TimelineStep[] = WIZARD_STEPS.map((s) => ({ id: s.id, name: s.name }));

@@ -31,6 +31,7 @@ import {
     prepareEditModeTempDir,
     performAtomicComponentSwap,
 } from './executorEditMode';
+import { renameAfterEdit } from './executorEditRename';
 import { populateEdsMetadata, syncEdsConfigToRemote, setupEdsContent } from './executorEdsPhase';
 import { executeMeshPhase, populateMeshComponentConfigs } from './executorMeshPhase';
 import {
@@ -177,7 +178,8 @@ export async function executeProjectCreation(
     context: HandlerContext,
     config: ProjectCreationConfig,
 ): Promise<void> {
-    return whileCreating(creationPath(config), () => createOrRebuild(context, config));
+    await whileCreating(creationPath(config), () => createOrRebuild(context, config));
+    await renameAfterEdit(context, config); // a name changed in Edit, applied after it
 }
 
 async function createOrRebuild(

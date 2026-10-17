@@ -85,6 +85,23 @@ describe('storefrontSectionStates', () => {
         const states = storefrontSectionStates(CONFIGURED);
         expect(states.every(s => s.status === 'done')).toBe(true);
     });
+
+    // Block libraries are Configure's in Edit. The step showed a locked picker under
+    // an info box and took a Continue to pass (owner, 2026-10-17); the summary still
+    // counts them.
+    it('leaves Block Libraries out of Edit', () => {
+        const states = storefrontSectionStates({ ...CONFIGURED, wizardMode: 'edit' } as WizardState);
+        expect(states.map(s => s.id)).toEqual(['accounts', 'repository']);
+    });
+
+    it('puts Block Libraries back once the package or backend changed in Edit', () => {
+        const states = storefrontSectionStates({
+            ...CONFIGURED,
+            wizardMode: 'edit',
+            foundationChanged: true,
+        } as WizardState);
+        expect(states.map(s => s.id)).toEqual(['accounts', 'repository', 'block-libraries']);
+    });
 });
 
 describe('isStorefrontStepComplete', () => {

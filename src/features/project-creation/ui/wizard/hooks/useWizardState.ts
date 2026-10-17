@@ -215,6 +215,7 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
         wizardMode: 'edit',
         editProjectPath: editProject.projectPath,
         editOriginalName: editProject.projectName,
+        editOriginalTitle: editProject.projectTitle,
         componentConfigs: editSettings.configs || {},
         adobeAuth: { isAuthenticated: true, isChecking: false },
         components: buildEditModeComponents(editSettings.selections),
@@ -225,6 +226,10 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
         edsConfig: editSettings.edsConfig
             ? buildEditModeEdsConfig(editSettings.edsConfig)
             : undefined,
+        // The project was built with its repository. Opened without it marked, the
+        // summary read "Not set" for it (owner, 2026-10-17). Screen state, never an
+        // edit. (The Commerce rows read the project directly: buildSummary.ts.)
+        storefrontRepoValid: true,
     };
     // What the SC chose, as the wizard opened: an Edit that leaves it alone only saves.
     return { ...opened, editBaseline: editChoicesOf(opened) };

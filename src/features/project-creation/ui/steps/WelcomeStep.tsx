@@ -3,7 +3,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { AddDemoModal } from '../components/add-demo/AddDemoModal';
 import { EditDemoPackageModal } from '../components/add-demo/EditDemoPackageModal';
 import { BrandGallery } from '../components/BrandGallery';
-import { isNameSetInConfigure, projectNameDescription } from './editLocks';
+import { projectNameDescription } from './editLocks';
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
@@ -292,9 +292,6 @@ export function WelcomeStep({
                         ? validateProjectName(state.projectName)
                         : undefined
                 }
-                // Edit shows the name without changing it: Configure renames the
-                // folder too (editLocks.ts).
-                isReadOnly={isNameSetInConfigure(state)}
                 // Say where it lands, rather than making them type it. The folder
                 // is browsable on disk, so it is worth showing -- silently
                 // deriving a name the user then cannot find is its own bug.

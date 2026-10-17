@@ -12,8 +12,10 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import { openUrl } from '@/core/utils/browserUtils';
 import { validateURL } from '@/core/validation/URLValidator';
+import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, HandlerContext } from '@/types/handlers';
 import { SimpleResult, DataResult } from '@/types/results';
@@ -111,6 +113,17 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
 
 
 /**
+ * backToProject - Edit's last button: back to the project it came from.
+ *
+ * Edit opens from the project's dashboard, so finishing it replaces the wizard with
+ * that dashboard rather than the projects list Create ends on (owner, 2026-10-17).
+ */
+export async function handleBackToProject(_context: HandlerContext): Promise<SimpleResult> {
+    await swapWebviewSurface(WIZARD_WEBVIEW_ID, 'demoBuilder.showProjectDashboard');
+    return { success: true };
+}
+
+/**
  * log - Handles logging messages from webview
  *
  * Routes log messages from the webview to the appropriate logger.
@@ -200,6 +213,7 @@ export const lifecycleHandlers = defineHandlers({
 
     // Project actions
     'openProject': handleOpenProject,
+    'backToProject': handleBackToProject,
 
     // Utilities
     'log': handleLog,

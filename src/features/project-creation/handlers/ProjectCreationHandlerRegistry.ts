@@ -56,6 +56,7 @@ export const projectCreationHandlers = defineHandlers({
     ready: lifecycle.handleReady,
     cancel: lifecycle.handleCancel,
     openProject: lifecycle.handleOpenProject,
+    backToProject: lifecycle.handleBackToProject,
     log: lifecycle.handleLog,
     'cancel-project-creation': lifecycle.handleCancelProjectCreation,
     openExternal: lifecycle.handleOpenExternal,

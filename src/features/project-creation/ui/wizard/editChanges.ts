@@ -29,8 +29,10 @@ type Kind = 'choice' | 'screen';
 /** Every wizard field: something the SC chooses, or state of the screen itself. */
 const WIZARD_FIELDS: Record<keyof WizardState, Kind> = {
     currentStep: 'screen',
-    projectName: 'choice',
-    projectTitle: 'choice',
+    // Not a rebuild choice: a rename is its own request (`editRenameTo`), made after
+    // the Edit by the shared rename. As a choice, a rename alone rebuilt everything.
+    projectName: 'screen',
+    projectTitle: 'screen',
     selectedPackage: 'choice',
     demo: 'choice',
     selectedBackend: 'choice',
@@ -78,6 +80,7 @@ const WIZARD_FIELDS: Record<keyof WizardState, Kind> = {
     wizardMode: 'screen',
     editProjectPath: 'screen',
     editOriginalName: 'screen',
+    editOriginalTitle: 'screen',
     // Set only by a package or backend change, which changes a choice anyway.
     foundationChanged: 'screen',
     editBaseline: 'screen',
@@ -102,7 +105,6 @@ const EDS_FIELDS: Record<keyof EDSConfig, Kind> = {
     daLiveOrg: 'choice',
     daLiveOrgVerified: 'screen',
     daLiveOrgError: 'screen',
-    siteMode: 'choice',
     daLiveSite: 'choice',
     // Compared by id, for the same reason.
     selectedSite: 'choice',
@@ -223,6 +225,22 @@ export function editChangesOf(state: Partial<WizardState>): string[] | undefined
     const now = editChoicesOf(state);
     const names = new Set([...Object.keys(baseline), ...Object.keys(now)]);
     return [...names].filter((name) => baseline[name] !== now[name]).sort();
+}
+
+/**
+ * The name an Edit asks to rename the project to: the typed name when it differs
+ * from the name the project opened with. Renaming in Edit used to be locked because
+ * Edit changed the label and not the folder; the extension now renames with the
+ * same rename Configure uses, after the Edit (owner, 2026-10-17).
+ *
+ * @param state - the wizard state
+ * @returns the new name, or undefined when there is none to make (or not in Edit)
+ */
+export function editRenameTo(state: Partial<WizardState>): string | undefined {
+    if (state.wizardMode !== 'edit') return undefined;
+    const typed = (state.projectTitle?.trim() || state.projectName?.trim()) ?? '';
+    const original = state.editOriginalTitle || state.editOriginalName || '';
+    return typed && typed !== original ? typed : undefined;
 }
 
 /**

@@ -116,22 +116,27 @@ describe('what the field shows', () => {
 });
 
 describe('in Edit', () => {
-    // Configure renames the folder and the Adobe project title too; Edit did not,
-    // so the name is shown here and changed there.
-    const editing = { ...baseState, wizardMode: 'edit' as const, projectTitle: 'Bodea Demo' };
+    // The name was locked here because Edit changed only the label; it now renames
+    // with the same rename Configure uses, after the Edit (owner, 2026-10-17).
+    const editing = {
+        ...baseState,
+        wizardMode: 'edit' as const,
+        projectTitle: 'Bodea Demo',
+        projectName: 'bodea-demo',
+    };
 
-    it('shows the name without letting it change', () => {
+    it('shows the name and lets it change', () => {
         renderStep(editing);
 
         expect(nameField()).toHaveValue('Bodea Demo');
-        expect(nameField()).toHaveAttribute('readonly');
+        expect(nameField()).not.toHaveAttribute('readonly');
     });
 
-    it('points to Configure instead of naming the folder', () => {
+    it('names the folder it lives in, as when creating', () => {
         renderStep(editing);
 
-        expect(screen.getByText('Rename in Configure.')).toBeInTheDocument();
-        expect(screen.queryByText(/Folder:/)).not.toBeInTheDocument();
+        expect(screen.getByText(/Folder: bodea-demo/)).toBeInTheDocument();
+        expect(screen.queryByText('Rename in Configure.')).not.toBeInTheDocument();
     });
 
     it('stays editable when creating', () => {

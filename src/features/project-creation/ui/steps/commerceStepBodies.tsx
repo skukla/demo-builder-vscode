@@ -15,9 +15,9 @@
 import React from 'react';
 import { ChoiceCard } from '../components/ChoiceCard';
 import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
-import { COMMERCE_SET_IN_CONFIGURE, SET_IN_CONFIGURE_TITLE } from './editLocks';
+import { COMMERCE_SET_IN_CONFIGURE } from './editLocks';
 import { SampleDataStep } from './SampleDataStep';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
+import { SetInConfigureNote } from './SetInConfigureNote';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
 
@@ -73,7 +73,7 @@ export interface SectionBodyContext {
     updateState: (partial: Partial<WizardState>) => void;
     /** The single ConnectStoreStepContent (rendered only by a config step's body). */
     configForm: React.ReactNode;
-    /** Edit leaves the config steps to Configure: show a notice, not the form. */
+    /** Edit leaves the settings steps to Configure: Backend says so, once. */
     setInConfigure: boolean;
 }
 
@@ -81,18 +81,28 @@ export interface SectionBodyContext {
 export function sectionBody(id: CommerceSectionId, ctx: SectionBodyContext): React.ReactNode {
     if (id === 'backend') {
         return (
-            <div className="choice-grid" role="listbox" data-testid="backend-cards">
-                {Object.keys(BACKEND_LABELS).map((backend) => (
-                    <BackendCard
-                        key={backend}
-                        backend={backend}
-                        pkgName={ctx.pkgName}
-                        available={ctx.availableBackends.includes(backend)}
-                        selected={ctx.selectedBackend === backend}
-                        onSelect={ctx.onBackendSelect}
+            <>
+                <div className="choice-grid" role="listbox" data-testid="backend-cards">
+                    {Object.keys(BACKEND_LABELS).map((backend) => (
+                        <BackendCard
+                            key={backend}
+                            backend={backend}
+                            pkgName={ctx.pkgName}
+                            available={ctx.availableBackends.includes(backend)}
+                            selected={ctx.selectedBackend === backend}
+                            onSelect={ctx.onBackendSelect}
+                        />
+                    ))}
+                </div>
+                {/* Said once, quietly: the three settings steps are not in Edit's strip. */}
+                {ctx.setInConfigure && (
+                    <SetInConfigureNote
+                        text={COMMERCE_SET_IN_CONFIGURE}
+                        state={ctx.state}
+                        testId="commerce-set-in-configure"
                     />
-                ))}
-            </div>
+                )}
+            </>
         );
     }
     if (id === 'signin') {
@@ -110,12 +120,5 @@ export function sectionBody(id: CommerceSectionId, ctx: SectionBodyContext): Rea
     // Config steps render ONLY the form — the footer Continue advances to the next
     // sub-step (no in-body "Save & continue" CTA). sectionBody is built only for the
     // active step, so the single configForm instance lives in exactly one place.
-    if (ctx.setInConfigure) {
-        return (
-            <InlineNotice title={SET_IN_CONFIGURE_TITLE} tone="info" testId="commerce-set-in-configure">
-                {COMMERCE_SET_IN_CONFIGURE}
-            </InlineNotice>
-        );
-    }
     return <>{ctx.configForm}</>;
 }

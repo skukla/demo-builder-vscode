@@ -29,7 +29,10 @@ function SuccessContent({ isOpeningProject, isEdit }: { isOpeningProject: boolea
     if (isOpeningProject) {
         return (
             <CenteredFeedbackContainer>
-                <LoadingDisplay size="L" message="Loading your projects" />
+                <LoadingDisplay
+                    size="L"
+                    message={isEdit ? 'Opening your project' : 'Loading your projects'}
+                />
             </CenteredFeedbackContainer>
         );
     }
@@ -42,9 +45,13 @@ function SuccessContent({ isOpeningProject, isEdit }: { isOpeningProject: boolea
                     <Text UNSAFE_className="text-xl font-medium">
                         {isEdit ? 'Changes Saved' : 'Project Created Successfully'}
                     </Text>
-                    <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                        Click below to view your projects
-                    </Text>
+                    {/* Edit's heading says it all; a second line read as a claim about
+                        the project (owner, 2026-10-17). */}
+                    {!isEdit && (
+                        <Text UNSAFE_className="text-sm text-gray-600 text-center">
+                            Click below to view your projects
+                        </Text>
+                    )}
                 </Flex>
             </Flex>
         </CenteredFeedbackContainer>

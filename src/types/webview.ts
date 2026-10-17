@@ -185,6 +185,7 @@ export interface WizardState {
     // Edit-target data (populated when wizardMode === 'edit')
     editProjectPath?: string; // Path to existing project being edited
     editOriginalName?: string; // Original project name (for duplicate validation)
+    editOriginalTitle?: string; // Original project title, to tell a rename in Edit
     /**
      * The demo package or the backend was changed in this wizard session. Both
      * reset the Commerce settings and block libraries, so in Edit this is what
@@ -476,8 +477,6 @@ export interface EDSConfig {
     daLiveOrgVerified?: boolean;
     /** DA.live org verification error */
     daLiveOrgError?: string;
-    /** DA.live site mode: create new or use existing */
-    siteMode?: 'new' | 'existing';
     /** DA.live site name (for new sites or manual entry) */
     daLiveSite?: string;
     /** Selected existing DA.live site (from searchable list) */

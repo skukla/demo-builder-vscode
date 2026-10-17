@@ -54,6 +54,7 @@ export interface CreationProgressPhase {
  */
 export function useCreationProgressPhase(
     progress: WizardState['creationProgress'],
+    isEdit = false,
 ): CreationProgressPhase {
     const [isCancelling, setIsCancelling] = useState(false);
     const [isOpeningProject, setIsOpeningProject] = useState(false);
@@ -75,7 +76,8 @@ export function useCreationProgressPhase(
 
         // Show transition message, then trigger reload
         setTimeout(() => {
-            vscode.postMessage('openProject');
+            // Edit came from the project and goes back to it; Create goes to the list.
+            vscode.postMessage(isEdit ? 'backToProject' : 'openProject');
         }, TIMEOUTS.PROJECT_OPEN_TRANSITION);
     };
 

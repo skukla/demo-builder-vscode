@@ -7,7 +7,7 @@ import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
-import { editChangesOf } from '@/features/project-creation/ui/wizard/editChanges';
+import { editChangesOf, editRenameTo } from '@/features/project-creation/ui/wizard/editChanges';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
@@ -621,6 +621,8 @@ export type ProjectConfigSource = Pick<
     | 'selectedBlockLibraries'
     | 'customBlockLibraries'
     | 'editProjectPath'
+    | 'editOriginalName'
+    | 'editOriginalTitle'
     | 'edsConfig'
     | 'wizardMode'
     | 'editBaseline'
@@ -629,6 +631,24 @@ export type ProjectConfigSource = Pick<
     | 'components'
     | 'commerceConfig'
 >;
+
+/**
+ * The project's name as the Edit runs: in Edit the ORIGINAL name, since the Edit
+ * runs in the project's existing folder and a new name there would leave the name
+ * and the folder disagreeing; the new one is renamed to after it (`renameField`).
+ */
+function nameFields(wizardState: ProjectConfigSource): { projectName: string; projectTitle?: string } {
+    if (editRenameTo(wizardState) && wizardState.editOriginalName) {
+        return { projectName: wizardState.editOriginalName, projectTitle: wizardState.editOriginalTitle };
+    }
+    return { projectName: wizardState.projectName, projectTitle: wizardState.projectTitle };
+}
+
+/** A rename asked for in Edit, made after the Edit by the shared rename. */
+function renameField(wizardState: ProjectConfigSource): { editRenameTo?: string } {
+    const editRenameToValue = editRenameTo(wizardState);
+    return editRenameToValue ? { editRenameTo: editRenameToValue } : {};
+}
 
 /** What an Edit changed, for Finish to do only that (PL-75); nothing outside an Edit. */
 function editChangesField(wizardState: ProjectConfigSource): { editChanges?: string[] } {
@@ -649,8 +669,7 @@ export function buildProjectConfig(
     validateStackLookup(wizardState, stack, warn);
 
     return {
-        projectName: wizardState.projectName,
-        projectTitle: wizardState.projectTitle,
+        ...nameFields(wizardState),
         adobe: {
             organization: wizardState.adobeOrg?.id,
             organizationName: wizardState.adobeOrg?.name,
@@ -700,6 +719,7 @@ export function buildProjectConfig(
         frontendSource,
         editProjectPath: wizardState.editProjectPath,
         ...editChangesField(wizardState),
+        ...renameField(wizardState),
         edsConfig: buildProjectEdsConfig(wizardState),
     };
 }

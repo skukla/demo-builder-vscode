@@ -79,6 +79,36 @@ export function shouldAutoReopenProjectsList(
     return true;
 }
 
+/**
+ * The screen to open after a Demo Builder screen closes, or undefined for none.
+ * Called from extension.ts's disposal callback, for screens that opt in through
+ * `shouldReopenWelcomeOnDispose`.
+ *
+ *  - The dashboard closes: the projects list, as `shouldAutoReopenProjectsList` decides.
+ *  - Configure closes with no other Demo Builder screen open: the project dashboard.
+ *    Configure used to open only beside the dashboard; since Edit can hand over to
+ *    it, it can be the last screen, and closing it left none (owner, 2026-10-17).
+ *    Same guards as the dashboard's: not mid-swap, and only in the projects folder.
+ *
+ * @param webviewId - the screen that closed
+ * @param ctx - the window's folder, whether a swap is under way, and how many
+ *        Demo Builder screens are still open
+ * @returns the command to run, if any
+ */
+export function screenAfterClose(
+    webviewId: string,
+    ctx: { workspaceFolderPath: string | undefined; transitionInProgress: boolean; openScreens: number },
+): string | undefined {
+    if (!shouldAutoReopenProjectsList(ctx.workspaceFolderPath, ctx.transitionInProgress)) {
+        return undefined;
+    }
+    if (webviewId === 'demoBuilder.projectDashboard') return 'demoBuilder.showProjectsList';
+    if (webviewId === 'demoBuilder.configureProject' && ctx.openScreens === 0) {
+        return 'demoBuilder.showProjectDashboard';
+    }
+    return undefined;
+}
+
 /** The demo package on the Welcome step reading from the project's source, by its card name, when there is one. */
 function demoPackageNameFor(demo: AddedDemo): { demoPackageName?: string } {
     const key = addedDemoKey(demo);

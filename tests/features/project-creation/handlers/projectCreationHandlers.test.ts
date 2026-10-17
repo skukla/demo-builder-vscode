@@ -28,6 +28,7 @@ describe('projectCreationHandlers', () => {
             expect(hasHandler(projectCreationHandlers, 'ready')).toBe(true);
             expect(hasHandler(projectCreationHandlers, 'cancel')).toBe(true);
             expect(hasHandler(projectCreationHandlers, 'openProject')).toBe(true);
+            expect(hasHandler(projectCreationHandlers, 'backToProject')).toBe(true);
         });
 
         it('should register prerequisite handlers', () => {

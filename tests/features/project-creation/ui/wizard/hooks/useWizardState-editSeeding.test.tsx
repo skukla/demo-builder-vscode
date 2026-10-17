@@ -276,3 +276,23 @@ describe('useWizardState - import mode seeds the same App Builder state edit mod
         expect(state.selectedConsoleApis).toBeUndefined();
     });
 });
+
+/**
+ * The project being edited was built with its repository. Opened without it marked,
+ * the Build Your Project summary read "Not set" for it (owner, 2026-10-17): the
+ * Repository row shows only a checked repository. The Commerce rows read the project
+ * directly in Edit (buildSummary.test.tsx).
+ */
+describe('useWizardState - edit mode opens with the project as built', () => {
+    it('counts the repository it was built with as checked', () => {
+        const state = renderWizardState(makeEditProject({ selections: {} }));
+
+        expect(state.storefrontRepoValid).toBe(true);
+    });
+
+    it('leaves it alone when creating a project', () => {
+        const state = renderWizardState();
+
+        expect(state.storefrontRepoValid).not.toBe(true);
+    });
+});

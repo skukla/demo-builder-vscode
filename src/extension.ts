@@ -82,6 +82,7 @@ import { bareDefinition, sweepOntoDemoBuilderNode } from '@/features/components/
 import { ensureNode } from '@/features/components/services/nodeEnsure';
 import {
     ProjectDashboardWebviewCommand,
+    screenAfterClose,
     shouldAutoReopenProjectsList,
 } from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
@@ -323,13 +324,15 @@ export async function activate(context: vscode.ExtensionContext) {
         //   - a webview transition is in progress (user is mid-navigation), or
         //   - the workspace folder is not a Demo Builder project (the dashboard
         //     was open in a non-project workspace; nothing to reopen toward).
+        //
+        // Configure closing as the last screen opens the dashboard (screenAfterClose).
         BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
-            if (webviewId !== 'demoBuilder.projectDashboard') return;
-            const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            const transitionInProgress = BaseWebviewCommand.isWebviewTransitionInProgress();
-            if (shouldAutoReopenProjectsList(workspaceFolderPath, transitionInProgress)) {
-                await vscode.commands.executeCommand('demoBuilder.showProjectsList');
-            }
+            const next = screenAfterClose(webviewId, {
+                workspaceFolderPath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+                transitionInProgress: BaseWebviewCommand.isWebviewTransitionInProgress(),
+                openScreens: BaseWebviewCommand.getActivePanelCount(),
+            });
+            if (next) await vscode.commands.executeCommand(next);
         });
 
         // Initialize external command manager

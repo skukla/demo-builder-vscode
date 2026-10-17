@@ -46,15 +46,16 @@ describe('firstOpenSection — precedence and the end-of-list fallback', () => {
         expect(firstOpenSection(sections)).toBe('connection');
     });
 
-    it('falls back to the LAST section when every section is done or locked', () => {
-        // Nothing is openable, so there is no id to answer with except the final
-        // one — the branch that runs when the walk falls off the end.
+    // Edit opens on a project whose every step is done. Falling back to the LAST one
+    // dropped the SC on Datapacks, past everything they came to review (owner,
+    // 2026-10-17); the start of the strip is where a review begins.
+    it('falls back to the FIRST section when every section is done or locked', () => {
         const sections = [
             sec('backend', 'done'),
             sec('connection', 'done'),
             sec('catalog', 'locked'),
         ];
-        expect(firstOpenSection(sections)).toBe('catalog');
+        expect(firstOpenSection(sections)).toBe('backend');
     });
 });
 

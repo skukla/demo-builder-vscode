@@ -2185,7 +2185,7 @@
             "anchors": [
                 "if (importedSettings) {"
             ],
-            "line": 261,
+            "line": 266,
             "mutants": 2,
             "category": "branch",
             "reason": "The body of this if is one log.info and nothing more. Every value it reports \u2014 the selections, the Adobe block, the configs, the generated name \u2014 was computed on the four lines above it and is returned from computeInitialState regardless of whether this branch runs. Forcing it false or emptying it changes only development output.",
@@ -2198,7 +2198,7 @@
             "anchors": [
                 "hasSelections: !!importedSettings.selections,"
             ],
-            "line": 263,
+            "line": 268,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.selections directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2211,7 +2211,7 @@
             "anchors": [
                 "hasAdobe: !!importedSettings.adobe,"
             ],
-            "line": 264,
+            "line": 269,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.adobe directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2224,7 +2224,7 @@
             "anchors": [
                 "hasConfigs: !!importedSettings.configs,"
             ],
-            "line": 265,
+            "line": 270,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.configs directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2237,7 +2237,7 @@
             "anchors": [
                 "configKeys: importedSettings.configs ? Object.keys(importedSettings.configs) : [],"
             ],
-            "line": 266,
+            "line": 271,
             "mutants": 1,
             "category": "other",
             "reason": "The empty fallback here is the else arm of a field inside the log.info payload; it is reached only when the import carried no configs, and it is printed rather than used. componentConfigs on the returned state comes from importedSettings?.configs || {} further down, which this expression cannot reach. Any test able to see the difference would be asserting log content.",
@@ -2250,7 +2250,7 @@
             "anchors": [
                 "existingProjectNames || [],"
             ],
-            "line": 318,
+            "line": 323,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when the caller passes no existing-names list, and the array goes straight to initializeProjectName, which uses it for one thing: existingNames.includes(baseName) inside generateUniqueProjectName. A list holding Stryker's placeholder string answers that check identically to an empty list for every project name a wizard can be opened with.",
@@ -2263,7 +2263,7 @@
             "anchors": [
                 "const originalStep = wizardSteps?.find((ws) => ws.id === step.id);"
             ],
-            "line": 342,
+            "line": 347,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing the optional call would throw only if this map body ran with wizardSteps undefined, and it cannot: enabledSteps is getEnabledWizardSteps(wizardSteps), which returns an empty array for a missing or empty configuration, so the map never executes a single iteration. There is no input that reaches this line with wizardSteps absent.",
@@ -2276,7 +2276,7 @@
             "anchors": [
                 "condition: originalStep?.condition,"
             ],
-            "line": 347,
+            "line": 352,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "originalStep is the result of finding step.id in wizardSteps, and step came from getEnabledWizardSteps(wizardSteps) \u2014 every id being searched for was taken from that same array, so the find always hits. Removing the optional read can never dereference undefined, whatever step configuration is handed in.",
@@ -2289,7 +2289,7 @@
             "anchors": [
                 "if (currentOrgId) {"
             ],
-            "line": 420,
+            "line": 425,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true sets hasSeenOrgRef when the org is absent, but the flag can only change an outcome once orgActuallyChanged is evaluated with prevOrgId defined \u2014 and prevOrgId is assigned currentOrgId at the end of a previous run, so a defined prevOrgId means that run had a defined currentOrgId and already set the flag unmutated. The two therefore agree on every sequence of org values.",
@@ -2302,7 +2302,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 449,
+            "line": 454,
             "mutants": 1,
             "category": "other",
             "reason": "This is the useCallback dependency list for updateState. Replacing the empty array with one holding a constant string leaves the memo equally stable \u2014 the value never changes between renders, so the callback identity never invalidates either way, and the test asserting updateState keeps the same reference across a state change passes under both.",
@@ -2328,7 +2328,7 @@
             "anchors": [
                 "return title && title.length > 0 ? title : name;"
             ],
-            "line": 155,
+            "line": 161,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing the length test true, or widening it to >= 0, changes the answer only for a title that is present but empty \u2014 and an empty string is falsy, so the && short-circuits to it and the ternary still takes the name branch. Both mutants therefore return the same value for every title: undefined, empty, or set. A test with title '' passes under all three.",
@@ -2341,7 +2341,7 @@
             "anchors": [
                 "if (!orgName && !projectName && !workspaceName) return <View />;"
             ],
-            "line": 185,
+            "line": 191,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard false makes AdobeIOSection render its card with no rows \u2014 but the component is only mounted inside the (orgName || projectName || workspaceName) test at line 385, so it is never called with all three absent. There is no wizard state that reaches this line with the condition true, which is why only the false direction survives.",
@@ -2354,7 +2354,7 @@
             "anchors": [
                 "...(stack.dependencies || []),"
             ],
-            "line": 289,
+            "line": 295,
             "mutants": 2,
             "category": "other",
             "reason": "Every stack in stacks.json declares dependencies as an empty array, and an empty array is truthy \u2014 so the || never falls through, and swapping it for && yields the mutant's own empty array instead, spreading to nothing either way. The uncovered array-literal mutant is the same fact from the other side: the fallback is unreachable while no stack omits the field.",
@@ -2367,7 +2367,7 @@
             "anchors": [
                 "...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),"
             ],
-            "line": 290,
+            "line": 296,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when no App Builder components are selected, and whatever it produces goes straight through filter(isMeshComponentId). Stryker's placeholder string is not a mesh id, so it is filtered out and the dependencies list is empty either way. The .filter call itself is NOT equivalent \u2014 a test with a non-mesh selection kills that one.",
@@ -2380,7 +2380,7 @@
             "anchors": [
                 "() => resolveReviewIntegrationNames(state, packages ?? [], stacks ?? []),"
             ],
-            "line": 303,
+            "line": 309,
             "mutants": 2,
             "category": "other",
             "reason": "Both fallbacks fire only when the catalog prop is absent, and each is handed to resolveReviewIntegrationNames, which uses them for one thing: stacks.find(s => s.id === state.selectedStack) and the package lookup behind meshComponentForStack. A list holding Stryker's placeholder string matches no stack or package id, so the resolved names are identical to the empty-list case.",
@@ -2393,7 +2393,7 @@
             "anchors": [
                 "{(adobeOrgName || adobeProjectName || adobeWorkspaceName) && ("
             ],
-            "line": 374,
+            "line": 381,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true always mounts AdobeIOSection, which opens with its own guard returning an empty View when all three names are absent \u2014 so the rendered output is the same empty element the falsy branch produces. The two guards are deliberately redundant, and that redundancy is exactly what makes this mutant unobservable.",
@@ -2406,7 +2406,7 @@
             "anchors": [
                 "if (typeof value !== 'object' || value === null) return false;"
             ],
-            "line": 36,
+            "line": 38,
             "mutants": 4,
             "category": "branch",
             "reason": "Relaxing this first guard does not let a bad step through \u2014 it makes the next line run 'id' in value against a string, a number or null, which throws a TypeError. readWizardStepsFile catches that and returns 'unreadable', and getInitialData answers 'unreadable' with the same null wizardSteps it answers 'invalid-shape' with. Every mutant here therefore lands on the identical response; only which error line is logged differs.",
@@ -2419,7 +2419,7 @@
             "anchors": [
                 "function formatComponentDefaults(defaults: ComponentSelection | null): string {"
             ],
-            "line": 48,
+            "line": 50,
             "mutants": 1,
             "category": "block",
             "reason": "This whole function exists to build one string, and it has exactly one call site: a template literal inside this.logger.debug in getInitialData. Emptying its body changes what that debug line prints and nothing else \u2014 componentDefaults reaches the webview from the parsed file, never from this formatter. Killing it would mean asserting a log string.",
@@ -2432,7 +2432,7 @@
             "anchors": [
                 "if (!defaults) return 'no defaults loaded';"
             ],
-            "line": 49,
+            "line": 51,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the not-loaded case changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2445,7 +2445,7 @@
             "anchors": [
                 "const frontend = defaults.frontend || 'none';"
             ],
-            "line": 50,
+            "line": 52,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the frontend fallback changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2458,7 +2458,7 @@
             "anchors": [
                 "const backend = defaults.backend || 'none';"
             ],
-            "line": 51,
+            "line": 53,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the backend fallback changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2471,7 +2471,7 @@
             "anchors": [
                 "const depCount = defaults.dependencies?.length || 0;"
             ],
-            "line": 52,
+            "line": 54,
             "mutants": 4,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the dependency count changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2484,7 +2484,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 128,
+            "line": 133,
             "mutants": 1,
             "category": "block",
             "reason": "The constructor's api-services catch body is a single this.logger.debug. Emptying it still swallows the failure, still leaves sharedState.apiServicesConfig undefined, and still lets the wizard open \u2014 a test asserting exactly that already passes with and without the log. The only difference is whether the reason appears in the debug channel.",
@@ -2497,7 +2497,7 @@
             "anchors": [
                 "return { outcome: 'absent' };"
             ],
-            "line": 157,
+            "line": 162,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this result object leaves outcome undefined. Both callers discriminate on it: getInitialData matches 'ok', 'invalid-shape' and 'unreadable', and ensureStepLogger matches 'ok' and 'unreadable'. An undefined outcome matches none of them, which is exactly what 'absent' already does \u2014 no steps, no error logged. The two are indistinguishable from outside.",
@@ -2510,7 +2510,7 @@
             "anchors": [
                 "if (!stepsConfig || !Array.isArray(stepsConfig.steps)) {"
             ],
-            "line": 160,
+            "line": 165,
             "mutants": 3,
             "category": "branch",
             "reason": "Relaxing this guard does not admit a malformed file \u2014 it makes the next line call .every on null or on a string, which throws, so the read returns 'unreadable' instead of 'unparseable'. getInitialData answers both with wizardSteps null, and ensureStepLogger passes undefined steps for both. Only the logged wording separates them.",
@@ -2523,7 +2523,7 @@
             "anchors": [
                 "return { outcome: 'unparseable' };"
             ],
-            "line": 161,
+            "line": 166,
             "mutants": 1,
             "category": "other",
             "reason": "Same as the absent result above: an empty object leaves outcome undefined, which matches none of the branches either caller tests, producing the identical no-steps-and-no-error response that 'unparseable' already produces.",
@@ -2536,7 +2536,7 @@
             "anchors": [
                 "return { outcome: 'unreadable', error: error as Error };"
             ],
-            "line": 168,
+            "line": 173,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this leaves outcome undefined, so getInitialData skips its error log and ensureStepLogger skips its debug \u2014 but wizardSteps is null either way and StepLogger still gets undefined steps. The error field it drops is only ever passed to a logger call, so nothing observable moves.",
@@ -2549,7 +2549,7 @@
             "anchors": [
                 "if (read.outcome === 'ok') {"
             ],
-            "line": 192,
+            "line": 197,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true assigns read.steps unconditionally \u2014 and on every non-ok outcome that property does not exist, so wizardSteps becomes undefined, which is precisely the value the untaken branch leaves it at. StepLogger.create therefore receives undefined for a failed read either way, which the suite already asserts.",
@@ -2562,7 +2562,7 @@
             "anchors": [
                 "} else if (read.outcome === 'unreadable') {"
             ],
-            "line": 194,
+            "line": 199,
             "mutants": 4,
             "category": "branch",
             "reason": "The body of this branch is one this.logger.debug and nothing else; the step logger is built below it with whatever wizardSteps holds, which this branch never assigns. Forcing the condition either way, inverting the equality or emptying the block all change only whether a line prints.",
@@ -2575,7 +2575,7 @@
             "anchors": [
                 "if (defaults) {"
             ],
-            "line": 247,
+            "line": 252,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true reads .componentSelection off the null that parseJSON returns for an unreadable file, which throws inside the surrounding try and lands in the catch \u2014 leaving componentDefaults at its initial null, which is exactly what the untaken branch leaves it at. The suite's malformed-defaults test passes under both.",
@@ -2588,7 +2588,7 @@
             "anchors": [
                 "const stepPreview = wizardSteps"
             ],
-            "line": 268,
+            "line": 273,
             "mutants": 1,
             "category": "other",
             "reason": "stepPreview is built solely to be interpolated into the this.logger.debug two lines below; wizardSteps itself is already assigned and is what reaches the webview. Dropping the slice changes how many ids appear in that one log line and nothing a caller can observe.",
@@ -2601,7 +2601,7 @@
             "anchors": [
                 ".map((s) => s.id)"
             ],
-            "line": 270,
+            "line": 275,
             "mutants": 1,
             "category": "other",
             "reason": "Part of the same preview string: the mapped ids are joined and interpolated into one this.logger.debug call. Replacing the mapper changes the text of that line, while the steps sent to the webview come from the parsed file above, untouched by this expression.",
@@ -2614,7 +2614,7 @@
             "anchors": [
                 "const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';"
             ],
-            "line": 272,
+            "line": 277,
             "mutants": 5,
             "category": "branch",
             "reason": "remainingCount is appended to the preview inside the same this.logger.debug. Forcing the comparison either way, widening it, or flipping the subtraction changes only the suffix of that debug line \u2014 the wizardSteps array the webview receives was assigned before this expression and is not derived from it.",
@@ -2627,7 +2627,7 @@
             "anchors": [
                 "} else if (stepsRead.outcome === 'invalid-shape') {"
             ],
-            "line": 274,
+            "line": 279,
             "mutants": 1,
             "category": "branch",
             "reason": "The body is a single this.logger.error. wizardSteps was left null by the branch above and stays null whichever way this condition goes, so the response the webview receives is identical; only whether the validation message is logged changes.",
@@ -2640,7 +2640,7 @@
             "anchors": [
                 "} else if (stepsRead.outcome === 'unreadable') {"
             ],
-            "line": 280,
+            "line": 285,
             "mutants": 4,
             "category": "branch",
             "reason": "Same shape as the invalid-shape branch above: the body is one this.logger.error, and wizardSteps is null on entry and on exit regardless. Forcing the condition either way, inverting the equality or emptying the block moves only a log line.",
@@ -2653,7 +2653,7 @@
             "anchors": [
                 "const customBlockLibraryDefaults = parseCustomBlockLibrarySettings("
             ],
-            "line": 295,
+            "line": 300,
             "mutants": 1,
             "category": "other",
             "reason": "The empty default on the setting read below is only used when the setting has never been set, and whatever it yields goes straight into parseCustomBlockLibrarySettings, which keeps an entry only when parseCustomBlockLibraryUrl resolves it to an owner and repo. Stryker's placeholder string is not a repository URL, so it is dropped and the result is the same empty array.",
@@ -2666,7 +2666,7 @@
             "anchors": [
                 "const updated = parseCustomBlockLibrarySettings("
             ],
-            "line": 433,
+            "line": 461,
             "mutants": 1,
             "category": "other",
             "reason": "Same as the getInitialData read: the fallback fires only for an unset setting, and the value is parsed by parseCustomBlockLibrarySettings before it is pushed to the webview. A placeholder string resolves to no owner and repo, so it is filtered out and the pushed payload holds the same empty array \u2014 which the settings-listener suite asserts directly.",
@@ -2679,7 +2679,7 @@
             "anchors": [
                 "if (this.editProject?.settings?.edsConfig) {"
             ],
-            "line": 303,
+            "line": 308,
             "mutants": 3,
             "category": "branch",
             "reason": "Both arms of this if are a this.logger.debug, and the editProject sent to the webview is the field itself, assigned in execute and returned untouched below. Forcing the condition false or emptying the block changes only which debug line prints. The optional read on settings is defensive against a value the EditProjectConfig type forbids \u2014 settings is required there, so no caller can produce the shape that would make removing it throw.",
@@ -2692,7 +2692,7 @@
             "anchors": [
                 "} else if (this.editProject) {"
             ],
-            "line": 312,
+            "line": 317,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is one this.logger.debug noting that an edit carried no EDS config. Nothing in the returned initial data is computed here \u2014 editProject is passed through as the field execute assigned \u2014 so forcing the condition either way or emptying the block moves only the debug channel.",
@@ -2705,7 +2705,7 @@
             "anchors": [
                 "if (panel) {"
             ],
-            "line": 460,
+            "line": 488,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true calls dispose on undefined when no wizard panel is open \u2014 and that call sits inside the try whose catch is deliberately empty, so the TypeError is swallowed and disposeActivePanel still returns having done nothing. The no-panel test passes under both, because the guard and the catch cover the same case.",
@@ -2718,7 +2718,7 @@
             "anchors": [
                 "if (this.importedSettings) {"
             ],
-            "line": 477,
+            "line": 505,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is a single this.logger.debug naming the import source. importedSettings is assigned on the line above and read by getInitialData from the field, never from this branch, so forcing the condition either way or emptying the block leaves the wizard's initial data identical.",
@@ -2731,7 +2731,7 @@
             "anchors": [
                 "if (this.editProject.settings?.selections) {"
             ],
-            "line": 492,
+            "line": 520,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing this optional read would throw only for an edit project whose settings is undefined, and EditProjectConfig declares settings as required \u2014 no caller can construct that value without deliberately defeating the type. The guard is defensive against a shape the compiler already refuses.",
@@ -2744,7 +2744,7 @@
             "anchors": [
                 "let componentDefaults: ComponentSelection | null = null;"
             ],
-            "line": 232,
+            "line": 237,
             "mutants": 1,
             "category": "block",
             "reason": "The catch that closes this try block holds one this.logger.debug. Emptying it still swallows the failure and still leaves componentDefaults at the null declared here, which is what the webview receives \u2014 the suite asserts exactly that for both a malformed defaults.json and a throwing read. Only the debug channel differs.",
@@ -7298,7 +7298,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 288,
+            "line": 319,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
@@ -7323,7 +7323,7 @@
             "anchors": [
                 "const value = getValueFromConfigs(field);"
             ],
-            "line": 130,
+            "line": 131,
             "mutants": 1,
             "category": "branch",
             "reason": "Stryker forces the following guard's second half ('value !== \"\"') true. getValueFromConfigs can never return an empty string: it returns findFieldValue's result, which skips empty values, or a foreign value guarded by the same non-empty test, or undefined. The half that CAN be false is the undefined check, and that one is killed.",
@@ -7977,7 +7977,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 826,
+            "line": 840,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -8002,7 +8002,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 560,
+            "line": 574,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -8015,7 +8015,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 933,
+            "line": 947,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
@@ -8044,18 +8044,6 @@
             "category": "other",
             "reason": "The resolved version reaches exactly one place: a logger.debug line naming the build. Nothing branches on it and nothing else reads it, so every mutant on this line \u2014 the fallback, the operator, both forced conditions \u2014 differs only in what that one log line says.",
             "decision": "none \u2014 the only observable difference is log text.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/extension.ts",
-            "anchors": [
-                "if (webviewId !== 'demoBuilder.projectDashboard') return;"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing the guard FALSE lets any webview's disposal fall through to shouldAutoReopenProjectsList, which then decides on the workspace alone \u2014 and the disposal tests that pass a different webview id run with workspace states where that predicate is false anyway. Making it distinguishable would need a test whose only claim is that a non-dashboard webview in a PROJECT workspace does not reopen the list, which is the same assertion as the dashboard case with the id changed. The forced-TRUE half is killed.",
-            "decision": "none \u2014 equivalent under every workspace state the callback can be in.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
@@ -10630,7 +10618,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 153,
+            "line": 161,
             "mutants": 1,
             "category": "other",
             "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
@@ -13467,7 +13455,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 90,
+            "line": 98,
             "mutants": 1,
             "category": "other",
             "reason": "The deployment-status subscription's dependency array holds no values, so ['Stryker was here'] is just as constant as [] when React compares it element-wise with Object.is on every render: the effect subscribes once on mount and unsubscribes on unmount either way. The listener reads nothing from the render it was created in, only the stable setIsDeploying setter. Survived identically on ConfigureScreen.tsx before the EDS-8 split, where the PL-22 row for the handlers already described the same equivalence.",
@@ -15713,7 +15701,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 180,
+            "line": 181,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (debugLogger.warn that the agent-trace file sink is unavailable). That the catch EXISTS is tested: extension-activationSeams 'degrades to channel-only when the storage path cannot be created' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15726,7 +15714,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 291,
+            "line": 292,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.error that seeding the default AI prompts failed). That the catch EXISTS is tested: extension-activationSeams 'does not abort activation when seeding fails' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15739,7 +15727,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 596,
+            "line": 610,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.warn that the global MCP entry could not be refreshed). That the catch EXISTS is tested: extension-mcpAndHome 'does not abort activation when the repair throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15752,7 +15740,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 872,
+            "line": 886,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the secret sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed secret sweep stop the sweeps after it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15765,7 +15753,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 887,
+            "line": 901,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the DA.live token move was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed DA.live token move take activation down' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15778,7 +15766,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 909,
+            "line": 923,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the publish-key renewal sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failing sweep take activation down with it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",
@@ -15791,7 +15779,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 983,
+            "line": 997,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call (logger.debug that the Node sweep was skipped). That the catch EXISTS is tested: extension-nodeSweep 'shows nothing, and does not fail activation, when the sweep throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed.",

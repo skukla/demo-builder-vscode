@@ -42,6 +42,8 @@ export function StepFooterArea(props: {
     onBack: () => void;
     onCancel: () => void;
     onOpenProject: () => void;
+    /** Edit goes back to the project it came from; Create goes to the projects list. */
+    isEdit?: boolean;
 }) {
     const {
         isActive,
@@ -55,6 +57,7 @@ export function StepFooterArea(props: {
         onBack,
         onCancel,
         onOpenProject,
+        isEdit = false,
     } = props;
 
     if (isActive || isStarting || isGitHubAppInstall) {
@@ -81,7 +84,7 @@ export function StepFooterArea(props: {
                 rightContent={
                     !isOpeningProject && (
                         <Button variant="cta" onPress={onOpenProject}>
-                            View Projects
+                            {isEdit ? 'Back to Project' : 'View Projects'}
                         </Button>
                     )
                 }

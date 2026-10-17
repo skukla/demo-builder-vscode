@@ -210,5 +210,24 @@ describe('useCreationProgressPhase (through ProjectCreationStep)', () => {
 
             expect(mockPostMessage).toHaveBeenCalledWith('openProject');
         });
+
+        // Edit came from the project, so it goes back to it, in Edit's words: the
+        // last screen said "Click below to view your projects" (owner, 2026-10-17).
+        it('in Edit, says the changes are saved and goes back to the project', async () => {
+            render(step({ ...stateWith(progressOf({ currentOperation: 'Project Created' })), wizardMode: 'edit' }));
+            await settle();
+
+            expect(screen.getByText('Changes Saved')).toBeInTheDocument();
+            expect(screen.queryByText('Click below to view your projects')).not.toBeInTheDocument();
+            await press(screen.getByRole('button', { name: 'Back to Project' }));
+            expect(screen.getByText('Opening your project')).toBeInTheDocument();
+
+            await act(async () => {
+                jest.advanceTimersByTime(TIMEOUTS.PROJECT_OPEN_TRANSITION);
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('backToProject');
+            expect(mockPostMessage).not.toHaveBeenCalledWith('openProject');
+        });
     });
 });

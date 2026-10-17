@@ -108,6 +108,15 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         }
     }
 
+    /**
+     * Configure used to open only beside the dashboard. Since Edit can hand over to
+     * it, it can be the only screen open, so closing it must land somewhere; the
+     * disposal callback in extension.ts (`screenAfterClose`) decides where.
+     */
+    protected shouldReopenWelcomeOnDispose(): boolean {
+        return true;
+    }
+
     protected getWebviewId(): string {
         return 'demoBuilder.configureProject';
     }

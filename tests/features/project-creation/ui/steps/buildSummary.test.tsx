@@ -191,6 +191,57 @@ describe('commerceSummaryGroup - ACCS', () => {
     });
 });
 
+/**
+ * Edit, before the backend or package changes: the settings belong to Configure and
+ * their steps are not in the strip, but the project HAS them. The rows used to wait
+ * for a Continue past each step, so a working project read "Not set" throughout,
+ * and going Back cleared what had been clicked (owner, 2026-10-17).
+ */
+describe('commerceSummaryGroup - Edit', () => {
+    const editing = (partial: Partial<WizardState> = {}) =>
+        state({
+            wizardMode: 'edit',
+            selectedBackend: 'adobe-commerce-paas',
+            componentConfigs: {
+                'adobe-commerce-paas': { ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us' },
+            },
+            ...partial,
+        });
+
+    it('shows every row done with the project value, with nothing moved past', () => {
+        const group = commerceSummaryGroup(editing());
+
+        expect(group.rows).toEqual([
+            { label: 'Backend', value: 'Adobe Commerce (PaaS)', done: true },
+            { label: 'Connection', value: 'Connected', done: true },
+            { label: 'Business', value: 'citisignal_us', done: true },
+            { label: 'Catalog', value: 'Configured', done: true },
+            { label: 'Datapacks', value: 'None', done: true },
+        ]);
+    });
+
+    it('reads the ACCS store view code on an ACCS project', () => {
+        const group = commerceSummaryGroup(
+            editing({
+                selectedBackend: 'adobe-commerce-accs',
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'bodea_us' } },
+            }),
+        );
+
+        expect(group.rows.find((r) => r.label === 'Business')?.value).toBe('bodea_us');
+    });
+
+    it('goes back to the walk once the backend or package changed', () => {
+        const group = commerceSummaryGroup(editing({ foundationChanged: true }));
+
+        expect(group.rows.find((r) => r.label === 'Connection')).toEqual({
+            label: 'Connection',
+            value: undefined,
+            done: false,
+        });
+    });
+});
+
 describe('storefrontSummaryGroup', () => {
     it('names an added demo first, and says when its site will start empty', () => {
         const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
@@ -295,6 +346,17 @@ describe('storefrontSummaryGroup', () => {
         const libs = some.rows.find((r) => r.label === 'Block Libraries');
         expect(libs?.done).toBe(true);
         expect(libs?.value).toBe('3 selected');
+    });
+
+    // Demo Builder Blocks comes with every storefront and is kept out of the picker.
+    // A built project records it, so Edit counted 2 beside a picker showing 1
+    // (owner, 2026-10-17). The count is what the picker shows.
+    it('leaves the always-included library out of the count, as the picker does', () => {
+        const group = storefrontSummaryGroup(
+            state({ selectedBlockLibraries: ['demo-builder-blocks', 'demo-team-blocks'] }),
+        );
+
+        expect(group.rows.find((r) => r.label === 'Block Libraries')?.value).toBe('1 selected');
     });
 
     it('leaves not-yet-configured rows undone with no value', () => {

@@ -136,9 +136,15 @@ function deriveGithubRepoInfo(
     return { fullName, mode };
 }
 
-/** Derive DA.live display info from EDS config */
+/**
+ * Derive DA.live display info from EDS config. In Edit the site is the one the
+ * project has; creating a project makes it. (A `siteMode` field was read here and
+ * set nowhere, so Edit called the project's own site "New site"; it was removed,
+ * owner, 2026-10-17.)
+ */
 function deriveDaLiveInfo(
     edsConfig: WizardState['edsConfig'],
+    editing: boolean,
 ): { org: string; site: string; mode: string } | null {
     if (!edsConfig) return null;
 
@@ -146,7 +152,7 @@ function deriveDaLiveInfo(
     const site = edsConfig.selectedSite?.name || edsConfig.daLiveSite || '';
     if (!site) return null;
 
-    const mode = edsConfig.siteMode === 'existing' ? 'Existing site' : 'New site';
+    const mode = editing ? 'Existing site' : 'New site';
     return { org, site, mode };
 }
 
@@ -336,7 +342,8 @@ export function ReviewStep({
     const hasEdsConfig = hasEdsConfiguration(edsConfig);
 
     const githubRepoInfo = useMemo(() => deriveGithubRepoInfo(edsConfig), [edsConfig]);
-    const daLiveInfo = useMemo(() => deriveDaLiveInfo(edsConfig), [edsConfig]);
+    const editing = state.wizardMode === 'edit';
+    const daLiveInfo = useMemo(() => deriveDaLiveInfo(edsConfig, editing), [edsConfig, editing]);
 
     const aemAssetsEnabled = useMemo(() => {
         return (
@@ -354,7 +361,7 @@ export function ReviewStep({
     return (
         <ContentColumn className="container-wizard">
             <Heading level={2} marginBottom="size-300">
-                {state.projectName}
+                {resolveDisplayName(state.projectTitle, state.projectName)}
             </Heading>
 
             <Divider size="M" marginBottom="size-400" />

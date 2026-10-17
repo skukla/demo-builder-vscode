@@ -10,7 +10,7 @@
 
 import * as vscode from 'vscode';
 import { warmOrgServicesCatalog } from './warmOrgServicesCatalog';
-import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import { MessageHandler } from '@/types/handlers';
 
 /**
@@ -20,28 +20,6 @@ export const handleConfigure: MessageHandler = async () => {
     await vscode.commands.executeCommand('demoBuilder.configureProject');
     return { success: true };
 };
-
-/**
- * The shared tab-replacement sequence: dispose the named panel (if open)
- * inside a webview transition — so its disposal callback doesn't fire and
- * re-open another surface — then dispatch the target command.
- */
-async function swapWebviewSurface(panelId: string, commandId: string): Promise<void> {
-    await BaseWebviewCommand.startWebviewTransition();
-    try {
-        const panel = BaseWebviewCommand.getActivePanel(panelId);
-        if (panel) {
-            try {
-                panel.dispose();
-            } catch {
-                // Panel may already be disposed - this is OK
-            }
-        }
-        await vscode.commands.executeCommand(commandId);
-    } finally {
-        BaseWebviewCommand.endWebviewTransition();
-    }
-}
 
 /**
  * Handle 'navigateBack' message - Navigate back to projects list

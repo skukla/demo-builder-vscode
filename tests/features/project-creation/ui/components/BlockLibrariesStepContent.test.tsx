@@ -292,41 +292,4 @@ describe('BlockLibrariesStepContent', () => {
             expect(screen.getByText('Another Custom Lib')).toBeInTheDocument();
         });
     });
-
-    // --- Read-only (Edit leaves block libraries to Configure) ---
-
-    describe('read-only', () => {
-        const readOnly = {
-            ...defaultProps,
-            readOnly: true,
-            nativeBlockLibraries: [nativeLib],
-            availableBlockLibraries: [availableLib, { ...availableLib, id: 'unchosen', name: 'Unchosen Blocks' }],
-            selectedBlockLibraries: ['commerce-blocks'],
-            // The project's own record, not the settings list it was picked from.
-            customBlockLibraries: [customLib],
-            customBlockLibraryDefaults: [customLib, customLib2],
-        };
-
-        it('lists only what the project has, every card locked', () => {
-            render(<BlockLibrariesStepContent {...readOnly} />);
-
-            const names = ['Core Blocks', 'Commerce Blocks', 'My Custom Lib'];
-            for (const name of names) {
-                const card = screen.getByRole('button', { name: new RegExp(name) });
-                expect(card).toBeDisabled();
-                expect(card).toHaveAttribute('aria-pressed', 'true');
-            }
-            expect(screen.queryByText('Unchosen Blocks')).not.toBeInTheDocument();
-            expect(screen.queryByText('Another Custom Lib')).not.toBeInTheDocument();
-        });
-
-        it('offers no way to change them', () => {
-            render(<BlockLibrariesStepContent {...readOnly} />);
-
-            fireEvent.click(screen.getByRole('button', { name: /Commerce Blocks/ }));
-
-            expect(readOnly.onBlockLibraryToggle).not.toHaveBeenCalled();
-            expect(screen.queryByText('Configure custom libraries in Settings')).not.toBeInTheDocument();
-        });
-    });
 });

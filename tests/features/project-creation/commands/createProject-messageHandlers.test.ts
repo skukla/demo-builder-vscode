@@ -2,15 +2,16 @@
  * CreateProjectWebviewCommand.initializeMessageHandlers — what the wizard wires
  * to its message channel.
  *
- * Three things are registered here and nowhere else: the one-time tip offering
+ * Four things are registered here and nowhere else: the one-time tip offering
  * to save the SC's block-library picks as defaults, the shortcut that opens the
- * custom-library setting, and a settings listener that pushes both library
+ * custom-library setting, Edit's link to project configuration, and a settings listener that pushes both library
  * settings back to the webview when VS Code changes them. Everything else is
  * the auto-registration loop over the handler registry.
  */
 
 import { CreateProjectWebviewCommand } from './createProject.testUtils';
 import * as vscode from 'vscode';
+import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
@@ -20,6 +21,9 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/core/utils/oneTimeTip', () => ({ showOneTimeTip: jest.fn() }));
+jest.mock('@/core/base/swapWebviewSurface', () => ({
+    swapWebviewSurface: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/core/handlers/dispatchHandler', () => ({
     dispatchHandler: jest.fn().mockResolvedValue({ success: true }),
     getRegisteredTypes: jest.fn(() => ['get-components-data', 'create-project']),
@@ -204,6 +208,55 @@ describe('the shortcut to the custom-library setting', () => {
             'demoBuilder.blockLibraries.custom'
         );
         expect(result).toEqual({ success: true });
+    });
+});
+
+// Edit's line under the backend cards links to where the Commerce settings change.
+// Configure takes Edit's place rather than opening beside it, two screens that can
+// each save the same project (owner, 2026-10-17); an Edit with changes asks first.
+describe('the shortcut to project configuration', () => {
+    beforeEach(() => {
+        (swapWebviewSurface as jest.Mock).mockClear();
+        (vscode.window.showWarningMessage as jest.Mock).mockReset();
+    });
+
+    it('replaces Edit with Configure when nothing was changed in Edit', async () => {
+        const { comm } = wireUp();
+
+        const result = await comm.handlerFor('open-configure')?.({ discardsEdits: false });
+
+        // The dashboard first, then Configure on top: the arrangement the dashboard's
+        // own Configure button makes, so closing Configure lands on the dashboard.
+        expect(swapWebviewSurface).toHaveBeenCalledWith(
+            'demoBuilderWizard',
+            'demoBuilder.showProjectDashboard',
+            'demoBuilder.configureProject',
+        );
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(result).toEqual({ success: true });
+    });
+
+    it('asks before throwing away changes made in Edit, and goes on a yes', async () => {
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Discard and open');
+        const { comm } = wireUp();
+
+        await comm.handlerFor('open-configure')?.({ discardsEdits: true });
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            expect.stringContaining('Discard'),
+            { modal: true },
+            'Discard and open',
+        );
+        expect(swapWebviewSurface).toHaveBeenCalled();
+    });
+
+    it('stays in Edit when the SC does not confirm', async () => {
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
+        const { comm } = wireUp();
+
+        await comm.handlerFor('open-configure')?.({ discardsEdits: true });
+
+        expect(swapWebviewSurface).not.toHaveBeenCalled();
     });
 });
 

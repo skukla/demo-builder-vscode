@@ -8,7 +8,10 @@
 
 import * as os from 'os';
 import * as path from 'path';
-import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
+import {
+    screenAfterClose,
+    shouldAutoReopenProjectsList,
+} from '@/features/dashboard/commands/showDashboard';
 
 const PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
 
@@ -61,5 +64,46 @@ describe('shouldAutoReopenProjectsList', () => {
     it('returns true when path is a Demo Builder project AND no transition is in progress', () => {
         const projectPath = path.join(PROJECTS_BASE, 'my-demo');
         expect(shouldAutoReopenProjectsList(projectPath, false)).toBe(true);
+    });
+});
+
+// Configure could be the last screen once Edit hands over to it; closing it then left
+// no Demo Builder screen at all (owner, 2026-10-17).
+describe('screenAfterClose', () => {
+    const inProject = path.join(PROJECTS_BASE, 'my-demo');
+    const ctx = (over: Partial<Parameters<typeof screenAfterClose>[1]> = {}) => ({
+        workspaceFolderPath: inProject,
+        transitionInProgress: false,
+        openScreens: 0,
+        ...over,
+    });
+
+    it('follows the dashboard with the projects list, as before', () => {
+        expect(screenAfterClose('demoBuilder.projectDashboard', ctx({ openScreens: 2 }))).toBe(
+            'demoBuilder.showProjectsList',
+        );
+    });
+
+    it('follows Configure with the dashboard when it was the last screen', () => {
+        expect(screenAfterClose('demoBuilder.configureProject', ctx())).toBe(
+            'demoBuilder.showProjectDashboard',
+        );
+    });
+
+    it('opens nothing after Configure while another screen is still open', () => {
+        expect(screenAfterClose('demoBuilder.configureProject', ctx({ openScreens: 1 }))).toBeUndefined();
+    });
+
+    it('opens nothing mid-swap, or outside the projects folder', () => {
+        expect(
+            screenAfterClose('demoBuilder.configureProject', ctx({ transitionInProgress: true })),
+        ).toBeUndefined();
+        expect(
+            screenAfterClose('demoBuilder.configureProject', ctx({ workspaceFolderPath: '/elsewhere' })),
+        ).toBeUndefined();
+    });
+
+    it('opens nothing after a screen with no rule', () => {
+        expect(screenAfterClose('demoBuilderWizard', ctx())).toBeUndefined();
     });
 });

@@ -204,9 +204,11 @@ export function commerceSectionStates(
     }
 
     if (isSetInConfigure(state)) {
-        // Edit leaves these to Configure: the project already has them, and this
-        // screen shows them without changing them (editLocks.ts).
-        sections.push(...SET_IN_CONFIGURE_SECTIONS, sampleDataSection(state));
+        // Edit leaves these to Configure, so they are not in the strip: three steps
+        // that each said only "Changed in Configure" took three Continues to pass
+        // (owner, 2026-10-17). The summary still shows them (buildSummary.ts), and
+        // they come back once the backend or package changes (editLocks.ts).
+        sections.push(sampleDataSection(state));
         return sections;
     }
 
@@ -245,13 +247,6 @@ export function commerceSectionStates(
     return sections;
 }
 
-/** The three settings sub-steps as Edit shows them when they belong to Configure. */
-const SET_IN_CONFIGURE_SECTIONS: readonly CommerceSectionState[] = [
-    { id: 'connection', status: 'done', value: 'Connected' },
-    { id: 'business-structure', status: 'done', value: 'Selected' },
-    { id: 'catalog', status: 'done', value: 'Configured' },
-];
-
 /** The Datapacks sub-step: never gated, always done. */
 function sampleDataSection(state: WizardState): CommerceSectionState {
     return { id: 'sample-data', status: 'done', value: state.datapack?.name ?? 'None' };
@@ -259,7 +254,9 @@ function sampleDataSection(state: WizardState): CommerceSectionState {
 
 /**
  * The section to open first: the first `current` section, else the first
- * openable (non-done, non-locked) one, else the last section.
+ * openable (non-done, non-locked) one, else the FIRST section. Edit opens on a
+ * project whose every step is done; the last one dropped the SC on Datapacks, past
+ * everything they came to review (owner, 2026-10-17).
  *
  * @param sectionStates - Ordered section states from commerceSectionStates
  * @returns the id of the section to open
@@ -269,7 +266,7 @@ export function firstOpenSection(sectionStates: CommerceSectionState[]): Commerc
     if (current) return current.id;
     const openable = sectionStates.find((s) => s.status !== 'done' && s.status !== 'locked');
     if (openable) return openable.id;
-    return sectionStates[sectionStates.length - 1].id;
+    return sectionStates[0].id;
 }
 
 /**
@@ -322,7 +319,6 @@ export function isCommerceStepComplete(
     stepId: CommerceSectionId,
     ctx: CommerceSectionContext,
 ): boolean {
-    if (isConfigStep(stepId) && isSetInConfigure(state)) return true;
     switch (stepId) {
         case 'backend':
             return Boolean(state.selectedBackend);
@@ -348,18 +344,6 @@ export function isCommerceStepComplete(
             // here can be required to move on.
             return true;
     }
-}
-
-/**
- * Whether a sub-step is one of the three that set Commerce settings.
- *
- * @param stepId - the sub-step
- * @returns true for Connection, Business Structure and Catalog
- */
-export function isConfigStep(
-    stepId: CommerceSectionId,
-): stepId is 'connection' | 'business-structure' | 'catalog' {
-    return stepId === 'connection' || stepId === 'business-structure' || stepId === 'catalog';
 }
 
 /** A config section whose `done` is a single boolean (connection / business). */

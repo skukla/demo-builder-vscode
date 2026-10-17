@@ -118,6 +118,45 @@ describe('the callbacks activate() registers', () => {
 
             expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.showProjectsList');
         });
+
+        // Configure opened beside the dashboard until Edit could hand over to it;
+        // closed alone, it left no Demo Builder screen at all (owner, 2026-10-17).
+        describe('when Configure closes', () => {
+            beforeEach(() => {
+                setWorkspaceFolder(path.join(REOPEN_BASE, 'some-project'));
+            });
+
+            it('opens the project dashboard when no other Demo Builder screen is open', async () => {
+                jest.spyOn(BaseWebviewCommand, 'getActivePanelCount').mockReturnValue(0);
+                await activate(createActivationContext());
+                mockExecuteCommand.mockClear();
+
+                await disposalCallback()('demoBuilder.configureProject');
+
+                expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showProjectDashboard');
+            });
+
+            it('leaves the screen that is still open alone', async () => {
+                jest.spyOn(BaseWebviewCommand, 'getActivePanelCount').mockReturnValue(1);
+                await activate(createActivationContext());
+                mockExecuteCommand.mockClear();
+
+                await disposalCallback()('demoBuilder.configureProject');
+
+                expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.showProjectDashboard');
+            });
+
+            it('opens nothing during a deliberate swap of screens', async () => {
+                jest.spyOn(BaseWebviewCommand, 'getActivePanelCount').mockReturnValue(0);
+                jest.spyOn(BaseWebviewCommand, 'isWebviewTransitionInProgress').mockReturnValue(true);
+                await activate(createActivationContext());
+                mockExecuteCommand.mockClear();
+
+                await disposalCallback()('demoBuilder.configureProject');
+
+                expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.showProjectDashboard');
+            });
+        });
     });
 
     describe('keeping the home AGENTS.md in step with the current project', () => {

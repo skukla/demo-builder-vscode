@@ -207,22 +207,18 @@ describe('the DA.live row', () => {
         expect(screen.queryByText('DA.live Project')).not.toBeInTheDocument();
     });
 
-    it('reads "New site" when no site mode was chosen', () => {
+    it('reads "New site" when creating a project, which makes the site', () => {
         renderReview(withEds({ daLiveSite: 'acme-site-da' }));
 
         expect(subItemsUnder('DA.live Project')).toBe('New site');
     });
 
-    it('reads "Existing site" for a site that already exists', () => {
-        renderReview(withEds({ daLiveSite: 'acme-site-da', siteMode: 'existing' }));
+    // `siteMode` was read here and set nowhere, so Edit called the project's own site
+    // "New site" (owner, 2026-10-17). In Edit the site is the one the project has.
+    it('reads "Existing site" in Edit', () => {
+        renderReview({ ...withEds({ daLiveSite: 'acme-site-da' }), wizardMode: 'edit' });
 
         expect(subItemsUnder('DA.live Project')).toBe('Existing site');
-    });
-
-    it('reads "New site" for any other site mode', () => {
-        renderReview(withEds({ daLiveSite: 'acme-site-da', siteMode: 'new' }));
-
-        expect(subItemsUnder('DA.live Project')).toBe('New site');
     });
 });
 

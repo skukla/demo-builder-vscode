@@ -25,12 +25,12 @@ import { getGitHubServices } from './edsHelpers';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getRepositoryNameError } from '@/core/validation/normalizers';
 import { rememberAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
+import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { StorefrontZipProgressPayload } from '@/types/webviewPayloads';
 import type { ImportStorefrontZipRequest, ImportStorefrontZipResult, UseBundleSetupRequest } from '@/types/webviewRequests';
 
 const PICKER_TITLE = 'Add a storefront from a zip file';
-const WIZARD_PANEL = 'demoBuilderWizard';
 
 async function pickZip(): Promise<string | undefined> {
     const picked = await vscode.window.showOpenDialog({
@@ -155,7 +155,7 @@ export async function handleUseBundleSetup(context: HandlerContext, request?: Us
     if (!request?.setup || !request.demo) return { success: false, error: "The bundle's setup and the demo it belongs to are required" };
     const importedSettings = setupForCard(request.setup, request.demo);
     context.logger.info(`[Zip] Starting a project from the bundle's setup on ${request.demo.source.owner}/${request.demo.source.repo}`);
-    BaseWebviewCommand.disposePanel(WIZARD_PANEL);
+    BaseWebviewCommand.disposePanel(WIZARD_WEBVIEW_ID);
     await vscode.commands.executeCommand('demoBuilder.createProject', { importedSettings, sourceDescription: 'the demo bundle' });
     return { success: true };
 }

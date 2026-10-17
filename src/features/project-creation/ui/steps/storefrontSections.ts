@@ -20,6 +20,7 @@
  * @module features/project-creation/ui/steps/storefrontSections
  */
 
+import { isSetInConfigure } from './editLocks';
 import type { StorefrontSectionId, WizardState } from '@/types/webview';
 
 export type { StorefrontSectionId };
@@ -50,12 +51,19 @@ const STOREFRONT_SECTION_ORDER: StorefrontSectionId[] = [
 ];
 
 /**
- * The Storefront sub-steps for the current state — the same three in both repo modes.
+ * The Storefront sub-steps for the current state: the same three in both repo modes,
+ * less Block Libraries in Edit.
  *
  * @param state - Wizard state
  * @returns the ordered sub-step ids
  */
-export function storefrontSectionOrder(_state: WizardState): StorefrontSectionId[] {
+export function storefrontSectionOrder(state: WizardState): StorefrontSectionId[] {
+    // Edit leaves the block libraries to Configure, so their step is not in the strip:
+    // it showed a locked picker under an info box and took a Continue to pass (owner,
+    // 2026-10-17). It comes back once the package or backend changes (editLocks.ts).
+    if (isSetInConfigure(state)) {
+        return STOREFRONT_SECTION_ORDER.filter((id) => id !== 'block-libraries');
+    }
     return [...STOREFRONT_SECTION_ORDER];
 }
 

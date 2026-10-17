@@ -11,6 +11,7 @@ import {
     appliesInPlace,
     editChangesOf,
     editChoicesOf,
+    editRenameTo,
     editSkipsStorefrontStep,
     isEditUnchanged,
     selectionDelta,
@@ -25,6 +26,8 @@ function opened(overrides: Partial<WizardState> = {}): WizardState {
         projectName: 'justrite',
         projectTitle: 'Justrite',
         wizardMode: 'edit',
+        editOriginalName: 'justrite',
+        editOriginalTitle: 'Justrite',
         adobeAuth: { isAuthenticated: true, isChecking: false },
         selectedPackage: 'justrite',
         selectedStack: 'eds-accs',
@@ -144,6 +147,42 @@ describe('isEditUnchanged — a change the SC made', () => {
         const state = opened();
 
         expect(isEditUnchanged({ ...state, ...change(state) })).toBe(false);
+    });
+});
+
+/**
+ * Renaming in Edit (owner, 2026-10-17). The name used to count as a rebuild choice,
+ * so a rename alone would have reinstalled and redeployed everything; it is now its
+ * own request, carried out after the Edit by the same rename Configure uses.
+ */
+describe('renaming in Edit', () => {
+    const renamed = (title: string) => ({ ...opened(), projectTitle: title, projectName: 'whatever-slug' });
+
+    it('is not a rebuild choice: a rename alone leaves the Edit unchanged', () => {
+        expect(isEditUnchanged(renamed('Justrite West'))).toBe(true);
+    });
+
+    it('asks for the new name, trimmed', () => {
+        expect(editRenameTo(renamed('  Justrite West  '))).toBe('Justrite West');
+    });
+
+    it('asks for nothing when the name is as it opened', () => {
+        expect(editRenameTo(opened())).toBeUndefined();
+    });
+
+    it('asks for nothing outside an Edit', () => {
+        expect(editRenameTo({ ...renamed('Other'), wizardMode: 'create' })).toBeUndefined();
+    });
+
+    it('sends the original name with the Edit, and the new one as a rename to make after it', () => {
+        const config = buildProjectConfig(renamed('Justrite West'));
+
+        expect(config).toMatchObject({
+            projectName: 'justrite',
+            projectTitle: 'Justrite',
+            editRenameTo: 'Justrite West',
+            editChanges: [],
+        });
     });
 });
 
