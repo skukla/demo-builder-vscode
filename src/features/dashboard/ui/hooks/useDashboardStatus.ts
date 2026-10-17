@@ -379,8 +379,9 @@ export function useDashboardStatus(
                     return { color: 'yellow', text: 'Restart needed', remedy: 'restart' };
                 }
                 return { color: 'green', text: `Running on port ${port}` };
+            // Blue: in progress, like Starting beside it (owner, 2026-10-16).
             case 'stopping':
-                return { color: 'yellow', text: 'Stopping' };
+                return { color: 'blue', text: 'Stopping' };
             case 'stopped':
             case 'ready':
                 return { color: 'gray', text: 'Stopped' };

@@ -14,7 +14,6 @@ import {
     normalizeDisplayStatus,
     severityToColor,
     severityToDot,
-    severityToVariant,
     type DisplayStatus,
     type StatusSeverity,
 } from '@/core/ui/utils/statusVocabulary';
@@ -70,15 +69,16 @@ describe('aliases collapse in exactly one place', () => {
 });
 
 describe('severity adapters are total', () => {
-    it.each(ALL_SEVERITIES)('%s maps to all three prop shapes', (severity) => {
+    it.each(ALL_SEVERITIES)('%s maps to both prop shapes', (severity) => {
         expect(severityToColor(severity)).toBeTruthy();
-        expect(severityToVariant(severity)).toBeTruthy();
         expect(severityToDot(severity)).toBeTruthy();
     });
 
-    it('info degrades to neutral for the variant shape, which has no info tone', () => {
-        expect(severityToVariant('info')).toBe('neutral');
+    it('keeps info as info on the dot: blue is what "in progress" looks like', () => {
+        // A second, narrower shape mapped info to neutral for the projects list,
+        // on the belief that its dot had no info tone. It has the same dot.
         expect(severityToDot('info')).toBe('info');
+        expect(severityToColor('info')).toBe('blue');
     });
 });
 
@@ -189,9 +189,9 @@ describe('getStorefrontStatusDisplay', () => {
     });
 
     it('carries a severity the existing adapters already understand', () => {
-        // No new colour space — reuses severityToColor/severityToVariant, which
+        // No new colour space — reuses severityToColor/severityToDot, which
         // is the point of putting this table in this module.
         expect(severityToColor(getStorefrontStatusDisplay('stale').severity)).toBe('yellow');
-        expect(severityToVariant(getStorefrontStatusDisplay('published').severity)).toBe('success');
+        expect(severityToDot(getStorefrontStatusDisplay('published').severity)).toBe('success');
     });
 });

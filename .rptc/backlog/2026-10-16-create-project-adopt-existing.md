@@ -29,3 +29,7 @@ retry", which nothing implemented: every retry asked for a new repository again.
 - Typing the storefront payload to its declared type showed the agent was also sending
   `accsEndpoint`, which nothing in storefront setup reads (creation reads `accsHost`).
   Removed; four tests that pinned the dead field now assert `accsHost`.
+
+## Shipped so far
+
+- 2026-10-16  Shipped in 6958aff36 (with PL-82): adoptExisting on create_project; canary recreated with it

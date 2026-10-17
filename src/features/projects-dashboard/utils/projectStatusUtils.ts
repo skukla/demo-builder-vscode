@@ -8,14 +8,9 @@
 
 import { getIdentifiedMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type { StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
-import { getStorefrontStatusDisplay, severityToVariant } from '@/core/ui/utils/statusVocabulary';
+import { getStorefrontStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
 import type { AppBuilderComponentState, Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues, isEdsProject } from '@/types/typeGuards';
-
-/**
- * StatusDot variant type for visual status indication
- */
-export type StatusVariant = 'success' | 'neutral' | 'warning' | 'error';
 
 /**
  * Work in flight, which every project shows, EDS or not. `creating` is set by the
@@ -62,12 +57,14 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
  * @param isEds - Whether the project is an EDS project
  * @returns StatusDot variant for color coding
  */
-export function getStatusVariant(status: ProjectStatus, isEds?: boolean): StatusVariant {
-    // Yellow/orange during transitional operations
-    if (UNSETTLED_TEXT[status]) return 'warning';
+export function getStatusVariant(status: ProjectStatus, isEds?: boolean): StatusDotVariant {
+    // Blue while something is in progress, the dot's own meaning of `info`, on every
+    // surface (StatusDot). These were orange until 2026-10-16 (owner: "it should be
+    // blue"); the card's deployment line already used `info` for Deploying.
+    if (UNSETTLED_TEXT[status]) return 'info';
     // EDS projects show "success" (green) unless something is unsettled
     if (isEds) return 'success';
-    if (status === 'starting' || status === 'stopping') return 'warning';
+    if (status === 'starting' || status === 'stopping') return 'info';
     if (status === 'error') return 'error';
     return status === 'running' ? 'success' : 'neutral';
 }
@@ -119,8 +116,8 @@ export function getStorefrontStatusText(project: Project): string {
     return getStorefrontStatusDisplay(project.edsStorefrontStatusSummary).label;
 }
 
-export function getStorefrontStatusVariant(project: Project): StatusVariant {
-    return severityToVariant(
+export function getStorefrontStatusVariant(project: Project): StatusDotVariant {
+    return severityToDot(
         getStorefrontStatusDisplay(project.edsStorefrontStatusSummary).severity,
     );
 }
@@ -150,10 +147,8 @@ const CONCERN_ORDER: readonly DeploymentConcern[] = [
 /**
  * The card's one deployment line.
  *
- * Typed against `StatusDotVariant`, not this module's narrower `StatusVariant`:
- * the value feeds a StatusDot, and only the dot's type admits `info` — which is
- * what an in-flight deploy should be, rather than the `warning` the runtime line
- * uses for its transitional states.
+ * Typed against `StatusDotVariant`: the value feeds a StatusDot, whose `info` is
+ * what an in-flight deploy is.
  */
 export interface DeploymentSummary {
     text: string;
@@ -299,7 +294,7 @@ export function getProjectStatusDisplay(project: Project): {
     isEds: boolean;
     port: number | undefined;
     statusText: string;
-    statusVariant: StatusVariant;
+    statusVariant: StatusDotVariant;
 } {
     const isEds = isEdsProject(project);
     const port = getFrontendPort(project);

@@ -128,26 +128,13 @@ describe('projectStatusUtils', () => {
             expect(result).toBe('success');
         });
 
-        it('should return "warning" for starting status', () => {
-            // Given: Starting status (transitional)
-            const status: ProjectStatus = 'starting';
-
-            // When: Getting variant
-            const result = getStatusVariant(status);
-
-            // Then: Should be warning (yellow/amber)
-            expect(result).toBe('warning');
+        // Blue while in progress, StatusDot's `info` (owner, 2026-10-16).
+        it('should return "info" for starting status', () => {
+            expect(getStatusVariant('starting')).toBe('info');
         });
 
-        it('should return "warning" for stopping status', () => {
-            // Given: Stopping status (transitional)
-            const status: ProjectStatus = 'stopping';
-
-            // When: Getting variant
-            const result = getStatusVariant(status);
-
-            // Then: Should be warning (yellow/amber)
-            expect(result).toBe('warning');
+        it('should return "info" for stopping status', () => {
+            expect(getStatusVariant('stopping')).toBe('info');
         });
 
         it('should return "error" for error status', () => {
@@ -282,9 +269,9 @@ describe('projectStatusUtils', () => {
             expect(getStatusVariant('error', true)).toBe('success');
         });
 
-        it('creating is a warning, EDS or not (PL-82)', () => {
-            expect(getStatusVariant('creating', true)).toBe('warning');
-            expect(getStatusVariant('creating', false)).toBe('warning');
+        it('creating is in progress (blue), EDS or not (PL-82)', () => {
+            expect(getStatusVariant('creating', true)).toBe('info');
+            expect(getStatusVariant('creating', false)).toBe('info');
         });
 
         it('should return normal variant when isEds is false', () => {

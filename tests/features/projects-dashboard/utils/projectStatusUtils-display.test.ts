@@ -33,13 +33,14 @@ describe('the transitional statuses each keep their own words', () => {
         expect(getStatusText('republishing')).toBe('Republishing');
     });
 
-    it('warns while an EDS project is resetting, rather than calling it published', () => {
-        expect(getStatusVariant('resetting', true)).toBe('warning');
+    // Blue while in progress (StatusDot's `info`), not a warning (owner, 2026-10-16).
+    it('shows an EDS project resetting as in progress, rather than calling it published', () => {
+        expect(getStatusVariant('resetting', true)).toBe('info');
         expect(getStatusText('resetting', undefined, true)).toBe('Resetting');
     });
 
-    it('warns while an EDS project is republishing', () => {
-        expect(getStatusVariant('republishing', true)).toBe('warning');
+    it('shows an EDS project republishing as in progress', () => {
+        expect(getStatusVariant('republishing', true)).toBe('info');
         expect(getStatusText('republishing', undefined, true)).toBe('Republishing');
     });
 });

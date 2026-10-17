@@ -163,10 +163,12 @@ export function getStorefrontStatusDisplay(status: string | undefined): StatusDi
 /** Badge colors (dashboard header). */
 export type StatusColor = 'green' | 'yellow' | 'orange' | 'red' | 'gray' | 'blue';
 
-/** StatusDot on the projects-list card, which has no `info` tone of its own. */
-export type StatusVariant = 'success' | 'warning' | 'error' | 'neutral';
-
-/** StatusDot in the integrations grid, which does. */
+/**
+ * A StatusDot's tone, on every surface. There used to be a second, narrower type for
+ * the projects list, written on the belief that its dot had no `info` tone; it has
+ * the same dot. Mapping `info` away turned every in-progress state there gray or
+ * orange instead of the blue that means "in progress" (owner, 2026-10-16).
+ */
 export type StatusDotTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 
 const SEVERITY_COLOR: Record<StatusSeverity, StatusColor> = {
@@ -181,12 +183,7 @@ export function severityToColor(severity: StatusSeverity): StatusColor {
     return SEVERITY_COLOR[severity];
 }
 
-/** `info` has no counterpart here, and reads as "nothing is wrong yet". */
-export function severityToVariant(severity: StatusSeverity): StatusVariant {
-    return severity === 'info' ? 'neutral' : severity;
-}
-
-/** Identity today; named so the grid states its intent rather than leaking the type. */
+/** Identity today; named so a surface states its intent rather than leaking the type. */
 export function severityToDot(severity: StatusSeverity): StatusDotTone {
     return severity;
 }

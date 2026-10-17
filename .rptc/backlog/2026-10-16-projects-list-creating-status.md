@@ -65,3 +65,4 @@ must not leave a tile stuck on "Creating…" forever.
 ## Shipped so far
 
 - 2026-10-16  fix(projects-dashboard): show projects an agent is building, and refresh on change (`13cf5a4f2`)
+- 2026-10-16  fix(projects-dashboard): show an agent's creation from its start; create_project adopts an existing storefront (`6958aff36`)
