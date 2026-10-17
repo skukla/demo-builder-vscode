@@ -85,3 +85,4 @@ not on a patch PR yet.
 - 2026-10-17  feat(updates): the patch canary takes updates through the extension's own update code (`b15496d54`)
 - 2026-10-17  docs(backlog): record the canary's progress and the proven write with the SC's sign-in (`00a3b2810`)
 - 2026-10-17  Step B live: canary.yml (eds-demo-patches 4ed6389) runs the extension's update code (b15496d54) before the checks; first run 39003260461 green, nothing to update (canary already at 48bed04)
+- 2026-10-17  docs(updates): record how the patch canary takes updates, and what it needs (`c5fbdc7da`)
