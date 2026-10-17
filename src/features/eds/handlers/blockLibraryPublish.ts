@@ -97,6 +97,11 @@ export async function publishSheetPaths(
     return publishOneByOne(helixService, { owner, repo }, paths, logger, 'sheets');
 }
 
+/** A rejected publish's reason, as one line for the log. */
+function reasonOf(reason: unknown): string {
+    return reason instanceof Error ? reason.message : String(reason);
+}
+
 /** The single-page publish loop; `what` names the paths in the log. */
 async function publishOneByOne(
     helixService: LibraryPublishHelix,
@@ -126,14 +131,15 @@ async function publishOneByOne(
             if (result.status === 'fulfilled') {
                 published++;
             } else {
-                failures.push(batch[index]);
+                failures.push(`${batch[index]} (${reasonOf(result.reason)})`);
             }
         });
     }
 
     if (failures.length > 0) {
-        // Name what was dropped. A count with no paths sends the reader back to
-        // the site to work out which blocks are missing.
+        // Name what was dropped, and why. A count with no paths sends the reader
+        // back to the site to work out which blocks are missing; a path with no
+        // reason leaves nothing to act on.
         const sample = failures.slice(0, 5).join(', ');
         logger.warn(
             `[EDS] ${failures.length} of ${absolute.length} ${what} failed to publish` +
