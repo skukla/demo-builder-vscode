@@ -135,6 +135,7 @@ export function ConfigureScreen({
         isFieldComplete,
         updateField,
         normalizeUrlField,
+        markSaved,
     } = useConfigureFieldValues({ project, existingEnvValues });
 
     const { isSaving, isDeploying, handleSave, handleCancel } = useConfigureSave({
@@ -147,6 +148,7 @@ export function ConfigureScreen({
         authoringExperience,
         initialAuthoringExperience: initialAuthoringExperience ?? 'da-live-classic',
         blockLibrarySelection: changedSelection,
+        onSaved: markSaved,
     });
 
     // The storefront Republish a save offers, told in this screen's progress modal.

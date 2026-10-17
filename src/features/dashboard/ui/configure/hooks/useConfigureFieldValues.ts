@@ -52,7 +52,8 @@ export interface UseConfigureFieldValuesReturn {
     updateField: (field: UniqueField, value: string | boolean) => void;
     /** Trim a URL field's trailing slash on blur. */
     normalizeUrlField: (field: UniqueField) => void;
-    /** Stage an App Builder component's value under its own component id. */
+    /** Record a successful save: what it sent becomes the new starting point. */
+    markSaved: (sent: ComponentConfigs) => void;
 }
 
 /**
@@ -182,6 +183,19 @@ export function useConfigureFieldValues({
         [componentConfigs, backendId],
     );
 
+    // The window stays open after Save, so what it saved is where the next change
+    // starts from. Left at what the screen opened with, putting a field back after a
+    // save diffed as "no change" and was never sent (owner, 2026-10-17).
+    const markSaved = useCallback((sent: ComponentConfigs) => {
+        setLoadedConfigs((prev) => {
+            const next: ComponentConfigs = { ...prev };
+            for (const [componentId, values] of Object.entries(sent)) {
+                next[componentId] = { ...prev[componentId], ...values };
+            }
+            return next;
+        });
+    }, []);
+
     return {
         componentConfigs,
         configChanges,
@@ -191,5 +205,6 @@ export function useConfigureFieldValues({
         isFieldComplete,
         updateField,
         normalizeUrlField,
+        markSaved,
     };
 }

@@ -235,5 +235,19 @@ describe('useConfigureFieldValues', () => {
                 },
             });
         });
+
+        // The window stays open after Save, so what it saved is the new starting
+        // point. Measured against what it OPENED with, putting a field back after a
+        // save looked like "no change" and was never sent (owner, 2026-10-17).
+        it('carries a value put back after a save, once the save is marked', () => {
+            const { result } = render({ headless: { STORE_CODE: 'main' } });
+
+            act(() => result.current.updateField(textField, 'outlet'));
+            act(() => result.current.markSaved(result.current.configChanges));
+            expect(result.current.configChanges).toStrictEqual({});
+
+            act(() => result.current.updateField(textField, 'main'));
+            expect(result.current.configChanges).toStrictEqual({ headless: { STORE_CODE: 'main' } });
+        });
     });
 });

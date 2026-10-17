@@ -86,6 +86,50 @@ describe('useConfigureSave', () => {
         expect(mockRequest.mock.calls[0][1]).toMatchObject({ newProjectName: 'bodea demo' });
     });
 
+    // The window stays open after Save. Compared with the name it OPENED with, a
+    // rename and then a rename back looked like "no change" the second time, and
+    // the project kept the first new name (owner, 2026-10-17).
+    it('sends a rename back to the opening name after an earlier rename was saved', async () => {
+        let current = props({ projectName: 'Renamed' });
+        const { result, rerender } = renderHook(() => useConfigureSave(current));
+
+        await act(() => result.current.handleSave());
+        expect(mockRequest.mock.calls[0][1]).toMatchObject({ newProjectName: 'Renamed' });
+
+        current = { ...current, projectName: 'Bodea Demo' };
+        rerender();
+        await act(() => result.current.handleSave());
+
+        expect(mockRequest.mock.calls[1][1]).toMatchObject({ newProjectName: 'Bodea Demo' });
+    });
+
+    it('sends the authoring experience switched back after an earlier switch was saved', async () => {
+        let current = props({ isEds: true, authoringExperience: 'da-live-classic' });
+        const { result, rerender } = renderHook(() => useConfigureSave(current));
+
+        await act(() => result.current.handleSave());
+        current = { ...current, authoringExperience: 'experience-workspace' };
+        rerender();
+        await act(() => result.current.handleSave());
+
+        expect(mockRequest.mock.calls[1][1]).toMatchObject({
+            authoringExperience: 'experience-workspace',
+        });
+    });
+
+    it('hands what it sent to onSaved once the save succeeds, and not when it fails', async () => {
+        const onSaved = jest.fn();
+        const ok = render({ onSaved });
+        await act(() => ok.result.current.handleSave());
+        expect(onSaved).toHaveBeenCalledWith({ headless: { ADOBE_COMMERCE_URL: 'https://example.com' } });
+
+        onSaved.mockClear();
+        mockRequest.mockResolvedValue({ success: false, error: 'disk full' });
+        const failed = render({ onSaved });
+        await act(() => failed.result.current.handleSave());
+        expect(onSaved).not.toHaveBeenCalled();
+    });
+
     it('sends the authoring experience once the SC changed it, for an EDS project', async () => {
         const eds = render({ isEds: true, initialAuthoringExperience: 'da-live-classic' });
         await act(() => eds.result.current.handleSave());

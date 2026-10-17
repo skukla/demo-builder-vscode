@@ -46,6 +46,8 @@ export interface UseConfigureSaveProps {
      * touched the picker, and then nothing about them is sent.
      */
     blockLibrarySelection?: BlockLibrarySelection;
+    /** Told what a successful save sent, so the field values can start over from it. */
+    onSaved?: (sent: ComponentConfigs) => void;
 }
 
 export interface UseConfigureSaveReturn {
@@ -75,9 +77,15 @@ export function useConfigureSave({
     authoringExperience,
     initialAuthoringExperience,
     blockLibrarySelection,
+    onSaved,
 }: UseConfigureSaveProps): UseConfigureSaveReturn {
     const [isSaving, setIsSaving] = useState(false);
     const [isDeploying, setIsDeploying] = useState(false);
+    // What the project holds as of the last save from this window. The window stays
+    // open after Save; compared with what it OPENED with, a rename and then a rename
+    // back looked like "no change" the second time (owner, 2026-10-17).
+    const [savedName, setSavedName] = useState<string>(() => getProjectDisplayName(project));
+    const [savedAuthoring, setSavedAuthoring] = useState(initialAuthoringExperience);
 
     // Listen for deployment status updates from backend
     // This keeps the Save button disabled during mesh/storefront deployment
@@ -97,12 +105,10 @@ export function useConfigureSave({
             // title still counts as a change. Comparing to the slug would treat
             // "bodea demo" -> "Bodea Demo" as a no-op and silently discard it.
             const newProjectName =
-                projectName.trim() !== getProjectDisplayName(project)
-                    ? projectName.trim()
-                    : undefined;
+                projectName.trim() !== savedName ? projectName.trim() : undefined;
             // The authoring-experience preference is EDS-only, and like the block
             // libraries it rides only once changed.
-            const authoringChanged = authoringExperience !== initialAuthoringExperience;
+            const authoringChanged = authoringExperience !== savedAuthoring;
             const result = await webviewClient.request<SaveConfigurationResponse>(
                 'save-configuration',
                 {
@@ -123,6 +129,9 @@ export function useConfigureSave({
             if (!result.success) {
                 throw new Error(result.error || 'Failed to save configuration');
             }
+            if (newProjectName) setSavedName(newProjectName);
+            if (isEds) setSavedAuthoring(authoringExperience);
+            onSaved?.(configChanges);
         } catch {
             // Error handled by extension - no action needed
             // Extension shows user-facing error message via webview communication
@@ -137,15 +146,14 @@ export function useConfigureSave({
         componentSecretFlags,
         touchedFields,
         projectName,
-        // `project`, not `project.name`: handleSave now compares against
-        // `getProjectDisplayName(project)`, which reads `title` too. Depending on
-        // `.name` alone left a stale closure that would compare a new title
-        // against an old one and silently drop the rename.
-        project,
+        // The baselines handleSave compares against. A stale closure here would
+        // compare a new name against an old one and silently drop the rename.
+        savedName,
+        savedAuthoring,
         isEds,
         authoringExperience,
-        initialAuthoringExperience,
         blockLibrarySelection,
+        onSaved,
     ]);
 
     const handleCancel = useCallback(() => {
