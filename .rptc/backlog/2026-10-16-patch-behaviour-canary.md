@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: [EDS-48]
 value: high
-status: backlog
+status: active
 ---
 
 # A storefront canary: check that the patched boilerplate still WORKS, not just that patches fit
@@ -64,3 +64,4 @@ patch case be automated further?"
 ## Shipped so far
 
 - 2026-10-17  Step A live in skukla/eds-demo-patches (2ff6b1b, 20ef37d): canary.yml checks the three B2B patches by behaviour on patch-canary-b2b after each green gate run and daily, and its self-test proves every check fails with its patch removed. The canary's first runs found two patches that never act on a shipped storefront (sidebar selector race, account column layout); both removed from the ledgers and packages, with the two product-link ids ADR-024 had already removed. Step B (bring the canary to each new tested version inside GitHub) not started.
+- 2026-10-17  fix(eds): drop four code patches no shipped storefront runs (`d68880054`)

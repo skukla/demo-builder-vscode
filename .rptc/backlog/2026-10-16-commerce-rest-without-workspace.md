@@ -47,3 +47,4 @@ ACCS-REST-API subscription. Both tool descriptions say which sign-in they use.
 ## Shipped so far
 
 - 2026-10-16  fix(ai): sign Commerce REST calls as the SC when a project has no Adobe workspace (`9a9627fb6`)
+- 2026-10-17  Write measured 2026-10-17: write_commerce_rest DELETE customers/58 on patch-canary-b2b (no Adobe workspace, so signed as the SC) answered true; a re-read found the customer gone. The SC's own sign-in carries writes too.
