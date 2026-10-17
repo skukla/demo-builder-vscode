@@ -33,12 +33,19 @@ async function commitToShip(
     return deps.readCloneCommit ? deps.readCloneCommit(componentPath) : undefined;
 }
 
-/** Dispatch the deploy by kind; returns success + the outcome to record. */
+/**
+ * Dispatch the deploy by kind; returns success + the outcome to record.
+ *
+ * `workspaceJustMade`: an add that made the app's workspace in this run. Nothing can
+ * have been left behind in it, so the left-behind code check is skipped; it cost a
+ * new app about 16 seconds of waiting for nothing (AB-80, owner, 2026-10-17).
+ */
 export async function dispatchDeploy(
     project: Project,
     entry: AppBuilderComponentCatalogEntry,
     componentPath: string,
     deps: AppBuilderComponentRunnerDeps,
+    options?: { workspaceJustMade?: boolean },
 ): Promise<{ ok: true; outcome: DeployOutcome; warning?: string } | { ok: false; error: string }> {
     if (entry.kind === 'mesh') {
         // The .env must exist before `aio api-mesh` reads it, and it is rewritten
@@ -150,7 +157,7 @@ export async function dispatchDeploy(
         },
     );
     if (!result.success) return { ok: false, error: result.error || 'App deployment failed.' };
-    const leftovers = await deleteLeftBehindActions(project, entry, componentPath, deps);
+    const leftovers = await deleteLeftBehindActions(project, entry, componentPath, deps, options);
     const warning = [events?.note, leftovers].filter(Boolean).join(' ');
     return {
         ok: true,
@@ -211,12 +218,16 @@ async function deleteLeftBehindActions(
     entry: AppBuilderComponentCatalogEntry,
     componentPath: string,
     deps: AppBuilderComponentRunnerDeps,
+    options?: { workspaceJustMade?: boolean },
 ): Promise<string | undefined> {
-    if (!deps.deleteUndeclaredActions) return undefined;
+    // A workspace this add made holds nothing to leave behind (AB-80).
+    if (!deps.deleteUndeclaredActions || options?.workspaceJustMade) return undefined;
     deps.onProgress?.(
         OPERATION_STAGES.checkingLeftovers.label,
-        // In its Runtime namespace: the stage's detail says so.
-        'Deleting code the app no longer declares',
+        // In its Runtime namespace: the stage's detail says so. "Looking", because it
+        // deletes only what it finds; "Deleting" read as a claim, and "Checking for
+        // code no longer declared" as jargon (owner, 2026-10-17).
+        'Looking for old code to remove',
     );
     const sharing = entriesInSameWorkspace(deps.catalog, project, entry)
         .map((other) => project.componentInstances?.[other.id]?.path)

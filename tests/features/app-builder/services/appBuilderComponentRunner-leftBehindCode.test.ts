@@ -54,12 +54,42 @@ describe('an app deploy', () => {
         expect(deleteUndeclaredActions).toHaveBeenCalledWith([folder]);
     });
 
-    it('an add asks too', async () => {
+    it('an add into a workspace it joined asks too', async () => {
         const deleteUndeclaredActions = jest.fn(async () => NOTHING_LEFT);
 
         await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, createDeps({ deleteUndeclaredActions }));
 
         expect(deleteUndeclaredActions).toHaveBeenCalledTimes(1);
+    });
+
+    // AB-80. A workspace this add made moments earlier holds nothing to leave behind,
+    // and the check cost a new app about 16 seconds of waiting for nothing (owner,
+    // 2026-10-17). It still runs when the add joins a workspace that already exists.
+    it('an add into a workspace it just made does not look for left-behind code', async () => {
+        const deleteUndeclaredActions = jest.fn(async () => NOTHING_LEFT);
+        const deps = createDeps({ deleteUndeclaredActions });
+        deps.createComponentWorkspace = jest.fn(async (_project, _entry, onMaking) => {
+            onMaking?.();
+            return undefined;
+        });
+
+        const result = await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, deps);
+
+        expect(result).toMatchObject({ success: true });
+        expect(deleteUndeclaredActions).not.toHaveBeenCalled();
+    });
+
+    // A new app has nothing left behind, and the line said "Deleting" on its first
+    // deploy (owner, 2026-10-17). It says what the step does: it looks first.
+    it('says it is checking for left-behind code, not that it is deleting it', async () => {
+        const lines: Array<string | undefined> = [];
+        const deps = createDeps({ deleteUndeclaredActions: jest.fn(async () => NOTHING_LEFT) });
+        deps.onProgress = (_stage: string, line?: string) => lines.push(line);
+
+        await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, deps);
+
+        expect(lines).toContain('Looking for old code to remove');
+        expect(lines).not.toContain('Deleting code the app no longer declares');
     });
 
     it('stands, and warns by name, when some of it could not be deleted', async () => {

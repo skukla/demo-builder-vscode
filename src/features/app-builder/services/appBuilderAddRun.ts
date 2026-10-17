@@ -132,9 +132,13 @@ async function runAdd(
         // point: the subscribe grants API access to a WORKSPACE's credential, so
         // subscribing first would entitle the project's workspace and leave the
         // component's own without the access it deploys against.
-        const workspaceError = await deps.createComponentWorkspace(project, entry, () =>
-            deps.onProgress?.(OPERATION_STAGES.makingWorkspace.label),
-        );
+        // Whether THIS add made the workspace (told only on making, not on joining):
+        // a new one holds no code to leave behind, so the deploy skips that check (AB-80).
+        let workspaceJustMade = false;
+        const workspaceError = await deps.createComponentWorkspace(project, entry, () => {
+            workspaceJustMade = true;
+            deps.onProgress?.(OPERATION_STAGES.makingWorkspace.label);
+        });
         if (workspaceError) {
             return { success: false, error: workspaceError.error };
         }
@@ -199,7 +203,7 @@ async function runAdd(
 
         const since = new Date().toISOString();
         const deployed = await withOrgContext(targetFor(project, deps, entry.id), () =>
-            dispatchDeploy(project, entry, installed.path, deps),
+            dispatchDeploy(project, entry, installed.path, deps, { workspaceJustMade }),
         );
 
         if (!deployed.ok) {
