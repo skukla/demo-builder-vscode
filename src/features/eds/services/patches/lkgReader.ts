@@ -32,8 +32,13 @@ const MALFORMED_BODY_LOG_CAP = 80;
  * track a different upstream) point at per-ledger LKG files. When
  * omitted, defaults to `last-known-good` at the repo root. All current
  * package entries set `lkgFile: 'b2b/last-known-good'` (tracking
- * `adobe-commerce/boilerplate-b2b-template`); the root default is
- * presently unused but remains the mechanism's fallback.
+ * `adobe-commerce/boilerplate-b2b-template`). The root default is still
+ * READ: a project created 2026-06-10 to 06-19 from the `custom` package
+ * (then on hlxsites, `8cee89846`..`cba779ef1`) recorded its `lkgSource`
+ * without `lkgFile`, and its update check reads the root file. Keep the
+ * default. No ledger advances the root pointer since 2026-10-17 (the
+ * hlxsites ledgers were deleted), so those projects stay at its last
+ * tested commit.
  */
 export interface LkgSource {
     owner: string;

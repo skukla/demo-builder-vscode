@@ -1520,7 +1520,7 @@
         },
         "lkgFile": {
           "type": "string",
-          "description": "Repo-relative path to the LKG file when this ledger tracks a non-default canonical (multi-canonical patches repos). Omitted = the default root `last-known-good`. Every current package entry (citisignal-b2b, b2b, bodea) tracks adobe-commerce/boilerplate-b2b-template and sets `lkgFile: \"b2b/last-known-good\"`; the root default is presently unused."
+          "description": "Repo-relative path to the LKG file when this ledger tracks a non-default canonical (multi-canonical patches repos). Omitted = the default root `last-known-good`. Every current package entry (citisignal-b2b, b2b, bodea) tracks adobe-commerce/boilerplate-b2b-template and sets `lkgFile: \"b2b/last-known-good\"`. The root default is still read by older projects that recorded no `lkgFile` (see `LkgSource` in lkgReader.ts)."
         }
       },
       "required": [
@@ -1528,7 +1528,7 @@
         "repo",
         "path"
       ],
-      "description": "CodePatchSource - External repository for code patches.\n\nSibling of  {@link  ContentPatchSource } . Code patches are file-level edits applied to a cloned storefront repo during create/reset, after reset-to-template and after block install. The engine knows no canonical file by name; everything comes from the external ledger fetched here.\n\nPer ADR-006 D3 the canonical home is `skukla/eds-demo-patches` (the generalized successor to `eds-demo-content-patches`); a path of e.g. `citisignal` selects the patch family for a storefront."
+      "description": "CodePatchSource - External repository for code patches.\n\nSibling of  {@link  ContentPatchSource } . Code patches are file-level edits applied to a cloned storefront repo during create/reset, after reset-to-template and after block install. The engine knows no canonical file by name; everything comes from the external ledger fetched here.\n\nPer ADR-006 D3 the canonical home is `skukla/eds-demo-patches` (the generalized successor to `eds-demo-content-patches`); a path of e.g. `citisignal-b2b` selects the patch family for a storefront."
     },
     "StorefrontBoilerplate": {
       "type": "object",
