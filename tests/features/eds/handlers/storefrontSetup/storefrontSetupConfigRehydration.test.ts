@@ -21,7 +21,7 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 const logger = createMockLogger();
 
 const STOREFRONT = {
-    codePatches: ['product-link-sku-encoding', 'aem-assets-sku-sanitization'],
+    codePatches: ['pdp-empty-data-redirect', 'aem-assets-sku-sanitization'],
     codePatchSource: { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b' },
     contentPatches: ['content-a'],
     contentPatchSource: { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b' },

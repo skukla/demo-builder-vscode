@@ -51,7 +51,7 @@ const PACKAGES = [
                 templateOwner: 'current-owner',
                 templateRepo: 'current-repo',
                 contentPatches: ['current-content-patch'],
-                codePatches: ['product-link-sku-encoding', 'product-teaser-sku-encoding'],
+                codePatches: ['pdp-empty-data-redirect', 'product-teaser-sku-encoding'],
                 codePatchSource: { owner: 'skukla', repo: 'eds-demo-patches' },
             },
         },
@@ -67,7 +67,7 @@ const STALE_EDS_CONFIG = {
     templateOwner: 'OLD-owner',
     templateRepo: 'OLD-repo',
     contentPatches: ['OLD-content-patch'],
-    codePatches: ['product-link-sku-encoding'],
+    codePatches: ['pdp-empty-data-redirect'],
     codePatchSource: { owner: 'skukla', repo: 'eds-demo-patches' },
 };
 
@@ -113,7 +113,7 @@ describe('WelcomeStep — edsConfig refresh on the edit path', () => {
         expect(eds).toBeDefined();
         // The regression: these two were the fields left behind.
         expect(eds!.codePatches).toEqual([
-            'product-link-sku-encoding',
+            'pdp-empty-data-redirect',
             'product-teaser-sku-encoding',
         ]);
         expect(eds!.codePatchSource).toEqual({ owner: 'skukla', repo: 'eds-demo-patches' });
@@ -130,7 +130,7 @@ describe('WelcomeStep — edsConfig refresh on the edit path', () => {
         expect(eds.templateRepo).toBe('current-repo');
         expect(eds.contentPatches).toEqual(['current-content-patch']);
         expect(eds.codePatches).toEqual([
-            'product-link-sku-encoding',
+            'pdp-empty-data-redirect',
             'product-teaser-sku-encoding',
         ]);
     });

@@ -37,7 +37,7 @@ describe('the storefront origin section', () => {
             '    Store settings (config.json): could not read.',
             '    Demo package description: not there.',
             "  Demo Builder's fixes",
-            '    Already on the code: header and account sidebar robustness.',
+            '    Already on the code: header robustness.',
             '    Fit, not applied: empty product pages.',
             '    pdp-empty-data-redirect: fits',
             '    header-nav-tools-defensive: applied',

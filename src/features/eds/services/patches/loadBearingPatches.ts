@@ -1,20 +1,22 @@
 /**
- * The five code patches the EXTENSION depends on, and what it means for a
+ * The code patches the EXTENSION depends on, and what it means for a
  * storefront when one cannot apply.
  *
- * Five of our patches are load-bearing for features the extension provides
+ * Three of our patches are load-bearing for features the extension provides
  * around the storefront (product deep links, the smart 404, AEM Assets images).
  * For a storefront with no tie to our templates they run as a DRY CHECK against
  * the demo's code at creation and reset (D23): the engine's three-state outcome
  * on a throwaway file set; a miss becomes a caveat, worded by consequence, and
  * nothing is written. Since EDS-13f a saved package gets its own fixes applied
- * where they fit and a storefront with our lineage is OFFERED them with the two
- * universal ones (`demoFixPass.ts`); this module keeps the ids, the wording and
+ * where they fit and a storefront with our lineage is OFFERED them with the
+ * universal one (`demoFixPass.ts`); this module keeps the ids, the wording and
  * the ledger they come from.
  *
- * The ids were named by the owner in the research (2026-09-11). The ledger
- * they live in is resolved from the shipped catalog, never hardcoded: the
- * first shipped storefront whose patch list carries all five names the ledger.
+ * The ids were named by the owner in the research (2026-09-11); the two
+ * product-link patches went with ADR-024, and the patches repo deleted them on
+ * 2026-10-06. The ledger they live in is resolved from the shipped catalog, never
+ * hardcoded: the first shipped storefront whose patch list carries all of them
+ * names the ledger.
  *
  * @module features/eds/services/patches/loadBearingPatches
  */
@@ -32,8 +34,6 @@ export type LoadBearingConsequence = 'product-links' | 'empty-product-page' | 'a
 
 /** Every load-bearing id and its consequence. A new id without a consequence fails the pin. */
 export const LOAD_BEARING_PATCHES: Readonly<Record<string, LoadBearingConsequence>> = {
-    'product-link-sku-encoding': 'product-links',
-    'product-link-sku-slash-encoding': 'product-links',
     'product-teaser-sku-encoding': 'product-links',
     'pdp-empty-data-redirect': 'empty-product-page',
     'aem-assets-sku-sanitization': 'asset-images',
@@ -62,13 +62,15 @@ export const CONSEQUENCE_CAVEATS: Readonly<Record<LoadBearingConsequence, string
 };
 
 /**
- * The two universal fixes (the research's `custom` ledger): not load-bearing for
- * anything the extension does, but plain boilerplate bugs every storefront on
- * our boilerplate carries. Offered beside the five (EDS-13f step 03).
+ * The universal fix (the research's `custom` ledger): not load-bearing for anything
+ * the extension does, but a plain boilerplate bug every storefront on our
+ * boilerplate carries. Offered beside the load-bearing ones (EDS-13f step 03).
+ * `commerce-account-sidebar-selector-race` was the second, removed 2026-10-17: no
+ * shipped account page uses the block it patched.
  */
-const UNIVERSAL_PATCHES: readonly string[] = ['header-nav-tools-defensive', 'commerce-account-sidebar-selector-race'];
+const UNIVERSAL_PATCHES: readonly string[] = ['header-nav-tools-defensive'];
 
-/** Every fix offered to a storefront that shows our lineage: the five, then the two. */
+/** Every fix offered to a storefront that shows our lineage: the load-bearing ones, then the universal one. */
 export const STOREFRONT_FIX_IDS: readonly string[] = [...Object.keys(LOAD_BEARING_PATCHES), ...UNIVERSAL_PATCHES];
 
 /** What each group of fixes is for, in SC words, in the order a list names them. */
@@ -76,7 +78,7 @@ const FIX_GROUP_NAMES: ReadonlyArray<[LoadBearingConsequence | 'robustness', str
     ['product-links', 'product links'],
     ['empty-product-page', 'empty product pages'],
     ['asset-images', 'AEM Assets images'],
-    ['robustness', 'header and account sidebar robustness'],
+    ['robustness', 'header robustness'],
 ];
 
 /** The fixes by what they fix, never by patch id: "product links; empty product pages". */
@@ -114,7 +116,7 @@ const CONSEQUENCE_ORDER: readonly LoadBearingConsequence[] = ['product-links', '
  * shipped brand gets.
  *
  * @param packages - The catalog; defaults to the bundled one
- * @returns The ledger source, or undefined when no shipped storefront carries all five
+ * @returns The ledger source, or undefined when no shipped storefront carries them all
  */
 export function resolveDryCheckSource(
     packages: readonly DemoPackage[] = bundledDemoPackages,
@@ -164,7 +166,7 @@ export interface DryCheckTarget {
 }
 
 /**
- * Run the five load-bearing patches against a demo's code without writing
+ * Run the load-bearing patches against a demo's code without writing
  * anything: the engine works on a throwaway map that is never committed.
  *
  * @param target - The demo's repository and branch

@@ -34,11 +34,11 @@ const result = (patchId: string, applied: boolean, alreadyApplied = false): Code
 });
 
 describe('the load-bearing list', () => {
-    it('names the five ids the owner listed, each with a consequence the card can say', () => {
+    // The two product-link patches went with ADR-024 (deleted from the patches repo
+    // 2026-10-06); the ids left are the ones the owner listed that still exist.
+    it('names the load-bearing ids, each with a consequence the card can say', () => {
         expect([...IDS].sort()).toEqual(
             [
-                'product-link-sku-encoding',
-                'product-link-sku-slash-encoding',
                 'product-teaser-sku-encoding',
                 'pdp-empty-data-redirect',
                 'aem-assets-sku-sanitization',
@@ -53,8 +53,8 @@ describe('the load-bearing list', () => {
         }
     });
 
-    it('finds a ledger in the shipped catalog that carries all five', () => {
-        // Bundled catalog: the CitiSignal storefront lists all five today.
+    it('finds a ledger in the shipped catalog that carries all of them', () => {
+        // Bundled catalog: the CitiSignal storefront lists all of them today.
         expect(resolveDryCheckSource()).toEqual(expect.objectContaining({ repo: 'eds-demo-patches' }));
         const partial = [makeDemoPackage({ storefronts: { 'eds-paas': makeStorefront({ codePatches: IDS.slice(1), codePatchSource: { owner: 'o', repo: 'r', path: 'p' } }) } })];
         expect(resolveDryCheckSource(partial)).toBeUndefined();
@@ -62,10 +62,10 @@ describe('the load-bearing list', () => {
 });
 
 describe('the fixes offered to a storefront that shows our lineage (EDS-13f step 03)', () => {
-    it('are the five load-bearing fixes and the two universal ones, and the ledger the dry check reads carries all seven', () => {
-        expect([...STOREFRONT_FIX_IDS].sort()).toEqual(
-            [...IDS, 'header-nav-tools-defensive', 'commerce-account-sidebar-selector-race'].sort(),
-        );
+    it('are the load-bearing fixes and the universal one, and the ledger the dry check reads carries them all', () => {
+        // commerce-account-sidebar-selector-race was the second universal fix, removed
+        // 2026-10-17: no shipped account page uses the block it patched.
+        expect([...STOREFRONT_FIX_IDS].sort()).toEqual([...IDS, 'header-nav-tools-defensive'].sort());
         const ledgerIds = new Set(
             bundledDemoPackages
                 .flatMap((p) => Object.values(p.storefronts))
@@ -76,13 +76,13 @@ describe('the fixes offered to a storefront that shows our lineage (EDS-13f step
     });
 
     it('is offered by count and named by what it fixes, never by patch id', () => {
-        const line = fixOfferLine(['product-link-sku-encoding', 'product-link-sku-slash-encoding', 'header-nav-tools-defensive'], 'template');
+        const line = fixOfferLine(['product-teaser-sku-encoding', 'pdp-empty-data-redirect', 'header-nav-tools-defensive'], 'template');
 
         expect(line).toBe(
-            "3 of Demo Builder's fixes fit this storefront's code: product links; header and account sidebar robustness. " +
+            "3 of Demo Builder's fixes fit this storefront's code: product links; empty product pages; header robustness. " +
                 'They were not applied. Apply them from the storefront report.',
         );
-        expect(line).not.toMatch(/sku-encoding|nav-tools/);
+        expect(line).not.toMatch(/sku-encoding|data-redirect|nav-tools/);
     });
 
     it('says when the match to our boilerplate is by package name only', () => {
@@ -98,16 +98,15 @@ describe('caveatsFor', () => {
     it('groups misses by consequence, in the card order, and says nothing about a patch that applies or is present', () => {
         const caveats = caveatsFor([
             result('aem-assets-sku-sanitization', false),
-            result('product-link-sku-encoding', true),
-            result('product-link-sku-slash-encoding', false),
-            result('product-teaser-sku-encoding', true, true),
-            result('pdp-empty-data-redirect', false),
+            result('product-teaser-sku-encoding', false),
+            // Already present: no caveat for empty product pages.
+            result('pdp-empty-data-redirect', true, true),
         ]);
         expect(caveats).toEqual([
             CONSEQUENCE_CAVEATS['product-links'],
-            CONSEQUENCE_CAVEATS['empty-product-page'],
             CONSEQUENCE_CAVEATS['asset-images'],
         ]);
+        expect(caveatsFor([result('pdp-empty-data-redirect', true)])).toStrictEqual([]);
         expect(caveatsFor(IDS.map((id) => result(id, true)))).toStrictEqual([]);
     });
 });

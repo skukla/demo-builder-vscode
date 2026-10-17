@@ -40,23 +40,18 @@ function patch(id: string, target: string, precondition: string): CodePatch {
 
 /** One file per fix; each precondition appears once, so every fix fits unless a test changes the file. */
 const LEDGER: CodePatch[] = [
-    patch('product-link-sku-encoding', 'scripts/commerce.js', 'A1'),
-    patch('product-link-sku-slash-encoding', 'scripts/commerce.js', 'A2'),
     patch('product-teaser-sku-encoding', 'blocks/product-teaser/product-teaser.js', 'T1'),
     patch('pdp-empty-data-redirect', 'blocks/product-details/product-details.js', 'P1'),
     patch('aem-assets-sku-sanitization', 'scripts/initializers/assets.js', 'S1'),
     patch('header-nav-tools-defensive', 'blocks/header/header.js', 'H1'),
-    patch('commerce-account-sidebar-selector-race', 'blocks/commerce-account-sidebar/commerce-account-sidebar.js', 'R1'),
 ];
 
 function repoFiles(overrides: Record<string, string> = {}): Record<string, string> {
     return {
-        'scripts/commerce.js': 'A1 A2',
         'blocks/product-teaser/product-teaser.js': 'T1',
         'blocks/product-details/product-details.js': 'P1',
         'scripts/initializers/assets.js': 'S1',
         'blocks/header/header.js': 'H1',
-        'blocks/commerce-account-sidebar/commerce-account-sidebar.js': 'R1',
         ...overrides,
     };
 }
@@ -144,12 +139,9 @@ describe("a colleague's storefront with our lineage — offered, opt-in", () => 
         expect(d.fileOps.commitTreeToBranch).not.toHaveBeenCalled();
         expect(report.by).toBe('template');
         expect(report.offered).toEqual([
-            'product-link-sku-encoding',
-            'product-link-sku-slash-encoding',
             'pdp-empty-data-redirect',
             'aem-assets-sku-sanitization',
             'header-nav-tools-defensive',
-            'commerce-account-sidebar-selector-race',
         ]);
         // Every load-bearing fix not on the code is still a caveat: declining leaves them.
         expect(report.caveats).toEqual([
@@ -164,8 +156,8 @@ describe("a colleague's storefront with our lineage — offered, opt-in", () => 
 
         const report = await runDemoFixPass(colleague, OWN, DEMO_SOURCE, d, { applyOffered: true });
 
-        expect(d.fileOps.commitTreeToBranch).toHaveBeenCalledWith('steve', 'aistore-copy', 'main', expect.any(Array), expect.stringMatching(/^Demo Builder: 6 fixes\n/));
-        expect(report.applied).toHaveLength(6);
+        expect(d.fileOps.commitTreeToBranch).toHaveBeenCalledWith('steve', 'aistore-copy', 'main', expect.any(Array), expect.stringMatching(/^Demo Builder: 3 fixes\n/));
+        expect(report.applied).toHaveLength(3);
         expect(report).not.toHaveProperty('offered');
         // The teaser fix missed: product links stay a caveat; the rest are answered.
         expect(report.caveats).toEqual([CONSEQUENCE_CAVEATS['product-links']]);
@@ -203,7 +195,7 @@ describe('demoFixLines — what the SC reads', () => {
                 offered: ['pdp-empty-data-redirect'],
             }),
         ).toEqual([
-            'Demo Builder applied 1 fix to this storefront: header and account sidebar robustness.',
+            'Demo Builder applied 1 fix to this storefront: header robustness.',
             CONSEQUENCE_CAVEATS['asset-images'],
             "1 of Demo Builder's fixes fits this storefront's code: empty product pages. It was not applied. Apply it from the storefront report.",
         ]);

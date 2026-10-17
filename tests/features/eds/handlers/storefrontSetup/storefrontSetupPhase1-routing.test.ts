@@ -50,7 +50,7 @@ const CREATED_REPO = {
 };
 
 const PATCH_FIELDS = {
-    codePatches: ['product-link-sku-encoding'],
+    codePatches: ['pdp-empty-data-redirect'],
     codePatchSource: {
         owner: 'skukla',
         repo: 'eds-demo-patches',

@@ -63,7 +63,6 @@ export async function executePhaseGitHubRepo(
         // button creates the repo BEFORE storefront setup runs, so this branch
         // sees the repo at template HEAD with no canonical patches applied.
         // Without the pin step, canonical-phase patches (e.g., b2b's
-        // product-link-sku-encoding / product-link-sku-slash-encoding /
         // aem-assets-sku-sanitization) silently do NOT apply — only block-phase
         // patches (which run later in the pipeline) land. No-op for forked
         // storefronts (codePatchSource absent).

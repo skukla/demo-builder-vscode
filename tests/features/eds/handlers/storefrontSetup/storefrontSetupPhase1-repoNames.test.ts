@@ -187,7 +187,7 @@ describe('the repo the SC TYPED (existingRepo)', () => {
 
 describe('the reset path', () => {
     const PATCH_FIELDS = {
-        codePatches: ['product-link-sku-encoding'],
+        codePatches: ['pdp-empty-data-redirect'],
         codePatchSource: {
             owner: 'skukla',
             repo: 'eds-demo-patches',

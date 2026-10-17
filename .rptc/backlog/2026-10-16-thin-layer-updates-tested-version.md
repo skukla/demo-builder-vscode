@@ -46,3 +46,8 @@ version-fetch one also by a live request.
 
 - Decompose `templateSyncService.ts` first (426 lines, four jobs), behaviour-preserving.
 - Fix 6, then 5, then 1-3, then 4.
+
+## Shipped so far
+
+- 2026-10-16  fix(updates): bring thin-layer storefronts to the tested version and keep their fixes (`1556e4104`)
+- 2026-10-16  fix(eds): record a block library whose blocks were already in the repository (`3cfd0b622`)

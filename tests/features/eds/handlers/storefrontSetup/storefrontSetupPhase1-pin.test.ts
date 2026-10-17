@@ -49,7 +49,7 @@ function makeServices(): SetupServices {
 }
 
 const THIN_LAYER_CONFIG_PATCH_FIELDS = {
-    codePatches: ['header-nav-tools-defensive', 'product-link-sku-encoding'],
+    codePatches: ['header-nav-tools-defensive', 'pdp-empty-data-redirect'],
     codePatchSource: {
         owner: 'skukla',
         repo: 'eds-demo-patches',

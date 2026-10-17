@@ -89,7 +89,7 @@ describe('StorefrontReportCommand', () => {
             {
                 modal: true,
                 detail:
-                    'They fix: empty product pages; header and account sidebar robustness. Each changes only the code it ' +
+                    'They fix: empty product pages; header robustness. Each changes only the code it ' +
                     "was written for, in one commit to steve/aistore-copy. A reset puts the demo's own code back and offers them again.",
             },
             APPLY_FIXES,

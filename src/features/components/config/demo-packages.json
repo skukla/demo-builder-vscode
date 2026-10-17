@@ -130,11 +130,7 @@
           },
           "codePatches": [
             "header-nav-tools-defensive",
-            "product-link-sku-encoding",
-            "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
-            "commerce-account-sidebar-selector-race",
-            "account-page-column-layout",
             "pdp-empty-data-redirect"
           ],
           "codePatchSource": {
@@ -171,11 +167,7 @@
           },
           "codePatches": [
             "header-nav-tools-defensive",
-            "product-link-sku-encoding",
-            "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
-            "commerce-account-sidebar-selector-race",
-            "account-page-column-layout",
             "pdp-empty-data-redirect"
           ],
           "codePatchSource": {
@@ -270,11 +262,7 @@
           },
           "codePatches": [
             "header-nav-tools-defensive",
-            "product-link-sku-encoding",
-            "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
-            "commerce-account-sidebar-selector-race",
-            "account-page-column-layout",
             "product-teaser-sku-encoding",
             "product-teaser-getproductlink-import",
             "product-teaser-image-url-handling",
@@ -326,11 +314,7 @@
           },
           "codePatches": [
             "header-nav-tools-defensive",
-            "product-link-sku-encoding",
-            "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
-            "commerce-account-sidebar-selector-race",
-            "account-page-column-layout",
             "product-teaser-sku-encoding",
             "product-teaser-getproductlink-import",
             "product-teaser-image-url-handling",
@@ -439,11 +423,7 @@
           },
           "codePatches": [
             "header-nav-tools-defensive",
-            "product-link-sku-encoding",
-            "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
-            "commerce-account-sidebar-selector-race",
-            "account-page-column-layout",
             "pdp-empty-data-redirect"
           ],
           "codePatchSource": {
@@ -506,11 +486,7 @@
           },
           "codePatches": [
             "header-nav-tools-defensive",
-            "product-link-sku-encoding",
-            "product-link-sku-slash-encoding",
             "aem-assets-sku-sanitization",
-            "commerce-account-sidebar-selector-race",
-            "account-page-column-layout",
             "pdp-empty-data-redirect"
           ],
           "codePatchSource": {

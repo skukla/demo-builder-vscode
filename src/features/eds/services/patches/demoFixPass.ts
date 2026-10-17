@@ -6,8 +6,8 @@
  *   1. A saved package: `builtWith` names one of our templates and its ledger.
  *      Both ends are the SC's own (decision 2), so the ledger is APPLIED where
  *      it fits, in one commit to the SC's repository.
- *   2. A colleague's storefront that shows our lineage (decision 3): the five
- *      load-bearing and two universal fixes are checked against the code and
+ *   2. A colleague's storefront that shows our lineage (decision 3): the
+ *      load-bearing and universal fixes are checked against the code and
  *      the ones that fit are OFFERED. Nothing is written unless the caller says
  *      the SC accepted (`applyOffered`), which is never a default.
  *   3. Anything else: the dry check, exactly as before (D23). It runs only here.

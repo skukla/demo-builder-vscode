@@ -60,3 +60,7 @@ patch case be automated further?"
 
 - A dedicated Commerce store for the canary, or the scratch store the walk uses?
 - Where the canary shopper's credentials live and how they are created.
+
+## Shipped so far
+
+- 2026-10-17  Step A live in skukla/eds-demo-patches (2ff6b1b, 20ef37d): canary.yml checks the three B2B patches by behaviour on patch-canary-b2b after each green gate run and daily, and its self-test proves every check fails with its patch removed. The canary's first runs found two patches that never act on a shipped storefront (sidebar selector race, account column layout); both removed from the ledgers and packages, with the two product-link ids ADR-024 had already removed. Step B (bring the canary to each new tested version inside GitHub) not started.

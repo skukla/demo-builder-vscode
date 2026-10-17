@@ -84,9 +84,9 @@ describe('get_storefront_report', () => {
         expect(res).toEqual({ ...REPORT, summary: ['## Where this storefront comes from', 'Built on X.'] });
     });
 
-    it('stays within its recorded size on a full report: seven fixes and every line', async () => {
+    it('stays within its recorded size on a full report: every fix and every line', async () => {
         const actual = jest.requireActual('@/features/eds/services/storefront/storefrontReport');
-        const ids = ['product-link-sku-encoding', 'product-link-sku-slash-encoding', 'product-teaser-sku-encoding', 'pdp-empty-data-redirect', 'aem-assets-sku-sanitization', 'header-nav-tools-defensive', 'commerce-account-sidebar-selector-race'];
+        const ids = ['product-teaser-sku-encoding', 'pdp-empty-data-redirect', 'aem-assets-sku-sanitization', 'header-nav-tools-defensive'];
         const full = {
             repository: { owner: 'steve', repo: 'aistore-copy' },
             boilerplate: { status: 'read', value: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' } },

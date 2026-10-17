@@ -30,8 +30,6 @@ const B2B = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
 const LEDGER_SOURCE = { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b', lkgFile: 'b2b/last-known-good' };
 const LKG = 'abcdef0123456789abcdef0123456789abcdef01';
 const LOAD_BEARING = [
-    'product-link-sku-encoding',
-    'product-link-sku-slash-encoding',
     'product-teaser-sku-encoding',
     'pdp-empty-data-redirect',
     'aem-assets-sku-sanitization',
@@ -45,7 +43,7 @@ const CATALOG = [
                 templateOwner: B2B.owner,
                 templateRepo: B2B.repo,
                 codePatchSource: LEDGER_SOURCE,
-                codePatches: [...LOAD_BEARING, 'header-nav-tools-defensive', 'commerce-account-sidebar-selector-race'],
+                codePatches: [...LOAD_BEARING, 'header-nav-tools-defensive'],
             }),
         },
     }),
@@ -55,24 +53,19 @@ function patch(id: string, target: string, token: string): CodePatch {
     return { id, target, description: id, precondition: token, replacement: `${token.toLowerCase()}-fixed` };
 }
 const LEDGER: CodePatch[] = [
-    patch('product-link-sku-encoding', 'scripts/commerce.js', 'A1'),
-    patch('product-link-sku-slash-encoding', 'scripts/commerce.js', 'A2'),
     patch('product-teaser-sku-encoding', 'blocks/product-teaser/product-teaser.js', 'T1'),
     patch('pdp-empty-data-redirect', 'blocks/product-details/product-details.js', 'P1'),
     patch('aem-assets-sku-sanitization', 'scripts/initializers/assets.js', 'S1'),
     patch('header-nav-tools-defensive', 'blocks/header/header.js', 'H1'),
-    patch('commerce-account-sidebar-selector-race', 'blocks/commerce-account-sidebar/commerce-account-sidebar.js', 'R1'),
 ];
 
 /** The SC's copy of Jen's storefront: two link fixes and the PDP fix fit, the asset file drifted, the two universal ones already there. */
 const OWN_FILES: Record<string, string | Error> = {
     'package.json': '{"name":"@adobe/aem-boilerplate-commerce","version":"4.0.1"}',
-    'scripts/commerce.js': 'A1 A2',
     'blocks/product-teaser/product-teaser.js': 'T1',
     'blocks/product-details/product-details.js': 'P1',
     'scripts/initializers/assets.js': 'rewritten by Jen',
     'blocks/header/header.js': 'h1-fixed',
-    'blocks/commerce-account-sidebar/commerce-account-sidebar.js': 'r1-fixed',
     'scripts/delayed.js': `${SMART_404_MARKER_START}\n// snippet`,
     'fstab.yaml': 'mountpoints: {}',
     'config.json': '{}',
@@ -152,15 +145,12 @@ describe('readStorefrontReport — a colleague’s storefront', () => {
             origin: { kind: 'added', lineage: { status: 'read', value: { templateRepository: B2B } }, match: { by: 'template', template: B2B } },
             written: { smart404: 'present', fstab: 'present', config: 'present', description: 'absent' },
             fixes: [
-                { patchId: 'product-link-sku-encoding', target: 'scripts/commerce.js', state: 'fits' },
-                { patchId: 'product-link-sku-slash-encoding', target: 'scripts/commerce.js', state: 'fits' },
                 { patchId: 'product-teaser-sku-encoding', target: 'blocks/product-teaser/product-teaser.js', state: 'fits' },
                 { patchId: 'pdp-empty-data-redirect', target: 'blocks/product-details/product-details.js', state: 'fits' },
                 expect.objectContaining({ patchId: 'aem-assets-sku-sanitization', state: 'missing' }),
                 { patchId: 'header-nav-tools-defensive', target: 'blocks/header/header.js', state: 'applied' },
-                { patchId: 'commerce-account-sidebar-selector-race', target: 'blocks/commerce-account-sidebar/commerce-account-sidebar.js', state: 'applied' },
             ],
-            offer: ['product-link-sku-encoding', 'product-link-sku-slash-encoding', 'product-teaser-sku-encoding', 'pdp-empty-data-redirect'],
+            offer: ['product-teaser-sku-encoding', 'pdp-empty-data-redirect'],
             contentSite: { org: 'steve', site: 'aistore-copy' },
         });
     });
@@ -202,7 +192,7 @@ describe('readStorefrontReport — a shipped brand', () => {
         const report = await read(shipped, deps());
 
         expect(report.origin).toEqual({ kind: 'shipped', package: 'bodea', template: B2B, pin: LKG });
-        expect(report.fixes).toHaveLength(7);
+        expect(report.fixes).toHaveLength(4);
         expect(report).not.toHaveProperty('offer');
     });
 });
@@ -222,7 +212,7 @@ describe('storefrontReportLines — the SC-facing rendering', () => {
             'Store settings (config.json): there.',
             'Demo package description: not there.',
             "## Demo Builder's fixes",
-            'Already on the code: header and account sidebar robustness.',
+            'Already on the code: header robustness.',
             'Fit, not applied: product links; empty product pages.',
             "Don't fit this code: AEM Assets images.",
         ]);
