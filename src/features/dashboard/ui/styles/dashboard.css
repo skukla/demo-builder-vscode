@@ -239,6 +239,15 @@
     text-overflow: ellipsis;
 }
 
+/* A tile's tooltip lets the pointer through. It stays half a second after the pointer
+   leaves (Spectrum's close delay), covering whatever is beside it; Spectrum does not
+   count hovering the tooltip as hovering the tile, so blocking the pointer kept it
+   open for nothing and made the next tile unreachable (owner, 2026-10-17). Where it
+   opens is DashboardTile's `placement`. */
+.dashboard-tile-tooltip {
+    pointer-events: none;
+}
+
 .dashboard-action-button--hero .dashboard-tile-description {
     color: var(--spectrum-global-color-blue-600);
 }

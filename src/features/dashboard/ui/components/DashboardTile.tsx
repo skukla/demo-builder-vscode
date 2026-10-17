@@ -135,10 +135,15 @@ export function DashboardTile({
     const text = status?.tooltip ?? tooltip;
     if (!text) return button;
 
+    // A list tile's tooltip opens BESIDE it: above, it covered the tile you move to
+    // next. A card sits in a row with nothing above it, so its tooltip stays on top
+    // rather than over the card beside it (owner, 2026-10-17).
+    const placement = description ? 'top' : 'end';
+
     return (
-        <TooltipTrigger delay={300}>
+        <TooltipTrigger delay={300} placement={placement}>
             {button}
-            <Tooltip>{text}</Tooltip>
+            <Tooltip UNSAFE_className="dashboard-tile-tooltip">{text}</Tooltip>
         </TooltipTrigger>
     );
 }
