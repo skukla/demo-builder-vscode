@@ -28,7 +28,7 @@
         "src/features/eds/commands/manageGitHubRepos.ts:166": "Gates: delete these GitHub repositories? Named in the detail, and they do not come back.",
         "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts:95": "Gates: cancel setup, knowing the GitHub repo and DA.live content created so far will be deleted? The cost of stopping is not obvious without asking.",
         "src/features/lifecycle/services/projectResetService.ts:414": "Gates: delete the components and reinstall them from scratch? Configuration and integrations survive, the rest does not.",
-        "src/features/updates/commands/templateConflictPrompt.ts:47": "Gates: which side wins where an update and the SC's own edits touched the same file? The update cannot proceed until someone chooses.",
+        "src/features/updates/commands/templateConflictPrompt.ts:74": "Gates: which side wins where an update and the SC's own edits touched the same file? The update cannot proceed until someone chooses.",
         "src/features/ai/server/agentOperationNotifier.ts:165": "Gates: let the agent run this tool? A cloud write an agent proposes is confirmed by a person before it happens.",
         "src/features/project-creation/handlers/executorEditApply.ts:229": "Gates: an Edit that changes the package resets the storefront to it. Its code and content are replaced; asked before anything in the Edit runs (PL-75).",
         "src/features/project-creation/handlers/executorEditApply.ts:240": "Gates: an Edit that unticks integrations undeploys them. Asked by name, before anything in the Edit runs (PL-75).",

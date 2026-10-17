@@ -37,6 +37,13 @@ interface TemplateChangeRequest {
     preserveFiles: string[];
     /** Where the patch is written — outside the clone's working tree. */
     patchFile: string;
+    /**
+     * The template version to bring the storefront up to. Absent: the template's
+     * latest commit. A thin-layer storefront passes its patches repo's tested
+     * version (ADR-006), never the latest, which nothing has checked its patches
+     * against (owner, 2026-10-16).
+     */
+    target?: string;
 }
 
 /** git's own reason for a failure: its first error line, without the `error:` prefix. */
@@ -123,8 +130,8 @@ async function explainUnapplied(git: GitStep, stderr: string): Promise<TemplateC
 }
 
 /**
- * Apply the template's change from `request.base` to the template's latest commit
- * onto the clone's working tree and index. Pushes nothing.
+ * Apply the template's change from `request.base` to `request.target` (default: the
+ * template's latest commit) onto the clone's working tree and index. Pushes nothing.
  */
 export async function applyTemplateChangeSince(
     git: GitStep,
@@ -135,7 +142,12 @@ export async function applyTemplateChangeSince(
         return { kind: 'not-in-template' };
     }
 
-    const templateHead = await readTemplateHead(git);
+    // A target the template no longer carries cannot be measured to: refuse it
+    // rather than fall back to the latest commit, which is exactly what it replaces.
+    if (request.target && !(await isTemplateCommit(git, request.target))) {
+        return { kind: 'failed', reason: `the tested template version ${request.target.slice(0, 7)} could not be fetched` };
+    }
+    const templateHead = request.target ?? (await readTemplateHead(git));
     if (templateHead === base || !(await writePatch(git, `${base} ${templateHead}`, request))) {
         return { kind: 'unchanged', templateHead };
     }

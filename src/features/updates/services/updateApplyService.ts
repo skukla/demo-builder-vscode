@@ -33,10 +33,8 @@ import {
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { applyIntegrationUpdates } from '@/features/updates/services/integrationUpdates';
-import {
-    TemplateSyncService,
-    type TemplateSyncResult,
-} from '@/features/updates/services/templateSyncService';
+import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
 import {
     emptyResult,
     type ApplyUpdatesResult,
@@ -137,6 +135,8 @@ async function applyTemplate(
                 succeededPaths.add(project.path);
                 result.successCount++;
                 ctx.logger.info(`[Updates] Template synced for ${project.name} (${r.strategy})`);
+                // A fix or piece the update could not put back (EDS-51), in plain words.
+                for (const note of r.notes ?? []) (result.applied ??= []).push(`${project.name}: ${note}`);
             } else {
                 throw new Error(r.error || 'Unknown error');
             }

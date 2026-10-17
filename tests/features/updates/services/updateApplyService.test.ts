@@ -224,6 +224,24 @@ describe('applyUpdatesHeadless', () => {
         expect(res.template.successCount).toBe(1);
     });
 
+    it("tells the agent, in plain lines, which fix a template update could not put back (EDS-51)", async () => {
+        syncWithTemplateMock.mockResolvedValue({
+            success: true,
+            syncedCommit: 'c1',
+            strategy: 'merge',
+            notes: ['A Demo Builder fix could not be put back: fix-gone (gone).'],
+        });
+        const sel = emptySelections();
+        sel.template = [{ project }];
+
+        const res = await applyUpdatesHeadless(sel, ctx);
+
+        expect(res.template.successCount).toBe(1);
+        expect(res.template.applied).toEqual([
+            `${project.name}: A Demo Builder fix could not be put back: fix-gone (gone).`,
+        ]);
+    });
+
     it('updates the inspector SDK via the rollback-guarded helper', async () => {
         const sel = emptySelections();
         sel.inspector = [{ project, latestCommit: 'newsha' }];

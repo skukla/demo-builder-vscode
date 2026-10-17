@@ -19,19 +19,9 @@ import {
 } from './githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
+import { isLkgSource } from '@/features/updates/services/thinLayerUpdate';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-
-/** Runtime shape guard for the LkgSource shape stored on EdsStorefrontMetadata.
- *  `lkgFile` is optional — present for ledgers with non-default LKG paths
- *  (e.g., b2b), absent for ledgers sharing the root `last-known-good`. */
-function isLkgSource(value: unknown): value is { owner: string; repo: string; lkgFile?: string } {
-    if (typeof value !== 'object' || value === null) return false;
-    const obj = value as { owner: unknown; repo: unknown; lkgFile?: unknown };
-    if (typeof obj.owner !== 'string' || typeof obj.repo !== 'string') return false;
-    if (obj.lkgFile !== undefined && typeof obj.lkgFile !== 'string') return false;
-    return true;
-}
 
 /**
  * Result of checking for template updates

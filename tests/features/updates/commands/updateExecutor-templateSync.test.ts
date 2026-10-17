@@ -16,7 +16,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { RESET_TO_TEMPLATE } from '@/features/updates/commands/templateConflictPrompt';
 import { performTemplateUpdates } from '@/features/updates/commands/updateExecutor';
 import type { TemplateUpdateItem } from '@/features/updates/commands/updateTypes';
-import type { TemplateSyncResult } from '@/features/updates/services/templateSyncService';
+import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -214,6 +214,20 @@ describe('performTemplateUpdates', () => {
             expect(updateLastSyncedCommit).toHaveBeenCalledWith(project, 'ccc333', ctx.stateManager);
         });
 
+        it('on success shows each note about a fix the update could not put back (EDS-51)', async () => {
+            const ctx = makeUpdateContext();
+            const project = createMockProject({ name: 'demo' });
+            syncWithTemplate.mockResolvedValue(
+                synced({ notes: ['A Demo Builder fix could not be put back: fix-gone (gone).'] }),
+            );
+
+            await performTemplateUpdates([makeItem(project)], ctx);
+
+            expect(showWarningMock).toHaveBeenCalledWith(
+                'demo: A Demo Builder fix could not be put back: fix-gone (gone).',
+            );
+        });
+
         it('on success shows the plain success summary', async () => {
             const ctx = makeUpdateContext();
 
@@ -249,6 +263,40 @@ describe('performTemplateUpdates', () => {
                 { modal: true },
                 RESET_TO_TEMPLATE,
             );
+        });
+
+        // A thin-layer storefront (it records an LKG source) is never offered a reset to
+        // the bare template: it would drop Demo Builder's fixes. The project's own Reset
+        // rebuilds it at the tested version with them (EDS-51).
+        const thinLayer = () =>
+            createMockProject({
+                name: 'demo',
+                componentInstances: {
+                    'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'EDS Storefront',
+                        status: 'ready',
+                        metadata: { lkgSource: { owner: 'skukla', repo: 'eds-demo-patches' } },
+                    },
+                },
+            });
+
+        it('a thin-layer storefront gets no reset button: it is pointed at the project Reset', async () => {
+            const ctx = makeUpdateContext();
+            syncWithTemplate.mockResolvedValue(CONFLICTED);
+            showWarningMock.mockResolvedValue(undefined);
+
+            const result = await performTemplateUpdates([makeItem(thinLayer())], ctx);
+
+            expect(showWarningMock).toHaveBeenCalledTimes(1);
+            // One argument: a plain warning, not a modal, and no reset button.
+            const [text, ...rest] = showWarningMock.mock.calls[0];
+            expect(text).toContain('blocks/hero/hero.js\nstyles/styles.css');
+            expect(text).toContain('Reset the project from its dashboard');
+            expect(rest).toStrictEqual([]);
+            expect(syncWithTemplate).toHaveBeenCalledTimes(1);
+            expect(updateLastSyncedCommit).not.toHaveBeenCalled();
+            expect(result.size).toBe(0);
         });
 
         it('cancelled: no reset, no commit recorded, no error box, and the project is not a success', async () => {

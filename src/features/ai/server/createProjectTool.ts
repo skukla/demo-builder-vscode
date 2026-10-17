@@ -64,6 +64,7 @@ import { cleanupFailedCreation } from '@/features/project-creation/handlers/crea
 import { projectNameProblem } from '@/features/project-creation/handlers/creationNameCheck';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import { creationPath } from '@/features/project-creation/handlers/executorPreflight';
+import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
 import {
     buildProjectConfig,
     type ProjectConfigSource,
@@ -549,8 +550,12 @@ async function createEds(
         customBlockLibraries: [],
         edsConfig: {
             ...edsConfigInput,
+            // Every field the storefront contributes, from the wizard's one list. A
+            // hand-copied subset left out codePatches/codePatchSource, so an agent's
+            // project recorded no tested-version source and was updated like a plain
+            // fork, against Adobe's latest commit (EDS-51).
+            ...pickStorefrontDerived(storefront),
             accsHost: args.accsEndpoint,
-            contentPatches: storefront.contentPatches,
             repoUrl,
             preflightComplete: true,
             ...(brokenLinks?.length ? { brokenLinks } : {}),

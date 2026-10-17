@@ -9,7 +9,9 @@
  */
 
 import * as vscode from 'vscode';
-import type { TemplateSyncResult, TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
+import { isThinLayerProject } from '@/features/updates/services/thinLayerUpdate';
 import type { Project } from '@/types/base';
 
 export const RESET_TO_TEMPLATE = 'Reset to template';
@@ -20,13 +22,32 @@ export type TemplateUpdateOutcome =
     | { kind: 'kept'; conflicts: string[] }
     | { kind: 'failed'; error: string };
 
-function conflictPrompt(project: Project, conflicts: string[]): string {
+function conflictLead(project: Project, conflicts: string[]): string {
     const noun = conflicts.length === 1 ? 'file' : 'files';
     return (
         `${project.name}: the template update conflicts with your edits in ${conflicts.length} ${noun}.\n\n`
         + `${conflicts.join('\n')}\n\n`
+    );
+}
+
+function conflictPrompt(project: Project, conflicts: string[]): string {
+    return (
+        conflictLead(project, conflicts)
         + 'Nothing has been changed. "Reset to template" replaces those files with the template\'s '
         + 'version and discards your edits to them. Cancel keeps your storefront as it is.'
+    );
+}
+
+/**
+ * A thin-layer storefront is offered no template reset: it would drop Demo Builder's
+ * fixes. The project's own Reset rebuilds it at the tested version with them (EDS-51).
+ */
+function thinLayerConflictNotice(project: Project, conflicts: string[]): string {
+    return (
+        conflictLead(project, conflicts)
+        + 'Nothing has been changed. To take the update anyway, Reset the project from its '
+        + 'dashboard: it rebuilds the code at the tested version with every Demo Builder fix, '
+        + 'and replaces your own code edits.'
     );
 }
 
@@ -41,6 +62,12 @@ export async function syncTemplateWithConflictPrompt(
     const merged = await service.syncWithTemplate(project, { strategy: 'merge' });
     if (merged.success) return { kind: 'synced', result: merged };
     if (!merged.conflicts?.length) return { kind: 'failed', error: merged.error || 'Unknown error' };
+
+    if (isThinLayerProject(project)) {
+        // Not modal: there is nothing to choose here, only where to go next.
+        void vscode.window.showWarningMessage(thinLayerConflictNotice(project, merged.conflicts));
+        return { kind: 'kept', conflicts: merged.conflicts };
+    }
 
     const choice = await vscode.window.showWarningMessage(
         conflictPrompt(project, merged.conflicts),

@@ -195,7 +195,10 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
             ['p1', 'p2'],
             PATCH_SOURCE,
             context.logger,
+            expect.any(String),
         );
+        // Targets read at the SAME ref the reset commits, never Adobe's latest (EDS-51).
+        expect(mocks.applyCanonicalCodePatches.mock.calls[0][6]).toBe(resetMock.mock.calls[0][5]);
         // The SAME map, so patched canonical files land in the one atomic commit.
         expect(mocks.applyCanonicalCodePatches.mock.calls[0][0]).toBe(resetMock.mock.calls[0][4]);
         expect(mocks.applyCanonicalCodePatches.mock.invocationCallOrder[0]).toBeLessThan(
@@ -270,5 +273,19 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
 
         expect(getFileContent).toHaveBeenCalledWith('me', 'shop', 'package.json', undefined);
         expect('boilerplate' in result).toBe(false);
+    });
+});
+
+describe('resetRepoToTemplate — patched files are the version the reset commits (EDS-51)', () => {
+    it('reads patch targets at the resolved commit, not the branch', async () => {
+        mockGetLatestCommitSha.mockResolvedValue(HEAD_SHA);
+        mocks.applyCanonicalCodePatches.mockResolvedValue([]);
+
+        const { resetMock } = await runReset(
+            buildParams({ codePatches: ['p1'], codePatchSource: PATCH_SOURCE }),
+        );
+
+        expect(resetMock.mock.calls[0][5]).toBe(HEAD_SHA);
+        expect(mocks.applyCanonicalCodePatches.mock.calls[0][6]).toBe(HEAD_SHA);
     });
 });

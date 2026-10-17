@@ -14,6 +14,7 @@ import {
     EDS,
     capturedWizardState,
     defaultStorefrontSetup,
+    getStorefrontForStack,
     storefrontSetup,
     toolServer,
 } from './createProjectTool.testUtils';
@@ -69,5 +70,32 @@ describe('create_project — adoptExisting', () => {
 
         expect(res.hint).toContain('adoptExisting:true');
         expect(res.hint).not.toContain('skipped on retry');
+    });
+});
+
+describe('create_project — the storefront fields creation records (EDS-51)', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        defaultStorefrontSetup();
+    });
+
+    it("hands creation the storefront's patches and their source, so the project knows its tested version", async () => {
+        // Without codePatchSource the project records no lkgSource, and Check for
+        // Updates treats it as a plain fork of Adobe's latest commit.
+        const codePatchSource = { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b', lkgFile: 'b2b/last-known-good' };
+        (getStorefrontForStack as jest.Mock).mockResolvedValueOnce({
+            templateOwner: 'adobe-commerce',
+            templateRepo: 'boilerplate-b2b-template',
+            contentSource: { org: 'co', site: 'cs' },
+            codePatches: ['pdp-empty-data-redirect'],
+            codePatchSource,
+        });
+
+        await toolServer().call(EDS);
+
+        expect(capturedWizardState().edsConfig).toMatchObject({
+            codePatches: ['pdp-empty-data-redirect'],
+            codePatchSource,
+        });
     });
 });

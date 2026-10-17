@@ -32,6 +32,7 @@ import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { callRequestsConsent } from '@/features/ai/server/inExtensionMcpServer';
 
 const computeMock = computeProjectUpdateSelections as jest.Mock;
 const applyMock = applyUpdatesHeadless as jest.Mock;
@@ -97,6 +98,12 @@ describe('apply_updates', () => {
         });
     });
 
+    it('raises the consent dialog when it is told to apply (EDS-51)', () => {
+        expect(callRequestsConsent('apply_updates', { confirm: true })).toBe(true);
+        // A report-only call (no confirm) changes nothing and asks nothing.
+        expect(callRequestsConsent('apply_updates', {})).toBe(false);
+    });
+
     it('declares what it is: no read-only claim, github auth, and a confirm flag', async () => {
         // The annotation block travels to the client in tools/list and the dry run
         // gates on it, so a wrong declaration is a tool an agent applies blind.
@@ -105,7 +112,9 @@ describe('apply_updates', () => {
 
         const def = s.definition();
         expect(def.needsAuth).toStrictEqual(['github']);
-        expect(def.annotations).toStrictEqual({ readOnlyHint: false, destructiveHint: false });
+        // Destructive: it rewrites storefront code, and its conflict reset discards the
+        // user's own edits, so it raises the consent dialog (EDS-51).
+        expect(def.annotations).toStrictEqual({ readOnlyHint: false, destructiveHint: true });
         expect(def.description).toMatch(/apply available updates/);
         expect(def.inputSchema.confirm.isOptional()).toBe(true);
         expect(def.inputSchema.confirm.parse(true)).toBe(true);

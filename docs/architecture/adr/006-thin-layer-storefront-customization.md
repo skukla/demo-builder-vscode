@@ -145,6 +145,16 @@ Demo Builder does **not** build from raw canonical `main`, and does **not** use 
 
 Applying an update to an EXISTING project is still the SC's choice in Check for Updates, because it rewrites that project's code.
 
+**Amended 2026-10-16 (EDS-51): an update keeps both halves of the thin layer.** Found while preparing the patch canary (EDS-49). Check for Updates compared a project against the LKG, but the merge it then ran replayed the template's change up to Adobe's latest commit, which nothing had checked against our patches, and recorded that commit. Nothing put back a patch added to the ledger since the project was made, and the only way through a conflict was a reset to the bare template, which dropped the patches, the 404 handling and Quick Edit. Now, for a storefront that records an `lkgSource`:
+
+- the merge goes to the LKG (`templateMergeBase` takes a `target`); an unreadable LKG changes nothing rather than fall back to the latest;
+- the ledger's patches are re-applied in the update's own commit (`thinLayerUpdate.reapplyPatchesInCheckout`): one already present is left alone, one whose precondition is gone is reported to the SC, a `critical` one that cannot apply stops the update before anything is pushed;
+- the 404 handling and Quick Edit are put back if missing (both installers check their own markers);
+- a reset to the bare template is refused (button and agent alike); the way through a conflict is the project's own Reset, which rebuilds at the LKG with the whole layer;
+- `apply_updates` raises the consent dialog when it applies.
+
+Two related defects fixed with it. **Patched files came from Adobe's latest copy** on create and reset: `applyCanonicalCodePatches` read each target from `main` under a comment saying a single file could not be fetched by commit id. It can (`raw.githubusercontent.com/<template>/<sha>/<path>`, verified 2026-10-16 for an LKG commit already rewritten off `main`); targets are now read at the commit the tree is built from. **An agent-created storefront recorded no `lkgSource`**: `create_project` copied a subset of the storefront's fields, so the project was updated like a plain fork. It now takes the wizard's one list (`pickStorefrontDerived`).
+
 **The gate also watches for patch retirement** (decided 2026-06-10) — it automates the patch policy's "every patch has an exit" rule instead of leaving it to memory:
 
 - **Obsolete-patch detection.** When a patch's precondition no longer matches, the check additionally tests whether the file *already contains the patch's replacement*. If so, the fix landed upstream (near-certain when our own PR was merged verbatim) and the patch is obsolete. The job then **opens a pull request in the patches repo removing the patch**, with the evidence in the description — automation proposes retirement, a human merges it. Deliberately not auto-delete: judging whether upstream's fix is truly equivalent can be subtle, and a wrong silent deletion would break demos quietly.

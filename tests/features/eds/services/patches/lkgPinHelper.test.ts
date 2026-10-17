@@ -71,13 +71,15 @@ describe('pinRepoToLkg — happy path', () => {
             mockLogger,
         );
 
-        // Canonical patcher invoked with the fileOverrides map + patch list.
+        // Canonical patcher invoked with the fileOverrides map + patch list, reading
+        // each target AT the LKG commit, the version the rest of the tree is (EDS-51).
         expect(mockApplyCanonicalCodePatches).toHaveBeenCalledWith(
             expect.any(Map),  // fileOverrides
             'hlxsites', 'aem-boilerplate-commerce',
             ['p1', 'p2'],
             SOURCE,
             mockLogger,
+            LKG_SHA,
         );
 
         // Bulk Tree reset called with templateRef = LKG SHA, target = user's repo.

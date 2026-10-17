@@ -45,7 +45,40 @@ jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
     getGitHubServices: () => ({ tokenService: { getToken: async () => ({ token: 'gh-token' }) } }),
 }));
 
+// A thin-layer storefront's network reads (EDS-51), faked; none is reached by a
+// storefront with no lkgSource, so the cases above run exactly as before.
+// The tested (LKG) version the patches repo names.
+const mockReadLkgSha = jest.fn();
+jest.mock('@/features/eds/services/patches/lkgReader', () => ({
+    readLkgSha: (...args: unknown[]) => mockReadLkgSha(...args),
+}));
+// The patch ledger: the REAL engine applies it to the checkout's files.
+const mockLedger = jest.fn();
+jest.mock('@/features/eds/services/patches/externalPatchFetcher', () => ({
+    fetchExternalPatches: async () => mockLedger(),
+}));
+// The project's storefront settings: which patches it carries, and its reset params.
+const mockStorefront = jest.fn();
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    resolveStorefrontConfig: () => mockStorefront(),
+    extractResetParams: () => ({
+        success: true,
+        params: { repoOwner: 'skukla', repoName: 'demo-storefront', daLiveOrg: 'skukla', daLiveSite: 'demo-storefront' },
+    }),
+}));
+// The 404 handling and Quick Edit write through GitHub's API; asserted, not run.
+const mockInstall404 = jest.fn().mockResolvedValue({ installed: true });
+const mockInstallQuickEdit = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/eds/services/storefront/notFoundPage', () => ({
+    installMissingPageHandling: (...args: unknown[]) => mockInstall404(...args),
+}));
+jest.mock('@/features/eds/services/quickEditPublisher', () => ({
+    installQuickEdit: (...args: unknown[]) => mockInstallQuickEdit(...args),
+}));
+
 const REAL_GIT_TIMEOUT_MS = 60_000;
+const LKG_SOURCE = { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' };
+const PATCH_SOURCE = { ...LKG_SOURCE, path: 'b2b' };
 const SC_REPO = 'skukla/demo-storefront';
 const TEMPLATE = { owner: 'adobe', repo: 'aem-boilerplate-commerce' };
 /** A GitHub https URL, with or without credentials in it, as the service builds it. */
@@ -165,7 +198,7 @@ function realGitExecutor(fx: Fixture) {
     return createMockCommandExecutor({ execute });
 }
 
-function storefrontProject(lastSyncedCommit: string | undefined): Project {
+function storefrontProject(lastSyncedCommit: string | undefined, thinLayer = false): Project {
     return createMockProject({
         name: 'demo',
         componentInstances: {
@@ -178,19 +211,25 @@ function storefrontProject(lastSyncedCommit: string | undefined): Project {
                     templateOwner: TEMPLATE.owner,
                     templateRepo: TEMPLATE.repo,
                     lastSyncedCommit,
+                    ...(thinLayer ? { lkgSource: LKG_SOURCE } : {}),
                 },
             },
         },
     });
 }
 
-function merge(fx: Fixture, lastSyncedCommit: string | undefined, strategy: 'merge' | 'reset' = 'merge') {
+function merge(
+    fx: Fixture,
+    lastSyncedCommit: string | undefined,
+    strategy: 'merge' | 'reset' = 'merge',
+    thinLayer = false,
+) {
     const svc = new TemplateSyncService(
         createMockSecretStorage(githubTokenSecret('gh-token')).secrets,
         createMockLogger(),
         realGitExecutor(fx),
     );
-    return svc.syncWithTemplate(storefrontProject(lastSyncedCommit), { strategy });
+    return svc.syncWithTemplate(storefrontProject(lastSyncedCommit, thinLayer), { strategy });
 }
 
 const originHead = (fx: Fixture): string => git(fx, fx.scBare, 'rev-parse', 'main');
@@ -342,5 +381,116 @@ describe('merging a template update from the recorded version (real git)', () =>
         expect(result).toEqual({ success: true, strategy: 'reset', syncedCommit: fx.t2 });
         expect(originFile(fx, 'A.txt')).toBe(TEMPLATE_A.trim());
         expect(originFile(fx, 'config.json')).toBe(SC_CONFIG.trim());
+    }, REAL_GIT_TIMEOUT_MS);
+});
+
+/** Adobe moves on past the tested version: T3 adds D.txt, which nothing has checked. */
+function templateMovesOn(fx: Fixture): string {
+    const work = path.join(fx.root, 'template-work');
+    write(work, 'D.txt', 'd from an untested commit\n');
+    git(fx, work, 'add', '-A');
+    git(fx, work, 'commit', '-q', '-m', 'T3, not yet tested');
+    git(fx, work, 'push', '-q', path.join(fx.root, 'github', TEMPLATE.owner, `${TEMPLATE.repo}.git`), 'main');
+    return git(fx, work, 'rev-parse', 'HEAD');
+}
+
+const commitsOnOrigin = (fx: Fixture): number => Number(git(fx, fx.scBare, 'rev-list', '--count', 'main'));
+
+describe('a thin-layer storefront updates to the TESTED version, with its fixes (EDS-51, real git)', () => {
+    let fx: Fixture;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockLedger.mockResolvedValue([]);
+        mockStorefront.mockReturnValue({ codePatches: [], codePatchSource: PATCH_SOURCE });
+    });
+
+    afterEach(() => {
+        if (fx) fs.rmSync(fx.root, { recursive: true, force: true });
+    });
+
+    it('stops at the tested version, not Adobe\'s latest, and records the tested version', async () => {
+        fx = buildFixture();
+        const t3 = templateMovesOn(fx);
+        mockReadLkgSha.mockResolvedValue(fx.t2);
+
+        const result = await merge(fx, fx.t1, 'merge', true);
+
+        expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: fx.t2 });
+        expect(originFile(fx, 'A.txt')).toBe(TEMPLATE_A.trim());
+        expect(() => originFile(fx, 'D.txt')).toThrow();
+        expect(result.syncedCommit).not.toBe(t3);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('CONTROL: the same storefront with no tested version recorded goes to the latest', async () => {
+        fx = buildFixture();
+        const t3 = templateMovesOn(fx);
+
+        const result = await merge(fx, fx.t1);
+
+        expect(result.syncedCommit).toBe(t3);
+        expect(originFile(fx, 'D.txt')).toBe('d from an untested commit');
+        expect(mockReadLkgSha).not.toHaveBeenCalled();
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('re-applies a fix in the SAME commit as the update, and says which it could not', async () => {
+        // Patch targets must sit under scripts/ or blocks/ (patchTargetPolicy).
+        fx = buildFixture((work) => {
+            fs.mkdirSync(path.join(work, 'scripts'));
+            write(work, 'scripts/app.js', 'const shown = false;\n');
+        });
+        mockReadLkgSha.mockResolvedValue(fx.t2);
+        mockLedger.mockResolvedValue([
+            { id: 'fix-a', target: 'scripts/app.js', description: '', precondition: 'const shown = false;', replacement: 'const shown = true;' },
+            { id: 'fix-gone', target: 'scripts/app.js', description: '', precondition: 'not in the file', replacement: 'x' },
+        ]);
+        mockStorefront.mockReturnValue({ codePatches: ['fix-a', 'fix-gone'], codePatchSource: PATCH_SOURCE });
+        const before = commitsOnOrigin(fx);
+
+        const result = await merge(fx, fx.t1, 'merge', true);
+
+        expect(result.success).toBe(true);
+        expect(originFile(fx, 'A.txt')).toBe(TEMPLATE_A.trim());
+        expect(originFile(fx, 'scripts/app.js')).toBe('const shown = true;');
+        expect(commitsOnOrigin(fx)).toBe(before + 1);
+        expect(result.notes).toEqual([
+            expect.stringMatching(/^A Demo Builder fix could not be put back: fix-gone \(/),
+        ]);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('puts back the 404 handling and Quick Edit after the update', async () => {
+        fx = buildFixture();
+        mockReadLkgSha.mockResolvedValue(fx.t2);
+
+        await merge(fx, fx.t1, 'merge', true);
+
+        expect(mockInstall404).toHaveBeenCalledWith(
+            undefined, 'skukla', 'demo-storefront', undefined, expect.anything(), 'skukla', 'demo-storefront',
+        );
+        expect(mockInstallQuickEdit).toHaveBeenCalledWith(undefined, 'skukla', 'demo-storefront', expect.anything());
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('refuses a reset to the bare template, which would drop the fixes, and pushes nothing', async () => {
+        fx = buildFixture();
+        const before = originHead(fx);
+
+        const result = await merge(fx, fx.t1, 'reset', true);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/Reset the project instead/);
+        expect(originHead(fx)).toBe(before);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('changes nothing when the tested version cannot be read, rather than use the latest', async () => {
+        fx = buildFixture();
+        templateMovesOn(fx);
+        mockReadLkgSha.mockResolvedValue(undefined);
+        const before = originHead(fx);
+
+        const result = await merge(fx, fx.t1, 'merge', true);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/Could not read the tested boilerplate version/);
+        expect(originHead(fx)).toBe(before);
     }, REAL_GIT_TIMEOUT_MS);
 });

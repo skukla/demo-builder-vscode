@@ -298,6 +298,8 @@ export async function resetRepoToTemplate(
     // patchReport (callers pass it forward into `executeEdsPipeline`).
     let canonicalCodePatchResults: CodePatchResult[] | undefined;
     if (codePatches && codePatches.length > 0 && codePatchSource) {
+        // Targets are read at the ref the reset commits, so a patched file is
+        // the same version as the rest of the tree (EDS-51).
         canonicalCodePatchResults = await applyCanonicalCodePatches(
             fileOverrides,
             templateOwner,
@@ -305,6 +307,7 @@ export async function resetRepoToTemplate(
             codePatches,
             codePatchSource,
             context.logger,
+            templateRef,
         );
     }
 

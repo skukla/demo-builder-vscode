@@ -106,13 +106,12 @@ export async function pinRepoToLkg(
 
     logger.info(`[LKGPin] Pinning ${repoOwner}/${repoName} to LKG ${lkgSha.substring(0, 7)} (${codePatchSource.owner}/${codePatchSource.repo})`);
 
-    // Apply canonical-phase patches into a fileOverrides map. The helper
-    // fetches each target from the template repo (at canonical main — the
-    // archive endpoint doesn't take a SHA for individual file fetches,
-    // but that's fine: the preconditions are stable substrings that work
-    // against both main and the LKG SHA). The bulk reset below uses the
-    // LKG SHA so the overall tree is pinned; only the per-file fetches
-    // for patch precondition checking use main.
+    // Apply canonical-phase patches into a fileOverrides map. Each target is
+    // fetched at the LKG commit, the same version as the rest of the tree the
+    // bulk reset below commits. This read `main` until 2026-10-16, under a
+    // comment saying a single file could not be fetched by commit id; it can
+    // (raw.githubusercontent.com/<repo>/<sha>/<path>), and reading `main` put
+    // Adobe's latest copy of every patched file into an LKG storefront (EDS-51).
     const fileOverrides = new Map<string, string>();
     const canonicalResults = await applyCanonicalCodePatches(
         fileOverrides,
@@ -120,6 +119,7 @@ export async function pinRepoToLkg(
         codePatches,
         codePatchSource,
         logger,
+        lkgSha,
     );
 
     // Route canonical results into the shared patch report (when provided)

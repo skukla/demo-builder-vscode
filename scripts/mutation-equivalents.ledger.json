@@ -6986,7 +6986,7 @@
             "anchors": [
                 "if (!patchIds || patchIds.length === 0) return [];"
             ],
-            "line": 72,
+            "line": 77,
             "mutants": 3,
             "category": "branch",
             "reason": "This is a fast path, not a decision. With the guard gone an empty id list flows into getCodePatches, which has the identical guard and returns [] without fetching, then into applyCodePatches, which also returns [] for an empty list \u2014 so the wrapper still returns [] and still makes no network call. The || to && form differs only when patchIds is null or undefined, which the signature forbids and which all three call sites (edsPipeline, lkgPinHelper, edsResetRepoHelper) already guard against before calling.",
@@ -6999,7 +6999,7 @@
             "anchors": [
                 "if (!patchIds || patchIds.length === 0) return [];"
             ],
-            "line": 132,
+            "line": 137,
             "mutants": 3,
             "category": "branch",
             "reason": "The block-phase copy of the same fast path. Removing it lets an empty id list reach getCodePatches, which returns [] without fetching, so blockPatches is empty, uniqueTargets is empty, no repo read or write happens and applyCodePatches returns [] for the empty list \u2014 the same [] the guard returns. The || to && variant needs a null patchIds, which the signature forbids and which every call site guards before calling.",
@@ -7060,7 +7060,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 95,
+            "line": 100,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.warn. Emptying it does not stop the catch from swallowing the template-fetch error, so control still continues to the next patch target, the target still never enters fileOverrides, and the engine still reports the patch not-applied. The rejecting-fetch test now covers this path and asserts those outcomes; the only thing the mutant removes is the warning text.",
@@ -7073,7 +7073,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 150,
+            "line": 155,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.warn. Emptying it still swallows the getFileContent failure, so the loop still moves to the next target, the unreadable target still stays out of the working set, and the engine still reports it not-applied while the other targets are patched and written. The failing-read test covers exactly that and asserts the surviving target is still written; only the warn text goes.",
@@ -7086,7 +7086,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 184,
+            "line": 189,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger.warn. Emptying it still absorbs a failing createOrUpdateFile, so the write loop continues to the remaining targets and the engine results are still returned to the caller rather than thrown at the pipeline. The failing-write test covers this path and asserts the results come back intact; the mutant changes only the warn text.",
@@ -8957,7 +8957,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 224,
+            "line": 225,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -8970,7 +8970,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 239,
+            "line": 240,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
@@ -15360,7 +15360,7 @@
             "source": "PL-70 batch MUT-01"
         },
         {
-            "module": "src/features/updates/services/templateSyncService.ts",
+            "module": "src/features/updates/services/templateCheckout.ts",
             "anchors": [
                 "const gitOutput = error instanceof TemplateSyncStepError ? `: ${error.gitOutput.trim()}` : '';"
             ],
@@ -15372,7 +15372,7 @@
             "source": "PL-70 batch MUT-01"
         },
         {
-            "module": "src/features/updates/services/templateSyncService.ts",
+            "module": "src/features/updates/services/templateCheckout.ts",
             "anchors": [
                 "const label = strategy === 'merge' ? 'Merge' : 'Reset';"
             ],

@@ -176,6 +176,11 @@ export async function performTemplateUpdates(
                         ctx.logger.info(
                             `[Updates] Template synced for ${project.name} (${outcome.result.strategy})`,
                         );
+                        // A fix or piece the update could not put back (EDS-51).
+                        for (const note of outcome.result.notes ?? []) {
+                            ctx.logger.warn(`[Updates] ${project.name}: ${note}`);
+                            vscode.window.showWarningMessage(`${project.name}: ${note}`);
+                        }
                     } else if (outcome.kind === 'kept') {
                         // The SC chose to keep their edits; the modal already named the files.
                         keptCount++;
