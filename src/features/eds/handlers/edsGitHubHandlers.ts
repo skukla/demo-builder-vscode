@@ -422,7 +422,7 @@ export async function handleCreateGitHubRepo(
         // Create repository from template — or, for an added demo whose source
         // is not a template, an empty repository reset onto the source.
         const templateSync = new TemplateSyncService(
-            context.context.secrets,
+            getGitHubServices(context.context.secrets),
             context.logger,
             ServiceLocator.getCommandExecutor(),
         );

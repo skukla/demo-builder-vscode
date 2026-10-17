@@ -503,6 +503,7 @@
         "clean:webview": "rm -rf dist/webview",
         "compile": "npm run clean:webview && npm run copy:media && node esbuild.config.js --production",
         "compile:dev": "npm run copy:media && node esbuild.config.js --production",
+        "build:canary-update": "esbuild src/features/updates/canary/canaryUpdateCli.ts --bundle --platform=node --target=node20 --format=cjs --tsconfig=tsconfig.json --alias:vscode=./src/features/updates/canary/vscodeAbsent.ts --outfile=dist/canary-update.js",
         "compile:extension": "node esbuild.config.js --extension-only --production",
         "compile:extension:dev": "node esbuild.config.js --extension-only",
         "compile:typescript": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",

@@ -6,6 +6,9 @@
  * @module features/updates/services/templateSyncTypes
  */
 
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
+
 /** Options for template sync operation */
 export interface TemplateSyncOptions {
     /** Sync strategy: 'merge' applies the template's change, 'reset' does full reset */
@@ -36,6 +39,17 @@ export interface TemplateSyncResult {
      * piece that could not be put back (EDS-51). Absent when there is nothing to say.
      */
     notes?: string[];
+}
+
+/**
+ * The GitHub access a sync needs: the token its git clone and push use, and the file
+ * operations that put Demo Builder's pieces back. Handed in rather than fetched from
+ * the extension's service cache, so the same code runs outside VS Code: the patch
+ * canary brings its storefront up to date with it in CI (EDS-49).
+ */
+export interface GitHubAccess {
+    tokenService: Pick<GitHubTokenService, 'getToken'>;
+    fileOperations: GitHubFileOperations;
 }
 
 /** Which repositories one sync moves between. */

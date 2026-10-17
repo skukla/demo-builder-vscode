@@ -148,6 +148,11 @@ const NOT_FRAGMENTED: Readonly<Record<string, string>> = {
         'constructs itself in its own factory, once per PANEL. The state it carries — ' +
         'handshake, disposables, config — is per-panel state, so a second panel SHOULD ' +
         'have a second instance. Sharing one would be the bug.',
+    'src/features/updates/canary/canaryUpdateCli.ts':
+        "a separate program's entry point (dist/canary-update.js, run by the patch canary " +
+        'in CI), not part of the extension. It builds GitHubTokenService once per process ' +
+        'and hands it down: it is the composition root of that program, as extension.ts is ' +
+        'of the extension.',
 };
 
 function mayConstruct(f: string): boolean {

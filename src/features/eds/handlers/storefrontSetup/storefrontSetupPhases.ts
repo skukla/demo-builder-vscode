@@ -69,7 +69,7 @@ function createSetupServices(context: HandlerContext): SetupServices {
         githubRepoOps: new GitHubRepoOperations(githubTokenService, context.logger),
         githubRepoLifecycle: new GitHubRepoLifecycle(githubTokenService, context.logger),
         templateSync: new TemplateSyncService(
-            context.context.secrets,
+            getGitHubServices(context.context.secrets),
             context.logger,
             ServiceLocator.getCommandExecutor(),
         ),

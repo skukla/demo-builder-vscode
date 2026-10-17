@@ -23,6 +23,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { APPLYING_UPDATES } from '@/core/utils/updateStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { describeUpdateLeftOut } from '@/features/eds/services/addedEntriesRecord';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
@@ -151,7 +152,7 @@ export async function performTemplateUpdates(
     const { successCount, failCount, keptCount } = await withProgressRegister(
         { title: APPLYING_UPDATES },
         async (report) => {
-            const templateSyncService = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
+            const templateSyncService = new TemplateSyncService(getGitHubServices(ctx.secrets), ctx.logger, ctx.commandManager);
             let successCount = 0;
             let failCount = 0;
             let keptCount = 0;

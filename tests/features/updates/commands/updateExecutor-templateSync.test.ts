@@ -20,6 +20,7 @@ import type { TemplateSyncResult } from '@/features/updates/services/templateSyn
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 jest.mock('@/features/updates/services/templateSyncService');
 jest.mock('@/core/utils/sleep');
@@ -173,7 +174,8 @@ describe('performTemplateUpdates', () => {
 
             await performTemplateUpdates([makeItem(project)], ctx);
 
-            expect(ServiceMock).toHaveBeenCalledWith(ctx.secrets, ctx.logger, ctx.commandManager);
+            // The extension's own GitHub services for this context, handed in (EDS-49).
+            expect(ServiceMock).toHaveBeenCalledWith(getGitHubServices(ctx.secrets), ctx.logger, ctx.commandManager);
             expect(syncWithTemplate).toHaveBeenCalledWith(project, { strategy: 'merge' });
         });
 

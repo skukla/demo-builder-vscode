@@ -33,17 +33,15 @@ import * as os from 'os';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
 import type { ExecuteOptions } from '@/core/shell/types';
+import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { Project } from '@/types/base';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { githubAccessFor } from '../../../helpers/githubAccessFake';
 import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
 
-// The service reads its GitHub token through the shared service cache; only getToken is called.
-jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
-    getGitHubServices: () => ({ tokenService: { getToken: async () => ({ token: 'gh-token' }) } }),
-}));
 
 // A thin-layer storefront's network reads (EDS-51), faked; none is reached by a
 // storefront with no lkgSource, so the cases above run exactly as before.
@@ -224,9 +222,10 @@ function merge(
     strategy: 'merge' | 'reset' = 'merge',
     thinLayer = false,
 ) {
+    const logger = createMockLogger();
     const svc = new TemplateSyncService(
-        createMockSecretStorage(githubTokenSecret('gh-token')).secrets,
-        createMockLogger(),
+        githubAccessFor(createMockSecretStorage(githubTokenSecret('gh-token')).secrets, logger),
+        logger,
         realGitExecutor(fx),
     );
     return svc.syncWithTemplate(storefrontProject(lastSyncedCommit, thinLayer), { strategy });
@@ -465,9 +464,11 @@ describe('a thin-layer storefront updates to the TESTED version, with its fixes 
         await merge(fx, fx.t1, 'merge', true);
 
         expect(mockInstall404).toHaveBeenCalledWith(
-            undefined, 'skukla', 'demo-storefront', undefined, expect.anything(), 'skukla', 'demo-storefront',
+            expect.any(GitHubFileOperations), 'skukla', 'demo-storefront', undefined, expect.anything(), 'skukla', 'demo-storefront',
         );
-        expect(mockInstallQuickEdit).toHaveBeenCalledWith(undefined, 'skukla', 'demo-storefront', expect.anything());
+        expect(mockInstallQuickEdit).toHaveBeenCalledWith(
+            expect.any(GitHubFileOperations), 'skukla', 'demo-storefront', expect.anything(),
+        );
     }, REAL_GIT_TIMEOUT_MS);
 
     it('refuses a reset to the bare template, which would drop the fixes, and pushes nothing', async () => {

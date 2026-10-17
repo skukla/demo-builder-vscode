@@ -27,12 +27,10 @@
  */
 
 import * as path from 'path';
-import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { restorePreservedFiles } from '@/features/updates/services/preservedFiles';
 import { commitAndPush, withCheckout, type SyncDeps } from '@/features/updates/services/templateCheckout';
@@ -52,6 +50,7 @@ import {
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 import type {
     Checkout,
+    GitHubAccess,
     TemplateSyncOptions,
     TemplateSyncResult,
     TemplateSyncTarget,
@@ -73,25 +72,23 @@ import type { Logger } from '@/types/logger';
  * Synchronizes an EDS project with its upstream template.
  */
 export class TemplateSyncService {
-    private logger: Logger;
-    private secrets: vscode.SecretStorage;
-
-    /** ADR-015: the executor joins the secrets + logger as an injected dependency. */
+    /**
+     * ADR-015: every dependency arrives here; nothing is fetched from a service cache.
+     * The callers (commands and handlers, the boundary) pass the extension's own GitHub
+     * services; the patch canary passes its own, outside VS Code (EDS-49).
+     */
     constructor(
-        secrets: vscode.SecretStorage,
-        logger: Logger,
-        private commandManager: CommandExecutor,
-    ) {
-        this.secrets = secrets;
-        this.logger = logger;
-    }
+        private readonly github: GitHubAccess,
+        private readonly logger: Logger,
+        private readonly commandManager: Pick<CommandExecutor, 'execute'>,
+    ) {}
 
     /** What the shared checkout needs from this service. */
     private get deps(): SyncDeps {
         return {
             git: (cwd, command, timeout) => this.git(cwd, command, timeout),
             logger: this.logger,
-            secrets: this.secrets,
+            github: this.github,
         };
     }
 
@@ -155,8 +152,7 @@ export class TemplateSyncService {
             this.mergeFromBase(checkout, target, { base, tested, preserveFiles }, project),
         );
         if (!merged.success || !tested) return merged;
-        const { fileOperations } = getGitHubServices(this.secrets);
-        const pieces = await restoreDemoBuilderPieces(project, fileOperations, this.logger);
+        const pieces = await restoreDemoBuilderPieces(project, this.github.fileOperations, this.logger);
         if (pieces.length === 0) return merged;
         return { ...merged, notes: [...(merged.notes ?? []), ...pieces] };
     }

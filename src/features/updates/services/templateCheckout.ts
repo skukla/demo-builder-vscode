@@ -10,26 +10,25 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import type * as vscode from 'vscode';
 import type { CommandResult } from '@/core/shell/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
 import { backupPreservedFiles } from '@/features/updates/services/preservedFiles';
 import { describeStepFailure, failure } from '@/features/updates/services/templateSyncMessages';
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 import type {
     Checkout,
+    GitHubAccess,
     TemplateSyncResult,
     TemplateSyncTarget,
 } from '@/features/updates/services/templateSyncTypes';
 import type { Logger } from '@/types/logger';
 
-/** What the checkout needs from its owner: a git runner, a logger, and the secrets the GitHub token lives in. */
+/** What the checkout needs from its owner: a git runner, a logger, and the GitHub token. */
 export interface SyncDeps {
     git: (cwd: string, command: string, timeout: number) => Promise<CommandResult>;
     logger: Logger;
-    secrets: vscode.SecretStorage;
+    github: Pick<GitHubAccess, 'tokenService'>;
 }
 
 /**
@@ -47,7 +46,7 @@ export async function withCheckout(
     // The SHARED instance. NOTE: this site only calls getToken() and never
     // validates, so a fresh instance cost nothing here — this is consistency with
     // the other call sites, not a fix for a redundant round trip.
-    const { tokenService: githubTokenService } = getGitHubServices(deps.secrets);
+    const { tokenService: githubTokenService } = deps.github;
     const token = await githubTokenService.getToken();
     if (!token) {
         return failure(strategy, 'Not authenticated with GitHub');

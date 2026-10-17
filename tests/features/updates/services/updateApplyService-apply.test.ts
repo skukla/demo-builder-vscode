@@ -30,6 +30,7 @@ import {
 import * as vscode from 'vscode';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 const getConfigMock = vscode.workspace.getConfiguration as jest.Mock;
 
@@ -120,8 +121,9 @@ describe('template sync', () => {
             onProgress
         );
 
+        // The extension's own GitHub services for this context, handed in (EDS-49).
         expect(TemplateSyncServiceCtor).toHaveBeenCalledWith(
-            ctx.secrets,
+            getGitHubServices(ctx.secrets),
             ctx.logger,
             ctx.commandManager
         );

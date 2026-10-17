@@ -23,6 +23,7 @@ import * as vscode from 'vscode';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { describeUpdateLeftOut } from '@/features/eds/services/addedEntriesRecord';
 import { shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
@@ -125,7 +126,7 @@ async function applyTemplate(
     const result = emptyResult();
     const succeededPaths = new Set<string>();
     if (items.length === 0) return { result, succeededPaths };
-    const svc = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
+    const svc = new TemplateSyncService(getGitHubServices(ctx.secrets), ctx.logger, ctx.commandManager);
     for (const { project } of items) {
         onProgress?.(S.updatingTemplate.label, project.name);
         try {
