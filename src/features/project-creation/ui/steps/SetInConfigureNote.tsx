@@ -2,9 +2,9 @@
  * Edit's one quiet line saying a setting is changed in project configuration, with a
  * link that hands over to Configure.
  *
- * Edit leaves the Commerce settings and the block libraries to Configure and keeps
- * their steps out of its strips (editLocks.ts). This line is said once per area, in
- * place of the info boxes that stood on each of those steps (owner, 2026-10-17).
+ * Edit leaves the Commerce settings to Configure and keeps their steps out of its
+ * strip (editLocks.ts). This line is said once, under the backend cards, in place
+ * of the info boxes that stood on each of those steps (owner, 2026-10-17).
  * The extension closes Edit and opens the dashboard with Configure on top, asking
  * first when this Edit has changes that leaving would throw away.
  *

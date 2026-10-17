@@ -28,8 +28,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { BlockLibrariesStepContent } from '../components/BlockLibrariesStepContent';
 import { requireAreaSubSteps } from './areaSubSteps';
-import { BLOCK_LIBRARIES_SET_IN_CONFIGURE, isSetInConfigure } from './editLocks';
-import { SetInConfigureNote } from './SetInConfigureNote';
 import { isStorefrontConfigured } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
@@ -263,21 +261,11 @@ export function StorefrontStep({
             ) : activeStep === 'block-libraries' ? (
                 blockLibraries
             ) : (
-                <>
-                    <RepoSelectionInline
-                        state={state}
-                        updateState={updateState}
-                        onRepoValidChange={v => updateState({ storefrontRepoValid: v })}
-                    />
-                    {/* Edit leaves Block Libraries out of the strip: said once, here. */}
-                    {isSetInConfigure(state) && (
-                        <SetInConfigureNote
-                            text={BLOCK_LIBRARIES_SET_IN_CONFIGURE}
-                            state={state}
-                            testId="block-libraries-set-in-configure"
-                        />
-                    )}
-                </>
+                <RepoSelectionInline
+                    state={state}
+                    updateState={updateState}
+                    onRepoValidChange={v => updateState({ storefrontRepoValid: v })}
+                />
             )}
         </StepAreaShell>
     );

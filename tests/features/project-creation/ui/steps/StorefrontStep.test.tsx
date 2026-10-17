@@ -339,15 +339,13 @@ describe('StorefrontStep', () => {
             expect(nativeCard).toHaveAttribute('aria-pressed', 'true');
         });
 
-        // In Edit the step is not in the strip; Repository says once, quietly, where
-        // they change (owner, 2026-10-17).
-        it('says on Repository, in Edit, that they change in project configuration', () => {
+        // In Edit the step is not in the strip and nothing stands in for it: the
+        // summary shows the libraries (owner, 2026-10-17).
+        it('leaves the step out of Edit, with no line in its place', () => {
             setup({ activeStorefrontStep: 'repository', wizardMode: 'edit', selectedBlockLibraries: ['lib-a'] });
 
-            expect(screen.getByTestId('block-libraries-set-in-configure')).toHaveTextContent(
-                'Block libraries are added and removed in project configuration.',
-            );
             expect(document.querySelector('[data-step="block-libraries"]')).toBeNull();
+            expect(screen.queryByTestId('block-libraries-set-in-configure')).not.toBeInTheDocument();
         });
 
         it('lets them change in Edit once the package or backend changed', () => {
