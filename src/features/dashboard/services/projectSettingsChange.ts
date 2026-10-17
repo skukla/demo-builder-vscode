@@ -134,6 +134,22 @@ export async function stageSettingsChange(
     project.componentConfigs = configs;
     if (meshChanges.hasChanges) project.meshStatusSummary = 'stale';
     if (storefrontChanges.hasChanges) project.edsStorefrontStatusSummary = 'stale';
+    else if (storefrontMatchesLiveAgain(project)) project.edsStorefrontStatusSummary = 'published';
 
     return { configs, meshChanges, storefrontChanges };
+}
+
+/**
+ * Whether a storefront marked out of date is current again: the settings now match
+ * what was last published (the detector found no change against it) and no store
+ * change still owes the page swap. The flag only ever went ON, so a store switched
+ * and switched back kept asking for a republish that had nothing to publish (owner,
+ * 2026-10-17). A republish the CDN refused keeps its old baseline, so the settings
+ * still differ from it and that case stays out of date.
+ */
+function storefrontMatchesLiveAgain(project: Project): boolean {
+    const summary = project.edsStorefrontStatusSummary;
+    const outOfDate = summary === 'stale' || summary === 'update-declined';
+    const state = project.edsStorefrontState;
+    return outOfDate && state !== undefined && !state.catalogPagesPending;
 }

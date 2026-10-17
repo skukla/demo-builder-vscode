@@ -92,6 +92,44 @@ describe('configure_project — the storefront', () => {
         expect(saved.edsStorefrontStatusSummary).toBe('published');
         expect(out).not.toHaveProperty('storefrontMarkedStale');
     });
+
+    // The flag only ever went ON: switched to another store and back, the settings
+    // matched the live site again and Republish still said "needed" (owner, 2026-10-17).
+    it('marks the storefront current again when a change is put back to what is live', async () => {
+        getCurrentProject.mockResolvedValue(
+            publishedEdsProject({
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'new' } },
+                edsStorefrontStatusSummary: 'stale',
+            }),
+        );
+
+        await serve()({ env: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'old' } } });
+
+        const saved = saveProject.mock.calls[0][0] as Project;
+        expect(saved.edsStorefrontStatusSummary).toBe('published');
+    });
+
+    it('keeps it out of date while a store change still owes the page swap', async () => {
+        getCurrentProject.mockResolvedValue(
+            publishedEdsProject({
+                edsStorefrontState: {
+                    envVars: { ACCS_STORE_VIEW_CODE: 'old' },
+                    lastPublished: '2026-10-01T00:00:00Z',
+                    catalogPagesPending: {
+                        fromWebsiteCode: 'a',
+                        fromStoreCode: 'b',
+                        fromStoreViewCode: 'c',
+                    },
+                },
+                edsStorefrontStatusSummary: 'stale',
+            }),
+        );
+
+        await serve()({ env: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'old' } } });
+
+        const saved = saveProject.mock.calls[0][0] as Project;
+        expect(saved.edsStorefrontStatusSummary).toBe('stale');
+    });
 });
 
 describe('configure_project — the .env files', () => {
