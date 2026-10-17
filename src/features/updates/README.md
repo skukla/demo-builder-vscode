@@ -41,6 +41,22 @@ Releases are **prereleases**, and `releases/latest` ignores those — a detail t
 bitten this repo before. See
 [cut-release](../../../.claude/skills/cut-release/SKILL.md).
 
+## The template update also runs outside VS Code, for the patch canary
+
+`TemplateSyncService` (the storefront's template merge) receives its GitHub access as a
+constructor argument (`GitHubAccess` in `templateSyncTypes.ts`); callers pass
+`getGitHubServices(secrets)`. Nothing on that path needs VS Code at run time, so the patch
+canary in `skukla/eds-demo-patches` runs the SAME update on its canary storefront in CI,
+rather than a copy of it that would drift (EDS-49).
+
+`canary/` is that program: `canaryUpdate.ts` builds the canary's project record from the
+bundled demo-package catalog and runs the merge; `canaryUpdateCli.ts` is its command
+(inputs from the environment, documented in its header). `npm run build:canary-update`
+bundles it to `dist/canary-update.js`, with `vscode` replaced by `vscodeAbsent.ts`, which
+throws by name if a change ever makes this path reach for VS Code. Change the update path
+and the canary runs your change, from whatever branch the patches repo's `EXTENSION_REF`
+variable names.
+
 ## A selected block library is installed here, not only at creation
 
 Ticking a block library on a project that already exists only records the id in

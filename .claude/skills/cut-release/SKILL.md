@@ -125,6 +125,12 @@ Let `N` = new beta number, `PREV` = current one.
 4. **Merge to master:**
    `git checkout master && git merge --no-ff develop -m "Merge branch 'develop' for v1.0.0-beta.<N>"`
 
+   Then check which branch the patch canary builds the extension's update code from:
+   `gh variable list --repo skukla/eds-demo-patches` (`EXTENSION_REF`). It should be
+   `master`. If it names a branch this release just merged, set it back:
+   `gh variable set EXTENSION_REF --repo skukla/eds-demo-patches --body master`
+   (EDS-49; a deleted branch makes every canary run fail at checkout).
+
 5. **Annotated tag:**
    `git tag -a v1.0.0-beta.<N> -m "v1.0.0-beta.<N>"`
 
