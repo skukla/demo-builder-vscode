@@ -6591,7 +6591,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 361,
+            "line": 398,
             "mutants": 1,
             "category": "block",
             "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log. Re-anchored 2026-10-16 (355 -> 361): unchanged code; the progress lines above it are reworded (progress vocabulary slice 4).",

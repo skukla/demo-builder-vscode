@@ -51,6 +51,9 @@ jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
         getFileContent: jest.fn().mockResolvedValue(null),
         createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
+        // A library whose blocks were all present is recorded at its source's
+        // latest commit (EDS-51).
+        getLatestCommitSha: jest.fn().mockResolvedValue('f00dfeed00000000000000000000000000000000'),
     })),
 }));
 

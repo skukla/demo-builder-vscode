@@ -16,6 +16,7 @@ import {
     blockLibraryLoader,
     executePhaseHelixConfig,
     inspectorHelpers,
+    LIBRARY_HEAD_SHA,
     makeFileOps,
     makePhaseContext,
     makeRepoInfo,
@@ -36,8 +37,8 @@ const ISLE5_SOURCE = { owner: 'adobe', repo: 'isle5-blocks', branch: 'main' };
 async function runPhase(
     options: Parameters<typeof executePhaseHelixConfig>[5],
     project: Project | null = null,
+    fileOps = makeFileOps(),
 ) {
-    const fileOps = makeFileOps();
     const { context, sendMessage, saveProject } = makePhaseContext(project);
     const repoInfo = makeRepoInfo();
     const result = await executePhaseHelixConfig(
@@ -418,7 +419,11 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
         expect(repoInfo.installedBlockLibraries?.map((lib) => lib.name)).toEqual(['Isle5 Blocks']);
     });
 
-    it('hands nothing back when the install reported no library versions', async () => {
+    it('records a library whose blocks were all present, crediting it with no blocks (EDS-51)', async () => {
+        // An adopted existing repository already has every block. Leaving the library
+        // out of the record made the update check offer "install" on every run; it is
+        // recorded at its source's latest commit, as the update path's own install
+        // does, with no blocks credited, so removal deletes nothing it did not add.
         blockCollectionHelpers.installBlockCollections.mockResolvedValue({
             success: true,
             blocksCount: 0,
@@ -429,8 +434,28 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
 
         const { saveProject, repoInfo } = await runPhase({ selectedBlockLibraries: ['isle5'] }, project);
 
+        // Handed back for creation to record, never saved onto the open project here.
         expect(saveProject).not.toHaveBeenCalled();
         expect(project.installedBlockLibraries).toBeUndefined();
+        expect(repoInfo.installedBlockLibraries).toEqual([
+            expect.objectContaining({ name: 'Isle5 Blocks', commitSha: LIBRARY_HEAD_SHA, blockIds: [] }),
+        ]);
+    });
+
+    it('records nothing for a library whose source commit cannot be read, and says so', async () => {
+        blockCollectionHelpers.installBlockCollections.mockResolvedValue({
+            success: true,
+            blocksCount: 0,
+            blockIds: [],
+            libraryVersions: [],
+        });
+
+        const { repoInfo } = await runPhase(
+            { selectedBlockLibraries: ['isle5'] },
+            createMockProject(),
+            makeFileOps({ getLatestCommitSha: jest.fn().mockResolvedValue(null) }),
+        );
+
         expect(repoInfo.installedBlockLibraries).toBeUndefined();
     });
 });

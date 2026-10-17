@@ -65,16 +65,23 @@ export const EDS_CONFIG: StorefrontSetupStartPayload['edsConfig'] = {
 
 export const makeRepoInfo = (): RepoInfo => ({ repoOwner: 'me', repoName: 'shop' });
 
-/** The three file-ops calls this phase makes; the class itself holds private Octokit state. */
+/** The file-ops calls this phase makes; the class itself holds private Octokit state. */
 export type FileOpsStub = jest.Mocked<
-    Pick<GitHubFileOperations, 'getFileContent' | 'createOrUpdateFile' | 'commitTreeToBranch'>
+    Pick<
+        GitHubFileOperations,
+        'getFileContent' | 'createOrUpdateFile' | 'commitTreeToBranch' | 'getLatestCommitSha'
+    >
 >;
+
+/** The source commit a library is recorded at when it contributed no blocks (EDS-51). */
+export const LIBRARY_HEAD_SHA = 'f00dfeed00000000000000000000000000000000';
 
 export function makeFileOps(overrides: Partial<FileOpsStub> = {}): FileOpsStub {
     return {
         getFileContent: jest.fn().mockResolvedValue(null),
         createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
         commitTreeToBranch: jest.fn().mockResolvedValue('sha123'),
+        getLatestCommitSha: jest.fn().mockResolvedValue(LIBRARY_HEAD_SHA),
         ...overrides,
     };
 }

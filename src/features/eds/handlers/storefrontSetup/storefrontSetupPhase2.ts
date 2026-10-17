@@ -38,7 +38,7 @@ import {
     isBlockLibraryAvailableForPackage,
     withAlwaysIncludedBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import type { CustomBlockLibrary, LibraryVersionInfo } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
@@ -320,10 +320,11 @@ async function installBlockCollectionsWithTracking(
             // project it creates or edits. In the wizard that project does not exist
             // yet, and `getCurrentProject()` — where these went until 2026-10-09 —
             // is whatever was open before, which got the new project's list.
-            if (result.libraryVersions && result.libraryVersions.length > 0) {
-                repoInfo.installedBlockLibraries = result.libraryVersions.map((lv) =>
-                    toInstalledBlockLibrary(lv),
-                );
+            const versions = await withEveryLibraryRecorded(
+                allLibraries, result.libraryVersions ?? [], githubFileOps, logger,
+            );
+            if (versions.length > 0) {
+                repoInfo.installedBlockLibraries = versions.map((lv) => toInstalledBlockLibrary(lv));
             }
             return result.blockIds;
         }
@@ -332,6 +333,42 @@ async function installBlockCollectionsWithTracking(
         await applyStandaloneInspectorTagging(githubFileOps, repoInfo, packageId, context, logger);
     }
     return undefined;
+}
+
+/**
+ * Every library setup installed, including one whose blocks were all already in the
+ * repository (an adopted existing repository, or blocks another library supplied).
+ *
+ * The installer credits a library only for blocks it copied, which is right for the
+ * blocks; but a library it credited nothing was left out of the project's record,
+ * so the update check offered "install" for it on every run (EDS-51, the recreated
+ * canary). The update path's own install records such a library at its source's
+ * latest commit with no blocks (`versionWithNoBlocks`); setup now does the same.
+ * No blocks are claimed, so removal still deletes only folders it can prove it added.
+ */
+function sameSource(a: { owner: string; repo: string }, b: { owner: string; repo: string }): boolean {
+    return a.owner.toLowerCase() === b.owner.toLowerCase() && a.repo.toLowerCase() === b.repo.toLowerCase();
+}
+
+async function withEveryLibraryRecorded(
+    libraries: readonly BlockLibraryEntry[],
+    versions: readonly LibraryVersionInfo[],
+    githubFileOps: GitHubFileOperations,
+    logger: Logger,
+): Promise<LibraryVersionInfo[]> {
+    const recorded = [...versions];
+    for (const lib of libraries) {
+        // Matched the way the update check matches a record: by name or by source.
+        if (versions.some((v) => v.name === lib.name || sameSource(v.source, lib.source))) continue;
+        const { owner, repo, branch } = lib.source;
+        const commitSha = await githubFileOps.getLatestCommitSha(owner, repo, branch).catch(() => null);
+        if (!commitSha) {
+            logger.warn(`[Storefront Setup] ${lib.name}: no source commit to record; it may be offered again`);
+            continue;
+        }
+        recorded.push({ name: lib.name, source: lib.source, commitSha, blockIds: [] });
+    }
+    return recorded;
 }
 
 /**
