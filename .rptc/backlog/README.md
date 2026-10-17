@@ -303,7 +303,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-52` | fix | [The new-category offer reads the SAVED store, before it is published](2026-10-17-category-offer-after-store-switch.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (123)
+### app-builder  (124)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -429,6 +429,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-77` | feature | [Prepare this store: the ERP setup steps the extension can apply, not only check](2026-10-10-prepare-this-store-for-the-erp-integration.md) | — | high | built |
 | `AB-78` | feature | [One Commerce instance runs one ERP integration](2026-10-15-second-erp-on-a-shared-commerce-backend.md) | — | med | built |
 | `AB-79` | fix | [The mesh's "redeploy needed" flag only ever turns on](2026-10-17-mesh-stale-flag-never-clears.md) | — | low | backlog |
+| `AB-80` | fix | [An add into a workspace it just made skips the leftover-code check](2026-10-17-add-skips-leftover-check-on-fresh-workspace.md) | — | low | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (4)
@@ -688,7 +689,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*288 item(s) sit outside the A–G chain.*
+*289 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
