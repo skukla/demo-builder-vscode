@@ -48,6 +48,7 @@ jest.mock(
 
 import './dashboardValidatorMocks';
 import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
+import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { warmOrgServicesCatalog } from '@/features/dashboard/handlers/warmOrgServicesCatalog';
 import { setupMocks } from './dashboardHandlers.testUtils';
 
@@ -302,5 +303,22 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         await handleRequestStatus(mockContext);
 
         expect(warmOrgServicesCatalog).toHaveBeenCalledWith(mockContext);
+    });
+
+    // The cheap half, posted on every project save (pushStatus): the status the
+    // dashboard renders, and none of the on-open work.
+    it('posts the status alone, without the on-open work, through postStatusUpdate', async () => {
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
+        const project = await mockContext.stateManager.getCurrentProject();
+        if (!project || !mockContext.panel) throw new Error('fixture has no project or panel');
+
+        const { statusData } = await postStatusUpdate(mockContext, mockContext.panel, project);
+
+        expect(mockContext.panel.webview.postMessage).toHaveBeenCalledWith({
+            type: 'statusUpdate',
+            payload: statusData,
+        });
+        expect(statusData).toMatchObject({ name: 'test-project' });
+        expect(warmOrgServicesCatalog).not.toHaveBeenCalled();
     });
 });

@@ -431,6 +431,17 @@ export async function activate(context: vscode.ExtensionContext) {
             }),
         );
 
+        // A save made anywhere shows on an open dashboard. An agent's
+        // configure_project changed the store and the Republish tile stayed plain
+        // until the dashboard was reopened (owner, 2026-10-17): only the Configure
+        // screen refreshed it. The status post is cheap; the on-open checks are not
+        // rerun.
+        context.subscriptions.push(
+            stateManager.onProjectChanged(() => {
+                void ProjectDashboardWebviewCommand.pushStatus();
+            }),
+        );
+
         // The publish key's SECOND trigger. The activation run happens above,
         // sequenced behind the AI-bundle sweep; this one fires on sign-in.
         //

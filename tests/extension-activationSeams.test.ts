@@ -35,6 +35,7 @@ import {
     mockWatcherManagerCtor,
     mockEnvWatcherInitialize,
     mockSendAuthoringExperienceUpdate,
+    mockOnProjectChanged,
 } from './extension.testUtils';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -152,6 +153,32 @@ describe('the seams activate() hands away', () => {
                 TIMEOUTS.STATUS_BAR_SUCCESS,
             );
             expect(refresh).toHaveBeenCalledTimes(1);
+            refresh.mockRestore();
+        });
+    });
+
+    // An agent's configure_project changed the store and the Republish tile stayed
+    // plain until the dashboard was reopened: only the Configure screen refreshed it
+    // (owner, 2026-10-17). A save from ANY surface now posts the status again.
+    describe('a project save', () => {
+        it('posts the status to an open dashboard, without rerunning its on-open checks', async () => {
+            const push = jest
+                .spyOn(ProjectDashboardWebviewCommand, 'pushStatus')
+                .mockResolvedValue(undefined);
+            const refresh = jest
+                .spyOn(ProjectDashboardWebviewCommand, 'refreshStatus')
+                .mockResolvedValue(undefined);
+            await activate(createActivationContext());
+            await settle();
+
+            for (const [listener] of mockOnProjectChanged.event.mock.calls) {
+                listener({ name: 'demo' });
+            }
+            await settle();
+
+            expect(push).toHaveBeenCalledTimes(1);
+            expect(refresh).not.toHaveBeenCalled();
+            push.mockRestore();
             refresh.mockRestore();
         });
     });

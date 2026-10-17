@@ -13,6 +13,7 @@ import { loadDemoPackages } from '@/features/components/services/demoPackageLoad
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import {
@@ -316,6 +317,20 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
         // Directly invoke the handler with proper context
         const context = instance.createHandlerContext();
         await dispatchHandler(dashboardHandlers, context, 'requestStatus', {});
+    }
+
+    /**
+     * Post the open dashboard's status again, without the on-open checks. Wired to
+     * every project save in extension.ts, so a change made anywhere (an agent tool
+     * included) shows on an open dashboard; `refreshStatus` is too heavy for that.
+     */
+    public static async pushStatus(): Promise<void> {
+        const instance = ProjectDashboardWebviewCommand.activeInstance;
+        if (!instance) return;
+        const context = instance.createHandlerContext();
+        const project = await context.stateManager.getCurrentProject();
+        if (!context.panel || !project) return;
+        await postStatusUpdate(context, context.panel, project);
     }
 
     // ============================================================================

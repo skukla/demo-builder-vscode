@@ -9,6 +9,7 @@
  */
 
 import * as path from 'path';
+import type * as vscode from 'vscode';
 import { buildStatusPayload, deriveMeshStatus } from '../services/dashboardStatusService';
 import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
@@ -38,32 +39,29 @@ import {
     applicableMcpPackages,
     readInstalledMcpPackages,
 } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
+import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import { MessageHandler } from '@/types/handlers';
+import { type HandlerContext, MessageHandler } from '@/types/handlers';
 import { getMeshComponentInstance, isEdsProject } from '@/types/typeGuards';
 import type { MeshStatus } from '@/types/webviewPayloads';
 
 /**
- * Handle 'requestStatus' message - Send current project status
+ * Build the dashboard's status and post it, with none of the on-open checks.
  *
- * Note: the dashboard's initial `init` payload (theme, project, hasMesh, isEds,
- * hasAdobeContext, …) is delivered once by BaseWebviewCommand via getInitialData
- * after the handshake. There is intentionally no `'ready'` handler that re-sends
- * a partial `init` — doing so previously clobbered rich fields (hasAdobeContext,
- * hasMesh, brand/stack names) that aren't ref-captured in the UI.
+ * The cheap half of `requestStatus`, on its own so a project SAVE can refresh an
+ * open dashboard (`ProjectDashboardWebviewCommand.pushStatus`). An agent's
+ * configure_project changed the store and the Republish tile stayed plain until
+ * the dashboard was reopened (owner, 2026-10-17); the full refresh reruns the mesh
+ * verify and the AI checks, too heavy for every save.
  */
-export const handleRequestStatus: MessageHandler = async (context) => {
-    context.logger.debug('[Dashboard] handleRequestStatus called');
-
-    if (!context.panel) {
-        return { success: false, error: 'No panel available', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
+export async function postStatusUpdate(
+    context: HandlerContext,
+    panel: vscode.WebviewPanel,
+    project: Project,
+): Promise<{
+    statusData: ReturnType<typeof buildStatusPayload>;
+    shouldVerifyMesh: boolean;
+}> {
     const meshComponent = getMeshComponentInstance(project);
     const frontendConfigChanged =
         project.status === 'running' ? detectFrontendChanges(project) : false;
@@ -113,10 +111,40 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         meshComponent ? { status: meshStatus, endpoint: meshEndpoint } : undefined,
     );
 
-    context.panel.webview.postMessage({
+    panel.webview.postMessage({
         type: 'statusUpdate',
         payload: statusData,
     });
+
+    return { statusData, shouldVerifyMesh };
+}
+
+/**
+ * Handle 'requestStatus' message - Send current project status
+ *
+ * Note: the dashboard's initial `init` payload (theme, project, hasMesh, isEds,
+ * hasAdobeContext, …) is delivered once by BaseWebviewCommand via getInitialData
+ * after the handshake. There is intentionally no `'ready'` handler that re-sends
+ * a partial `init` — doing so previously clobbered rich fields (hasAdobeContext,
+ * hasMesh, brand/stack names) that aren't ref-captured in the UI.
+ */
+export const handleRequestStatus: MessageHandler = async (context) => {
+    context.logger.debug('[Dashboard] handleRequestStatus called');
+
+    if (!context.panel) {
+        return { success: false, error: 'No panel available', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
+    }
+
+    const { statusData, shouldVerifyMesh } = await postStatusUpdate(
+        context,
+        context.panel,
+        project,
+    );
 
     // On-open checks run through the orchestrator (fire-and-forget): each posts a
     // typed outcome on the single `checkResult` channel.
