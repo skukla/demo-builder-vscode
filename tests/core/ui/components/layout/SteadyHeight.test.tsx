@@ -118,3 +118,24 @@ it('leaves the caller element, and its class, untouched inside', () => {
 
     expect(screen.getByTestId('content').parentElement).toHaveClass('datapack-import-body');
 });
+
+// The Add Integration window keeps the project list's height when the shorter
+// "Create New Project" form replaces it, and the form floated mid-window while the
+// list had started at the top (owner, 2026-10-17). A form reads from the top.
+it('centres a shorter state by default, and pins it to the top when asked', () => {
+    measuringAt(100);
+    const { unmount } = render(
+        <SteadyHeight>
+            <div data-testid="content">a spinner</div>
+        </SteadyHeight>,
+    );
+    expect(reservedBox()).toHaveStyle({ justifyContent: 'center' });
+    unmount();
+
+    render(
+        <SteadyHeight align="start">
+            <div data-testid="content">a form</div>
+        </SteadyHeight>,
+    );
+    expect(reservedBox()).not.toHaveStyle({ justifyContent: 'center' });
+});

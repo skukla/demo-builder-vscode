@@ -167,8 +167,11 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
             ]}
         >
             {/* Five stages, five natural heights. The dialog jumped at every step
-                without a floor under them (owner, 2026-09-20). */}
-            <SteadyHeight>
+                without a floor under them (owner, 2026-09-20). Pinned to the top: a
+                short stage after a tall one (the create form after the project
+                list) floated mid-window when centred (owner, 2026-10-17). Its
+                spinners centre themselves in their own containers. */}
+            <SteadyHeight align="start">
             <div className="intflow-stage-body">
                 <DestinationContext
                     state={props.state}

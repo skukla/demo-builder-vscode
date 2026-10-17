@@ -25,6 +25,13 @@ export interface SteadyHeightProps {
     children: React.ReactNode;
     /** A floor to start from, for a first state known to be short. */
     minHeight?: number;
+    /**
+     * Where a shorter state sits in the reserved height. `center` (the default) suits a
+     * spinner or a result; `start` suits a form, which reads from the top. The Add
+     * Integration window's "Create New Project" form floated mid-window under the
+     * project list's height (owner, 2026-10-17).
+     */
+    align?: 'center' | 'start';
 }
 
 /*
@@ -36,7 +43,11 @@ export interface SteadyHeightProps {
  */
 
 /** Hold the height of the tallest state this box has shown. */
-export function SteadyHeight({ children, minHeight = 0 }: SteadyHeightProps): React.ReactElement {
+export function SteadyHeight({
+    children,
+    minHeight = 0,
+    align = 'center',
+}: SteadyHeightProps): React.ReactElement {
     const content = useRef<HTMLDivElement>(null);
     const [tallest, setTallest] = useState(minHeight);
 
@@ -67,7 +78,7 @@ export function SteadyHeight({ children, minHeight = 0 }: SteadyHeightProps): Re
         // (root CLAUDE.md), and the import form this wraps is three columns wide.
         <Flex
             direction="column"
-            justifyContent="center"
+            justifyContent={align}
             minHeight={tallest || undefined}
             width="100%"
         >
