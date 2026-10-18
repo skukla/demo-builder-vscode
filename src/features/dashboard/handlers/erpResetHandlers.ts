@@ -83,6 +83,7 @@ async function resetErp(
             call.id,
             {
                 authManager,
+                credentials: context.context?.secrets,
                 getAuth: async () => call.auth,
                 onProgress: (step) =>
                     report(OPERATION_STAGES.loadingErpDemoData.label, `${name}: ${step}`),

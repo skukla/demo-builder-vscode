@@ -8,8 +8,8 @@
  * capturing the verify the status handler wires into the check and running it.
  */
 
-jest.mock('@/features/dashboard/handlers/warmOrgServicesCatalog', () => ({
-    warmOrgServicesCatalog: jest.fn().mockResolvedValue(undefined),
+jest.mock('@/features/dashboard/handlers/warmProjectReads', () => ({
+    warmProjectReads: jest.fn(),
 }));
 const mockVerifyAiSetup = jest.fn();
 jest.mock('@/features/ai/aiSetupVerifier', () => ({

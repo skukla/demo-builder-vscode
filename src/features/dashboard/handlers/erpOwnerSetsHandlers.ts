@@ -47,7 +47,7 @@ async function openSets(context: HandlerContext, payload: ErpOwnerSetsRequestPay
     if (!context.authManager) {
         return { error: { success: false, error: `Adobe sign-in required to ${verb}.`, code: ErrorCode.AUTH_REQUIRED } };
     }
-    const commerce = await openCommerce(call.project, context.authManager);
+    const commerce = await openCommerce(call.project, context.authManager, context.context?.secrets);
     if ('refusal' in commerce) return { error: { success: false, error: commerce.refusal, code: ErrorCode.CONFIG_INVALID } };
     return { call, commerce };
 }

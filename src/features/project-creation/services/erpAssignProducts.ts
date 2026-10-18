@@ -21,6 +21,7 @@
 
 import { commerceClientForProject } from './erpFillForProject';
 import { listedErpNames, readErpRules } from './erpRules';
+import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { followBulk, startBulk, type BulkFollowDeps, type CommerceSend } from '@/features/app-builder/services/commerceBulk';
 import {
@@ -75,9 +76,10 @@ export interface ErpAssignDeps {
 export async function openCommerce(
     project: Project,
     authManager: AuthenticationService,
+    credentials: CredentialStore | undefined,
     fetchImpl?: typeof fetch,
 ): Promise<CommerceClient | { refusal: string }> {
-    return commerceClientForProject(project, authManager, fetchImpl);
+    return commerceClientForProject(project, authManager, credentials, fetchImpl);
 }
 
 /** The store and the rules as an assignment reads them. */

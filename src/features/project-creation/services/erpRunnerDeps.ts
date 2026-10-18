@@ -12,6 +12,7 @@
  * @module features/project-creation/services/erpRunnerDeps
  */
 
+import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AppBuilderComponentRunnerDeps } from '@/features/app-builder/services/appBuilderComponentRunner';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
@@ -29,6 +30,8 @@ import type { Project } from '@/types/base';
 /** What the ERP deps need from the host: a subset of `RunnerDepsContext`, by structure. */
 export type ErpRunnerContext = Parameters<typeof erpEventsEnvResolver>[0] & {
     authManager: AuthenticationService;
+    /** Where the Commerce credential is kept across reloads (the extension's SecretStorage). */
+    secrets: CredentialStore;
     getCachedOrganization: () => Parameters<typeof erpCredentialReader>[2];
     commandManager: Parameters<typeof erpCredentialReader>[0];
 };
@@ -64,6 +67,7 @@ export function erpRunnerDeps(
             summarizeFills(
                 await fillEveryErp(project, entry.id, {
                     authManager: ctx.authManager,
+                    credentials: ctx.secrets,
                     getAuth: authFor(project),
                     onProgress: onStep,
                 }),

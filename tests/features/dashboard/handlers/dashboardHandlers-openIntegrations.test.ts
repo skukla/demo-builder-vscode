@@ -94,74 +94,16 @@ describe('handleOpenIntegrations', () => {
         mockGetServicesForOrg.mockReset().mockResolvedValue([]);
     });
 
-    // Opening this surface is the last cheap moment before the user needs the
-    // Adobe API catalog: `getServicesForOrg` is one call, but a highly variable
-    // one — 348ms on a warm endpoint, 42s on a cold one, measured minutes apart
-    // on the same org. Nothing warmed it, so the first consumer was always a
-    // modal that BLOCKS on it behind a spinner. The fetcher already caches
-    // per-org for 30 minutes and single-flights, so warming here cannot cause a
-    // second fetch — a later opener joins this one or reads its result.
-    describe('API catalog prefetch', () => {
-        it('warms the org services catalog, org-targeted', async () => {
-            const context = createMockContext();
+    // The slow reads (the API list, the Commerce sign-in) start in the command this dispatches,
+    // which the projects list's Integrations also runs: started here, that door got neither
+    // (2026-10-18). The command's suite checks they start; this one that the tile adds no second.
+    it('leaves the slow reads to the screen it opens', async () => {
+        const context = createMockContext();
 
-            await handleOpenIntegrations(context);
-            await settle();
+        await handleOpenIntegrations(context);
+        await settle();
 
-            expect(mockGetServicesForOrg).toHaveBeenCalledWith('org-A');
-            expect(mockWithOrgContext).toHaveBeenCalled();
-        });
-
-        it('never blocks the surface on it', async () => {
-            // A slow or hanging catalog fetch must not delay the tab swap: the
-            // whole point is that the wait happens while the user reads the grid.
-            const context = createMockContext();
-            mockGetServicesForOrg.mockReturnValue(new Promise(() => undefined));
-
-            const result = await handleOpenIntegrations(context);
-
-            expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showIntegrations');
-        });
-
-        it('does NOT run when signed out — a prefetch must never open a browser', async () => {
-            // The standing rule: no background path may trigger interactive Adobe
-            // auth. getTokenStatus reads the token file directly (no CLI call, no
-            // popup), so the guard itself is silent too.
-            const context = createMockContext();
-            mockGetTokenStatus.mockResolvedValue({ isAuthenticated: false });
-
-            await handleOpenIntegrations(context);
-            await settle();
-
-            expect(mockGetServicesForOrg).not.toHaveBeenCalled();
-        });
-
-        it('does NOT run without an org to target', async () => {
-            // `adobe: undefined` is the POINT of this test, and it has to be said
-            // explicitly: the canonical fixture defaults a real `adobe` block, so a
-            // project built without one still HAS an org to target. The bare
-            // literal this replaces expressed absence by omission, which the
-            // builder cannot preserve.
-            const context = createMockContext(
-                createMockProject({ name: 'demo', path: '/p', adobe: undefined })
-            );
-
-            await handleOpenIntegrations(context);
-            await settle();
-
-            expect(mockGetServicesForOrg).not.toHaveBeenCalled();
-        });
-
-        it('swallows a prefetch failure — the surface still opens', async () => {
-            const context = createMockContext();
-            mockGetServicesForOrg.mockRejectedValue(new Error('catalog down'));
-
-            const result = await handleOpenIntegrations(context);
-            await settle();
-
-            expect(result).toEqual({ success: true });
-        });
+        expect(mockGetServicesForOrg).not.toHaveBeenCalled();
     });
 
     it('dispatches the integrations surface command', async () => {

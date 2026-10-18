@@ -17,10 +17,10 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 jest.mock('@/core/state/projectStateSync');
-// The API-list warm-up has its own suite; here we only check that opening the
-// dashboard starts it.
-jest.mock('@/features/dashboard/handlers/warmOrgServicesCatalog', () => ({
-    warmOrgServicesCatalog: jest.fn().mockResolvedValue(undefined),
+// The warm-ups have their own suites; here we only check that opening the dashboard
+// starts them.
+jest.mock('@/features/dashboard/handlers/warmProjectReads', () => ({
+    warmProjectReads: jest.fn(),
 }));
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
@@ -50,7 +50,7 @@ import './dashboardValidatorMocks';
 import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { adobeSignInRestored } from '@/features/dashboard/services/adobeSignInPrompt';
-import { warmOrgServicesCatalog } from '@/features/dashboard/handlers/warmOrgServicesCatalog';
+import { warmProjectReads } from '@/features/dashboard/handlers/warmProjectReads';
 import { setupMocks } from './dashboardHandlers.testUtils';
 
 describe('dashboardHandlers - handleRequestStatus', () => {
@@ -304,14 +304,15 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         expect(signIn).not.toHaveBeenCalled();
     });
 
-    it('starts loading the Adobe API list when the dashboard opens', async () => {
+    it('starts the slow reads when the dashboard opens', async () => {
         // Developer Console loads its API list the moment it opens, so the list is
-        // ready before anyone looks; a cold load takes Adobe about a minute.
+        // ready before anyone looks; a cold load takes Adobe about a minute. The
+        // Commerce sign-in took two on Justrite (2026-10-18).
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
 
         await handleRequestStatus(mockContext);
 
-        expect(warmOrgServicesCatalog).toHaveBeenCalledWith(mockContext);
+        expect(warmProjectReads).toHaveBeenCalledWith(mockContext);
     });
 
     // The cheap half, posted on every project save (pushStatus): the status the
@@ -328,6 +329,6 @@ describe('dashboardHandlers - handleRequestStatus', () => {
             payload: statusData,
         });
         expect(statusData).toMatchObject({ name: 'test-project' });
-        expect(warmOrgServicesCatalog).not.toHaveBeenCalled();
+        expect(warmProjectReads).not.toHaveBeenCalled();
     });
 });

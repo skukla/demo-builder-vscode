@@ -22,6 +22,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
+import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type {
     RuntimeCleanupSummary,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
@@ -109,7 +110,7 @@ export async function removeWithCleanup(
         return { ...removed, warnings: [...(removed.warnings ?? []), MESH_NEEDED_NOTE] };
     }
     if (!removed.success || !integrationId) return removed;
-    return applyOwnershipAfterRemove(removed, project, integrationId, report);
+    return applyOwnershipAfterRemove(removed, project, integrationId, report, context.context?.secrets);
 }
 
 /**
@@ -123,6 +124,7 @@ async function applyOwnershipAfterRemove(
     project: Project,
     integrationId: string,
     report: (message: string, subMessage?: string) => void,
+    credentials: CredentialStore | undefined,
 ): Promise<GuardableResult> {
     if (systemsUsedBy(project, integrationId, getAppBuilderComponentCatalog()).length === 0) return removed;
     const authManager = ServiceLocator.getAuthenticationService();
@@ -131,6 +133,7 @@ async function applyOwnershipAfterRemove(
         integrationId,
         {
             authManager,
+            credentials,
             getAuth: () => resolveAppManagementAuth(project, authManager),
             onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, step),
         },

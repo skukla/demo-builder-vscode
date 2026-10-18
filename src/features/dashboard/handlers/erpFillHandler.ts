@@ -94,7 +94,7 @@ export const handleLoadErpDemoData: MessageHandler<ErpCallPayload & { progress?:
                     const applied = await applyErpOwnership(
                         call.project,
                         call.id,
-                        { authManager, getAuth: async () => call.auth, onProgress },
+                        { authManager, credentials: context.context?.secrets, getAuth: async () => call.auth, onProgress },
                         'load',
                     );
                     if (applied.status === 'failed') {

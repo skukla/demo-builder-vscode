@@ -91,7 +91,7 @@ const OPTIONS: ErpOwnershipOptions = {
 };
 
 function deps(onProgress = jest.fn()) {
-    return { authManager, getAuth: async () => AUTH, onProgress, fetchImpl: jest.fn() as unknown as typeof fetch };
+    return { authManager, credentials: undefined, getAuth: async () => AUTH, onProgress, fetchImpl: jest.fn() as unknown as typeof fetch };
 }
 
 beforeEach(() => {
@@ -108,7 +108,7 @@ describe('applyErpOwnership', () => {
         const d = deps();
         const result = await applyErpOwnership(project(), 'erp-integration', d, 'add');
 
-        expect(mockRead).toHaveBeenCalledWith(expect.objectContaining({ name: 'bodea' }), 'erp-integration', AUTH, authManager, d.fetchImpl);
+        expect(mockRead).toHaveBeenCalledWith(expect.objectContaining({ name: 'bodea' }), 'erp-integration', AUTH, authManager, d.credentials, d.fetchImpl);
         expect(mockFillEvery).toHaveBeenCalledWith(expect.objectContaining({ name: 'bodea' }), 'erp-integration', d);
         expect(result).toStrictEqual({
             status: 'applied',

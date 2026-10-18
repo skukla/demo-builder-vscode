@@ -37,6 +37,7 @@ import { getAvailableAppBuilderComponents } from '@/features/components/services
 import { isMeshNeededByPackage } from '@/features/components/services/demoPackageLoader';
 import { settingsCatalogOf } from '@/features/dashboard/handlers/componentSettingsHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { warmProjectReads } from '@/features/dashboard/handlers/warmProjectReads';
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
@@ -172,5 +173,8 @@ export class ShowIntegrationsCommand extends BundledPanelCommand<IntegrationsIni
         if (!this.communicationManager) {
             await this.initializeCommunication();
         }
+        // Every door into this screen runs this command (the dashboard tile and the projects
+        // list's Integrations), so the slow reads start here rather than at one door.
+        warmProjectReads(this.createHandlerContext());
     }
 }

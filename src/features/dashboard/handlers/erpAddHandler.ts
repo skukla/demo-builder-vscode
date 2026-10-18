@@ -43,6 +43,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
@@ -96,6 +97,8 @@ interface ErpAddPlan {
     deployed: boolean;
     /** The rule the SC chose (AB-64); absent = the default, the attribute `erp_owner=<its list id>`. */
     owns?: ErpOwnsRule;
+    /** Where the Commerce credential is kept across reloads, so the store reads skip Console. */
+    credentials: CredentialStore | undefined;
 }
 
 /** One ERP's rule as the answer says it: its list id, the rule, and the rule in words. */
@@ -205,6 +208,7 @@ async function planErpAdd(
         name,
         deployed,
         owns: payload?.owns,
+        credentials: context.context?.secrets,
     };
 }
 
@@ -222,7 +226,7 @@ async function ownershipToSave(
 ): Promise<ErpOwnsEntry[] | { refusal: string }> {
     const owns = plan.owns ?? defaultOwnsRule({ listId });
     if (owns.mode !== 'websites') return [{ erp: listId, owns }];
-    const options = await readErpOwnershipOptionsForProject(plan.project, plan.integrationId, auth, authManager);
+    const options = await readErpOwnershipOptionsForProject(plan.project, plan.integrationId, auth, authManager, plan.credentials);
     if ('refusal' in options) return options;
     const erps = options.erps.filter((erp) => erp.erp !== listId);
     return [{ erp: listId, owns }, ...existingRulesToChange({ websites: options.websites, erps }, owns)];
@@ -384,7 +388,7 @@ async function listAndFill(
     const applied = await applyErpOwnership(
         project,
         integrationId,
-        { authManager, getAuth: async () => auth, onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, step) },
+        { authManager, credentials: plan.credentials, getAuth: async () => auth, onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, step) },
         'add',
     );
     // A credential the list could not carry (AB-16a) and a pass that did not finish are

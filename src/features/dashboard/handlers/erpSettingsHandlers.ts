@@ -98,7 +98,7 @@ export const handleSetErpSettings: MessageHandler<SetErpSettingsPayload> = async
             ? await applyErpOwnership(
                   call.project,
                   call.id,
-                  { authManager: ServiceLocator.getAuthenticationService(), getAuth: async () => call.auth },
+                  { authManager: ServiceLocator.getAuthenticationService(), credentials: context.context?.secrets, getAuth: async () => call.auth },
                   'settings',
               )
             : undefined;

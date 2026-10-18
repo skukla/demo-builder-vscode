@@ -9,7 +9,6 @@
  */
 
 import * as vscode from 'vscode';
-import { warmOrgServicesCatalog } from './warmOrgServicesCatalog';
 import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import { MessageHandler } from '@/types/handlers';
 
@@ -56,9 +55,6 @@ export const handleNavigateBack: MessageHandler = async (context) => {
 export const handleOpenIntegrations: MessageHandler = async (context) => {
     try {
         context.logger.info('Opening integrations surface');
-
-        // Deliberately not awaited — see warmOrgServicesCatalog.
-        void warmOrgServicesCatalog(context);
 
         await swapWebviewSurface('demoBuilder.projectDashboard', 'demoBuilder.showIntegrations');
 

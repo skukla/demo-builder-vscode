@@ -53,7 +53,7 @@ async function openPreparation(context: HandlerContext, idArg: unknown, verb: st
     if (!context.authManager) {
         return { error: { success: false, error: `Adobe sign-in required to ${verb}.`, code: ErrorCode.AUTH_REQUIRED } };
     }
-    const commerce = await openCommerce(project, context.authManager);
+    const commerce = await openCommerce(project, context.authManager, context.context?.secrets);
     if ('refusal' in commerce) return { error: { success: false, error: commerce.refusal, code: ErrorCode.CONFIG_INVALID } };
     const { read, scope } = await setupCheckReader(context, project);
     const deps: PreparationDeps = {
@@ -230,7 +230,7 @@ export const handleSetCommerceConfig: MessageHandler<SetCommerceConfigRequestPay
     if (undo && !record) return { success: false, error: 'Demo Builder has no settings change to undo.', code: ErrorCode.INVALID_OPERATION };
     const items = undo ? [] : validItems(payload?.items);
     if (typeof items === 'string') return { success: false, error: items, code: ErrorCode.CONFIG_INVALID };
-    const commerce = await openCommerce(project, context.authManager);
+    const commerce = await openCommerce(project, context.authManager, context.context?.secrets);
     if ('refusal' in commerce) return { success: false, error: commerce.refusal, code: ErrorCode.CONFIG_INVALID };
     const { scope } = await setupCheckReader(context, project);
     const deps = { commerce, websiteCode: scope.websiteCode, erpNames: [] };

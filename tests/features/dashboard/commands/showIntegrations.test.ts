@@ -22,6 +22,7 @@ import { getAvailableAppBuilderComponents } from '@/features/components/services
 import { ShowIntegrationsCommand } from '@/features/dashboard/commands/showIntegrations';
 import { settingsCatalogOf } from '@/features/dashboard/handlers/componentSettingsHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { warmProjectReads } from '@/features/dashboard/handlers/warmProjectReads';
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
@@ -52,6 +53,9 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
 }));
 jest.mock('@/features/dashboard/handlers/componentSettingsHandlers', () => ({
     settingsCatalogOf: jest.fn(),
+}));
+jest.mock('@/features/dashboard/handlers/warmProjectReads', () => ({
+    warmProjectReads: jest.fn(),
 }));
 
 const WEBVIEW_ID = 'demoBuilder.integrations';
@@ -384,5 +388,20 @@ describe('execute', () => {
 
         expect(createOrRevealPanel).toHaveBeenCalledTimes(1);
         expect(initializeCommunication).not.toHaveBeenCalled();
+    });
+
+    // Both doors (the dashboard tile and the projects list's Integrations) run this command,
+    // so the slow reads start here: the Commerce sign-in took two minutes on Justrite and Add
+    // another ERP waited on all of it (2026-10-18).
+    it('starts the slow reads with the panel\'s own handler context', async () => {
+        const { command } = commandFor(null);
+        const context = createMockHandlerContext();
+        jest.mocked(createPanelHandlerContext).mockReturnValue(context);
+        internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(createMockWebviewPanel());
+        internals(command).initializeCommunication = jest.fn().mockResolvedValue(undefined);
+
+        await command.execute();
+
+        expect(warmProjectReads).toHaveBeenCalledWith(context);
     });
 });

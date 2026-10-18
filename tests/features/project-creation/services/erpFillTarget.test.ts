@@ -46,7 +46,7 @@ function project(added: AppBuilderComponentState): Project {
     });
 }
 
-const deps = { authManager: createMockAuthenticationService(), getAuth: async () => undefined };
+const deps = { authManager: createMockAuthenticationService(), credentials: undefined, getAuth: async () => undefined };
 
 describe('fillErpForProject — which ERP it fills', () => {
     it('stops, naming the ERP, when an added ERP cannot be told from the first', async () => {

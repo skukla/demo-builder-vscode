@@ -210,7 +210,13 @@ describe('handleAddErp without confirm', () => {
 
         const result = await handleAddErp(mockContext, { id: 'erp-integration', name: 'Brand B' });
 
-        expect(mockReadOptions).toHaveBeenCalledWith(expect.objectContaining({ name: expect.any(String) }), 'erp-integration', AUTH, expect.anything());
+        expect(mockReadOptions).toHaveBeenCalledWith(
+            expect.objectContaining({ name: expect.any(String) }),
+            'erp-integration',
+            AUTH,
+            expect.anything(),
+            mockContext.context.secrets,
+        );
         expect(result).toStrictEqual({
             success: true,
             data: {
@@ -282,7 +288,7 @@ describe('handleAddErp', () => {
 
             // The new ERP's list id is derived from its name (AB-51), never guessed by the dialog; the
             // narrowing is the handler's, from the store, so a click before the dialog's read cannot drop it.
-            expect(mockReadOptions).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', AUTH, expect.any(Object));
+            expect(mockReadOptions).toHaveBeenCalledWith(expect.any(Object), 'erp-integration', AUTH, expect.any(Object), mockContext.context.secrets);
             expect(mockSaveOwnership).toHaveBeenCalledWith(expect.any(Object), [
                 { erp: 'brand-b', owns: { mode: 'websites', websites: ['justrite'] } },
                 { erp: 'acme', owns: { mode: 'websites', websites: ['base'] } },

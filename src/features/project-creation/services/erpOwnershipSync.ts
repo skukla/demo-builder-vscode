@@ -12,6 +12,7 @@
 
 import { commerceGetForProject } from './erpFillForProject';
 import { listedErpNames, readErpRules, type ListedErpName } from './erpRules';
+import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { listProducts, listWebsites, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
 import { ownedRowOf } from '@/features/app-builder/services/erpFillRows';
@@ -75,10 +76,11 @@ export async function readErpOwnershipOptionsForProject(
     integrationId: string,
     auth: AppManagementAuth,
     authManager: AuthenticationService,
+    credentials: CredentialStore | undefined,
     fetchImpl: typeof fetch = globalThis.fetch,
 ): Promise<ErpOwnershipOptions | { refusal: string }> {
     const integration = project.appBuilderComponents?.[integrationId];
-    const get = await commerceGetForProject(project, authManager, fetchImpl);
+    const get = await commerceGetForProject(project, authManager, credentials, fetchImpl);
     if ('refusal' in get) return get;
     const client = new ErpIntegrationClient(integration?.deployedUrls, auth, fetchImpl);
     return readErpOwnershipOptions({ get, client }, listedErpNames(project, integrationId));

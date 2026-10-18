@@ -35,6 +35,7 @@ export const handleGetErpOwnershipOptions: MessageHandler<ErpCallPayload> = asyn
             call.id,
             call.auth,
             ServiceLocator.getAuthenticationService(),
+            context.context?.secrets,
         );
         if ('refusal' in options) {
             context.logger.warn(`[ERP] Add another ERP could not read the store (${took()}): ${options.refusal}`);

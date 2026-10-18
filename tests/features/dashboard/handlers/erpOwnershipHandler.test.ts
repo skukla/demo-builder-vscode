@@ -45,6 +45,16 @@ describe('getErpOwnershipOptions', () => {
         expect(result).toEqual({ success: true, data: OPTIONS });
     });
 
+    // Without the store the credential is read from Adobe Console on every reload: about two
+    // minutes on Justrite, all of it under "Reading the store" (2026-10-18).
+    it('hands the read the extension\'s credential store, so a kept credential is used', async () => {
+        const { mockContext } = setupMocks(pairProject());
+
+        await handleGetErpOwnershipOptions(mockContext, { id: 'erp-integration' });
+
+        expect(mockRead.mock.calls[0][4]).toBe(mockContext.context.secrets);
+    });
+
     it('answers the refusal when the project has no Commerce credential', async () => {
         mockRead.mockResolvedValue({ refusal: 'No Commerce credential on this project.' });
         const { mockContext } = setupMocks(pairProject());

@@ -23,6 +23,7 @@ import {
     type RestRoute,
     type RestTarget,
 } from '@/features/ai/server/commerceRestClient';
+import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import type { CommerceSend } from '@/features/app-builder/services/commerceBulk';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
@@ -50,6 +51,12 @@ import type { Project } from '@/types/base';
 
 export interface ErpFillForProjectDeps {
     authManager: AuthenticationService;
+    /**
+     * Where the workspace credential is kept across reloads (VS Code SecretStorage). Required,
+     * so no caller can skip it: without it every reload read the credential from Adobe
+     * Console again, about two minutes on Justrite (2026-10-18).
+     */
+    credentials: CredentialStore | undefined;
     /** The signed-in identity the integration's and the ERP's actions take. */
     getAuth: () => Promise<AppManagementAuth | undefined>;
     onProgress?: (step: string) => void;
@@ -114,9 +121,10 @@ function commerceGet(target: RestTarget, fetchImpl: typeof fetch): CommerceGet {
 export async function commerceGetForProject(
     project: Project,
     authManager: AuthenticationService,
+    credentials: CredentialStore | undefined,
     fetchImpl: typeof fetch = globalThis.fetch,
 ): Promise<CommerceGet | { refusal: string }> {
-    const rest = await resolveRestTargetFor(project, authManager, undefined, fetchImpl);
+    const rest = await resolveRestTargetFor(project, authManager, undefined, fetchImpl, credentials);
     if ('refusal' in rest) return { refusal: rest.refusal.replace(/^Error: /u, '') };
     return commerceGet(rest, fetchImpl);
 }
@@ -130,9 +138,10 @@ export async function commerceGetForProject(
 export async function commerceClientForProject(
     project: Project,
     authManager: AuthenticationService,
+    credentials: CredentialStore | undefined,
     fetchImpl: typeof fetch = globalThis.fetch,
 ): Promise<{ get: CommerceGet; send: CommerceSend } | { refusal: string }> {
-    const rest = await resolveRestTargetFor(project, authManager, undefined, fetchImpl);
+    const rest = await resolveRestTargetFor(project, authManager, undefined, fetchImpl, credentials);
     if ('refusal' in rest) return { refusal: rest.refusal.replace(/^Error: /u, '') };
     return {
         get: commerceGet(rest, fetchImpl),
@@ -229,7 +238,7 @@ export async function fillErpForProject(
     }
     const auth = await deps.getAuth();
     if (!auth) return { status: 'failed', detail: 'Adobe sign-in required.' };
-    const rest = await resolveRestTargetFor(project, deps.authManager, undefined, fetchImpl);
+    const rest = await resolveRestTargetFor(project, deps.authManager, undefined, fetchImpl, deps.credentials);
     if ('refusal' in rest)
         return { status: 'failed', detail: rest.refusal.replace(/^Error: /u, '') };
     const integrationClient = new ErpIntegrationClient(integration.deployedUrls, auth, fetchImpl);

@@ -27,7 +27,7 @@ import {
     logAiVerification,
     EXTENSION_COMMAND_PROBE,
 } from '@/features/dashboard/handlers/aiHandlers';
-import { warmOrgServicesCatalog } from '@/features/dashboard/handlers/warmOrgServicesCatalog';
+import { warmProjectReads } from '@/features/dashboard/handlers/warmProjectReads';
 import { createAiContextFreshnessCheck } from '@/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck';
 import { createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks/aiVerifyCheck';
 import { createDemoSourceCheck } from '@/features/dashboard/services/onOpenChecks/demoSourceCheck';
@@ -245,10 +245,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         );
     }
 
-    // Start loading the org's Adobe API list now, so it is ready before the user
-    // reaches a picker — see warmOrgServicesCatalog. Not an on-open check: it has
-    // no badge and nothing to report. Deliberately not awaited.
-    void warmOrgServicesCatalog(context);
+    // Start the slow reads now (the org's Adobe API list, the Commerce sign-in), so they
+    // are ready before the user reaches a picker or a dialog that reads the store — see
+    // warmProjectReads. Not an on-open check: no badge and nothing to report. Not awaited.
+    warmProjectReads(context);
 
     void runOnOpenChecks(
         {

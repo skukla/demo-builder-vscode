@@ -287,7 +287,7 @@ export async function applyErpOwnership(
     deps.onProgress?.('Reading which products each ERP owns');
     let options: ErpOwnershipOptions;
     try {
-        const read = await readErpOwnershipOptionsForProject(project, integrationId, auth, deps.authManager, deps.fetchImpl);
+        const read = await readErpOwnershipOptionsForProject(project, integrationId, auth, deps.authManager, deps.credentials, deps.fetchImpl);
         if ('refusal' in read) return { status: 'failed', detail: read.refusal };
         options = read;
     } catch (error) {

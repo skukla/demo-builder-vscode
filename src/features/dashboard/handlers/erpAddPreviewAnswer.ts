@@ -8,6 +8,7 @@
  */
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import { ownsNothingNext, previewErpAdd } from '@/features/app-builder/services/erpAddPreview';
 import { erpListIdFor } from '@/features/app-builder/services/erpListId';
 import { defaultOwnsRule } from '@/features/app-builder/services/erpOwnership';
@@ -24,6 +25,8 @@ export interface AddToPreview {
     integrationId: string;
     name: string;
     owns?: ErpOwnsRule;
+    /** Where the Commerce credential is kept across reloads. */
+    credentials: CredentialStore | undefined;
 }
 
 /**
@@ -37,7 +40,7 @@ export async function previewErpAddAnswer(add: AddToPreview): Promise<HandlerRes
     if (!auth) return { success: false, error: 'Adobe sign-in required to preview the add.', code: ErrorCode.AUTH_REQUIRED };
     let options;
     try {
-        options = await readErpOwnershipOptionsForProject(add.project, add.integrationId, auth, authManager);
+        options = await readErpOwnershipOptionsForProject(add.project, add.integrationId, auth, authManager, add.credentials);
     } catch (error) {
         return { success: false, error: `Could not read the store: ${error instanceof Error ? error.message : String(error)}` };
     }
