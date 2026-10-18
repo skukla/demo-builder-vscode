@@ -27,6 +27,7 @@
  * @module features/eds/services/storefront/missingPages
  */
 
+import { EXCLUDED_FOLDERS } from '../helix/helixPageDiscovery';
 import { contentSiteBaseUrl, probePaths } from '../sitePathProbe';
 import { aemLiveBaseUrl } from './storefrontProbe';
 import type { Logger } from '@/types/logger';
@@ -76,6 +77,7 @@ export interface ExpectedPaths {
  * (`/placeholders/cart.json`), and every other document by its path (`/cart`).
  * Configuration under a dot folder (`/.da/...`) and files with an extension (an
  * image, a PDF) are not documents a storefront serves at that path, and are left out.
+ * So are pages in a folder the publish never publishes (`EXCLUDED_FOLDERS`).
  *
  * @param copiedFiles - the copy's `copiedFiles`, content paths
  * @param sheetPaths - the copy's `sheetPaths`, already web paths
@@ -89,6 +91,9 @@ export function carriedWebPaths(copiedFiles: readonly string[], sheetPaths: read
         const name = segments[segments.length - 1] ?? '';
         if (segments.some((segment) => segment.startsWith('.'))) continue;
         if (name.includes('.') || sheets.has(`${path}.json`)) continue;
+        // A folder the publish skips on purpose (`experiments`, owner 2026-10-12) is
+        // not missing when it is not on the site; it was never meant to be.
+        if (segments.slice(0, -1).some((folder) => EXCLUDED_FOLDERS.includes(folder))) continue;
         carried.add(path);
     }
     return [...carried];

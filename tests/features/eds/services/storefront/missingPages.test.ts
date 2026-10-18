@@ -170,6 +170,18 @@ describe('carriedWebPaths', () => {
         expect(carriedWebPaths(['/.da/library/blocks', '/media/logo.png', '/about'], [])).toEqual(['/about']);
     });
 
+    // The publish keeps `experiments` (A/B test variants) off a copy on purpose
+    // (owner, 2026-10-12). Expecting them made every CitiSignal reset report six
+    // pages "missing" that were never meant to be there (2026-10-17).
+    it('leaves out pages in a folder the publish never publishes, at any depth', () => {
+        expect(
+            carriedWebPaths(
+                ['/experiments/test/index1', '/citisignal-fr/experiments/test/index1', '/citisignal-fr/phones'],
+                [],
+            ),
+        ).toEqual(['/citisignal-fr/phones']);
+    });
+
     it('reads a path written without its leading slash', () => {
         expect(carriedWebPaths(['enrichment/product-banner'], [])).toEqual(['/enrichment/product-banner']);
     });
