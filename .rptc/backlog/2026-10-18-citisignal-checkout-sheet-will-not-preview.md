@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # CitiSignal's checkout label sheet will not preview on a copy
@@ -93,3 +93,5 @@ the rows, preview, repeat. Row 72 is the first suspect to remove whole.
 
 Related: [[EDS-40]], which moved sheet copying to DA.live's native JSON document.
 - 2026-10-17  docs(backlog): EDS-53 records why CitiSignal's checkout sheet will not preview (`3c28a2001`)
+- 2026-10-18  fix(eds): template label files no longer hide the copied sheets (`3d4804ab1`)
+- 2026-10-17  docs(backlog): EDS-53 records why CitiSignal's checkout sheet will not preview (`ffce66d8e`)
