@@ -56,6 +56,10 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // first check past the 30s default on 2026-10-01) before its Commerce reads.
     checkSetupSteps: TIMEOUTS.LONG, // 180s - credential read + up to three Commerce reads
     prepareSetupChecks: TIMEOUTS.LONG, // 180s - the same credential read, done ahead of a check
+    // Add another ERP's store read: the same credential, then every product in the store.
+    // On Justrite it outran the 30s default and the dialog gave up while the read went on
+    // (2026-10-18).
+    getErpOwnershipOptions: TIMEOUTS.LONG, // 180s - credential + the whole product list
 
     addConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + union subscribe PUT
     setConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + reconcile subscribe PUT
