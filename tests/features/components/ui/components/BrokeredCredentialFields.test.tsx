@@ -12,6 +12,8 @@
  * - **Not-served always shows them.** A refused user's only way through is typing
  *   their own pair; hiding it behind a "nothing to enter" message would strand them.
  * - **Unknown shows them too.** "We could not check" must never render as a verdict.
+ * - **In flight shows nothing** (unless a value is already typed), so the boxes do
+ *   not open and then close when the answer is "served".
  * - **An existing value opens the override.** Otherwise a user who already typed a
  *   credential sees it vanish behind a message saying nothing is needed.
  */
@@ -137,10 +139,22 @@ describe('when the service will NOT serve this user', () => {
 });
 
 describe('when the probe has not answered', () => {
-    it('shows the fields and says NOTHING while loading', () => {
+    it('renders NOTHING while loading — the boxes must not open and then close', () => {
+        // The usual answer is "served", which hides the boxes. Drawing them while
+        // the probe runs made them appear and then vanish each time the step opened
+        // (owner, 2026-10-17: "It shouldn't do that").
         renderFields({ loading: true });
 
-        expect(screen.getByLabelText('OAuth client ID')).toBeInTheDocument();
+        expect(screen.queryByLabelText('OAuth client ID')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('OAuth client secret')).not.toBeInTheDocument();
+        expect(screen.queryByText(/provided automatically/i)).not.toBeInTheDocument();
+    });
+
+    it('shows a value the user already typed while loading — every answer shows it', () => {
+        const values: Record<string, string> = { ACCS_OAUTH_CLIENT_ID: 'mine' };
+        renderFields({ loading: true, getFieldValue: (field: any) => values[field.key] });
+
+        expect(screen.getByLabelText('OAuth client ID')).toHaveValue('mine');
         expect(screen.queryByText(/provided automatically/i)).not.toBeInTheDocument();
     });
 

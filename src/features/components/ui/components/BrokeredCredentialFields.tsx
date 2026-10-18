@@ -16,7 +16,8 @@
  * Three rendered states, because different people fix them
  * (`credentialServiceProbe.ts`): served (nothing to do), not served (the verdict
  * names the remedy — an administrator for a 403, the user for an unset setting),
- * and unknown/in-flight (say nothing, show the fields as they always were).
+ * and unknown (say nothing, show the fields as they always were). While the probe
+ * is in flight it renders nothing, so the fields do not open and then close.
  *
  * ## Shaped like the form, not like a notice
  *
@@ -113,9 +114,17 @@ export function BrokeredCredentialFields({
         </Text>
     );
 
-    // While the probe is in flight, and when it could not answer at all, the fields
-    // stand exactly as they did. "We could not check" must never read as a verdict.
-    if (loading || !status) {
+    // While the probe is in flight, render nothing: the usual answer is "served",
+    // which hides the fields, so drawing them first made them open and then close
+    // every time the step loaded (owner, 2026-10-17). A value already typed shows
+    // under every answer, so it shows now too.
+    if (loading) {
+        return <View>{hasExistingValue ? bothFields : null}</View>;
+    }
+
+    // When the probe could not answer at all, the fields stand exactly as they did.
+    // "We could not check" must never read as a verdict.
+    if (!status) {
         return <View>{bothFields}</View>;
     }
 

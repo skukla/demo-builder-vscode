@@ -39,44 +39,47 @@ export interface CredentialServiceState {
  * @param orgId - the org whose service entry to select
  */
 export function useCredentialService(enabled: boolean, orgId?: string): CredentialServiceState {
-    const [state, setState] = useState<CredentialServiceState>({ loading: enabled });
-
     // Keyed by org so a sign-in that switches org re-asks, but a re-render does not.
+    const key = orgId ?? '(no-org)';
+    const [answer, setAnswer] = useState<{ key: string; status?: CredentialServiceStatus }>();
     const askedFor = useRef<string | undefined>(undefined);
 
     useEffect(() => {
-        if (!enabled) {
-            setState({ loading: false });
-            return;
-        }
-        const key = orgId ?? '(no-org)';
-        if (askedFor.current === key) {
+        if (!enabled || askedFor.current === key) {
             return;
         }
         askedFor.current = key;
 
         let cancelled = false;
-        setState({ loading: true });
-
+        let answered = false;
         webviewClient
             .request<{ success?: boolean; data?: CredentialServiceStatus }>(
                 'check-credential-service',
                 orgId ? { orgId } : {},
             )
             .then((response) => {
-                if (cancelled) return;
                 // A probe that cannot answer leaves the fields exactly as they were.
                 // "We could not check" must never render as "you must type these".
-                setState({ loading: false, status: response?.data });
+                answered = true;
+                if (!cancelled) setAnswer({ key, status: response?.data });
             })
             .catch(() => {
-                if (!cancelled) setState({ loading: false });
+                answered = true;
+                if (!cancelled) setAnswer({ key });
             });
 
         return () => {
             cancelled = true;
+            // A request cut off before it answered must be asked again, or the
+            // fields would wait on it forever.
+            if (!answered && askedFor.current === key) askedFor.current = undefined;
         };
-    }, [enabled, orgId]);
+    }, [enabled, key, orgId]);
 
-    return state;
+    // Loading is DERIVED, not stored: on the render where the probe switches on,
+    // a stored flag still said "not loading, no answer", which drew the fields
+    // for a moment before the effect ran.
+    if (!enabled) return { loading: false };
+    if (answer?.key !== key) return { loading: true };
+    return { loading: false, status: answer.status };
 }
