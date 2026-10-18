@@ -34,6 +34,7 @@ import {
     type RestCredential,
     saveCredential,
 } from './savedRestCredential';
+import { noteStoreWrite } from '@/core/utils/storeWrites';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { deriveAccsTenantId } from '@/features/components/services/envVarHelpers';
@@ -385,6 +386,8 @@ export async function requestRest(
     fetchImpl: typeof fetch,
     route?: RestRoute,
 ): Promise<RestAnswer> {
+    // Counted as it is sent, not as it answers: a write that fails or times out may still land.
+    if (method !== 'GET') noteStoreWrite();
     const controller = new AbortController();
     // Commerce on the sandbox can take far longer than 30s to answer anything:
     // a company POST ran past it while sending welcome mail no server delivers,

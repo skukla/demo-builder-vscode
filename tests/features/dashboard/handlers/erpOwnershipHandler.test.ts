@@ -19,6 +19,11 @@ const mockRead = jest.fn();
 jest.mock('@/features/project-creation/services/erpOwnershipSync', () => ({
     readErpOwnershipOptionsForProject: (...a: unknown[]) => mockRead(...a),
 }));
+// The kept read has its own suite; here it passes straight through, so each test reads.
+const mockShared = jest.fn((_project: unknown, _id: string, read: () => Promise<unknown>) => read());
+jest.mock('@/features/project-creation/services/erpOwnershipOptionsShared', () => ({
+    readErpOwnershipOptionsShared: (...a: [unknown, string, () => Promise<unknown>]) => mockShared(...a),
+}));
 
 const OPTIONS: ErpOwnershipOptions = {
     websites: [{ code: 'base', name: 'Main Website' }],
@@ -53,6 +58,16 @@ describe('getErpOwnershipOptions', () => {
         await handleGetErpOwnershipOptions(mockContext, { id: 'erp-integration' });
 
         expect(mockRead.mock.calls[0][4]).toBe(mockContext.context.secrets);
+    });
+
+    // So a read the dashboard started when it opened is joined, not repeated.
+    it('reads through the kept read for this project and integration', async () => {
+        const { mockContext } = setupMocks(pairProject());
+
+        await handleGetErpOwnershipOptions(mockContext, { id: 'erp-integration' });
+
+        expect(mockShared).toHaveBeenCalledTimes(1);
+        expect(mockShared.mock.calls[0][1]).toBe('erp-integration');
     });
 
     it('answers the refusal when the project has no Commerce credential', async () => {

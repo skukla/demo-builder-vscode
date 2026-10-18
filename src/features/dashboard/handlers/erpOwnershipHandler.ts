@@ -11,6 +11,7 @@
 import { type ErpCallPayload, errorText, openErpCall } from './erpCall';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { formatDuration } from '@/core/utils/timeFormatting';
+import { readErpOwnershipOptionsShared } from '@/features/project-creation/services/erpOwnershipOptionsShared';
 import { readErpOwnershipOptionsForProject } from '@/features/project-creation/services/erpOwnershipSync';
 import type { HandlerResponse, MessageHandler } from '@/types/handlers';
 
@@ -30,12 +31,15 @@ export const handleGetErpOwnershipOptions: MessageHandler<ErpCallPayload> = asyn
     const signedIn = Date.now();
     const took = () => `sign-in ${formatDuration(signedIn - started)}, store ${formatDuration(Date.now() - signedIn)}`;
     try {
-        const options = await readErpOwnershipOptionsForProject(
-            call.project,
-            call.id,
-            call.auth,
-            ServiceLocator.getAuthenticationService(),
-            context.context?.secrets,
+        // Shared: the read the dashboard started when it opened, if it is still right.
+        const options = await readErpOwnershipOptionsShared(call.project, call.id, () =>
+            readErpOwnershipOptionsForProject(
+                call.project,
+                call.id,
+                call.auth,
+                ServiceLocator.getAuthenticationService(),
+                context.context?.secrets,
+            ),
         );
         if ('refusal' in options) {
             context.logger.warn(`[ERP] Add another ERP could not read the store (${took()}): ${options.refusal}`);

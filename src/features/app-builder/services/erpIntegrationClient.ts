@@ -27,6 +27,7 @@ import {
 } from './erpActionRun';
 import type { ErpKeyMapEntry, ResolvedErpSettings } from './erpFill';
 import type { ErpListEntry } from './erpList';
+import { noteStoreWrite } from '@/core/utils/storeWrites';
 import type {
     ErpDetachReport,
     ErpIntegrationStatus,
@@ -314,6 +315,7 @@ export async function callWithIms(
     fetchImpl: typeof fetch,
     payload?: unknown,
 ): Promise<ImsCallAnswer> {
+    if (method !== 'GET') noteStoreWrite();
     const response = await fetchImpl(url, {
         method,
         headers: {
