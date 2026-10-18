@@ -10,7 +10,8 @@
  * - when `demoBuilder.categoryPages.autoAdd` changes.
  *
  * What a look does — offer, or add when the SC has opted in — is
- * `services/catalogMenu/newCategoryPagesWatcher.ts`. Nothing here opens a browser.
+ * `services/catalogMenu/newCategoryPagesWatcher.ts`. Nothing here opens a browser unasked:
+ * an expired DA.live sign-in is a modal question, and the sign-in runs only on its yes.
  *
  * @module features/eds/handlers/newCategoryPagesWatch
  */
@@ -31,6 +32,22 @@ import {
 import type { HandlerContext } from '@/types/handlers';
 import type { StateManager } from '@/types/state';
 import { isEdsProject } from '@/types/typeGuards';
+
+const DA_LIVE_SIGN_IN = 'Sign In';
+
+/**
+ * Asks to sign in to DA.live, and runs the palette's own sign-in on a yes.
+ *
+ * @param why - what could not be done, and what happens after the sign-in
+ */
+export async function askDaLiveSignIn(why: string): Promise<void> {
+    const choice = await vscode.window.showWarningMessage(
+        'Your DA.live sign-in has expired',
+        { modal: true, detail: why },
+        DA_LIVE_SIGN_IN,
+    );
+    if (choice === DA_LIVE_SIGN_IN) await vscode.commands.executeCommand('demoBuilder.signInDaLive');
+}
 
 /** Reads `demoBuilder.categoryPages.autoAdd`, live. Off unless it is set. */
 export function readAutoAddCategoryPagesSetting(): boolean {
@@ -65,6 +82,7 @@ export function registerNewCategoryPagesWatch(deps: NewCategoryPagesWatchDeps): 
         save: (project) => stateManager.saveProject(project),
         notify: (message, ...actions) =>
             Promise.resolve(vscode.window.showInformationMessage(message, ...actions)),
+        askToSignIn: askDaLiveSignIn,
         inProgress: (title, job) => withProgressRegister({ title }, () => job()),
         logger: deps.logger,
     });

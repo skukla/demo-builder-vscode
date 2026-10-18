@@ -17,8 +17,10 @@
  * is the caller's business (`features/eds/handlers/newCategoryPagesWatch.ts`).
  *
  * When the look fails:
- * - a refused DA.live sign-in is one notice, then it waits for the next look. It never
- *   opens a browser, and it does not repeat the notice until a look has worked again;
+ * - a refused DA.live sign-in is one question, "sign in now?", then it waits for the next
+ *   look. The browser opens only on a yes (owner, 2026-10-17: an expired sign-in should
+ *   prompt, not open a browser by itself), and it does not ask again until a look has
+ *   worked again;
  * - anything else is logged and nothing is offered. A failed read is never read as
  *   "every category is missing a page".
  *
@@ -52,6 +54,8 @@ export interface NewCategoryPagesWatcherDeps {
     save(project: Project): Promise<void>;
     /** Show a notice; answers the button pressed, or undefined when it is dismissed. */
     notify(message: string, ...actions: string[]): Promise<string | undefined>;
+    /** Ask the SC to sign in to DA.live, saying why; signs in only on a yes. */
+    askToSignIn(why: string): Promise<void>;
     /** Show progress while `job` runs: an add the SC asked for takes about a minute. */
     inProgress<T>(title: string, job: () => Promise<T>): Promise<T>;
     logger: Pick<Logger, 'info' | 'warn' | 'debug'>;
@@ -83,8 +87,8 @@ function offerText(name: string, categories: NewCategory[]): string {
 
 function signInText(name: string): string {
     return (
-        `Demo Builder could not check "${name}" for new categories because your DA.live sign-in has expired. ` +
-        'Sign in to DA.live and it will check again.'
+        `Demo Builder could not check "${name}" for new categories. ` +
+        'Sign in and it will check again. The sign-in opens in your browser.'
     );
 }
 
@@ -118,7 +122,7 @@ export function createNewCategoryPagesWatcher(deps: NewCategoryPagesWatcherDeps)
     function tellSignIn(project: Project): void {
         if (said.signIn) return;
         said.signIn = true;
-        void deps.notify(signInText(nameOf(project)));
+        void deps.askToSignIn(signInText(nameOf(project)));
     }
 
     async function stopForProject(path: string): Promise<void> {
@@ -191,7 +195,7 @@ export function createNewCategoryPagesWatcher(deps: NewCategoryPagesWatcherDeps)
         said.signIn = false;
         if (found.status === 'nothing') {
             said.offered = undefined;
-            // The sign-in notice promised a check; say it happened, once.
+            // The sign-in question promised a check; say it happened, once.
             if (promisedRecheck) void deps.notify(`Checked "${nameOf(project)}" again: no new categories.`);
             return;
         }

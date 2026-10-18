@@ -150,6 +150,25 @@ describe('registerNewCategoryPagesWatch', () => {
         expect(choice).toBe('Add pages');
     });
 
+    // Owner, 2026-10-17: an expired sign-in should PROMPT, not open a browser by itself.
+    it('asks to sign in to DA.live as a modal, and signs in only on a yes', async () => {
+        const { deps } = start();
+        const ask = vscode.window.showWarningMessage as jest.Mock;
+
+        ask.mockResolvedValueOnce(undefined);
+        await deps.askToSignIn('Could not check.');
+        expect(ask).toHaveBeenCalledWith(
+            'Your DA.live sign-in has expired',
+            { modal: true, detail: 'Could not check.' },
+            'Sign In',
+        );
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.signInDaLive');
+
+        ask.mockResolvedValueOnce('Sign In');
+        await deps.askToSignIn('Could not check.');
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.signInDaLive');
+    });
+
     it('stops looking once disposed', () => {
         const { check, projectChanged, signedIn, disposable } = start();
 

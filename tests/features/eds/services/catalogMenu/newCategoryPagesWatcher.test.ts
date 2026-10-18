@@ -9,7 +9,7 @@
  * - setting OFF: it offers, and writes nothing until the SC says yes;
  * - setting ON: it adds without asking and then names what it added;
  * - the per-project choice beats the setting, both ways;
- * - an expired DA.live sign-in is one notice and no write — and no repeat every tick;
+ * - an expired DA.live sign-in is one sign-in question and no write — and no repeat every tick;
  * - a failed read is never an offer to add a page per category;
  * - the same offer is not made twice.
  */
@@ -67,6 +67,7 @@ interface Harness {
     setting: boolean;
     pages: StorefrontPages;
     notify: jest.Mock<Promise<string | undefined>, [string, ...string[]]>;
+    askToSignIn: jest.Mock<Promise<void>, [string]>;
     save: jest.Mock<Promise<void>, [Project]>;
     warn: jest.Mock;
     /** The progress the SC sees while an answered offer adds its pages. */
@@ -85,6 +86,7 @@ async function harness(answer?: string): Promise<Harness> {
         setting: false,
         pages: s.port,
         notify: jest.fn(async (_message: string, ..._actions: string[]) => answer),
+        askToSignIn: jest.fn(async (_why: string) => undefined),
         save: jest.fn(async (_project: Project) => undefined),
         warn: jest.fn(),
         inProgress: jest.fn((_title: string, job: () => Promise<unknown>) => job()),
@@ -103,6 +105,7 @@ async function harness(answer?: string): Promise<Harness> {
         autoAddByDefault: () => h.setting,
         save: h.save,
         notify: h.notify,
+        askToSignIn: h.askToSignIn,
         inProgress: h.inProgress,
         logger: { info: jest.fn(), warn: h.warn, debug: jest.fn() },
     });
@@ -295,7 +298,9 @@ describe('setting on: it adds without asking', () => {
 });
 
 describe('when it cannot look', () => {
-    it('an expired DA.live sign-in is one notice, no write, and no repeat on the next look', async () => {
+    // Owner, 2026-10-17: an expired sign-in should PROMPT, not open a browser by itself.
+    // The watcher asks; the browser is the yes's business (newCategoryPagesWatch.ts).
+    it('an expired DA.live sign-in asks once, writes nothing, and does not ask on the next look', async () => {
         const h = await harness(undefined);
         h.setting = true;
         h.pages = {
@@ -310,15 +315,16 @@ describe('when it cannot look', () => {
         await h.watcher.check();
         await h.watcher.idle();
 
-        expect(h.notify).toHaveBeenCalledTimes(1);
-        expect(h.notify).toHaveBeenCalledWith(
-            'Demo Builder could not check "Justrite" for new categories because your DA.live sign-in has expired. ' +
-                'Sign in to DA.live and it will check again.',
+        expect(h.askToSignIn).toHaveBeenCalledTimes(1);
+        expect(h.askToSignIn).toHaveBeenCalledWith(
+            'Demo Builder could not check "Justrite" for new categories. ' +
+                'Sign in and it will check again. The sign-in opens in your browser.',
         );
+        expect(h.notify).not.toHaveBeenCalled();
         expect(h.s.written).toStrictEqual([]);
     });
 
-    it('checks again once the sign-in works, and tells the SC again if it lapses later', async () => {
+    it('checks again once the sign-in works, and asks again if it lapses later', async () => {
         const h = await harness(undefined);
         const expired: StorefrontPages = {
             ...h.s.port,
@@ -338,10 +344,10 @@ describe('when it cannot look', () => {
         h.pages = expired;
         await h.watcher.check();
         await h.watcher.idle();
-        expect(h.notify).toHaveBeenCalledTimes(3);
+        expect(h.askToSignIn).toHaveBeenCalledTimes(2);
     });
 
-    it('closes the loop it opened: after the sign-in notice, a clean look says so once', async () => {
+    it('closes the loop it opened: after the sign-in question, a clean look says so once', async () => {
         // Owner, 2026-10-14: the notice promised "it will check again", the check ran on
         // sign-in, found nothing, and said nothing, so the promise read as broken.
         const h = await harness(undefined);
@@ -361,7 +367,7 @@ describe('when it cannot look', () => {
         await h.watcher.check();
         await h.watcher.idle();
 
-        expect(h.notify).toHaveBeenCalledTimes(2);
+        expect(h.notify).toHaveBeenCalledTimes(1);
         expect(h.notify).toHaveBeenLastCalledWith('Checked "Justrite" again: no new categories.');
         expect(h.s.written).toStrictEqual([]);
     });
@@ -392,6 +398,7 @@ describe('when it cannot look', () => {
             autoAddByDefault: () => true,
             save: h.save,
             notify: h.notify,
+            askToSignIn: h.askToSignIn,
             inProgress: h.inProgress,
             logger: { info: jest.fn(), warn: jest.fn(), debug: jest.fn() },
         });
