@@ -49,4 +49,4 @@ path exists in both folders at different sizes.
 
 ## Shipped so far
 
-- 2026-10-18  docs(backlog): EDS-53 built; PL-83 records the hooks resolving shell paths in the wrong folder (`05335cbee`)
+- 2026-10-18  docs(backlog): EDS-53 built; PL-83 records the hooks resolving shell paths in the wrong folder (`a93155cb4`)
