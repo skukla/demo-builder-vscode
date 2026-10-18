@@ -19,7 +19,10 @@ import {
     buildPlaceholderStubJson,
     placeholderStubPathsFor,
     placeholderStubTreeEntries,
+    removeShadowingPlaceholderFiles,
 } from '@/features/eds/services/placeholderStubs';
+import type { GitHubFileContent } from '@/features/eds/services/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
 import { installSiteFetch, restoreFetch } from '../../../helpers/siteFetchFake';
 
 afterEach(restoreFetch);
@@ -168,5 +171,78 @@ describe('placeholderStubTreeEntries', () => {
             expect(entry.type).toBe('blob');
             expect(entry.content).toBe(buildPlaceholderStubJson());
         }
+    });
+});
+
+/**
+ * A template file at a label-sheet path hides the copied sheet (EDS-53).
+ *
+ * The B2B template ships `placeholders/checkout.json`, a two-row file in the old
+ * bare-list shape. Every reset and creation copied it into the repository, the
+ * repository file wins over the DA.live sheet at the same path, and the publish
+ * service refused to preview CitiSignal's checkout sheet ("invalid sheet; unknown
+ * type"). Deleting the file on the scratch site made the sheet preview (owner,
+ * 2026-10-18). After the stubs are written, a file at a label-sheet path that is
+ * NOT our stub can only be such a leftover, and the area has a real sheet.
+ */
+describe('removeShadowingPlaceholderFiles', () => {
+    const REPO = { owner: 'skukla', repo: 'my-commerce-demo' };
+    const TEMPLATE_CHECKOUT = '{"data":[{"Key":"Checkout.Summary.Edit","Value":"Edit"}]}';
+
+    function fileOps(files: Record<string, string>) {
+        return {
+            getFileContent: jest.fn(
+                async (_owner: string, _repo: string, path: string): Promise<GitHubFileContent | null> =>
+                    path in files ? { content: files[path], sha: `sha-${path}`, path, encoding: 'base64' } : null,
+            ),
+            commitTreeToBranch: jest.fn().mockResolvedValue('new-commit'),
+        };
+    }
+
+    it('deletes a template file at a label-sheet path, in one commit, reading the given ref', async () => {
+        const ops = fileOps({
+            'placeholders/checkout.json': TEMPLATE_CHECKOUT,
+            'placeholders/company.json': buildPlaceholderStubJson(),
+        });
+
+        const removed = await removeShadowingPlaceholderFiles(ops, REPO, 'reset-commit', createMockLogger());
+
+        expect(removed).toEqual(['placeholders/checkout.json']);
+        expect(ops.getFileContent).toHaveBeenCalledWith(
+            'skukla', 'my-commerce-demo', 'placeholders/checkout.json', 'reset-commit',
+        );
+        expect(ops.commitTreeToBranch).toHaveBeenCalledTimes(1);
+        expect(ops.commitTreeToBranch).toHaveBeenCalledWith(
+            'skukla',
+            'my-commerce-demo',
+            'main',
+            [{ path: 'placeholders/checkout.json', mode: '100644', type: 'blob', sha: null }],
+            expect.any(String),
+        );
+    });
+
+    it('keeps our own stubs, which stand in for sheets nobody authored', async () => {
+        const ops = fileOps({ 'placeholders/cart.json': buildPlaceholderStubJson() });
+
+        const removed = await removeShadowingPlaceholderFiles(ops, REPO, 'c', createMockLogger());
+
+        expect(removed).toStrictEqual([]);
+        expect(ops.commitTreeToBranch).not.toHaveBeenCalled();
+    });
+
+    it('commits nothing when no label-sheet path has a file', async () => {
+        const ops = fileOps({});
+
+        expect(await removeShadowingPlaceholderFiles(ops, REPO, 'c', createMockLogger())).toStrictEqual([]);
+        expect(ops.commitTreeToBranch).not.toHaveBeenCalled();
+    });
+
+    it('never throws: a failed commit costs the sheet, not the reset', async () => {
+        const ops = fileOps({ 'placeholders/checkout.json': TEMPLATE_CHECKOUT });
+        ops.commitTreeToBranch.mockRejectedValue(new Error('409'));
+
+        await expect(
+            removeShadowingPlaceholderFiles(ops, REPO, 'c', createMockLogger()),
+        ).resolves.toStrictEqual([]);
     });
 });

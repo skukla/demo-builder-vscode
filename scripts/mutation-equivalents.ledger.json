@@ -6578,10 +6578,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 237,
+            "line": 249,
             "mutants": 1,
             "category": "block",
-            "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload. Re-anchored 2026-10-16 (234 -> 237): unchanged code; the progress line above it now names the libraries in the vocabulary (progress vocabulary slice 4).",
+            "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload. Re-anchored 2026-10-16 (234 -> 237): unchanged code; the progress line above it now names the libraries in the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-18 (237 -> 249): unchanged code; EDS-53 added the template-label-file removal after the stub commit above it.",
             "decision": "none \u2014 a log-only else",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"
@@ -6591,10 +6591,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 398,
+            "line": 410,
             "mutants": 1,
             "category": "block",
-            "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log. Re-anchored 2026-10-16 (355 -> 361): unchanged code; the progress lines above it are reworded (progress vocabulary slice 4).",
+            "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log. Re-anchored 2026-10-16 (355 -> 361): unchanged code; the progress lines above it are reworded (progress vocabulary slice 4). Re-anchored 2026-10-18 (398 -> 410): unchanged code; EDS-53 added the template-label-file removal after the stub commit above it.",
             "decision": "none \u2014 a log-only else",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"

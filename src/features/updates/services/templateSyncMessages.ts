@@ -5,6 +5,7 @@
  * @module features/updates/services/templateSyncMessages
  */
 
+import { PLACEHOLDER_STUB_PATHS } from '@/features/eds/services/placeholderStubs';
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 import type { TemplateSyncResult, TemplateSyncTarget } from '@/features/updates/services/templateSyncTypes';
 
@@ -43,10 +44,19 @@ export function describeStepFailure(error: unknown): string {
 }
 
 /**
+ * The label-sheet files. Label text lives in DA.live, and a file in the repository
+ * hides the sheet at its path, so reset and creation remove the template's own and a
+ * template update leaves the folder as the storefront has it (EDS-53: the B2B
+ * template's placeholders/checkout.json hid CitiSignal's checkout sheet).
+ */
+export const LABEL_SHEET_FILES: readonly string[] = PLACEHOLDER_STUB_PATHS.map((sheet) => `${sheet}.json`);
+
+/**
  * Files that should never be overwritten during template sync
  * These contain project-specific configuration
  */
 export const DEFAULT_PRESERVE_FILES = [
     'fstab.yaml',       // Helix content source configuration
     'config.json',      // Commerce endpoint configuration
+    ...LABEL_SHEET_FILES,
 ];

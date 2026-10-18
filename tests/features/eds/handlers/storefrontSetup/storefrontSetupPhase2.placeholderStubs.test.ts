@@ -127,6 +127,38 @@ describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
         expect(site.asked()).toContain(`${base}/placeholders/cart.json`);
     });
 
+    // The B2B template ships placeholders/checkout.json; a new repository made from
+    // it keeps that file, and it hides the checkout sheet the content copy writes
+    // (EDS-53). Creation removes it after the stub commit, as reset does.
+    it('removes a template label file after the stub commit, reading that commit', async () => {
+        const githubFileOps = makeGithubFileOps({
+            getFileContent: jest.fn(async (_o: string, _r: string, path: string) =>
+                path === 'placeholders/checkout.json'
+                    ? { content: '{"data":[{"Key":"Checkout.Summary.Edit","Value":"Edit"}]}', sha: 's', path, encoding: 'base64' }
+                    : null,
+            ),
+        });
+
+        await executePhaseHelixConfig(
+            makeContext(),
+            EDS_CONFIG,
+            servicesWith(githubFileOps),
+            REPO_INFO,
+            new AbortController().signal
+        );
+
+        expect(githubFileOps.getFileContent).toHaveBeenCalledWith(
+            'me', 'shop', 'placeholders/checkout.json', 'sha123',
+        );
+        expect(githubFileOps.commitTreeToBranch).toHaveBeenCalledWith(
+            'me',
+            'shop',
+            'main',
+            [{ path: 'placeholders/checkout.json', mode: '100644', type: 'blob', sha: null }],
+            expect.any(String),
+        );
+    });
+
     it('a failed stub commit warns and never fails the phase', async () => {
         const githubFileOps = makeGithubFileOps({
             commitTreeToBranch: jest.fn().mockRejectedValue(new Error('boom')),

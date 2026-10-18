@@ -23,7 +23,11 @@ import {
     installInspectorTagging,
 } from '../../services/inspectorHelpers';
 import { toInstalledBlockLibrary } from '../../services/installedBlockLibraryRecord';
-import { placeholderStubPathsFor, placeholderStubTreeEntries } from '../../services/placeholderStubs';
+import {
+    placeholderStubPathsFor,
+    placeholderStubTreeEntries,
+    removeShadowingPlaceholderFiles,
+} from '../../services/placeholderStubs';
 import { installQuickEdit } from '../../services/quickEditPublisher';
 import { installMissingPageHandling } from '../../services/storefront/notFoundPage';
 import { type GitHubTreeInput } from '../../services/types';
@@ -102,7 +106,7 @@ export async function executePhaseHelixConfig(
     // failed commit costs console cosmetics, never the setup.
     try {
         const stubPaths = await placeholderStubPathsFor(edsConfig.contentSource);
-        await githubFileOps.commitTreeToBranch(
+        const stubCommit = await githubFileOps.commitTreeToBranch(
             repoInfo.repoOwner,
             repoInfo.repoName,
             'main',
@@ -111,6 +115,14 @@ export async function executePhaseHelixConfig(
         );
         logger.info(
             `[Storefront Setup] Placeholder stub sheets committed: ${stubPaths.length} (the source has the rest)`,
+        );
+        // The template's own label files hide the copied sheets at the same paths
+        // (the B2B template's placeholders/checkout.json did, EDS-53). Reset does the same.
+        await removeShadowingPlaceholderFiles(
+            githubFileOps,
+            { owner: repoInfo.repoOwner, repo: repoInfo.repoName },
+            stubCommit,
+            logger,
         );
     } catch (error) {
         logger.warn(

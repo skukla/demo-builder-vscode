@@ -9,7 +9,17 @@
  * repo's mock-audit rule.
  */
 
-import { buildParams, installDefaults, runReset } from './edsResetRepoHelper.testUtils';
+import {
+    RESET_RESULT,
+    buildParams,
+    installDefaults,
+    mockGetLatestCommitSha,
+    resetRepoToTemplate,
+    runReset,
+} from './edsResetRepoHelper.testUtils';
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 import {
     PLACEHOLDER_STUB_PATHS,
     buildPlaceholderStubJson,
@@ -49,5 +59,43 @@ describe('resetRepoToTemplate — placeholder stubs ride the bulk override commi
                 .sort(),
         );
         expect(site.asked()).toContain(`${base}/placeholders/cart.json`);
+    });
+});
+
+/**
+ * The B2B template ships `placeholders/checkout.json`; the reset copied it, and the
+ * repository file hid CitiSignal's copied checkout sheet (EDS-53). After the reset
+ * commit, the template's label files are removed, reading the commit just written.
+ */
+describe('resetRepoToTemplate — template label files that hide a copied sheet', () => {
+    it('removes them in a commit after the reset, reading the reset commit', async () => {
+        const getFileContent = jest.fn(async (_o: string, _r: string, path: string) =>
+            path === 'placeholders/checkout.json'
+                ? { content: '{"data":[{"Key":"Checkout.Summary.Edit","Value":"Edit"}]}', sha: 's', path, encoding: 'base64' }
+                : null,
+        );
+        const commitTreeToBranch = jest.fn().mockResolvedValue('after');
+        const githubFileOps = {
+            resetRepoToTemplate: jest.fn().mockResolvedValue(RESET_RESULT),
+            getFileContent,
+            commitTreeToBranch,
+            getLatestCommitSha: mockGetLatestCommitSha,
+        } as unknown as GitHubFileOperations;
+
+        await resetRepoToTemplate(
+            buildParams(),
+            createMockHandlerContext({ logger: createMockLogger() }),
+            githubFileOps,
+            jest.fn(),
+        );
+
+        expect(getFileContent).toHaveBeenCalledWith('me', 'shop', 'placeholders/checkout.json', RESET_RESULT.commitSha);
+        expect(commitTreeToBranch).toHaveBeenCalledWith(
+            'me',
+            'shop',
+            'main',
+            [{ path: 'placeholders/checkout.json', mode: '100644', type: 'blob', sha: null }],
+            expect.any(String),
+        );
     });
 });

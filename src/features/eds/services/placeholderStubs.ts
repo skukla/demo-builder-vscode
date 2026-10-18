@@ -32,8 +32,10 @@
  * @module features/eds/services/placeholderStubs
  */
 
+import type { GitHubFileOperations } from './github/githubFileOperations';
 import { contentSiteBaseUrl, probePaths } from './sitePathProbe';
 import type { GitHubTreeInput } from './types';
+import type { Logger } from '@/types/logger';
 
 /**
  * The sheets the boilerplate requests — measured 2026-08-23 by grepping
@@ -156,4 +158,65 @@ export function placeholderStubTreeEntries(stubPaths: readonly string[]): GitHub
         type: 'blob' as const,
         content: stub,
     }));
+}
+
+/** The sentinel key every stub carries, and nothing else does. */
+const STUB_KEY = '_stub';
+
+/** Is this repository file one of our stubs? Anything unreadable is not. */
+function isOurStub(content: string): boolean {
+    try {
+        const rows = (JSON.parse(content) as { data?: { data?: { Key?: string }[] } }).data?.data;
+        return Array.isArray(rows) && rows.length === 1 && rows[0]?.Key === STUB_KEY;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Remove the template's own files at label-sheet paths, which hide the copied sheets.
+ *
+ * Run after the stubs are written. A file at a label-sheet path that is NOT our stub
+ * is something the template shipped, and it is only still there because the content
+ * source serves a real sheet for that area (otherwise a stub replaced it). The file in
+ * the repository wins over the DA.live sheet, so the sheet would never be served. The
+ * B2B template ships one: `placeholders/checkout.json`, two rows in the old bare-list
+ * shape, which made the publish service refuse CitiSignal's checkout sheet ("invalid
+ * sheet; unknown type"). Deleting it on a scratch site made the sheet preview (EDS-53,
+ * 2026-10-18).
+ *
+ * Shared by creation and reset. Never throws: a failure costs that sheet, not the run.
+ *
+ * @param ref - the commit to read, so the answer is the tree just written
+ * @returns the paths removed, or none when there was nothing to remove or it failed
+ */
+export async function removeShadowingPlaceholderFiles(
+    fileOps: Pick<GitHubFileOperations, 'getFileContent' | 'commitTreeToBranch'>,
+    repo: { owner: string; repo: string },
+    ref: string,
+    logger: Logger,
+): Promise<string[]> {
+    try {
+        const files = await Promise.all(
+            PLACEHOLDER_STUB_PATHS.map(async (sheetPath) => {
+                const path = `${sheetPath}.json`;
+                const file = await fileOps.getFileContent(repo.owner, repo.repo, path, ref);
+                return file && !isOurStub(file.content) ? path : undefined;
+            }),
+        );
+        const shadowing = files.filter((path): path is string => path !== undefined);
+        if (shadowing.length === 0) return [];
+        await fileOps.commitTreeToBranch(
+            repo.owner,
+            repo.repo,
+            'main',
+            shadowing.map((path) => ({ path, mode: '100644', type: 'blob', sha: null })),
+            'chore: remove template label files that hide the copied sheets',
+        );
+        logger.info(`[Placeholders] Removed template files that hid copied sheets: ${shadowing.join(', ')}`);
+        return shadowing;
+    } catch (error) {
+        logger.warn(`[Placeholders] Could not remove template label files: ${(error as Error).message}`);
+        return [];
+    }
 }

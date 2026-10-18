@@ -18,12 +18,14 @@
  */
 
 import {
+    REPO_DIR,
     applyStops,
     edsProject,
     failOn,
     gitCalls,
     mockExecute,
     mockReadFile,
+    mockRm,
     mockWriteFile,
     pushed,
     resetFakes,
@@ -76,6 +78,55 @@ describe('CRITERION 1 — the preserved files survive both strategies', () => {
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
         expect(result.success).toBe(true);
+    });
+});
+
+/**
+ * A label file the SC's repository does not have stays absent through a replace
+ * (EDS-53). Reset and creation remove the template's own label files, because one
+ * in the repository hides the DA.live sheet at its path; a replace that read the
+ * template's tree back over the checkout would put the B2B template's
+ * placeholders/checkout.json back and hide CitiSignal's checkout sheet again.
+ */
+describe('a replace keeps the label folder as the storefront had it', () => {
+    const CHECKOUT = `${REPO_DIR}/placeholders/checkout.json`;
+
+    function withoutCheckoutLabel(): void {
+        mockReadFile.mockImplementation(async (p: string) => {
+            if (p === CHECKOUT) throw Object.assign(new Error('nope'), { code: 'ENOENT' });
+            return p.endsWith('fstab.yaml') ? 'MOUNTS' : '{"headers":{}}';
+        });
+    }
+
+    it('removes a label file the storefront did not have, after the template tree lands', async () => {
+        withoutCheckoutLabel();
+
+        await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
+
+        expect(mockRm).toHaveBeenCalledWith(CHECKOUT, { force: true });
+    });
+
+    it('keeps the label files the storefront did have (its stubs), written back as they were', async () => {
+        withoutCheckoutLabel();
+
+        await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
+
+        const removed = mockRm.mock.calls.map((c) => String(c[0]));
+        expect(removed).not.toContain(`${REPO_DIR}/placeholders/cart.json`);
+        expect(mockWriteFile.mock.calls.map((c) => String(c[0]))).toContain(`${REPO_DIR}/placeholders/cart.json`);
+    });
+
+    it('removes nothing from a reset that was asked to preserve nothing', async () => {
+        withoutCheckoutLabel();
+
+        await service().resetRepository({
+            repoOwner: 'skukla',
+            repoName: 'demo-storefront',
+            templateOwner: 'adobe',
+            templateRepo: 'aem-boilerplate-commerce',
+        });
+
+        expect(mockRm).not.toHaveBeenCalledWith(CHECKOUT, { force: true });
     });
 });
 

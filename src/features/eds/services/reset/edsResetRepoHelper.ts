@@ -15,6 +15,7 @@ import { generateInspectorTreeEntries, installInspectorTagging } from '../inspec
 import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
 import type { CodePatchResult } from '../patches/codePatchRegistry';
 import { demoFixLines, runDemoFixPass, type DemoFixReport } from '../patches/demoFixPass';
+import { removeShadowingPlaceholderFiles } from '../placeholderStubs';
 import { installQuickEdit } from '../quickEditPublisher';
 import { installMissingPageHandling } from '../storefront/notFoundPage';
 import { readRepoBoilerplate } from '../storefront/storefrontOrigin';
@@ -324,6 +325,16 @@ export async function resetRepoToTemplate(
         `[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`,
     );
     report(RESET_STEP.resettingCode, `Reset ${resetResult.fileCount} files`);
+
+    // The template's own label files hide the sheets the content copy writes at the
+    // same paths (the B2B template's placeholders/checkout.json did, EDS-53). The
+    // stubs above already replaced the ones the source has no sheet for.
+    await removeShadowingPlaceholderFiles(
+        githubFileOps,
+        { owner: repoOwner, repo: repoName },
+        resetResult.commitSha,
+        context.logger,
+    );
 
     // An added demo's fix pass re-runs on every reset (D23, EDS-13f): a saved package
     // gets its fixes back where they fit, a colleague's storefront with our lineage

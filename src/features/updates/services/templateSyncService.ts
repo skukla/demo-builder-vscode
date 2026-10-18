@@ -32,7 +32,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
-import { restorePreservedFiles } from '@/features/updates/services/preservedFiles';
+import { removeFilesNotBackedUp, restorePreservedFiles } from '@/features/updates/services/preservedFiles';
 import { commitAndPush, withCheckout, type SyncDeps } from '@/features/updates/services/templateCheckout';
 import {
     applyTemplateChangeSince,
@@ -43,6 +43,7 @@ import {
     COMMIT_SHA,
     DEFAULT_PRESERVE_FILES,
     describeTemplateConflicts,
+    LABEL_SHEET_FILES,
     failure,
     NO_RECORDED_VERSION,
     notInTemplateHistory,
@@ -168,8 +169,10 @@ export class TemplateSyncService {
         preserveFiles: string[] = [],
         commitMessage = 'chore: sync with template (reset)',
     ): Promise<TemplateSyncResult> {
+        // Only the label files this reset was asked to preserve are kept absent.
+        const keptAbsent = LABEL_SHEET_FILES.filter((file) => preserveFiles.includes(file));
         return withCheckout(this.deps, 'reset', target, preserveFiles, (checkout) =>
-            this.performReset(checkout, commitMessage),
+            this.performReset(checkout, commitMessage, keptAbsent),
         );
     }
 
@@ -237,7 +240,11 @@ export class TemplateSyncService {
     }
 
     /** Reset the checkout to the template's content, keeping the preserved files; force-push. */
-    private async performReset(checkout: Checkout, commitMessage: string): Promise<TemplateSyncResult> {
+    private async performReset(
+        checkout: Checkout,
+        commitMessage: string,
+        keptAbsent: readonly string[],
+    ): Promise<TemplateSyncResult> {
         const { repoDir, backups, branch } = checkout;
         const git: GitStep = (command, timeout) => this.git(repoDir, command, timeout);
         const templateHead = await readTemplateHead(git);
@@ -251,6 +258,7 @@ export class TemplateSyncService {
         }
 
         await restorePreservedFiles(repoDir, backups, this.logger);
+        await removeFilesNotBackedUp(repoDir, keptAbsent, backups, this.logger);
         // Force: a reset may rewrite history.
         await commitAndPush(this.deps, repoDir, commitMessage, `git push origin ${branch} --force`);
 
