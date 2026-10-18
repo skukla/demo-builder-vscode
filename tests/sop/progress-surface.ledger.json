@@ -44,6 +44,7 @@
         "src/features/dashboard/handlers/appBuilderComponentPromote.ts:286": "Gates: delete from GitHub the repository Demo Builder created when an app was saved to one. Cannot be undone.",
         "src/features/dashboard/handlers/destinationHandlers.ts:315": "Gates: move the project to another Adobe project, which removes each integration with a workspace of its own from the old one (uninstalled from Commerce, workspace deleted). An Edit asks this before anything runs.",
         "src/features/projects-dashboard/services/deletionConfirmation.ts:37": "Gates: delete a project's files and configuration from this computer. Cannot be undone.",
-        "src/features/project-creation/commands/createProject.ts:426": "Gates: throw away the changes made in this Edit and open project configuration? Asked only when the Edit has changes; leaving for Configure would discard them."
+        "src/features/project-creation/commands/createProject.ts:426": "Gates: throw away the changes made in this Edit and open project configuration? Asked only when the Edit has changes; leaving for Configure would discard them.",
+        "src/features/dashboard/handlers/statusHandlers.ts:56": "Gates: sign in to Adobe now, which opens the browser? Asked once per expiry when the dashboard finds the sign-in expired; a no opens nothing (owner, 2026-10-17)."
     }
 }

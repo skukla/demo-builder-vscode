@@ -64,6 +64,7 @@ export function projectWithOrg(organization?: string, extra: Partial<AdobeConfig
 export function buildOrgContextCheck(
     authManager: jest.Mocked<AuthenticationService>,
     stateManager: OrgContextCheckDeps['stateManager'],
+    signIn: Pick<OrgContextCheckDeps, 'onSignedOut' | 'onSignedIn'> = {},
 ): OnOpenCheck {
-    return createOrgContextCheck({ authManager, stateManager });
+    return createOrgContextCheck({ authManager, stateManager, ...signIn });
 }

@@ -9,7 +9,8 @@
  */
 
 import * as path from 'path';
-import type * as vscode from 'vscode';
+import * as vscode from 'vscode';
+import { adobeSignInRestored, askToSignInOnce } from '../services/adobeSignInPrompt';
 import { buildStatusPayload, deriveMeshStatus } from '../services/dashboardStatusService';
 import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
@@ -44,6 +45,23 @@ import { ErrorCode } from '@/types/errorCodes';
 import { type HandlerContext, MessageHandler } from '@/types/handlers';
 import { getMeshComponentInstance, isEdsProject } from '@/types/typeGuards';
 import type { MeshStatus } from '@/types/webviewPayloads';
+
+const ADOBE_SIGN_IN = 'Sign In';
+
+/** The Adobe sign-in prompt: a modal, and nothing opens until the SC says so. */
+async function askAdobeSignIn(): Promise<boolean> {
+    const choice = await vscode.window.showWarningMessage(
+        'Your Adobe sign-in has expired',
+        {
+            modal: true,
+            detail:
+                "Sign in to use this project's Adobe features, such as deploys and integrations. " +
+                'The sign-in opens in your browser.',
+        },
+        ADOBE_SIGN_IN,
+    );
+    return choice === ADOBE_SIGN_IN;
+}
 
 /**
  * Build the dashboard's status and post it, with none of the on-open checks.
@@ -81,12 +99,11 @@ export async function postStatusUpdate(
         const settledWithoutAuth =
             meshComponent.status === 'deploying' || meshComponent.status === 'error';
 
-        // Auth check, SILENTLY. Nobody started this: it runs when the dashboard
-        // opens, so a prompt arrives unasked — and it asked for something the
-        // screen was already showing. An unauthenticated mesh derives `needs-auth`,
+        // Auth check, SILENTLY here. An unauthenticated mesh derives `needs-auth`,
         // which this dashboard renders as "Session expired" beside a sign-in
-        // affordance, with the re-auth action already on the status header. The
-        // notification was a second voice for that (owner, 2026-09-20).
+        // affordance. The one prompt for an expired sign-in is the org check's
+        // (`adobeSignInPrompt`, owner 2026-10-17, replacing the 2026-09-20 rule that
+        // opening a dashboard asks nothing); a second one here would ask twice.
         //
         // Skipped entirely for the two states reported without waiting on auth, so
         // a failed deploy costs nothing to look at.
@@ -160,6 +177,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         createOrgContextCheck({
             authManager: ServiceLocator.getAuthenticationService(),
             stateManager: () => ServiceLocator.getStateManager(),
+            // An expired sign-in asks, once per expiry; the browser opens on a yes only.
+            onSignedOut: () =>
+                askToSignInOnce(askAdobeSignIn, () => handleReAuthenticate(context)),
+            onSignedIn: adobeSignInRestored,
         }),
         createMcpHealthCheck({
             detectDrift: detectMcpDrift,

@@ -110,6 +110,33 @@ it('absent/expired token → unknown + signedOut; SDK read NOT attempted, no int
     expect(auth.loginAndRestoreProjectContext).not.toHaveBeenCalled();
 });
 
+// An expired sign-in now prompts (owner, 2026-10-17): the check hands that off and
+// returns at once, so the badge does not wait on the SC's answer.
+it('asks the host to prompt for a sign-in when signed out, without signing in itself', async () => {
+    const onSignedOut = jest.fn();
+    const auth = makeOrgContextAuth({ isAuthenticated: jest.fn().mockResolvedValue(false) });
+    const check = buildOrgContextCheck(auth, () => undefined, { onSignedOut });
+    const { ctx } = makeOrgCheckContext(projectWithOrg('org1'));
+
+    await check.run(ctx);
+
+    expect(onSignedOut).toHaveBeenCalledTimes(1);
+    expect(auth.loginAndRestoreProjectContext).not.toHaveBeenCalled();
+});
+
+it('tells the host the sign-in is good, so the next expiry prompts again', async () => {
+    const onSignedIn = jest.fn();
+    const onSignedOut = jest.fn();
+    const auth = makeOrgContextAuth({ isAuthenticated: jest.fn().mockResolvedValue(true) });
+    const check = buildOrgContextCheck(auth, () => undefined, { onSignedIn, onSignedOut });
+    const { ctx } = makeOrgCheckContext(projectWithOrg('org1'));
+
+    await check.run(ctx);
+
+    expect(onSignedIn).toHaveBeenCalledTimes(1);
+    expect(onSignedOut).not.toHaveBeenCalled();
+});
+
 it('SDK unavailable (undefined SDK-only read) → unknown, NOT signed out; no CLI fallback fired', async () => {
     // `undefined` means the SDK could not answer (cold, timeout, error). The token
     // is valid, so the badge must not say "Signed out" — it says "Not verified" and

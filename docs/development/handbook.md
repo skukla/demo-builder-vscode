@@ -588,7 +588,10 @@ meant.
 > continue without — an expired sign-in, a missing prerequisite, a merge needing a
 > decision — is asked through `askDuringOperation`, which sends it to whichever
 > surface is already narrating. **A check the SC did not start asks nothing at all**:
-> it reports what it found on the surface that wanted it.
+> it reports what it found on the surface that wanted it. The one exception is an
+> expired sign-in: the check asks once per expiry, in a blocking dialog, and opens the
+> browser only on a yes (owner, 2026-10-17: "An expired adobe login should PROMPT, but
+> it should not open a browser automatically").
 > *Why:* the surface is not a per-handler choice, because the handler cannot see how it
 > was reached. `withOperationProgress` reads that from the request and routes, so one
 > handler serves a button, the palette and an agent without knowing which is which, and a

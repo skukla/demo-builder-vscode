@@ -49,6 +49,7 @@ jest.mock(
 import './dashboardValidatorMocks';
 import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
+import { adobeSignInRestored } from '@/features/dashboard/services/adobeSignInPrompt';
 import { warmOrgServicesCatalog } from '@/features/dashboard/handlers/warmOrgServicesCatalog';
 import { setupMocks } from './dashboardHandlers.testUtils';
 
@@ -216,10 +217,12 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         });
     });
 
-    // Nobody started this: it runs when the dashboard opens. So it reports what it
-    // found and asks nothing — the screen already renders `needs-auth` as "Session
-    // expired" beside a sign-in affordance (owner, 2026-09-20).
-    it('reports needs-auth without asking the SC anything', async () => {
+    // It reports what it found, and since 2026-10-17 it also ASKS: "An expired adobe
+    // login should PROMPT, but it should not open a browser automatically" (owner,
+    // replacing the 2026-09-20 rule that it asked nothing). The ask is a modal, and
+    // a no (this mock's 'Cancel') opens no sign-in.
+    it('reports needs-auth and asks to sign in, opening nothing on a no', async () => {
+        adobeSignInRestored();
         const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
@@ -242,8 +245,14 @@ describe('dashboardHandlers - handleRequestStatus', () => {
             },
         });
 
+        // The on-open checks run in the background; let them reach the prompt.
+        for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
         const vscode = require('vscode');
-        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            'Your Adobe sign-in has expired',
+            expect.objectContaining({ modal: true }),
+            'Sign In',
+        );
         expect(signIn).not.toHaveBeenCalled();
     });
 

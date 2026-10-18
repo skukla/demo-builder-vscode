@@ -21,7 +21,9 @@
  *                 re-runs this check — a sign-in would change nothing).
  *
  * The browser only ever opens from a USER action (Switch IMS Org / Sign in) —
- * never from this automatic open-time check.
+ * never from this automatic open-time check. When signed out it tells the host
+ * (`onSignedOut`), which ASKS the SC to sign in (owner, 2026-10-17); a yes is the
+ * user action.
  *
  * @module features/dashboard/services/onOpenChecks/orgContextCheck
  */
@@ -114,6 +116,14 @@ export interface OrgContextCheckDeps {
      * nothing skips the (non-fatal) write, exactly as the locator read did.
      */
     stateManager: () => Pick<StateManager, 'saveProjectConfigOnly'> | null | undefined;
+    /**
+     * Told when there is no valid sign-in, so the host can ASK the SC to sign in
+     * (owner, 2026-10-17). Not awaited: the badge must not wait on the answer, and
+     * this check itself still opens no browser.
+     */
+    onSignedOut?: () => Promise<void>;
+    /** Told when the sign-in is valid, so the next expiry asks again. */
+    onSignedIn?: () => void;
 }
 
 /**
@@ -148,8 +158,10 @@ export function createOrgContextCheck(deps: OrgContextCheckDeps): OnOpenCheck {
     
             // P1: token-only check — no browser. No valid token → unknown.
             if (!(await deps.authManager.isAuthenticated())) {
+                void deps.onSignedOut?.();
                 return signedOutOutcome();
             }
+            deps.onSignedIn?.();
 
             // P1: SDK-only org read — never the CLI fallback. `undefined` means the
             // SDK could not answer → not verified (the token is valid). An EMPTY list is a
