@@ -44,18 +44,31 @@ interface SearchPage {
     total_count?: number;
 }
 
-/** Every page of a search endpoint, with extra search criteria appended. */
+/**
+ * How many pages are read at once after the first. Commerce takes about as long for one page
+ * as for four at once, measured on Justrite's 321 products (2026-10-18): four pages of 100 in
+ * turn took 7.7 s, at once 2.6 s. One page of 400 took 6.2 s, so bigger pages are no answer.
+ */
+const PAGES_AT_ONCE = 4;
+
+/**
+ * Every page of a search endpoint, with extra search criteria appended. The first page says
+ * how many there are; the rest are read {@link PAGES_AT_ONCE} at a time, kept in page order.
+ */
 export async function readAllPages<T>(get: CommerceGet, path: string, criteria = ''): Promise<T[]> {
-    const items: T[] = [];
-    let total = Number.POSITIVE_INFINITY;
-    for (let page = 1; items.length < total; page += 1) {
-        const query = `searchCriteria[currentPage]=${page}&searchCriteria[pageSize]=${PAGE_SIZE}${criteria}`;
-        // Pages in order: total_count arrives with the first.
-        const data = (await get(`${path}?${query}`)) as SearchPage;
-        const batch = (data.items ?? []) as T[];
-        items.push(...batch);
-        total = Number(data.total_count ?? items.length);
+    const pageOf = async (page: number): Promise<SearchPage> =>
+        (await get(
+            `${path}?searchCriteria[currentPage]=${page}&searchCriteria[pageSize]=${PAGE_SIZE}${criteria}`,
+        )) as SearchPage;
+    const first = await pageOf(1);
+    const items = (first.items ?? []) as T[];
+    const total = Number(first.total_count ?? items.length);
+    const pages = Math.ceil(total / PAGE_SIZE);
+    for (let start = 2; start <= pages && items.length < total; start += PAGES_AT_ONCE) {
+        const numbers = Array.from({ length: Math.min(PAGES_AT_ONCE, pages - start + 1) }, (_, i) => start + i);
+        const batch = (await Promise.all(numbers.map(pageOf))).flatMap((data) => (data.items ?? []) as T[]);
         if (batch.length === 0) break;
+        items.push(...batch);
     }
     return items;
 }
