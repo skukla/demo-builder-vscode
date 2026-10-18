@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: low
-status: backlog
+status: active
 ---
 
 # An add into a workspace it just made skips the leftover-code check
@@ -48,3 +48,8 @@ carries that to `dispatchDeploy` today). Keep it for:
 
 Pinned in `appBuilderComponentRunner-leftBehindCode.test.ts`: an add into a workspace
 it made does not look; one into a workspace it joined still does.
+
+## Shipped so far
+
+- 2026-10-17  docs(walk): record row 3.16, Edit adds and removes an app (`37e6b5ae1`)
+- 2026-10-17  fix(app-builder): an add into a workspace it just made skips the leftover check (`98f525c4b`)

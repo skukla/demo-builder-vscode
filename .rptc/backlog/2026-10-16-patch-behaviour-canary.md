@@ -88,3 +88,4 @@ not on a patch PR yet.
 - 2026-10-17  docs(updates): record how the patch canary takes updates, and what it needs (`c5fbdc7da`)
 - 2026-10-17  docs(eds): the root LKG pointer is still read by older projects (`b4fcfb316`)
 - 2026-10-17  test(eds): point the patch-registry fixture at a ledger that exists (`e838e9543`)
+- 2026-10-17  docs(walk): record row 2.4, and log the canary commits on EDS-49 (`815b46b3a`)
