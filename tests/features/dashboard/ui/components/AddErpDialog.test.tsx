@@ -20,6 +20,7 @@ import React from 'react';
 // Below the mock on purpose: jest.mock hoists within its own module only.
 import { ADD_ERP_COPY, AddErpDialog } from '@/features/dashboard/ui/components/AddErpDialog';
 import { PICKER_COPY } from '@/features/dashboard/ui/components/ErpOwnershipPicker';
+import { NAME_IS_FIXED } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
 import type { ErpOwnershipOptions, ErpOwnershipOptionsResult } from '@/types/erpOwnership';
 
 const TARGET = { id: 'erp-integration', name: 'Acme ERP Integration' };
@@ -68,9 +69,14 @@ const websitesRadio = () => radio(new RegExp(`^${PICKER_COPY.websitesLabel}`));
 const addButton = () => screen.getByRole('button', { name: /^add$/i });
 /** The core Modal's action buttons are focusable divs, so disabled reads off aria-disabled. */
 const addDisabled = () => addButton().getAttribute('aria-disabled') === 'true';
-const preview = () => screen.getByTestId('add-erp-preview');
+/** Each preview row as "<name> <count> <meaning>", read off its three pieces of text. */
+const rows = () =>
+    screen.getAllByTestId('add-erp-preview-row').map((row) =>
+        Array.from(row.querySelectorAll('[data-testid="spectrum-text"]')).map((text) => text.textContent).join(' | '),
+    );
 function typeName(name: string): void {
-    fireEvent.change(screen.getByLabelText(ADD_ERP_COPY.nameLabel), { target: { value: name } });
+    // The box's line sits inside its label in the shared mock, so match the start.
+    fireEvent.change(screen.getByLabelText(new RegExp(`^${ADD_ERP_COPY.nameLabel}`)), { target: { value: name } });
 }
 
 beforeEach(() => {
@@ -78,20 +84,33 @@ beforeEach(() => {
 });
 
 describe('AddErpDialog — the question and its default', () => {
-    it('asks the store once, and offers the two options, each with what it means and what it gives', async () => {
+    it('asks the store once, and offers the two options, with one line for the selected one', async () => {
         mockRequest.mockResolvedValue(answers(STORE));
         await open();
         typeName('Brand B ERP');
 
         expect(mockRequest).toHaveBeenCalledTimes(1);
         expect(mockRequest).toHaveBeenCalledWith('getErpOwnershipOptions', { id: 'erp-integration' });
-        expect(screen.getByText(ADD_ERP_COPY.intro(TARGET.name))).toBeInTheDocument();
-        expect(screen.getByText(PICKER_COPY.attributeHelp('erp_owner=brand-b'))).toBeInTheDocument();
-        expect(screen.getByText(PICKER_COPY.websitesHelp)).toBeInTheDocument();
+        // One line under the choices, saying what the SELECTED one means (owner, 2026-10-18).
+        expect(screen.getByText(PICKER_COPY.attributeHelp)).toBeInTheDocument();
+        expect(screen.queryByText(PICKER_COPY.websitesHelp)).toBeNull();
         // The default is the attribute (owner, 2026-10-09). The websites option ticks nothing yet.
         expect(attributeRadio()).toBeChecked();
-        expect(screen.getByText(PICKER_COPY.owns(1))).toBeInTheDocument();
-        expect(screen.getByText(PICKER_COPY.owns(0))).toBeInTheDocument();
+        fireEvent.click(websitesRadio());
+        expect(screen.getByText(PICKER_COPY.websitesHelp)).toBeInTheDocument();
+        expect(screen.queryByText(PICKER_COPY.attributeHelp)).toBeNull();
+    });
+
+    // Owner, 2026-10-18: simplify. The counts live in ONE place, "After adding"; the
+    // options carry no count of their own and no attribute code (the SC tags products
+    // with Assign products, never by typing erp_owner).
+    it('shows no count and no attribute code on the options themselves', async () => {
+        mockRequest.mockResolvedValue(answers(STORE));
+        await open();
+        typeName('Brand B ERP');
+
+        expect(screen.queryByText(/It would own/)).toBeNull();
+        expect(screen.queryByText(/erp_owner/)).toBeNull();
     });
 
     it('the default is the attribute; Add hands back the name and the rule, nothing about the existing ERP', async () => {
@@ -104,30 +123,36 @@ describe('AddErpDialog — the question and its default', () => {
 });
 
 describe('AddErpDialog — After adding', () => {
-    it('shows what every ERP will own, the catch-all included, with a few SKUs each', async () => {
+    // One plain line per ERP, as Assign products shows its preview (the 2026-10-18 audit),
+    // in the words of the button the SC presses, never the attribute code or SKUs.
+    it('shows what every ERP will own, one line each, the catch-all included', async () => {
         mockRequest.mockResolvedValue(answers(STORE));
         await open();
         typeName('Brand B ERP');
 
-        const shown = within(preview());
         expect(screen.getByText(ADD_ERP_COPY.afterAdding)).toBeInTheDocument();
-        expect(shown.getByText('Acme ERP: 2 products.')).toBeInTheDocument();
-        expect(shown.getByText('Every product no other ERP claims.')).toBeInTheDocument();
-        expect(shown.getByText('For example: A, C.')).toBeInTheDocument();
-        expect(shown.getByText('Brand B ERP: 1 product.')).toBeInTheDocument();
-        expect(shown.getByText('For example: B.')).toBeInTheDocument();
-        expect(shown.queryByText(/^Nobody/)).toBeNull();
+        expect(rows()).toStrictEqual([
+            'Acme ERP | 2 products | All products not assigned to another ERP',
+            'Brand B ERP | 1 product | Products assigned to it',
+        ]);
     });
 
-    it('follows the name: the attribute and the counts move with it, and an ERP owning nothing is told what next', async () => {
+    it('before a name is typed, shows the ERPs as they stand and no nameless new one', async () => {
+        mockRequest.mockResolvedValue(answers(STORE));
+        await open();
+
+        expect(rows()).toStrictEqual(['Acme ERP | 3 products | All products not assigned to another ERP']);
+    });
+
+    it('follows the name, and an ERP owning nothing is told what next', async () => {
         mockRequest.mockResolvedValue(answers(STORE));
         await open();
         typeName('Evo ERP');
 
-        const shown = within(preview());
-        expect(shown.getByText('Acme ERP: 3 products.')).toBeInTheDocument();
-        expect(shown.getByText('Evo ERP: 0 products.')).toBeInTheDocument();
-        expect(shown.getByText('Evo ERP will own no products yet. After adding, use Assign products on its card.')).toBeInTheDocument();
+        expect(rows()).toStrictEqual([
+            'Acme ERP | 3 products | All products not assigned to another ERP',
+            'Evo ERP | 0 products | None yet: assign products to it after adding',
+        ]);
     });
 
     it('follows the rule: a website rule narrows the catch-all and says so', async () => {
@@ -139,12 +164,12 @@ describe('AddErpDialog — After adding', () => {
         expect(addDisabled()).toBe(true);
         fireEvent.click(screen.getByRole('checkbox', { name: /^Justrite/ }));
 
-        const shown = within(preview());
         // C is sold on justrite AND evo, so the narrowed catch-all and the new ERP both claim it.
-        expect(shown.getByText('Acme ERP: 2 products.')).toBeInTheDocument();
-        expect(shown.getByText('Products sold on base, evo. Its rule changes to this when the ERP is added.')).toBeInTheDocument();
-        expect(shown.getByText('Brand B ERP: 2 products.')).toBeInTheDocument();
-        expect(shown.getByText('Claimed by two ERPs: 1 product.')).toBeInTheDocument();
+        expect(rows()).toStrictEqual([
+            'Acme ERP | 2 products | Products sold on Main Website, Evo (changes when this ERP is added)',
+            'Brand B ERP | 2 products | Products sold on Justrite',
+            'Two ERPs | 1 product | Their orders are refused until a rule changes',
+        ]);
         fireEvent.click(addButton());
         expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'websites', websites: ['justrite'] });
     });
@@ -156,20 +181,23 @@ describe('AddErpDialog — After adding', () => {
         await open();
         typeName('Brand B ERP');
 
-        const shown = within(preview());
-        expect(shown.getByText('Nobody: 2 products.')).toBeInTheDocument();
-        expect(shown.getByText('Claimed by two ERPs: 1 product.')).toBeInTheDocument();
-        expect(shown.getByText('Orders for them are refused until one rule changes.')).toBeInTheDocument();
+        expect(rows()).toEqual(
+            expect.arrayContaining([
+                'Nobody | 2 products | Products no ERP owns',
+                'Two ERPs | 1 product | Their orders are refused until a rule changes',
+            ]),
+        );
     });
 });
 
 describe('AddErpDialog — the name', () => {
-    it('a name without "ERP" is added with it, and the dialog says so', async () => {
+    // The full name shows in the list below, so the name box only says it can't be renamed.
+    it('a name without "ERP" is added with it', async () => {
         mockRequest.mockResolvedValue(answers({ ...STORE, websites: [STORE.websites[0]] }));
         const { onAdd } = await open();
         typeName('Brand B');
 
-        expect(screen.getByText(ADD_ERP_COPY.addedAs('Brand B ERP'))).toBeInTheDocument();
+        expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
         fireEvent.click(addButton());
         expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' });
     });
@@ -192,15 +220,16 @@ describe('AddErpDialog — the name', () => {
 });
 
 describe('AddErpDialog — before and without the store', () => {
-    it('while the store is read, the counts, the websites and the preview all say so, and Add works', async () => {
+    it('while the store is read, ONE loading view says so, whichever choice is showing, and Add works', async () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));
         const { onAdd } = await open();
         typeName('Brand B ERP');
 
-        expect(screen.getAllByText(PICKER_COPY.counting)).toHaveLength(2);
+        // One wait, shown once (the 2026-10-18 audit: two spinners showed at once).
+        expect(screen.getAllByText(/Reading/)).toHaveLength(1);
         expect(screen.getByText(ADD_ERP_COPY.readingStore)).toBeInTheDocument();
         fireEvent.click(websitesRadio());
-        expect(screen.getByText(PICKER_COPY.readingWebsites)).toBeInTheDocument();
+        expect(screen.getAllByText(/Reading/)).toHaveLength(1);
         expect(screen.queryByText(PICKER_COPY.noWebsites)).toBeNull();
 
         fireEvent.click(attributeRadio());
@@ -217,14 +246,19 @@ describe('AddErpDialog — before and without the store', () => {
         expect(screen.getByText(PICKER_COPY.noWebsites)).toBeInTheDocument();
     });
 
-    it("a store that could not be read says why, in the read's words; Add still works", async () => {
+    // A notice box, as Assign products shows a failed read, with the reason inside, ONCE
+    // (the 2026-10-18 audit: a plain sentence, and the reason twice with websites chosen).
+    it("a store that could not be read says why, once, in a notice; Add still works", async () => {
         mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required.' });
         const { onAdd } = await open();
         typeName('Brand B ERP');
 
-        expect(screen.getByText(ADD_ERP_COPY.readFailed)).toBeInTheDocument();
+        const notice = within(screen.getByTestId('add-erp-read-failed'));
+        expect(notice.getByText(ADD_ERP_COPY.readFailed)).toBeInTheDocument();
+        expect(notice.getByText('Adobe sign-in required.')).toBeInTheDocument();
+        expect(notice.getByText(ADD_ERP_COPY.stillAdd)).toBeInTheDocument();
         fireEvent.click(websitesRadio());
-        expect(screen.getByText('Adobe sign-in required.')).toBeInTheDocument();
+        expect(screen.getAllByText('Adobe sign-in required.')).toHaveLength(1);
         fireEvent.click(attributeRadio());
         fireEvent.click(addButton());
         expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'attribute', attribute: 'erp_owner=brand-b' });
@@ -237,7 +271,8 @@ describe('AddErpDialog — before and without the store', () => {
             </Provider>,
         );
         await flush();
-        expect(within(screen.getByTestId('spectrum-dialog-container')).queryByRole('dialog')).toBeNull();
+        // Not even an empty container: it would hold the screen's one dialog slot.
+        expect(screen.queryByTestId('spectrum-dialog-container')).toBeNull();
         expect(mockRequest).not.toHaveBeenCalled();
     });
 });

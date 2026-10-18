@@ -700,7 +700,9 @@ export const Switch: React.FC<any> = ({ children, isSelected, onChange, ...props
 );
 
 // Radio and RadioGroup mocks
-export const RadioGroup: React.FC<any> = ({ children, value, onChange, label, ...props }) => (
+// `description` is drawn under the choices, as Spectrum does; dropping it hid a group's
+// help line from every test (2026-10-18, Add another ERP).
+export const RadioGroup: React.FC<any> = ({ children, value, onChange, label, description, ...props }) => (
     <div
         data-testid="spectrum-radiogroup"
         role="radiogroup"
@@ -711,6 +713,7 @@ export const RadioGroup: React.FC<any> = ({ children, value, onChange, label, ..
         {React.Children.map(children, (child: any) =>
             React.cloneElement(child, { selectedValue: value, onSelect: onChange })
         )}
+        {description ? <span data-testid="spectrum-radiogroup-description">{description}</span> : null}
     </div>
 );
 

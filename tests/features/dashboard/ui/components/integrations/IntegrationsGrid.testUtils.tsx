@@ -40,7 +40,8 @@ jest.mock('@adobe/react-spectrum', () => ({
         </ul>
     ),
     Item: ({ children }: any) => <>{children}</>,
-    View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    // Add another ERP's wait sits a little lower (paddingTop): a Spectrum prop, not a DOM one.
+    View: ({ children, paddingTop: _pt, ...props }: any) => <div {...props}>{children}</div>,
     // The progress modal's LoadingDisplay (PL-59).
     ProgressCircle: ({ 'aria-label': label }: any) => <div role="progressbar" aria-label={label} />,
     // The setup guide's progress over its steps.
@@ -60,6 +61,8 @@ jest.mock('@adobe/react-spectrum', () => ({
         justifyContent: _j,
         // SteadyHeight's floor (the setup guide renders one): a Spectrum prop, not a DOM one.
         minHeight: _mh,
+        // CenteredFeedbackContainer's (Add another ERP's wait), passed even when unset.
+        maxWidth: _mw,
         ...props
     }: any) => (
         <div className={UNSAFE_className} {...props}>

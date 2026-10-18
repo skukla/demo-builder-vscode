@@ -6,7 +6,8 @@
  * runs, so this check is for the SC's benefit, not the gate.
  *
  * The ownership picker ({@link ErpOwnershipPicker}) opens on the attribute (`defaultOwnsRule`).
- * Under it, "After adding" previews what EVERY ERP will own once the new one is added
+ * Under it, "After adding" is the ONE place counts show (owner, 2026-10-18: simplify; the
+ * options carried a count and a loading line each, three spinners at once). It previews what EVERY ERP will own once the new one is added
  * (`previewErpAdd`, the one resolver, the catch-all included), with a few SKUs each, what
  * nobody will own and what two rules will both claim. It follows the name (the attribute is
  * derived from it) and the rule as the SC changes them. The one narrowing the add does is
@@ -16,7 +17,7 @@
  *
  * Every string is in `ADD_ERP_COPY` or the picker's `PICKER_COPY`, in plain short sentences
  * (owner, 2026-10-09: the old dialog was cramped and spoke in riddles). The sections sit on
- * Spectrum's size-300 gap, as the other Integrations-screen modals do.
+ * Spectrum's size-200 gap, as Assign products and Simulate downtime do (owner, 2026-10-18).
  *
  * The core Modal in a DialogContainer, the same host as {@link ConfirmActionDialog}, with
  * one accent action instead of a negative one: adding is not destructive.
@@ -24,28 +25,30 @@
  * @module features/dashboard/ui/components/AddErpDialog
  */
 
-import { DialogContainer, Flex, Heading, Text, TextField } from '@adobe/react-spectrum';
+import { DialogContainer, Flex, Text, TextField, View } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { ErpOwnershipPicker, ruleOf, type OwnershipChoice, type StoreReadState } from './ErpOwnershipPicker';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal } from '@/core/ui/components/ui/Modal';
-import { ownsNothingNext, previewErpAdd, previewSentences } from '@/features/app-builder/services/erpAddPreview';
+import { previewAsItStands, previewErpAdd, previewLines } from '@/features/app-builder/services/erpAddPreview';
 import { erpListIdFor } from '@/features/app-builder/services/erpListId';
-import { countOwnedAfterAdd, ownsProblem } from '@/features/app-builder/services/erpOwnership';
+import { countOwnedAfterAdd, ownsProblem, rulesAfterAdd } from '@/features/app-builder/services/erpOwnership';
 import { MAX_ERP_NAME, erpNameProblem, withSystemWord } from '@/features/app-builder/services/pairNames';
 import { useErpOwnershipOptions } from '@/features/dashboard/ui/hooks/useErpOwnershipOptions';
+import { NAME_IS_FIXED } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
 import type { ErpOwnershipOptions, ErpOwnsRule } from '@/types/erpOwnership';
 
 /** Every string the dialog shows, in one place. */
 export const ADD_ERP_COPY = {
     title: 'Add another ERP',
-    intro: (integration: string) =>
-        `Demo Builder deploys a new ERP in its own Adobe workspace, and ${integration} sends it the orders for its products.`,
     nameLabel: 'ERP name',
-    addedAs: (name: string) => `It is added as ${name}.`,
-    afterAdding: 'After adding',
+    afterAdding: 'Products each ERP will own',
     readingStore: 'Reading the store',
-    readFailed: 'The preview needs the store, and it could not be read. You can still add the ERP.',
+    readFailed: "Couldn't read the store",
+    stillAdd: 'You can still add the ERP.',
     add: 'Add',
 };
 
@@ -80,48 +83,84 @@ const NOTHING = (): number => 0;
  * @returns the dialog container
  */
 export function AddErpDialog({ target, takenNames, onAdd, onClose }: AddErpDialogProps): React.ReactElement {
+    // Nothing mounted while closed, not an empty DialogContainer: the screen hosts this beside
+    // its own dialogs, and an empty container still occupies the dialog slot (SetupGuideModal).
+    if (target === undefined) return <></>;
     return (
         <DialogContainer onDismiss={onClose}>
-            {target !== undefined && (
-                <AddErpForm target={target} takenNames={takenNames} onAdd={onAdd} onClose={onClose} />
-            )}
+            <AddErpForm target={target} takenNames={takenNames} onAdd={onAdd} onClose={onClose} />
         </DialogContainer>
     );
 }
 
-/** "After adding": what every ERP will own, or where the read is. */
+/**
+ * The space the wait holds: about the preview for two ERPs, the usual case, with a little room
+ * above the spinner so it does not sit against the heading (owner, 2026-10-18).
+ */
+const PREVIEW_SPACE = '112px';
+
+/**
+ * "Products each ERP will own": one line per ERP, or where the read is. Until a name is typed
+ * it shows the ERPs as they stand, not a nameless new one (owner, 2026-10-18). Shaped like its
+ * siblings (the 2026-10-18 audit): one loading view, a failed read in an InlineNotice as
+ * Assign products has, the preview as lines of text as Assign products has, and the section
+ * label in the house class Export uses.
+ */
 function AfterAdding({ store, options, added }: {
     store: StoreReadState;
     options: ErpOwnershipOptions | null;
-    added: { erp: string; name: string; owns: ErpOwnsRule };
+    added?: { erp: string; name: string; owns: ErpOwnsRule };
 }): React.ReactElement {
-    const preview = useMemo(
-        () => (options ? previewErpAdd(options.products, { websites: options.websites, erps: options.erps }, added) : undefined),
-        [options, added],
-    );
+    const lines = useMemo(() => {
+        if (!options) return undefined;
+        const input = { websites: options.websites, erps: options.erps };
+        const preview = added ? previewErpAdd(options.products, input, added) : previewAsItStands(options.products, input);
+        const rules = added ? rulesAfterAdd(input, { erp: added.erp, owns: added.owns }) : options.erps;
+        return previewLines(preview, rules, options.websites);
+    }, [options, added]);
     let body: React.ReactNode;
-    if (store.status === 'reading') body = <LoadingDisplay size="S" message={ADD_ERP_COPY.readingStore} />;
-    else if (store.status === 'failed' || !preview) body = <Text>{ADD_ERP_COPY.readFailed}</Text>;
-    else {
-        const next = ownsNothingNext(preview, added.owns);
+    if (store.status === 'reading') {
+        // Centred in a space about the preview's size, not pinned to the top of it
+        // (owner, 2026-10-18), so the preview arriving barely moves the dialog. The display
+        // keeps an empty line under its label, so centring alone leaves it looking high: the
+        // padding sets it lower, between the heading and the buttons.
         body = (
-            <Flex direction="column" gap="size-150" data-testid="add-erp-preview">
-                {previewSentences(preview).map(({ line, detail, examples }) => (
-                    <Flex key={line} direction="column">
-                        <Text>{line}</Text>
-                        {detail && <Text UNSAFE_className="text-gray-700 text-sm">{detail}</Text>}
-                        {examples && <Text UNSAFE_className="text-gray-700 text-sm">{examples}</Text>}
-                    </Flex>
+            <CenteredFeedbackContainer height={PREVIEW_SPACE}>
+                <View paddingTop="size-300">
+                    <LoadingDisplay size="M" message={ADD_ERP_COPY.readingStore} />
+                </View>
+            </CenteredFeedbackContainer>
+        );
+    }
+    else if (store.status === 'failed' || !lines) {
+        const reason = store.status === 'failed' ? store.error : undefined;
+        body = (
+            <InlineNotice title={ADD_ERP_COPY.readFailed} hint={ADD_ERP_COPY.stillAdd} testId="add-erp-read-failed">
+                {reason}
+            </InlineNotice>
+        );
+    } else {
+        // Name and count on one line, so both line up down the list; the meaning on its own
+        // line in the help-text size, so it never wraps mid-thought (owner, 2026-10-18).
+        body = (
+            <Flex direction="column" gap="size-100" data-testid="add-erp-preview">
+                {lines.map(({ who, count, says }) => (
+                    <div key={who} data-testid="add-erp-preview-row">
+                        <Flex justifyContent="space-between" gap="size-200">
+                            <Text>{who}</Text>
+                            <Text>{count}</Text>
+                        </Flex>
+                        <Text UNSAFE_className="text-gray-700 text-sm">{says}</Text>
+                    </div>
                 ))}
-                {next && <Text>{next}</Text>}
             </Flex>
         );
     }
     return (
-        <Flex direction="column" gap="size-100">
-            <Heading level={4} margin={0}>{ADD_ERP_COPY.afterAdding}</Heading>
+        <div>
+            <p className="intflow-section-label">{ADD_ERP_COPY.afterAdding}</p>
             {body}
-        </Flex>
+        </div>
     );
 }
 
@@ -147,7 +186,8 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
     const attribute = `erp_owner=${listId}`;
 
     const rule = useMemo(() => ruleOf(choice, attribute), [choice, attribute]);
-    const added = useMemo(() => ({ erp: listId, name: saved || 'The new ERP', owns: rule }), [listId, saved, rule]);
+    // No name yet: the preview shows the ERPs as they stand, not a nameless new one.
+    const added = useMemo(() => (saved ? { erp: listId, name: saved, owns: rule } : undefined), [listId, saved, rule]);
     // What the new ERP would own under each option, once every ERP's rule is applied (AB-72).
     const count = useMemo(
         () =>
@@ -171,8 +211,11 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
             onClose={onClose}
             actionButtons={[{ label: ADD_ERP_COPY.add, variant: 'accent', onPress: add, isDisabled: !ready }]}
         >
-            <Flex direction="column" gap="size-300">
-                <Text>{ADD_ERP_COPY.intro(target.name)}</Text>
+            {/* The body goes from a spinner to the preview, and the website list comes and
+                goes: the floor keeps the dialog from jumping. The section gap is the one
+                Assign products and Simulate downtime use (owner, 2026-10-18). */}
+            <SteadyHeight align="start">
+            <Flex direction="column" gap="size-200">
                 <TextField
                     label={ADD_ERP_COPY.nameLabel}
                     value={name}
@@ -182,7 +225,7 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
                     width="100%"
                     validationState={problem ? 'invalid' : undefined}
                     errorMessage={problem}
-                    description={saved && saved !== name.trim() ? ADD_ERP_COPY.addedAs(saved) : undefined}
+                    description={NAME_IS_FIXED}
                     onKeyDown={(event) => {
                         if (event.key === 'Enter') add();
                     }}
@@ -190,13 +233,13 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
                 <ErpOwnershipPicker
                     choice={choice}
                     onChange={setChoice}
-                    attribute={attribute}
                     websites={options?.websites ?? NONE}
                     count={count}
                     store={store}
                 />
                 <AfterAdding store={store} options={options} added={added} />
             </Flex>
+            </SteadyHeight>
         </Modal>
     );
 }

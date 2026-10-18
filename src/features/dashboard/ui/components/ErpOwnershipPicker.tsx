@@ -1,15 +1,15 @@
 /**
- * "Which products belong to this ERP?" inside Add another ERP (AB-64): one question, two
- * choices. Each choice is its own line with one sentence under it saying what it means, and a
- * line under that with the count of products it would give, counted by the dialog from the
- * products the extension read once and across every ERP's rule (`countOwnedAfterAdd` →
- * `ownersAcross`, AB-72).
+ * "Which products does it own?" inside Add another ERP (AB-64): one question, two one-line
+ * choices, and one line under the group saying what the selected one means for orders. The counts live in the dialog's "After
+ * adding", the one place they show (owner, 2026-10-18: each option used to carry its own count
+ * and loading line). A website box still says what it alone gives, counted across every ERP's
+ * rule (`countOwnedAfterAdd` → `ownersAcross`, AB-72).
  *
  * - Tagged in Commerce — `erp_owner=<the ERP's list id>` → `attribute`; the default
  *   (owner, 2026-10-09)
  * - Sold on chosen websites — a checkbox per website → `structure_owns: websites`
  *
- * While the store is being read, the counts and the website list show the house loading view
+ * While the store is being read, the website list show the house loading view
  * (`LoadingDisplay`) with the same words; "The store has no websites." is said only when the
  * read answered with none, and a read that failed says why (AB-75, owner 2026-10-09: the list
  * used to say "no websites" while it was still loading).
@@ -19,21 +19,16 @@
 
 import { Checkbox, Flex, Radio, RadioGroup, Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { productCount } from '@/features/app-builder/services/erpAddPreview';
 import type { ErpOwnsMode, ErpOwnsRule } from '@/types/erpOwnership';
 
 /** Every string the picker shows, in one place. */
 export const PICKER_COPY = {
-    question: 'Which products belong to this ERP?',
-    attributeLabel: 'Products tagged in Commerce',
-    attributeHelp: (attribute: string) =>
-        `Products tagged ${attribute} in Commerce. One order can include products from several ERPs.`,
-    websitesLabel: 'Products sold on chosen websites',
-    websitesHelp: 'Every product sold on the websites you tick. Each order goes to one ERP.',
-    owns: (count: number) => `It would own ${productCount(count)}.`,
-    counting: 'Counting the products',
-    readingWebsites: "Reading the store's websites",
+    question: 'Which products does it own?',
+    attributeLabel: 'Products you assign to it',
+    attributeHelp: 'One order can include products from several ERPs.',
+    websitesLabel: 'Products sold on websites you choose',
+    websitesHelp: 'Each order goes to one ERP.',
     noWebsites: 'The store has no websites.',
 };
 
@@ -49,10 +44,8 @@ export type StoreReadState = { status: 'reading' } | { status: 'read' } | { stat
 export interface ErpOwnershipPickerProps {
     choice: OwnershipChoice;
     onChange: (next: OwnershipChoice) => void;
-    /** `erp_owner=<list id>`, derived from the typed name. */
-    attribute: string;
     websites: Array<{ code: string; name: string }>;
-    /** How many products the new ERP would own under a rule. */
+    /** How many products the new ERP would own under a rule: each website box says what it alone gives. */
     count: (rule: ErpOwnsRule) => number;
     store: StoreReadState;
 }
@@ -69,22 +62,9 @@ export function ruleOf(choice: OwnershipChoice, attribute: string): ErpOwnsRule 
     }
 }
 
-/** The count line under an option: loading while the store is read, nothing when it failed. */
-function CountLine({ store, count }: { store: StoreReadState; count: () => number }): React.ReactElement | null {
-    if (store.status === 'reading') return <LoadingDisplay size="S" message={PICKER_COPY.counting} />;
-    if (store.status === 'failed') return null;
-    return <Text>{PICKER_COPY.owns(count())}</Text>;
-}
-
-/** One option's words: its name, the sentence under it, then its count line. */
-function OptionText({ label, help, children }: { label: string; help: string; children: React.ReactNode }): React.ReactElement {
-    return (
-        <Flex direction="column" gap="size-50">
-            <Text>{label}</Text>
-            <Text UNSAFE_className="text-gray-700 text-sm">{help}</Text>
-            {children}
-        </Flex>
-    );
+/** The one line under the group: what the selected choice means for orders. */
+function helpFor(mode: ErpOwnsMode): string {
+    return mode === 'websites' ? PICKER_COPY.websitesHelp : PICKER_COPY.attributeHelp;
 }
 
 /** The websites list: loading, refused, empty, or a box per website with what it alone gives. */
@@ -94,9 +74,10 @@ function WebsiteList({ items, ticked, onTick, countFor, store }: {
     onTick: (codes: string[]) => void;
     countFor: (code: string) => number;
     store: StoreReadState;
-}): React.ReactElement {
-    if (store.status === 'reading') return <LoadingDisplay size="S" message={PICKER_COPY.readingWebsites} />;
-    if (store.status === 'failed') return <Text>{store.error}</Text>;
+}): React.ReactElement | null {
+    // The dialog shows the one loading view and the one failed-read notice; the list adds
+    // neither, so the wait and the reason each show once (the 2026-10-18 audit).
+    if (store.status !== 'read') return null;
     if (items.length === 0) return <Text>{PICKER_COPY.noWebsites}</Text>;
     return (
         <Flex direction="column" marginStart="size-300">
@@ -124,7 +105,6 @@ function WebsiteList({ items, ticked, onTick, countFor, store }: {
 export function ErpOwnershipPicker({
     choice,
     onChange,
-    attribute,
     websites,
     count,
     store,
@@ -132,21 +112,16 @@ export function ErpOwnershipPicker({
     return (
         <Flex direction="column" gap="size-150">
             {/* Radios are the group's DIRECT children: the group hands each one its state. */}
+            {/* One-line choices, as Assign products has; the meaning of the selected one sits
+                under the group (owner, 2026-10-18: two lines a choice read as crowded). */}
             <RadioGroup
                 label={PICKER_COPY.question}
+                description={helpFor(choice.mode)}
                 value={choice.mode}
                 onChange={(mode) => onChange({ ...choice, mode: mode as ErpOwnsMode })}
             >
-                <Radio value="attribute">
-                    <OptionText label={PICKER_COPY.attributeLabel} help={PICKER_COPY.attributeHelp(attribute)}>
-                        <CountLine store={store} count={() => count({ mode: 'attribute', attribute })} />
-                    </OptionText>
-                </Radio>
-                <Radio value="websites">
-                    <OptionText label={PICKER_COPY.websitesLabel} help={PICKER_COPY.websitesHelp}>
-                        <CountLine store={store} count={() => count({ mode: 'websites', websites: choice.websites })} />
-                    </OptionText>
-                </Radio>
+                <Radio value="attribute">{PICKER_COPY.attributeLabel}</Radio>
+                <Radio value="websites">{PICKER_COPY.websitesLabel}</Radio>
             </RadioGroup>
             {choice.mode === 'websites' && (
                 <WebsiteList

@@ -26,7 +26,9 @@ const LEDGER: { _what: string; noViewsOfItsOwn: Record<string, string> } = JSON.
 );
 
 /** A body that switches on which view it is showing. */
-const BRANCH = /(view === |phase === |state === |stage === |step === |mode === )/g;
+// `status === ` joined 2026-10-18: Add another ERP switched on `store.status` (loading,
+// failed, preview) and the scan never saw it, so the dialog grew as its preview arrived.
+const BRANCH = /(view === |phase === |state === |stage === |step === |mode === |status === )/g;
 
 /**
  * The three ways a modal body holds a floor under its states, as they appear when

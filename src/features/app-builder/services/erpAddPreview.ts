@@ -36,10 +36,30 @@ export function previewErpAdd(
     added: ErpOwnsEntry & { name: string },
 ): ErpAddPreview {
     const rules = rulesAfterAdd(input, { erp: added.erp, owns: added.owns });
+    return previewOver(products, rules, input, added);
+}
+
+/**
+ * What every ERP owns now, before anything is added: the dialog shows this until a name is
+ * typed, rather than counting for an ERP that has no name yet (owner, 2026-10-18: an empty
+ * name previewed "The new ERP" owning the products tagged `erp`).
+ */
+export function previewAsItStands(products: readonly ErpOwnedProductRow[], input: ErpAddPreviewInput): ErpAddPreview {
+    return previewOver(products, input.erps, input);
+}
+
+/** The rows for a set of rules: each ERP's count and examples, nobody, and the overlap. */
+function previewOver(
+    products: readonly ErpOwnedProductRow[],
+    rules: readonly ErpOwnsEntry[],
+    input: ErpAddPreviewInput,
+    added?: ErpOwnsEntry & { name: string },
+): ErpAddPreview {
     const owners = ownersAcross(products, rules);
     const skusOf = (pick: (claimed: string[]) => boolean): string[] =>
         [...owners].filter(([, claimed]) => pick(claimed)).map(([sku]) => sku);
-    const names = new Map([...input.erps.map((erp) => [erp.erp, erp.name] as const), [added.erp, added.name] as const]);
+    const names = new Map(input.erps.map((erp) => [erp.erp, erp.name] as const));
+    if (added) names.set(added.erp, added.name);
     const before = new Map(input.erps.map((erp) => [erp.erp, erp.owns]));
     const erps = rules.map((rule) => {
         const owned = skusOf((claimed) => claimed.includes(rule.erp));
@@ -50,7 +70,7 @@ export function previewErpAdd(
             count: owned.length,
             describe: describeOwnsAcross(rule.owns),
             examples: owned.slice(0, EXAMPLES),
-            isNew: rule.erp === added.erp,
+            isNew: rule.erp === added?.erp,
             narrowed: previous !== undefined && JSON.stringify(previous) !== JSON.stringify(rule.owns),
         };
     });
@@ -68,29 +88,63 @@ export function productCount(count: number): string {
     return count === 1 ? '1 product' : `${count} products`;
 }
 
+/** One line of the dialog's table: who, how many, and what that means. */
+export interface PreviewLine {
+    who: string;
+    count: string;
+    says: string;
+}
+
 /**
- * The preview in sentences, one idea each, for the dialog and the agent alike. An ERP that will
- * own nothing by `erp_owner` is told where to go next (AB-74's Assign products).
+ * What a rule means, in the words of the button an SC presses (Assign products), never the
+ * attribute code (owner, 2026-10-18: "tagged" and `erp_owner` confused). An ERP on another
+ * ERP's tag, or any other attribute, keeps its exact words, so an odd setup stays visible.
  */
-export function previewSentences(preview: ErpAddPreview): Array<{ line: string; detail?: string; examples?: string }> {
-    const sentences: Array<{ line: string; detail?: string; examples?: string }> = [];
-    const examples = (skus: string[]) => (skus.length ? `For example: ${skus.join(', ')}.` : undefined);
-    for (const erp of preview.erps) {
-        const detail = `${erp.describe.charAt(0).toUpperCase()}${erp.describe.slice(1)}.`;
-        const changed = erp.narrowed ? ' Its rule changes to this when the ERP is added.' : '';
-        sentences.push({ line: `${erp.name}: ${productCount(erp.count)}.`, detail: `${detail}${changed}`, examples: examples(erp.examples) });
+function plainRule(entry: ErpOwnsEntry, row: { count: number; isNew: boolean }, websiteName: (code: string) => string): string {
+    const { owns } = entry;
+    if (owns.mode === 'all') return 'All products not assigned to another ERP';
+    if (owns.mode === 'websites') {
+        const sites = (owns.websites ?? []).map(websiteName);
+        return sites.length ? `Products sold on ${sites.join(', ')}` : 'Products sold on the websites you choose';
     }
+    if (owns.attribute !== `erp_owner=${entry.erp}`) {
+        const exact = describeOwnsAcross(owns);
+        return `${exact.charAt(0).toUpperCase()}${exact.slice(1)}`;
+    }
+    if (row.count > 0) return 'Products assigned to it';
+    return row.isNew ? 'None yet: assign products to it after adding' : 'None yet: assign products to it';
+}
+
+/**
+ * The preview as the dialog's table: one line per ERP, then nobody and the overlap when there
+ * are any. The shared preview keeps the exact rules and the example SKUs for the agent.
+ *
+ * @param rules - the rule each row's ERP will have (`rulesAfterAdd`, or the ERPs as they stand)
+ * @param websites - the store's websites, so a website rule names them
+ */
+export function previewLines(
+    preview: ErpAddPreview,
+    rules: readonly ErpOwnsEntry[],
+    websites: ReadonlyArray<{ code: string; name: string }>,
+): PreviewLine[] {
+    const ruleOf = new Map(rules.map((rule) => [rule.erp, rule]));
+    const websiteName = (code: string) => websites.find((site) => site.code === code)?.name ?? code;
+    const lines: PreviewLine[] = preview.erps.map((row) => {
+        const rule = ruleOf.get(row.erp) ?? { erp: row.erp, owns: { mode: 'all' as const } };
+        const changes = row.narrowed ? ' (changes when this ERP is added)' : '';
+        return { who: row.name, count: productCount(row.count), says: `${plainRule(rule, row, websiteName)}${changes}` };
+    });
     if (preview.nobody.count > 0) {
-        sentences.push({ line: `Nobody: ${productCount(preview.nobody.count)}.`, examples: examples(preview.nobody.examples) });
+        lines.push({ who: 'Nobody', count: productCount(preview.nobody.count), says: 'Products no ERP owns' });
     }
     if (preview.overlap.count > 0) {
-        sentences.push({
-            line: `Claimed by two ERPs: ${productCount(preview.overlap.count)}.`,
-            detail: 'Orders for them are refused until one rule changes.',
-            examples: examples(preview.overlap.examples),
+        lines.push({
+            who: 'Two ERPs',
+            count: productCount(preview.overlap.count),
+            says: 'Their orders are refused until a rule changes',
         });
     }
-    return sentences;
+    return lines;
 }
 
 /**
