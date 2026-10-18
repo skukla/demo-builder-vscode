@@ -134,6 +134,22 @@ describe('HelixService - Preview/Publish', () => {
                 'Failed to publish page: 500 Server Error'
             );
         });
+
+        // A bare "400 Bad Request" could not be explained after the fact (release
+        // row 3.17). Helix says why in x-error and the body, so the error carries both.
+        it('carries the reason Helix gave (x-error and body) on any other failure', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 400,
+                statusText: 'Bad Request',
+                headers: new Headers({ 'x-error': 'unable to preview sheet' }),
+                text: async () => 'sheet has no default tab',
+            });
+            await expect(service.previewPage('testuser', 'my-site', '/placeholders/checkout.json'))
+                .rejects.toThrow(
+                    'Failed to preview page: 400 Bad Request (unable to preview sheet — sheet has no default tab)',
+                );
+        });
     });
 
     describe('Bulk Preview/Publish', () => {

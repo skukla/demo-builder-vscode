@@ -120,7 +120,7 @@ async function publishOneByOne(
     logger.debug(`[EDS] Publishing ${absolute.length} ${what}`);
 
     let published = 0;
-    const failures: string[] = [];
+    const firstFailures: { path: string; reason: string }[] = [];
 
     for (let i = 0; i < absolute.length; i += LIBRARY_PUBLISH_BATCH) {
         const batch = absolute.slice(i, i + LIBRARY_PUBLISH_BATCH);
@@ -131,9 +131,24 @@ async function publishOneByOne(
             if (result.status === 'fulfilled') {
                 published++;
             } else {
-                failures.push(`${batch[index]} (${reasonOf(result.reason)})`);
+                firstFailures.push({ path: batch[index], reason: reasonOf(result.reason) });
             }
         });
+    }
+
+    // One retry each, one at a time. A sheet refused once with "400 Bad Request"
+    // in a reset was fine on the site afterwards (row 3.17, 2026-10-17); a one-off
+    // refusal clears on a second ask. The first reason is logged even when the
+    // retry works, so a recurring one can be explained rather than guessed at.
+    const failures: string[] = [];
+    for (const { path, reason } of firstFailures) {
+        try {
+            await helixService.previewAndPublishPage(owner, repo, path);
+            published++;
+            logger.info(`[EDS] ${path} published on the second try (first try: ${reason})`);
+        } catch (retryError) {
+            failures.push(`${path} (${reasonOf(retryError)}; first try: ${reason})`);
+        }
     }
 
     if (failures.length > 0) {

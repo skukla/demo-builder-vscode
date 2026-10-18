@@ -13,7 +13,12 @@
  */
 
 import type { HelixAdminAuth } from './helixAdminAuth';
-import { ADMIN_API_401_MESSAGE, throwCredentialRefused } from './helixAdminErrors';
+import {
+    ADMIN_API_401_MESSAGE,
+    captureErrorBody,
+    getXError,
+    throwCredentialRefused,
+} from './helixAdminErrors';
 import {
     buildPartitionUrl,
     buildPublishHeaders,
@@ -137,7 +142,13 @@ async function postPage(
     }
 
     if (!response.ok) {
-        throw new Error(`Failed to ${op.verb} page: ${response.status} ${response.statusText}`);
+        // Carry Helix's own reason (x-error, then the body). A bare "400 Bad Request"
+        // on one sheet of a reset could not be explained afterwards (row 3.17).
+        const reason = [getXError(response), await captureErrorBody(response)].filter(Boolean);
+        throw new Error(
+            `Failed to ${op.verb} page: ${response.status} ${response.statusText}` +
+                (reason.length ? ` (${reason.join(' — ')})` : ''),
+        );
     }
 
     logger.debug(`[Helix] ${op.did}: ${cleanPath}`);
