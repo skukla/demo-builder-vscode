@@ -96,12 +96,15 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > `src/` unnoticed, three of them through the dashboard command, each hidden behind a
 > lazy import. All four were broken on 2026-10-07; the check went in at zero.
 
-> **Convention.** Features do not import other features; commands may.
-> [src/features/CLAUDE.md](../../src/features/CLAUDE.md). **Not enforced.** This line said
-> "enforced by eslint" until 2026-10-19; no eslint rule, suite or ledger checks it, and
-> 857 imports in `src/features/` cross into another feature (72 feature pairs, measured
-> 2026-10-19). Whether to enforce it with a ledger or restate it is open (PL-68).
-> *Why:* it keeps a feature replaceable. Cross-feature imports are how two features quietly become one.
+> **Convention.** A feature uses another feature through its `services/`, types and
+> config. Code that no single feature owns goes in `core/`. Handlers, commands and the MCP
+> server compose features and import across them freely.
+> [src/features/CLAUDE.md](../../src/features/CLAUDE.md). **Not enforced**, by the owner's
+> choice (PL-68, 2026-10-19). Until then this said "features do not import other features
+> ... enforced by eslint": nothing enforced it, and 857 imports crossed features, 644 of
+> them into `services/`. A ledger for even the narrower rule would have opened with about
+> 160 exceptions, most of them handler maps whose job is to combine features.
+> *Why:* a feature's services are its public face; reaching past them into its internals is how two features quietly become one.
 
 > **Convention.** A module is imported by the path that DEFINES the symbol. No
 > re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is

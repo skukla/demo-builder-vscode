@@ -24,10 +24,11 @@ updates/             auto-update for the extension and components
 
 ## Import rules
 
-Features import `@/core/*` and `@/types`. **A feature does not import another
-feature** — if two need the same thing it moves to `core/`. Commands are the
-exception, because orchestrating features is their job. **Not enforced**: nothing checks
-it, and 857 imports already cross features (2026-10-19, PL-68).
+Features import `@/core/*` and `@/types`. **A feature uses another feature through its
+`services/`, types and config**; code no single feature owns goes in `core/`. Handlers,
+commands and the MCP server compose features and import across them freely. **Not
+enforced** (owner's choice, PL-68, 2026-10-19): the old rule, "a feature does not import
+another feature", was broken by 857 imports and checked by nothing.
 
 **Deep imports are the convention for features.** Import the module that defines the
 symbol (`@/features/authentication/services/authenticationService`), not a feature
