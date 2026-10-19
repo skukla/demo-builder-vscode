@@ -369,8 +369,7 @@ describe('rows with no output safety net are classified', () => {
         'remove_integration',
         'rename_project',
         'save_ai_prompt',
-        // AB-1c's agent door: `{repository: {owner, repo, url, fileCount}}` and `{deleted}`.
-        'save_app_to_github',
+        'save_app_to_github', // AB-1c: `{repository}` and `{deleted}`, one repository each
         'delete_app_github_repo',
         'start_demo',
         'stop_demo',
@@ -516,25 +515,19 @@ describe('the ceiling table tracks the tool surface', () => {
         'start_demo',
         'stop_demo',
         'rename_project',
-        // `add_integration` joins its three siblings: its response is
-        // `{added: {id, name, kind}}` — three short strings, bounded by
-        // nothing that scales with project or catalog size.
+        // `{added: {id, name, kind}}`: three short strings, nothing that scales.
         'add_integration',
-        // `rename_integration` returns two short strings. `set_console_apis`
-        // returns `{code, name?}` per subscribed API — the same shape and the
-        // same credential-bounded union `add_console_apis` already returns
-        // exempt. `set_project_destination` returns the destination refs plus a
-        // move summary, bounded by the project's integration COUNT.
+        // Rename: two short strings. `set_console_apis`: `{code, name?}` per subscribed
+        // API, the credential-bounded union `add_console_apis` returns exempt.
+        // `set_project_destination`: the refs and a move summary, bounded by integration COUNT.
         'rename_integration',
         'set_console_apis',
         'set_project_destination',
         'deploy_integration',
         'redeploy_integration',
         'remove_integration',
-        // Saving an app to GitHub answers one repository's owner, name, URL and file count;
-        // the undo answers the name it deleted (2026-10-18).
-        'save_app_to_github',
-        'delete_app_github_repo',
+        'save_app_to_github', // one repository's owner, name, URL and file count (AB-1c)
+        'delete_app_github_repo', // the name it deleted
         // `{namespace, deleted, failed}`: bounded by what one app left behind.
         // `{id, erp, loaded}`: four counts and a sentence, whatever the catalogue's size.
         'load_erp_demo_data',
