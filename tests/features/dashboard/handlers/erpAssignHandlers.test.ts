@@ -116,8 +116,13 @@ describe('assignErpProducts', () => {
             value: 'accuform',
             previous: [{ sku: 'ACC-1', value: 'justrite' }, { sku: 'ACC-2', value: '' }],
         });
-        expect(mockApply).toHaveBeenCalledWith(p, 'erp-integration', expect.any(Object), 'assign');
+        // Only the ERP gaining products is filled from Commerce; where they left, the pass marks
+        // them (owner, 2026-10-19: moving three products refilled every ERP).
+        expect(mockApply).toHaveBeenCalledWith(p, 'erp-integration', expect.objectContaining({ fillOnly: ['demo-erp-2'] }), 'assign');
         expect(result).toMatchObject({ success: true, data: { confirmed: true, written: 2, bulk: { complete: 2, failed: 0, timedOut: false } } });
+        // Each step is in the Debug Logs, named for the run.
+        const logged = (context.logger.debug as jest.Mock).mock.calls.map(([line]) => String(line));
+        expect(logged.some((line) => line.startsWith('[ERP] Assign products to Accuform ERP: '))).toBe(true);
     });
 
     it("says what Commerce refused and what is still queued, and the assignment stands", async () => {
@@ -194,7 +199,8 @@ describe('undoErpAssignment', () => {
         expect(mockWrite).toHaveBeenCalledWith(COMMERCE, [{ sku: 'ACC-1', value: 'justrite' }], expect.any(Object));
         const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
         expect(saved.appBuilderComponents?.['demo-erp-2']).not.toHaveProperty('erpAssignment');
-        expect(mockApply).toHaveBeenCalledWith(p, 'erp-integration', expect.any(Object), 'assign');
+        // The undo gives products back to whichever ERPs had them, so every ERP is filled.
+        expect(mockApply).toHaveBeenCalledWith(p, 'erp-integration', expect.not.objectContaining({ fillOnly: expect.anything() }), 'assign');
         expect(result).toMatchObject({
             success: true,
             data: { undone: true, warning: '1 products were left as they are: their erp_owner has changed since the assignment.' },

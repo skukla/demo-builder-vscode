@@ -146,8 +146,17 @@ type AssignOutcome = GuardableResult & {
     ownership?: unknown;
 };
 
-/** The ownership pass after a write, and its notes; the write stands whatever it says. */
-async function passAfterWrite(context: HandlerContext, opened: Opened, report: ReportStage): Promise<{ notes: string[]; ownership?: unknown }> {
+/**
+ * The ownership pass after a write, and its notes; the write stands whatever it says. With
+ * `fillOnly`, only those ERPs are filled from Commerce (the one an assignment gives products
+ * to); every ERP still has its products marked sellable or discontinued.
+ */
+async function passAfterWrite(
+    context: HandlerContext,
+    opened: Opened,
+    report: ReportStage,
+    fillOnly?: readonly string[],
+): Promise<{ notes: string[]; ownership?: unknown }> {
     if (!context.authManager) return { notes: [] };
     const applied = await applyErpOwnership(
         opened.target.project,
@@ -156,7 +165,8 @@ async function passAfterWrite(context: HandlerContext, opened: Opened, report: R
             authManager: context.authManager,
             credentials: context.context?.secrets,
             getAuth: async () => opened.call.auth,
-            onProgress: (step) => report(OPERATION_STAGES.loadingErpDemoData.label, step),
+            onProgress: (step) => report(OPERATION_STAGES.updatingErps.label, step),
+            ...(fillOnly ? { fillOnly } : {}),
         },
         'assign',
     );
@@ -164,6 +174,17 @@ async function passAfterWrite(context: HandlerContext, opened: Opened, report: R
     return {
         notes: applied.notes,
         ownership: { erps: applied.erps.map((erp) => ({ erp: erp.erp, name: erp.name, owns: erp.ownsNow })), unowned: applied.unowned },
+    };
+}
+
+/**
+ * The progress reporter, writing each step to the Debug Logs too: the run was otherwise in no
+ * log, and what an assignment did could only be read from the code (2026-10-19).
+ */
+function logged(context: HandlerContext, title: string, report: ReportStage): ReportStage {
+    return (stage, step, position) => {
+        context.logger.debug(`[ERP] ${title}: ${step ? `${stage}: ${step}` : stage}`);
+        report(stage, step, position);
     };
 }
 
@@ -190,7 +211,8 @@ async function runAssign(
     report(stage, value ? `Writing erp_owner=${value} on ${toWrite.length} products` : `Clearing erp_owner on ${toWrite.length} products`);
     const bulk = await writeOwnerValues(opened.deps.commerce, toWrite.map((row) => ({ sku: row.sku, value })), followDeps(report, stage));
     await saveErpRecord(context, opened, assignmentRecord(toWrite, value, new Date().toISOString()));
-    const pass = await passAfterWrite(context, opened, report);
+    // Only the ERP gaining products needs Commerce's records; where they left, the pass marks them.
+    const pass = await passAfterWrite(context, opened, report, [opened.target.erpId]);
     const warning = [...bulkNotes(bulk), ...previewNotes(preview), ...pass.notes].join(' ');
     return { success: true, preview, bulk, written: bulk.complete, ownership: pass.ownership, ...(warning ? { warning } : {}) };
 }
@@ -239,7 +261,7 @@ export const handleAssignErpProducts: MessageHandler<ErpAssignRequestPayload> = 
         const name = opened.call.erp?.name ?? 'the ERP';
         const outcome = await withOperationProgress(
             { id: opened.call.id, title: `Assigning products to ${name}`, inModal: progressSurfaceOf(payload) === 'modal', cardLabel: `Assigning products to ${name}` },
-            async (report) => runAssign(context, opened, payload, selection, report).catch((error: unknown) => readFailed('assign the products', error) as AssignOutcome),
+            async (report) => runAssign(context, opened, payload, selection, logged(context, `Assign products to ${name}`, report)).catch((error: unknown) => readFailed('assign the products', error) as AssignOutcome),
         );
         await postComponentsSnapshot(context);
         return answerOf(opened, outcome);
@@ -307,7 +329,7 @@ export const handleUndoErpAssignment: MessageHandler<ErpAssignRequestPayload> = 
         const name = opened.call.erp?.name ?? 'the ERP';
         const outcome = await withOperationProgress(
             { id: opened.call.id, title: `Undoing ${name}'s last assignment`, inModal: progressSurfaceOf(payload) === 'modal', cardLabel: `Undoing ${name}'s assignment` },
-            async (report) => runUndo(context, opened, payload, record, report).catch((error: unknown) => readFailed('undo the assignment', error) as AssignOutcome),
+            async (report) => runUndo(context, opened, payload, record, logged(context, `Undo ${name}'s assignment`, report)).catch((error: unknown) => readFailed('undo the assignment', error) as AssignOutcome),
         );
         await postComponentsSnapshot(context);
         return answerOf(opened, outcome, { undone: true });

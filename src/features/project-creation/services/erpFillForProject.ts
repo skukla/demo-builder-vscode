@@ -61,6 +61,12 @@ export interface ErpFillForProjectDeps {
     getAuth: () => Promise<AppManagementAuth | undefined>;
     onProgress?: (step: string) => void;
     fetchImpl?: typeof fetch;
+    /**
+     * Only these ERPs (component ids) are filled; absent, every ERP is. An assignment fills the
+     * one ERP gaining products and leaves the rest (owner, 2026-10-19: moving three products
+     * refilled all three ERPs from Commerce).
+     */
+    fillOnly?: readonly string[];
 }
 
 /** What one fill put in the ERP, and the prices published after it (absent when none were). */
@@ -303,7 +309,8 @@ export async function fillEveryErp(
     deps: ErpFillForProjectDeps,
 ): Promise<ErpFillOutcomes> {
     const outcomes: ErpFillOutcomes = [];
-    const erps = systemsUsedBy(project, integrationId, getAppBuilderComponentCatalog());
+    const erps = systemsUsedBy(project, integrationId, getAppBuilderComponentCatalog())
+        .filter((erp) => !deps.fillOnly || deps.fillOnly.includes(erp));
     for (const erp of erps) {
         const name = project.appBuilderComponents?.[erp]?.name ?? erp;
         const onProgress = (step: string) =>

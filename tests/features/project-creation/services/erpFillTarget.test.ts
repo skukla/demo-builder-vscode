@@ -20,7 +20,7 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
 }));
 
 // Below the mock on purpose: the fill must bind to it.
-import { fillErpForProject } from '@/features/project-creation/services/erpFillForProject';
+import { fillErpForProject, fillEveryErp } from '@/features/project-creation/services/erpFillForProject';
 
 const ERP: AppBuilderComponentState = {
     kind: 'system',
@@ -69,5 +69,22 @@ describe('fillErpForProject — which ERP it fills', () => {
         const outcome = await fillErpForProject(project({ ...ERP, name: 'Contoso', catalogId: 'demo-erp' }), 'erp-integration', deps);
 
         expect(outcome).toEqual({ status: 'failed', detail: 'Adobe sign-in required.' });
+    });
+});
+
+// An assignment fills only the ERP gaining products (owner, 2026-10-19: moving three products
+// refilled every ERP from Commerce). Signed out, each fill stops at once, so the outcomes say
+// which ERPs were tried.
+describe('fillEveryErp — which ERPs it fills', () => {
+    const added: AppBuilderComponentState = { ...ERP, name: 'Contoso', catalogId: 'demo-erp' };
+
+    it('fills every ERP the integration serves', async () => {
+        const outcomes = await fillEveryErp(project(added), 'erp-integration', deps);
+        expect(outcomes.map((outcome) => outcome.erp)).toStrictEqual(['demo-erp', 'demo-erp-2']);
+    });
+
+    it('fills only the ERPs named in fillOnly', async () => {
+        const outcomes = await fillEveryErp(project(added), 'erp-integration', { ...deps, fillOnly: ['demo-erp-2'] });
+        expect(outcomes.map((outcome) => outcome.erp)).toStrictEqual(['demo-erp-2']);
     });
 });
