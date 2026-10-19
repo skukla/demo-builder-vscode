@@ -20,6 +20,7 @@ import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { catalogMenuSiteFor } from '@/features/ai/server/storefrontPages';
+import type { CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuStep';
 import {
     AUTO_ADD_SETTING_LEAF,
     AUTO_ADD_SETTING_SECTION,
@@ -29,6 +30,8 @@ import {
     type NewCategoryPagesWatcher,
     type NewCategoryPagesWatcherDeps,
 } from '@/features/eds/services/catalogMenu/newCategoryPagesWatcher';
+import { storeAwaitsRepublish } from '@/features/eds/services/storefront/storeScopeChange';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { StateManager } from '@/types/state';
 import { isEdsProject } from '@/types/typeGuards';
@@ -68,6 +71,18 @@ interface NewCategoryPagesWatchDeps {
 }
 
 /**
+ * The storefront to look at, or none: not an Edge Delivery project, or one whose store
+ * changed and is not yet republished. Its saved store is not the one the site shows, so
+ * the offer (and the auto-add, which publishes without asking) would add the wrong
+ * store's pages to the live site; the republish replaces them for the new store anyway
+ * (EDS-52).
+ */
+function watchedSite(ctxFactory: () => HandlerContext, project: Project): CatalogMenuSite | null {
+    if (!isEdsProject(project) || storeAwaitsRepublish(project)) return null;
+    return catalogMenuSiteFor(ctxFactory(), project);
+}
+
+/**
  * Start looking. The returned Disposable stops the timer and removes every subscription.
  *
  * @param deps - the state manager, the context factory, the sign-in event and the logger
@@ -77,7 +92,7 @@ export function registerNewCategoryPagesWatch(deps: NewCategoryPagesWatchDeps): 
     const { stateManager } = deps;
     const watcher = (deps.makeWatcher ?? createNewCategoryPagesWatcher)({
         openProject: () => stateManager.getCurrentProject(),
-        siteFor: (project) => (isEdsProject(project) ? catalogMenuSiteFor(deps.ctxFactory(), project) : null),
+        siteFor: (project) => watchedSite(deps.ctxFactory, project),
         autoAddByDefault: readAutoAddCategoryPagesSetting,
         save: (project) => stateManager.saveProject(project),
         notify: (message, ...actions) =>

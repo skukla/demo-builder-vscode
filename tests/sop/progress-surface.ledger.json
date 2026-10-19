@@ -46,6 +46,6 @@
         "src/features/projects-dashboard/services/deletionConfirmation.ts:37": "Gates: delete a project's files and configuration from this computer. Cannot be undone.",
         "src/features/project-creation/commands/createProject.ts:426": "Gates: throw away the changes made in this Edit and open project configuration? Asked only when the Edit has changes; leaving for Configure would discard them.",
         "src/features/dashboard/handlers/statusHandlers.ts:56": "Gates: sign in to Adobe now, which opens the browser? Asked once per expiry when the dashboard finds the sign-in expired; a no opens nothing (owner, 2026-10-17).",
-        "src/features/eds/handlers/newCategoryPagesWatch.ts:46": "Gates: sign in to DA.live now, which opens the browser? Asked once per expiry when the new-category check finds the sign-in expired; a no opens nothing (owner, 2026-10-17)."
+        "src/features/eds/handlers/newCategoryPagesWatch.ts:49": "Gates: sign in to DA.live now, which opens the browser? Asked once per expiry when the new-category check finds the sign-in expired; a no opens nothing (owner, 2026-10-17)."
     }
 }

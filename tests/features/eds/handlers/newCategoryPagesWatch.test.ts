@@ -10,6 +10,14 @@
  */
 
 import * as vscode from 'vscode';
+
+// The storefront's site, faked to one answer: what is asserted is whether the wiring asks
+// for it, not how a site is built (that is `storefrontPages`'s own suite).
+const mockSite = { name: 'the site' };
+jest.mock('@/features/ai/server/storefrontPages', () => ({
+    catalogMenuSiteFor: () => mockSite,
+}));
+
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { registerNewCategoryPagesWatch } from '@/features/eds/handlers/newCategoryPagesWatch';
 import type { NewCategoryPagesWatcherDeps } from '@/features/eds/services/catalogMenu/newCategoryPagesWatcher';
@@ -134,6 +142,22 @@ describe('registerNewCategoryPagesWatch', () => {
         expect(stateManager.saveProject).toHaveBeenCalledWith(project);
         // A project without an Edge Delivery storefront has no site to look at.
         expect(deps.siteFor(createMockProject())).toBeNull();
+    });
+
+    // EDS-52: a store switched but not republished — the live site still shows the old
+    // store, so the watch looks at nothing (no offer, no auto-add) until the republish.
+    it('looks at no site while a store change waits for its republish, and at the site otherwise', () => {
+        const { deps } = start();
+        const saved = (website: string) =>
+            createMockProject({
+                selectedStack: 'eds-accs',
+                componentSelections: { frontend: 'eds-storefront', backend: 'adobe-commerce-accs' },
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: website } },
+                edsStorefrontState: { envVars: { ACCS_WEBSITE_CODE: 'citisignal' }, lastPublished: '2026-10-01T00:00:00Z' },
+            });
+
+        expect(deps.siteFor(saved('base'))).toBeNull();
+        expect(deps.siteFor(saved('citisignal'))).toBe(mockSite);
     });
 
     it('shows a notice as a plain VS Code message and answers the button pressed', async () => {

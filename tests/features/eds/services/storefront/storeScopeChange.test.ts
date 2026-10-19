@@ -11,6 +11,7 @@ import {
     clearCatalogPagesPending,
     hasCatalogPagesPending,
     isStoreScopeChange,
+    storeAwaitsRepublish,
 } from '@/features/eds/services/storefront/storeScopeChange';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../../helpers/projectFake';
@@ -105,5 +106,34 @@ describe('the marker on a project', () => {
 
         expect(project.edsStorefrontState).toEqual(published(CITISIGNAL));
         expect(hasCatalogPagesPending(project)).toBe(false);
+    });
+});
+
+// EDS-52: between a store change and its republish, the live site still shows the OLD
+// store, so anything reading the saved store (the new-category offer) acts on a store the
+// site does not show.
+describe('storeAwaitsRepublish', () => {
+    /** An Edge Delivery ACCS project saved on `saved`, whose storefront last published `live`. */
+    function eds(saved: Record<string, string>, live: StorefrontState): Project {
+        return createMockProject({
+            selectedStack: 'eds-accs',
+            componentSelections: { frontend: 'eds-storefront', backend: 'adobe-commerce-accs' },
+            componentConfigs: { 'adobe-commerce-accs': saved },
+            edsStorefrontState: live,
+        });
+    }
+
+    it('is true when the saved store is not the one last published', () => {
+        expect(storeAwaitsRepublish(eds(MAIN, published(CITISIGNAL)))).toBe(true);
+    });
+
+    it('is true while a published store change still owes its page swap', () => {
+        const pending = { fromWebsiteCode: 'citisignal', fromStoreCode: 'citisignal_store', fromStoreViewCode: 'citisignal_us' };
+        expect(storeAwaitsRepublish(eds(MAIN, published(MAIN, { catalogPagesPending: pending })))).toBe(true);
+    });
+
+    it('CONTROL: is false when the saved store is the one live, or only a non-store setting differs', () => {
+        expect(storeAwaitsRepublish(eds(MAIN, published(MAIN)))).toBe(false);
+        expect(storeAwaitsRepublish(eds({ ...MAIN, ACCS_CUSTOMER_GROUP: 'other' }, published(MAIN)))).toBe(false);
     });
 });

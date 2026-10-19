@@ -23,6 +23,7 @@ import {
     PAAS_STORE_VIEW_CODE,
     PAAS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
+import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import type { Project } from '@/types/base';
 
 type StorefrontState = NonNullable<Project['edsStorefrontState']>;
@@ -38,6 +39,22 @@ const SCOPE = {
 } as const;
 
 const STORE_SCOPE_KEYS: ReadonlySet<string> = new Set(Object.values(SCOPE).flat());
+
+/**
+ * Whether the storefront is still on another store than the project's settings name: the
+ * saved store differs from the one last published, or a published store change still owes
+ * its page swap. Until the republish, the live site shows the OLD store, so anything that
+ * reads the saved store would act on a store the site does not show (EDS-52, 2026-10-19:
+ * the new-category offer proposed the Main Website's 11 categories for a live CitiSignal
+ * site whose republish was declined).
+ *
+ * @param project - the project, with its saved settings
+ */
+export function storeAwaitsRepublish(project: Project): boolean {
+    if (project.edsStorefrontState?.catalogPagesPending) return true;
+    const { changedEnvVars } = detectStorefrontChanges(project, project.componentConfigs ?? {});
+    return isStoreScopeChange(changedEnvVars);
+}
 
 /**
  * Whether a set of changed settings moves the storefront to another store.
