@@ -15,18 +15,19 @@
  *
  * Built like `AddErpDialog`: the core Modal in a DialogContainer, one accent action. Every state
  * holds the list's space, so the dialog does not change size as the read lands (owner,
- * 2026-10-19: the spinner sat high in a short dialog): reading, a read that failed and nothing
- * to assign are centred in it, as Manage APIs shows its own (`LoadingDisplay`, `StatusDisplay`),
- * with Close alone. The attribute-set notice above the list is the house `InlineNotice`.
+ * 2026-10-19: the spinner sat high in a short dialog). While reading, the list's frame is
+ * already there with the reading where the rows will be; a read that failed and nothing to
+ * assign are centred in the space, as Manage APIs shows its own (`StatusDisplay`), with Close
+ * alone. No intro under the title (owner, 2026-10-19: "still feels busy"): the title says what
+ * it does, and the website is in the count. The attribute-set notice is the house `InlineNotice`.
  *
  * @module features/dashboard/ui/components/AssignErpProductsModal
  */
 
-import { Button, DialogContainer, Text } from '@adobe/react-spectrum';
+import { Button, DialogContainer } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { AssignProductList } from './AssignProductList';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -39,9 +40,6 @@ import type { ErpAssignOptions, ErpAssignPreview, ErpProductSelection } from '@/
 /** Every string the modal shows, in one place. */
 export const ASSIGN_COPY = {
     title: (name: string) => `Assign products to ${name}`,
-    intro: (value: string, website?: string) =>
-        `Pick the products this ERP should own${website ? `, from ${website}` : ''}. Demo Builder tags them erp_owner=${value} in Commerce.`,
-    loading: 'Reading the products in Commerce',
     readFailed: "Couldn't read Commerce",
     nothingToAssign: (name: string) => `Nothing to assign to ${name}`,
     setsTitle: 'Some products cannot be tagged yet',
@@ -88,9 +86,18 @@ export function AssignErpProductsModal({ target, onClose, onAssign, onAddSets }:
     );
 }
 
-/** What the modal shows instead of the list: the read, its failure, or why nothing can be assigned. */
-function feedbackOf(state: { options: ErpAssignOptions | null; error: string | null; loading: boolean }, name: string): React.ReactElement | null {
-    if (state.loading) return <LoadingDisplay size="L" message={ASSIGN_COPY.loading} />;
+/** What the list stands on while the products are read: the frame, empty. */
+const READING: ErpAssignOptions = {
+    erp: { id: '', name: '', listId: '' },
+    categories: [],
+    setsWithoutOwner: [],
+    products: [],
+    owners: {},
+    names: {},
+};
+
+/** What the modal shows instead of the list: a read that failed, or why nothing can be assigned. */
+function feedbackOf(state: { options: ErpAssignOptions | null; error: string | null }, name: string): React.ReactElement | null {
     if (state.error) return <StatusDisplay variant="error" height="100%" title={ASSIGN_COPY.readFailed} message={state.error} />;
     if (state.options && !state.options.ownerValue) {
         return <StatusDisplay variant="info" height="100%" title={ASSIGN_COPY.nothingToAssign(name)} message={state.options.refusal} />;
@@ -103,8 +110,8 @@ function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsM
     const read = useErpAssignOptions(target.id, target.erp);
     const { options } = read;
     const feedback = feedbackOf(read, target.name);
-    /** The options the list shows: none while a read, a failure or a refusal is shown instead. */
-    const listed = feedback ? null : options;
+    /** The options the list shows: the empty frame while reading, none for a failure or a refusal. */
+    const listed = feedback ? null : (options ?? READING);
     const [selected, setSelected] = useState<Set<string>>(() => new Set());
     const selection = useMemo<ErpProductSelection | undefined>(
         () => (selected.size > 0 ? { by: 'skus', skus: [...selected] } : undefined),
@@ -140,9 +147,8 @@ function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsM
                     <CenteredFeedbackContainer fill>{feedback}</CenteredFeedbackContainer>
                 </div>
             )}
-            {listed && value && (
+            {listed && (
                 <div className="assign-products-body">
-                    <Text>{ASSIGN_COPY.intro(value, listed.website)}</Text>
                     {listed.setsWithoutOwner.length > 0 && (
                         <InlineNotice
                             title={ASSIGN_COPY.setsTitle}
@@ -154,7 +160,8 @@ function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsM
                     )}
                     <AssignProductList
                         options={listed}
-                        value={value}
+                        value={value ?? ''}
+                        loading={read.loading}
                         selected={selected}
                         onChange={setSelected}
                         summary={preview && (

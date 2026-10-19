@@ -114,11 +114,15 @@ describe('AssignErpProductsModal', () => {
         await open();
         expect(mockRequest).toHaveBeenCalledTimes(1);
         expect(mockRequest).toHaveBeenCalledWith('getErpAssignOptions', { id: 'erp-integration', erp: 'demo-erp-2' });
-        expect(screen.getByText(ASSIGN_COPY.intro('accuform', 'Justrite Website'))).toBeInTheDocument();
+        // No intro and no attribute code: the title says what it does, the count where from.
+        expect(screen.queryByText(/erp_owner=/)).toBeNull();
         expect(screen.getAllByRole('columnheader').map((heading) => heading.textContent).filter(Boolean)).toStrictEqual(['SKU', 'Name', 'Category', 'Owner']);
         expect(shownSkus()).toEqual(['ACC-1', 'ACC-3', 'ACC-9', 'CAB-30']);
         expect(cells('CAB-30')).toStrictEqual(['CAB-30', 'Safety cabinet', 'Flammables', 'Justrite ERP']);
-        expect(screen.getByText(LIST_COPY.shown(4, 4))).toBeInTheDocument();
+        expect(screen.getByText('4 products on Justrite Website')).toBeInTheDocument();
+        // Nothing selected: nothing to show or clear yet.
+        expect(screen.queryByRole('button', { name: LIST_COPY.selectedOnly })).toBeNull();
+        expect(screen.queryByRole('button', { name: LIST_COPY.clear })).toBeNull();
         // Nothing ticked: nothing to assign.
         expect(screen.getByRole('button', { name: ASSIGN_COPY.actionIdle })).toHaveAttribute('aria-disabled', 'true');
     });
@@ -138,8 +142,8 @@ describe('AssignErpProductsModal', () => {
             return Array.from(picker?.querySelectorAll('option') ?? []).map((option) => option.textContent);
         };
         expect(offered(LIST_COPY.category)).toStrictEqual([LIST_COPY.anyCategory, 'Cabinets (1)', 'Signs (3)']);
-        // Nothing to narrow until a category is chosen.
-        expect(screen.getByRole('button', { name: LIST_COPY.subcategory })).toBeDisabled();
+        // No subcategory filter until a category with some is chosen.
+        expect(screen.queryByRole('button', { name: LIST_COPY.subcategory })).toBeNull();
 
         filterBy(LIST_COPY.category, 'Signs');
         expect(shownSkus()).toEqual(['ACC-1', 'ACC-3', 'ACC-9']);
@@ -158,7 +162,7 @@ describe('AssignErpProductsModal', () => {
         expect(shownSkus()).toEqual(['ACC-1', 'ACC-3', 'ACC-9']);
         filterBy(LIST_COPY.owner, 'justrite');
         expect(shownSkus()).toEqual(['ACC-1', 'ACC-9']);
-        expect(screen.getByText(LIST_COPY.shown(2, 4))).toBeInTheDocument();
+        expect(screen.getByText('2 of 4 products on Justrite Website')).toBeInTheDocument();
         filterBy(LIST_COPY.owner, 'none');
         expect(screen.getByText(LIST_COPY.nothing)).toBeInTheDocument();
     });
@@ -248,9 +252,9 @@ describe('AssignErpProductsModal', () => {
         expect(screen.queryByRole('button', { name: ASSIGN_COPY.actionIdle })).toBeNull();
     });
 
-    // The dialog holds the list's space from the first frame, so it does not change size as
-    // the read lands (owner, 2026-10-19).
-    it('reads in the same space the list will take, with nothing to press but Close', async () => {
+    // The frame is there from the first moment, so nothing moves as the read lands (owner,
+    // 2026-10-19): the controls off, the reading where the rows will be.
+    it('opens on the whole frame while reading, the controls off and the reading under the headings', async () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));
         render(
             <Provider theme={defaultTheme}>
@@ -258,9 +262,14 @@ describe('AssignErpProductsModal', () => {
             </Provider>,
         );
         await flush();
-        const reading = screen.getByText(ASSIGN_COPY.loading);
-        expect(reading.closest('.assign-products-body')).not.toBeNull();
-        expect(screen.queryByRole('button', { name: ASSIGN_COPY.actionIdle })).toBeNull();
+        const table = screen.getByRole('grid', { name: 'Products' });
+        expect(within(table).getByText(LIST_COPY.reading)).toBeInTheDocument();
+        expect(within(table).getAllByRole('columnheader').map((heading) => heading.textContent).filter(Boolean)).toStrictEqual(['SKU', 'Name', 'Category', 'Owner']);
+        expect(screen.getByTestId('spectrum-searchfield')).toBeDisabled();
+        expect(screen.getByRole('button', { name: LIST_COPY.category })).toBeDisabled();
+        expect(screen.getByRole('button', { name: LIST_COPY.owner })).toBeDisabled();
+        expect(screen.queryByText(/products on/)).toBeNull();
+        expect(screen.getByRole('button', { name: ASSIGN_COPY.actionIdle })).toHaveAttribute('aria-disabled', 'true');
     });
 });
 

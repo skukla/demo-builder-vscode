@@ -11,11 +11,17 @@
  * A Spectrum TableView in multiple selection, with SKU, Name, Category and Owner as columns
  * the SC sorts by (owner, 2026-10-19: the SKU and the name as column headings, the filters
  * above). Its heading checkbox selects every row shown. The search on its own line, the
- * labelled filters under it with the count, the table taking the rest of the modal's height
- * (owner, 2026-10-18: not a list halfway down), and what the selection would do below it.
+ * filters under it with the count, the table taking the rest of the modal's height (owner,
+ * 2026-10-18: not a list halfway down), and what the selection would do below it.
  * Categories are two pickers, the top level and then its subcategories, rather than one long
  * path a picker cuts off. A row that cannot be tagged is disabled with the reason in its Owner
  * cell; one already this ERP's is selected and disabled.
+ *
+ * Kept quiet (owner, 2026-10-19: "still feels busy"): the filters carry no labels, since each
+ * one's value says what it is ("All categories"); Subcategory appears only once a category
+ * has some; Show selected and Clear only once something is selected. While the products are
+ * read the whole frame is already there, the filters off and the reading said where the rows
+ * will be, so nothing moves when they land.
  *
  * @module features/dashboard/ui/components/AssignProductList
  */
@@ -23,6 +29,7 @@
 import { ActionButton, Cell, Column, Item, Picker, Row, SearchField, TableBody, TableHeader, TableView } from '@adobe/react-spectrum';
 import type { Selection, SortDescriptor } from '@react-types/shared';
 import React, { useMemo, useState } from 'react';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import type { ErpAssignOptions, ErpAssignProduct } from '@/types/erpAssign';
 
 /** The filter value meaning "no filter". */
@@ -39,7 +46,9 @@ export const LIST_COPY = {
     anyCategory: 'All categories',
     anyOwner: 'Any owner',
     noErp: 'No ERP',
-    shown: (shown: number, total: number) => (shown === total ? `${total} products` : `${shown} of ${total} products`),
+    shown: (shown: number, total: number, website?: string) =>
+        `${shown === total ? total : `${shown} of ${total}`} products${website ? ` on ${website}` : ''}`,
+    reading: 'Reading the products in Commerce',
     columns: { sku: 'SKU', name: 'Name', category: 'Category', owner: 'Owner' },
     selectedOnly: 'Show selected',
     showAll: 'Show all',
@@ -163,7 +172,7 @@ function FilterPicker({ label, value, choices, onChange, isDisabled }: {
     isDisabled?: boolean;
 }): React.ReactElement {
     return (
-        <Picker label={label} selectedKey={value} onSelectionChange={(key) => onChange(String(key))} width="size-3000" isDisabled={isDisabled}>
+        <Picker aria-label={label} selectedKey={value} onSelectionChange={(key) => onChange(String(key))} width="size-3000" isDisabled={isDisabled}>
             {choices.map((choice) => <Item key={choice.value}>{choice.label}</Item>)}
         </Picker>
     );
@@ -202,6 +211,8 @@ export interface AssignProductListProps {
     onChange: (next: Set<string>) => void;
     /** Under the table: what the selection would do, in sentences. */
     summary?: React.ReactNode;
+    /** The products are still being read: the frame, with the controls off. */
+    loading?: boolean;
 }
 
 /**
@@ -210,7 +221,7 @@ export interface AssignProductListProps {
  * @param props - the store's products, the value written, the selection, its setter, a summary
  * @returns the table with its controls
  */
-export function AssignProductList({ options, value, selected, onChange, summary }: AssignProductListProps): React.ReactElement {
+export function AssignProductList({ options, value, selected, onChange, summary, loading }: AssignProductListProps): React.ReactElement {
     const [filters, setFilters] = useState<Filters>({ query: '', category: ANY, subcategory: ANY, owner: ANY, selectedOnly: false });
     const [sort, setSort] = useState<SortDescriptor>({ column: 'sku', direction: 'ascending' });
     const set = (patch: Partial<Filters>): void => setFilters({ ...filters, ...patch });
@@ -221,6 +232,7 @@ export function AssignProductList({ options, value, selected, onChange, summary 
     const shown = sorted(rows.filter((row) => matches(row, filters, options, selected, labels)), sort);
     const locked = shown.filter((row) => row.locked).map((row) => row.product.sku);
     const already = shown.filter((row) => row.locked === 'already').map((row) => row.product.sku);
+    const picking = selected.size > 0 || filters.selectedOnly;
     const owners = [
         { value: ANY, label: LIST_COPY.anyOwner },
         ...Object.entries(options.names).map(([id, name]) => ({ value: id, label: name })),
@@ -234,6 +246,7 @@ export function AssignProductList({ options, value, selected, onChange, summary 
                 value={filters.query}
                 onChange={(query) => set({ query })}
                 width="100%"
+                isDisabled={loading}
             />
             <div className="assign-filters">
                 <FilterPicker
@@ -241,62 +254,70 @@ export function AssignProductList({ options, value, selected, onChange, summary 
                     value={filters.category}
                     choices={[{ value: ANY, label: LIST_COPY.anyCategory }, ...groups.map((group) => ({ value: group.name, label: `${group.name} (${group.count})` }))]}
                     onChange={(category) => set({ category, subcategory: ANY })}
+                    isDisabled={loading}
                 />
-                <FilterPicker
-                    label={LIST_COPY.subcategory}
-                    value={filters.subcategory}
-                    choices={[{ value: ANY, label: LIST_COPY.anySubcategory }, ...subcategories]}
-                    onChange={(subcategory) => set({ subcategory })}
-                    isDisabled={subcategories.length === 0}
-                />
-                <FilterPicker label={LIST_COPY.owner} value={filters.owner} choices={owners} onChange={(owner) => set({ owner })} />
-                <span className="assign-count">{LIST_COPY.shown(shown.length, rows.length)}</span>
+                {subcategories.length > 0 && (
+                    <FilterPicker
+                        label={LIST_COPY.subcategory}
+                        value={filters.subcategory}
+                        choices={[{ value: ANY, label: LIST_COPY.anySubcategory }, ...subcategories]}
+                        onChange={(subcategory) => set({ subcategory })}
+                    />
+                )}
+                <FilterPicker label={LIST_COPY.owner} value={filters.owner} choices={owners} onChange={(owner) => set({ owner })} isDisabled={loading} />
+                {!loading && <span className="assign-count">{LIST_COPY.shown(shown.length, rows.length, options.website)}</span>}
             </div>
             <div className="assign-list">
-                {shown.length === 0 ? (
-                    <div className="assign-list-empty">{LIST_COPY.nothing}</div>
-                ) : (
-                    <TableView
-                        aria-label="Products"
-                        selectionMode="multiple"
-                        selectedKeys={[...already, ...shown.filter((row) => selected.has(row.product.sku)).map((row) => row.product.sku)]}
-                        disabledKeys={locked}
-                        onSelectionChange={(keys) => onChange(nextSelection(keys, shown, selected))}
-                        sortDescriptor={sort}
-                        onSortChange={setSort}
-                        density="compact"
-                        overflowMode="truncate"
-                        height="100%"
-                    >
-                        {/* Each column and cell written out: Spectrum's table throws ("reading
-                            'getReusableView'") on columns and cells made by a .map (2026-10-19). */}
-                        <TableHeader>
-                            <Column key="sku" allowsSorting>{LIST_COPY.columns.sku}</Column>
-                            <Column key="name" allowsSorting width="2fr">{LIST_COPY.columns.name}</Column>
-                            <Column key="category" allowsSorting>{LIST_COPY.columns.category}</Column>
-                            <Column key="owner" allowsSorting>{LIST_COPY.columns.owner}</Column>
-                        </TableHeader>
-                        <TableBody items={shown.map((row) => ({ id: row.product.sku, row }))}>
-                            {(item) => (
-                                <Row key={item.id}>
-                                    <Cell>{cellOf(item.row, 'sku')}</Cell>
-                                    <Cell>{cellOf(item.row, 'name')}</Cell>
-                                    <Cell>{cellOf(item.row, 'category')}</Cell>
-                                    <Cell>{cellOf(item.row, 'owner')}</Cell>
-                                </Row>
-                            )}
-                        </TableBody>
-                    </TableView>
-                )}
+                <TableView
+                    aria-label="Products"
+                    selectionMode="multiple"
+                    selectedKeys={[...already, ...shown.filter((row) => selected.has(row.product.sku)).map((row) => row.product.sku)]}
+                    disabledKeys={locked}
+                    onSelectionChange={(keys) => onChange(nextSelection(keys, shown, selected))}
+                    sortDescriptor={sort}
+                    onSortChange={setSort}
+                    density="compact"
+                    overflowMode="truncate"
+                    height="100%"
+                    // The reading and "none match" sit where the rows will be, under the headings.
+                    renderEmptyState={() => (loading
+                        ? <LoadingDisplay size="L" message={LIST_COPY.reading} />
+                        : <div className="assign-list-empty">{LIST_COPY.nothing}</div>)}
+                >
+                    {/* Each column and cell written out: Spectrum's table throws ("reading
+                        'getReusableView'") on columns and cells made by a .map (2026-10-19). */}
+                    <TableHeader>
+                        <Column key="sku" allowsSorting>{LIST_COPY.columns.sku}</Column>
+                        <Column key="name" allowsSorting width="2fr">{LIST_COPY.columns.name}</Column>
+                        <Column key="category" allowsSorting>{LIST_COPY.columns.category}</Column>
+                        <Column key="owner" allowsSorting>{LIST_COPY.columns.owner}</Column>
+                    </TableHeader>
+                    <TableBody items={shown.map((row) => ({ id: row.product.sku, row }))}>
+                        {(item) => (
+                            <Row key={item.id}>
+                                <Cell>{cellOf(item.row, 'sku')}</Cell>
+                                <Cell>{cellOf(item.row, 'name')}</Cell>
+                                <Cell>{cellOf(item.row, 'category')}</Cell>
+                                <Cell>{cellOf(item.row, 'owner')}</Cell>
+                            </Row>
+                        )}
+                    </TableBody>
+                </TableView>
             </div>
+            {/* The line keeps its height when empty, so the table does not resize as a pick
+                starts or ends. */}
             <div className="assign-counts">
                 <div className="assign-summary-slot">{summary}</div>
-                <ActionButton isQuiet isDisabled={selected.size === 0 && !filters.selectedOnly} onPress={() => set({ selectedOnly: !filters.selectedOnly })}>
-                    {filters.selectedOnly ? LIST_COPY.showAll : LIST_COPY.selectedOnly}
-                </ActionButton>
-                <ActionButton isQuiet isDisabled={selected.size === 0} onPress={() => onChange(new Set())}>
-                    {LIST_COPY.clear}
-                </ActionButton>
+                {picking && (
+                    <>
+                        <ActionButton isQuiet onPress={() => set({ selectedOnly: !filters.selectedOnly })}>
+                            {filters.selectedOnly ? LIST_COPY.showAll : LIST_COPY.selectedOnly}
+                        </ActionButton>
+                        <ActionButton isQuiet isDisabled={selected.size === 0} onPress={() => onChange(new Set())}>
+                            {LIST_COPY.clear}
+                        </ActionButton>
+                    </>
+                )}
             </div>
         </div>
     );

@@ -282,6 +282,8 @@
 .assign-counts {
     display: flex;
     align-items: center;
+    /* Held when empty, so the table does not resize as a pick starts or ends. */
+    min-height: 32px;
     gap: 4px;
     font-size: 13px;
     color: var(--spectrum-global-color-gray-700);

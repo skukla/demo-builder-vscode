@@ -515,11 +515,12 @@ export const Badge: React.FC<any> = ({ children, variant, ...props }) => (
 );
 
 // SearchField mock
-export const SearchField: React.FC<any> = ({ value, onChange, autoFocus, ...props }) => (
+export const SearchField: React.FC<any> = ({ value, onChange, autoFocus, isDisabled, ...props }) => (
     <input
         data-testid="spectrum-searchfield"
         type="search"
         value={value || ''}
+        disabled={isDisabled}
         onChange={(e) => onChange?.(e.target.value)}
         // Surfaced, not enacted — same reason as TextField's. Whether the search
         // field opens focused is a real decision (SearchableList suppresses it once
@@ -880,7 +881,8 @@ export const ListView: React.FC<any> = ({
 // aria-selected and aria-disabled like ListView's; a click toggles it in multiple selection and
 // a disabled row ignores it. The heading checkbox answers 'all', or an empty Set when every
 // open row is already selected (Spectrum's select-all and deselect-all). A sortable column's
-// heading toggles its direction through onSortChange.
+// heading toggles its direction through onSortChange. With no rows, renderEmptyState's content
+// is drawn in the body, as Spectrum does.
 export const TableHeader: React.FC<any> = () => null;
 export const TableBody: React.FC<any> = () => null;
 export const Column: React.FC<any> = () => null;
@@ -904,6 +906,7 @@ export const TableView: React.FC<any> = ({
     onSelectionChange,
     sortDescriptor,
     onSortChange,
+    renderEmptyState,
     'aria-label': ariaLabel,
     density: _density,
     overflowMode: _overflowMode,
@@ -960,6 +963,11 @@ export const TableView: React.FC<any> = ({
                 </tr>
             </thead>
             <tbody>
+                {rows.length === 0 && renderEmptyState && (
+                    <tr>
+                        <td>{renderEmptyState()}</td>
+                    </tr>
+                )}
                 {rows.map((row) => {
                     const key = row.key as React.Key;
                     const isDisabled = disabled.has(key);
