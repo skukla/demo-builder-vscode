@@ -110,7 +110,7 @@ describe('isEditUnchanged — nothing the SC chose has changed', () => {
         const state = opened();
         const pickerSetFalse: WizardState = {
             ...state,
-            edsConfig: { ...state.edsConfig!, resetToTemplate: false, resetSiteContent: false },
+            edsConfig: { ...state.edsConfig!, resetToTemplate: false },
         };
 
         expect(isEditUnchanged(pickerSetFalse)).toBe(true);

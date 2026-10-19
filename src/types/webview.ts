@@ -481,8 +481,6 @@ export interface EDSConfig {
     daLiveSite?: string;
     /** Selected existing DA.live site (from searchable list) */
     selectedSite?: DaLiveSiteItem;
-    /** Whether to reset existing site content (repopulate with demo data) */
-    resetSiteContent?: boolean;
     /** DA.live authentication state */
     daLiveAuth?: {
         isAuthenticated: boolean;

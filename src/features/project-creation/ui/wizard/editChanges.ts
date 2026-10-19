@@ -108,7 +108,6 @@ const EDS_FIELDS: Record<keyof EDSConfig, Kind> = {
     daLiveSite: 'choice',
     // Compared by id, for the same reason.
     selectedSite: 'choice',
-    resetSiteContent: 'choice',
     daLiveAuth: 'screen',
     templateOwner: 'screen',
     templateRepo: 'screen',
@@ -204,7 +203,6 @@ export function editChoicesOf(state: Partial<WizardState>): EditChoices {
     eds.selectedSite = idOf(state.edsConfig?.selectedSite);
     // "Do not reset" reads the same unset or false; the pickers set false on mount.
     eds.resetToTemplate = state.edsConfig?.resetToTemplate || undefined;
-    eds.resetSiteContent = state.edsConfig?.resetSiteContent || undefined;
     choices.edsConfig = eds;
     const out: EditChoices = {};
     for (const field of [...KEYED_CHOICES, 'edsConfig']) spread(choices, field, out);

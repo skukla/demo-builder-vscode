@@ -641,8 +641,8 @@ export interface StorefrontSetupStartPayload {
             id: string;
             name: string;
         };
-        // Whether to reset existing site content (repopulate with demo data)
-        // Only applies when selectedSite is set (existing site mode)
+        // Whether the existing site's pages are replaced with the package's: a reset to
+        // the template, or a package change in an Edit (`replacesSiteContent`).
         resetSiteContent?: boolean;
         // Created repository info (set when the repo was created by useRepoCreation)
         // If present, skip repo creation in StorefrontSetupStep

@@ -7,7 +7,7 @@ import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
-import { editChangesOf, editRenameTo } from '@/features/project-creation/ui/wizard/editChanges';
+import { editChangesOf, editRenameTo, isPackageChange } from '@/features/project-creation/ui/wizard/editChanges';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
@@ -526,6 +526,18 @@ function validateStackLookup(
     }
 }
 
+/**
+ * Whether the storefront's existing pages are replaced with the package's: when the SC
+ * resets to the template ("replaces all content", the tick's own words) or changes the
+ * package in an Edit. The separate tick for the site's content went with the DA.live site
+ * picker (b21696992), and nothing set it since, so an Edit onto another package kept the
+ * old package's pages under the new package's code (owner, 2026-10-19: Bodea over CitiSignal).
+ */
+export function replacesSiteContent(wizardState: ProjectConfigSource): boolean {
+    if (wizardState.edsConfig?.resetToTemplate) return true;
+    return isPackageChange(editChangesOf(wizardState) ?? []);
+}
+
 /** Build EDS config object for project creation from wizard EDS state */
 function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
     const eds = wizardState.edsConfig;
@@ -545,7 +557,7 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
         isPrivate: eds.selectedRepo?.isPrivate,
         skipContent: eds.skipContent,
         skipTools: !wizardState.selectedAddons?.includes('adobe-commerce-aco'),
-        resetSiteContent: eds.resetSiteContent || false,
+        resetSiteContent: replacesSiteContent(wizardState),
         // The whole storefront-derived slice, from the one list (step 05 closed
         // the half-list that used to live here).
         ...pickStorefrontDerived(eds),

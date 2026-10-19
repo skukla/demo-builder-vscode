@@ -20,6 +20,7 @@ import {
     getWizardTitle,
     initializeAdobeContextFromImport,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
+import { editChoicesOf } from '@/features/project-creation/ui/wizard/editChanges';
 import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
@@ -364,9 +365,23 @@ describe('buildProjectConfig', () => {
             });
         });
 
-        it('should default the site-content reset to false and keep an explicit true', () => {
+        // The site's pages follow the code (owner, 2026-10-19: an Edit from CitiSignal to Bodea
+        // with "Reset to template" kept CitiSignal's pages under Bodea's code).
+        it('should replace the site content on a reset to the template, and not otherwise', () => {
             expect(withEds({})).toMatchObject({ resetSiteContent: false });
-            expect(withEds({ resetSiteContent: true })).toMatchObject({ resetSiteContent: true });
+            expect(withEds({ resetToTemplate: true })).toMatchObject({ resetSiteContent: true });
+        });
+
+        it('should replace the site content when an Edit changes the package', () => {
+            const opened = { ...base, wizardMode: 'edit', edsConfig: {} } as unknown as WizardState;
+            const edit = (selectedPackage: string) =>
+                buildProjectConfig(
+                    { ...opened, selectedPackage, editBaseline: editChoicesOf(opened) } as unknown as WizardState,
+                    null,
+                    [],
+                ).edsConfig;
+            expect(edit('bodea')).toMatchObject({ resetSiteContent: true });
+            expect(edit('citisignal')).toMatchObject({ resetSiteContent: false });
         });
 
         it('should skip the tools install unless the ACO addon was chosen', () => {
