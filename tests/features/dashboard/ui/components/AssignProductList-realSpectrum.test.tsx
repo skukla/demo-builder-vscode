@@ -25,7 +25,7 @@ import type { ErpAssignOptions } from '@/types/erpAssign';
 const STORE: ErpAssignOptions = {
     erp: { id: 'demo-erp-2', name: 'Accuform ERP', listId: 'accuform' },
     ownerValue: 'accuform',
-    categories: [{ value: '7', label: 'Signs › Exit Signs', count: 3 }],
+    categories: [{ value: '7', label: 'Signs › Exit Signs' }],
     setsWithoutOwner: [{ id: 9, name: 'Gear', products: 1 }],
     products: [
         { sku: 'ACC-1', name: 'Exit sign', attributeSetId: 4, categoryIds: ['7'], owner: '' },

@@ -23,7 +23,6 @@ export interface ErpAssignChoice {
     /** The category id as a string, or the brand value. */
     value: string;
     label: string;
-    count: number;
 }
 
 /** An attribute set some of the store's products use that has no `erp_owner`. */

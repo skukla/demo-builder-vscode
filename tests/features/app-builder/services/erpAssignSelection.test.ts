@@ -104,7 +104,7 @@ describe('selections', () => {
 
     it('offers the labelled categories with counts, most products first, and leaves out an unlabelled one', () => {
         // 8 has no label: it is in another catalog (listCategoryLabels).
-        expect(categoryChoicesOf(ROWS, new Map([['7', 'Signs']]))).toStrictEqual([{ value: '7', label: 'Signs', count: 4 }]);
+        expect(categoryChoicesOf(ROWS, new Map([['7', 'Signs']]))).toStrictEqual([{ value: '7', label: 'Signs' }]);
     });
 });
 

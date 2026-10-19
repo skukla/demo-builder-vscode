@@ -37,8 +37,8 @@ const STORE: ErpAssignOptions = {
     ownerValue: 'accuform',
     categories: [
         // Labelled by path below the store's root, as listCategoryLabels gives them.
-        { value: '7', label: 'Signs › Exit Signs', count: 3 },
-        { value: '8', label: 'Cabinets › Flammables', count: 1 },
+        { value: '7', label: 'Signs › Exit Signs' },
+        { value: '8', label: 'Cabinets › Flammables' },
     ],
     website: 'Justrite Website',
     setsWithoutOwner: [{ id: 9, name: 'Gear', products: 1 }],
@@ -141,13 +141,13 @@ describe('AssignErpProductsModal', () => {
             const picker = screen.getAllByTestId('spectrum-picker-wrapper').find((wrapper) => within(wrapper).queryByRole('button', { name: label }));
             return Array.from(picker?.querySelectorAll('option') ?? []).map((option) => option.textContent);
         };
-        expect(offered(LIST_COPY.category)).toStrictEqual([LIST_COPY.anyCategory, 'Cabinets (1)', 'Signs (3)']);
+        expect(offered(LIST_COPY.category)).toStrictEqual([LIST_COPY.anyCategory, 'Cabinets', 'Signs']);
         // No subcategory filter until a category with some is chosen.
         expect(screen.queryByRole('button', { name: LIST_COPY.subcategory })).toBeNull();
 
         filterBy(LIST_COPY.category, 'Signs');
         expect(shownSkus()).toEqual(['ACC-1', 'ACC-3', 'ACC-9']);
-        expect(offered(LIST_COPY.subcategory)).toStrictEqual([LIST_COPY.anySubcategory, 'Exit Signs (3)']);
+        expect(offered(LIST_COPY.subcategory)).toStrictEqual([LIST_COPY.anySubcategory, 'Exit Signs']);
         filterBy(LIST_COPY.subcategory, '7');
         expect(shownSkus()).toEqual(['ACC-1', 'ACC-3', 'ACC-9']);
 

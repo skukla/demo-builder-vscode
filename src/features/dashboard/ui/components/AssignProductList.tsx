@@ -136,25 +136,20 @@ function inCategory(product: ErpAssignProduct, filters: Filters, labels: Readonl
     });
 }
 
-/** A top-level category, with its product count and its subcategories. */
+/** A top-level category and its subcategories, by name only (the count beside the filters says how many). */
 interface CategoryGroup {
     name: string;
-    count: number;
     subcategories: Array<{ value: string; label: string }>;
 }
 
-function categoryGroups(options: ErpAssignOptions, labels: ReadonlyMap<string, string>): CategoryGroup[] {
+function categoryGroups(options: ErpAssignOptions): CategoryGroup[] {
     const groups = new Map<string, CategoryGroup>();
     for (const choice of options.categories) {
         const name = groupOf(choice.label);
-        const group = groups.get(name) ?? { name, count: 0, subcategories: [] };
+        const group = groups.get(name) ?? { name, subcategories: [] };
         const rest = choice.label.slice(name.length).replace(/^ › /u, '');
-        if (rest) group.subcategories.push({ value: choice.value, label: `${rest} (${choice.count})` });
+        if (rest) group.subcategories.push({ value: choice.value, label: rest });
         groups.set(name, group);
-    }
-    for (const group of groups.values()) {
-        const filters = { query: '', category: group.name, subcategory: ANY, owner: ANY, selectedOnly: false };
-        group.count = options.products.filter((product) => inCategory(product, filters, labels)).length;
     }
     return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -172,7 +167,15 @@ function FilterPicker({ label, value, choices, onChange, isDisabled }: {
     isDisabled?: boolean;
 }): React.ReactElement {
     return (
-        <Picker aria-label={label} selectedKey={value} onSelectionChange={(key) => onChange(String(key))} width="size-3000" isDisabled={isDisabled}>
+        // The menu wider than its box, so a long category name stays on one line (owner, 2026-10-19).
+        <Picker
+            aria-label={label}
+            selectedKey={value}
+            onSelectionChange={(key) => onChange(String(key))}
+            width="size-3000"
+            menuWidth="size-4600"
+            isDisabled={isDisabled}
+        >
             {choices.map((choice) => <Item key={choice.value}>{choice.label}</Item>)}
         </Picker>
     );
@@ -227,7 +230,7 @@ export function AssignProductList({ options, value, selected, onChange, summary,
     const set = (patch: Partial<Filters>): void => setFilters({ ...filters, ...patch });
     const rows = useMemo(() => rowsOf(options, value), [options, value]);
     const labels = useMemo(() => new Map(options.categories.map((choice) => [choice.value, choice.label])), [options]);
-    const groups = useMemo(() => categoryGroups(options, labels), [options, labels]);
+    const groups = useMemo(() => categoryGroups(options), [options]);
     const subcategories = groups.find((group) => group.name === filters.category)?.subcategories ?? [];
     const shown = sorted(rows.filter((row) => matches(row, filters, options, selected, labels)), sort);
     const locked = shown.filter((row) => row.locked).map((row) => row.product.sku);
@@ -252,7 +255,7 @@ export function AssignProductList({ options, value, selected, onChange, summary,
                 <FilterPicker
                     label={LIST_COPY.category}
                     value={filters.category}
-                    choices={[{ value: ANY, label: LIST_COPY.anyCategory }, ...groups.map((group) => ({ value: group.name, label: `${group.name} (${group.count})` }))]}
+                    choices={[{ value: ANY, label: LIST_COPY.anyCategory }, ...groups.map((group) => ({ value: group.name, label: group.name }))]}
                     onChange={(category) => set({ category, subcategory: ANY })}
                     isDisabled={loading}
                 />

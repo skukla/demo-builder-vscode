@@ -117,7 +117,7 @@ describe('readErpAssignOptions', () => {
         expect(options).toMatchObject({
             erp: { id: 'demo-erp-2', name: 'Accuform ERP', listId: 'accuform' },
             ownerValue: 'accuform',
-            categories: expect.arrayContaining([{ value: '7', label: 'Plans', count: 1 }]),
+            categories: expect.arrayContaining([{ value: '7', label: 'Plans' }]),
             setsWithoutOwner: [],
             owners: { 'essentials-plan': ['justrite'], DigiWristQuantum: ['accuform'] },
             names: { justrite: 'Justrite ERP', accuform: 'Accuform ERP' },
@@ -169,7 +169,7 @@ describe('readErpAssignOptions in the project\'s own store', () => {
         expect(options.website).toBe('Bodea Website');
         expect(options.products.map((row) => row.sku)).toStrictEqual(['essentials-plan', 'DigiWristQuantum']);
         // 7 is another catalog's; 3 is the root itself.
-        expect(options.categories).toStrictEqual([{ value: '9', label: 'Watches', count: 1 }]);
+        expect(options.categories).toStrictEqual([{ value: '9', label: 'Watches' }]);
     });
 
     it("leaves out another website's products", async () => {

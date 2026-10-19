@@ -212,28 +212,18 @@ function unknownSkusOf(rows: readonly ErpAssignProduct[], selection: ErpProductS
     return [...new Set(selection.skus.map((sku) => sku.trim()).filter(Boolean))].filter((sku) => !known.has(lower(sku)));
 }
 
-/** Counted choices, the most products first, then by name. */
-function counted(values: Array<{ value: string; label: string }>): ErpAssignChoice[] {
-    const byValue = new Map<string, ErpAssignChoice>();
-    for (const { value, label } of values) {
-        const choice = byValue.get(value) ?? { value, label, count: 0 };
-        choice.count += 1;
-        byValue.set(value, choice);
-    }
-    return [...byValue.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-}
-
 /**
- * The category filter's choices: the labelled categories the products carry, each with its
- * count. A category with no label is in another catalog (`listCategoryLabels`) and is left out.
+ * The category filter's choices: the labelled categories the products carry, once each, by
+ * name. No counts: the dialog's count says how many a pick shows (owner, 2026-10-19). A
+ * category with no label is in another catalog (`listCategoryLabels`) and is left out.
  */
 export function categoryChoicesOf(rows: readonly ErpAssignProduct[], labels: ReadonlyMap<string, string>): ErpAssignChoice[] {
-    return counted(
-        rows.flatMap((row) => row.categoryIds.flatMap((id) => {
-            const label = labels.get(id);
-            return label ? [{ value: id, label }] : [];
-        })),
-    );
+    const byValue = new Map<string, ErpAssignChoice>();
+    for (const id of rows.flatMap((row) => row.categoryIds)) {
+        const label = labels.get(id);
+        if (label) byValue.set(id, { value: id, label });
+    }
+    return [...byValue.values()].sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /** Everything the preview is worked out from. */
