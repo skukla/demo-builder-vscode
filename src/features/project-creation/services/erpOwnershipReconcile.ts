@@ -92,6 +92,13 @@ function rowsOf(project: Project, integrationId: string, options: ErpOwnershipOp
     });
 }
 
+/** The ERPs (component ids) that own any of the moved products now. */
+function gainersOf(rows: readonly ErpRow[], owners: ReadonlyMap<string, readonly string[]>, moved: readonly string[]): string[] {
+    return rows
+        .filter((row) => moved.some((sku) => (owners.get(sku) ?? []).includes(row.listId)))
+        .map((row) => row.erp);
+}
+
 /** A per-website rule's websites Commerce no longer has, said by name; nothing for the rest. */
 function deadWebsitesNote(row: ErpRow, websites: ReadonlyArray<{ code: string }>): string | undefined {
     if (row.owns.mode !== 'websites') return undefined;
@@ -314,15 +321,24 @@ export async function applyErpOwnership(
         const dead = deadWebsitesNote(row, options.websites);
         if (dead) notes.push(dead);
     }
-    const fills = await fillEveryErp(project, integrationId, deps);
     const owners = ownersAcross(options.products, rulesOf(options, rows));
+    // Products that moved go only to the ERPs that own them now (owner, 2026-10-19: moving one
+    // product re-sent every ERP's every product); where they left, the statuses below mark them.
+    const fillOnly = deps.onlySkus ? gainersOf(rows, owners, deps.onlySkus) : undefined;
+    const fills = await fillEveryErp(project, integrationId, fillOnly ? { ...deps, fillOnly } : deps);
     const erps: OwnershipErpReport[] = [];
     for (const row of rows) {
         const owned = ownedBy(owners, row.listId);
         const onProgress = (step: string) => deps.onProgress?.(rows.length > 1 ? `${row.name}: ${step}` : step);
         const marked = await reconcileStatuses(row, owned, { ...deps, onProgress }, project);
-        // The catch-all owning nothing (an empty store, or every product claimed) is not an action item; a rule that matches nothing is.
-        if (owned.size === 0 && row.owns.mode !== 'all') notes.push(ownsNothingNote(row));
+        // The catch-all owning nothing (an empty store, or every product claimed) is not an action
+        // item; a rule that matches nothing is.
+        if (owned.size === 0 && row.owns.mode !== 'all') {
+            const note = ownsNothingNote(row);
+            // Not "use Assign products" after an assignment or its undo: an ERP left with nothing
+            // is what the SC just chose (owner, 2026-10-19). A rule on another attribute still says.
+            if (moment !== 'assign' || note !== assignProductsNote(row.name)) notes.push(note);
+        }
         if (marked.note) notes.push(marked.note);
         if (marked.restored > 0) {
             notes.push(`${row.name}: ${marked.restored} product${marked.restored === 1 ? ' is' : 's are'} sellable again.`);

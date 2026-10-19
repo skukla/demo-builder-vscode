@@ -89,6 +89,14 @@ export interface ErpFillDeps {
      */
     saveKeyMap: (entries: ErpKeyMapEntry[]) => Promise<boolean>;
     onProgress?: (message: string) => void;
+    /**
+     * Products that moved between ERPs: only these of the ERP's own are sent, and the
+     * customers, structure and key map, which a move does not change, are left as they are
+     * (owner, 2026-10-19: moving one product re-sent all 223). The pricing seed still runs on
+     * everything the ERP owns: the ERP adds a price list per seed, so a seed of the moved
+     * products alone would change how it prices the rest. Absent, everything is sent.
+     */
+    onlySkus?: readonly string[];
 }
 
 export interface ErpFillResult {
@@ -154,11 +162,15 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
     const ownedSkus = ownedSkusAcross(rows, [...(await deps.otherErps()), { erp: deps.listId, owns: rule }], deps.listId);
     const owned = read.products.filter((p) => ownedSkus.has(p.sku));
     const partners = partnersFrom(read.companies, read.websites, salesOrgByWebsite);
-    const products = productsFrom(owned, read.stock, read.sourceNames, read.attributes);
+    const only = deps.onlySkus ? new Set(deps.onlySkus) : undefined;
+    const sent = only ? owned.filter((product) => only.has(product.sku)) : owned;
+    const products = productsFrom(sent, read.stock, read.sourceNames, read.attributes);
 
-    deps.onProgress?.(`Sending ${partners.length} customers`);
-    const structure = structureFrom(read.websites, read.configs, settingsByWebsite);
-    await deps.importRecords({ partners, projectName, structure });
+    if (!only) {
+        deps.onProgress?.(`Sending ${partners.length} customers`);
+        const structure = structureFrom(read.websites, read.configs, settingsByWebsite);
+        await deps.importRecords({ partners, projectName, structure });
+    }
     let done = 0;
     // In order: the count shown is the count imported so far.
     for (const batch of batches(products, PRODUCT_BATCH)) {
@@ -179,11 +191,12 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
             erp: partners[index].id,
         }),
     );
-    const kept = await deps.saveKeyMap(keyMap);
-    if (!kept) deps.onProgress?.('The integration keeps no key map yet; update it to have one');
+    // A move changes no customer, so the key map stays as the integration holds it.
+    const kept = only ? false : await deps.saveKeyMap(keyMap);
+    if (!kept && !only) deps.onProgress?.('The integration keeps no key map yet; update it to have one');
     const skipped = read.products.length - owned.length;
     return {
-        partners: partners.length,
+        partners: only ? 0 : partners.length,
         products: products.length,
         skipped,
         ...(skipped > 0 ? { owns: describeOwnsAcross(rule) } : {}),

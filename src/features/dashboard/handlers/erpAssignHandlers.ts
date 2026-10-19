@@ -33,7 +33,7 @@ import {
     type ErpAssignDeps,
     type ErpAssignTarget,
 } from '@/features/project-creation/services/erpAssignProducts';
-import { applyErpOwnership, assignProductsNote } from '@/features/project-creation/services/erpOwnershipReconcile';
+import { applyErpOwnership } from '@/features/project-creation/services/erpOwnershipReconcile';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { CommerceBulkOutcome, ErpAssignmentRecord, ErpAssignPreview, ErpProductSelection } from '@/types/erpAssign';
 import { ErrorCode } from '@/types/errorCodes';
@@ -147,15 +147,15 @@ type AssignOutcome = GuardableResult & {
 };
 
 /**
- * The ownership pass after a write, and its notes; the write stands whatever it says. With
- * `fillOnly`, only those ERPs are filled from Commerce (the one an assignment gives products
- * to); every ERP still has its products marked sellable or discontinued.
+ * The ownership pass after a write, and its notes; the write stands whatever it says. Only the
+ * products written are sent, and only to the ERPs that own them now; every ERP still has its
+ * products marked sellable or discontinued.
  */
 async function passAfterWrite(
     context: HandlerContext,
     opened: Opened,
     report: ReportStage,
-    fillOnly?: readonly string[],
+    moved: readonly string[],
 ): Promise<{ notes: string[]; ownership?: unknown }> {
     if (!context.authManager) return { notes: [] };
     const applied = await applyErpOwnership(
@@ -166,7 +166,7 @@ async function passAfterWrite(
             credentials: context.context?.secrets,
             getAuth: async () => opened.call.auth,
             onProgress: (step) => report(OPERATION_STAGES.updatingErps.label, step),
-            ...(fillOnly ? { fillOnly } : {}),
+            onlySkus: moved,
         },
         'assign',
     );
@@ -211,8 +211,7 @@ async function runAssign(
     report(stage, value ? `Writing erp_owner=${value} on ${toWrite.length} products` : `Clearing erp_owner on ${toWrite.length} products`);
     const bulk = await writeOwnerValues(opened.deps.commerce, toWrite.map((row) => ({ sku: row.sku, value })), followDeps(report, stage));
     await saveErpRecord(context, opened, assignmentRecord(toWrite, value, new Date().toISOString()));
-    // Only the ERP gaining products needs Commerce's records; where they left, the pass marks them.
-    const pass = await passAfterWrite(context, opened, report, [opened.target.erpId]);
+    const pass = await passAfterWrite(context, opened, report, toWrite.map((row) => row.sku));
     const warning = [...bulkNotes(bulk), ...previewNotes(preview), ...pass.notes].join(' ');
     return { success: true, preview, bulk, written: bulk.complete, ownership: pass.ownership, ...(warning ? { warning } : {}) };
 }
@@ -291,12 +290,8 @@ async function runUndo(
         bulk = await writeOwnerValues(opened.deps.commerce, plan.restore, followDeps(report, stage));
     }
     await saveErpRecord(context, opened, undefined);
-    const pass = bulk ? await passAfterWrite(context, opened, report) : { notes: [] };
-    // Owning nothing is what an undo of an ERP's only assignment leaves: not a warning on an
-    // undo that went right (Justrite, 2026-10-19), as the add leaves the same note out.
-    const expected = assignProductsNote(opened.call.erp?.name ?? '');
-    const notes = pass.notes.filter((note) => note !== expected);
-    const warning = [...(bulk ? bulkNotes(bulk) : []), ...changed, ...notes].join(' ');
+    const pass = bulk ? await passAfterWrite(context, opened, report, plan.restore.map((entry) => entry.sku)) : { notes: [] };
+    const warning = [...(bulk ? bulkNotes(bulk) : []), ...changed, ...pass.notes].join(' ');
     const written = bulk ? bulk.complete : 0;
     return { success: true, bulk, written, ownership: pass.ownership, ...(warning ? { warning } : {}) };
 }

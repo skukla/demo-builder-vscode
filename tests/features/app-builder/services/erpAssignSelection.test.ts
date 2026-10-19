@@ -60,6 +60,27 @@ describe('listAssignableProducts', () => {
         ]);
     });
 
+    // A move of a few products reads those, not the store (owner, 2026-10-19). The "in" filter
+    // answered 3 of 4 named SKUs, the made-up one left out, in 0.9 s on Justrite that day.
+    it('reads only the SKUs named, a few dozen per read, by an "in" filter', async () => {
+        const get = jest.fn(async (requested: string) => (requested.startsWith('products/attributes/brand') ? { options: [] } : pageWith({})));
+        const skus = Array.from({ length: 60 }, (_, index) => `SKU-${index}`);
+        await listAssignableProducts(get, { skus });
+
+        const reads = get.mock.calls.map(([requested]) => String(requested)).filter((requested) => requested.startsWith('products?'));
+        expect(reads).toHaveLength(2);
+        expect(reads[0]).toContain('[field]=sku&searchCriteria[filter_groups][1][filters][0][value]=SKU-0,SKU-1,');
+        expect(reads[0]).toContain('[condition_type]=in');
+        expect(reads[1]).toContain('[value]=SKU-50,');
+    });
+
+    it('CONTROL: reads everything when a SKU has a comma, which a list cannot carry', async () => {
+        const get = jest.fn(async (requested: string) => (requested.startsWith('products/attributes/brand') ? { options: [] } : pageWith({})));
+        await listAssignableProducts(get, { skus: ['A,B'] });
+        const reads = get.mock.calls.map(([requested]) => String(requested)).filter((requested) => requested.startsWith('products?'));
+        expect(reads.every((requested) => !requested.includes('condition_type'))).toBe(true);
+    });
+
     it('reads a free-text brand as it is stored', async () => {
         const get = jest.fn(async (requested: string) => {
             if (requested.startsWith('products/attributes/brand')) throw new Error('404');

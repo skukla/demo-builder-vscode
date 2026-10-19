@@ -33,6 +33,7 @@ import {
     previewAssignment,
     storeScopeOf,
     type AssignProductRow,
+    type ProductScope,
 } from '@/features/app-builder/services/erpAssignSelection';
 import { listWebsites, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
@@ -120,9 +121,9 @@ function valueOfRule(name: string, rule: ErpOwnsEntry['owns'] | undefined): { va
 
 /**
  * Read the store and every ERP's rule; the preview, the options and the write all start here.
- * With a website id, only that website's products.
+ * With a scope, only its products: one website's, or the SKUs picked.
  */
-async function readAssignState(target: ErpAssignTarget, deps: ErpAssignDeps, websiteId?: number): Promise<AssignState> {
+async function readAssignState(target: ErpAssignTarget, deps: ErpAssignDeps, scope: ProductScope = {}): Promise<AssignState> {
     const { project, integrationId, erpId } = target;
     const listId = erpListIdOf(project, erpId, getAppBuilderComponentCatalog());
     if (!listId) throw new Error(`${erpId} has no id in the integration's list yet; add it again to finish.`);
@@ -130,7 +131,7 @@ async function readAssignState(target: ErpAssignTarget, deps: ErpAssignDeps, web
     const integration = project.appBuilderComponents?.[integrationId];
     const client = new ErpIntegrationClient(integration?.deployedUrls, deps.auth, deps.fetchImpl);
     const [rows, websites, rules] = await Promise.all([
-        listAssignableProducts(deps.commerce.get, websiteId),
+        listAssignableProducts(deps.commerce.get, scope),
         listWebsites(deps.commerce.get),
         readErpRules(client, listedErpNames(project, integrationId)),
     ]);
@@ -153,7 +154,7 @@ export async function readErpAssignOptions(target: ErpAssignTarget, deps: ErpAss
     // Commerce filters them, so the other demos' products are never read.
     const scope = await storeScopeOf(deps.commerce.get, extractConfigParams(target.project).websiteCode);
     const [state, labels] = await Promise.all([
-        readAssignState(target, deps, scope?.websiteId),
+        readAssignState(target, deps, scope ? { websiteId: scope.websiteId } : {}),
         listCategoryLabels(deps.commerce.get, scope?.rootCategoryId),
     ]);
     const { rows } = state;
@@ -191,7 +192,9 @@ export async function planErpAssignment(
     deps: ErpAssignDeps,
     selection: ErpProductSelection,
 ): Promise<AssignPlan> {
-    const state = await readAssignState(target, deps);
+    // Picked by SKU (the modal always is): only those are read, not the whole store. A pick by
+    // category, brand or prefix is the agent's, and needs every product to match against.
+    const state = await readAssignState(target, deps, selection.by === 'skus' ? { skus: selection.skus.map((sku) => sku.trim()).filter(Boolean) } : {});
     if (state.value === undefined) return { refusal: state.refusal ?? `${state.erp.name} has no ${OWNER_CODE} value.` };
     const { preview, toWrite } = previewAssignment({ ...state, selection, value: state.value });
     return { preview, toWrite, value: state.value };
@@ -231,7 +234,9 @@ export interface UndoPlan {
 
 /** Plan the undo against Commerce as it stands: only products that still carry the value written. */
 export async function planUndo(commerce: CommerceClient, record: ErpAssignmentRecord): Promise<UndoPlan> {
-    const now = new Map((await listAssignableProducts(commerce.get)).map((row) => [row.sku, row.owner]));
+    // Only the products the assignment wrote: whether each still carries the value is all it asks.
+    const skus = record.previous.map((entry) => entry.sku);
+    const now = new Map((await listAssignableProducts(commerce.get, { skus })).map((row) => [row.sku, row.owner]));
     const restore: UndoPlan['restore'] = [];
     const changedSince: string[] = [];
     for (const entry of record.previous) {

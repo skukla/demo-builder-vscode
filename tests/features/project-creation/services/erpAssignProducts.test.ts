@@ -250,5 +250,15 @@ describe('the write, the record and the undo', () => {
             previous: [{ sku: 'essentials-plan', value: '' }, { sku: 'DigiWristQuantum', value: 'justrite' }],
         });
         expect(plan).toEqual({ restore: [{ sku: 'essentials-plan', value: '' }], changedSince: ['DigiWristQuantum'] });
+        // Only the products the assignment wrote are read (owner, 2026-10-19).
+        const read = client.get.mock.calls.map(([requested]) => String(requested)).find((requested) => requested.startsWith('products?'));
+        expect(read).toContain('[value]=essentials-plan,DigiWristQuantum');
+    });
+
+    it('the plan reads only the SKUs picked', async () => {
+        const client = commerce({});
+        await planErpAssignment(TARGET, { auth: AUTH, commerce: client }, { by: 'skus', skus: ['essentials-plan '] });
+        const read = client.get.mock.calls.map(([requested]) => String(requested)).find((requested) => requested.startsWith('products?'));
+        expect(read).toContain('[field]=sku&searchCriteria[filter_groups][1][filters][0][value]=essentials-plan&');
     });
 });

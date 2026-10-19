@@ -67,6 +67,8 @@ export interface ErpFillForProjectDeps {
      * refilled all three ERPs from Commerce).
      */
     fillOnly?: readonly string[];
+    /** Products that moved: only these are sent, and the mapping is left (`ErpFillDeps.onlySkus`). */
+    onlySkus?: readonly string[];
 }
 
 /** What one fill put in the ERP, and the prices published after it (absent when none were). */
@@ -263,6 +265,7 @@ export async function fillErpForProject(
             return true;
         },
         onProgress: deps.onProgress,
+        ...(deps.onlySkus ? { onlySkus: deps.onlySkus } : {}),
     };
     let result: ErpFillResult;
     try {
@@ -271,7 +274,8 @@ export async function fillErpForProject(
         return { status: 'failed', detail: error instanceof Error ? error.message : String(error) };
     }
     // Before the prices: the integration publishes a price to the websites its mapping names.
-    const mapped = await mapAfterFill({
+    // A move changes no website, so the mapping is left as it is.
+    const mapped = deps.onlySkus ? {} : await mapAfterFill({
         erp: { ...target, deployedUrls: erp.deployedUrls },
         client: integrationClient,
         get: fillDeps.get,

@@ -88,6 +88,23 @@ describe('fillErp', () => {
         expect(result).toStrictEqual({ partners: 4, products: 2, skipped: 0, paired: 4 });
     });
 
+    // A move sends only the products that moved: the customers, structure and key map are as
+    // they were (owner, 2026-10-19: moving one product re-sent all 223).
+    it('sends only the products that moved, and no customers, structure or key map', async () => {
+        const all = deps();
+        await fillErp(all, 'bodea');
+        const skus = all.sent.flatMap((body) => body.products ?? []).map((product) => product.sku);
+        expect(skus.length).toBeGreaterThan(1);
+
+        const d = { ...deps(), onlySkus: [skus[0]] };
+        const result = await fillErp(d, 'bodea');
+
+        expect(d.sent.every((body) => body.partners === undefined && body.structure === undefined)).toBe(true);
+        expect(d.sent.flatMap((body) => body.products ?? []).map((product) => product.sku)).toStrictEqual([skus[0]]);
+        expect(d.saveKeyMap).not.toHaveBeenCalled();
+        expect(result).toMatchObject({ partners: 0, products: 1 });
+    });
+
     it('hands the integration the key map once every import has landed: each company with the ERP customer made for it', async () => {
         const d = deps();
         await fillErp(d, 'bodea');

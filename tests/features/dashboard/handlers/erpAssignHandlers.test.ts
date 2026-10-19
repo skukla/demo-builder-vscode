@@ -41,8 +41,6 @@ jest.mock('@/features/project-creation/services/erpAssignProducts', () => ({
 const mockApply = jest.fn();
 jest.mock('@/features/project-creation/services/erpOwnershipReconcile', () => ({
     applyErpOwnership: (...a: unknown[]) => mockApply(...a),
-    // The real wording: the undo matches the note it leaves out by its text.
-    assignProductsNote: jest.requireActual('@/features/project-creation/services/erpOwnershipReconcile').assignProductsNote,
 }));
 
 // Imported after the mocks, which jest hoists above it.
@@ -118,9 +116,9 @@ describe('assignErpProducts', () => {
             value: 'accuform',
             previous: [{ sku: 'ACC-1', value: 'justrite' }, { sku: 'ACC-2', value: '' }],
         });
-        // Only the ERP gaining products is filled from Commerce; where they left, the pass marks
-        // them (owner, 2026-10-19: moving three products refilled every ERP).
-        expect(mockApply).toHaveBeenCalledWith(p, 'erp-integration', expect.objectContaining({ fillOnly: ['demo-erp-2'] }), 'assign');
+        // Only the products written are sent, to whichever ERPs own them now (owner, 2026-10-19:
+        // moving one product re-sent every ERP's every product).
+        expect(mockApply).toHaveBeenCalledWith(p, 'erp-integration', expect.objectContaining({ onlySkus: ['ACC-1', 'ACC-2'] }), 'assign');
         expect(result).toMatchObject({ success: true, data: { confirmed: true, written: 2, bulk: { complete: 2, failed: 0, timedOut: false } } });
         // Each step is in the Debug Logs, named for the run.
         const logged = (context.logger.debug as jest.Mock).mock.calls.map(([line]) => String(line));
@@ -201,34 +199,11 @@ describe('undoErpAssignment', () => {
         expect(mockWrite).toHaveBeenCalledWith(COMMERCE, [{ sku: 'ACC-1', value: 'justrite' }], expect.any(Object));
         const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
         expect(saved.appBuilderComponents?.['demo-erp-2']).not.toHaveProperty('erpAssignment');
-        // The undo gives products back to whichever ERPs had them, so every ERP is filled.
-        expect(mockApply).toHaveBeenCalledWith(p, 'erp-integration', expect.not.objectContaining({ fillOnly: expect.anything() }), 'assign');
+        // Only the products put back, to whichever ERPs own them again.
+        expect(mockApply).toHaveBeenCalledWith(p, 'erp-integration', expect.objectContaining({ onlySkus: ['ACC-1'] }), 'assign');
         expect(result).toMatchObject({
             success: true,
             data: { undone: true, warning: '1 products were left as they are: their erp_owner has changed since the assignment.' },
-        });
-    });
-
-    // An undo of an ERP's only assignment leaves it owning nothing: that is the undo working,
-    // not a warning (Justrite, 2026-10-19). Another ERP's note still shows.
-    it("leaves out the note that this ERP owns nothing, and keeps the others'", async () => {
-        mockPlanUndo.mockResolvedValue({ restore: [{ sku: 'ACC-1', value: 'justrite' }], changedSince: [] });
-        mockApply.mockResolvedValue({
-            status: 'applied',
-            erps: [],
-            unowned: 0,
-            fills: [],
-            notes: [
-                'Accuform ERP owns no products yet: use Assign products on its card to give it some.',
-                'Kukla ERP owns no products yet: use Assign products on its card to give it some.',
-            ],
-        });
-        const { context } = setup(project({ erpAssignment: RECORD }));
-        const result = await handleUndoErpAssignment(context, { id: 'erp-integration', erp: 'demo-erp-2', confirm: true });
-
-        expect(result).toMatchObject({
-            success: true,
-            data: { undone: true, warning: 'Kukla ERP owns no products yet: use Assign products on its card to give it some.' },
         });
     });
 });

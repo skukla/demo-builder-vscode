@@ -92,20 +92,49 @@ function brandOf(value: string | undefined, labels: ReadonlyMap<string, string>)
 const PRODUCT_FIELDS =
     '&fields=total_count,items[sku,name,attribute_set_id,custom_attributes,extension_attributes[category_links,website_ids]]';
 
+/** Which products a read covers: one website's, and only the SKUs named. Absent, all of them. */
+export interface ProductScope {
+    websiteId?: number;
+    skus?: readonly string[];
+}
+
+/** SKUs per read when they are named: a list in the query string, kept short. */
+const SKUS_PER_READ = 50;
+
+/** The search criteria: enabled, and the scope's website and SKUs, each its own "and" group. */
+function criteriaOf(websiteId: number | undefined, skus?: readonly string[]): string {
+    const groups: Array<{ field: string; value: string; condition?: string }> = [{ field: 'status', value: '1' }];
+    if (websiteId !== undefined) groups.push({ field: 'website_id', value: String(websiteId) });
+    if (skus) groups.push({ field: 'sku', value: skus.map(encodeURIComponent).join(','), condition: 'in' });
+    const filters = groups.map(({ field, value, condition }, index) => {
+        const at = `searchCriteria[filter_groups][${index}][filters][0]`;
+        return `&${at}[field]=${field}&${at}[value]=${value}${condition ? `&${at}[condition_type]=${condition}` : ''}`;
+    });
+    return `${filters.join('')}${PRODUCT_FIELDS}`;
+}
+
+/**
+ * The products a scope covers. Named SKUs are read by an "in" filter, a few dozen at a time,
+ * so a move of three products reads three (owner, 2026-10-19: every move read the whole
+ * sandbox first); a SKU with a comma in it cannot be listed, so then everything is read.
+ */
+async function readProducts(get: CommerceGet, scope: ProductScope): Promise<RawProduct[]> {
+    const { websiteId, skus } = scope;
+    if (!skus || skus.some((sku) => sku.includes(','))) return readAllPages<RawProduct>(get, 'products', criteriaOf(websiteId));
+    const read: RawProduct[] = [];
+    for (let at = 0; at < skus.length; at += SKUS_PER_READ) {
+        read.push(...(await readAllPages<RawProduct>(get, 'products', criteriaOf(websiteId, skus.slice(at, at + SKUS_PER_READ)))));
+    }
+    return read;
+}
+
 /**
  * Enabled products (status 1), the ones the ERPs are filled with, in the fields an assignment
  * reads; with a website id, only the products on that website (Commerce filters on
- * `website_id`: Justrite's 139 of the sandbox's 321, 2026-10-19).
+ * `website_id`: Justrite's 139 of the sandbox's 321, 2026-10-19); with SKUs, only those.
  */
-export async function listAssignableProducts(get: CommerceGet, websiteId?: number): Promise<AssignProductRow[]> {
-    const status =
-        '&searchCriteria[filter_groups][0][filters][0][field]=status&searchCriteria[filter_groups][0][filters][0][value]=1';
-    const website =
-        websiteId === undefined
-            ? ''
-            : `&searchCriteria[filter_groups][1][filters][0][field]=website_id&searchCriteria[filter_groups][1][filters][0][value]=${websiteId}`;
-    const criteria = `${status}${website}${PRODUCT_FIELDS}`;
-    const [items, labels] = await Promise.all([readAllPages<RawProduct>(get, 'products', criteria), brandLabels(get)]);
+export async function listAssignableProducts(get: CommerceGet, scope: ProductScope = {}): Promise<AssignProductRow[]> {
+    const [items, labels] = await Promise.all([readProducts(get, scope), brandLabels(get)]);
     return items
         .filter((product) => product.sku)
         .map((product) => {

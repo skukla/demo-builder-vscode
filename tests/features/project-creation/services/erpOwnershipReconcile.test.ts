@@ -103,6 +103,32 @@ beforeEach(() => {
     mockSetStatus.mockResolvedValue(undefined);
 });
 
+// Products that moved between ERPs (an assignment, its undo) go only to the ERPs that own them
+// now, and only they are sent (owner, 2026-10-19: moving one product re-sent every ERP's every
+// product). Kukla ERP owns nothing, which the SC just chose: no "use Assign products".
+describe('applyErpOwnership after products moved', () => {
+    it('fills only the ERPs owning the moved products, with those products alone', async () => {
+        const result = await applyErpOwnership(project(), 'erp-integration', { ...deps(), onlySkus: ['J1'] }, 'assign');
+
+        expect(mockFillEvery).toHaveBeenCalledWith(
+            expect.anything(),
+            'erp-integration',
+            expect.objectContaining({ onlySkus: ['J1'], fillOnly: ['demo-erp'] }),
+        );
+        expect(result).toMatchObject({ status: 'applied' });
+        if (result.status !== 'applied') return;
+        expect(result.notes).not.toContain('Kukla ERP owns no products yet: use Assign products on its card to give it some.');
+    });
+
+    it('CONTROL: with nothing moved, every ERP is filled and an empty ERP is told what next', async () => {
+        const result = await applyErpOwnership(project(), 'erp-integration', deps(), 'add');
+
+        expect(mockFillEvery).toHaveBeenCalledWith(expect.anything(), 'erp-integration', expect.not.objectContaining({ fillOnly: expect.anything() }));
+        if (result.status !== 'applied') throw new Error('not applied');
+        expect(result.notes).toContain('Kukla ERP owns no products yet: use Assign products on its card to give it some.');
+    });
+});
+
 describe('applyErpOwnership', () => {
     it('reads the store, fills every ERP, and says what each owns and what the SC still has to do', async () => {
         const d = deps();
