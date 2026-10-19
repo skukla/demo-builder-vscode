@@ -71,6 +71,7 @@ in the stub list now (`ea374381d`).
 - 2026-10-12  docs(research): the live test on bodea; a stub blocks the copied sheet at its path (`cc306f47c`)
 - 2026-10-12  fix(eds): the page check covers everything the copy carried; enrichment pages are published (`ffbd41b52`)
 - 2026-10-12  docs(research): the complete copy, proven on bodea; two enrichment pages still unpublished (`65833f045`)
+- 2026-10-19  fix(eds): creation's own content copy reads the storefront's code paths (`32615a1a2`)
 
 ## The stub list cannot know an added demo's code (owner, 2026-10-12)
 
