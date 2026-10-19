@@ -99,7 +99,7 @@ const READING: ErpAssignOptions = {
 /** What the modal shows instead of the list: a read that failed, or why nothing can be assigned. */
 function feedbackOf(state: { options: ErpAssignOptions | null; error: string | null }, name: string): React.ReactElement | null {
     if (state.error) return <StatusDisplay variant="error" height="100%" title={ASSIGN_COPY.readFailed} message={state.error} />;
-    if (state.options && !state.options.ownerValue) {
+    if (state.options && state.options.ownerValue === undefined) {
         return <StatusDisplay variant="info" height="100%" title={ASSIGN_COPY.nothingToAssign(name)} message={state.options.refusal} />;
     }
     return null;
@@ -119,7 +119,7 @@ function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsM
     );
     const value = options?.ownerValue;
     const preview = useMemo(() => {
-        if (!options || !value || !selection) return undefined;
+        if (!options || value === undefined || !selection) return undefined;
         return previewAssignment({
             rows: options.products,
             selection,

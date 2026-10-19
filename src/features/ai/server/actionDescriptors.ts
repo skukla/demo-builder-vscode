@@ -666,7 +666,10 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'again with confirm:true: Commerce writes them in one bulk call, the extension follows it ' +
             'to its end (data.bulk: complete, failed, open), records each product\'s previous ' +
             'erp_owner so undo_erp_assignment can put them back, and applies ownership ' +
-            'across every ERP (data.ownership). Only for an ERP whose rule is erp_owner=<value>. Takes ' +
+            'across every ERP (data.ownership). For an ERP whose rule is erp_owner=<value>, or the ' +
+            'ERP on every product no other ERP claims, whose products are the untagged ones: for ' +
+            "it the write clears the products' erp_owner, so they move to it. Not for an ERP on " +
+            'websites. Takes ' +
             "the ERP integration id and the ERP's component id.",
         map: dashboardHandlers,
         type: 'assignErpProducts',

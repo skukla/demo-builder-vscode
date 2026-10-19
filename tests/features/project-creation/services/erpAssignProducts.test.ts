@@ -98,6 +98,27 @@ describe('planErpAssignment', () => {
         });
     });
 
+    // The catch-all owns the untagged products, so a product moves to it by losing its tag
+    // (owner, 2026-10-19: products move between ERPs both ways).
+    it('clears the tag for the ERP on every product no other ERP claims, and says where they come from', async () => {
+        const withJustrite = createMockProject({
+            appBuilderComponents: {
+                ...project.appBuilderComponents,
+                'demo-erp': { kind: 'system', status: 'deployed', name: 'Justrite ERP', source: { owner: 's', repo: 'demo-erp' } },
+            },
+        });
+        const target = { project: withJustrite, integrationId: 'erp-integration', erpId: 'demo-erp' };
+        const deps = { auth: AUTH, commerce: commerce({ DigiWristQuantum: 'accuform' }) };
+
+        const plan = await planErpAssignment(target, deps, { by: 'skus', skus: ['essentials-plan', 'DigiWristQuantum'] });
+        expect(plan).toMatchObject({
+            value: '',
+            // essentials-plan has no tag: it is Justrite ERP's already.
+            preview: { matched: 2, toWrite: 1, alreadyTagged: 1, examples: ['DigiWristQuantum'], movedFrom: [{ name: 'Accuform ERP', count: 1 }] },
+        });
+        expect((await readErpAssignOptions(target, deps)).ownerValue).toBe('');
+    });
+
     it('refuses an ERP whose rule is not erp_owner, in words', async () => {
         mockRules.mockResolvedValue([
             { erp: 'justrite', name: 'Justrite ERP', owns: { mode: 'all' } },

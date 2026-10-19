@@ -186,7 +186,8 @@ async function runAssign(
         return { success: true, preview, written: 0, note: [`Nothing to write: ${preview.alreadyTagged} of the ${preview.matched} products already belong to ${opened.call.erp?.name}.`, ...notes].join(' ') };
     }
     const stage = OPERATION_STAGES.assigningErpProducts.label;
-    report(stage, `Writing erp_owner=${value} on ${toWrite.length} products`);
+    // '' is the catch-all ERP's: the tag is cleared, and the product falls to it.
+    report(stage, value ? `Writing erp_owner=${value} on ${toWrite.length} products` : `Clearing erp_owner on ${toWrite.length} products`);
     const bulk = await writeOwnerValues(opened.deps.commerce, toWrite.map((row) => ({ sku: row.sku, value })), followDeps(report, stage));
     await saveErpRecord(context, opened, assignmentRecord(toWrite, value, new Date().toISOString()));
     const pass = await passAfterWrite(context, opened, report);

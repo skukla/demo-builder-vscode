@@ -87,7 +87,10 @@ export async function openCommerce(
 /** The store and the rules as an assignment reads them. */
 interface AssignState {
     erp: ErpAssignPreview['erp'];
-    /** The value a write sets, read off the ERP's own rule; absent with `refusal`. */
+    /**
+     * The value a write sets, read off the ERP's own rule; '' for the ERP on every product no
+     * other ERP claims (clearing the tag gives a product to it); absent with `refusal`.
+     */
     value?: string;
     refusal?: string;
     rows: AssignProductRow[];
@@ -96,8 +99,14 @@ interface AssignState {
     setsWithoutOwner: AttributeSetWithoutOwner[];
 }
 
-/** The value an ERP's rule tags its products with, or why it has none. */
+/**
+ * The value an ERP's rule tags its products with, or why it has none. The ERP on every product
+ * no other ERP claims takes products by losing them nowhere else: its value is no tag at all,
+ * so a product moves to it by having its tag cleared (owner, 2026-10-19: products move between
+ * ERPs both ways). An ERP on websites owns whole websites, and takes no product one by one.
+ */
 function valueOfRule(name: string, rule: ErpOwnsEntry['owns'] | undefined): { value: string } | { refusal: string } {
+    if (rule?.mode === 'all') return { value: '' };
     const [code, value] = (rule?.attribute ?? '').split('=');
     if (rule?.mode === 'attribute' && code === OWNER_CODE && value) return { value };
     const owns = rule ? describeOwnsAcross(rule) : 'nothing it can be read for';
@@ -152,7 +161,7 @@ export async function readErpAssignOptions(target: ErpAssignTarget, deps: ErpAss
     const last = target.project.appBuilderComponents?.[target.erpId]?.erpAssignment;
     return {
         erp: state.erp,
-        ...(state.value ? { ownerValue: state.value } : {}),
+        ...(state.value !== undefined ? { ownerValue: state.value } : {}),
         ...(state.refusal ? { refusal: state.refusal } : {}),
         categories,
         ...(scope ? { website: scope.websiteName } : {}),
@@ -183,7 +192,7 @@ export async function planErpAssignment(
     selection: ErpProductSelection,
 ): Promise<AssignPlan> {
     const state = await readAssignState(target, deps);
-    if (!state.value) return { refusal: state.refusal ?? `${state.erp.name} has no ${OWNER_CODE} value.` };
+    if (state.value === undefined) return { refusal: state.refusal ?? `${state.erp.name} has no ${OWNER_CODE} value.` };
     const { preview, toWrite } = previewAssignment({ ...state, selection, value: state.value });
     return { preview, toWrite, value: state.value };
 }

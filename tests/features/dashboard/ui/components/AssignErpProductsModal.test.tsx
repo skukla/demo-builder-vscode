@@ -210,6 +210,35 @@ describe('AssignErpProductsModal', () => {
         expect(shownSkus()).toEqual(['CAB-30', 'ACC-9', 'ACC-3', 'ACC-1']);
     });
 
+    // Its own products are greyed here, so until a pick the line says where to give them away
+    // (owner, 2026-10-19).
+    it('says how to move its own products elsewhere until something is picked', async () => {
+        await open();
+        const hint = LIST_COPY.elsewhere('Accuform ERP');
+        expect(screen.getByText(hint)).toBeInTheDocument();
+        pick('ACC-1');
+        expect(screen.queryByText(hint)).toBeNull();
+        expect(screen.getByTestId('assign-preview')).toBeInTheDocument();
+    });
+
+    // The ERP on every product no other ERP claims owns the untagged ones: a product moves to
+    // it by losing its tag, so its value is '' (owner, 2026-10-19).
+    it('assigns to the catch-all ERP: the untagged are its own, a tagged one moves to it', async () => {
+        const catchAll: ErpAssignOptions = {
+            ...STORE,
+            erp: { id: 'demo-erp', name: 'Justrite ERP', listId: 'justrite' },
+            ownerValue: '',
+            setsWithoutOwner: [],
+        };
+        const { onAssign } = await open(catchAll);
+        expect(row('ACC-1')).toHaveAttribute('aria-disabled', 'true');
+        expect(row('ACC-1')).toHaveTextContent(LIST_COPY.already('Justrite ERP'));
+        pick('ACC-3');
+        expect(screen.getByTestId('assign-preview')).toHaveTextContent("1 selected. They move to Justrite ERP. 1 of them is Accuform ERP's now.");
+        fireEvent.click(screen.getByRole('button', { name: 'Assign 1 product' }));
+        expect(onAssign).toHaveBeenCalledWith({ ...TARGET }, { by: 'skus', skus: ['ACC-3'] });
+    });
+
     it("locks a product already this ERP's, and one whose attribute set has no erp_owner, saying why", async () => {
         await open();
         expect(row('ACC-3')).toHaveAttribute('aria-selected', 'true');

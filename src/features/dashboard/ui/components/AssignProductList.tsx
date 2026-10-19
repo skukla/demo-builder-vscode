@@ -26,7 +26,7 @@
  * @module features/dashboard/ui/components/AssignProductList
  */
 
-import { ActionButton, Cell, Column, Item, Picker, Row, SearchField, TableBody, TableHeader, TableView } from '@adobe/react-spectrum';
+import { ActionButton, Cell, Column, Item, Picker, Row, SearchField, TableBody, TableHeader, TableView, Text } from '@adobe/react-spectrum';
 import type { Selection, SortDescriptor } from '@react-types/shared';
 import React, { useMemo, useState } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
@@ -55,6 +55,7 @@ export const LIST_COPY = {
     clear: 'Clear',
     blocked: "Can't be tagged (no erp_owner in its set)",
     already: (erp: string) => `Already ${erp}'s`,
+    elsewhere: (erp: string) => `To move ${erp}'s products to another ERP, open Assign products on that ERP.`,
     nothing: 'No products match.',
 };
 
@@ -236,6 +237,7 @@ export function AssignProductList({ options, value, selected, onChange, summary,
     const locked = shown.filter((row) => row.locked).map((row) => row.product.sku);
     const already = shown.filter((row) => row.locked === 'already').map((row) => row.product.sku);
     const picking = selected.size > 0 || filters.selectedOnly;
+    const holdsSome = rows.some((row) => row.locked === 'already');
     const owners = [
         { value: ANY, label: LIST_COPY.anyOwner },
         ...Object.entries(options.names).map(([id, name]) => ({ value: id, label: name })),
@@ -310,7 +312,11 @@ export function AssignProductList({ options, value, selected, onChange, summary,
             {/* The line keeps its height when empty, so the table does not resize as a pick
                 starts or ends. */}
             <div className="assign-counts">
-                <div className="assign-summary-slot">{summary}</div>
+                {/* What the pick would do; until there is one, for an ERP holding products, the
+                    way to give them away (owner, 2026-10-19: its own are greyed here). */}
+                <div className="assign-summary-slot">
+                    {summary ?? (holdsSome && <Text UNSAFE_className="text-gray-700 text-sm">{LIST_COPY.elsewhere(options.erp.name)}</Text>)}
+                </div>
                 {picking && (
                     <>
                         <ActionButton isQuiet onPress={() => set({ selectedOnly: !filters.selectedOnly })}>
