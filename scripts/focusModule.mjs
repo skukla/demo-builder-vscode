@@ -210,20 +210,51 @@ export function uncoveredModules(report) {
  * @param mutate     the modules the focus is aimed at
  * @param selected   the suites the jest config names now
  * @param uncovered  `uncoveredModules(report)` for the run just finished
+ * REFUSED, PER MODULE (PL-71). Two widens fail rather than measure, and both were met
+ * in one day (2026-10-10). More than {@link WIDEN_LIMIT} importers: a core utility
+ * brought 384 suites, and 60- and 72-suite widens hit the 12-minute limit with no
+ * result, leaving the focus widened for the next run; 17 finished in 1.4 minutes. And
+ * an importer in the OTHER test environment: one React suite among node ones puts the
+ * whole focus under jsdom, where `setImmediate` does not exist and the dry run dies. A
+ * refused module is named with its reason and the rest of the widen goes ahead.
+ *
  * @param related    module -> importing suites; handed in so the controls need no jest
- * @returns `{ suites, added }` — the new selection, and what was added per module
+ * @param isReact    suite -> runs under jsdom; handed in for the same reason
+ * @returns `{ suites, added, refused }` — the new selection, what was added per module,
+ *          and why each refused module was left alone
  */
-export function widenSelection({ mutate, selected, uncovered, related }) {
+export function widenSelection({ mutate, selected, uncovered, related, isReact = isReactSuite }) {
     const suites = new Set(selected);
     const added = {};
+    const refused = {};
+    const envs = new Set(selected.map(isReact));
     for (const m of mutate) {
         if (!uncovered.includes(m)) continue;
         const extra = related(m).filter((s) => !suites.has(s));
         if (!extra.length) continue;
+        const why = widenRefusal(extra, envs, isReact);
+        if (why) {
+            refused[m] = why;
+            continue;
+        }
         added[m] = extra;
         for (const s of extra) suites.add(s);
     }
-    return { suites: [...suites].sort(), added };
+    return { suites: [...suites].sort(), added, refused };
+}
+
+/** Importing suites one module may add before the widen is refused (PL-71). */
+export const WIDEN_LIMIT = 40;
+
+function widenRefusal(extra, envs, isReact) {
+    if (extra.length > WIDEN_LIMIT) {
+        return `${extra.length} importing suites, over the ${WIDEN_LIMIT} a measurement finishes with; measure it alone and write direct tests`;
+    }
+    const other = extra.filter((s) => envs.size === 1 && !envs.has(isReact(s)));
+    if (other.length) {
+        return `${other[0]} runs in the other test environment, which would put every suite under jsdom`;
+    }
+    return '';
 }
 
 /** The suites `jest.focus.config.js` names now, as repo-relative paths. */
@@ -248,12 +279,13 @@ function widen(stryker) {
         console.error('Measure first: npm run test:mutation:focus');
         process.exit(1);
     }
-    const { suites, added } = widenSelection({
+    const { suites, added, refused } = widenSelection({
         mutate,
         selected: selectedSuites(),
         uncovered: uncoveredModules(report),
         related: relatedSuites,
     });
+    for (const [m, why] of Object.entries(refused)) console.log(`Not widened ${m}: ${why}`);
     if (!Object.keys(added).length) {
         console.log('Nothing to add: every mutant is covered, or nothing else imports the module(s).');
         process.exit(3);

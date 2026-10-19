@@ -14,7 +14,7 @@
  * Run directly (`node scripts/focusModule.selftest.mjs`) or via its jest wrapper,
  * `tests/scripts/focusModule.test.ts`.
  */
-import { uncoveredModules, widenSelection } from './focusModule.mjs';
+import { uncoveredModules, WIDEN_LIMIT, widenSelection } from './focusModule.mjs';
 
 /** A Stryker-shaped report: module -> list of mutant statuses. */
 const report = (spec) => ({
@@ -105,6 +105,45 @@ function control(label, ok, detail) {
 {
     const r = report({ 'src/a/x.ts': ['Survived', 'Killed'], 'src/a/y.ts': ['Killed', 'NoCoverage'] });
     control('E-only-NoCoverage-counts-as-uncovered', same(uncoveredModules(r), ['src/a/y.ts']), JSON.stringify(uncoveredModules(r)));
+}
+
+// F: too many importers — refused, named, and the other member still widens (PL-71).
+{
+    const many = Array.from({ length: WIDEN_LIMIT + 1 }, (_, i) => `tests/b/importer${i}.test.ts`);
+    const graph = { ...GRAPH, 'src/b/everywhere.ts': many };
+    const r = report({ 'src/b/everywhere.ts': ['NoCoverage'], 'src/a/updateCore.ts': ['NoCoverage'] });
+    const out = widenSelection({
+        mutate: ['src/b/everywhere.ts', 'src/a/updateCore.ts'],
+        selected: ['tests/a/updateCore.test.ts'],
+        uncovered: uncoveredModules(r),
+        related: (m) => graph[m] ?? [],
+        isReact: () => false,
+    });
+    control(
+        'F-a-module-with-too-many-importers-is-refused-and-named',
+        !out.suites.includes(many[0]) &&
+            /41 importing suites/.test(out.refused['src/b/everywhere.ts'] ?? '') &&
+            out.suites.includes('tests/a/updateExecutor.test.ts'),
+        JSON.stringify(out.refused)
+    );
+}
+
+// G: an importer in the other environment would put the node suites under jsdom (PL-71).
+{
+    const graph = { 'src/c/util.ts': ['tests/c/util.test.ts', 'tests/c/Field.test.tsx'] };
+    const r = report({ 'src/c/util.ts': ['NoCoverage'] });
+    const out = widenSelection({
+        mutate: ['src/c/util.ts'],
+        selected: ['tests/c/util.test.ts'],
+        uncovered: uncoveredModules(r),
+        related: (m) => graph[m] ?? [],
+        isReact: (s) => s.endsWith('.tsx'),
+    });
+    control(
+        'G-a-widen-that-would-mix-environments-is-refused',
+        same(out.suites, ['tests/c/util.test.ts']) && /Field\.test\.tsx/.test(out.refused['src/c/util.ts'] ?? ''),
+        JSON.stringify(out)
+    );
 }
 
 console.log(failed ? `\n${failed} CONTROL(S) BROKEN` : '\nALL CONTROLS PASSED');
