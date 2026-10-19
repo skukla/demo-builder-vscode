@@ -87,6 +87,22 @@ describe('previewErpAdd', () => {
         ]);
     });
 
+    // Owner, 2026-10-19: an ERP already added that owns nothing gets Assign products on its
+    // line. Not the one being added (it does not exist yet), and not one holding products.
+    it('marks an ERP already added, owning nothing by its own tag, as one to assign to', () => {
+        const acme: ErpOwnsEntry & { name: string } = { erp: 'acme', name: 'Acme ERP', owns: { mode: 'attribute', attribute: 'erp_owner=acme' } };
+        const fresh: ErpOwnsEntry & { name: string } = { erp: 'fresh', name: 'Fresh ERP', owns: { mode: 'attribute', attribute: 'erp_owner=fresh' } };
+        const accuform: ErpOwnsEntry & { name: string } = { erp: 'accuform', name: 'Accuform ERP', owns: { mode: 'attribute', attribute: 'erp_owner=accuform' } };
+        const input = { websites: WEBSITES, erps: [JUSTRITE_ALL, accuform, acme] };
+        const preview = previewErpAdd(PRODUCTS, input, fresh);
+        expect(previewLines(preview, [JUSTRITE_ALL, accuform, acme, fresh], NAMED)).toStrictEqual([
+            { who: 'Justrite ERP', count: '3 products', says: 'All products not assigned to another ERP' },
+            { who: 'Accuform ERP', count: '2 products', says: 'Products assigned to it' },
+            { who: 'Acme ERP', count: '0 products', says: 'None yet', assignable: true },
+            { who: 'Fresh ERP', count: '0 products', says: 'None yet: assign products to it after adding' },
+        ]);
+    });
+
     it('says the catch-all and an ERP holding its own products plainly', () => {
         const accuform = { erp: 'accuform', name: 'Accuform ERP', owns: { mode: 'attribute' as const, attribute: 'erp_owner=accuform' } };
         const preview = previewErpAdd(PRODUCTS, { websites: WEBSITES, erps: [JUSTRITE_ALL] }, accuform);

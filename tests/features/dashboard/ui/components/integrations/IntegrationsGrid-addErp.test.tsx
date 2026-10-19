@@ -2,12 +2,14 @@
  * IntegrationsGrid — "Add another ERP" on the ERP integration's card (AB-16). The menu item
  * opens a name prompt; Add sends `addErp` with the integration's id and the typed name,
  * straight into the progress modal. A name the project already has is refused in the prompt.
- * An added ERP's Remove says the integration stays.
+ * An added ERP's Remove says the integration stays. An ERP already added that owns nothing
+ * is offered Assign products in the prompt, which closes it and opens that ERP's.
  */
 
 import { screen, within } from '@testing-library/react';
 import { getClient, openPanel, renderCards, resetGridMocks, setupUser } from './IntegrationsGrid.testUtils';
 import type { IntegrationCardModel, LinkedCard } from '@/core/ui/components/integrations/integrationCardModel.types';
+import type { ErpOwnershipOptionsResult } from '@/types/erpOwnership';
 
 const INTEGRATION_LINK: LinkedCard = {
     id: 'erp-integration',
@@ -43,7 +45,7 @@ const erpCard = (id: string, name: string, over: Partial<IntegrationCardModel> =
         typeBadge: 'ERP',
         kindLabel: 'ERP',
         urlLabel: 'Screen',
-        menuActions: ['open', 'load-demo-data', 'reset-records', 'redeploy', 'remove'],
+        menuActions: ['open', 'assign-products', 'simulate-downtime', 'redeploy', 'remove'],
         linked: { cards: [INTEGRATION_LINK] },
         ...over,
     });
@@ -88,6 +90,32 @@ describe('IntegrationsGrid — Add another ERP', () => {
         expect(within(dialog).getByText('An ERP named "acme ERP" is already in this project. Pick another name.')).toBeInTheDocument();
         await user.click(within(dialog).getByRole('button', { name: 'Add' }));
         expect(getClient().postMessage).not.toHaveBeenCalledWith('addErp', expect.anything());
+    });
+
+    it('Assign products on an ERP that owns nothing closes the prompt and opens that ERP\'s', async () => {
+        const store: ErpOwnershipOptionsResult = {
+            success: true,
+            data: {
+                websites: [],
+                products: [{ sku: 'A', websiteCodes: [], attributes: {} }],
+                erps: [
+                    { erp: 'acme', name: 'Acme ERP', owns: { mode: 'all' } },
+                    { erp: 'brand-b', name: 'Brand B ERP', owns: { mode: 'attribute', attribute: 'erp_owner=brand-b' } },
+                ],
+                takenListIds: ['acme', 'brand-b'],
+            },
+        };
+        getClient().request.mockResolvedValue(store);
+        const erpAssign = { openAssign: jest.fn(), confirmUndoAssignment: jest.fn() };
+        const user = setupUser();
+        renderCards([integrationCard(), erpCard('demo-erp', 'Acme ERP'), erpCard('demo-erp-2', 'Brand B ERP')], { erpAssign });
+        const panel = await openPanel(user, 'Acme ERP Integration', 'Deployed');
+        await user.click(within(panel).getByRole('button', { name: /^add another erp$/i }));
+
+        await user.click(await screen.findByRole('button', { name: 'Assign products to Brand B ERP' }));
+
+        expect(erpAssign.openAssign).toHaveBeenCalledWith({ id: 'erp-integration', erp: 'demo-erp-2', name: 'Brand B ERP' });
+        expect(screen.queryByRole('dialog', { name: 'Add another ERP' })).toBeNull();
     });
 
     it("an added ERP's Remove says the integration stays", async () => {

@@ -117,7 +117,7 @@ export async function mapAfterFill(
         return { mapping, ...(warning ? { note: warning } : {}) };
     } catch (error) {
         const reason = clause(error instanceof Error ? error.message : String(error));
-        const note = `Demo data loaded; the integration's mapping was not filled: ${reason}. Load demo data again to retry.`;
+        const note = `Demo data loaded; the integration's mapping was not filled: ${reason}. Fill ERPs from Commerce again to retry.`;
         onProgress?.(note);
         return { note };
     }

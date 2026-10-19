@@ -63,13 +63,12 @@ describe('deriveSystemCard', () => {
         });
     });
 
-    it('offers its screen, fill from Commerce, simulated downtime, redeploy and remove while both halves are deployed', () => {
+    it('offers its screen, simulated downtime, redeploy and remove while both halves are deployed', () => {
         const card = deriveSystemCard(erp(), undefined, usedBy(), CATALOG);
-        // Simulated downtime (AB-59) sits beside its fill. Its look is not offered here: it is set
-        // on the ERP's own screen (owner, 2026-10-02).
+        // No fill: the integration's covers every ERP (owner, 2026-10-19). Its look is not
+        // offered here: it is set on the ERP's own screen (owner, 2026-10-02).
         expect(card.menuActions).toEqual([
             'open',
-            'load-demo-data',
             'simulate-downtime',
             'redeploy',
             'remove',
@@ -133,14 +132,13 @@ describe('deriveIntegrationCard with systems', () => {
         expect(card.linked).toEqual({ cards: [system] });
         // Its own status: a broken system shows on the system's card, not here.
         expect(card.status).toBe('deployed');
-        // The ERP verbs lead the deployed ERP integration's menu (AB-16; order, 2026-10-18).
+        // Prepare this store first, on an entry whose setup steps declare a fix (AB-77), then
+        // the ERP verbs (AB-16; order, 2026-10-18 and 2026-10-19).
         expect(card.menuActions).toEqual([
+            'prepare-store',
             'add-erp',
             'load-demo-data',
             'reset-records',
-            // Prepare this store, on an entry whose setup steps declare a fix (AB-77).
-            'prepare-store',
-            'manage-apis',
             'redeploy',
             'open',
             'remove',

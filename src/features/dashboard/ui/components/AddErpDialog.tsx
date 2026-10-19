@@ -25,7 +25,7 @@
  * @module features/dashboard/ui/components/AddErpDialog
  */
 
-import { DialogContainer, Flex, Text, TextField, View } from '@adobe/react-spectrum';
+import { ActionButton, DialogContainer, Flex, Text, TextField, View } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { ErpOwnershipPicker, ruleOf, type OwnershipChoice, type StoreReadState } from './ErpOwnershipPicker';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
@@ -50,6 +50,7 @@ export const ADD_ERP_COPY = {
     readFailed: "Couldn't read the store",
     stillAdd: 'You can still add the ERP.',
     add: 'Add',
+    assign: 'Assign products',
 };
 
 /** The ERP integration an ERP is added to, while the prompt is open. */
@@ -65,6 +66,11 @@ export interface AddErpDialogProps {
     takenNames: string[];
     onAdd: (name: string, owns: ErpOwnsRule) => void;
     onClose: () => void;
+    /**
+     * Assign products to an ERP already added that owns nothing yet, by its name: the screen
+     * closes this dialog and opens that one (owner, 2026-10-19).
+     */
+    onAssign?: (erpName: string) => void;
 }
 
 /** The attribute: the default, and the one rule that needs nothing from the store. */
@@ -82,13 +88,13 @@ const NOTHING = (): number => 0;
  * @param props - the integration, the taken names, and the two callbacks
  * @returns the dialog container
  */
-export function AddErpDialog({ target, takenNames, onAdd, onClose }: AddErpDialogProps): React.ReactElement {
+export function AddErpDialog({ target, takenNames, onAdd, onClose, onAssign }: AddErpDialogProps): React.ReactElement {
     // Nothing mounted while closed, not an empty DialogContainer: the screen hosts this beside
     // its own dialogs, and an empty container still occupies the dialog slot (SetupGuideModal).
     if (target === undefined) return <></>;
     return (
         <DialogContainer onDismiss={onClose}>
-            <AddErpForm target={target} takenNames={takenNames} onAdd={onAdd} onClose={onClose} />
+            <AddErpForm target={target} takenNames={takenNames} onAdd={onAdd} onClose={onClose} onAssign={onAssign} />
         </DialogContainer>
     );
 }
@@ -106,10 +112,11 @@ const PREVIEW_SPACE = '112px';
  * Assign products has, the preview as lines of text as Assign products has, and the section
  * label in the house class Export uses.
  */
-function AfterAdding({ store, options, added }: {
+function AfterAdding({ store, options, added, onAssign }: {
     store: StoreReadState;
     options: ErpOwnershipOptions | null;
     added?: { erp: string; name: string; owns: ErpOwnsRule };
+    onAssign?: (erpName: string) => void;
 }): React.ReactElement {
     const lines = useMemo(() => {
         if (!options) return undefined;
@@ -144,13 +151,20 @@ function AfterAdding({ store, options, added }: {
         // line in the help-text size, so it never wraps mid-thought (owner, 2026-10-18).
         body = (
             <Flex direction="column" gap="size-100" data-testid="add-erp-preview">
-                {lines.map(({ who, count, says }) => (
+                {lines.map(({ who, count, says, assignable }) => (
                     <div key={who} data-testid="add-erp-preview-row">
                         <Flex justifyContent="space-between" gap="size-200">
                             <Text>{who}</Text>
                             <Text>{count}</Text>
                         </Flex>
-                        <Text UNSAFE_className="text-gray-700 text-sm">{says}</Text>
+                        <Flex justifyContent="space-between" alignItems="center" gap="size-200">
+                            <Text UNSAFE_className="text-gray-700 text-sm">{says}</Text>
+                            {assignable && onAssign && (
+                                <ActionButton isQuiet aria-label={`${ADD_ERP_COPY.assign} to ${who}`} onPress={() => onAssign(who)}>
+                                    {ADD_ERP_COPY.assign}
+                                </ActionButton>
+                            )}
+                        </Flex>
                     </div>
                 ))}
             </Flex>
@@ -171,7 +185,7 @@ function storeStateOf(loading: boolean, error: string | null): StoreReadState {
 }
 
 /** The open prompt: mounted per opening, so each starts empty. */
-function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & { target: AddErpTarget }) {
+function AddErpForm({ target, takenNames, onAdd, onClose, onAssign }: AddErpDialogProps & { target: AddErpTarget }) {
     const [name, setName] = useState('');
     const [choice, setChoice] = useState<OwnershipChoice>(ATTRIBUTE_FIRST);
     const { options, error, loading } = useErpOwnershipOptions(target.id);
@@ -237,7 +251,7 @@ function AddErpForm({ target, takenNames, onAdd, onClose }: AddErpDialogProps & 
                     count={count}
                     store={store}
                 />
-                <AfterAdding store={store} options={options} added={added} />
+                <AfterAdding store={store} options={options} added={added} onAssign={onAssign} />
             </Flex>
             </SteadyHeight>
         </Modal>

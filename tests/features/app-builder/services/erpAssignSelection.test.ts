@@ -11,7 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 import {
-    choicesOf,
+    categoryChoicesOf,
     inSelection,
     listAssignableProducts,
     ownerBody,
@@ -102,13 +102,9 @@ describe('selections', () => {
         expect(selectionProblem({ by: 'brand', brand: 'Accuform' })).toBeUndefined();
     });
 
-    it('offers the categories and brands with counts, most products first', () => {
-        const { categories, brands } = choicesOf(ROWS, new Map([['7', 'Signs']]));
-        expect(categories).toEqual([
-            { value: '7', label: 'Signs', count: 4 },
-            { value: '8', label: 'Category 8', count: 1 },
-        ]);
-        expect(brands[0]).toEqual({ value: 'Accuform', label: 'Accuform', count: 4 });
+    it('offers the labelled categories with counts, most products first, and leaves out an unlabelled one', () => {
+        // 8 has no label: it is in another catalog (listCategoryLabels).
+        expect(categoryChoicesOf(ROWS, new Map([['7', 'Signs']]))).toStrictEqual([{ value: '7', label: 'Signs', count: 4 }]);
     });
 });
 

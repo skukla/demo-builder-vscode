@@ -13,7 +13,7 @@ import {
 } from '@/features/project-creation/services/erpFillForProject';
 
 const RESULT = { partners: 1, products: 2, skipped: 0 };
-const WARNING = 'Demo data loaded; prices were not published: boom. Load demo data again to retry.';
+const WARNING = 'Demo data loaded; prices were not published: boom. Fill ERPs from Commerce again to retry.';
 const NOTE = 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.';
 
 describe('fillWarnings', () => {

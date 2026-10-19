@@ -112,7 +112,7 @@ function bulkNotes(outcome: CommerceBulkOutcome): string[] {
         notes.push(`Commerce refused ${outcome.failed.length} of ${outcome.total} product saves (first: ${sentence(first)})`);
     }
     if (outcome.timedOut) {
-        notes.push(`${outcome.open} product saves were still queued in Commerce when Demo Builder stopped waiting; they finish by themselves. Run Load demo data once they have.`);
+        notes.push(`${outcome.open} product saves were still queued in Commerce when Demo Builder stopped waiting; they finish by themselves. Run Fill ERPs from Commerce once they have.`);
     }
     return notes;
 }
@@ -160,7 +160,7 @@ async function passAfterWrite(context: HandlerContext, opened: Opened, report: R
         },
         'assign',
     );
-    if (applied.status === 'failed') return { notes: [`The ERPs were not filled with what they now own: ${sentence(applied.detail)} Use Load demo data.`] };
+    if (applied.status === 'failed') return { notes: [`The ERPs were not filled with what they now own: ${sentence(applied.detail)} Use Fill ERPs from Commerce.`] };
     return {
         notes: applied.notes,
         ownership: { erps: applied.erps.map((erp) => ({ erp: erp.erp, name: erp.name, owns: erp.ownsNow })), unowned: applied.unowned },

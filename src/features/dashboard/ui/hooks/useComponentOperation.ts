@@ -104,7 +104,7 @@ export interface ComponentOperationControls extends OperationRunnerControls {
     /** Run the ERP reset the integration card's confirmation dialog just agreed to. */
     resetErp: (id: string) => void;
     /** Fill an ERP from Commerce; `id` is the integration it runs through, `erp` which of its ERPs. */
-    loadErpData: (id: string, erpName: string, erp?: string) => void;
+    loadErpData: (id: string, erpName: string) => void;
     /** Add another ERP to the integration `id`, named `erpName`, owning what `owns` says (AB-16, AB-64). */
     addErp: (id: string, erpName: string, owns: ErpOwnsRule) => void;
 }
@@ -146,14 +146,16 @@ export function useComponentOperation(): ComponentOperationControls {
         [start],
     );
 
-    /** The ERP fill: through the integration's id, like the reset; the card confirms first (ErpConfirmDialogs). */
+    /**
+     * The ERP fill, every ERP: through the integration's id, like the reset; the card confirms
+     * first (ErpConfirmDialogs). One ERP alone is the agent's (`load_erp_demo_data` with `erp`).
+     */
     const loadErpData = useCallback(
-        (id: string, erpName: string, erp?: string): void => {
+        (id: string, erpName: string): void => {
             start({
                 id,
                 name: erpName,
                 message: 'loadErpDemoData',
-                ...(erp ? { payload: { erp } } : {}),
                 title: `Filling ${erpName} from Commerce`,
                 failureTitle: `Couldn't fill ${erpName} from Commerce`,
                 successTitle: `${erpName} filled from Commerce`,

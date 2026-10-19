@@ -35,6 +35,7 @@ export interface AssignProductRow extends ErpAssignProduct {
 
 interface RawProduct {
     sku: string;
+    name?: string;
     attribute_set_id?: number;
     custom_attributes?: Array<{ attribute_code: string; value: unknown }>;
     extension_attributes?: {
@@ -83,11 +84,28 @@ function brandOf(value: string | undefined, labels: ReadonlyMap<string, string>)
     return labels.get(value) ?? value;
 }
 
-/** Enabled products (status 1), the ones the ERPs are filled with, in the fields an assignment reads. */
-export async function listAssignableProducts(get: CommerceGet): Promise<AssignProductRow[]> {
+/**
+ * Only the fields `RawProduct` reads. A full product carries stock, media and links besides:
+ * on Justrite a page of 100 was 477 KB and 6.4 s in full, 275 KB and 2.2 s trimmed
+ * (measured 2026-10-19). `total_count` stays, as the paging reads it.
+ */
+const PRODUCT_FIELDS =
+    '&fields=total_count,items[sku,name,attribute_set_id,custom_attributes,extension_attributes[category_links,website_ids]]';
+
+/**
+ * Enabled products (status 1), the ones the ERPs are filled with, in the fields an assignment
+ * reads; with a website id, only the products on that website (Commerce filters on
+ * `website_id`: Justrite's 139 of the sandbox's 321, 2026-10-19).
+ */
+export async function listAssignableProducts(get: CommerceGet, websiteId?: number): Promise<AssignProductRow[]> {
     const status =
         '&searchCriteria[filter_groups][0][filters][0][field]=status&searchCriteria[filter_groups][0][filters][0][value]=1';
-    const [items, labels] = await Promise.all([readAllPages<RawProduct>(get, 'products', status), brandLabels(get)]);
+    const website =
+        websiteId === undefined
+            ? ''
+            : `&searchCriteria[filter_groups][1][filters][0][field]=website_id&searchCriteria[filter_groups][1][filters][0][value]=${websiteId}`;
+    const criteria = `${status}${website}${PRODUCT_FIELDS}`;
+    const [items, labels] = await Promise.all([readAllPages<RawProduct>(get, 'products', criteria), brandLabels(get)]);
     return items
         .filter((product) => product.sku)
         .map((product) => {
@@ -95,6 +113,7 @@ export async function listAssignableProducts(get: CommerceGet): Promise<AssignPr
             const brand = brandOf(attributes[BRAND], labels);
             return {
                 sku: product.sku,
+                ...(product.name ? { name: product.name } : {}),
                 attributeSetId: Number(product.attribute_set_id),
                 categoryIds: categoriesOf(product),
                 ...(brand ? { brand } : {}),
@@ -105,10 +124,47 @@ export async function listAssignableProducts(get: CommerceGet): Promise<AssignPr
         });
 }
 
-/** The store's category names by id (`GET categories/list`). */
-export async function listCategoryNames(get: CommerceGet): Promise<Map<string, string>> {
-    const items = await readAllPages<{ id: number | string; name?: string }>(get, 'categories/list');
-    return new Map(items.map((category) => [String(category.id), category.name ?? `Category ${category.id}`]));
+/** One website's store, as the Assign products modal is scoped to it. */
+export interface StoreScope {
+    websiteId: number;
+    websiteName: string;
+    rootCategoryId: string;
+}
+
+/**
+ * The project's website and the root catalog its store shows, by the website's code: a shared
+ * sandbox holds several demos' catalogs, and the SC assigns from their own (owner,
+ * 2026-10-18). Undefined when the code is unset or Commerce has no such website.
+ */
+export async function storeScopeOf(get: CommerceGet, websiteCode: string | undefined): Promise<StoreScope | undefined> {
+    if (!websiteCode) return undefined;
+    const sites = ((await get('store/websites')) ?? []) as Array<{ id: number | string; code: string; name: string; default_group_id?: number | string }>;
+    const site = sites.find((candidate) => candidate.code === websiteCode);
+    if (!site) return undefined;
+    const groups = ((await get('store/storeGroups')) ?? []) as Array<{ id: number | string; root_category_id?: number | string }>;
+    const group = groups.find((candidate) => String(candidate.id) === String(site.default_group_id));
+    if (!group?.root_category_id) return undefined;
+    return { websiteId: Number(site.id), websiteName: site.name, rootCategoryId: String(group.root_category_id) };
+}
+
+/**
+ * The store's category labels by id (`GET categories/list`). Under a root, only that root's
+ * categories, each labelled by its path below the root ("Signs › Danger Signs"), so one
+ * catalog's categories are not mixed with another demo's. Without a root, every category by
+ * its own name.
+ */
+export async function listCategoryLabels(get: CommerceGet, rootId?: string): Promise<Map<string, string>> {
+    const items = await readAllPages<{ id: number | string; name?: string; path?: string }>(get, 'categories/list');
+    const names = new Map(items.map((category) => [String(category.id), category.name ?? `Category ${category.id}`]));
+    if (!rootId) return names;
+    const labels = new Map<string, string>();
+    for (const category of items) {
+        const ids = (category.path ?? '').split('/');
+        const at = ids.indexOf(rootId);
+        if (at === -1 || at === ids.length - 1) continue;
+        labels.set(String(category.id), ids.slice(at + 1).map((id) => names.get(id) ?? id).join(' › '));
+    }
+    return labels;
 }
 
 /** The row as the ownership resolver reads it. */
@@ -167,16 +223,17 @@ function counted(values: Array<{ value: string; label: string }>): ErpAssignChoi
     return [...byValue.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
-/** The pickers' choices: the categories and brands the products carry, each with its count. */
-export function choicesOf(
-    rows: readonly ErpAssignProduct[],
-    categoryNames: ReadonlyMap<string, string>,
-): { categories: ErpAssignChoice[]; brands: ErpAssignChoice[] } {
-    const categories = counted(
-        rows.flatMap((row) => row.categoryIds.map((id) => ({ value: id, label: categoryNames.get(id) ?? `Category ${id}` }))),
+/**
+ * The category filter's choices: the labelled categories the products carry, each with its
+ * count. A category with no label is in another catalog (`listCategoryLabels`) and is left out.
+ */
+export function categoryChoicesOf(rows: readonly ErpAssignProduct[], labels: ReadonlyMap<string, string>): ErpAssignChoice[] {
+    return counted(
+        rows.flatMap((row) => row.categoryIds.flatMap((id) => {
+            const label = labels.get(id);
+            return label ? [{ value: id, label }] : [];
+        })),
     );
-    const brands = counted(rows.flatMap((row) => (row.brand ? [{ value: row.brand, label: row.brand }] : [])));
-    return { categories, brands };
 }
 
 /** Everything the preview is worked out from. */

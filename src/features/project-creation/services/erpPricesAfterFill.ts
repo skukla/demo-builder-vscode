@@ -23,7 +23,7 @@ export interface ErpPricesPublished {
 
 /** The warning for prices that did not get published after a fill that did: the SC retries. */
 function pricesWarning(reason: string): string {
-    return `Demo data loaded; ${reason}. Load demo data again to retry.`;
+    return `Demo data loaded; ${reason}. Fill ERPs from Commerce again to retry.`;
 }
 
 /**

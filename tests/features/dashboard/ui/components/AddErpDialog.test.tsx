@@ -54,13 +54,14 @@ async function flush(): Promise<void> {
 
 async function open() {
     const onAdd = jest.fn();
+    const onAssign = jest.fn();
     render(
         <Provider theme={defaultTheme}>
-            <AddErpDialog target={TARGET} takenNames={['Acme ERP']} onAdd={onAdd} onClose={jest.fn()} />
+            <AddErpDialog target={TARGET} takenNames={['Acme ERP']} onAdd={onAdd} onClose={jest.fn()} onAssign={onAssign} />
         </Provider>,
     );
     await flush();
-    return { onAdd };
+    return { onAdd, onAssign };
 }
 
 const radio = (name: RegExp) => screen.getByRole('radio', { name });
@@ -153,6 +154,22 @@ describe('AddErpDialog — After adding', () => {
             'Acme ERP | 3 products | All products not assigned to another ERP',
             'Evo ERP | 0 products | None yet: assign products to it after adding',
         ]);
+    });
+
+    it('offers Assign products on an ERP already added that owns nothing, and only there', async () => {
+        const kept: ErpOwnershipOptions['erps'][number] = { erp: 'kept', name: 'Kept ERP', owns: { mode: 'attribute', attribute: 'erp_owner=kept' } };
+        mockRequest.mockResolvedValue(answers({ ...STORE, erps: [...STORE.erps, kept], takenListIds: ['acme', 'kept'] }));
+        const { onAssign } = await open();
+        typeName('Evo ERP');
+
+        expect(rows()).toStrictEqual([
+            'Acme ERP | 3 products | All products not assigned to another ERP',
+            'Kept ERP | 0 products | None yet',
+            'Evo ERP | 0 products | None yet: assign products to it after adding',
+        ]);
+        expect(screen.getAllByRole('button', { name: /^Assign products/ })).toHaveLength(1);
+        fireEvent.click(screen.getByRole('button', { name: 'Assign products to Kept ERP' }));
+        expect(onAssign).toHaveBeenCalledWith('Kept ERP');
     });
 
     it('follows the rule: a website rule narrows the catch-all and says so', async () => {

@@ -235,7 +235,7 @@ describe('handleLoadErpDemoData — several ERPs', () => {
             success: true,
             data: {
                 warning:
-                    'Brand B ERP: Demo data loaded; prices were not published: ERP prices answered 502: bad gateway. Load demo data again to retry.',
+                    'Brand B ERP: Demo data loaded; prices were not published: ERP prices answered 502: bad gateway. Fill ERPs from Commerce again to retry.',
             },
         });
     });
@@ -367,8 +367,8 @@ describe('handleLoadErpDemoData — mapping', () => {
         });
 
         const warning =
-            'Demo data loaded; the mapping for website bodea was not saved: ERP erps answered 500: store unavailable. Load demo data again to retry. ' +
-            'Demo data loaded; prices were not published: ERP prices answered 500: down. Load demo data again to retry.';
+            'Demo data loaded; the mapping for website bodea was not saved: ERP erps answered 500: store unavailable. Fill ERPs from Commerce again to retry. ' +
+            'Demo data loaded; prices were not published: ERP prices answered 500: down. Fill ERPs from Commerce again to retry.';
         expect(result).toMatchObject({ success: true, data: { warning } });
         expect(mockContext.sendMessage).toHaveBeenLastCalledWith('operationProgress', {
             id: 'erp-integration',

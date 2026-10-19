@@ -317,7 +317,7 @@ describe('handleRemoveAppBuilderComponent — an ERP leaving a multi-ERP integra
 
         expect(result).toMatchObject({
             success: true,
-            data: { warning: 'Ownership was not applied across the remaining ERPs: Adobe sign-in required. Use Load demo data on the integration.' },
+            data: { warning: "Ownership was not applied across the remaining ERPs: Adobe sign-in required. Use Fill ERPs from Commerce on the integration's card." },
         });
     });
 

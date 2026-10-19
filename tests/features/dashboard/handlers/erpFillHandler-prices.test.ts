@@ -67,7 +67,7 @@ describe('handleLoadErpDemoData — prices', () => {
             data: {
                 loaded: { partners: 4, products: 182, skipped: 0 },
                 warning:
-                    'Demo data loaded; prices were not published: ERP prices answered 500: Commerce did not answer. Load demo data again to retry.',
+                    'Demo data loaded; prices were not published: ERP prices answered 500: Commerce did not answer. Fill ERPs from Commerce again to retry.',
             },
         });
         expect(result.data).not.toHaveProperty('loaded.prices');
@@ -86,7 +86,7 @@ describe('handleLoadErpDemoData — prices', () => {
             id: 'erp-integration',
             state: 'succeeded',
             warning:
-                'Demo data loaded; prices were not published: ERP prices answered 500: Commerce did not answer. Load demo data again to retry.',
+                'Demo data loaded; prices were not published: ERP prices answered 500: Commerce did not answer. Fill ERPs from Commerce again to retry.',
             startedAt: expect.any(Number),
             tookMs: expect.any(Number),
         });
@@ -142,7 +142,7 @@ describe('handleLoadErpDemoData — prices', () => {
             success: true,
             data: {
                 warning:
-                    'Demo data loaded; prices were not published: ERP prices failed: Commerce answered 503. Load demo data again to retry.',
+                    'Demo data loaded; prices were not published: ERP prices failed: Commerce answered 503. Fill ERPs from Commerce again to retry.',
             },
         });
         expect(result.data).not.toHaveProperty('note');
@@ -190,7 +190,7 @@ describe('handleLoadErpDemoData — prices', () => {
             success: true,
             data: {
                 warning:
-                    'Demo data loaded; prices for 2 companies were not published: Commerce answered 400. Load demo data again to retry.',
+                    'Demo data loaded; prices for 2 companies were not published: Commerce answered 400. Fill ERPs from Commerce again to retry.',
             },
         });
     });

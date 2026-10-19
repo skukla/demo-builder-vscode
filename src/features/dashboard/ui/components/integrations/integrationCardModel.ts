@@ -141,13 +141,19 @@ const INTEGRATION_STATUSES: readonly string[] = [
  *
  * @param status - the card's normalized status
  * @param installation - the Commerce install record, when the app has one
+ * Manage APIs only on an app whose code the SC writes (a blank starter, saved or imported):
+ * it adds optional APIs to the workspace, and a pre-built app's fixed code uses none of
+ * them (owner, 2026-10-19). Its required APIs are subscribed by the deploy.
+ *
  * @param hasUpdate - newer code is recorded for it
+ * @param ownCode - the SC's own code, not a catalog app
  * @returns the menu actions, in display order
  */
 function buildMenuActions(
     status: IntegrationStatus,
     installation: IntegrationCardModel['installation'],
     hasUpdate: boolean,
+    ownCode: boolean,
 ): CardAction[] {
     if (status === 'deploying') return [];
     // The status verb leads: on a card that needs something, that something is the
@@ -191,15 +197,15 @@ function buildMenuActions(
         ...admin,
         ...redeploy,
         ...repair,
-        'manage-apis',
+        ...(ownCode ? (['manage-apis'] as CardAction[]) : []),
         'remove',
     ];
 }
 
 /**
- * A system card's kebab items: its screen, its fill from Commerce and its simulated
- * downtime (AB-59) (only while it and the integration they run through are
- * both deployed), its redeploy, its removal
+ * A system card's kebab items: its screen, Assign products and its simulated downtime
+ * (AB-59) (only while it and the integration they run through are both deployed), its
+ * redeploy, its removal
  * (which takes its integration too). No Manage APIs: a system's APIs are part
  * of the project's set, not its own choice.
  */
@@ -219,12 +225,16 @@ function buildSystemMenuActions(
     return [
         ...(verb ? [verb] : []),
         ...(url ? (['open'] as CardAction[]) : []),
-        // Its own fill only; the reset covers every ERP, so it is the integration's. Then its
-        // simulated downtime (AB-59), which reaches the ERP through the same integration. Its
-        // look is set on the ERP's own screen, not here (owner, 2026-10-02).
-        ...(resettable ? (['load-demo-data', 'simulate-downtime'] as CardAction[]) : []),
+        // In the order an SC sets an ERP up and demos it (owner, 2026-10-19): which products it
+        // owns, with the undo under it, then its data, then the demo moment.
         ...(assignable ? (['assign-products'] as CardAction[]) : []),
         ...(assignable && assign.assigned ? (['undo-assignment'] as CardAction[]) : []),
+        // No fill here: adding, removing, assigning and a settings change already refill every
+        // ERP, and Commerce changed by hand is out of date for every ERP at once, which the
+        // integration's Fill from Commerce covers (owner, 2026-10-19). Then its simulated
+        // downtime (AB-59), which reaches the ERP through the same integration. Its look is
+        // set on the ERP's own screen, not here (owner, 2026-10-02).
+        ...(resettable ? (['simulate-downtime'] as CardAction[]) : []),
         ...(status === 'deployed' ? (['redeploy'] as CardAction[]) : []),
         'remove',
     ];
@@ -352,6 +362,8 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
     sourceLine: string;
     apis?: string[];
     renamable: boolean;
+    /** A catalog app: its code is fixed, so an extra API gives it nothing to use. */
+    prebuilt?: boolean;
 } {
     // A second copy of a kind (AB-23) reads as the entry it was made from.
     const catalogEntry = getAppBuilderComponentEntry(entry.catalogId ?? entry.id);
@@ -361,6 +373,7 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
             sourceLine: formatSourceLine(entry.source),
             apis: catalogEntry.requiredApis,
             renamable: Boolean(catalogEntry.nameFromEnvVar),
+            prebuilt: true,
         };
     }
     if (entry.promotion) {
@@ -468,7 +481,7 @@ export function deriveIntegrationCard(
                     withErpActions(
                         entry,
                         face.status,
-                        buildMenuActions(face.status, installation, Boolean(entry.updateAvailable)),
+                        buildMenuActions(face.status, installation, Boolean(entry.updateAvailable), !facet.prebuilt),
                     ),
                 ),
             ),
@@ -492,11 +505,14 @@ const USE_ORDER: readonly CardAction[] = [
     'retry',
     'install',
     'sign-in',
+    // Shown only while a setup step is open, so when it is there it is what the card needs
+    // (owner, 2026-10-19).
+    'prepare-store',
     'open-admin',
     'add-erp',
     'load-demo-data',
     'reset-records',
-    'prepare-store',
+    // Back to the start, beside the reset: Prepare is gone by the time setup is done.
     'undo-store-preparation',
     'settings',
     'manage-apis',

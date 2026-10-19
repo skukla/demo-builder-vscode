@@ -171,7 +171,7 @@ describe('mapAfterFill', () => {
         expect(result.mapping?.filled).toStrictEqual([]);
         expect(result.mapping?.failed).toHaveLength(1);
         expect(result.note).toBe(
-            'Demo data loaded; the mapping for website base was not saved: ERP erps answered 500: store unavailable. Load demo data again to retry.',
+            'Demo data loaded; the mapping for website base was not saved: ERP erps answered 500: store unavailable. Fill ERPs from Commerce again to retry.',
         );
     });
 
@@ -181,7 +181,7 @@ describe('mapAfterFill', () => {
         const result = await done;
 
         expect(result).toStrictEqual({
-            note: "Demo data loaded; the integration's mapping was not filled: the ERP's setup answered 500: down. Load demo data again to retry.",
+            note: "Demo data loaded; the integration's mapping was not filled: the ERP's setup answered 500: down. Fill ERPs from Commerce again to retry.",
         });
         expect(sent.filter((call) => call.method === 'PATCH')).toStrictEqual([]);
     });

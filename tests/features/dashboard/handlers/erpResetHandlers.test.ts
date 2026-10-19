@@ -225,7 +225,7 @@ describe('handleResetErpRecords', () => {
         const { mockContext } = setupMocks(pairProject());
         allowDeveloperRole();
         const warning =
-            'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
+            'Demo data loaded; prices were not published: ERP prices answered 500: boom. Fill ERPs from Commerce again to retry.';
         mockFillErpForProject.mockResolvedValue({
             status: 'filled',
             erpId: 'demo-erp',
@@ -243,7 +243,7 @@ describe('handleResetErpRecords', () => {
         const { mockContext } = setupMocks(pairProject());
         allowDeveloperRole();
         const warning =
-            'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
+            'Demo data loaded; prices were not published: ERP prices answered 500: boom. Fill ERPs from Commerce again to retry.';
         mockFillErpForProject.mockResolvedValue({
             status: 'filled',
             erpId: 'demo-erp',

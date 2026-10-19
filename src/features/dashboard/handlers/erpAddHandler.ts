@@ -273,10 +273,10 @@ function ownsSaid(entries: ErpOwnsEntry[]): Pick<AddOutcome, 'owns' | 'existingO
     return { owns, existingOwns };
 }
 
-/** A fill that did not finish, named by its ERP; Load demo data on its card runs it again. */
+/** A fill that did not finish, named by its ERP; Fill ERPs from Commerce on the integration's card runs it again. */
 function fillFailures(fills: ErpFillOutcomes): string[] {
     return fills.flatMap((fill) =>
-        fill.status === 'failed' ? [`Demo data did not load into ${fill.name}: ${sentence(fill.detail)} Use Load demo data on its card.`] : [],
+        fill.status === 'failed' ? [`Demo data did not load into ${fill.name}: ${sentence(fill.detail)} Use Fill ERPs from Commerce on the integration's card.`] : [],
     );
 }
 
@@ -348,7 +348,7 @@ async function linkNewErp(
 /**
  * After the ERP is deployed: link it, list every ERP with the integration, fill the new one.
  * A list that could not be sent fails the add (the integration would not route to the ERP);
- * a fill that did not finish is said, and Load demo data on the ERP's card runs it again; a look
+ * a fill that did not finish is said, and Fill ERPs from Commerce on the integration's card runs it again; a look
  * that could not be checked or changed is said too.
  */
 async function listAndFill(
@@ -405,7 +405,7 @@ async function listAndFill(
         // Prices not published after a fill (AB-26z).
         notes.push(...applied.fills.flatMap((fill) => (fill.status === 'filled' && fill.warning ? [fill.warning] : [])));
     } else {
-        notes.push(`Demo data did not load: ${sentence(applied.detail)} Use Load demo data on its card.`);
+        notes.push(`Demo data did not load: ${sentence(applied.detail)} Use Fill ERPs from Commerce on the integration's card.`);
     }
     const filled = applied.status === 'applied' && applied.fills.some((fill) => fill.erp === entry.id && fill.status === 'filled');
     const warning = notes.length ? { warning: notes.join(' ') } : {};

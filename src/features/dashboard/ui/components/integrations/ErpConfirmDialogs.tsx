@@ -25,11 +25,10 @@ export interface PendingReset {
     erpNames: string[];
 }
 
-/** A fill waiting on its confirm: the integration's id, the name for the copy, one ERP's id or every ERP. */
+/** A fill waiting on its confirm: the integration's id and the name for the copy. */
 export interface PendingFill {
     id: string;
     erpName: string;
-    erp?: string;
 }
 
 export interface ErpConfirmDialogsProps {
@@ -43,7 +42,7 @@ export interface ErpConfirmDialogsProps {
 
 export interface ErpConfirms {
     askReset: (pending: PendingReset) => void;
-    askFill: (id: string, erpName: string, erp?: string) => void;
+    askFill: (id: string, erpName: string) => void;
     dialogs: ErpConfirmDialogsProps;
 }
 
@@ -56,9 +55,7 @@ export interface ErpConfirms {
 export function useErpConfirms(operations: ComponentOperationControls): ErpConfirms {
     const [reset, setReset] = useState<PendingReset | null>(null);
     const [fill, setFill] = useState<PendingFill | null>(null);
-    const askFill = useCallback((id: string, erpName: string, erp?: string): void => {
-        setFill({ id, erpName, ...(erp ? { erp } : {}) });
-    }, []);
+    const askFill = useCallback((id: string, erpName: string): void => setFill({ id, erpName }), []);
     const closeReset = useCallback((): void => setReset(null), []);
     const closeFill = useCallback((): void => setFill(null), []);
     const confirmReset = useCallback((): void => {
@@ -66,7 +63,7 @@ export function useErpConfirms(operations: ComponentOperationControls): ErpConfi
         setReset(null);
     }, [operations, reset]);
     const confirmFill = useCallback((): void => {
-        if (fill) operations.loadErpData(fill.id, fill.erpName, fill.erp);
+        if (fill) operations.loadErpData(fill.id, fill.erpName);
         setFill(null);
     }, [operations, fill]);
     return useMemo(

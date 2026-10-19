@@ -34,6 +34,7 @@ describe('an integration card that is not deployed', () => {
             integration({ status: 'error', installation: { status: 'installed' } }),
         );
 
+        // A custom app keeps Manage APIs: its own code can use what is added.
         expect(card.menuActions).toStrictEqual(['retry', 'manage-apis', 'open', 'remove']);
     });
 });
@@ -61,22 +62,22 @@ describe("the integration's own ERP verbs", () => {
             integration({ id: 'solo', catalogId: 'solo-with-setup', status: 'deployed' }),
         );
 
-        expect(card.menuActions).toStrictEqual(['manage-apis', 'redeploy', 'open', 'remove']);
+        // A pre-built app has no Manage APIs: its fixed code uses no extra API (owner, 2026-10-19).
+        expect(card.menuActions).toStrictEqual(['redeploy', 'open', 'remove']);
     });
 
-    // "Prepare this store" (AB-77) goes after them: the ERP integration's setup steps
-    // declare fixes, so its deployed card offers it too.
-    it('lead the ERP integration\'s menu, in the order an SC uses them', () => {
+    // "Prepare this store" (AB-77) goes before them: it shows only while a setup step is
+    // open, so when it is there it is what the card needs (owner, 2026-10-19).
+    it('lead the ERP integration\'s menu after Prepare, in the order an SC uses them', () => {
         const card = deriveIntegrationCard(
             integration({ id: 'erp-integration', status: 'deployed' }),
         );
 
         expect(card.menuActions).toStrictEqual([
+            'prepare-store',
             'add-erp',
             'load-demo-data',
             'reset-records',
-            'prepare-store',
-            'manage-apis',
             'redeploy',
             'open',
             'remove',
@@ -84,8 +85,9 @@ describe("the integration's own ERP verbs", () => {
     });
 });
 
-// The order an SC reaches for them (owner, 2026-10-18): the demo first, then the store's
-// setup, configuration, the repairs and the developer's link, and Remove last.
+// The order an SC reaches for them (owners, 2026-10-18 and 2026-10-19): an open setup step
+// first, then the demo, back to the start (the reset, then the preparation's undo),
+// configuration, the repairs and the developer's link, and Remove last.
 describe('the installed ERP integration, as Justrite has it', () => {
     it('lists its verbs in use order', () => {
         const card = deriveIntegrationCard(
@@ -98,13 +100,12 @@ describe('the installed ERP integration, as Justrite has it', () => {
         );
 
         expect(card.menuActions).toStrictEqual([
+            'prepare-store',
             'open-admin',
             'add-erp',
             'load-demo-data',
             'reset-records',
-            'prepare-store',
             'undo-store-preparation',
-            'manage-apis',
             'redeploy',
             'reinstall',
             'open',

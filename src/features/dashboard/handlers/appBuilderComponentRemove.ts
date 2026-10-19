@@ -142,7 +142,7 @@ async function applyOwnershipAfterRemove(
     const said =
         applied.status === 'applied'
             ? applied.notes
-            : [`Ownership was not applied across the remaining ERPs: ${applied.detail} Use Load demo data on the integration.`];
+            : [`Ownership was not applied across the remaining ERPs: ${applied.detail} Use Fill ERPs from Commerce on the integration's card.`];
     return { ...removed, warnings: [...(removed.warnings ?? []), ...said] };
 }
 

@@ -244,6 +244,16 @@ export function IntegrationsGrid({
         },
         [addingErpTo, operations],
     );
+    // An ERP already added that owns nothing: Add another ERP offers Assign products on its
+    // line, which closes that dialog and opens this one for the ERP (owner, 2026-10-19).
+    const assignFromAdd = useCallback(
+        (erpName: string): void => {
+            const erp = cards.find((card) => card.isSystem && card.name === erpName);
+            if (addingErpTo && erp) erpAssign?.openAssign({ id: addingErpTo.id, erp: erp.id, name: erp.name });
+            setAddingErpTo(null);
+        },
+        [addingErpTo, cards, erpAssign],
+    );
     const systemNames = useMemo(
         () => cards.filter((card) => card.isSystem).map((card) => card.name),
         [cards],
@@ -322,6 +332,7 @@ export function IntegrationsGrid({
                 takenNames={systemNames}
                 onAdd={addErp}
                 onClose={closeAddErp}
+                onAssign={erpAssign ? assignFromAdd : undefined}
             />
 
             <ErpDowntimeDialog target={downtime} onClose={() => setDowntime(null)} />

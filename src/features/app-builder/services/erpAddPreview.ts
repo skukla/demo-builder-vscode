@@ -93,6 +93,11 @@ export interface PreviewLine {
     who: string;
     count: string;
     says: string;
+    /**
+     * An ERP already added that owns nothing yet and is given products by hand: the dialog
+     * offers Assign products on its line (owner, 2026-10-19).
+     */
+    assignable?: boolean;
 }
 
 /**
@@ -112,7 +117,8 @@ function plainRule(entry: ErpOwnsEntry, row: { count: number; isNew: boolean }, 
         return `${exact.charAt(0).toUpperCase()}${exact.slice(1)}`;
     }
     if (row.count > 0) return 'Products assigned to it';
-    return row.isNew ? 'None yet: assign products to it after adding' : 'None yet: assign products to it';
+    // An ERP already added carries an Assign products button on its line, which says the rest.
+    return row.isNew ? 'None yet: assign products to it after adding' : 'None yet';
 }
 
 /**
@@ -132,7 +138,11 @@ export function previewLines(
     const lines: PreviewLine[] = preview.erps.map((row) => {
         const rule = ruleOf.get(row.erp) ?? { erp: row.erp, owns: { mode: 'all' as const } };
         const changes = row.narrowed ? ' (changes when this ERP is added)' : '';
-        return { who: row.name, count: productCount(row.count), says: `${plainRule(rule, row, websiteName)}${changes}` };
+        const line: PreviewLine = { who: row.name, count: productCount(row.count), says: `${plainRule(rule, row, websiteName)}${changes}` };
+        if (!row.isNew && row.count === 0 && rule.owns.mode === 'attribute' && rule.owns.attribute === `erp_owner=${rule.erp}`) {
+            line.assignable = true;
+        }
+        return line;
     });
     if (preview.nobody.count > 0) {
         lines.push({ who: 'Nobody', count: productCount(preview.nobody.count), says: 'Products no ERP owns' });

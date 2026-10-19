@@ -133,7 +133,7 @@ describe('applyErpOwnership', () => {
         });
         const result = await applyErpOwnership(project(), 'erp-integration', deps(), 'assign');
         expect(result).toMatchObject({
-            notes: expect.arrayContaining(['Kukla ERP owns no products yet: tag products with brand=kukla in Commerce, then Load demo data.']),
+            notes: expect.arrayContaining(['Kukla ERP owns no products yet: tag products with brand=kukla in Commerce, then Fill ERPs from Commerce.']),
         });
     });
 

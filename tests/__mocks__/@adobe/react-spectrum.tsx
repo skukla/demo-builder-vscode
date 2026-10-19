@@ -804,6 +804,15 @@ export const ListView: React.FC<any> = ({
 
     // disabledKeys may arrive as an array or an Iterable (Spectrum accepts both).
     const disabledKeySet = new Set<any>(disabledKeys ?? []);
+    // A click selects that row alone, as single selection does; in multiple selection it
+    // toggles the row and keeps the rest, as Spectrum's checkbox rows do (Assign products).
+    const clicked = (key: any): Set<React.Key> => {
+        if (_selectionMode !== 'multiple') return new Set([key]);
+        const next = new Set(selectedSet);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+    };
     const rowProps = (key: any) => {
         const isDisabled = disabledKeySet.has(key);
         return {
@@ -811,7 +820,7 @@ export const ListView: React.FC<any> = ({
             'data-key': key,
             'aria-selected': selectedSet.has(key) || undefined,
             'aria-disabled': isDisabled ? true : undefined,
-            onClick: isDisabled ? undefined : () => onSelectionChange?.(new Set([key])),
+            onClick: isDisabled ? undefined : () => onSelectionChange?.(clicked(key)),
         };
     };
 
@@ -860,6 +869,116 @@ export const ListView: React.FC<any> = ({
         >
             {content}
         </ul>
+    );
+};
+
+// TableView mock: a <table role="grid">. The header, column, body, row and cell parts are
+// markers the table reads, as Spectrum's collection components are. A row carries data-key,
+// aria-selected and aria-disabled like ListView's; a click toggles it in multiple selection and
+// a disabled row ignores it. The heading checkbox answers 'all', or an empty Set when every
+// open row is already selected (Spectrum's select-all and deselect-all). A sortable column's
+// heading toggles its direction through onSortChange.
+export const TableHeader: React.FC<any> = () => null;
+export const TableBody: React.FC<any> = () => null;
+export const Column: React.FC<any> = () => null;
+export const Row: React.FC<any> = () => null;
+export const Cell: React.FC<any> = ({ children }) => <>{children}</>;
+
+/** The valid element children of a node, keys untouched (toArray would prefix them). */
+function elementsOf(node: React.ReactNode): React.ReactElement<any>[] {
+    const out: React.ReactElement<any>[] = [];
+    React.Children.forEach(node, (child) => {
+        if (React.isValidElement(child)) out.push(child);
+    });
+    return out;
+}
+
+export const TableView: React.FC<any> = ({
+    children,
+    selectionMode,
+    selectedKeys,
+    disabledKeys,
+    onSelectionChange,
+    sortDescriptor,
+    onSortChange,
+    'aria-label': ariaLabel,
+    density: _density,
+    overflowMode: _overflowMode,
+    ...props
+}) => {
+    const parts = elementsOf(children);
+    const header = parts.find((part) => part.type === TableHeader);
+    const body = parts.find((part) => part.type === TableBody);
+    const columns = elementsOf(header?.props.children);
+    const render = body?.props.children;
+    const rows: React.ReactElement<any>[] =
+        typeof render === 'function' ? (body?.props.items ?? []).map(render) : elementsOf(render);
+    const selected = new Set<React.Key>(Array.isArray(selectedKeys) ? selectedKeys : []);
+    const disabled = new Set<React.Key>(disabledKeys ?? []);
+    const multiple = selectionMode === 'multiple';
+    const open = rows.map((row) => row.key as React.Key).filter((key) => !disabled.has(key));
+    const allOn = open.length > 0 && open.every((key) => selected.has(key));
+    const toggle = (key: React.Key): Set<React.Key> => {
+        if (!multiple) return new Set([key]);
+        const next = new Set(selected);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+    };
+    const sortBy = (key: React.Key): void => {
+        const again = sortDescriptor?.column === key && sortDescriptor?.direction === 'ascending';
+        onSortChange?.({ column: key, direction: again ? 'descending' : 'ascending' });
+    };
+    return (
+        <table data-testid="spectrum-tableview" role="grid" aria-label={ariaLabel} {...filterSpectrumProps(props)}>
+            <thead>
+                <tr>
+                    {multiple && (
+                        <th role="columnheader">
+                            <input
+                                type="checkbox"
+                                aria-label="Select All"
+                                checked={allOn}
+                                onChange={() => onSelectionChange?.(allOn ? new Set() : 'all')}
+                            />
+                        </th>
+                    )}
+                    {columns.map((column) => (
+                        <th
+                            key={column.key}
+                            role="columnheader"
+                            data-key={column.key}
+                            aria-sort={sortDescriptor?.column === column.key ? sortDescriptor.direction : undefined}
+                            onClick={column.props.allowsSorting ? () => sortBy(column.key as React.Key) : undefined}
+                        >
+                            {column.props.children}
+                        </th>
+                    ))}
+                </tr>
+            </thead>
+            <tbody>
+                {rows.map((row) => {
+                    const key = row.key as React.Key;
+                    const isDisabled = disabled.has(key);
+                    return (
+                        <tr
+                            key={key}
+                            data-key={key}
+                            aria-selected={selected.has(key) || undefined}
+                            aria-disabled={isDisabled || undefined}
+                            onClick={isDisabled ? undefined : () => onSelectionChange?.(toggle(key))}
+                        >
+                            {multiple && <td />}
+                            {elementsOf(row.props.children).map((cell, index) => (
+                                <td key={cell.key ?? index} role="gridcell">
+                                    {cell.props.children}
+                                </td>
+                            ))}
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
     );
 };
 

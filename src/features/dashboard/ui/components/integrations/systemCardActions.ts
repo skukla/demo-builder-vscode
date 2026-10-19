@@ -20,8 +20,8 @@ import type { ErpDemoControlTarget } from '@/features/dashboard/ui/hooks/useErpD
 export interface SystemCardHandlers {
     /** Ask before a reset: the INTEGRATION's id and the names of every ERP it resets. */
     confirmReset: (pending: { id: string; erpNames: string[] }) => void;
-    /** Fill from Commerce: the integration's id, the name for the modal, and one ERP's id (or every ERP). */
-    loadErpData: (id: string, erpName: string, erp?: string) => void;
+    /** Fill from Commerce, every ERP: the integration's id and the name for the modal. */
+    loadErpData: (id: string, erpName: string) => void;
     /** Open an ERP's simulated-downtime modal (AB-59). */
     openDowntime: (target: ErpDemoControlTarget) => void;
     /** Open "Assign products" for an ERP (AB-74). */
@@ -46,10 +46,6 @@ export function handleSystemAction(
     const integrationId = model.linked?.cards[0]?.id;
     if (action === 'open') {
         if (integrationId) webviewClient.postMessage('openErpScreen', { id: integrationId, erp: model.id });
-        return true;
-    }
-    if (action === 'load-demo-data') {
-        if (integrationId) handlers.loadErpData(integrationId, model.name, model.id);
         return true;
     }
     if (action === 'simulate-downtime') {

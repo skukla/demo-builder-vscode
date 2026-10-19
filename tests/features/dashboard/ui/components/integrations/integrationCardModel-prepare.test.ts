@@ -13,17 +13,19 @@ const recordedRun = { at: '2026-10-10T10:00:00Z', steps: { 'price-scope-website'
 const erpIntegration = (over = {}) => integration({ id: 'erp-integration', source: { owner: 'skukla', repo: 'commerce-erp-integration' }, ...over });
 
 describe('Prepare this store on an integration card', () => {
-    it('sits after the ERP verbs on a deployed integration with applicable setup steps', () => {
+    // Shown only while a step is open, so when it is there it is what the card needs (owner,
+    // 2026-10-19).
+    it('leads the menu of a deployed integration with applicable setup steps', () => {
         const actions = deriveIntegrationCard(erpIntegration()).menuActions;
-        expect(actions.indexOf('prepare-store')).toBe(actions.indexOf('reset-records') + 1);
+        expect(actions[0]).toBe('prepare-store');
         expect(actions).not.toContain('undo-store-preparation');
     });
 
-    it('adds the undo once a preparation is recorded', () => {
+    // Beside the reset: both go back to the start.
+    it('adds the undo once a preparation is recorded, under Reset ERPs', () => {
         const recorded = erpIntegration({ storePreparation: { at: '2026-10-10T10:00:00Z', steps: { 'price-scope-website': { kind: 'config', previous: [] } } } });
         const actions = deriveIntegrationCard(recorded).menuActions;
-        const at = actions.indexOf('prepare-store');
-        expect(actions.slice(at, at + 2)).toEqual(['prepare-store', 'undo-store-preparation']);
+        expect(actions.indexOf('undo-store-preparation')).toBe(actions.indexOf('reset-records') + 1);
     });
 
     it('is not offered while the integration is not deployed, nor on an entry with no applicable step', () => {

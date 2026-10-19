@@ -150,7 +150,7 @@ export function mappingNotes(report: ErpMappingReport): { said?: string; warning
             ? {
                   warning:
                       `Demo data loaded; the mapping for website ${websites} was not saved: ` +
-                      `${clause(failed[0].reason)}. Load demo data again to retry.`,
+                      `${clause(failed[0].reason)}. Fill ERPs from Commerce again to retry.`,
               }
             : {}),
     };

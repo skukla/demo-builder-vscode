@@ -490,12 +490,12 @@ describe('handleAddErp', () => {
 
         expect(result).toMatchObject({
             success: true,
-            data: { warning: 'Demo data did not load: Commerce answered 401 for products. Use Load demo data on its card.' },
+            data: { warning: "Demo data did not load: Commerce answered 401 for products. Use Fill ERPs from Commerce on the integration's card." },
         });
     });
 
     it("a fill whose prices were not published still adds the ERP, and says so (AB-26z)", async () => {
-        const warning = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
+        const warning = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Fill ERPs from Commerce again to retry.';
         mockApply.mockResolvedValue(applied({ warning }));
         const { mockContext } = setup();
 
@@ -587,7 +587,7 @@ describe('handleAddErp', () => {
     });
 
     it('ends the progress window on that warning when the add was started from a screen', async () => {
-        const warning = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Load demo data again to retry.';
+        const warning = 'Demo data loaded; prices were not published: ERP prices answered 500: boom. Fill ERPs from Commerce again to retry.';
         mockApply.mockResolvedValue(applied({ warning }));
         const { mockContext } = setup();
 
@@ -612,7 +612,7 @@ describe('handleAddErp', () => {
 
         expect(result).toMatchObject({
             success: true,
-            data: { warning: `${warning} Demo data did not load: Commerce answered 401 for products. Use Load demo data on its card.` },
+            data: { warning: `${warning} Demo data did not load: Commerce answered 401 for products. Use Fill ERPs from Commerce on the integration's card.` },
         });
     });
 

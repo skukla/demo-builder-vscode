@@ -37,6 +37,8 @@ export interface AttributeSetWithoutOwner {
 /** One product as the assignment's selection and preview read it. */
 export interface ErpAssignProduct {
     sku: string;
+    /** The product's name, so the SC can find one by it in the modal's list. */
+    name?: string;
     attributeSetId: number;
     categoryIds: string[];
     /** The brand as the SC reads it: a dropdown's option label, else the stored value. */
@@ -55,7 +57,8 @@ export interface ErpAssignOptions {
     ownerValue?: string;
     refusal?: string;
     categories: ErpAssignChoice[];
-    brands: ErpAssignChoice[];
+    /** The website the products are on, when the modal is scoped to the project's store. */
+    website?: string;
     /** The sets missing `erp_owner`: their products cannot be written until it is added. */
     setsWithoutOwner: AttributeSetWithoutOwner[];
     /** When the last assignment to this ERP was made, if one can be undone. */

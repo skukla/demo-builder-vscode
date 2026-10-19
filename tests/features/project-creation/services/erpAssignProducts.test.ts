@@ -34,7 +34,11 @@ const AUTH: AppManagementAuth = { accessToken: 't', imsOrgId: 'o' };
 const FIXTURES = path.join(__dirname, '../../../fixtures/commerce-rest');
 
 interface CapturedPage {
-    items: Array<{ sku: string; custom_attributes: Array<{ attribute_code: string; value: unknown }> }>;
+    items: Array<{
+        sku: string;
+        custom_attributes: Array<{ attribute_code: string; value: unknown }>;
+        extension_attributes?: { website_ids?: number[] };
+    }>;
     total_count: number;
 }
 
@@ -48,10 +52,18 @@ function products(owners: Record<string, string>): CapturedPage {
     return { ...page, items, total_count: items.length };
 }
 
+/** As Commerce answers a `website_id` filter: only the products on that website. */
+function onWebsite(page: CapturedPage, requested: string): CapturedPage {
+    const website = /field\]=website_id&[^&]*\[value\]=(\d+)/u.exec(requested)?.[1];
+    if (!website) return page;
+    const items = page.items.filter((item) => (item.extension_attributes?.website_ids ?? []).includes(Number(website)));
+    return { items, total_count: items.length };
+}
+
 /** Commerce for the store: products, websites, categories, and sets 15 and 16 both carrying erp_owner. */
 function commerce(owners: Record<string, string>) {
     const get = jest.fn(async (requested: string) => {
-        if (requested.startsWith('products?')) return products(owners);
+        if (requested.startsWith('products?')) return onWebsite(products(owners), requested);
         if (requested === 'store/websites') return [{ id: 2, code: 'bodea', name: 'Bodea' }];
         if (requested.startsWith('categories/list')) return { items: [{ id: 7, name: 'Plans' }], total_count: 1 };
         if (requested.startsWith('products/attribute-sets/sets/list')) return { items: [] };
@@ -94,7 +106,7 @@ describe('planErpAssignment', () => {
         const plan = await planErpAssignment(TARGET, { auth: AUTH, commerce: commerce({}) }, { by: 'skuPrefix', prefix: 'e' });
         expect(plan).toStrictEqual({
             refusal:
-                'Accuform ERP owns the products sold on bodea, not the products tagged with erp_owner, so there is nothing to assign to it. Change its rule to erp_owner in its Settings first.',
+                'Accuform ERP owns the products sold on bodea, not the products assigned to it. To assign products to it, first change which products it owns to "Products you assign to it" in its Settings.',
         });
     });
 });
@@ -111,9 +123,70 @@ describe('readErpAssignOptions', () => {
             names: { justrite: 'Justrite ERP', accuform: 'Accuform ERP' },
         });
         expect(options.products).toEqual([
-            { sku: 'essentials-plan', attributeSetId: 15, categoryIds: ['7'], owner: '' },
-            { sku: 'DigiWristQuantum', attributeSetId: 16, categoryIds: ['3', '9'], owner: 'accuform' },
+            { sku: 'essentials-plan', name: 'Essentials Plan', attributeSetId: 15, categoryIds: ['7'], owner: '' },
+            { sku: 'DigiWristQuantum', name: 'DigiWrist Quantum', attributeSetId: 16, categoryIds: ['3', '9'], owner: 'accuform' },
         ]);
+    });
+});
+
+// A shared sandbox holds several demos' catalogs: the modal lists the project's own website's
+// products, and only its root catalog's categories, by their path below the root (2026-10-18).
+describe('readErpAssignOptions in the project\'s own store', () => {
+    /** Two websites, each store with its own root; category 9 sits under Bodea's root 3. */
+    function store(owners: Record<string, string>) {
+        const base = commerce(owners);
+        const get = jest.fn(async (requested: string) => {
+            if (requested === 'store/websites') {
+                return [{ id: 2, code: 'bodea', name: 'Bodea Website', default_group_id: 2 }, { id: 5, code: 'justrite', name: 'Justrite Website', default_group_id: 5 }];
+            }
+            if (requested === 'store/storeGroups') return [{ id: 2, root_category_id: 3 }, { id: 5, root_category_id: 119 }];
+            if (requested.startsWith('categories/list')) {
+                return {
+                    items: [
+                        { id: 3, name: 'Bodea Catalog', path: '1/3' },
+                        { id: 9, name: 'Watches', path: '1/3/9' },
+                        { id: 7, name: 'Plans', path: '1/51/7' },
+                    ],
+                    total_count: 3,
+                };
+            }
+            return base.get(requested);
+        });
+        return { get, send: jest.fn() };
+    }
+    const scoped = (website: string) => ({
+        ...TARGET,
+        // As a real ACCS project has it (Justrite's manifest): the backend, and its website code.
+        project: {
+            ...project,
+            componentSelections: { backend: 'adobe-commerce-accs' },
+            componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: website } },
+        },
+    });
+
+    it("lists the website's products, and only its root catalog's categories, by path", async () => {
+        const options = await readErpAssignOptions(scoped('bodea'), { auth: AUTH, commerce: store({}) });
+        expect(options.website).toBe('Bodea Website');
+        expect(options.products.map((row) => row.sku)).toStrictEqual(['essentials-plan', 'DigiWristQuantum']);
+        // 7 is another catalog's; 3 is the root itself.
+        expect(options.categories).toStrictEqual([{ value: '9', label: 'Watches', count: 1 }]);
+    });
+
+    it("leaves out another website's products", async () => {
+        const commerce = store({});
+        const options = await readErpAssignOptions(scoped('justrite'), { auth: AUTH, commerce });
+        // Commerce is asked for website 5's products only, in the fields the rows read.
+        const read = commerce.get.mock.calls.map(([requested]) => requested).find((requested) => requested.startsWith('products?'));
+        expect(read).toContain('[field]=website_id&searchCriteria[filter_groups][1][filters][0][value]=5');
+        expect(read).toContain('&fields=total_count,items[');
+        expect(options.products).toStrictEqual([]);
+        expect(options.categories).toStrictEqual([]);
+    });
+
+    it('CONTROL: lists the whole store when the project names no website', async () => {
+        const options = await readErpAssignOptions(TARGET, { auth: AUTH, commerce: store({}) });
+        expect(options).not.toHaveProperty('website');
+        expect(options.products).toHaveLength(2);
     });
 });
 

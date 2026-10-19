@@ -232,4 +232,72 @@
 .setup-guide-skip-link {
     color: var(--spectrum-global-color-gray-600);
 }
+
+/* Assign products (AB-74): one toolbar line, the list filling the rest of the dialog, one line
+   of counts under it (owner, 2026-10-18: not a list halfway down). The body is height-bounded
+   like Manage APIs, so the list is the one region that scrolls. */
+.assign-products-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: min(640px, calc(100vh - 240px));
+    max-height: 100%;
+    min-height: 0;
+    min-width: 0;
+}
+
+.assign-products-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.assign-filters {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+/* Select all sits at the filters' right edge, level with the pickers. */
+.assign-count {
+    margin-left: auto;
+    padding-bottom: 6px;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.assign-list {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.assign-list-empty {
+    padding: 16px 4px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.assign-counts {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.assign-summary-slot {
+    flex: 1 1 auto;
+    color: var(--spectrum-global-color-gray-800);
+}
+
+.assign-summary {
+    font-size: 13px;
+}
+
+/* One scroller in the dialog, as Manage APIs has: the product list, not the modal body. */
+.modal-body:has(.assign-products-body) {
+    overflow: hidden;
+}
 }

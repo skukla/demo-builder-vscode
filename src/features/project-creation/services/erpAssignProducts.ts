@@ -25,12 +25,13 @@ import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import { followBulk, startBulk, type BulkFollowDeps, type CommerceSend } from '@/features/app-builder/services/commerceBulk';
 import {
-    choicesOf,
+    categoryChoicesOf,
     listAssignableProducts,
-    listCategoryNames,
+    listCategoryLabels,
     ownedRowOfAssign,
     ownerBody,
     previewAssignment,
+    storeScopeOf,
     type AssignProductRow,
 } from '@/features/app-builder/services/erpAssignSelection';
 import { listWebsites, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
@@ -40,6 +41,7 @@ import { OWNER_CODE, setsWithoutOwner } from '@/features/app-builder/services/er
 import { describeOwnsAcross, ownersAcross } from '@/features/app-builder/services/erpOwnership';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { extractConfigParams } from '@/features/eds/services/storefrontConfigParams';
 import type { Project } from '@/types/base';
 import type {
     AttributeSetWithoutOwner,
@@ -101,13 +103,17 @@ function valueOfRule(name: string, rule: ErpOwnsEntry['owns'] | undefined): { va
     const owns = rule ? describeOwnsAcross(rule) : 'nothing it can be read for';
     return {
         refusal:
-            `${name} owns ${owns.replace(/^products /u, 'the products ')}, not the products tagged with ${OWNER_CODE}, ` +
-            `so there is nothing to assign to it. Change its rule to ${OWNER_CODE} in its Settings first.`,
+            // In the SC's words, not the attribute code (owner, 2026-10-18), and the picker's.
+            `${name} owns ${owns.replace(/^products /u, 'the products ')}, not the products assigned to it. ` +
+            `To assign products to it, first change which products it owns to "Products you assign to it" in its Settings.`,
     };
 }
 
-/** Read the store and every ERP's rule; the preview, the options and the write all start here. */
-async function readAssignState(target: ErpAssignTarget, deps: ErpAssignDeps): Promise<AssignState> {
+/**
+ * Read the store and every ERP's rule; the preview, the options and the write all start here.
+ * With a website id, only that website's products.
+ */
+async function readAssignState(target: ErpAssignTarget, deps: ErpAssignDeps, websiteId?: number): Promise<AssignState> {
     const { project, integrationId, erpId } = target;
     const listId = erpListIdOf(project, erpId, getAppBuilderComponentCatalog());
     if (!listId) throw new Error(`${erpId} has no id in the integration's list yet; add it again to finish.`);
@@ -115,7 +121,7 @@ async function readAssignState(target: ErpAssignTarget, deps: ErpAssignDeps): Pr
     const integration = project.appBuilderComponents?.[integrationId];
     const client = new ErpIntegrationClient(integration?.deployedUrls, deps.auth, deps.fetchImpl);
     const [rows, websites, rules] = await Promise.all([
-        listAssignableProducts(deps.commerce.get),
+        listAssignableProducts(deps.commerce.get, websiteId),
         listWebsites(deps.commerce.get),
         readErpRules(client, listedErpNames(project, integrationId)),
     ]);
@@ -134,19 +140,27 @@ async function readAssignState(target: ErpAssignTarget, deps: ErpAssignDeps): Pr
 
 /** What the modal opens with: the ERP, its value (or why none), the pickers' choices, the sets to fix. */
 export async function readErpAssignOptions(target: ErpAssignTarget, deps: ErpAssignDeps): Promise<ErpAssignOptions> {
-    const state = await readAssignState(target, deps);
-    const { categories, brands } = choicesOf(state.rows, await listCategoryNames(deps.commerce.get));
+    // The project's own store only: a shared sandbox holds several demos' products (2026-10-18).
+    // Commerce filters them, so the other demos' products are never read.
+    const scope = await storeScopeOf(deps.commerce.get, extractConfigParams(target.project).websiteCode);
+    const [state, labels] = await Promise.all([
+        readAssignState(target, deps, scope?.websiteId),
+        listCategoryLabels(deps.commerce.get, scope?.rootCategoryId),
+    ]);
+    const { rows } = state;
+    const categories = categoryChoicesOf(rows, labels);
     const last = target.project.appBuilderComponents?.[target.erpId]?.erpAssignment;
     return {
         erp: state.erp,
         ...(state.value ? { ownerValue: state.value } : {}),
         ...(state.refusal ? { refusal: state.refusal } : {}),
         categories,
-        brands,
+        ...(scope ? { website: scope.websiteName } : {}),
         setsWithoutOwner: state.setsWithoutOwner,
         ...(last ? { lastAssignmentAt: last.at } : {}),
-        products: state.rows.map(({ sku, attributeSetId, categoryIds, brand, owner }) => ({
+        products: rows.map(({ sku, name, attributeSetId, categoryIds, brand, owner }) => ({
             sku,
+            ...(name ? { name } : {}),
             attributeSetId,
             categoryIds,
             ...(brand ? { brand } : {}),

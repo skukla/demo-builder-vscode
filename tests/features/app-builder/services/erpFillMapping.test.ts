@@ -199,7 +199,7 @@ describe('mappingNotes', () => {
 
         expect(notes).toStrictEqual({
             warning:
-                'Demo data loaded; the mapping for website base was not saved: boom. Load demo data again to retry.',
+                'Demo data loaded; the mapping for website base was not saved: boom. Fill ERPs from Commerce again to retry.',
         });
     });
 });

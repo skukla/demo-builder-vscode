@@ -126,7 +126,7 @@ function ownsNothingNote(row: ErpRow): string {
         }
         return (
             `${row.name} owns no products yet: tag products with ${code}=${value} in Commerce, ` +
-            'then Load demo data.'
+            'then Fill ERPs from Commerce.'
         );
     }
     return `${row.name} owns no products: no Commerce product is ${describeOwns(row.owns).replace(/^products /u, '')}.`;

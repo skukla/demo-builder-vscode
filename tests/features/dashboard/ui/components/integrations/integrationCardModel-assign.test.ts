@@ -39,20 +39,24 @@ function usedBy(status: LinkedCard['status'] = 'deployed'): LinkedCard {
 }
 
 describe('Assign products on an ERP card', () => {
-    it('is offered after the demo controls while both halves are deployed', () => {
+    // In the order an SC sets an ERP up and demos it (owner, 2026-10-19): products, then the demo.
+    it('is offered right after Open, before the downtime, while both halves are deployed', () => {
         expect(deriveSystemCard(erp(), undefined, usedBy(), CATALOG).menuActions).toEqual([
             'open',
-            'load-demo-data',
-            'simulate-downtime',
             'assign-products',
+            'simulate-downtime',
             'redeploy',
             'remove',
         ]);
     });
 
-    it('adds the undo once an assignment is recorded', () => {
+    it('adds the undo once an assignment is recorded, right under Assign products', () => {
         const assigned = erp({ erpAssignment: { at: '2026-10-09T10:00:00Z', value: 'accuform', previous: [] } });
-        expect(deriveSystemCard(assigned, undefined, usedBy(), CATALOG).menuActions).toContain('undo-assignment');
+        expect(deriveSystemCard(assigned, undefined, usedBy(), CATALOG).menuActions.slice(0, 3)).toStrictEqual([
+            'open',
+            'assign-products',
+            'undo-assignment',
+        ]);
     });
 
     it('is not offered while the integration is not deployed', () => {

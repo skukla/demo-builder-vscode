@@ -73,9 +73,9 @@ function systemCard(): IntegrationCardModel {
         dotVariant: 'success',
         url: 'https://ns.adobeio-static.net/index.html',
         urlLabel: 'Screen',
+        // As deriveSystemCard gives it: no fill, which is the integration's (owner, 2026-10-19).
         menuActions: [
             'open',
-            'load-demo-data',
             'simulate-downtime',
             'redeploy',
             'remove',
@@ -140,38 +140,6 @@ describe('IntegrationsGrid — the system card verbs', () => {
         });
     });
 
-    // It asks first: it removes nothing, but a hand-edited ERP value goes back to
-    // Commerce's (audit, 2026-10-18).
-    it("Fill from Commerce asks first, then fills THIS ERP through the INTEGRATION's id", async () => {
-        const { user, panel } = await openSystem();
-
-        await user.click(within(panel).getByRole('button', { name: /^fill from commerce$/i }));
-
-        const dialog = screen.getByRole('dialog', { name: /fill from commerce/i });
-        expect(dialog).toHaveTextContent('into Nordwind');
-        expect(dialog).toHaveTextContent("A value changed by hand in the ERP is set back to Commerce's.");
-        expect(getClient().postMessage).not.toHaveBeenCalledWith('loadErpDemoData', expect.anything());
-
-        await user.click(within(dialog).getByRole('button', { name: /^fill$/i }));
-
-        expect(getClient().postMessage).toHaveBeenCalledWith('loadErpDemoData', {
-            id: 'erp-integration',
-            // This ERP, by its own id: an integration can serve several (AB-16).
-            erp: 'demo-erp',
-            progress: 'modal',
-        });
-    });
-
-    it('SAFETY: closing the fill confirm posts nothing', async () => {
-        const { user, panel } = await openSystem();
-        await user.click(within(panel).getByRole('button', { name: /^fill from commerce$/i }));
-
-        const dialog = screen.getByRole('dialog', { name: /fill from commerce/i });
-        await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
-
-        expect(getClient().postMessage).not.toHaveBeenCalledWith('loadErpDemoData', expect.anything());
-    });
-
     // Simulated downtime (AB-59): through the INTEGRATION's id, naming THIS ERP, in a modal
     // that reads the ERP as it opens.
     it('Simulate downtime opens its modal on THIS ERP', async () => {
@@ -196,17 +164,31 @@ describe('IntegrationsGrid — the system card verbs', () => {
 });
 
 describe("IntegrationsGrid — the integration's ERP verbs", () => {
-    it('Fill ERPs from Commerce, once confirmed, fills every ERP it serves — no ERP named', async () => {
+    // It asks first: it removes nothing, but a hand-edited ERP value goes back to
+    // Commerce's (audit, 2026-10-18).
+    it('Fill ERPs from Commerce asks first, then fills every ERP it serves — no ERP named', async () => {
         const { user, panel } = await openIntegration();
 
         await user.click(within(panel).getByRole('button', { name: /^fill erps from commerce$/i }));
         const dialog = screen.getByRole('dialog', { name: /fill from commerce/i });
+        expect(dialog).toHaveTextContent("A value changed by hand in the ERP is set back to Commerce's.");
+        expect(getClient().postMessage).not.toHaveBeenCalledWith('loadErpDemoData', expect.anything());
         await user.click(within(dialog).getByRole('button', { name: /^fill$/i }));
 
         expect(getClient().postMessage).toHaveBeenCalledWith('loadErpDemoData', {
             id: 'erp-integration',
             progress: 'modal',
         });
+    });
+
+    it('SAFETY: closing the fill confirm posts nothing', async () => {
+        const { user, panel } = await openIntegration();
+        await user.click(within(panel).getByRole('button', { name: /^fill erps from commerce$/i }));
+
+        const dialog = screen.getByRole('dialog', { name: /fill from commerce/i });
+        await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
+
+        expect(getClient().postMessage).not.toHaveBeenCalledWith('loadErpDemoData', expect.anything());
     });
 
     it('Reset ERPs opens a confirm naming every ERP, and posts NOTHING until confirmed', async () => {
