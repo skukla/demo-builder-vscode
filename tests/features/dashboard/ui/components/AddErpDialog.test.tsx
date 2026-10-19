@@ -164,11 +164,14 @@ describe('AddErpDialog — After adding', () => {
 
         expect(rows()).toStrictEqual([
             'Acme ERP | 3 products | All products not assigned to another ERP',
-            'Kept ERP | 0 products | None yet',
+            'Kept ERP | 0 products | None yet.',
             'Evo ERP | 0 products | None yet: assign products to it after adding',
         ]);
         expect(screen.getAllByRole('button', { name: /^Assign products/ })).toHaveLength(1);
-        fireEvent.click(screen.getByRole('button', { name: 'Assign products to Kept ERP' }));
+        // The screen's inline action, as "Change" beside Deploys to, on the hint's line.
+        const assign = screen.getByRole('button', { name: 'Assign products to Kept ERP' });
+        expect(assign).toHaveClass('inline-action-link');
+        fireEvent.click(assign);
         expect(onAssign).toHaveBeenCalledWith('Kept ERP');
     });
 

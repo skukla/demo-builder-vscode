@@ -98,7 +98,7 @@ describe('previewErpAdd', () => {
         expect(previewLines(preview, [JUSTRITE_ALL, accuform, acme, fresh], NAMED)).toStrictEqual([
             { who: 'Justrite ERP', count: '3 products', says: 'All products not assigned to another ERP' },
             { who: 'Accuform ERP', count: '2 products', says: 'Products assigned to it' },
-            { who: 'Acme ERP', count: '0 products', says: 'None yet', assignable: true },
+            { who: 'Acme ERP', count: '0 products', says: 'None yet.', assignable: true },
             { who: 'Fresh ERP', count: '0 products', says: 'None yet: assign products to it after adding' },
         ]);
     });

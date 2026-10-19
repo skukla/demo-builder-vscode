@@ -118,7 +118,7 @@ function plainRule(entry: ErpOwnsEntry, row: { count: number; isNew: boolean }, 
     }
     if (row.count > 0) return 'Products assigned to it';
     // An ERP already added carries an Assign products button on its line, which says the rest.
-    return row.isNew ? 'None yet: assign products to it after adding' : 'None yet';
+    return row.isNew ? 'None yet: assign products to it after adding' : 'None yet.';
 }
 
 /**

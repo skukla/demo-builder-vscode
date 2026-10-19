@@ -25,7 +25,7 @@
  * @module features/dashboard/ui/components/AddErpDialog
  */
 
-import { ActionButton, DialogContainer, Flex, Text, TextField, View } from '@adobe/react-spectrum';
+import { DialogContainer, Flex, Text, TextField, View } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { ErpOwnershipPicker, ruleOf, type OwnershipChoice, type StoreReadState } from './ErpOwnershipPicker';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
@@ -157,12 +157,20 @@ function AfterAdding({ store, options, added, onAssign }: {
                             <Text>{who}</Text>
                             <Text>{count}</Text>
                         </Flex>
-                        <Flex justifyContent="space-between" alignItems="center" gap="size-200">
+                        <Flex alignItems="baseline">
                             <Text UNSAFE_className="text-gray-700 text-sm">{says}</Text>
                             {assignable && onAssign && (
-                                <ActionButton isQuiet aria-label={`${ADD_ERP_COPY.assign} to ${who}`} onPress={() => onAssign(who)}>
+                                // The screen's own inline action, as "Change" beside Deploys to: blue,
+                                // at the hint's size, on the hint's line (owner, 2026-10-19: a quiet
+                                // button was missed, an outlined one too big for the list).
+                                <button
+                                    type="button"
+                                    className="inline-action-link"
+                                    aria-label={`${ADD_ERP_COPY.assign} to ${who}`}
+                                    onClick={() => onAssign(who)}
+                                >
                                     {ADD_ERP_COPY.assign}
-                                </ActionButton>
+                                </button>
                             )}
                         </Flex>
                     </div>

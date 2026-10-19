@@ -312,12 +312,15 @@ export const Checkbox: React.FC<any> = ({
 // Uses forwardRef to support buttonRef.current.focus()
 // `variant` is surfaced as `data-variant` (as StatusLight and Badge do): which
 // button is the accent one is a decision, and filtering it made it unobservable.
+// Spectrum's `style` is "fill" or "outline", not a CSS object: surfaced as data-style rather
+// than handed to the DOM, which throws on a string style.
 export const Button = React.forwardRef<HTMLButtonElement, any>(
-    ({ children, onPress, onClick, isDisabled, variant, ...props }, ref) => (
+    ({ children, onPress, onClick, isDisabled, variant, style, ...props }, ref) => (
         <button
             ref={ref}
             data-testid="spectrum-button"
             data-variant={variant}
+            data-style={typeof style === 'string' ? style : undefined}
             tabIndex={0}
             onClick={(e) => {
                 onClick?.(e);

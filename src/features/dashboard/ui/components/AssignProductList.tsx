@@ -268,17 +268,21 @@ export function AssignProductList({ options, value, selected, onChange, summary 
                         overflowMode="truncate"
                         height="100%"
                     >
+                        {/* Each column and cell written out: Spectrum's table throws ("reading
+                            'getReusableView'") on columns and cells made by a .map (2026-10-19). */}
                         <TableHeader>
-                            {COLUMNS.map((column) => (
-                                <Column key={column} allowsSorting width={column === 'name' ? '2fr' : '1fr'}>
-                                    {LIST_COPY.columns[column]}
-                                </Column>
-                            ))}
+                            <Column key="sku" allowsSorting>{LIST_COPY.columns.sku}</Column>
+                            <Column key="name" allowsSorting width="2fr">{LIST_COPY.columns.name}</Column>
+                            <Column key="category" allowsSorting>{LIST_COPY.columns.category}</Column>
+                            <Column key="owner" allowsSorting>{LIST_COPY.columns.owner}</Column>
                         </TableHeader>
                         <TableBody items={shown.map((row) => ({ id: row.product.sku, row }))}>
                             {(item) => (
                                 <Row key={item.id}>
-                                    {COLUMNS.map((column) => <Cell key={column}>{cellOf(item.row, column)}</Cell>)}
+                                    <Cell>{cellOf(item.row, 'sku')}</Cell>
+                                    <Cell>{cellOf(item.row, 'name')}</Cell>
+                                    <Cell>{cellOf(item.row, 'category')}</Cell>
+                                    <Cell>{cellOf(item.row, 'owner')}</Cell>
                                 </Row>
                             )}
                         </TableBody>

@@ -70,7 +70,8 @@ jest.mock('@adobe/react-spectrum', () => ({
         </div>
     ),
     Heading: ({ children, ...props }: any) => <h3 {...props}>{children}</h3>,
-    Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
+    // Spectrum's style is "fill" or "outline", not CSS: kept off the DOM, which throws on it.
+    Button: ({ children, onPress, isDisabled, variant, style: _style, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
             {children}
         </button>
