@@ -168,6 +168,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     redeploy_integration: 'Redeploying the integration',
     delete_undeclared_runtime_code: 'Deleting left-behind code',
     remove_integration: 'Removing the integration',
+    save_app_to_github: 'Saving the app to GitHub',
+    delete_app_github_repo: "Deleting the app's GitHub repo",
     // Display name only — "nothing redeploys".
     rename_integration: 'Renaming the integration',
     get_integration_settings: 'Reading integration settings',

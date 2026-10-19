@@ -98,7 +98,9 @@ const EXPECTED: Record<string, number> = {
     // 23 -> 21 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed (EDS-24).
     // 21 -> 23 on 2026-10-05: check_category_pages and add_category_pages read the
     // repository for the block, and the add publishes through Helix (EDS-27).
-    github: 23,
+    // 23 -> 25 on 2026-10-18: save_app_to_github and delete_app_github_repo create and
+    // delete a repository on the SC's own account (AB-1c, the agent door).
+    github: 25,
     commerce: 2,
     // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
     // and needs no sign-in.
@@ -123,7 +125,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 165; // 162 -> 165 on 2026-10-10: the three AB-77 store-preparation tools. 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 167; // 165 -> 167 on 2026-10-18: save_app_to_github and delete_app_github_repo (AB-1c). 162 -> 165 on 2026-10-10: the three AB-77 store-preparation tools. 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).

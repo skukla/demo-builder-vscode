@@ -369,6 +369,9 @@ describe('rows with no output safety net are classified', () => {
         'remove_integration',
         'rename_project',
         'save_ai_prompt',
+        // AB-1c's agent door: `{repository: {owner, repo, url, fileCount}}` and `{deleted}`.
+        'save_app_to_github',
+        'delete_app_github_repo',
         'start_demo',
         'stop_demo',
         // Group 5. `restart_demo` is category 1 — success IS the outcome, and
@@ -528,6 +531,10 @@ describe('the ceiling table tracks the tool surface', () => {
         'deploy_integration',
         'redeploy_integration',
         'remove_integration',
+        // Saving an app to GitHub answers one repository's owner, name, URL and file count;
+        // the undo answers the name it deleted (2026-10-18).
+        'save_app_to_github',
+        'delete_app_github_repo',
         // `{namespace, deleted, failed}`: bounded by what one app left behind.
         // `{id, erp, loaded}`: four counts and a sentence, whatever the catalogue's size.
         'load_erp_demo_data',

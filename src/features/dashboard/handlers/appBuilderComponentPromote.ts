@@ -8,8 +8,9 @@
  * refreshes through the component snapshot push.
  *
  * Creating and deleting a repository are cloud operations on the SC's own
- * account, so neither runs without the modal's yes — and an agent never reaches
- * these doors (no MCP tool yet; see the plan's walkthrough queue).
+ * account, so neither runs without a yes. A person gives it in the modal. An agent
+ * (`save_app_to_github`, `delete_app_github_repo`) passes the answers the dialogs would
+ * ask for, and `confirm: true` after asking the user; then no dialog opens (2026-10-18).
  *
  * @module features/dashboard/handlers/appBuilderComponentPromote
  */
@@ -195,10 +196,36 @@ async function gitHubLogin(context: HandlerContext): Promise<string | undefined>
     return validation.valid ? validation.user?.login : undefined;
 }
 
-/** What the card sends: the app, and whether its screen's modal narrates. */
+/**
+ * What the card sends: the app, and whether its screen's modal narrates. An agent sends
+ * the answers instead (`repoName`, `owner`) with `confirm: true`, and nothing is asked.
+ */
 export interface PromotePayload {
     id?: string;
     progress?: 'modal';
+    repoName?: string;
+    /** A GitHub organisation the user belongs to; absent = their own account. */
+    owner?: string;
+    confirm?: boolean;
+}
+
+/** The answers an agent gave, checked as the dialogs would check them. */
+async function choiceFromAnswers(
+    context: HandlerContext,
+    login: string,
+    answers: PromotePayload,
+): Promise<RepositoryChoice | string> {
+    if (answers.confirm !== true) {
+        return 'Saving to GitHub creates a public repository. Ask the user, then call again with confirm: true.';
+    }
+    const repoName = normalizeRepositoryName(answers.repoName ?? '');
+    if (!repoName) return 'Enter a repository name.';
+    if (!answers.owner || answers.owner === login) return { repoName };
+    const orgs = await getGitHubServices(context.context.secrets).tokenService.getUserOrgs();
+    if (!orgs.includes(answers.owner)) {
+        return `${answers.owner} is not ${login}'s account or one of their organisations.`;
+    }
+    return { owner: answers.owner, repoName };
 }
 
 /**
@@ -214,6 +241,7 @@ export const handlePromoteAppBuilderComponent: MessageHandler<PromotePayload> =
             const target = await resolveComponentTarget(context, payload?.id);
             if (!target.ok) return target.error;
             const { id } = target;
+            if (payload?.repoName !== undefined) return promote(context, target, false, payload);
             return inModal ? withModalAsking(id, () => promote(context, target, true)) : promote(context, target, false);
         },
         (payload) => payload?.id,
@@ -223,6 +251,7 @@ async function promote(
     context: HandlerContext,
     { id, project }: { id: string; project: Project },
     inModal: boolean,
+    answers?: PromotePayload,
 ): Promise<HandlerResponse> {
     // The modal says a refusal or a failure itself; a notification would say it twice.
     const say = (message: string, kind: 'error' | 'info' = 'error'): void => {
@@ -239,7 +268,8 @@ async function promote(
     const name = getAppBuilderComponent(project, id)?.name ?? id;
     const app = await collectAppFiles(project.componentInstances?.[id]?.path ?? '');
     const ask = inModal ? askInModal : askInDialogs;
-    const choice = await ask(context, login, name, app);
+    const choice = answers ? await choiceFromAnswers(context, login, answers) : await ask(context, login, name, app);
+    if (typeof choice === 'string') return refuse(choice, say);
     if (!choice) return cancelled();
 
     try {
@@ -268,7 +298,7 @@ async function promote(
  * Builder made for this app and make it a blank-starter app again. The app's
  * folder is not touched.
  */
-export const handleUnpromoteAppBuilderComponent: MessageHandler<{ id?: string }> = async (
+export const handleUnpromoteAppBuilderComponent: MessageHandler<{ id?: string; confirm?: boolean }> = async (
     context,
     payload,
 ) => {
@@ -280,7 +310,8 @@ export const handleUnpromoteAppBuilderComponent: MessageHandler<{ id?: string }>
 
     const state = getAppBuilderComponent(project, id);
     const fullName = `${state?.source.owner}/${state?.source.repo}`;
-    const choice = await vscode.window.showWarningMessage(
+    // An agent asked the user already and says so with confirm: true; a person is asked here.
+    const choice = payload?.confirm === true ? DELETE_REPOSITORY : await vscode.window.showWarningMessage(
         `Delete ${fullName} from GitHub? This cannot be undone.`,
         {
             modal: true,

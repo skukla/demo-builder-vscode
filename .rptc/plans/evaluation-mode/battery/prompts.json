@@ -1379,5 +1379,23 @@
         "cwd": "project",
         "why": "Added 2026-10-10 with the tool (AB-77): one settings write through PUT system/config that reads first, reads the answer's errors list and records the previous values. A MISS means a raw write_commerce_rest PUT whose refused rows go unread under HTTP 200. Tier 2: it writes to the live store with confirm.",
         "tier": 2
+    },
+    {
+        "id": "app-save-to-github",
+        "prompt": "Save my custom App Builder app to its own GitHub repository called order-sync.",
+        "expect": [
+            "save_app_to_github"
+        ],
+        "cwd": "project",
+        "why": "AB-1c's agent door (2026-10-18): saving a blank-starter app was a button only. Creates a PUBLIC repository, so it is confirm-gated and names the repository in the alert."
+    },
+    {
+        "id": "app-delete-github-repo",
+        "prompt": "I don't want my app on GitHub any more. Delete the repository you made for it.",
+        "expect": [
+            "delete_app_github_repo"
+        ],
+        "cwd": "project",
+        "why": "The undo of app-save-to-github, which must ship with it. Deletes a repository for good, so confirm-gated."
     }
 ]

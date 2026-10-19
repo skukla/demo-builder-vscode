@@ -273,6 +273,20 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // The code is gone for good, though a redeploy of an older version brings it back.
         sessionGrant: false,
     },
+    save_app_to_github: {
+        action: 'Save the app to a new GitHub repository',
+        consequence:
+            "Creates a public repository on your GitHub account or organisation and pushes the app's files to it, leaving out secrets and build output; anyone can see it.",
+        target: ['owner', 'repoName'],
+        sessionGrant: false,
+    },
+    delete_app_github_repo: {
+        action: "Delete the app's GitHub repository",
+        consequence:
+            'Deletes the repository Demo Builder created for this app, with anything pushed to it since; the app on this computer stays, and this cannot be undone.',
+        target: ['id'],
+        sessionGrant: false,
+    },
     remove_integration: {
         action: 'Remove an integration',
         consequence:

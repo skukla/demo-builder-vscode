@@ -165,12 +165,6 @@
         },
         "github-change-account": {
             "reason": "No tool switches the GitHub account (clear the token, force a fresh sign-in). sign_in covers signing in, not changing who."
-        },
-        "promoteAppBuilderComponent": {
-            "reason": "No tool saves a blank-starter app to its own GitHub repository. The handler asks where and what to call it through dialogs, so a tool needs a variant that takes both."
-        },
-        "unpromoteAppBuilderComponent": {
-            "reason": "No tool undoes saving a blank-starter app to its own repository (deletes the repository, makes it a blank-starter app again). Goes with promoteAppBuilderComponent."
         }
     }
 }

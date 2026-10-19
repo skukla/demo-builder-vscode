@@ -55,6 +55,9 @@ const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
     update_integration: ['adobe'],
     check_integration_updates: false,
     remove_integration: ['adobe'],
+    // AB-1c's agent door: creates and deletes a repository on the user's GitHub account.
+    save_app_to_github: ['github'],
+    delete_app_github_repo: ['github'],
     delete_undeclared_runtime_code: ['adobe'],
     load_erp_demo_data: ['adobe'],
     // AB-74: preview without confirm, write with it; both read Commerce through the sign-in.
@@ -109,6 +112,8 @@ const INPUT_KEYS: Record<string, string[]> = {
     update_integration: ['id'],
     check_integration_updates: [],
     remove_integration: ['force', 'id'],
+    save_app_to_github: ['id', 'owner', 'repoName'],
+    delete_app_github_repo: ['id'],
     delete_undeclared_runtime_code: ['componentId'],
     load_erp_demo_data: ['erp', 'id'],
     assign_erp_products: ['confirm', 'erp', 'id', 'selection'],

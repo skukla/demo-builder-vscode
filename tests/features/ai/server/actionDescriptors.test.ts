@@ -138,6 +138,8 @@ describe('ACTION_DESCRIPTORS', () => {
         // previewWithoutConfirm below.
         expect(gated.sort()).toEqual([
             'delete_ai_prompt',
+            // Deletes the repository Demo Builder made for an app, for good (AB-1c).
+            'delete_app_github_repo',
             'delete_mesh',
             // Deletes deployed Runtime code; a redeploy of an older version is the only undo.
             'delete_undeclared_runtime_code',
@@ -159,6 +161,8 @@ describe('ACTION_DESCRIPTORS', () => {
             // Wipes the ERP and undoes what it wrote into Commerce companies
             // (plan step 05, 2026-09-14).
             'reset_erp_records',
+            // Creates a PUBLIC repository on the user's account (AB-1c).
+            'save_app_to_github',
             // Says "set", not "delete", and removes on a live workspace credential
             // — exactly the case the delete_* rule above cannot see.
             'set_console_apis',

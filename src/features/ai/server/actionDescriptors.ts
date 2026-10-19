@@ -98,6 +98,48 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         // remove_integration — which undeploys remotely — carries the gate instead.
     },
     {
+        tool: 'save_app_to_github',
+        needsAuth: ['github'],
+        readOnly: false,
+        description:
+            'Save a blank-starter App Builder app (a Custom integration still on the blank starter) ' +
+            "to a new PUBLIC GitHub repository on the user's account or one of their organisations, " +
+            'as one commit. Secret files (.env), the Adobe workspace file (.aio), build output and ' +
+            "whatever its .gitignore lists are left out. Projects exported afterwards carry the " +
+            'repository. Undo with delete_app_github_repo. Requires confirm:true: ask the user ' +
+            'first, naming the repository (owner/name), since anyone can see it.',
+        map: dashboardHandlers,
+        type: 'promoteAppBuilderComponent',
+        confirm: true,
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+            // REQUIRED: without it the handler asks in dialogs, which an agent's call
+            // would wait on with nobody watching (the rename_integration reasoning).
+            repoName: z.string().min(1).describe('The new repository name'),
+            owner: z
+                .string()
+                .optional()
+                .describe("A GitHub organisation the user belongs to; omit for the user's own account"),
+        },
+    },
+    {
+        tool: 'delete_app_github_repo',
+        needsAuth: ['github'],
+        readOnly: false,
+        description:
+            'Undo save_app_to_github: delete the GitHub repository Demo Builder created for an app, ' +
+            'and make it a blank-starter app again. The app on this computer is not touched. ' +
+            'Cannot be undone: anything pushed to the repository since is deleted with it, and ' +
+            'projects exported meanwhile point at a repository that no longer exists. Requires ' +
+            'confirm:true: ask the user first, naming the repository.',
+        map: dashboardHandlers,
+        type: 'unpromoteAppBuilderComponent',
+        confirm: true,
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+        },
+    },
+    {
         tool: 'rename_integration',
         needsAuth: false,
         readOnly: false,

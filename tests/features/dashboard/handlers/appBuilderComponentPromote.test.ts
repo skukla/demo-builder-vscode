@@ -291,3 +291,57 @@ describe('handleUnpromoteAppBuilderComponent', () => {
         expect(deleteRepository).not.toHaveBeenCalled();
     });
 });
+
+// The agent's door (save_app_to_github, delete_app_github_repo): the answers the dialogs
+// would ask for arrive as arguments, with confirm: true, and NO dialog opens (2026-10-18).
+describe('the agent door: answers as arguments, no dialogs', () => {
+    const PROMOTED = {
+        source: { owner: 'steve', repo: 'order-sync', branch: 'main' },
+        promotion: { from: { ...SHELL }, at: '2026-10-05T00:00:00.000Z' },
+    };
+
+    it('saves to the named repository on the user account with no dialog', async () => {
+        const { context } = setup();
+
+        const result = await handlePromoteAppBuilderComponent(context, { id: 'my-app', repoName: 'Order Sync', confirm: true });
+
+        expect(warn).not.toHaveBeenCalled();
+        expect(input).not.toHaveBeenCalled();
+        expect(pick).not.toHaveBeenCalled();
+        expect(createEmptyRepository).toHaveBeenCalledWith('order-sync', false, undefined);
+        expect(result).toMatchObject({ success: true, repository: { owner: 'steve', repo: 'order-sync' } });
+    });
+
+    it('saves under an organisation the user belongs to', async () => {
+        getUserOrgs.mockResolvedValue(['acme']);
+        const { context } = setup();
+
+        await handlePromoteAppBuilderComponent(context, { id: 'my-app', repoName: 'order-sync', owner: 'acme', confirm: true });
+
+        expect(createEmptyRepository).toHaveBeenCalledWith('order-sync', false, 'acme');
+    });
+
+    it('SAFETY: creates nothing without confirm, for an owner the user is not in, or with no name', async () => {
+        getUserOrgs.mockResolvedValue(['acme']);
+        const calls = [
+            { id: 'my-app', repoName: 'order-sync' },
+            { id: 'my-app', repoName: 'order-sync', owner: 'someone-else', confirm: true },
+            { id: 'my-app', repoName: '  ', confirm: true },
+        ];
+        for (const payload of calls) {
+            expect(await handlePromoteAppBuilderComponent(setup().context, payload)).toMatchObject({ success: false });
+        }
+        expect(createEmptyRepository).not.toHaveBeenCalled();
+        expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('deletes with confirm: true and no modal', async () => {
+        const { context } = setup(PROMOTED);
+
+        const result = await handleUnpromoteAppBuilderComponent(context, { id: 'my-app', confirm: true });
+
+        expect(warn).not.toHaveBeenCalled();
+        expect(deleteRepository).toHaveBeenCalledWith('steve', 'order-sync');
+        expect(result).toEqual({ success: true, deleted: 'steve/order-sync' });
+    });
+});
