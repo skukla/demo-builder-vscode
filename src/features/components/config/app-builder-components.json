@@ -22,7 +22,26 @@
         "owner": "adobe",
         "repo": "commerce-integration-starter-kit",
         "branch": "main"
-      }
+      },
+      "setupSteps": [
+        {
+          "id": "app-management-listing",
+          "optional": true,
+          "label": "App Management",
+          "title": "List the integration in App Management",
+          "why": "Only if you want it on Commerce's own list of apps: the integration works the same either way. Once it is listed, leave it associated: unassociating it there deletes its settings for this store, and that cannot be undone.",
+          "where": "Apps > App Management > Associate App: pick the integration's Adobe project, then its workspace.",
+          "path": [
+            "Apps",
+            "App Management"
+          ],
+          "enter": [
+            "<Adobe project>",
+            "<Adobe workspace>"
+          ],
+          "then": "Choose Associate App and pick the project, then the workspace. To remove the integration later, unassociate it here first."
+        }
+      ]
     },
     {
       "id": "app-builder-shell",
@@ -300,6 +319,23 @@
             ],
             "manual": "The PayPal sandbox connection stays by hand: Sales > Payment Services > Sandbox onboarding, with a PayPal sandbox business account, before the switch takes effect."
           }
+        },
+        {
+          "id": "app-management-listing",
+          "optional": true,
+          "label": "App Management",
+          "title": "List the integration in App Management",
+          "why": "Only if you want it on Commerce's own list of apps: the integration works the same either way. Once it is listed, leave it associated: unassociating it there deletes its settings for this store, and that cannot be undone.",
+          "where": "Apps > App Management > Associate App: pick the integration's Adobe project, then its workspace.",
+          "path": [
+            "Apps",
+            "App Management"
+          ],
+          "enter": [
+            "<Adobe project>",
+            "<Adobe workspace>"
+          ],
+          "then": "Choose Associate App and pick the project, then the workspace. To remove the integration later, unassociate it here first."
         }
       ],
       "description": "Connects Commerce to an ERP: orders, prices and stock stay in sync.",

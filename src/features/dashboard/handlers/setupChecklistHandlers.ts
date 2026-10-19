@@ -19,14 +19,14 @@ import { getAppBuilderComponent, setAppBuilderComponent } from '@/core/state/app
 import { buildCommerceEndpoints } from '@/features/ai/server/commerceEndpointsTool';
 import { explainStatus, requestRest, resolveRestTarget } from '@/features/ai/server/commerceRestClient';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
-import { setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
+import { setupChecklistOf, withAdobeNames } from '@/features/app-builder/services/setupChecklist';
 import { runSetupCheck, type CommerceRead, type SetupCheckResult, type SetupCheckScope } from '@/features/app-builder/services/setupChecks';
 import {
     getAppBuilderComponentCatalog,
     getAppBuilderComponentEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
-import type { SetupCheck, SetupStep } from '@/types/appBuilderComponents';
+import type { SetupCheck, SetupChecklistItem, SetupStep } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project, SetupCheckOutcome, SetupStepRecord } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
@@ -70,6 +70,16 @@ export function erpNamesOf(project: Project, integrationId: string): string[] {
     );
 }
 
+/**
+ * The checklist as the guide shows it: the ERPs' names and the integration's own Adobe project
+ * and workspace in its values (its workspace when it has one of its own, else the project's).
+ */
+function checklistOf(project: Project, id: string, state: AppBuilderComponentState): SetupChecklistItem[] | undefined {
+    const items = setupChecklistOf(id, state, erpNamesOf(project, id));
+    const names = { project: project.adobe?.projectTitle, workspace: state.workspace?.title ?? project.adobe?.workspaceTitle };
+    return items && withAdobeNames(items, names);
+}
+
 /** Save the component's step records and push the grid's snapshot. */
 async function saveSteps(
     context: HandlerContext,
@@ -79,7 +89,7 @@ async function saveSteps(
     const next = { ...opened.state, setupSteps };
     await context.stateManager.saveProject(setAppBuilderComponent(opened.project, opened.id, next));
     await postComponentsSnapshot(context);
-    return { success: true, data: { items: setupChecklistOf(opened.id, next, erpNamesOf(opened.project, opened.id)) } };
+    return { success: true, data: { items: checklistOf(opened.project, opened.id, next) } };
 }
 
 /**
@@ -89,7 +99,7 @@ async function saveSteps(
 export const handleGetSetupChecklist: MessageHandler<{ id?: string }> = async (context, payload) => {
     const opened = await openChecklist(context, payload?.id);
     if ('error' in opened) return opened.error;
-    return { success: true, data: { items: setupChecklistOf(opened.id, opened.state, erpNamesOf(opened.project, opened.id)) } };
+    return { success: true, data: { items: checklistOf(opened.project, opened.id, opened.state) } };
 };
 
 const STATES = new Set(['done', 'dismissed', 'open']);

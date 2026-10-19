@@ -1,5 +1,5 @@
 /**
- * SetupStatus — "Demo setup · 3 of 7 done" on an integration's card and row while its demo
+ * SetupStatus — "Demo setup: 3 of 7 done" on an integration's card and row while its demo
  * setup has steps open (AB-26x), so the SC sees there is Commerce Admin work left without
  * opening the flyout. Nothing once every step is done or skipped.
  *
@@ -32,11 +32,11 @@ export function setupSummary(items: SetupChecklistItem[]): string {
     return open === 0 ? 'All done' : `${done} of ${open + done} done`;
 }
 
-/** "Demo setup · N of M done", or undefined when nothing is left. */
+/** "Demo setup: N of M done", or undefined when nothing is left. */
 export function setupStatusText(model: IntegrationCardModel): string | undefined {
     const items = model.setupChecklist ?? [];
     if (!items.some(isLeftToDo)) return undefined;
-    return `Demo setup · ${setupSummary(items)}`;
+    return `Demo setup: ${setupSummary(items)}`;
 }
 
 export interface SetupStatusProps {

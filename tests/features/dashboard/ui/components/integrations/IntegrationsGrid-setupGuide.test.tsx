@@ -33,7 +33,7 @@ function renderWithSteps() {
     return renderCards(cards);
 }
 
-const SETUP_LINE = 'Demo setup · 0 of 1 done';
+const SETUP_LINE = 'Demo setup: 0 of 1 done';
 /** The card's accessible name: its name, status and setup line. */
 const LABEL = `Deployed, ${SETUP_LINE}`;
 

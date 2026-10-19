@@ -34,7 +34,7 @@ describe('an integration card that is not deployed', () => {
             integration({ status: 'error', installation: { status: 'installed' } }),
         );
 
-        expect(card.menuActions).toStrictEqual(['retry', 'open', 'manage-apis', 'remove']);
+        expect(card.menuActions).toStrictEqual(['retry', 'manage-apis', 'open', 'remove']);
     });
 });
 
@@ -61,24 +61,53 @@ describe("the integration's own ERP verbs", () => {
             integration({ id: 'solo', catalogId: 'solo-with-setup', status: 'deployed' }),
         );
 
-        expect(card.menuActions).toStrictEqual(['open', 'redeploy', 'manage-apis', 'remove']);
+        expect(card.menuActions).toStrictEqual(['manage-apis', 'redeploy', 'open', 'remove']);
     });
 
     // "Prepare this store" (AB-77) goes after them: the ERP integration's setup steps
     // declare fixes, so its deployed card offers it too.
-    it('sit above Prepare this store and Remove on the ERP integration', () => {
+    it('lead the ERP integration\'s menu, in the order an SC uses them', () => {
         const card = deriveIntegrationCard(
             integration({ id: 'erp-integration', status: 'deployed' }),
         );
 
         expect(card.menuActions).toStrictEqual([
-            'open',
-            'redeploy',
-            'manage-apis',
             'add-erp',
             'load-demo-data',
             'reset-records',
             'prepare-store',
+            'manage-apis',
+            'redeploy',
+            'open',
+            'remove',
+        ]);
+    });
+});
+
+// The order an SC reaches for them (owner, 2026-10-18): the demo first, then the store's
+// setup, configuration, the repairs and the developer's link, and Remove last.
+describe('the installed ERP integration, as Justrite has it', () => {
+    it('lists its verbs in use order', () => {
+        const card = deriveIntegrationCard(
+            integration({
+                id: 'erp-integration',
+                status: 'deployed',
+                installation: { status: 'installed' },
+                storePreparation: { at: '2026-10-10T10:00:00Z', steps: {} },
+            }),
+        );
+
+        expect(card.menuActions).toStrictEqual([
+            'open-admin',
+            'add-erp',
+            'load-demo-data',
+            'reset-records',
+            'prepare-store',
+            'undo-store-preparation',
+            'manage-apis',
+            'redeploy',
+            'reinstall',
+            'open',
             'remove',
         ]);
     });

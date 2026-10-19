@@ -50,4 +50,9 @@ describe('SetupChecklistSection', () => {
         expect(screen.getByText('All done')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: 'Review setup' })).toBeInTheDocument();
     });
+
+    it('puts no dot between the summary and the guide', () => {
+        const { container } = render(<SetupChecklistSection model={model([step({})])} onOpenGuide={jest.fn()} />);
+        expect(container).not.toHaveTextContent('·');
+    });
 });

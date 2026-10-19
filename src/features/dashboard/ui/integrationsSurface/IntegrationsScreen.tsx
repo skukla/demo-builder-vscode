@@ -88,6 +88,7 @@ export function IntegrationsScreen({
         isTransitioning,
         commerceStoreStructure,
         meshNeededByDemo,
+        destination,
     });
     const search = useIntegrationCardSearch(cards);
     const { searchQuery, visibleCards, isFiltering, searchFoundNothing } = search;

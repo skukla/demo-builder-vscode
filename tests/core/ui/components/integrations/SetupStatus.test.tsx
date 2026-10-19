@@ -1,5 +1,5 @@
 /**
- * SetupStatus — "Demo setup · N of M done" while an integration's demo setup has steps
+ * SetupStatus — "Demo setup: N of M done" while an integration's demo setup has steps
  * open (AB-26x), as a link that opens the guide. The words and the link are pinned here;
  * that the card and the grid show them is pinned in IntegrationsGrid-setupGuide.test.tsx.
  */
@@ -46,7 +46,7 @@ describe('setupSummary', () => {
 describe('setupStatusText', () => {
     it('says how far through the setup is, in the flyout\'s words', () => {
         expect(setupStatusText(model([step('a', 'open'), step('b', 'done'), step('c', 'open')]))).toBe(
-            'Demo setup · 1 of 3 done',
+            'Demo setup: 1 of 3 done',
         );
     });
 
@@ -75,7 +75,7 @@ describe('SetupStatus', () => {
             </div>,
         );
 
-        fireEvent.click(screen.getByRole('button', { name: 'Demo setup · 0 of 1 done' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Demo setup: 0 of 1 done' }));
 
         expect(onAction).toHaveBeenCalledWith(m, 'setup-guide');
         expect(onCardClick).not.toHaveBeenCalled();

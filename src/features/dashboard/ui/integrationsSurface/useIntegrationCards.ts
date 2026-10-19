@@ -23,6 +23,7 @@ import {
     getIdentifiedMeshAppBuilderComponent,
     listAppBuilderComponents,
 } from '@/core/state/appBuilderComponentState';
+import { withAdobeNames } from '@/features/app-builder/services/setupChecklist';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
@@ -42,6 +43,23 @@ export interface IntegrationCardsSource {
     commerceStoreStructure?: CommerceStoreStructure;
     /** The project's demo needs the mesh, which its Remove then says. */
     meshNeededByDemo?: boolean;
+    /**
+     * The Adobe project and workspace the screen deploys to, which the App Management step
+     * names (AB-11); an integration in a workspace of its own names that one instead.
+     */
+    destination?: { projectTitle?: string; workspaceTitle?: string };
+}
+
+/** An integration's checklist with its Adobe project and workspace named (`withAdobeNames`). */
+function withDestinationNames(
+    card: IntegrationCardModel,
+    components: Record<string, AppBuilderComponentState>,
+    destination: IntegrationCardsSource['destination'],
+): IntegrationCardModel {
+    if (!card.setupChecklist) return card;
+    const own = components[card.componentId ?? card.id]?.workspace?.title;
+    const names = { project: destination?.projectTitle, workspace: own ?? destination?.workspaceTitle };
+    return { ...card, setupChecklist: withAdobeNames(card.setupChecklist, names) };
 }
 
 /**
@@ -58,6 +76,7 @@ export function useIntegrationCards({
     isTransitioning,
     commerceStoreStructure,
     meshNeededByDemo,
+    destination,
 }: IntegrationCardsSource): IntegrationCardModel[] {
     const overrides = useRowStatusOverrides();
 
@@ -79,7 +98,7 @@ export function useIntegrationCards({
             overrides,
             catalog,
             meshStatusDisplay ? mesh?.id : undefined,
-        );
+        ).map((card) => withDestinationNames(card, components, destination));
         if (!meshStatusDisplay) {
             return integrationCards;
         }
@@ -107,5 +126,6 @@ export function useIntegrationCards({
         isTransitioning,
         commerceStoreStructure,
         meshNeededByDemo,
+        destination,
     ]);
 }

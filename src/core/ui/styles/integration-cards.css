@@ -365,11 +365,12 @@
     font-size: 13px;
 }
 
+/* The summary, then the guide link: spaced apart, no dot between (owner: no dot separators). */
 .integration-panel-setup-line {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 6px;
+    gap: 6px 14px;
 }
 
 .integration-panel-setup-next {

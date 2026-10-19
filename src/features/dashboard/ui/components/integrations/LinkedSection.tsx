@@ -52,7 +52,7 @@ export function LinkedSection({
                     <Link isQuiet onPress={() => onOpenLinked(card.id)}>
                         {card.status === 'deployed'
                             ? card.name
-                            : `${card.name} · ${card.statusLabel}`}
+                            : `${card.name} (${card.statusLabel.toLowerCase()})`}
                     </Link>
                 </span>
             ))}

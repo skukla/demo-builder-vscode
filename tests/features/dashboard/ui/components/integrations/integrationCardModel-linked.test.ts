@@ -133,16 +133,16 @@ describe('deriveIntegrationCard with systems', () => {
         expect(card.linked).toEqual({ cards: [system] });
         // Its own status: a broken system shows on the system's card, not here.
         expect(card.status).toBe('deployed');
-        // Add another ERP sits just above Remove on the deployed ERP integration (AB-16).
+        // The ERP verbs lead the deployed ERP integration's menu (AB-16; order, 2026-10-18).
         expect(card.menuActions).toEqual([
-            'open',
-            'redeploy',
-            'manage-apis',
             'add-erp',
             'load-demo-data',
             'reset-records',
             // Prepare this store, on an entry whose setup steps declare a fix (AB-77).
             'prepare-store',
+            'manage-apis',
+            'redeploy',
+            'open',
             'remove',
         ]);
     });

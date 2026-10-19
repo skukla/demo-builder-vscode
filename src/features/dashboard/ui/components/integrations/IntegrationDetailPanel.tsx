@@ -66,7 +66,9 @@ interface RowsProps {
  * the Commerce install beside it. When either needs attention, the reason and the fix
  * sit under it — the deploy's live message, or the failed install's hands-back line and
  * "Finish install" (the idempotent pass that also repairs a record left "failed" by a
- * call that timed out while the app finished, 2026-09-30).
+ * call that timed out while the app finished, 2026-09-30). When Commerce refused an upgrade,
+ * the install pass would meet the same refusal, so the fix is the reinstall the line names,
+ * through the menu's own confirm (2026-10-18).
  */
 function HealthLine({ model, onAction }: RowsProps): React.ReactElement {
     const install = model.installation;
@@ -76,7 +78,7 @@ function HealthLine({ model, onAction }: RowsProps): React.ReactElement {
                 <IntegrationStatusLabel model={model} />
                 {install && !install.failed && (
                     <span className="integration-panel-status-aside">
-                        · {install.label.toLowerCase()} in Commerce
+                        ({install.label.toLowerCase()} in Commerce)
                     </span>
                 )}
             </span>
@@ -88,8 +90,8 @@ function HealthLine({ model, onAction }: RowsProps): React.ReactElement {
                     <span className="integration-panel-status-message">
                         {install.detail ?? `${install.label} in Commerce`}
                     </span>
-                    <Link isQuiet onPress={() => onAction(model, 'install')}>
-                        Finish install
+                    <Link isQuiet onPress={() => onAction(model, install.needsReinstall ? 'reinstall' : 'install')}>
+                        {install.needsReinstall ? 'Reinstall in Commerce' : 'Finish install'}
                     </Link>
                 </>
             )}
@@ -106,23 +108,6 @@ function MeshEndpointRow({ model }: { model: IntegrationCardModel }): React.Reac
     return (
         <PanelRow label={model.urlLabel}>
             <CopyableText>{model.url}</CopyableText>
-        </PanelRow>
-    );
-}
-
-/**
- * What App Management's listing is, for an app this extension installed (AB-11). The install
- * writes the app's own record and runs its installer; App Management's own record exists
- * only when the SC associates the app there, and removing that record deletes the app's
- * saved settings for the store.
- */
-function AppManagementRow({ model }: { model: IntegrationCardModel }): React.ReactElement | null {
-    if (!model.installation || model.installation.failed) return null;
-    return (
-        <PanelRow label="App Management">
-            Optional. To list it in Commerce Admin, go to Apps &gt; App Management, choose
-            Associate App and pick this integration&apos;s project and workspace. Unassociating
-            there deletes its settings for that store and cannot be undone.
         </PanelRow>
     );
 }
@@ -172,7 +157,6 @@ function PanelContent({
                         </PanelRow>
                     ) : null}
                     <MeshEndpointRow model={model} />
-                    <AppManagementRow model={model} />
                 </div>
                 <SetupChecklistSection
                     model={model}

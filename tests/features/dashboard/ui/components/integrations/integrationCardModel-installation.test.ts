@@ -127,13 +127,13 @@ describe('deriveIntegrationCard — installation facet', () => {
     // card. The menu item is the shortcut; both post the same message (owner,
     // 2026-09-22). Commerce's Admin page for the app cannot be linked directly — its
     // URL carries a per-session security key — so this lands on the Admin itself.
-    it('an installed card can open the Commerce Admin, right after Open', () => {
+    it('an installed card can open the Commerce Admin, first among its verbs', () => {
         const model = deriveIntegrationCard(
             integration({ status: 'deployed', installation: { status: 'installed' } })
         );
 
         expect(model.menuActions).toContain('open-admin');
-        expect(model.menuActions.indexOf('open-admin')).toBe(model.menuActions.indexOf('open') + 1);
+        expect(model.menuActions[0]).toBe('open-admin');
     });
 
     it('no Commerce Admin item on a card with nothing installed', () => {

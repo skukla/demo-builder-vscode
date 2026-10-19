@@ -56,7 +56,7 @@ import {
     strandedSystemMessage,
     systemsUsedBy,
 } from '@/features/components/services/appBuilderComponentLinks';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { AppBuilderComponentCatalogEntry, SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 
@@ -342,7 +342,7 @@ function deriveInstallation(
 
 /**
  * kindLabel / source-line / apis facet. Catalog id → 'Pre-built' (+ its
- * requiredApis); a blank-entry source → 'Custom · built with AI' (the shell
+ * requiredApis); a blank-entry source → 'Custom (blank starter)' (the shell
  * instancing path); anything else → 'Imported repo' with a mono owner/repo.
  * `renamable`: a pre-built one only when its name comes from an input (the ERP
  * integration, AB-16o) — the rename sets that input, so a redeploy keeps it.
@@ -367,7 +367,7 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
         // Saved from the blank starter to the SC's own repository (AB-1c): still
         // theirs, now with a home an exported project carries.
         return {
-            kindLabel: 'Custom · saved to GitHub',
+            kindLabel: 'Custom (saved to GitHub)',
             sourceLine: formatSourceLine(entry.source),
             renamable: true,
         };
@@ -378,7 +378,7 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
             // out yourself (with AI, in-project, later). Labelling a freshly-added
             // shell as already AI-built described the intended workflow as though
             // it had happened (reported 2026-07-31).
-            kindLabel: 'Custom · blank starter',
+            kindLabel: 'Custom (blank starter)',
             sourceLine: 'Blank starter — build it out',
             renamable: true,
         };
@@ -442,6 +442,7 @@ export function deriveIntegrationCard(
     const facet = deriveKindFacet(entry);
     const primaryUrl = resolvePrimaryUrl(entry);
     const installation = deriveInstallation(entry);
+    const checklist = withSetupChecklist(entry, systems.map((system) => system.name));
 
     return withRemovalStopped(entry, {
         id: entry.id,
@@ -457,22 +458,68 @@ export function deriveIntegrationCard(
         urlLabel: 'App URL',
         apis: facet.apis,
         installation,
-        menuActions: withPromotionActions(
-            entry,
-            withPreparationActions(
+        menuActions: inUseOrder(
+            withPromotionActions(
                 entry,
-                face.status,
-                withErpActions(
+                withPreparationActions(
                     entry,
                     face.status,
-                    buildMenuActions(face.status, installation, Boolean(entry.updateAvailable)),
+                    checklist.setupChecklist,
+                    withErpActions(
+                        entry,
+                        face.status,
+                        buildMenuActions(face.status, installation, Boolean(entry.updateAvailable)),
+                    ),
                 ),
             ),
+            installation,
         ),
         canRename: entry.kind === 'integration' && facet.renamable,
         ...(systems.length > 0 ? { linked: { cards: systems } } : {}),
-        ...withSetupChecklist(entry, systems.map((system) => system.name)),
+        ...checklist,
     });
+}
+
+/**
+ * An integration's verbs in the order an SC reaches for them (owner, 2026-10-18): what the
+ * card needs first, then the demo (the Admin, the ERPs), the store's setup, configuration,
+ * then the repairs and the developer's Console link, and Remove last. The builders above
+ * decide WHICH verbs a card offers; this decides only where each sits.
+ */
+const USE_ORDER: readonly CardAction[] = [
+    'deploy',
+    'update',
+    'retry',
+    'install',
+    'sign-in',
+    'open-admin',
+    'add-erp',
+    'load-demo-data',
+    'reset-records',
+    'prepare-store',
+    'undo-store-preparation',
+    'settings',
+    'manage-apis',
+    'save-to-github',
+    'delete-github-repo',
+    'redeploy',
+    'reinstall',
+    'open',
+    'remove',
+    'remove-anyway',
+];
+
+/** Where a verb sits; a refused upgrade's reinstall is what the card needs, so it leads. */
+function placeOf(action: CardAction, installation: IntegrationCardModel['installation']): number {
+    if (action === 'reinstall' && installation?.failed && installation.needsReinstall) {
+        return USE_ORDER.indexOf('install');
+    }
+    const at = USE_ORDER.indexOf(action);
+    return at === -1 ? USE_ORDER.length : at;
+}
+
+function inUseOrder(actions: CardAction[], installation: IntegrationCardModel['installation']): CardAction[] {
+    return [...actions].sort((a, b) => placeOf(a, installation) - placeOf(b, installation));
 }
 
 /**
@@ -507,19 +554,24 @@ function aboveRemove(actions: CardAction[], own: CardAction[]): CardAction[] {
 }
 
 /**
- * "Prepare this store" on a deployed integration whose setup steps declare a fix Demo
- * Builder can apply (AB-77), and "Undo preparation" once a run is recorded on it. Just above
- * Remove, after the ERP verbs.
+ * "Prepare this store" on a deployed integration while a setup step Demo Builder can fix is
+ * still open (AB-77), and "Undo preparation" whenever a run is recorded on it. Just above
+ * Remove, after the ERP verbs. Prepare is not offered once every fixable step is done: it
+ * would find nothing to apply (owner, 2026-10-18).
  */
 function withPreparationActions(
     entry: IdentifiedAppBuilderComponent,
     status: IntegrationStatus,
+    checklist: SetupChecklistItem[] | undefined,
     actions: CardAction[],
 ): CardAction[] {
-    const steps = getAppBuilderComponentEntry(entry.catalogId ?? entry.id)?.setupSteps ?? [];
-    if (status !== 'deployed' || !steps.some((step) => step.fix)) return actions;
-    const own: CardAction[] = ['prepare-store', ...(entry.storePreparation ? (['undo-store-preparation'] as CardAction[]) : [])];
-    return aboveRemove(actions, own);
+    if (status !== 'deployed') return actions;
+    const fixable = (checklist ?? []).some((item) => item.applicable && item.state === 'open');
+    const own: CardAction[] = [
+        ...(fixable ? (['prepare-store'] as CardAction[]) : []),
+        ...(entry.storePreparation ? (['undo-store-preparation'] as CardAction[]) : []),
+    ];
+    return own.length > 0 ? aboveRemove(actions, own) : actions;
 }
 
 /** The repository verb an integration offers: the undo once saved, the save while blank. */

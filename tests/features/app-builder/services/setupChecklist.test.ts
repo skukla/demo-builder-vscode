@@ -3,11 +3,11 @@
  * where the SC is on each (AB-26x).
  */
 
-import { nextSetupStep, setupChecklistOf } from '@/features/app-builder/services/setupChecklist';
+import { nextSetupStep, setupChecklistOf, withAdobeNames } from '@/features/app-builder/services/setupChecklist';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 describe('setupChecklistOf', () => {
-    it("lists the ERP integration's steps, open until marked, every one checkable", () => {
+    it("lists the ERP integration's steps, open until marked, every one checkable but the App Management listing", () => {
         const items = setupChecklistOf('erp-integration', {});
         expect(items?.map((item) => [item.id, item.state, item.checkable])).toStrictEqual([
             ['confirmed-status', 'open', true],
@@ -19,12 +19,14 @@ describe('setupChecklistOf', () => {
             ['payment-on-account', 'open', true],
             ['storefront-returns', 'open', true],
             ['card-payments', 'open', true],
+            // Nothing can read App Management's list (AB-11), so the SC marks it.
+            ['app-management-listing', 'open', false],
         ]);
     });
 
-    it('marks card payments optional, and no other step', () => {
+    it('marks card payments and the App Management listing optional, and no other step', () => {
         const items = setupChecklistOf('erp-integration', {});
-        expect(items?.filter((item) => item.optional).map((item) => item.id)).toStrictEqual(['card-payments']);
+        expect(items?.filter((item) => item.optional).map((item) => item.id)).toStrictEqual(['card-payments', 'app-management-listing']);
         // Absent rather than false on a required step, as the other optional fields are.
         expect(items?.[0]).not.toHaveProperty('optional');
     });
@@ -42,6 +44,7 @@ describe('setupChecklistOf', () => {
         expect(items?.map((item) => item.state)).toEqual([
             'dismissed',
             'done',
+            'open',
             'open',
             'open',
             'open',
@@ -99,7 +102,7 @@ describe('setupChecklistOf', () => {
     it('reads a second copy through the entry it was made from', () => {
         expect(
             setupChecklistOf('erp-integration-2', { catalogId: 'erp-integration' })
-        ).toHaveLength(9);
+        ).toHaveLength(10);
     });
 
     it('is undefined for an entry that declares no steps', () => {
@@ -124,5 +127,36 @@ describe('nextSetupStep', () => {
 
     it('names nothing when only optional steps are open', () => {
         expect(nextSetupStep([item('a', 'done'), item('b', 'open', true)])).toBeUndefined();
+    });
+});
+
+// AB-11: listing in App Management is optional, and the step names the project and the
+// workspace the SC picks there (owner, 2026-10-18: the flyout's six-line row moved here).
+describe('the App Management listing step', () => {
+    const listing = (items: SetupChecklistItem[] | undefined) => items?.find((i) => i.id === 'app-management-listing');
+
+    it('is an optional step on every App Management app, with no check and nothing Demo Builder applies', () => {
+        for (const id of ['erp-integration', 'commerce-integration-starter-kit']) {
+            const step = listing(setupChecklistOf(id, {}));
+            expect(step).toMatchObject({ optional: true, checkable: false, applicable: false, path: ['Apps', 'App Management'] });
+            expect(step?.why).toMatch(/unassociating it there deletes its settings for this store, and that cannot be undone/);
+        }
+    });
+
+    it('names the real project and workspace once they are known', () => {
+        const items = withAdobeNames(setupChecklistOf('erp-integration', {}) ?? [], { project: 'Kukla Justrite', workspace: 'Justrite ERP' });
+        expect(listing(items)?.enter).toStrictEqual(['Kukla Justrite', 'Justrite ERP']);
+    });
+
+    it('leaves out a name it does not know rather than showing its placeholder', () => {
+        const items = withAdobeNames(setupChecklistOf('erp-integration', {}) ?? [], { workspace: 'Justrite ERP' });
+        expect(listing(items)?.enter).toStrictEqual(['Justrite ERP']);
+        expect(listing(withAdobeNames(items, {}))).not.toHaveProperty('enter', []);
+    });
+
+    it('CONTROL: touches no other step', () => {
+        const before = setupChecklistOf('erp-integration', {}) ?? [];
+        const after = withAdobeNames(before, { project: 'P', workspace: 'W' });
+        expect(after.filter((i) => i.id !== 'app-management-listing')).toStrictEqual(before.filter((i) => i.id !== 'app-management-listing'));
     });
 });

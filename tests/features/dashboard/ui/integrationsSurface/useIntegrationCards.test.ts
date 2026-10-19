@@ -157,4 +157,23 @@ describe('useIntegrationCards', () => {
 
         expect(result.current).toBe(first);
     });
+
+    // AB-11: the App Management step names what the SC picks there, from the destination
+    // this screen shows; an integration in a workspace of its own names that workspace.
+    it("names the Adobe project and the integration's own workspace in the App Management step", () => {
+        const erp: AppBuilderComponentState = {
+            kind: 'integration',
+            status: 'deployed',
+            source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+            workspace: { id: '1', name: 'JustriteERP1', title: 'Justrite ERP' },
+        };
+        const input = source({
+            components: { 'erp-integration': erp },
+            destination: { projectTitle: 'Kukla Justrite', workspaceTitle: 'Production' },
+        });
+        const { result } = renderHook(() => useIntegrationCards(input));
+
+        const step = result.current[0].setupChecklist?.find((item) => item.id === 'app-management-listing');
+        expect(step?.enter).toStrictEqual(['Kukla Justrite', 'Justrite ERP']);
+    });
 });

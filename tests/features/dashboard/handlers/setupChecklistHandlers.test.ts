@@ -77,8 +77,26 @@ describe('getSetupChecklist', () => {
             'payment-on-account',
             'storefront-returns',
             'card-payments',
+            'app-management-listing',
         ]);
         expect(mockSendRest).not.toHaveBeenCalled();
+    });
+
+    // AB-11: the step names what the SC picks in App Management — the project, and the
+    // integration's own workspace when it has one, else the project's.
+    it("names the integration's Adobe project and workspace in the App Management step", async () => {
+        const { context, project } = setup();
+        project.adobe = { ...project.adobe, projectTitle: 'Kukla Justrite', workspaceTitle: 'Production' };
+        const listing = async () => {
+            const result = await handleGetSetupChecklist(context, { id: 'erp-integration' });
+            const items = (result.data as { items: Array<{ id: string; enter?: string[] }> }).items;
+            return items.find((item) => item.id === 'app-management-listing')?.enter;
+        };
+        expect(await listing()).toStrictEqual(['Kukla Justrite', 'Production']);
+
+        const component = project.appBuilderComponents?.['erp-integration'];
+        if (component) component.workspace = { id: '1', name: 'JustriteERP1', title: 'Justrite ERP' };
+        expect(await listing()).toStrictEqual(['Kukla Justrite', 'Justrite ERP']);
     });
 });
 

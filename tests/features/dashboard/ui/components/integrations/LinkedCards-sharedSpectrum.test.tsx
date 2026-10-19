@@ -54,7 +54,7 @@ describe('linked cards against real Spectrum', () => {
         mount(<LinkedSection model={MODEL} onOpenLinked={jest.fn()} />);
 
         expect(screen.getByText('ERP integration')).toBeInTheDocument();
-        expect(screen.queryByText(/· Deployed/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/(deployed)/)).not.toBeInTheDocument();
     });
 
     it('a link in any other state spells the state out', () => {
@@ -71,7 +71,7 @@ describe('linked cards against real Spectrum', () => {
             />
         );
 
-        expect(screen.getByText('ERP integration · Deploy failed')).toBeInTheDocument();
+        expect(screen.getByText('ERP integration (deploy failed)')).toBeInTheDocument();
     });
 
     it('the card face mounts with its badge and link line', () => {

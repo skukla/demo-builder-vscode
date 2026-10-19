@@ -142,7 +142,7 @@ describe('toIntegrationCards', () => {
         it.each([
             ['mesh', 'mesh', 'API Mesh'],
             ['catalog', 'catalog', 'Pre-built'],
-            ['blank', 'blank', 'Custom · blank starter'],
+            ['blank', 'blank', 'Custom (blank starter)'],
             ['custom', 'custom', 'Imported repo'],
         ])('labels a %s row', (_name, kind, expected) => {
             const [card] = toIntegrationCards([row({ kind: kind as IntegrationRow['kind'] })]);

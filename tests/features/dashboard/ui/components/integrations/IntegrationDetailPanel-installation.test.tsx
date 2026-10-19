@@ -95,7 +95,7 @@ describe('IntegrationDetailPanel — the Commerce install on the health line', (
         );
 
         expect(healthLine().querySelector('.integration-panel-status-aside')).toHaveTextContent(
-            '· installed in Commerce'
+            '(installed in Commerce)'
         );
         expect(screen.queryByText('Commerce install')).not.toBeInTheDocument();
         expect(detailLines()).toStrictEqual([]);
@@ -114,6 +114,20 @@ describe('IntegrationDetailPanel — the Commerce install on the health line', (
         screen.getByText('Finish install').click();
 
         expect(onAction).toHaveBeenCalledWith(model, 'install');
+    });
+
+    // A refused upgrade: the install pass would meet the same refusal, so the line's fix is
+    // the reinstall it names, not "Finish install" (audit, 2026-10-18).
+    it('a refused upgrade offers the reinstall its reason names, not the install pass', () => {
+        const model = makeModel({
+            installation: { label: 'Not installed', detail: 'Reinstalling it applies the new version.', failed: true, needsReinstall: true },
+        });
+        const { onAction } = renderPanel(model);
+
+        expect(screen.queryByText('Finish install')).not.toBeInTheDocument();
+        screen.getByText('Reinstall in Commerce').click();
+
+        expect(onAction).toHaveBeenCalledWith(model, 'reinstall');
     });
 
     it('a failed install with no reason still says what is wrong', () => {
@@ -138,25 +152,11 @@ describe('IntegrationDetailPanel — the Commerce install on the health line', (
         expect(screen.queryByText('Open Commerce Admin')).not.toBeInTheDocument();
     });
 
-    // AB-11: the install does not list the app in App Management. Listing is optional, and
-    // unassociating there is the one step that destroys something.
-    it('an installed app says App Management is optional, and what unassociating there costs', () => {
+    // AB-11: the listing's how-to and its warning moved to an optional step in the setup
+    // guide, which names the real project and workspace (owner, 2026-10-18).
+    it('has no App Management row: the setup guide carries it', () => {
         renderPanel(makeModel({ installation: { label: 'Installed', failed: false } }));
 
-        const row = screen.getByText('App Management').closest('.integration-panel-row');
-        expect(row).toHaveTextContent(
-            'Optional. To list it in Commerce Admin, go to Apps > App Management, choose Associate App ' +
-                "and pick this integration's project and workspace. " +
-                'Unassociating there deletes its settings for that store and cannot be undone.'
-        );
-    });
-
-    it('CONTROL: no App Management row without an install, or while the install has failed', () => {
-        const { unmount } = renderPanel(makeModel());
-        expect(screen.queryByText('App Management')).not.toBeInTheDocument();
-        unmount();
-
-        renderPanel(makeModel({ installation: { label: 'Not installed', failed: true } }));
         expect(screen.queryByText('App Management')).not.toBeInTheDocument();
     });
 });

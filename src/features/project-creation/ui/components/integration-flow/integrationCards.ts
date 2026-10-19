@@ -81,7 +81,7 @@ const KIND_LABELS: Record<IntegrationRow['kind'], string> = {
     // later, and calling a freshly-added one AI-built describes the intended
     // workflow as though it had happened (reported 2026-07-31, fixed there).
     // `Record<IntegrationRow['kind'], …>` makes a new kind a compile error here.
-    blank: 'Custom · blank starter',
+    blank: 'Custom (blank starter)',
     custom: 'Imported repo',
 };
 

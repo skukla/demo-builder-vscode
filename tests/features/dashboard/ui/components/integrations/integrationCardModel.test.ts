@@ -70,7 +70,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.statusLabel).toBe('Not deployed');
         // The status verb is a kebab item like every other verb, and it leads:
         // on a card that needs something, that something is the first item.
-        expect(model.menuActions).toEqual(['deploy', 'open', 'manage-apis', 'remove']);
+        expect(model.menuActions).toEqual(['deploy', 'manage-apis', 'open', 'remove']);
     });
 
     // REGRESSION: the live step text used to land ONLY on `message`, which the
@@ -119,7 +119,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         );
     });
 
-    it('deployed (with url): success dot, "Deployed", NO face, Open leads the menu', () => {
+    it('deployed (with url): success dot, "Deployed", NO face, the deliberate verbs in use order', () => {
         const model = deriveIntegrationCard(
             integration({ status: 'deployed', url: 'https://245bce.adobeio-static.net' })
         );
@@ -130,7 +130,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         // A healthy card asks for nothing, so its menu carries no status verb —
         // just the deliberate actions. Redeploy appears here and only here:
         // there has to be a deployment before redoing one means anything.
-        expect(model.menuActions).toEqual(['open', 'redeploy', 'manage-apis', 'remove']);
+        expect(model.menuActions).toEqual(['manage-apis', 'redeploy', 'open', 'remove']);
     });
 
     // Verify was REMOVED (2026-08-03). It never verified the integration: the
@@ -145,7 +145,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         const model = deriveIntegrationCard(integration({ status: 'deployed' }));
 
         expect(model.url).toBeUndefined();
-        expect(model.menuActions).toEqual(['open', 'redeploy', 'manage-apis', 'remove']);
+        expect(model.menuActions).toEqual(['manage-apis', 'redeploy', 'open', 'remove']);
     });
 
     it('stale: warning dot, "Update needed", Update LEADS the menu', () => {
@@ -156,7 +156,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.statusLabel).toBe('Update needed');
         // No Redeploy beside it: Update IS the redeploy here, and two names for
         // one intent in one menu is what this whole change removed.
-        expect(model.menuActions).toEqual(['update', 'open', 'manage-apis', 'remove']);
+        expect(model.menuActions).toEqual(['update', 'manage-apis', 'open', 'remove']);
     });
 
     it('error: error dot, "Deploy failed", Retry face, Manage APIs·Remove menu', () => {
@@ -169,7 +169,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         expect(model.dotVariant).toBe('error');
         expect(model.statusLabel).toBe('Deploy failed');
         expect(model.message).toBe('aio deploy failed');
-        expect(model.menuActions).toEqual(['retry', 'open', 'manage-apis', 'remove']);
+        expect(model.menuActions).toEqual(['retry', 'manage-apis', 'open', 'remove']);
     });
 
     it('stale is DISTINCT from deployed (dot, label, menu verb)', () => {
@@ -359,7 +359,7 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
         expect(model.apis).toBeUndefined();
     });
 
-    it('blank-source match: "Custom · blank starter" + a build-it-out caption', () => {
+    it('blank-source match: "Custom (blank starter)" + a build-it-out caption', () => {
         const model = deriveIntegrationCard(
             integration({
                 id: 'my-firefly-gen',
@@ -368,7 +368,7 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
             })
         );
 
-        expect(model.kindLabel).toBe('Custom · blank starter');
+        expect(model.kindLabel).toBe('Custom (blank starter)');
         // NOT "built with AI" — the shell is empty until the user builds it.
         expect(model.sourceLine).toBe('Blank starter — build it out');
         expect(model.canRename).toBe(true);
@@ -455,7 +455,7 @@ describe('deriveIntegrationCard — url derivation', () => {
             'leads with the status verb, then Manage APIs + Remove on %s',
             (status, verb) => {
                 const model = deriveIntegrationCard(integration({ status }));
-                expect(model.menuActions).toEqual([verb, 'open', 'manage-apis', 'remove']);
+                expect(model.menuActions).toEqual([verb, 'manage-apis', 'open', 'remove']);
             }
         );
 
@@ -463,7 +463,7 @@ describe('deriveIntegrationCard — url derivation', () => {
         // card is calm), so Redeploy joins the menu.
         it('adds Redeploy on deployed', () => {
             const model = deriveIntegrationCard(integration({ status: 'deployed' }));
-            expect(model.menuActions).toEqual(['open', 'redeploy', 'manage-apis', 'remove']);
+            expect(model.menuActions).toEqual(['manage-apis', 'redeploy', 'open', 'remove']);
         });
 
         // Both would race the runner: an API change mid-deploy fights the

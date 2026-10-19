@@ -27,12 +27,12 @@ const SAVED = {
 };
 
 describe('the repository verbs on an integration card', () => {
-    it('offers "Save to GitHub" on a blank-starter app, just above Remove', () => {
+    it('offers "Save to GitHub" on a blank-starter app, beside Manage APIs', () => {
         expect(deriveIntegrationCard(blankApp()).menuActions).toEqual([
-            'open',
-            'redeploy',
             'manage-apis',
             'save-to-github',
+            'redeploy',
+            'open',
             'remove',
         ]);
     });
@@ -41,13 +41,13 @@ describe('the repository verbs on an integration card', () => {
         const model = deriveIntegrationCard(blankApp(SAVED));
 
         expect(model.menuActions).toEqual([
-            'open',
-            'redeploy',
             'manage-apis',
             'delete-github-repo',
+            'redeploy',
+            'open',
             'remove',
         ]);
-        expect(model.kindLabel).toBe('Custom · saved to GitHub');
+        expect(model.kindLabel).toBe('Custom (saved to GitHub)');
         expect(model.sourceLine).toBe('steve/order-sync');
         expect(model.canRename).toBe(true);
     });

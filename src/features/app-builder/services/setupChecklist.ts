@@ -66,6 +66,49 @@ function withErpNames(values: string[], erpNames: readonly string[]): string[] {
     return values.flatMap((value) => (value.includes(ERP_NAME) ? short.map((name) => value.replace(ERP_NAME, name)) : [value]));
 }
 
+/** The placeholders a step's `enter` value carries for the integration's Adobe project and workspace. */
+const ADOBE_PROJECT = '<Adobe project>';
+const ADOBE_WORKSPACE = '<Adobe workspace>';
+
+/** The integration's Adobe project and workspace, as App Management's pickers show them. */
+export interface AdobeNames {
+    project?: string;
+    workspace?: string;
+}
+
+function withNames(values: string[], names: AdobeNames): string[] {
+    const known: Array<[string, string | undefined]> = [[ADOBE_PROJECT, names.project], [ADOBE_WORKSPACE, names.workspace]];
+    return values.flatMap((value) => {
+        let filled = value;
+        for (const [placeholder, name] of known) {
+            if (!filled.includes(placeholder)) continue;
+            if (!name) return [];
+            filled = filled.replace(placeholder, name);
+        }
+        return [filled];
+    });
+}
+
+/**
+ * The checklist with the integration's own Adobe project and workspace names put into its
+ * values, for the App Management listing step (AB-11): the SC picks those two there, so the
+ * guide names them rather than saying "this integration's project". A value whose name is not
+ * known is left out, never shown with its placeholder. The extension fills them from the
+ * project; the integrations screen from the destination it shows.
+ *
+ * @param items - the checklist
+ * @param names - the Adobe project's and workspace's titles, when known
+ * @returns the checklist with them filled in
+ */
+export function withAdobeNames(items: SetupChecklistItem[], names: AdobeNames): SetupChecklistItem[] {
+    return items.map((item) => {
+        if (!item.enter) return item;
+        const { enter: _placeholders, ...rest } = item;
+        const enter = withNames(item.enter, names);
+        return enter.length > 0 ? { ...rest, enter } : rest;
+    });
+}
+
 /**
  * The checklist for one component, or undefined when its entry declares no steps.
  *

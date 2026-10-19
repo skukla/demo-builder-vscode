@@ -40,7 +40,6 @@ export function SetupChecklistSection({ model, onOpenGuide }: SetupChecklistSect
             <div className="integration-panel-setup">
                 <span className="integration-panel-setup-line">
                     <span>{setupSummary(items)}</span>
-                    <span aria-hidden="true">·</span>
                     <Link isQuiet onPress={onOpenGuide}>
                         {next ? 'Open setup guide' : 'Review setup'}
                     </Link>
