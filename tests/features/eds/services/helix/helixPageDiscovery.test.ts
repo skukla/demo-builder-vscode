@@ -2,11 +2,12 @@
  * HelixPageDiscovery — which DA.live documents a publish covers, measured on
  * its own (EDS-8, 2026-10-08). The decisions: HTML only, the two exclusion
  * lists, prefix stripping, `/index` collapsing, recursion by relative path,
- * and a listing failure that degrades to "nothing here" instead of throwing.
+ * a listing failure that degrades to "nothing here" instead of throwing, and an
+ * expired sign-in that does throw, because it fails every folder (EDS-29).
  */
 
 import { HelixPageDiscovery } from '@/features/eds/services/helix/helixPageDiscovery';
-import type { DaLiveEntry } from '@/features/eds/services/types';
+import { DaLiveAuthError, type DaLiveEntry } from '@/features/eds/services/types';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const file = (path: string, ext = 'html'): DaLiveEntry => ({
@@ -136,5 +137,15 @@ describe('HelixPageDiscovery.listAllPages', () => {
             .mockRejectedValueOnce(new Error('500'));
 
         expect(await discovery.listAllPages('org', 'site')).toEqual(['/home']);
+    });
+
+    // EDS-29: an expired sign-in fails every folder, and an empty list read as "no
+    // publishable pages, check your content" when the fix was to sign in.
+    it('an expired DA.live sign-in fails the whole listing, even from a subfolder', async () => {
+        listDirectory
+            .mockResolvedValueOnce([folder('/org/site/products'), file('/org/site/home.html')])
+            .mockRejectedValueOnce(new DaLiveAuthError('Authentication expired. Please log in again.'));
+
+        await expect(discovery.listAllPages('org', 'site')).rejects.toBeInstanceOf(DaLiveAuthError);
     });
 });

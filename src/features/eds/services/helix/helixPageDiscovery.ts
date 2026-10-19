@@ -13,6 +13,7 @@
  */
 
 import type { DaLiveSourceOperations } from '../daLive/daLiveSourceOperations';
+import { DaLiveAuthError } from '../types';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -114,6 +115,10 @@ export class HelixPageDiscovery {
                 }
             }
         } catch (error) {
+            // An expired sign-in fails EVERY folder, so the listing would come back empty
+            // and a publish would answer "no publishable pages" to an SC whose fix is to
+            // sign in (EDS-29). It goes up as itself; other failures lose one folder.
+            if (error instanceof DaLiveAuthError) throw error;
             this.logger.warn(`[Helix] Failed to list ${path}: ${(error as Error).message}`);
         }
 
