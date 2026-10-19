@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # An agent's project delete ignores the "deleteAll" setting
@@ -47,3 +47,7 @@ unattended run. It needs the owner present.
 The tests added in PL-70 pin only what is true either way: what the tool hands the
 cleanup step under `ask`, and the `localOnly` note. Nothing pins the `deleteAll`
 behaviour in either direction.
+
+## Shipped so far
+
+- 2026-10-19  fix(ai): an agent's project delete follows the cleanupBehavior setting (`83d5a41f1`)

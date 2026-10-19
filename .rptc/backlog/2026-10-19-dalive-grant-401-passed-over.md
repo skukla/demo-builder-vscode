@@ -36,3 +36,7 @@ becoming a warning.
 
 **Not done in the loop because** it changes what several creation-time callers see,
 and each needs its own look.
+
+## Shipped so far
+
+- 2026-10-19  docs(loop): 2026-10-19 backlog-fix loop report; EDS-54 split from EDS-29 (`35c7e5097`)
