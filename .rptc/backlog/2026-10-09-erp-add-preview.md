@@ -44,3 +44,10 @@ and cannot open this modal. Tests run it over the shared Spectrum mock.
 ## Shipped so far
 
 - 2026-10-09  feat(erp): preview what every ERP will own before Add another ERP (`f9f690f94`)
+- 2026-10-19  fix(erp): adding an ERP that owns nothing says so once (`3058e656d`)
+- 2026-10-18  docs(release-test): row 4.2 passes on Justrite (`cacf8078c`)
+- 2026-10-18  perf(erp): the Add another ERP store read starts when a project screen opens (`7436216cb`)
+- 2026-10-18  perf(erp): read the store's product pages four at a time (`86bf9644a`)
+- 2026-10-18  perf(erp): every store read reuses the kept Commerce sign-in, signed in ahead (`445d5150b`)
+- 2026-10-18  fix(erp): Add another ERP reads in short sentences and keeps its height (`cad406855`)
+- 2026-10-18  fix(erp): Add another ERP waits for the store read and says how long it took (`53bbbf875`)

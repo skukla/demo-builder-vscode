@@ -131,3 +131,4 @@ events.
 - 2026-10-03  feat(erp): a fill writes each ERP's sales organizations into the integration's mapping, where unset (AB-26y) (`4cdd36d52`)
 - 2026-10-03  Step 5 built 2026-10-03: the ERP's DELETE products route is removed (demo-erp 4457097, contract v17); a Commerce product delete is recorded in the integration's Activity and no ERP is called (integration 030bc88). 'Unlink the SKU in the lookup' was nothing to do: the key map holds customers only and the Admin lookup reads live.
 - 2026-10-03  Last step built 2026-10-03: the ERP raises its event for every change, whoever made it; the integration drops the events that echo its own changes (own-writes.js, five kinds, 15-minute records); box journeys count exactly one shipment, invoice, hold, unhold and cancel (demo-erp c7c0837, integration 812cf10; contract v19; on main). All six steps are now built.
+- 2026-10-18  fix(erp): Fill from Commerce asks first, and Reset ERPs says it plainly (`afd69da7c`)

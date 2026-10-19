@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: low
-status: backlog
+status: active
 ---
 
 # The jest-concurrent hook proof failed once under the full suite's load
@@ -51,3 +51,4 @@ that cannot collide, and a proof that tells "the router said pass" from "the rou
 ## Shipped so far
 
 - 2026-10-12  docs(backlog): file PL-74, the jest-concurrent hook proof failed once under load (`e65138333`)
+- 2026-10-19  fix(hooks): the jest-concurrent proof cannot collide with a real pid, or read a dead router as "pass" (`ae0a64001`)
