@@ -137,8 +137,11 @@ function makeDeps() {
         secrets: createMockSecretStorage().secrets,
         extensionContext: createMockExtensionContext(),
         makeHelix: () => helixSeam,
+        readCodePaths: mockReadCodePaths,
     };
 }
+
+const mockReadCodePaths = jest.fn();
 
 function setupDefaultMocks() {
     mockFetch.mockResolvedValue({ ok: false, status: 404 });
@@ -154,6 +157,7 @@ function setupDefaultMocks() {
     mockPublishLibraryPaths.mockResolvedValue(undefined);
     mockPublishSheetPaths.mockResolvedValue({ published: 0, failed: 0 });
     mockGetAccessToken.mockResolvedValue('da-live-token');
+    mockReadCodePaths.mockResolvedValue(undefined);
     mockOverlayAccountChrome.mockResolvedValue({ success: true, totalFiles: 4, failedFiles: [] });
 }
 
@@ -183,6 +187,16 @@ describe('ensureEdsContent', () => {
         const args = mockCopyContentFromSource.mock.calls[0];
         // 7th positional arg = patchReport. Empty report shape: { results: [] }
         expect(args[6]).toEqual(expect.objectContaining({ results: expect.any(Array) }));
+    });
+
+    // EDS-40: the copy used the fixed lists only, so pages a demo's code loads were dropped.
+    it("hands the copy the paths the SC's storefront code loads (9th arg)", async () => {
+        mockReadCodePaths.mockResolvedValue(['/cart', '/placeholders/b2b']);
+
+        await ensureEdsContent(makeConfig(), makeDeps());
+
+        expect(mockReadCodePaths).toHaveBeenCalledWith({ owner: 'test-owner', repo: 'test-repo' });
+        expect(mockCopyContentFromSource.mock.calls[0][8]).toEqual(['/cart', '/placeholders/b2b']);
     });
 
     it('does NOT fire the warning toast when no content patches failed', async () => {

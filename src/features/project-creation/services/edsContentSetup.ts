@@ -27,6 +27,7 @@ import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOper
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { SitePublishProgress } from '@/features/eds/services/helix/helixSiteContent';
 import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';
+import { readStorefrontCodePaths } from '@/features/eds/services/storefrontCodeReader';
 import type { Logger } from '@/types/logger';
 import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
@@ -94,6 +95,22 @@ interface EdsContentDeps {
         githubTokenService: GitHubTokenService,
         daLiveTokenProvider: TokenProvider,
     ) => EdsContentHelix;
+    /**
+     * The site paths the storefront's code loads, or undefined when it cannot be read.
+     * Defaults to downloading the SC's repository, as the shared pipeline does.
+     */
+    readCodePaths?: (repo: { owner: string; repo: string }) => Promise<string[] | undefined>;
+}
+
+/** The pipeline's own read of the storefront's code, through a GitHub client built here. */
+async function readCodePathsFromGitHub(
+    secrets: import('vscode').SecretStorage,
+    repo: { owner: string; repo: string },
+    logger: Logger,
+): Promise<string[] | undefined> {
+    const { GitHubFileOperations } = await import('@/features/eds/services/github/githubFileOperations');
+    const fileOps = new GitHubFileOperations(getGitHubServices(secrets).tokenService, logger);
+    return readStorefrontCodePaths(fileOps.repoArchive, repo, logger);
 }
 
 /**
@@ -200,8 +217,13 @@ export async function ensureEdsContent(
     // would silent-debug-log here and the import path would miss the user signal.
     const patchReport = createPatchReport();
 
-    // No code paths are handed over here: this copy uses the fixed lists (the static
-    // fallback), not the shared pipeline's read of the storefront's code (EDS-40).
+    // The paths the storefront's own code loads, read as the shared pipeline reads them,
+    // so this copy carries the same pages a reset would (EDS-40). Until 2026-10-19 it
+    // used the fixed lists only. Code that cannot be read falls back to them, as there.
+    const codePaths = await (deps.readCodePaths
+        ? deps.readCodePaths(repoInfo)
+        : readCodePathsFromGitHub(deps.secrets, repoInfo, logger));
+
     const contentResult = await daLiveContentOps.copyOps.copyContentFromSource(
         {
             org: contentSource.org,
@@ -218,6 +240,8 @@ export async function ensureEdsContent(
         config.contentPatches,
         config.contentPatchSource,
         patchReport,
+        undefined,
+        codePaths,
     );
 
     if (!contentResult.success) {

@@ -4264,10 +4264,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 137,
+            "line": 154,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still returns false, so the copy runs anyway \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs. Re-anchored 2026-09-10 (142 -> 128): the probe moved into contentExistsInDaLive when ensureEdsContent was decomposed. Same code, new line. Re-anchored 2026-10-16 (135 -> 137): unchanged code; the progress lines above it now import the vocabulary (progress vocabulary slice 4).",
+            "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still returns false, so the copy runs anyway \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs. Re-anchored 2026-09-10 (142 -> 128): the probe moved into contentExistsInDaLive when ensureEdsContent was decomposed. Same code, new line. Re-anchored 2026-10-16 (135 -> 137): unchanged code; the progress lines above it now import the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-19 (137 -> 154): unchanged code; the copy now reads the storefront's code paths first (EDS-40).",
             "decision": "none \u2014 the debug line is what tells a pasted log why the copy ran",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
@@ -4289,10 +4289,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 225,
+            "line": 249,
             "mutants": 1,
             "category": "block",
-            "reason": "The else body is one logger.info reporting the copied file count. Emptying it removes that line and changes nothing else \u2014 same reasoning as the condition above. Re-anchored 2026-09-10 (177 -> 207): unchanged code, shifted by the decomposition of ensureEdsContent. Re-anchored 2026-10-16 (218 -> 225): unchanged code; the copy now reports in the vocabulary (progress vocabulary slice 4).",
+            "reason": "The else body is one logger.info reporting the copied file count. Emptying it removes that line and changes nothing else \u2014 same reasoning as the condition above. Re-anchored 2026-09-10 (177 -> 207): unchanged code, shifted by the decomposition of ensureEdsContent. Re-anchored 2026-10-16 (218 -> 225): unchanged code; the copy now reports in the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-19 (225 -> 249): unchanged code; the copy now reads the storefront's code paths first (EDS-40).",
             "decision": "none \u2014 the count is the only record of how much content was copied",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
