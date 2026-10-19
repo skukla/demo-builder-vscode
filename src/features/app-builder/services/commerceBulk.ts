@@ -14,6 +14,8 @@
  */
 
 import type { CommerceGet } from './erpFillReaders';
+import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { CommerceBulkAccepted, CommerceBulkStatus } from '@/types/commerceWire';
 import type { CommerceBulkOutcome } from '@/types/erpAssign';
 
@@ -57,6 +59,20 @@ export interface BulkFollowDeps {
     /** How long the follow waits for open operations before it says so and stops. */
     deadlineMs: number;
     onProgress?: (done: number, total: number) => void;
+}
+
+/**
+ * How a product write is followed: every few seconds, for at most ten minutes, each read said
+ * as "N of M products saved". Shared by Assign products, its undo, and removal's undo.
+ */
+export function productBulkFollow(onProgress: (step: string) => void): BulkFollowDeps {
+    return {
+        sleep,
+        now: () => Date.now(),
+        intervalMs: TIMEOUTS.COMMERCE_BULK_POLL_INTERVAL,
+        deadlineMs: TIMEOUTS.COMMERCE_BULK_MAX,
+        onProgress: (done, total) => onProgress(`${done} of ${total} products saved`),
+    };
 }
 
 /** One status read, as counts. */

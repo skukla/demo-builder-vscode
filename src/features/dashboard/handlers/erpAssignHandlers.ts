@@ -16,11 +16,9 @@ import { guardOrBlock, postComponentsSnapshot, type GuardableResult } from './ap
 import { openErpCall, sentence, shapeErpRow, type ErpCall } from './erpCall';
 import { setAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
-import type { BulkFollowDeps } from '@/features/app-builder/services/commerceBulk';
+import { productBulkFollow } from '@/features/app-builder/services/commerceBulk';
 import { selectionProblem } from '@/features/app-builder/services/erpAssignSelection';
 import {
     assignmentRecord,
@@ -92,17 +90,6 @@ export const handleGetErpAssignOptions: MessageHandler<ErpAssignRequestPayload> 
         return readFailed('read the products', error);
     }
 };
-
-/** How the follow waits: every few seconds, for at most ten minutes. */
-function followDeps(report: ReportStage, stage: string): BulkFollowDeps {
-    return {
-        sleep,
-        now: () => Date.now(),
-        intervalMs: TIMEOUTS.COMMERCE_BULK_POLL_INTERVAL,
-        deadlineMs: TIMEOUTS.COMMERCE_BULK_MAX,
-        onProgress: (done, total) => report(stage, `${done} of ${total} products saved`),
-    };
-}
 
 /** What did not go right in the write, in words; the write that did land stands. */
 function bulkNotes(outcome: CommerceBulkOutcome): string[] {
@@ -209,7 +196,7 @@ async function runAssign(
     const stage = OPERATION_STAGES.assigningErpProducts.label;
     // '' is the catch-all ERP's: the tag is cleared, and the product falls to it.
     report(stage, value ? `Writing erp_owner=${value} on ${toWrite.length} products` : `Clearing erp_owner on ${toWrite.length} products`);
-    const bulk = await writeOwnerValues(opened.deps.commerce, toWrite.map((row) => ({ sku: row.sku, value })), followDeps(report, stage));
+    const bulk = await writeOwnerValues(opened.deps.commerce, toWrite.map((row) => ({ sku: row.sku, value })), productBulkFollow((step) => report(stage, step)));
     await saveErpRecord(context, opened, assignmentRecord(toWrite, value, new Date().toISOString()));
     const pass = await passAfterWrite(context, opened, report, toWrite.map((row) => row.sku));
     const warning = [...bulkNotes(bulk), ...previewNotes(preview), ...pass.notes].join(' ');
@@ -287,7 +274,7 @@ async function runUndo(
     let bulk: CommerceBulkOutcome | undefined;
     if (plan.restore.length > 0) {
         report(stage, `Putting back the erp_owner of ${plan.restore.length} products`);
-        bulk = await writeOwnerValues(opened.deps.commerce, plan.restore, followDeps(report, stage));
+        bulk = await writeOwnerValues(opened.deps.commerce, plan.restore, productBulkFollow((step) => report(stage, step)));
     }
     await saveErpRecord(context, opened, undefined);
     const pass = bulk ? await passAfterWrite(context, opened, report, plan.restore.map((entry) => entry.sku)) : { notes: [] };

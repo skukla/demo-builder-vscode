@@ -38,6 +38,12 @@ import {
 } from './appBuilderComponentHandlers.testUtils';
 import * as vscode from 'vscode';
 import { MESH_NEEDED_NOTE } from '@/features/components/services/demoPackageLoader';
+
+// The store-setup undo that runs first (erpSetupTeardown); nothing to undo unless a test says.
+const mockUndoErpSetup = jest.fn();
+jest.mock('@/features/dashboard/handlers/erpSetupTeardown', () => ({
+    undoErpSetup: (...a: unknown[]) => mockUndoErpSetup(...a),
+}));
 import { ErrorCode } from '@/types/errorCodes';
 
 // The family's shared reset. Dropped on the first attempt at this split, which is
@@ -338,5 +344,52 @@ describe('handleRemoveAppBuilderComponent — an ERP leaving a multi-ERP integra
         await handleRemoveAppBuilderComponent(mockContext, { id: 'demo-erp-2' });
 
         expect(mockApplyErpOwnership).not.toHaveBeenCalled();
+    });
+});
+
+// Removing the ERP integration undoes its store setup first, while its Commerce access stands:
+// its undo buttons and the record of old values go with it (Justrite, 2026-10-19).
+describe("handleRemoveAppBuilderComponent — the ERP integration's store setup", () => {
+    function integration() {
+        return setupMocks({
+            appBuilderComponents: {
+                'erp-integration': { kind: 'integration', status: 'deployed', name: 'ERP Integration', source: { owner: 'skukla', repo: 'commerce-erp-integration' } },
+            },
+        });
+    }
+
+    it('undoes it before anything is taken down', async () => {
+        const { mockContext, mockProject } = integration();
+        mockTestDeveloperPermissions(true);
+        mockUndoErpSetup.mockResolvedValue({ done: ['Cleared the erp_owner tag on 3 products.'], failed: [] });
+
+        await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-integration' });
+
+        expect(mockUndoErpSetup).toHaveBeenCalledWith(mockContext, mockProject, 'erp-integration', expect.any(Function));
+        expect(mockUndoErpSetup.mock.invocationCallOrder[0]).toBeLessThan(mockRemoveAppBuilderComponent.mock.invocationCallOrder[0]);
+    });
+
+    it('not fully undone, stops with nothing removed, and the card offers Remove anyway', async () => {
+        const { mockContext } = integration();
+        mockTestDeveloperPermissions(true);
+        mockUndoErpSetup.mockResolvedValue({ done: [], failed: ['3 products keep their erp_owner tag.'] });
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-integration' });
+
+        expect(mockRemoveAppBuilderComponent).not.toHaveBeenCalled();
+        expect(result).toMatchObject({ success: false });
+        const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls.at(-1)?.[0];
+        expect(saved?.appBuilderComponents?.['erp-integration']?.removalStopped).toContain('3 products keep their erp_owner tag.');
+    });
+
+    it('Remove anyway goes ahead, and says what was left', async () => {
+        const { mockContext } = integration();
+        mockTestDeveloperPermissions(true);
+        mockUndoErpSetup.mockResolvedValue({ done: [], failed: ['3 products keep their erp_owner tag.'] });
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-integration', force: true });
+
+        expect(mockRemoveAppBuilderComponent).toHaveBeenCalled();
+        expect(result).toMatchObject({ success: true, data: { warning: expect.stringContaining('Its store setup was not fully undone: 3 products keep their erp_owner tag.') } });
     });
 });

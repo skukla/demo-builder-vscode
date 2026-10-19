@@ -25,7 +25,18 @@ export function removalConsequence(target: IntegrationCardModel | undefined): st
     // A linked pair goes together (decision 2), whichever card asked.
     const linked = target?.linked ? linkedRemovalConsequence(target) : undefined;
     const appManagement = target?.installation ? APP_MANAGEMENT_REMOVAL_NOTE : undefined;
-    return [linked, appManagement].filter(Boolean).join(' ') || undefined;
+    const storeSetup = target?.linked ? storeSetupConsequence(target) : undefined;
+    return [linked, storeSetup, appManagement].filter(Boolean).join(' ') || undefined;
+}
+
+/**
+ * What removal undoes in Commerce first (erpSetupTeardown, 2026-10-19): the integration its
+ * ERPs' tags, erp_owner on the sets Demo Builder added it to and the store preparation; an ERP
+ * its own tags. Said before the click, as every removal consequence is.
+ */
+function storeSetupConsequence(target: IntegrationCardModel): string {
+    if (target.isSystem) return "Its products' ERP tags are cleared in Commerce first.";
+    return 'Its store setup is undone in Commerce first: the ERP tags on products, erp_owner on the attribute sets Demo Builder added it to, and what Prepare this store changed.';
 }
 
 /**

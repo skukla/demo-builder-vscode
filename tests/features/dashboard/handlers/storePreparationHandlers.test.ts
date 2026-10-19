@@ -27,8 +27,7 @@ const mockRunCheck = jest.fn();
 jest.mock('@/features/app-builder/services/setupChecks', () => ({
     runSetupCheck: (...a: unknown[]) => mockRunCheck(...a),
 }));
-jest.mock('@/features/dashboard/handlers/setupChecklistHandlers', () => ({
-    ...jest.requireActual('@/features/dashboard/handlers/setupChecklistHandlers'),
+jest.mock('@/features/dashboard/services/setupCheckReader', () => ({
     erpNamesOf: () => ['Justrite ERP'],
     setupCheckReader: async () => ({ read: jest.fn(), scope: { websiteCode: 'acme' } }),
 }));

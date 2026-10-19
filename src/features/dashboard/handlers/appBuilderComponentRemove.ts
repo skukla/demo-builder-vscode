@@ -18,8 +18,9 @@ import {
     type GuardableResult,
 } from './appBuilderComponentOperation';
 import { postComponentsSnapshot, refreshProjectStatus } from './appBuilderComponentPush';
+import { undoErpSetup, type TeardownOutcome } from './erpSetupTeardown';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { getAppBuilderComponent, setAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
@@ -89,6 +90,12 @@ export async function removeWithCleanup(
     const neededMesh =
         getAppBuilderComponent(project, id)?.kind === 'mesh' &&
         isMeshNeededByPackage(project.selectedPackage, project.selectedStack);
+    // The store setup first, while the integration's Commerce access stands: its undo and
+    // the record of old values go with the entry (owner, 2026-10-19). Not fully undone, the
+    // removal stops and the card offers Remove anyway, which goes ahead and says what is left.
+    const undone = await undoErpSetup(context, project, id, report);
+    if (undone && undone.failed.length > 0 && !force) return stopForSetup(context, project, id, undone);
+    if (undone) context.logger.info(`[ERP] Removing ${id}: ${[...undone.done, ...undone.failed].join(' ') || 'nothing to undo in the store'}`);
     // Undeploy is a slow cloud op — telegraph it, or the grid sits frozen
     // while `aio app undeploy` runs with nothing on screen saying so.
     report(OPERATION_STAGES.removing.label);
@@ -109,8 +116,24 @@ export async function removeWithCleanup(
     if (removed.success && neededMesh) {
         return { ...removed, warnings: [...(removed.warnings ?? []), MESH_NEEDED_NOTE] };
     }
+    if (removed.success && undone && undone.failed.length > 0) {
+        const left = `Its store setup was not fully undone: ${undone.failed.join(' ')}`;
+        return { ...removed, warnings: [...(removed.warnings ?? []), left] };
+    }
     if (!removed.success || !integrationId) return removed;
     return applyOwnershipAfterRemove(removed, project, integrationId, report, context.context?.secrets);
+}
+
+/**
+ * Stop a removal whose store setup was not fully undone: nothing is taken down, the card says
+ * why and offers Remove anyway (the `removalStopped` a stopped teardown sets).
+ */
+async function stopForSetup(context: HandlerContext, project: Project, id: string, undone: TeardownOutcome): Promise<GuardableResult> {
+    const why = `Its store setup was not fully undone, so nothing was removed. ${undone.failed.join(' ')}`;
+    const state = getAppBuilderComponent(project, id);
+    if (state) await context.stateManager.saveProject(setAppBuilderComponent(project, id, { ...state, removalStopped: why }));
+    await postComponentsSnapshot(context);
+    return { success: false, error: why, code: ErrorCode.COMPONENT_REMOVAL_STOPPED };
 }
 
 /**

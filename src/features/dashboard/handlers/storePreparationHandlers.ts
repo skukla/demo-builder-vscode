@@ -13,7 +13,7 @@
  */
 
 import { guardOrBlock, postComponentsSnapshot, type GuardableResult } from './appBuilderComponentHandlers';
-import { checkedRecords, erpNamesOf, openChecklist, setupCheckReader, type OpenedChecklist } from './setupChecklistHandlers';
+import { checkedRecords, openChecklist, type OpenedChecklist } from './setupChecklistHandlers';
 import { setAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
@@ -28,6 +28,7 @@ import {
     type PreparationDeps,
     type PreparationOutcome,
 } from '@/features/app-builder/services/storePreparation/storePreparationEngine';
+import { erpNamesOf, setupCheckReader } from '@/features/dashboard/services/setupCheckReader';
 import { openCommerce, type CommerceClient } from '@/features/project-creation/services/erpAssignProducts';
 import type { SetupConfigFixItem } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, SetupStepRecord } from '@/types/base';

@@ -138,6 +138,11 @@ export const OPERATION_STAGES = {
         expectation: 'A few seconds per set',
         detail: 'erp_owner in the sets your products use',
     },
+    undoingStoreSetup: {
+        label: 'Undoing the store setup',
+        expectation: 'Usually a minute',
+        detail: 'Tags, attribute sets, prepared settings',
+    },
     resettingErpRecords: {
         label: 'Resetting the records',
         expectation: 'Usually a minute or two',

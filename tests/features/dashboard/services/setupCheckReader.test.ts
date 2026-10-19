@@ -20,7 +20,7 @@ jest.mock('@/features/ai/server/commerceRestClient', () => ({
 
 // Below the mock on purpose: jest.mock hoists above this file's imports.
 import { sendRest, type RestTarget } from '@/features/ai/server/commerceRestClient';
-import { setupCheckReader } from '@/features/dashboard/handlers/setupChecklistHandlers';
+import { setupCheckReader } from '@/features/dashboard/services/setupCheckReader';
 
 const TARGET: RestTarget = { base: 'https://tenant.example', token: 't', clientId: 'c', imsOrgCode: 'o' };
 

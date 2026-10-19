@@ -523,7 +523,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'Remove one App Builder integration by its id. DESTRUCTIVE: undeploys it remotely ' +
             '(aio app undeploy / api-mesh:delete), deletes its local files and its own Adobe ' +
             'workspace, and republishes the storefront without it. The ERP integration first undoes what it wrote into Commerce ' +
-            'and takes every ERP with it; removing its first ERP removes the integration the same way. ' +
+            "and its store setup (its ERPs' erp_owner tags, erp_owner on the attribute sets it added, what " +
+            'prepare_commerce_store changed), and takes every ERP with it; removing its first ERP removes the ' +
+            'integration the same way; an ERP removed alone clears its own tags. ' +
             'An ERP added with add_erp is removed on its own: the integration stops listing it first. ' +
             'Before undeploying it runs the clean-ups only the deployed code can do (the Commerce ' +
             "undo and uninstall, the ERP's records); if one fails NOTHING is removed and the " +
