@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: low
-status: active
+status: built
 ---
 
 # An add into a workspace it just made skips the leftover-code check
@@ -53,3 +53,4 @@ it made does not look; one into a workspace it joined still does.
 
 - 2026-10-17  docs(walk): record row 3.16, Edit adds and removes an app (`37e6b5ae1`)
 - 2026-10-17  fix(app-builder): an add into a workspace it just made skips the leftover check (`98f525c4b`)
+- 2026-10-19  Reassessed 2026-10-19 (loop): the fix 98f525c4b is on the branch; built, waiting on the release check

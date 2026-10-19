@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # Copied pages lose their own page settings (template, robots, cache-control)
@@ -48,3 +48,4 @@ responses (`tests/fixtures/eds/page-metadata/README.md` names each source).
 ## Shipped so far
 
 - 2026-10-16  fix(eds): copied pages keep their own page settings (`1b2e4f1aa`)
+- 2026-10-19  Reassessed 2026-10-19 (loop): fixed by 1b2e4f1aa; built, waiting on the release check

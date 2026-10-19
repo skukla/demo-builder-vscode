@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # The sign-in status says DA.live is signed in when the sign-in has expired
@@ -26,3 +26,7 @@ Make the DA.live entry mean "usable now": check the stored token's expiry (and r
 `expiresInMinutes` like Adobe's), or make one cheap authenticated read. Whatever the UI's
 DA.live sign-in indicator reads should agree with it — find that reader and use one
 answer for both. Test: an expired stored token reads as not authenticated.
+
+## Shipped so far
+
+- 2026-10-19  fix(ai): get_auth_status asks DA.live whether the stored sign-in still works (`604743e70`)

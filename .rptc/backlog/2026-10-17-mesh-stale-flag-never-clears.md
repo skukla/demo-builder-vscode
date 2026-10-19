@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # The mesh's "redeploy needed" flag only ever turns on
@@ -33,3 +33,7 @@ was not verified. Read `meshStatusHelpers` and `deriveMeshStatus` before changin
 On a project with a mesh: change a setting the mesh reads, save without redeploying,
 change it back, save. Expected: the mesh reads current. Likely today: still stale.
 Not yet run; this is the predicted behaviour from the code, not an observed one.
+
+## Shipped so far
+
+- 2026-10-19  fix(mesh): a setting put back to what the mesh was deployed with clears "redeploy needed" (`5e6530b65`)

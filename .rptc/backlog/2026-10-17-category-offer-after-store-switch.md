@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # The new-category offer reads the SAVED store, before it is published
@@ -39,3 +39,7 @@ Do not offer (or auto-add) while the storefront is out of date on the store scop
 skip when `edsStorefrontState.catalogPagesPending` is set, or read the published store
 codes instead of the saved ones. Check against the auto-add path too
 (`demoBuilder.categoryPages.autoAdd`), which would publish without asking.
+
+## Shipped so far
+
+- 2026-10-19  fix(eds): the new-category check waits while a store change awaits its republish (`8ab77044c`)

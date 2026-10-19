@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: low
-status: active
+status: built
 ---
 
 # The jest-concurrent hook proof failed once under the full suite's load

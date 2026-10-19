@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: active
+status: built
 ---
 # One deployment per Adobe project
 
@@ -180,3 +180,4 @@ after "Refresh registrations", and Apps > App Management lists one app.
 - 2026-10-08  fix(authentication): the extension-point registry is a bare map, as the live service answers it (`f3cf95d30`)
 - 2026-10-08  fix(app-builder): name what a removal checks, and say why Adobe refused a delete (`cb5c45420`)
 - 2026-10-08  docs(backlog): AB-69 logs cb5c45420 (`c1ba61c66`)
+- 2026-10-19  Reassessed 2026-10-19 (loop): the built scope is on the branch; one browser check remains, in the walkthrough queue

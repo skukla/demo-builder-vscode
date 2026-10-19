@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # The projects list shows a project an agent is building, with an honest status
@@ -67,3 +67,4 @@ must not leave a tile stuck on "Creating…" forever.
 - 2026-10-16  fix(projects-dashboard): show projects an agent is building, and refresh on change (`13cf5a4f2`)
 - 2026-10-16  fix(projects-dashboard): show an agent's creation from its start; create_project adopts an existing storefront (`6958aff36`)
 - 2026-10-16  fix(ui): in-progress states are blue on every surface (`9b2746e82`)
+- 2026-10-19  Reassessed 2026-10-19 (loop): fixed by 13cf5a4f2, 6958aff36 and 9b2746e82; built, waiting on the release check

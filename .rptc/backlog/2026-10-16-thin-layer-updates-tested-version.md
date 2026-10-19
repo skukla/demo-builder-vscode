@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # Updates bring a storefront to the TESTED version, and keep Demo Builder's layer on it
@@ -51,3 +51,4 @@ version-fetch one also by a live request.
 
 - 2026-10-16  fix(updates): bring thin-layer storefronts to the tested version and keep their fixes (`1556e4104`)
 - 2026-10-16  fix(eds): record a block library whose blocks were already in the repository (`3cfd0b622`)
+- 2026-10-19  Reassessed 2026-10-19 (loop): fixed by 1556e4104; built, waiting on the release check

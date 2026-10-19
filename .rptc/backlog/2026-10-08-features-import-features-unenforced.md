@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # "Features do not import other features" says it is enforced by eslint; nothing enforces it
@@ -32,3 +32,5 @@ scope creep for a Node change.
 ## Shipped so far
 
 - 2026-10-07  docs(backlog): PL-68, the features-import-features rule claims an eslint check that does not exist (`cdd433130`)
+- 2026-10-19  docs(handbook): "features do not import features" is not enforced, say so (`64eafa5b7`)
+- 2026-10-19  Measured 2026-10-19: 857 cross-feature imports, 72 feature pairs. The false eslint claim is corrected; enforce-with-ledger vs restate the rule is the owner's decision

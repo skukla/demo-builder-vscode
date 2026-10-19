@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # An agent's create_project never deletes an existing project, and cleans up when it fails
@@ -51,3 +51,4 @@ stays, in both doors. The wizard never removed it, and the agent's re-run reuses
 ## Shipped so far
 
 - 2026-10-16  fix(ai): create_project refuses a taken or unsafe name, and cleans up when it fails (`15df43067`)
+- 2026-10-19  Reassessed 2026-10-19 (loop): the fix 15df43067 is on the branch; built, waiting on the release check

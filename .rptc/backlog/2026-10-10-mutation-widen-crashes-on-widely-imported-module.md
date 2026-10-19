@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # Widening a mutation measurement crashes when the module is imported everywhere
@@ -90,3 +90,8 @@ a later measurement of the same module list keeps it, so repeating the command w
 time out again. Measuring each module alone re-aimed the focus. Both then closed on
 direct tests in under a minute per measurement; every uncovered mutant was in a
 function no importing suite's test would have had a reason to enter.
+
+## Shipped so far
+
+- 2026-10-19  fix(mutation): a widen refuses a module with too many importers, or mixed environments (`f3abedc2a`)
+- 2026-10-19  Not done: a timed-out widen still leaves the focus widened for the next run (re-aim by measuring each module alone)

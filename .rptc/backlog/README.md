@@ -234,8 +234,8 @@ each item's own file; what has already landed against an item is in its
 | `AI-14` | fix | [Agent-run project creation waited for the AEM Code Sync App and told nobody](2026-10-09-agent-creation-waits-for-code-sync-silently.md) | — | med | built |
 | `AI-15` | fix | [A screen opened for one project acts on whichever project is current](2026-10-09-screens-act-on-the-current-project.md) | — | high | active |
 | `AI-71` | fix | [An agent's project delete ignores the "deleteAll" setting](2026-10-10-agent-delete-ignores-delete-all-setting.md) | — | low | backlog |
-| `AI-72` | fix | [The Commerce REST tools work on a project with no Adobe workspace](2026-10-16-commerce-rest-without-workspace.md) | — | med | active |
-| `AI-73` | fix | [An agent's create_project never deletes an existing project, and cleans up when it fails](2026-10-16-create-project-name-guard.md) | — | high | active |
+| `AI-72` | fix | [The Commerce REST tools work on a project with no Adobe workspace](2026-10-16-commerce-rest-without-workspace.md) | — | med | built |
+| `AI-73` | fix | [An agent's create_project never deletes an existing project, and cleans up when it fails](2026-10-16-create-project-name-guard.md) | — | high | built |
 | `AI-74` | feature | [An agent can rebuild a project on a repository and site that already exist](2026-10-16-create-project-adopt-existing.md) | — | med | active |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
@@ -279,8 +279,8 @@ each item's own file; what has already landed against an item is in its
 | `EDS-26` | fix | [Reset and delete leave a storefront's product pages published](2026-10-05-product-pages-survive-reset.md) | — | med | built |
 | `EDS-27` | feature | [New categories get their pages without a Republish](2026-10-05-new-categories-get-pages-automatically.md) | EDS-24 | med | built |
 | `EDS-28` | fix | [Existing storefront gains a block library](2026-10-05-existing-storefront-gains-a-block-library.md) | — | high | built |
-| `EDS-29` | fix | [Republish says "No publishable pages found" when the DA.live sign-in has expired](2026-10-05-republish-blames-content-for-an-expired-sign-in.md) | — | med | backlog |
-| `EDS-30` | fix | [The sign-in status says DA.live is signed in when the sign-in has expired](2026-10-05-dalive-sign-in-status-says-yes-when-expired.md) | — | med | backlog |
+| `EDS-29` | fix | [Republish says "No publishable pages found" when the DA.live sign-in has expired](2026-10-05-republish-blames-content-for-an-expired-sign-in.md) | — | med | built |
+| `EDS-30` | fix | [The sign-in status says DA.live is signed in when the sign-in has expired](2026-10-05-dalive-sign-in-status-says-yes-when-expired.md) | — | med | built |
 | `EDS-31` | fix | ["Manage DA.live Sites" deletes a site's content and leaves its pages published](2026-10-05-manage-dalive-sites-leaves-pages-published.md) | — | low | built |
 | `EDS-32` | question | [Sharing a storefront: should Site access also make someone a GitHub collaborator?](2026-10-07-share-storefront-github-collaborator.md) | — | med | dropped |
 | `EDS-34` | fix | [Publish and cache purge give up on an expired session that preview recovers from](2026-10-09-publish-purge-403-reprompts.md) | — | med | built |
@@ -296,11 +296,11 @@ each item's own file; what has already landed against an item is in its
 | `EDS-45` | fix | [The B2B template's 404 page renders blank](2026-10-15-b2b-template-404-page-renders-blank.md) | — | low | built |
 | `EDS-46` | feature | [The store step warns about a website with no products](2026-10-15-store-step-warns-about-a-website-with-no-products.md) | — | low | built |
 | `EDS-47` | feature | [Grant a B2B website's categories to its shared catalogs](2026-10-15-grant-categories-to-b2b-shared-catalogs.md) | — | med | backlog |
-| `EDS-48` | fix | [Storefronts stopped receiving Adobe's boilerplate updates after 2026-08-28](2026-10-16-boilerplate-baseline-froze.md) | — | high | active |
+| `EDS-48` | fix | [Storefronts stopped receiving Adobe's boilerplate updates after 2026-08-28](2026-10-16-boilerplate-baseline-froze.md) | — | high | built |
 | `EDS-49` | feature | [A storefront canary: check that the patched boilerplate still WORKS, not just that patches fit](2026-10-16-patch-behaviour-canary.md) | EDS-48 | high | active |
-| `EDS-50` | fix | [Copied pages lose their own page settings (template, robots, cache-control)](2026-10-16-copy-drops-page-metadata.md) | — | med | active |
-| `EDS-51` | fix | [Updates bring a storefront to the TESTED version, and keep Demo Builder's layer on it](2026-10-16-thin-layer-updates-tested-version.md) | — | high | active |
-| `EDS-52` | fix | [The new-category offer reads the SAVED store, before it is published](2026-10-17-category-offer-after-store-switch.md) | — | med | backlog |
+| `EDS-50` | fix | [Copied pages lose their own page settings (template, robots, cache-control)](2026-10-16-copy-drops-page-metadata.md) | — | med | built |
+| `EDS-51` | fix | [Updates bring a storefront to the TESTED version, and keep Demo Builder's layer on it](2026-10-16-thin-layer-updates-tested-version.md) | — | high | built |
+| `EDS-52` | fix | [The new-category offer reads the SAVED store, before it is published](2026-10-17-category-offer-after-store-switch.md) | — | med | built |
 | `EDS-53` | fix | [CitiSignal's checkout label sheet will not preview on a copy](2026-10-18-citisignal-checkout-sheet-will-not-preview.md) | — | med | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
@@ -420,7 +420,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-53` | epic | [JustRite from nothing: wipe the Adobe I/O project, rebuild on Khalil's storefront, one data model](2026-09-30-justrite-from-nothing-fresh-project-khalil-storefront.md) | AB-51 | high | active |
 | `AB-67` | fix | [An agent cannot name the first ERP when it adds the ERP integration](2026-10-04-add-integration-names-its-first-erp.md) | — | med | built |
 | `AB-68` | feature | [Remember custom integration repos across projects](2026-10-06-remember-custom-integration-repos.md) | — | med | active |
-| `AB-69` | fix | [One deployment per Adobe project](2026-10-08-one-deployment-per-adobe-project.md) | — | med | active |
+| `AB-69` | fix | [One deployment per Adobe project](2026-10-08-one-deployment-per-adobe-project.md) | — | med | built |
 | `AB-71` | fix | [An update whose deploy failed then says "already up to date"](2026-10-09-update-after-failed-deploy-says-up-to-date.md) | — | med | built |
 | `AB-72` | fix | [ERP ownership: the ERP on "everything" is the catch-all](2026-10-09-erp-ownership-all-is-the-catch-all.md) | — | high | built |
 | `AB-73` | feature | [Integrations in the extension update check](2026-10-09-integrations-in-the-extension-update-check.md) | — | med | built |
@@ -429,8 +429,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-76` | feature | [The ERP setup checklist follows each ERP's ownership mode](2026-10-09-erp-setup-checklist-follows-the-ownership-mode.md) | — | low | backlog |
 | `AB-77` | feature | [Prepare this store: the ERP setup steps the extension can apply, not only check](2026-10-10-prepare-this-store-for-the-erp-integration.md) | — | high | built |
 | `AB-78` | feature | [One Commerce instance runs one ERP integration](2026-10-15-second-erp-on-a-shared-commerce-backend.md) | — | med | built |
-| `AB-79` | fix | [The mesh's "redeploy needed" flag only ever turns on](2026-10-17-mesh-stale-flag-never-clears.md) | — | low | backlog |
-| `AB-80` | fix | [An add into a workspace it just made skips the leftover-code check](2026-10-17-add-skips-leftover-check-on-fresh-workspace.md) | — | low | active |
+| `AB-79` | fix | [The mesh's "redeploy needed" flag only ever turns on](2026-10-17-mesh-stale-flag-never-clears.md) | — | low | built |
+| `AB-80` | fix | [An add into a workspace it just made skips the leftover-code check](2026-10-17-add-skips-leftover-check-on-fresh-workspace.md) | — | low | built |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (4)
@@ -527,13 +527,13 @@ each item's own file; what has already landed against an item is in its
 | `PL-64` | fix | [Deleting a project leaves its secrets in SecretStorage](2026-10-02-project-delete-leaves-secrets.md) | — | med | built |
 | `PL-65` | fix | [The wizard's two config warnings should reach the log channel](2026-10-03-wizard-warnings-to-log-channel.md) | — | low | built |
 | `PL-66` | feature | [UI tests that drive more than one VS Code surface](2026-10-03-vscode-multi-surface-ui-tests.md) | — | low | built |
-| `PL-68` | fix | ["Features do not import other features" says it is enforced by eslint; nothing enforces it](2026-10-08-features-import-features-unenforced.md) | — | med | backlog |
+| `PL-68` | fix | ["Features do not import other features" says it is enforced by eslint; nothing enforces it](2026-10-08-features-import-features-unenforced.md) | — | med | active |
 | `PL-69` | chore | [Every clone pair gets a verdict, and the 34 that are the same job get extracted](2026-10-08-every-clone-pair-gets-a-verdict.md) | — | med | built |
 | `PL-70` | chore | [Mutation gaps after the stale row remeasure](2026-10-10-mutation-gaps-after-the-stale-row-remeasure.md) | — | med | active |
-| `PL-71` | fix | [Widening a mutation measurement crashes when the module is imported everywhere](2026-10-10-mutation-widen-crashes-on-widely-imported-module.md) | — | low | backlog |
+| `PL-71` | fix | [Widening a mutation measurement crashes when the module is imported everywhere](2026-10-10-mutation-widen-crashes-on-widely-imported-module.md) | — | low | built |
 | `PL-72` | chore | [The result builders' failure-flag tests sit in a suite a mutation measurement cannot count](2026-10-10-mutation-suite-named-for-behaviour-hides-mcp-tool-result-tests.md) | — | low | backlog |
 | `PL-73` | chore | [Review the tests the redundancy sweep found idle](2026-10-11-review-the-idle-test-leads.md) | — | low | backlog |
-| `PL-74` | fix | [The jest-concurrent hook proof failed once under the full suite's load](2026-10-12-the-jest-concurrent-hook-proof-failed-once-under-load.md) | — | low | backlog |
+| `PL-74` | fix | [The jest-concurrent hook proof failed once under the full suite's load](2026-10-12-the-jest-concurrent-hook-proof-failed-once-under-load.md) | — | low | built |
 | `PL-75` | feature | [Edit applies only what changed](2026-10-12-edit-applies-only-what-changed.md) | — | high | active |
 | `PL-76` | fix | [Configure saves what changed, in one place, and tells the truth about it](2026-10-13-configure-is-solid.md) | — | high | active |
 | `PL-77` | feature | [Edit switches a project's Adobe org](2026-10-13-edit-switches-adobe-org.md) | PL-75 | med | backlog |
@@ -541,8 +541,8 @@ each item's own file; what has already landed against an item is in its
 | `PL-79` | feature | [Edit switches a project's stack](2026-10-13-edit-switches-stack.md) | PL-75 | med | backlog |
 | `PL-81` | epic | [Every choice the SC makes is asked in a modal, not a notification](2026-10-16-choices-in-modals-not-notifications.md) | — | med | backlog |
 | `PL-80` | feature | └ [Check for Updates in a modal, with the updates already ticked](2026-10-16-update-picker-as-a-modal-with-updates-preselected.md) | — | med | backlog |
-| `PL-82` | fix | [The projects list shows a project an agent is building, with an honest status](2026-10-16-projects-list-creating-status.md) | — | med | active |
-| `PL-83` | fix | [The hooks resolve a shell edit's path against the wrong folder when the command starts with `cd`](2026-10-18-hook-shell-paths-ignore-cd.md) | — | low | backlog |
+| `PL-82` | fix | [The projects list shows a project an agent is building, with an honest status](2026-10-16-projects-list-creating-status.md) | — | med | built |
+| `PL-83` | fix | [The hooks resolve a shell edit's path against the wrong folder when the command starts with `cd`](2026-10-18-hook-shell-paths-ignore-cd.md) | — | low | built |
 
 <!-- END GENERATED registry -->
 

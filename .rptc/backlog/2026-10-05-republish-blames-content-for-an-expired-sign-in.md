@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Republish says "No publishable pages found" when the DA.live sign-in has expired
@@ -37,3 +37,5 @@ should have stopped the run with the sign-in message before any publish.
 ## Shipped so far
 
 - 2026-10-05  docs(backlog): EDS-29 and EDS-30 — an expired DA.live sign-in reads as no content, and as signed in (`f2e68a8e1`)
+- 2026-10-19  fix(eds): an expired DA.live sign-in no longer reads as "no publishable pages" (`3c0fe2c6f`)
+- 2026-10-19  Remaining slice, not done: the DA.live grant step (daLiveSiteAccess.ts grantAccess) still turns a 401 into success:false that callers treat as a warning; the run now stops one step later, at the page listing
