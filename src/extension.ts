@@ -15,6 +15,7 @@ import { adobeCliInstalledUnder } from '@/core/shell/ensureNodeVersion';
 import { listNodeFolderMajors } from '@/core/shell/nodeFolder';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
 import { StateManager } from '@/core/state/stateManager';
+import { createWorkingProjectStateManager } from '@/core/state/workingProjectStateManager';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
@@ -64,7 +65,6 @@ import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
-import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
@@ -760,10 +760,10 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 // Per-connection scope (owner decision 2026-08-28): a session
                 // whose directory sits inside a project acts on THAT project —
                 // reads load it fresh from disk, saves never flip the
-                // dashboard pointer (scopedStateManager). The home chat and
+                // dashboard pointer (workingProjectStateManager). The home chat and
                 // bare clients arrive unscoped and keep pointer semantics.
                 const connState = scopedProjectDir
-                    ? createScopedStateManager(stateManager, scopedProjectDir)
+                    ? createWorkingProjectStateManager(stateManager, () => scopedProjectDir)
                     : stateManager;
                 const connCtxFactory = scopedProjectDir
                     ? () => createHeadlessHandlerContext(context, connState, logger)

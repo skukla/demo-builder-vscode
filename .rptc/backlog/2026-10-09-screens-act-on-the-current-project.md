@@ -56,3 +56,5 @@ answer that the current project changed since its last call.
 
 ## Shipped so far
 - 2026-10-09  fix(dashboard): Add another ERP says when the integration is not in the current project (`f045b0c7d`)
+- 2026-10-19  Owner decisions (2026-10-19): (a) an agent's create_project does NOT make the new project current; it says it created it. (b) each screen sends its own project with every request and handlers act on that project. (c) every agent tool answer says when the current project changed since the agent's last call, naming both.
+- 2026-10-19  Owner (2026-10-19): an agent's set_current_project switches only the agent's working project, never the person's. Plan: .rptc/plans/ai-15-project-per-surface/overview.md

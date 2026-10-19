@@ -266,7 +266,7 @@ resolves the cwd to the containing project and, for that connection only:
 
 - current-project reads load THAT project fresh from disk per call;
 - saves route through `saveProjectConfigOnly` — a scoped session can NEVER
-  flip the dashboard's pointer (`scopedStateManager.ts`);
+  flip the dashboard's pointer (`workingProjectStateManager.ts`);
 - `get_current_project` answers `scope: "session-directory"` (vs
   `"dashboard-pointer"`), so an agent can always tell why it got the project
   it got.
