@@ -133,10 +133,25 @@ export async function stageSettingsChange(
 
     project.componentConfigs = configs;
     if (meshChanges.hasChanges) project.meshStatusSummary = 'stale';
+    else if (meshMatchesDeployedAgain(project, meshChanges)) project.meshStatusSummary = 'deployed';
     if (storefrontChanges.hasChanges) project.edsStorefrontStatusSummary = 'stale';
     else if (storefrontMatchesLiveAgain(project)) project.edsStorefrontStatusSummary = 'published';
 
     return { configs, meshChanges, storefrontChanges };
+}
+
+/**
+ * Whether a mesh marked out of date is current again: the detector compared the settings
+ * with what the mesh was deployed with and found no difference. The flag only ever went
+ * ON, as the storefront's did (AB-79, 2026-10-19). An unknown deployed state is not
+ * "current": the detector answers no change when it could not read the mesh, so that
+ * case keeps the flag. Only the two out-of-date states clear; "config-incomplete",
+ * "error" and the rest are not about the settings matching.
+ */
+function meshMatchesDeployedAgain(project: Project, changes: MeshChanges): boolean {
+    const summary = project.meshStatusSummary;
+    const outOfDate = summary === 'stale' || summary === 'update-declined';
+    return outOfDate && !changes.unknownDeployedState;
 }
 
 /**
