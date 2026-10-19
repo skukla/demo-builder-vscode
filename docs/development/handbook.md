@@ -97,7 +97,10 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > lazy import. All four were broken on 2026-10-07; the check went in at zero.
 
 > **Convention.** Features do not import other features; commands may.
-> [src/features/CLAUDE.md](../../src/features/CLAUDE.md) · enforced by eslint.
+> [src/features/CLAUDE.md](../../src/features/CLAUDE.md). **Not enforced.** This line said
+> "enforced by eslint" until 2026-10-19; no eslint rule, suite or ledger checks it, and
+> 857 imports in `src/features/` cross into another feature (72 feature pairs, measured
+> 2026-10-19). Whether to enforce it with a ledger or restate it is open (PL-68).
 > *Why:* it keeps a feature replaceable. Cross-feature imports are how two features quietly become one.
 
 > **Convention.** A module is imported by the path that DEFINES the symbol. No
@@ -1823,7 +1826,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 130 conventions. 129 of them are enforced; 1 is not.**
+**This handbook states 130 conventions. 128 of them are enforced; 2 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

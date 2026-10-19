@@ -26,7 +26,8 @@ updates/             auto-update for the extension and components
 
 Features import `@/core/*` and `@/types`. **A feature does not import another
 feature** — if two need the same thing it moves to `core/`. Commands are the
-exception, because orchestrating features is their job. Enforced by eslint.
+exception, because orchestrating features is their job. **Not enforced**: nothing checks
+it, and 857 imports already cross features (2026-10-19, PL-68).
 
 **Deep imports are the convention for features.** Import the module that defines the
 symbol (`@/features/authentication/services/authenticationService`), not a feature
