@@ -18,7 +18,9 @@ passed. A proof covering only the easy shapes reports clean on the one that matt
 """
 import json
 import os
+import shutil
 import subprocess
+import tempfile
 
 ROOT = os.getcwd()
 
@@ -78,6 +80,23 @@ CASES = [
     ('git log --oneline -5', '-'),
 ]
 
+# A LEADING cd MOVES THE BASE (PL-83). A throwaway checkout (a `.git` entry is what
+# marks one) holding the same relative paths at different sizes from this repo's:
+# the rule must measure the file in the folder the command cd'd into, not this one.
+OTHER = tempfile.mkdtemp(prefix='writtenPaths-cd-')
+os.makedirs(os.path.join(OTHER, '.git'))
+BIG = 'src/features/x/services/onlyThere.ts'  # absent here, 450 lines there
+for rel, lines in ((BIG, 450), (HANDLER, 10)):  # HANDLER is ~710 lines here, 10 there
+    os.makedirs(os.path.dirname(os.path.join(OTHER, rel)), exist_ok=True)
+    with open(os.path.join(OTHER, rel), 'w') as f:
+        f.write('x\n' * lines)
+CASES += [
+    ("cd " + OTHER + " && python3 - <<'PY'\np='" + BIG + "'\nopen(p,'w').write(x)\nPY", 'god-file'),
+    ("cd " + OTHER + " && python3 - <<'PY'\np='" + HANDLER + "'\nopen(p,'w').write(x)\nPY", '-'),
+    # a cd into scratch is not the subject, whatever is written there
+    ("cd /tmp && cat > " + HANDLER + " <<'EOF'\nx\nEOF", '-'),
+]
+
 bad = 0
 for cmd, expect in CASES:
     got = run_bash(cmd)
@@ -86,3 +105,4 @@ for cmd, expect in CASES:
     print(f'  {"OK " if ok else "*** WRONG ***"}  expect={expect:15s} got={got:15s} '
           f'{cmd.splitlines()[0][:50]}')
 print(f'\n{len(CASES) - bad}/{len(CASES)} correct')
+shutil.rmtree(OTHER, ignore_errors=True)

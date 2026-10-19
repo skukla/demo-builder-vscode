@@ -229,8 +229,13 @@ if [ "$TOOL" = "Bash" ] && [ -n "$CMD" ]; then
     if [ -f "$EXTRACT" ]; then
         while IFS= read -r written; do
             [ -n "$written" ] || continue
-            if [ -e "$written" ]; then synth=Edit; else synth=Write; fi
-            evaluate "$synth" "$CMD" "$PWD/$written" "$CONTENT" || exit 2
+            # Absolute when the command began with a cd (PL-83): use it as given.
+            case "$written" in
+                /*) target="$written" ;;
+                *) target="$PWD/$written" ;;
+            esac
+            if [ -e "$target" ]; then synth=Edit; else synth=Write; fi
+            evaluate "$synth" "$CMD" "$target" "$CONTENT" || exit 2
         done < <(printf '%s' "$CMD" | CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}" python3 "$EXTRACT" 2>/dev/null)
     fi
 fi
