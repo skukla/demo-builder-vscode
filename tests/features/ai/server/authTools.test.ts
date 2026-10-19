@@ -26,8 +26,11 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             getUserOrgs: jest.fn(async () => ['acme', 'skukla']),
         },
     })),
+    // `getStoredToken` answers null when the token is missing or within five minutes of
+    // expiry (`daLiveAuthService.ts`); `isServerAccepted` is the write guard's HEAD probe.
     getDaLiveAuthService: jest.fn(() => ({
-        isAuthenticated: jest.fn(async () => false),
+        getStoredToken: jest.fn(async () => null),
+        isServerAccepted: jest.fn(async () => 'accepted'),
         getOrgName: jest.fn(() => undefined),
     })),
     // Native DA.live sign-in flow (browser → token input → org). The agent
@@ -297,11 +300,17 @@ describe('registerAuthTools', () => {
         expect(storeToken).not.toHaveBeenCalled();
     });
 
-    it('reports the pinned DA.live namespace when one is set', async () => {
+    /** A DA.live sign-in stored until `minutes` from now, pinned to skukla, as DA.live answers it. */
+    function daLiveSignedIn(minutes: number, verdict: 'accepted' | 'refused' | 'unknown' = 'accepted') {
         (getDaLiveAuthService as jest.Mock).mockImplementationOnce(() => ({
-            isAuthenticated: jest.fn(async () => true),
+            getStoredToken: jest.fn(async () => ({ accessToken: 't', expiresAt: Date.now() + minutes * 60_000 + 30_000 })),
+            isServerAccepted: jest.fn(async () => verdict),
             getOrgName: jest.fn(() => 'skukla'),
         }));
+    }
+
+    it('reports the pinned DA.live namespace when one is set, and when the sign-in expires', async () => {
+        daLiveSignedIn(90);
         const server = fakeServer();
         registerAuthTools(server, makeCtxFactory(true));
 
@@ -309,8 +318,31 @@ describe('registerAuthTools', () => {
         // tells an agent to proceed while withholding what the write needs.
         expect((await server.call('get_auth_status')).dalive).toEqual({
             authenticated: true,
+            expiresInMinutes: 90,
             orgName: 'skukla',
         });
+    });
+
+    // EDS-30: a stored sign-in DA.live refuses read as signed in, and the next republish
+    // failed every DA.live call with a 401.
+    it('says not signed in when DA.live refuses the stored sign-in', async () => {
+        daLiveSignedIn(90, 'refused');
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(true));
+
+        expect((await server.call('get_auth_status')).dalive).toMatchObject({
+            authenticated: false,
+            orgName: 'skukla',
+            error: 'DA.live refused the stored sign-in: sign in to DA.live again.',
+        });
+    });
+
+    it('CONTROL: a probe that could not reach DA.live is not a refusal', async () => {
+        daLiveSignedIn(90, 'unknown');
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(true));
+
+        expect((await server.call('get_auth_status')).dalive).toMatchObject({ authenticated: true });
     });
 
     it('omits orgName rather than reporting an empty one', async () => {

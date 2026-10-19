@@ -30,7 +30,7 @@ import type { HandlerContext } from '@/types/handlers';
 
 interface ProviderStatus {
     authenticated: boolean;
-    /** Minutes until the Adobe token expires (negative if expired). Adobe only. */
+    /** Minutes until the token expires (negative if expired). Adobe and DA.live. */
     expiresInMinutes?: number;
     /** GitHub only: the authenticated username. */
     login?: string;
@@ -145,9 +145,20 @@ async function githubVsCodeSessionStatus(storedTokenRejected: boolean): Promise<
  */
 async function daLiveStatus(ctx: HandlerContext): Promise<ProviderStatus> {
     const service = getDaLiveAuthService(ctx.context);
-    const authenticated = await service.isAuthenticated();
     const orgName = service.getOrgName();
-    return { authenticated, ...(orgName ? { orgName } : {}) };
+    const org = orgName ? { orgName } : {};
+    // Absent, expired, or within five minutes of it: not usable (`getStoredToken`).
+    const token = await service.getStoredToken();
+    if (!token) return { authenticated: false, ...org };
+    const expiresInMinutes = Math.floor((token.expiresAt - Date.now()) / 60_000);
+    // A stored token can still be refused by DA.live, which a local expiry check cannot
+    // see: on 2026-10-05 this said signed in and every DA.live call in the next republish
+    // failed 401 (EDS-30). One HEAD settles it, the read the write guard makes; a network
+    // failure is "unknown" and never reads as a refusal.
+    if (orgName && (await service.isServerAccepted(orgName)) === 'refused') {
+        return { authenticated: false, expiresInMinutes, ...org, error: 'DA.live refused the stored sign-in: sign in to DA.live again.' };
+    }
+    return { authenticated: true, expiresInMinutes, ...org };
 }
 
 async function adobeStatus(ctx: HandlerContext): Promise<ProviderStatus> {
