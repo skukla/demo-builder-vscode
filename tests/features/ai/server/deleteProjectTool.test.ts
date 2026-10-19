@@ -310,6 +310,34 @@ describe('the two cloud choices', () => {
         });
     });
 
+    // AI-71: a left-out choice was read as "no" before the setting was consulted, so
+    // `deleteAll` never reached an agent's plain delete. The button ticks both boxes.
+    it('under deleteAll, a plain call deletes the repository and site, as the button does', async () => {
+        cleanupBehavior('deleteAll');
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        await s.call(CONFIRMED);
+
+        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
+            deleteGithubRepo: true,
+            deleteDaLiveSite: true,
+        });
+    });
+
+    it('under deleteAll, a choice the call states is kept', async () => {
+        cleanupBehavior('deleteAll');
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        await s.call({ ...CONFIRMED, deleteGithubRepo: false });
+
+        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
+            deleteGithubRepo: false,
+            deleteDaLiveSite: true,
+        });
+    });
+
     // Same bar as `confirm`: a word is not a tick.
     it('does not read a truthy word as a tick', async () => {
         const s = fakeServer();
@@ -409,9 +437,10 @@ describe('what each input is described as', () => {
             name: 'Name of the project to delete',
             confirm: 'Must be true to proceed',
             confirmName: 'Must equal the project name exactly — guards this irreversible deletion',
-            deleteGithubRepo: "Also delete the project's GitHub repository (default: false)",
+            deleteGithubRepo:
+                "Also delete the project's GitHub repository (default: false, or true when the cleanupBehavior setting is deleteAll)",
             deleteDaLiveSite:
-                "Also delete the project's DA.live site and take its pages off the CDN (default: false)",
+                "Also delete the project's DA.live site and take its pages off the CDN (default: false, or true when the cleanupBehavior setting is deleteAll)",
         });
     });
 });

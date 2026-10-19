@@ -108,7 +108,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_project: {
         action: 'Delete this project',
         consequence:
-            "Removes the project folder and settings from this machine; cloud resources stay. This can't be undone.",
+            "Removes the project from this machine, and its GitHub repository and DA.live site if the agent asked or your cleanup setting deletes everything. This can't be undone.",
         target: ['name'],
         sessionGrant: false,
     },

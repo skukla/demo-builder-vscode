@@ -6,10 +6,12 @@
  * Name-addressed and EXTRA-STRICT for this irreversible op: requires
  * `confirm:true` AND a `confirmName` that exactly echoes the project name.
  *
- * The cloud resources are the checklist the button shows, as arguments: both
- * unticked by default, both obeying `demoBuilder.cleanupBehavior` (AI-9, answered
- * 2026-09-19). A plain call still deletes only the local footprint, which is what
- * the button does when you press Enter without ticking anything.
+ * The cloud resources are the checklist the button shows, as arguments, both
+ * obeying `demoBuilder.cleanupBehavior` (AI-9, answered 2026-09-19): an argument the
+ * call leaves out takes the setting's default, as the button's boxes do. Under `ask`
+ * a plain call deletes only the local footprint; under `deleteAll` it deletes the
+ * repository and site too. Until 2026-10-19 a left-out argument was read as `false`
+ * before the setting was consulted, so `deleteAll` never applied to an agent (AI-71).
  */
 
 import { z } from 'zod';
@@ -48,12 +50,14 @@ export function registerDeleteProjectTool(
                 deleteGithubRepo: z
                     .boolean()
                     .optional()
-                    .describe("Also delete the project's GitHub repository (default: false)"),
+                    .describe(
+                        "Also delete the project's GitHub repository (default: false, or true when the cleanupBehavior setting is deleteAll)",
+                    ),
                 deleteDaLiveSite: z
                     .boolean()
                     .optional()
                     .describe(
-                        "Also delete the project's DA.live site and take its pages off the CDN (default: false)",
+                        "Also delete the project's DA.live site and take its pages off the CDN (default: false, or true when the cleanupBehavior setting is deleteAll)",
                     ),
             },
         },
@@ -85,9 +89,10 @@ export function registerDeleteProjectTool(
             // The cloud first: the local record is how the cloud resources are
             // found, so deleting it first would strand them (the button orders it
             // the same way).
+            // Left out is not "no": the setting decides (AI-71). A word is not a tick either.
             const choice = resolveCloudCleanup({
-                deleteGithubRepo: args?.deleteGithubRepo === true,
-                deleteDaLiveSite: args?.deleteDaLiveSite === true,
+                deleteGithubRepo: tickOf(args?.deleteGithubRepo),
+                deleteDaLiveSite: tickOf(args?.deleteDaLiveSite),
             });
             const cloud = await cleanUpProjectCloud(ctx, project, choice);
 
@@ -111,4 +116,9 @@ export function registerDeleteProjectTool(
             }
         },
     );
+}
+
+/** A checkbox argument: a boolean as given, anything else left for the setting to decide. */
+function tickOf(value: unknown): boolean | undefined {
+    return typeof value === 'boolean' ? value : undefined;
 }
