@@ -73,7 +73,7 @@ import {
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import type { ErpFillOutcomes } from '@/features/project-creation/services/erpFillForProject';
 import { syncErpList } from '@/features/project-creation/services/erpListSync';
-import { applyErpOwnership, type ApplyOwnershipOutcome } from '@/features/project-creation/services/erpOwnershipReconcile';
+import { applyErpOwnership, assignProductsNote, type ApplyOwnershipOutcome } from '@/features/project-creation/services/erpOwnershipReconcile';
 import {
     readErpOwnershipOptionsForProject,
     saveErpOwnership,
@@ -394,8 +394,14 @@ async function listAndFill(
     // A credential the list could not carry (AB-16a) and a pass that did not finish are
     // both said, and the add stands.
     const notes = [...(themed.warning ? [themed.warning] : []), ...listed.warnings];
+    const offer = assignOffer(plan, applied);
     if (applied.status === 'applied') {
-        notes.push(...fillFailures(applied.fills), ...applied.notes);
+        // The offer says the new ERP owns nothing yet, so its note would say it twice, and as
+        // a warning on an add that went right (Justrite, 2026-10-18).
+        // By the name the pass wrote it under, the one its list gives the new ERP.
+        const listedAs = applied.erps.find((erp) => erp.erp === plan.entry.id)?.name ?? plan.name;
+        const said = offer.offer ? assignProductsNote(listedAs) : undefined;
+        notes.push(...fillFailures(applied.fills), ...applied.notes.filter((note) => note !== said));
         // Prices not published after a fill (AB-26z).
         notes.push(...applied.fills.flatMap((fill) => (fill.status === 'filled' && fill.warning ? [fill.warning] : [])));
     } else {
@@ -412,7 +418,6 @@ async function listAndFill(
     const mapping = merged ? { mapping: merged } : {};
     const theme = themed.theme ? { theme: themed.theme } : {};
     const ownership = applied.status === 'applied' ? { ownership: ownershipSaid(applied) } : {};
-    const offer = assignOffer(plan, applied);
     return { success: true, listed: listed.ids, filled, owns, existingOwns, ...mapping, ...theme, ...ownership, ...warning, ...note, ...offer };
 }
 

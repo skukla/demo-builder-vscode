@@ -106,6 +106,14 @@ function deadWebsitesNote(row: ErpRow, websites: ReadonlyArray<{ code: string }>
 }
 
 /**
+ * The note for an ERP owning nothing by `erp_owner`. Exported so the add, which offers
+ * "Assign products" as its next step, can leave out the note that says the same.
+ */
+export function assignProductsNote(name: string): string {
+    return `${name} owns no products yet: use Assign products on its card to give it some.`;
+}
+
+/**
  * What the SC does for an ERP whose rule owns no product. For an `erp_owner` rule that is
  * "Assign products" on its card (AB-74), which tags the products and runs this pass again;
  * any other attribute is still tagged in Commerce.
@@ -114,7 +122,7 @@ function ownsNothingNote(row: ErpRow): string {
     if (row.owns.mode === 'attribute') {
         const [code, value] = (row.owns.attribute ?? 'erp_owner=').split('=');
         if (code === 'erp_owner') {
-            return `${row.name} owns no products yet: use Assign products on its card to give it some.`;
+            return assignProductsNote(row.name);
         }
         return (
             `${row.name} owns no products yet: tag products with ${code}=${value} in Commerce, ` +

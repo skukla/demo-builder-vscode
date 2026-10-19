@@ -47,6 +47,7 @@ jest.mock('@/features/app-builder/services/erpCredential', () => ({
 const mockApply = jest.fn();
 jest.mock('@/features/project-creation/services/erpOwnershipReconcile', () => ({
     applyErpOwnership: (...a: unknown[]) => mockApply(...a),
+    assignProductsNote: jest.requireActual('@/features/project-creation/services/erpOwnershipReconcile').assignProductsNote,
 }));
 
 /** The pass's answer for a fill that stood, with `over` on the new ERP's fill. */
@@ -546,6 +547,19 @@ describe('handleAddErp', () => {
             startedAt: expect.any(Number),
             tookMs: expect.any(Number),
         });
+    });
+
+    // Justrite, 2026-10-18: "owns no products yet" twice, under a warning icon. The offer says it.
+    it('does not repeat the offer as a warning, so the add reads as a plain success', async () => {
+        const nothing = applied({}, ['Brand B ERP owns no products yet: use Assign products on its card to give it some.', 'Something else to know.']);
+        nothing.erps[0].ownsNow = 0;
+        mockApply.mockResolvedValue(nothing);
+        const { mockContext } = setup();
+
+        const result = await handleAddErp(mockContext, { confirm: true, id: 'erp-integration', name: 'Brand B ERP', owns: OWN_ATTRIBUTE });
+
+        // Only the offer's own note goes (with no offer it stays: the warning test above).
+        expect((result.data as { warning?: string }).warning).toBe('Something else to know.');
     });
 
     it('offers nothing when the new ERP owns products, or owns by websites', async () => {
