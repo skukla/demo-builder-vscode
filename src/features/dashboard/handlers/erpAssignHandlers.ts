@@ -33,7 +33,7 @@ import {
     type ErpAssignDeps,
     type ErpAssignTarget,
 } from '@/features/project-creation/services/erpAssignProducts';
-import { applyErpOwnership } from '@/features/project-creation/services/erpOwnershipReconcile';
+import { applyErpOwnership, assignProductsNote } from '@/features/project-creation/services/erpOwnershipReconcile';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { CommerceBulkOutcome, ErpAssignmentRecord, ErpAssignPreview, ErpProductSelection } from '@/types/erpAssign';
 import { ErrorCode } from '@/types/errorCodes';
@@ -292,7 +292,11 @@ async function runUndo(
     }
     await saveErpRecord(context, opened, undefined);
     const pass = bulk ? await passAfterWrite(context, opened, report) : { notes: [] };
-    const warning = [...(bulk ? bulkNotes(bulk) : []), ...changed, ...pass.notes].join(' ');
+    // Owning nothing is what an undo of an ERP's only assignment leaves: not a warning on an
+    // undo that went right (Justrite, 2026-10-19), as the add leaves the same note out.
+    const expected = assignProductsNote(opened.call.erp?.name ?? '');
+    const notes = pass.notes.filter((note) => note !== expected);
+    const warning = [...(bulk ? bulkNotes(bulk) : []), ...changed, ...notes].join(' ');
     const written = bulk ? bulk.complete : 0;
     return { success: true, bulk, written, ownership: pass.ownership, ...(warning ? { warning } : {}) };
 }

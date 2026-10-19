@@ -41,6 +41,8 @@ jest.mock('@/features/project-creation/services/erpAssignProducts', () => ({
 const mockApply = jest.fn();
 jest.mock('@/features/project-creation/services/erpOwnershipReconcile', () => ({
     applyErpOwnership: (...a: unknown[]) => mockApply(...a),
+    // The real wording: the undo matches the note it leaves out by its text.
+    assignProductsNote: jest.requireActual('@/features/project-creation/services/erpOwnershipReconcile').assignProductsNote,
 }));
 
 // Imported after the mocks, which jest hoists above it.
@@ -204,6 +206,29 @@ describe('undoErpAssignment', () => {
         expect(result).toMatchObject({
             success: true,
             data: { undone: true, warning: '1 products were left as they are: their erp_owner has changed since the assignment.' },
+        });
+    });
+
+    // An undo of an ERP's only assignment leaves it owning nothing: that is the undo working,
+    // not a warning (Justrite, 2026-10-19). Another ERP's note still shows.
+    it("leaves out the note that this ERP owns nothing, and keeps the others'", async () => {
+        mockPlanUndo.mockResolvedValue({ restore: [{ sku: 'ACC-1', value: 'justrite' }], changedSince: [] });
+        mockApply.mockResolvedValue({
+            status: 'applied',
+            erps: [],
+            unowned: 0,
+            fills: [],
+            notes: [
+                'Accuform ERP owns no products yet: use Assign products on its card to give it some.',
+                'Kukla ERP owns no products yet: use Assign products on its card to give it some.',
+            ],
+        });
+        const { context } = setup(project({ erpAssignment: RECORD }));
+        const result = await handleUndoErpAssignment(context, { id: 'erp-integration', erp: 'demo-erp-2', confirm: true });
+
+        expect(result).toMatchObject({
+            success: true,
+            data: { undone: true, warning: 'Kukla ERP owns no products yet: use Assign products on its card to give it some.' },
         });
     });
 });
