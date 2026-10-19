@@ -20,6 +20,11 @@
 
 payload=$(cat)
 [ -z "$payload" ] && exit 0
+# A proof asks for trace lines (DBV_HOOK_TRACE), so a case that reads "pass" can be told
+# from a router that never ran, or gave up before its rules: every early exit here exits
+# 0. "started" once the payload is read; "evaluating" once the rules are about to run.
+# Off unless a proof sets it (PL-74, 2026-10-19).
+[ -n "$DBV_HOOK_TRACE" ] && echo "router: started" >&2
 
 # Cheap pre-filter. Nearly every tool call matches no rule, and python3 startup is
 # ~55ms — worth avoiding when a substring test costs nothing. Every token below
@@ -198,6 +203,8 @@ evaluate() {
     done
     return 0
 }
+
+[ -n "$DBV_HOOK_TRACE" ] && echo "router: evaluating $TOOL" >&2
 
 # The payload as it arrived.
 evaluate "$TOOL" "$CMD" "$FILE" "$CONTENT" || exit 2
