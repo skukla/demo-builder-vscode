@@ -15850,13 +15850,13 @@
             "source": "PL-70 batch MUT-01"
         },
         {
-            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "module": "src/features/dashboard/ui/components/integrations/ErpConfirmDialogs.tsx",
             "anchors": [
-                "const closeResetDialog = useCallback((): void => setPendingReset(null), []);"
+                "const closeReset = useCallback((): void => setReset(null), []);"
             ],
             "mutants": 1,
             "category": "equivalent",
-            "reason": "Replacing the empty dependency list with a non-empty constant one changes nothing: the callback closes over a state setter only. The emptied body IS killed (the reset confirm closes on Close). Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red).",
+            "reason": "Replacing the empty dependency list with a non-empty constant one changes nothing: the callback closes over a state setter only. The emptied body IS killed (the reset confirm closes on Close). Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red). Moved with the reset to ErpConfirmDialogs (2026-10-18); not re-measured there.",
             "decision": "Recorded, not killed: a dependency list holding a constant memoises exactly as an empty one does.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
@@ -15874,25 +15874,25 @@
             "source": "PL-70 batch MUT-01"
         },
         {
-            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "module": "src/features/dashboard/ui/components/integrations/ErpConfirmDialogs.tsx",
             "anchors": [
-                "erpNames={pendingReset?.erpNames ?? []}"
+                "erpNames={reset?.erpNames ?? []}"
             ],
             "mutants": 1,
             "category": "equivalent",
-            "reason": "The fallback list is used only while pendingReset is null, and then isOpen on the line above is false, so the dialog renders nothing and never reads the names. Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red).",
+            "reason": "The fallback list is used only while reset is null, and then isOpen on the line above is false, so the dialog renders nothing and never reads the names. Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red). Moved with the reset to ErpConfirmDialogs (2026-10-18); not re-measured there.",
             "decision": "Recorded, not killed: the fallback exists for the prop's type; no surface shows it.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"
         },
         {
-            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "module": "src/features/dashboard/ui/components/integrations/ErpConfirmDialogs.tsx",
             "anchors": [
-                "if (pendingReset) {"
+                "if (reset) operations.resetErp(reset.id);"
             ],
             "mutants": 1,
             "category": "equivalent",
-            "reason": "confirmReset runs only from the reset dialog's Reset button, and the dialog renders solely while isOpen={pendingReset !== null}. The guard cannot be reached with null, so forcing it true changes nothing. Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red).",
+            "reason": "confirmReset runs only from the reset dialog's Reset button, and the dialog renders solely while isOpen={reset !== null}. The guard cannot be reached with null, so forcing it true changes nothing. Verified by planting it (all 123 grid tests green) against a control on the same file (closeResetDialog emptied: suite red). Moved with the reset to ErpConfirmDialogs (2026-10-18); not re-measured there.",
             "decision": "Recorded, not killed: reaching it would mean confirming a dialog that is not open. Same shape as the pendingRemoveId row.",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-01"

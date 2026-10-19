@@ -1,6 +1,7 @@
 /**
- * The confirm in front of "Reset ERPs" (plan step 05, decision 8). Offered on the
- * integration's card, since a reset always covers every ERP it serves.
+ * The confirm in front of "Reset ERPs" (plan step 05, decision 8), hosted by
+ * `ErpConfirmDialogs`. Offered on the integration's card, since a reset always covers every
+ * ERP it serves.
  *
  * Through {@link ConfirmActionDialog}: one negative action, Close does
  * nothing. The words
@@ -31,6 +32,7 @@ export interface ErpResetDialogProps {
  */
 export function ErpResetDialog({ isOpen, erpNames, onConfirm, onClose }: ErpResetDialogProps): React.ReactElement {
     const which = erpNames.length > 0 ? erpNames.join(' and ') : 'every ERP this integration serves';
+    const them = erpNames.length === 1 ? 'it' : 'them';
     return (
         <ConfirmActionDialog
             isOpen={isOpen}
@@ -39,17 +41,14 @@ export function ErpResetDialog({ isOpen, erpNames, onConfirm, onClose }: ErpRese
             onConfirm={onConfirm}
             onClose={onClose}
         >
+            <Text>Clears {which} and reloads {them} from Commerce.</Text>
             <Text>
-                Resets {which}: wipes their records and fills them from Commerce again, as Commerce
-                stands now.
+                Open orders in the ERPs are cancelled. Orders already invoiced or shipped get a note
+                instead. Cancelled orders can't be reopened.
             </Text>
             <Text>
-                Every open order the ERPs hold is cancelled; an order already invoiced or shipped keeps
-                a note instead. A cancelled order cannot be reopened.
-            </Text>
-            <Text>
-                The credit limits and company blocks the ERPs set in Commerce are undone. Nothing else
-                in Commerce changes.
+                Credit limits and company blocks the ERPs set in Commerce are removed. Nothing else in
+                Commerce changes.
             </Text>
         </ConfirmActionDialog>
     );

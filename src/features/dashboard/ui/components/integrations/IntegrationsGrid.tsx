@@ -28,10 +28,10 @@ import type { ComponentOperationControls } from '../../hooks/useComponentOperati
 import { AddErpDialog, type AddErpDialogProps } from '../AddErpDialog';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
 import { ErpDowntimeDialog, type ErpDemoControlTarget } from '../ErpDowntimeDialog';
-import { ErpResetDialog } from '../ErpResetDialog';
 import { IntegrationSettingsModal } from '../IntegrationSettingsModal';
 import { ManageApisModal } from '../ManageApisModal';
 import type { ErpAssignControls } from './ErpAssignDialogs';
+import { ErpConfirmDialogs, useErpConfirms } from './ErpConfirmDialogs';
 import { FlaggedCardDialogs, needsReinstall, removalStopped } from './FlaggedCardDialogs';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
@@ -107,10 +107,9 @@ export function IntegrationsGrid({
     // used to hold the id alone and pass it as `componentName`, so the modal read
     // "Manage Adobe API access for erp-sync".
     const [manageApis, setManageApis] = useState<{ id: string; name: string } | null>(null);
-    // The ERP reset awaiting confirmation: the INTEGRATION's id (it runs through it), the names.
-    const [pendingReset, setPendingReset] = useState<{ id: string; erpNames: string[] } | null>(
-        null,
-    );
+    // The ERP reset and fill, each asking first (ErpConfirmDialogs).
+    const erpConfirms = useErpConfirms(operations);
+    const { askReset, askFill } = erpConfirms;
     // The integration "Add another ERP" names a new ERP for (AB-16); an ERP's downtime (AB-59).
     const [addingErpTo, setAddingErpTo] = useState<IntegrationCardModel | null>(null);
     const [downtime, setDowntime] = useState<ErpDemoControlTarget | null>(null);
@@ -147,8 +146,8 @@ export function IntegrationsGrid({
     const handleAction = useCallback(
         (model: IntegrationCardModel, action: CardAction): void => {
             const own = {
-                confirmReset: setPendingReset,
-                loadErpData: operations.loadErpData,
+                confirmReset: askReset,
+                loadErpData: askFill,
                 openDowntime: setDowntime,
                 openAssign: erpAssign?.openAssign,
                 confirmUndoAssignment: erpAssign?.confirmUndoAssignment,
@@ -208,7 +207,7 @@ export function IntegrationsGrid({
             }
             operations.run(model.id, model.name, action);
         },
-        [erpAssign, handleMeshAction, onOpenGuide, openReinstall, openRemoveAnyway, openSettings, operations, storePrep],
+        [askFill, askReset, erpAssign, handleMeshAction, onOpenGuide, openReinstall, openRemoveAnyway, openSettings, operations, storePrep],
     );
 
     // A tile whose operation started here and is still running reopens its progress
@@ -236,17 +235,6 @@ export function IntegrationsGrid({
         [cards, pendingRemoveId],
     );
     const removeConsequence = removalConsequence(pendingRemove);
-
-    const closeResetDialog = useCallback((): void => setPendingReset(null), []);
-    // Through the runner, so the reset reports into this screen's progress modal
-    // like every other card action rather than opening a notification of its own
-    // (owner, 2026-09-20).
-    const confirmReset = useCallback((): void => {
-        if (pendingReset) {
-            operations.resetErp(pendingReset.id);
-        }
-        setPendingReset(null);
-    }, [operations, pendingReset]);
 
     const closeAddErp = useCallback((): void => setAddingErpTo(null), []);
     const addErp = useCallback<AddErpDialogProps['onAdd']>(
@@ -327,12 +315,7 @@ export function IntegrationsGrid({
                 onSaved={settings.saved}
             />
 
-            <ErpResetDialog
-                isOpen={pendingReset !== null}
-                erpNames={pendingReset?.erpNames ?? []}
-                onConfirm={confirmReset}
-                onClose={closeResetDialog}
-            />
+            <ErpConfirmDialogs {...erpConfirms.dialogs} />
 
             <AddErpDialog
                 target={addingErpTo ?? undefined}

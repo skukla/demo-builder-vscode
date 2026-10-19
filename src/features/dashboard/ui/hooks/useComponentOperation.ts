@@ -146,7 +146,7 @@ export function useComponentOperation(): ComponentOperationControls {
         [start],
     );
 
-    /** The ERP fill: through the integration's id, like the reset, with no confirm (it removes nothing). */
+    /** The ERP fill: through the integration's id, like the reset; the card confirms first (ErpConfirmDialogs). */
     const loadErpData = useCallback(
         (id: string, erpName: string, erp?: string): void => {
             start({
