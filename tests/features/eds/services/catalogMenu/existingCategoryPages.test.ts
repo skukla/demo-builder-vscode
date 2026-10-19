@@ -114,6 +114,27 @@ describe('findOwnCategoryPages', () => {
         expect(found.get('signs')).toBe('/a-signs');
     });
 
+    // The French copy of CitiSignal's Accessories page (/citisignal-fr/accessories) was taken
+    // for Accessories' page, beside /accessories itself, and the menu sent shoppers to it
+    // (My Commerce Demo, 2026-10-19).
+    it('leaves a category that has a page at its own address to it, whatever else names it', async () => {
+        const site = fakeStorefront({
+            '/apparel': plp(row('urlPath', 'apparel')),
+            '/citisignal-fr/apparel': plp(row('urlPath', 'apparel')),
+        });
+
+        expect((await findOwnCategoryPages(site.port, CATEGORIES, nobodyOurs)).size).toBe(0);
+    });
+
+    it('picks the shallowest page when several name a category: a language copy is deeper', async () => {
+        const site = fakeStorefront({
+            '/citisignal-fr/clothing': plp(row('urlPath', 'apparel')),
+            '/clothing': plp(row('urlPath', 'apparel')),
+        });
+
+        expect((await findOwnCategoryPages(site.port, CATEGORIES, nobodyOurs)).get('apparel')).toBe('/clothing');
+    });
+
     it('ignores a page for a category that is not in the menu', async () => {
         const site = fakeStorefront({ '/clearance': plp(row('urlPath', 'clearance')) });
 

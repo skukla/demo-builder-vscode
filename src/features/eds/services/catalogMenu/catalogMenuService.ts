@@ -208,7 +208,12 @@ async function ownPages(
             .map((l) => [normaliseUrlPath(l.urlPath), l.path]),
     );
     const hashes = new Map(previous.pages.map((p) => [p.path, p.hash]));
-    const found = await findOwnCategoryPages(pages, categories, (path, html) => hashes.get(path) === hashOf(html));
+    const found = await findOwnCategoryPages(
+        pages,
+        categories,
+        (path, html) => hashes.get(path) === hashOf(html),
+        new Set(previous.pages.map((p) => p.path)),
+    );
     return { typed, found };
 }
 

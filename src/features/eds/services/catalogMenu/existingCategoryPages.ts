@@ -71,30 +71,45 @@ function categoriesShownBy(html: string, categories: CatalogCategory[]): Catalog
     );
 }
 
+/** Shallowest first, then alphabetical: a language copy (`/citisignal-fr/...`) sits deeper. */
+function byDepthThenName(a: string, b: string): number {
+    const depth = (path: string): number => path.split('/').length;
+    return depth(a) - depth(b) || a.localeCompare(b);
+}
+
 /**
  * The hand-built page for each category that has one somewhere other than its own
- * address. (A page AT the category's address is decided by address, in
- * `catalogMenuService`.) When two pages name one category, the first address in
- * alphabetical order is used.
+ * address. A page AT the category's address that Demo Builder did not write (the
+ * package's own content) is the category's page, so a page elsewhere naming the same
+ * category does not take it over; one Demo Builder wrote yields to the SC's page, as
+ * before (`catalogMenuService`). When two pages name one category, the shallowest is
+ * used, then the first in alphabetical order. (My Commerce Demo, 2026-10-19: beside
+ * `/accessories`, the French copy `/citisignal-fr/accessories` was taken for Accessories'
+ * page, and the menu sent shoppers to it.)
  *
  * @param pages - the storefront's pages
  * @param categories - the menu's categories
  * @param isOurs - whether the record proves Demo Builder wrote this page as it stands
+ * @param written - the pages Demo Builder wrote, edited since or not
  * @returns category url path (as Commerce spells it) → the page's web path
  */
 export async function findOwnCategoryPages(
     pages: PageReader,
     categories: CatalogCategory[],
     isOurs: (path: string, html: string) => boolean,
+    written: ReadonlySet<string> = new Set(),
 ): Promise<Map<string, string>> {
-    const paths = [...(await pages.listPages())].sort();
+    const paths = [...(await pages.listPages())].sort(byDepthThenName);
     const sources = await runInBatches(paths, READ_BATCH, (path) => pages.read(path));
+    // Addresses holding a page Demo Builder did not write: the category's own page already.
+    const theirs = new Set(paths.filter((path) => !written.has(path)).map((path) => path.toLowerCase()));
     const found = new Map<string, string>();
     paths.forEach((path, i) => {
         const html = sources[i];
         if (html === null || isOurs(path, html)) return;
         for (const category of categoriesShownBy(html, categories)) {
             const ownAddress = `/${normaliseUrlPath(category.urlPath)}`;
+            if (theirs.has(ownAddress)) continue;
             if (path.toLowerCase() !== ownAddress && !found.has(category.urlPath)) {
                 found.set(category.urlPath, path);
             }
