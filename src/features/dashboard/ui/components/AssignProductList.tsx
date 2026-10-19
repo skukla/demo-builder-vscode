@@ -15,7 +15,8 @@
  * 2026-10-18: not a list halfway down), and what the selection would do below it.
  * Categories are two pickers, the top level and then its subcategories, rather than one long
  * path a picker cuts off. A row that cannot be tagged is disabled with the reason in its Owner
- * cell; one already this ERP's is selected and disabled.
+ * cell; one already this ERP's is disabled, not ticked, and its Owner says this ERP (owner,
+ * 2026-10-19: a ticked row that would not untick read as stuck).
  *
  * Kept quiet (owner, 2026-10-19: "still feels busy"): the filters carry no labels, since each
  * one's value says what it is ("All categories"); Subcategory appears only once a category
@@ -54,7 +55,6 @@ export const LIST_COPY = {
     showAll: 'Show all',
     clear: 'Clear',
     blocked: "Can't be tagged (no erp_owner in its set)",
-    already: (erp: string) => `Already ${erp}'s`,
     elsewhere: (erp: string) => `To move ${erp}'s products to another ERP, open Assign products on that ERP.`,
     nothing: 'No products match.',
 };
@@ -99,7 +99,7 @@ function rowsOf(options: ErpAssignOptions, value: string): ProductRow[] {
         const row: ProductRow = { product, category: label ? leafOf(label) : '', owner: owners.join(', ') || LIST_COPY.noErp };
         if (product.owner === value) {
             row.locked = 'already';
-            row.owner = LIST_COPY.already(options.erp.name);
+            row.owner = options.erp.name;
         } else if (blockedSets.has(product.attributeSetId)) {
             row.locked = 'blocked';
             row.owner = LIST_COPY.blocked;
@@ -113,6 +113,15 @@ function cellOf(row: ProductRow, column: ColumnKey): string {
     if (column === 'sku') return row.product.sku;
     if (column === 'name') return row.product.name ?? '';
     return row[column];
+}
+
+/**
+ * A cell's text, greyed on a row that cannot be picked: Spectrum's table only stops a disabled
+ * row being ticked and draws it like the rest (owner, 2026-10-19: "they do NOT look greyed out").
+ * The all-bundles utility class, as the dialogs' hints use.
+ */
+function cellText(row: ProductRow, column: ColumnKey): React.ReactElement {
+    return <span className={row.locked ? 'text-gray-500' : undefined}>{cellOf(row, column)}</span>;
 }
 
 /** The rows in the order the column heading the SC clicked asks for. */
@@ -235,7 +244,6 @@ export function AssignProductList({ options, value, selected, onChange, summary,
     const subcategories = groups.find((group) => group.name === filters.category)?.subcategories ?? [];
     const shown = sorted(rows.filter((row) => matches(row, filters, options, selected, labels)), sort);
     const locked = shown.filter((row) => row.locked).map((row) => row.product.sku);
-    const already = shown.filter((row) => row.locked === 'already').map((row) => row.product.sku);
     const picking = selected.size > 0 || filters.selectedOnly;
     const holdsSome = rows.some((row) => row.locked === 'already');
     const owners = [
@@ -276,7 +284,7 @@ export function AssignProductList({ options, value, selected, onChange, summary,
                 <TableView
                     aria-label="Products"
                     selectionMode="multiple"
-                    selectedKeys={[...already, ...shown.filter((row) => selected.has(row.product.sku)).map((row) => row.product.sku)]}
+                    selectedKeys={shown.filter((row) => selected.has(row.product.sku)).map((row) => row.product.sku)}
                     disabledKeys={locked}
                     onSelectionChange={(keys) => onChange(nextSelection(keys, shown, selected))}
                     sortDescriptor={sort}
@@ -300,10 +308,10 @@ export function AssignProductList({ options, value, selected, onChange, summary,
                     <TableBody items={shown.map((row) => ({ id: row.product.sku, row }))}>
                         {(item) => (
                             <Row key={item.id}>
-                                <Cell>{cellOf(item.row, 'sku')}</Cell>
-                                <Cell>{cellOf(item.row, 'name')}</Cell>
-                                <Cell>{cellOf(item.row, 'category')}</Cell>
-                                <Cell>{cellOf(item.row, 'owner')}</Cell>
+                                <Cell textValue={cellOf(item.row, 'sku')}>{cellText(item.row, 'sku')}</Cell>
+                                <Cell textValue={cellOf(item.row, 'name')}>{cellText(item.row, 'name')}</Cell>
+                                <Cell textValue={cellOf(item.row, 'category')}>{cellText(item.row, 'category')}</Cell>
+                                <Cell textValue={cellOf(item.row, 'owner')}>{cellText(item.row, 'owner')}</Cell>
                             </Row>
                         )}
                     </TableBody>

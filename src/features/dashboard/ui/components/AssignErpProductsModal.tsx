@@ -50,14 +50,21 @@ export const ASSIGN_COPY = {
     actionIdle: 'Assign',
 };
 
-/** What the ticks would do, in sentences: how many, and where they move from. */
-export function selectionLines(preview: ErpAssignPreview): string[] {
-    if (preview.toWrite === 0) return [];
-    const lines = [`${preview.toWrite} selected. They move to ${preview.erp.name}.`];
-    for (const moved of preview.movedFrom) {
-        lines.push(`${moved.count} of them ${moved.count === 1 ? 'is' : 'are'} ${moved.name}'s now.`);
+/**
+ * What the ticks would do, in one line: how many, and where they come from. The title already
+ * says where they go (owner, 2026-10-19: "They move to…" was wordy).
+ */
+export function selectionLine(preview: ErpAssignPreview): string {
+    const count = preview.toWrite;
+    if (count === 0) return '';
+    const parts = preview.movedFrom.map((moved) => `${moved.count} from ${moved.name}`);
+    const fromNobody = count - preview.movedFrom.reduce((sum, moved) => sum + moved.count, 0);
+    if (fromNobody > 0) parts.push(`${fromNobody} from no ERP`);
+    if (parts.length === 1) {
+        const from = parts[0].slice(parts[0].indexOf(' from ') + 1);
+        return count === 1 ? `1 selected, ${from}.` : `${count} selected, all ${from}.`;
     }
-    return lines;
+    return `${count} selected: ${parts.join(', ')}.`;
 }
 
 export interface AssignErpProductsModalProps {
@@ -166,7 +173,7 @@ function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsM
                         onChange={setSelected}
                         summary={preview && (
                             <div className="assign-summary" data-testid="assign-preview">
-                                {selectionLines(preview).join(' ')}
+                                {selectionLine(preview)}
                             </div>
                         )}
                     />

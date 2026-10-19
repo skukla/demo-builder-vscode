@@ -21,7 +21,7 @@ import React from 'react';
 import {
     ASSIGN_COPY,
     AssignErpProductsModal,
-    selectionLines,
+    selectionLine,
 } from '@/features/dashboard/ui/components/AssignErpProductsModal';
 import { LIST_COPY } from '@/features/dashboard/ui/components/AssignProductList';
 import type { ErpAssignOptions, ErpAssignOptionsResult, ErpAssignPreview } from '@/types/erpAssign';
@@ -171,7 +171,7 @@ describe('AssignErpProductsModal', () => {
         const { onAssign } = await open();
         pick('ACC-1');
         pick('CAB-30');
-        expect(screen.getByTestId('assign-preview')).toHaveTextContent("2 selected. They move to Accuform ERP. 2 of them are Justrite ERP's now.");
+        expect(screen.getByTestId('assign-preview')).toHaveTextContent('2 selected, all from Justrite ERP.');
         fireEvent.click(screen.getByRole('button', { name: 'Assign 2 products' }));
         expect(onAssign).toHaveBeenCalledWith(TARGET, { by: 'skus', skus: ['ACC-1', 'CAB-30'] });
     });
@@ -232,18 +232,23 @@ describe('AssignErpProductsModal', () => {
         };
         const { onAssign } = await open(catchAll);
         expect(row('ACC-1')).toHaveAttribute('aria-disabled', 'true');
-        expect(row('ACC-1')).toHaveTextContent(LIST_COPY.already('Justrite ERP'));
+        expect(cells('ACC-1')[3]).toBe('Justrite ERP');
         pick('ACC-3');
-        expect(screen.getByTestId('assign-preview')).toHaveTextContent("1 selected. They move to Justrite ERP. 1 of them is Accuform ERP's now.");
+        expect(screen.getByTestId('assign-preview')).toHaveTextContent('1 selected, from Accuform ERP.');
         fireEvent.click(screen.getByRole('button', { name: 'Assign 1 product' }));
         expect(onAssign).toHaveBeenCalledWith({ ...TARGET }, { by: 'skus', skus: ['ACC-3'] });
     });
 
-    it("locks a product already this ERP's, and one whose attribute set has no erp_owner, saying why", async () => {
+    // Its own are greyed but not ticked, and the Owner says whose they are (owner, 2026-10-19:
+    // a ticked row that would not untick read as stuck).
+    it("locks a product already this ERP's, unticked, and one whose attribute set has no erp_owner, saying why", async () => {
         await open();
-        expect(row('ACC-3')).toHaveAttribute('aria-selected', 'true');
+        expect(row('ACC-3')).not.toHaveAttribute('aria-selected');
         expect(row('ACC-3')).toHaveAttribute('aria-disabled', 'true');
-        expect(row('ACC-3')).toHaveTextContent(LIST_COPY.already('Accuform ERP'));
+        expect(cells('ACC-3')[3]).toBe('Accuform ERP');
+        // Greyed: Spectrum draws a disabled row like the rest, so its text carries the grey.
+        expect(within(row('ACC-3')).getByText('Accuform ERP')).toHaveClass('text-gray-500');
+        expect(within(row('ACC-1')).getByText('Justrite ERP')).not.toHaveClass('text-gray-500');
         expect(row('ACC-9')).toHaveAttribute('aria-disabled', 'true');
         expect(row('ACC-9')).toHaveTextContent(LIST_COPY.blocked);
         // A click on a locked row changes nothing.
@@ -302,7 +307,7 @@ describe('AssignErpProductsModal', () => {
     });
 });
 
-describe('selectionLines', () => {
+describe('selectionLine', () => {
     const PREVIEW: ErpAssignPreview = {
         erp: STORE.erp,
         matched: 3,
@@ -314,11 +319,15 @@ describe('selectionLines', () => {
         unknownSkus: [],
     };
 
-    it('says how many and where each comes from, in the right number', () => {
-        expect(selectionLines(PREVIEW)).toEqual(['3 selected. They move to Accuform ERP.', "1 of them is Justrite ERP's now."]);
+    // One line; the title says where they go (owner, 2026-10-19).
+    it('says how many and where they come from, in one line', () => {
+        expect(selectionLine({ ...PREVIEW, movedFrom: [{ name: 'Justrite ERP', count: 3 }] })).toBe('3 selected, all from Justrite ERP.');
+        expect(selectionLine({ ...PREVIEW, toWrite: 1, movedFrom: [{ name: 'Justrite ERP', count: 1 }] })).toBe('1 selected, from Justrite ERP.');
+        expect(selectionLine(PREVIEW)).toBe('3 selected: 1 from Justrite ERP, 2 from no ERP.');
+        expect(selectionLine({ ...PREVIEW, movedFrom: [{ name: 'Justrite ERP', count: 2 }, { name: 'Acme ERP', count: 1 }] })).toBe('3 selected: 2 from Justrite ERP, 1 from Acme ERP.');
     });
 
     it('says nothing when nothing would be written', () => {
-        expect(selectionLines({ ...PREVIEW, toWrite: 0 })).toStrictEqual([]);
+        expect(selectionLine({ ...PREVIEW, toWrite: 0 })).toBe('');
     });
 });
