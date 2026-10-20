@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # A screen opened for one project acts on whichever project is current
@@ -58,3 +58,6 @@ answer that the current project changed since its last call.
 - 2026-10-09  fix(dashboard): Add another ERP says when the integration is not in the current project (`f045b0c7d`)
 - 2026-10-19  Owner decisions (2026-10-19): (a) an agent's create_project does NOT make the new project current; it says it created it. (b) each screen sends its own project with every request and handlers act on that project. (c) every agent tool answer says when the current project changed since the agent's last call, naming both.
 - 2026-10-19  Owner (2026-10-19): an agent's set_current_project switches only the agent's working project, never the person's. Plan: .rptc/plans/ai-15-project-per-surface/overview.md
+- 2026-10-19  refactor(state): one per-project StateManager view for screens and agents (`36200a8b9`)
+- 2026-10-19  fix(dashboard): a project screen keeps acting on the project it shows (`8bbc8a9bd`)
+- 2026-10-19  feat(ai): each agent connection works on its own project (`7cb6f3192`)

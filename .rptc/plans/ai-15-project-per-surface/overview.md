@@ -89,3 +89,31 @@ folder's project, as now.
 Gate per step. Live check by the owner: open the dashboard for project A, have an
 agent create project B, then start A from the dashboard and confirm A starts and the
 dashboard still says A.
+
+## Outcome (2026-10-19)
+
+Built in four commits on `loop/2026-10-19-backlog-fixes`: `36200a8b9` (the view),
+`8bbc8a9bd` (screens), `7cb6f3192` (agents and the notice), plus this docs commit.
+Every step passed the full gate; each new behaviour has a test shown to fail on the
+old code.
+
+Found while building, and decided in the code:
+
+- Saves decide by whether the SURFACE's project is current, not the saved project's
+  path: a rename saves at a new folder that is never "current", and deciding by path
+  left the pointer on a folder that no longer existed.
+- With no working project a save is today's save, so the projects list, which
+  selects a project BY saving it, still works.
+- A screen's command buttons pass the project's path to the command rather than
+  making it current first, because agents dispatch into the same handlers and an
+  agent's start must not move the person's project.
+
+Not covered, stated:
+
+- The AI screen's "open chat" button and the Site Access screen still act on the
+  current project (Site Access is deliberately its own picker).
+- An agent's create no longer stops the person's running demo on a port clash: the
+  check reads the project being built, which is not running.
+- Not proven live. The owner's check: open project A's dashboard, have an agent
+  create project B, then press Start on A's dashboard; A starts, the dashboard still
+  says A, and the projects list still shows A as open.
