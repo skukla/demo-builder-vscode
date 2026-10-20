@@ -78,5 +78,7 @@ export interface ApplyUpdatesReport {
 export interface ApplyUpdatesResponse {
     success: boolean;
     error?: string;
+    /** Set when some updates did not apply; the run still ended, and `data` says which. */
+    warning?: string;
     data?: ApplyUpdatesReport;
 }

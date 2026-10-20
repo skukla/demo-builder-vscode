@@ -400,6 +400,11 @@ export const TIMEOUTS = {
      *  VERY_LONG (5 min) was observed too tight: the webview showed a timeout
      *  error while the teardown kept running extension-side. */
     PROJECT_TEARDOWN: 900_000,
+    /** Applying the ticked rows in the Updates modal (PL-80): every project's updates in
+     *  one run, several integration pairs among them, each a deploy of minutes. The
+     *  progress modal follows the run regardless; this is how long the screen waits for
+     *  the report at the end. */
+    UPDATES_APPLY: 1_800_000,
 } as const;
 
 /**

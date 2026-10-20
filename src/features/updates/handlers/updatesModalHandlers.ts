@@ -17,7 +17,7 @@ import { questionsInModal, stopRunningDemos } from './updateQuestionsInModal';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
-import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
+import { withOperationProgress, type OperationOutcome, type ReportStage } from '@/core/vscode/withOperationProgress';
 import {
     integrationUpdateProbe,
     updateIntegrationPairFor,
@@ -72,7 +72,7 @@ async function applyTicked(
     found: FoundUpdates,
     ids: string[],
     report: ReportStage,
-): Promise<HandlerResponse> {
+): Promise<HandlerResponse & OperationOutcome> {
     const picked = selectionsForIds(found.selections, ids);
     const { selections, skipped } = await stopRunningDemos(picked.selections, found.currentProjectPath, () =>
         vscode.commands.executeCommand('demoBuilder.stopDemo'),
@@ -94,8 +94,10 @@ async function applyTicked(
     }
     const data = reportOf(result, skipped);
     if (data.problems.length === 0) return { success: true, data };
+    // A success with a warning, not a failure: the run ended, and a failure's Retry
+    // could not re-run a list that has been applied. The Updates list says why.
     const noun = data.problems.length === 1 ? 'update' : 'updates';
-    return { success: false, error: `${data.problems.length} ${noun} did not apply. The list says why.`, data };
+    return { success: true, warning: `${data.problems.length} ${noun} did not apply. The Updates list says why.`, data };
 }
 
 /** What the apply cores are built from, under this screen's context. */

@@ -89,6 +89,11 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // up to two app deploys in a row (the ERP, then its integration).
     saveIntegrationSettings: TIMEOUTS.EXTENDED, // 600s - store, then up to two redeploys
 
+    // The Updates modal (PL-80): the check reads every project and asks GitHub about each;
+    // the apply runs every ticked update, integration deploys among them.
+    checkUpdates: TIMEOUTS.LONG, // 180s - extension + every project's checks
+    applyUpdates: TIMEOUTS.UPDATES_APPLY, // 30min - the whole run, reported at its end
+
     // Project deletion (EDS cleanup involves multiple external APIs)
     deleteProject: TIMEOUTS.LONG, // 180s - DA.live + GitHub + local cleanup
 

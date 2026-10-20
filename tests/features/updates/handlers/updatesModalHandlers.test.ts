@@ -163,7 +163,7 @@ describe('applyUpdates', () => {
         expect(states[states.length - 1]).toBe('succeeded');
     });
 
-    it('answers what did not apply, and fails the run with one sentence saying so', async () => {
+    it('answers what did not apply, and ends the run with one warning sentence saying so', async () => {
         mockApplyUpdatesHeadless.mockResolvedValue(
             applied({ template: { ...emptyResult(), failCount: 1, errors: ['bodea: merge conflicts'] }, totalApplied: 0 }),
         );
@@ -171,8 +171,8 @@ describe('applyUpdates', () => {
         const { answer } = await checkedThenApply((rows) => rows.map((r) => r.id));
 
         expect(answer).toEqual({
-            success: false,
-            error: '1 update did not apply. The list says why.',
+            success: true,
+            warning: '1 update did not apply. The Updates list says why.',
             data: { applied: 0, problems: ['bodea: merge conflicts'], notes: [] },
         });
     });

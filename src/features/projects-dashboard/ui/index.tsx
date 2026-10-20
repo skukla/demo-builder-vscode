@@ -8,6 +8,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { ProjectActions } from './components/ProjectActionsMenu';
+import { UpdatesModal } from './components/UpdatesModal';
+import { useUpdatesModal } from './hooks/useUpdatesModal';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
@@ -53,6 +55,8 @@ import '@/core/ui/styles/inline-controls.css';
 // .add-card — the "New project" card at the grid's end, which opens the New menu
 // (PL-62). A stylesheet reaches only the bundles whose entry imports it (ADR-017 §6).
 import '@/core/ui/styles/add-card.css';
+// CheckboxRow, the Updates modal's rows (PL-80, ADR-017 §6).
+import '@/core/ui/styles/checkbox-row.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts
@@ -216,6 +220,9 @@ function ProjectsDashboardApp() {
     // screen's one progress modal (PL-59).
     const operations = useOperationRunner();
     const startOperation = operations.startWhenItBegins;
+    // Check for Updates (PL-80): its list here, its run in the progress modal below.
+    const refreshAfterUpdates = useCallback(() => void fetchProjects(true), [fetchProjects]);
+    const updates = useUpdatesModal(operations, refreshAfterUpdates);
 
     // Copy from a project: the modal asks which one, then the wizard opens with
     // its settings (picker-to-modal).
@@ -493,6 +500,7 @@ function ProjectsDashboardApp() {
             onRetry={operations.retry}
             onClose={operations.close}
         />
+        <UpdatesModal controls={updates} />
         </>
     );
 }
