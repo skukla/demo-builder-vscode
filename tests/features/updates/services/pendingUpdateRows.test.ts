@@ -49,7 +49,34 @@ const pair = (project: Project, otherOrg: boolean) => ({
     otherOrg,
 });
 
+/** A row that commits to the storefront repository, which the live site serves. */
+const LIVE = 'Updates the live site';
+
+/** A storefront whose template is followed through our patches repo's tested pointer. */
+function storefront(metadata: Record<string, unknown>): Project {
+    return createMockProject({
+        name: 'justrite',
+        title: 'JustRite',
+        path: '/p/justrite',
+        componentInstances: {
+            'eds-storefront': { id: 'eds-storefront', name: 'EDS Storefront', type: 'frontend', status: 'ready', metadata },
+        },
+    });
+}
+
 describe('toPendingUpdateRows', () => {
+    // Owner, 2026-10-20: two different updates read "EDS template". On a storefront that
+    // follows our tested pointer it IS Adobe's template; on one added from a colleague's
+    // repository it is that colleague's changes, and says whose.
+    it.each([
+        ['follows our tested template', { lkgSource: { owner: 'skukla', repo: 'eds-demo-patches' }, templateOwner: 'adobe-commerce', templateRepo: 'boilerplate-b2b-template' }, 'EDS template'],
+        ["follows a colleague's repository", { templateOwner: 'kmanns', templateRepo: 'justrite' }, 'Changes from kmanns/justrite'],
+    ])('names the template row by where it comes from: a storefront that %s', (_label, metadata, expected) => {
+        const [row] = toPendingUpdateRows({ ...empty(), template: [{ project: storefront(metadata) }] }, undefined, undefined);
+
+        expect(row).toMatchObject({ label: expected, detail: LIVE });
+    });
+
     it('words every kind of update, under its project, everything ticked but the redeploy', () => {
         const sel: UpdateSelections = {
             ...empty(),
@@ -81,11 +108,11 @@ describe('toPendingUpdateRows', () => {
         const rows = toPendingUpdateRows(sel, undefined, undefined);
 
         expect(rows.map((r) => [r.group.title, r.label, r.detail, r.ticked])).toEqual([
-            ['Bodea', 'EDS template', 'Newer version', true],
+            ['Bodea', 'EDS template', LIVE, true],
             ['Bodea', 'eds-storefront', '6.0.0 → 6.1.0', true],
             ['Bodea', 'Adobe MCP', '1.0.0 → 1.1.0', true],
-            ['Bodea', 'Demo Builder Blocks', 'Newer version', true],
-            ['Bodea', 'Bodea Blocks', 'install', true],
+            ['Bodea', 'Demo Builder Blocks', LIVE, true],
+            ['Bodea', 'Bodea Blocks', 'install, updates the live site', true],
             ['Bodea', 'Demo Inspector SDK', 'Newer version', true],
             ['Bodea', 'ERP Integration and Justrite ERP', 'Newer version, redeploys to Adobe', false],
         ]);

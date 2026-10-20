@@ -11,15 +11,45 @@
  * and brought a look nothing else here has (owner, 2026-10-20).
  */
 
+/* Registered so it animates as a length; an unregistered property jumps between values. */
+@property --updates-fade {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+}
+
 @layer theme {
-    /* Panels stacked with the cards' own gap, no divider lines. */
+    /* Panels stacked with the cards' own gap, no divider lines. A set height that scrolls,
+       so opening a project never resizes the window (owner, 2026-10-20): leaving the
+       modal's "fit to content" off was tried first and changed nothing on screen. Capped
+       by the viewport so a short editor still shows the buttons. */
     .updates-group-list {
         display: flex;
         flex-direction: column;
         gap: var(--card-gap);
+        height: min(440px, 55vh);
+        overflow-y: auto;
+        /* The last 32px fade out while there is more below, so a cut-off panel reads as
+           "scroll for more" (owner, 2026-10-20). The fade's size follows the scroll: full
+           at the top, gone at the bottom. A list that fits has no scroll, so the
+           animation never runs and the fade keeps its registered 0px. */
+        mask-image: linear-gradient(to bottom, #000 calc(100% - var(--updates-fade)), transparent);
+        animation: updates-list-fade linear both;
+        animation-timeline: scroll(self);
+    }
+
+    @keyframes updates-list-fade {
+        from {
+            --updates-fade: 32px;
+        }
+        to {
+            --updates-fade: 0px;
+        }
     }
 
     .updates-group {
+        /* A flex column with a set height squeezes its children; a panel keeps its own. */
+        flex-shrink: 0;
         background: var(--spectrum-global-color-gray-50);
         border: 1px solid var(--spectrum-global-color-gray-300);
         border-radius: 8px;
@@ -59,5 +89,17 @@
     /* Under the name, past the group's checkbox, so a row reads as part of the project. */
     .updates-group-rows {
         padding: 0 0 8px 28px;
+    }
+
+    /* Thinner rows here only (owner, 2026-10-20): Spectrum's checkbox is 32px tall, and the
+       box and one line of text need 24px, still the smallest target WCAG 2.2 accepts. The
+       API picker's rows, the other CheckboxRow host, keep Spectrum's height. Selected the
+       way wizard.css selects Spectrum's checkbox, by the class prefix it keeps. */
+    .updates-group-rows .checkbox-row {
+        padding: 0;
+    }
+
+    .updates-group-rows .checkbox-row label[class*='spectrum-Checkbox'] {
+        min-height: 24px;
     }
 }

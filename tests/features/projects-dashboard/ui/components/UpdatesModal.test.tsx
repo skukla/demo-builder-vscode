@@ -9,25 +9,24 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
+import { ruleFor } from '../../../../helpers/cssRules';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 
 jest.mock('@/core/ui/components/ui/Modal', () => ({
     Modal: ({
         title,
         size,
-        fitContent,
         actionButtons = [],
         onClose,
         children,
     }: {
         title: string;
         size?: string;
-        fitContent?: boolean;
         actionButtons?: ActionButton[];
         onClose: () => void;
         children: React.ReactNode;
     }) => (
-        <div role="dialog" aria-label={title} data-size={size} data-fit-content={fitContent ? 'yes' : 'no'}>
+        <div role="dialog" aria-label={title} data-size={size}>
             {children}
             <button onClick={onClose}>Close</button>
             {actionButtons.map((b) => (
@@ -141,15 +140,13 @@ describe('UpdatesModal', () => {
 
     // No sentence under the title: the ticks and the Apply count say it, and what cannot
     // be undone says so on its own row (owner, 2026-10-20). Large, so the longest row
-    // ("…, Newer version, redeploys to Adobe") keeps to one line. Not fitted to its
-    // content: the window keeps one height and its list scrolls, so opening a project
-    // never resizes it (owner, 2026-10-20).
-    it('opens large and steady, titled "Updates available", straight onto the list', () => {
+    // ("…, Newer version, redeploys to Adobe") keeps to one line.
+    it('opens large, titled "Updates available", straight onto the list', () => {
         const { container } = render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
 
         const dialog = screen.getByRole('dialog', { name: 'Updates available' });
         expect(dialog).toHaveAttribute('data-size', 'L');
-        expect(dialog).toHaveAttribute('data-fit-content', 'no');
+        expect(container.querySelector('.updates-group-list')).not.toBeNull();
         expect(container.querySelector('.lead-text')).toBeNull();
     });
 
@@ -228,5 +225,38 @@ describe('UpdatesModal', () => {
         await user().click(screen.getByRole('button', { name: 'Close' }));
 
         expect(c.close).toHaveBeenCalledTimes(1);
+    });
+});
+
+// The window keeps one height and its list scrolls, so opening a project never resizes it
+// (owner, 2026-10-20). Asserted against the stylesheet: jsdom resolves no layout. Leaving
+// the house modal's "fit to content" off was tried first and changed nothing on screen;
+// the height has to be on the list.
+describe('the Updates list', () => {
+    it('has a set height and scrolls, rather than growing', () => {
+        const rule = ruleFor('.updates-group-list');
+
+        expect(rule).toMatch(/(^|[;{\s])height:\s*[^;]+;/);
+        expect(rule).not.toMatch(/max-height/);
+        expect(rule).toMatch(/overflow-y:\s*auto/);
+    });
+
+    // A cut-off panel at the bottom edge did not read as "more below" (owner, 2026-10-20).
+    it('fades its bottom edge by how much is left to scroll, and not at all when it fits', () => {
+        const rule = ruleFor('.updates-group-list');
+
+        expect(rule).toMatch(/mask-image:[^;]*var\(--updates-fade\)/);
+        expect(rule).toMatch(/animation-timeline:\s*scroll\(self\)/);
+        // No scroll, no running animation: the registered starting value is what shows.
+        expect(ruleFor('@property --updates-fade')).toMatch(/initial-value:\s*0px/);
+    });
+
+    // Spectrum's 32px checkbox made the rows tall (owner, 2026-10-20); here alone they
+    // take 24px, the box and one line of text.
+    it('draws its rows thinner than the checkbox default, and only inside the list', () => {
+        expect(ruleFor('.updates-group-rows .checkbox-row')).toMatch(/padding:\s*0;/);
+        expect(ruleFor(".updates-group-rows .checkbox-row label[class*='spectrum-Checkbox']")).toMatch(
+            /min-height:\s*24px/,
+        );
     });
 });

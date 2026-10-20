@@ -17,7 +17,9 @@
  * closed group cannot hide the row that needs a decision. The rest of its line opens it.
  * Its checkbox ticks or unticks the whole group (mixed while some rows are ticked; never a
  * locked row), and sits beside the opening button rather than in it, so ticking a group
- * does not open it. No sentence under the title: the ticks and the Apply count say it.
+ * does not open it. The list has a set height and scrolls (`.updates-group-list`), so
+ * opening a project never resizes the window. No sentence under the title: the ticks and
+ * the Apply count say it.
  *
  * @module features/projects-dashboard/ui/components/UpdatesModal
  */
@@ -162,8 +164,6 @@ function bodyFor(controls: UpdatesModalControls): { body: React.ReactNode; actio
 /** The Updates modal; nothing while closed. */
 export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): React.ReactElement {
     const open = controls.view.phase !== 'closed';
-    // The list keeps the house modal's one height and scrolls, so opening a project never
-    // resizes the window (owner, 2026-10-20); the short report fits its content.
     const isReport = controls.view.phase === 'report';
     const { body, actions } = open ? bodyFor(controls) : { body: null, actions: NO_ACTIONS };
     return (
@@ -172,7 +172,7 @@ export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): 
                 <Modal
                     title={isReport ? REPORT_TITLE : LIST_TITLE}
                     size="L"
-                    fitContent={isReport}
+                    fitContent
                     onClose={controls.close}
                     actionButtons={actions}
                 >

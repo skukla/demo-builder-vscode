@@ -19,6 +19,8 @@
 
 import { OTHER_ORG_NOTE } from './integrationUpdates';
 import type { UpdateSelections } from './updateSelections';
+import { getTemplateSource } from './updateSources';
+import { COMPONENT_IDS } from '@/core/constants';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { Project } from '@/types/base';
 import type {
@@ -42,13 +44,21 @@ const LOCKED_OTHER_ORG = `This project ${OTHER_ORG_NOTE}`;
  * is the developer's measure, and tells an SC nothing they would act on (owner, 2026-10-20).
  */
 const NEWER = 'Newer version';
+/**
+ * Said on every row whose apply commits to the storefront repository, which the live site
+ * serves, as the integration row says it redeploys (owner, 2026-10-20). The Inspector SDK
+ * row does not say it: its apply only records the new version.
+ */
+const LIVE_SITE = 'updates the live site';
+/** "Newer version" dropped where it is said: it tells the SC nothing (owner, 2026-10-20). */
+const LIVE_SITE_DETAIL = 'Updates the live site';
 
 /** `ticked: false` is a row that waits for the SC's tick; a locked row is never ticked. */
 type RowText = Pick<PendingUpdateRow, 'label' | 'detail'> & { lockedReason?: string; ticked?: false };
 
 /** Each project kind's words for one of its entries. */
 const PROJECT_KINDS: { [K in ProjectKind]: (entry: UpdateSelections[K][number]) => RowText } = {
-    template: () => ({ label: 'EDS template', detail: NEWER }),
+    template: (t) => ({ label: templateLabel(t.project), detail: LIVE_SITE_DETAIL }),
     component: (c) => ({
         label: c.project.componentInstances?.[c.componentId]?.name ?? c.componentId,
         detail: c.currentVersion
@@ -61,8 +71,8 @@ const PROJECT_KINDS: { [K in ProjectKind]: (entry: UpdateSelections[K][number]) 
             ? `${a.currentVersion} → ${a.latestVersion}`
             : `version ${a.latestVersion}`,
     }),
-    blockLibrary: (b) => ({ label: b.library.name, detail: NEWER }),
-    blockLibraryInstall: (b) => ({ label: b.library.name, detail: 'install' }),
+    blockLibrary: (b) => ({ label: b.library.name, detail: LIVE_SITE_DETAIL }),
+    blockLibraryInstall: (b) => ({ label: b.library.name, detail: `install, ${LIVE_SITE}` }),
     inspector: () => ({ label: 'Demo Inspector SDK', detail: NEWER }),
     integration: (p) => ({
         label: p.label,
@@ -71,6 +81,19 @@ const PROJECT_KINDS: { [K in ProjectKind]: (entry: UpdateSelections[K][number]) 
         ...(p.otherOrg ? { lockedReason: LOCKED_OTHER_ORG } : {}),
     }),
 };
+
+/**
+ * What the template row is. A storefront following our patches repo's tested pointer gets
+ * Adobe's template; any other follows its source repository's branch, which for an added
+ * demo is a colleague's, so the row says whose (owner, 2026-10-20: two different updates
+ * both read "EDS template"). Mirrors the checker's split (`templateUpdateChecker.ts`).
+ */
+function templateLabel(project: Project): string {
+    const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+    const source = getTemplateSource(project);
+    if (metadata?.lkgSource || !source) return 'EDS template';
+    return `Changes from ${source.owner}/${source.repo}`;
+}
 
 /** The kinds that belong to one project, in the order a project's rows are listed. */
 type ProjectKind = Exclude<PendingUpdateKind, 'extension' | 'forkSync'>;
