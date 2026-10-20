@@ -200,7 +200,10 @@ describe("every pipeline operation shows under Reset's step for the same work", 
     // The default setup copies no content (no content source): five steps, the
     // authoring setup the fourth.
     it("numbers the step from the run's own list", async () => {
-        const payload = await reportProgress({ operation: 'block-library', message: 'Building block library' });
+        const payload = await reportProgress({
+            operation: 'block-library',
+            message: 'Building block library',
+        });
 
         expect(payload.position).toEqual({ index: 4, total: 5 });
         expect(payload.startedAt).toEqual(expect.any(Number));

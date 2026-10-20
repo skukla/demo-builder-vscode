@@ -266,7 +266,11 @@ describe('whether content is copied at all', () => {
     });
 
     it('copies content into a brand new site', async () => {
-        await runSetup(createEdsConfig({ contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' } }));
+        await runSetup(
+            createEdsConfig({
+                contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' },
+            })
+        );
 
         expect(pipelineInput().skipContent).toBe(false);
         expect(pipelineInput().clearExistingContent).toBe(false);

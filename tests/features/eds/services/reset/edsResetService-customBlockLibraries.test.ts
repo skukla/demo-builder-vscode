@@ -159,12 +159,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
         const context = createResetContext();
 
         // When: Executing reset
-        await executeEdsReset(
-            resetParams(project),
-            context,
-            mockTokenProvider,
-            meshDeps
-        );
+        await executeEdsReset(resetParams(project), context, mockTokenProvider, meshDeps);
 
         // Then: installBlockCollections (plural) called ONCE with all sources combined
         expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
@@ -197,12 +192,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
         const context = createResetContext();
 
         // When: Executing reset
-        await executeEdsReset(
-            resetParams(project),
-            context,
-            mockTokenProvider,
-            meshDeps
-        );
+        await executeEdsReset(resetParams(project), context, mockTokenProvider, meshDeps);
 
         // Then: installBlockCollections (plural) called with only built-in source
         expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);

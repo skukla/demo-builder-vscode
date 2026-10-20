@@ -38,7 +38,7 @@ jest.mock('@/core/utils/sleep');
 const mockReport = jest.fn();
 jest.mock('@/core/vscode/withOperationProgress', () => ({
     withOperationProgress: jest.fn(
-        async (_options: unknown, work: (report: jest.Mock) => Promise<unknown>) => work(mockReport),
+        async (_options: unknown, work: (report: jest.Mock) => Promise<unknown>) => work(mockReport)
     ),
 }));
 
@@ -75,7 +75,10 @@ function createProject(): Project {
 
 function createContext(): HandlerContext {
     return createMockHandlerContext({
-        stateManager: createMockStateManager({ getCurrentProject: jest.fn(), saveProject: jest.fn() }),
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn(),
+            saveProject: jest.fn(),
+        }),
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
         sendMessage: jest.fn(),
@@ -108,8 +111,12 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
         await run({ success: true });
 
         expect(withOperationProgress).toHaveBeenCalledWith(
-            { id: resetOperationId('test-project'), title: 'Resetting test-project', inModal: false },
-            expect.any(Function),
+            {
+                id: resetOperationId('test-project'),
+                title: 'Resetting test-project',
+                inModal: false,
+            },
+            expect.any(Function)
         );
     });
 
@@ -118,7 +125,7 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
 
         expect(withOperationProgress).toHaveBeenCalledWith(
             { id: 'op-7', title: 'Resetting test-project', inModal: true },
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
@@ -154,7 +161,11 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
                 totalSteps: 11,
                 message: 'Publishing the block list: 11 pages',
             });
-            onProgress?.({ step: RESET_STEP.resettingCode, totalSteps: 11, message: 'Reset 3448 files' });
+            onProgress?.({
+                step: RESET_STEP.resettingCode,
+                totalSteps: 11,
+                message: 'Reset 3448 files',
+            });
             return { success: true };
         });
 
@@ -166,10 +177,14 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
             progress: 'modal',
         });
 
-        expect(mockReport).toHaveBeenCalledWith('Publishing the pages', 'Publishing the block list: 11 pages', {
-            index: RESET_STEP.publishingPages,
-            total: 11,
-        });
+        expect(mockReport).toHaveBeenCalledWith(
+            'Publishing the pages',
+            'Publishing the block list: 11 pages',
+            {
+                index: RESET_STEP.publishingPages,
+                total: 11,
+            }
+        );
         expect(mockReport).toHaveBeenCalledWith('Resetting the code', 'Reset 3448 files', {
             index: RESET_STEP.resettingCode,
             total: 11,
@@ -186,7 +201,8 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
     // in its modal with a clean success, and its warning arrived as a notification
     // in the corner instead.
     it("puts a success's warnings on the modal's last view, not in notifications", async () => {
-        const leftover = 'Pages from before the reset may still be live on h. Reset again to remove them.';
+        const leftover =
+            'Pages from before the reset may still be live on h. Reset again to remove them.';
         const missing = '3 pages the source has are missing from this storefront: /a, /b, /c';
 
         const result = await run(
@@ -195,7 +211,7 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
                 leftoverPages: { status: 'not-listed', removed: 0, summary: leftover },
                 missingPages: missing,
             },
-            { progress: 'modal' },
+            { progress: 'modal' }
         );
 
         expect(result.warning).toBe(`${leftover} ${missing}`);
@@ -205,13 +221,17 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
 
     it('points at the storefront report in the modal when the demo has fixes on offer', async () => {
         const result = await run(
-            { success: true, demoCaveats: ['Product links may not work.'], demoFixes: { offered: ['pdp'] } },
-            { progress: 'modal' },
+            {
+                success: true,
+                demoCaveats: ['Product links may not work.'],
+                demoFixes: { offered: ['pdp'] },
+            },
+            { progress: 'modal' }
         );
 
         expect(result.warning).toBe(
             'A few things to know about this demo: Product links may not work. ' +
-                'Storefront Report offers fixes for this.',
+                'Storefront Report offers fixes for this.'
         );
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
     });
@@ -226,7 +246,7 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
         await run({ success: false, error: 'pipeline died' });
 
         expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-            'Failed to reset EDS project: pipeline died',
+            'Failed to reset EDS project: pipeline died'
         );
     });
 });
@@ -247,7 +267,10 @@ describe('resetEdsProjectWithUI — within an Edit', () => {
     });
 
     it('raises no result toast: the Edit reports the outcome', async () => {
-        await run({ success: false, error: 'pipeline died' }, { withinEdit: { report: jest.fn() } });
+        await run(
+            { success: false, error: 'pipeline died' },
+            { withinEdit: { report: jest.fn() } }
+        );
 
         expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
     });

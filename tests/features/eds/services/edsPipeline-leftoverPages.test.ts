@@ -87,7 +87,14 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
                 copyOps: {
                     copyContentFromSource: jest
                         .fn()
-                        .mockResolvedValue({ success: true, totalFiles: 2, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] }),
+                        .mockResolvedValue({
+                            success: true,
+                            totalFiles: 2,
+                            copiedFiles: [],
+                            failedFiles: [],
+                            sheetPaths: [],
+                            codePathsOnSource: [],
+                        }),
                 },
                 blockLibOps: { createBlockLibraryFromTemplate: jest.fn() },
             },
@@ -127,8 +134,15 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
     it('hands Helix exactly the live pages the reset did not republish, product pages excepted', async () => {
         const result = await run();
 
-        expect(helix.listPublishedPaths).toHaveBeenCalledWith('test-owner', 'test-repo', 'main', '/*');
-        expect(helix.unpublishPages).toHaveBeenCalledWith('test-owner', 'test-repo', 'main', ['/old-campaign']);
+        expect(helix.listPublishedPaths).toHaveBeenCalledWith(
+            'test-owner',
+            'test-repo',
+            'main',
+            '/*'
+        );
+        expect(helix.unpublishPages).toHaveBeenCalledWith('test-owner', 'test-repo', 'main', [
+            '/old-campaign',
+        ]);
         expect(result.success).toBe(true);
         expect(result.leftoverPages).toEqual({
             status: 'removed',
@@ -148,21 +162,31 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
 
         expect(readSource).toHaveBeenCalledWith('test-org', 'test-site', '/old-campaign.html', 0);
         expect(helix.unpublishPages).not.toHaveBeenCalled();
-        expect(helix.previewAndPublishPage).toHaveBeenCalledWith('test-owner', 'test-repo', '/old-campaign');
+        expect(helix.previewAndPublishPage).toHaveBeenCalledWith(
+            'test-owner',
+            'test-repo',
+            '/old-campaign'
+        );
         expect(result.leftoverPages?.kept).toEqual(['/old-campaign']);
     });
 
     it('runs before the catalog pre-warm, so the pages it publishes are never in the list', async () => {
-        await run({ ...resetParams, byomOverlayUrl: 'https://overlay.example', project: createMockProject() });
+        await run({
+            ...resetParams,
+            byomOverlayUrl: 'https://overlay.example',
+            project: createMockProject(),
+        });
 
         expect(mockPrewarmCatalog).toHaveBeenCalledTimes(1);
         expect(mockPrewarmCatalog.mock.invocationCallOrder[0]).toBeGreaterThan(
-            helix.unpublishPages.mock.invocationCallOrder[0],
+            helix.unpublishPages.mock.invocationCallOrder[0]
         );
     });
 
     it('warns in words, and never reads as clean, when Helix cannot say what is published', async () => {
-        helix.listPublishedPaths.mockRejectedValue(new Error('Helix refused to list the published pages (HTTP 401)'));
+        helix.listPublishedPaths.mockRejectedValue(
+            new Error('Helix refused to list the published pages (HTTP 401)')
+        );
 
         const result = await run();
 

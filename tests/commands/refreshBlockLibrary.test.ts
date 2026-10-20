@@ -68,7 +68,6 @@ jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getToken: jest.fn() })),
 }));
 
-
 jest.mock('@/features/eds/services/github/githubTokenService', () => ({
     GitHubTokenService: jest.fn().mockImplementation(() => ({})),
 }));
@@ -143,10 +142,13 @@ describe('RefreshBlockLibraryCommand', () => {
 
         // vscode.window.withProgress should execute the callback with a real progress reporter
         (vscode.window.withProgress as jest.Mock).mockImplementation(
-            async (_options: unknown, callback: (progress: { report: jest.Mock }) => Promise<unknown>) => {
+            async (
+                _options: unknown,
+                callback: (progress: { report: jest.Mock }) => Promise<unknown>
+            ) => {
                 const progress = { report: jest.fn() };
                 return callback(progress);
-            },
+            }
         );
     });
 
@@ -154,7 +156,7 @@ describe('RefreshBlockLibraryCommand', () => {
         const cmd = new RefreshBlockLibraryCommand(
             makeContext(),
             makeStateManager(EDS_PROJECT),
-            makeLogger(),
+            makeLogger()
         );
         cmd.helixService = fakeHelix;
 
@@ -177,7 +179,7 @@ describe('RefreshBlockLibraryCommand', () => {
         const cmd = new RefreshBlockLibraryCommand(
             makeContext(),
             makeStateManager(EDS_PROJECT),
-            makeLogger(),
+            makeLogger()
         );
         cmd.helixService = fakeHelix;
 
@@ -193,7 +195,9 @@ describe('RefreshBlockLibraryCommand', () => {
 
         // Invoking the pipeline progress callback must not throw — it must
         // bridge through to a reporter (we just verify it's wired and callable).
-        expect(() => onProgress({ operation: 'block-library', message: 'configuring...' })).not.toThrow();
+        expect(() =>
+            onProgress({ operation: 'block-library', message: 'configuring...' })
+        ).not.toThrow();
     });
 
     /** The pipeline as a library-only rebuild runs it, by the operations it reports. */
@@ -202,14 +206,20 @@ describe('RefreshBlockLibraryCommand', () => {
             async (
                 _params: unknown,
                 _services: unknown,
-                onProgress: (info: { operation: string; message: string }) => void,
+                onProgress: (info: { operation: string; message: string }) => void
             ) => {
                 onProgress({ operation: 'block-library', message: 'Building block library' });
-                onProgress({ operation: 'block-library', message: 'Building block library: 5 blocks' });
+                onProgress({
+                    operation: 'block-library',
+                    message: 'Building block library: 5 blocks',
+                });
                 onProgress({ operation: 'eds-settings', message: 'Applying DA.live settings' });
-                onProgress({ operation: 'library-publish', message: 'Publishing the block list: 2 pages' });
+                onProgress({
+                    operation: 'library-publish',
+                    message: 'Publishing the block list: 2 pages',
+                });
                 return { success: true, contentFilesCopied: 0, libraryPaths: [] };
-            },
+            }
         );
     }
 
@@ -220,11 +230,17 @@ describe('RefreshBlockLibraryCommand', () => {
         // sees for the length of a rebuild.
         const report = jest.fn();
         (vscode.window.withProgress as jest.Mock).mockImplementation(
-            async (_options: unknown, callback: (progress: { report: jest.Mock }) => Promise<unknown>) =>
-                callback({ report }),
+            async (
+                _options: unknown,
+                callback: (progress: { report: jest.Mock }) => Promise<unknown>
+            ) => callback({ report })
         );
         pipelineReportsItsSteps();
-        const cmd = new RefreshBlockLibraryCommand(makeContext(), makeStateManager(EDS_PROJECT), makeLogger());
+        const cmd = new RefreshBlockLibraryCommand(
+            makeContext(),
+            makeStateManager(EDS_PROJECT),
+            makeLogger()
+        );
         cmd.helixService = fakeHelix;
 
         await cmd.execute();
@@ -243,15 +259,24 @@ describe('RefreshBlockLibraryCommand', () => {
     it('shows the progress modal each step, with what it is doing under it', async () => {
         const report = jest.fn();
         (vscode.window.withProgress as jest.Mock).mockImplementation(
-            async (_options: unknown, callback: (progress: { report: jest.Mock }) => Promise<unknown>) =>
-                callback({ report }),
+            async (
+                _options: unknown,
+                callback: (progress: { report: jest.Mock }) => Promise<unknown>
+            ) => callback({ report })
         );
         pipelineReportsItsSteps();
-        const cmd = new RefreshBlockLibraryCommand(makeContext(), makeStateManager(EDS_PROJECT), makeLogger());
+        const cmd = new RefreshBlockLibraryCommand(
+            makeContext(),
+            makeStateManager(EDS_PROJECT),
+            makeLogger()
+        );
         cmd.helixService = fakeHelix;
         const steps: Array<[string, string | undefined]> = [];
 
-        await withStepSink((stage, step) => steps.push([stage, step]), () => cmd.execute());
+        await withStepSink(
+            (stage, step) => steps.push([stage, step]),
+            () => cmd.execute()
+        );
 
         expect(steps).toStrictEqual([
             ['Building block library', 'Building block library'],
@@ -273,7 +298,7 @@ describe('RefreshBlockLibraryCommand', () => {
             const cmd = new RefreshBlockLibraryCommand(
                 makeContext(),
                 makeStateManager(project),
-                makeLogger(),
+                makeLogger()
             );
             cmd.helixService = fakeHelix;
             return cmd;
@@ -284,7 +309,7 @@ describe('RefreshBlockLibraryCommand', () => {
 
             expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
                 expect.stringContaining('Block library refreshed'),
-                expect.anything(),
+                expect.anything()
             );
             expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
         });
@@ -301,7 +326,7 @@ describe('RefreshBlockLibraryCommand', () => {
             // command exists, and "it failed" sends the user nowhere.
             expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
                 expect.stringContaining('component-definition.json is not valid JSON'),
-                'OK',
+                'OK'
             );
             expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
         });
@@ -326,7 +351,7 @@ describe('RefreshBlockLibraryCommand', () => {
 
             expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
                 expect.stringContaining('token rejected'),
-                'OK',
+                'OK'
             );
         });
 
@@ -338,7 +363,7 @@ describe('RefreshBlockLibraryCommand', () => {
 
             expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
                 'No project loaded.',
-                'OK',
+                'OK'
             );
             expect(executePipelineMock).not.toHaveBeenCalled();
             expect(vscode.window.withProgress).not.toHaveBeenCalled();
@@ -355,7 +380,7 @@ describe('RefreshBlockLibraryCommand', () => {
 
             expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
                 expect.stringContaining('Unknown error'),
-                'OK',
+                'OK'
             );
             expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
         });
@@ -377,7 +402,7 @@ describe('RefreshBlockLibraryCommand', () => {
         const cmd = new RefreshBlockLibraryCommand(
             makeContext(),
             makeStateManager(EDS_PROJECT),
-            makeLogger(),
+            makeLogger()
         );
         cmd.helixService = fakeHelix;
 

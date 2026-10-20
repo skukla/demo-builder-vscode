@@ -74,7 +74,9 @@ import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFa
 // Get mock references
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
 const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<typeof executeEdsPipeline>;
-const mockConfigurePerms = configureDaLivePermissions as jest.MockedFunction<typeof configureDaLivePermissions>;
+const mockConfigurePerms = configureDaLivePermissions as jest.MockedFunction<
+    typeof configureDaLivePermissions
+>;
 
 // =============================================================================
 // Helpers
@@ -134,7 +136,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: ensureDaLiveAuth should have been called
@@ -146,7 +148,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
                 logger: mockContext.logger,
                 stateManager: mockContext.stateManager,
             }),
-            '[Storefront Setup]',
+            '[Storefront Setup]'
         );
         expect(result.success).toBe(true);
     });
@@ -169,7 +171,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Pipeline should have been called twice
@@ -192,7 +194,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should return error (caught by outer try-catch)
@@ -218,7 +220,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should return error
@@ -242,7 +244,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should have attempted pipeline 3 times (initial + 2 retries)
@@ -267,7 +269,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should NOT call ensureDaLiveAuth
@@ -295,7 +297,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should send auth-recovery progress
@@ -304,7 +306,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             expect.objectContaining({
                 phase: 'auth-recovery',
                 progress: -1,
-            }),
+            })
         );
 
         // And: Should send resume progress after re-auth
@@ -313,7 +315,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             expect.objectContaining({
                 phase: 'content',
                 message: expect.stringContaining('Resuming'),
-            }),
+            })
         );
     });
 
@@ -330,7 +332,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
         const result = await executeStorefrontSetupPhases(
             mockContext,
             createEdsConfig(),
-            abortController.signal,
+            abortController.signal
         );
 
         // Then: Should return error about cancellation
@@ -353,7 +355,11 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
         jest.clearAllMocks();
         mockContext = createSetupContext();
         // Default: pipeline succeeds
-        mockExecuteEdsPipeline.mockResolvedValue({ success: true, contentFilesCopied: 0, libraryPaths: [] });
+        mockExecuteEdsPipeline.mockResolvedValue({
+            success: true,
+            contentFilesCopied: 0,
+            libraryPaths: [],
+        });
     });
 
     it('should recover when configureDaLivePermissions throws DaLiveAuthError', async () => {
@@ -371,7 +377,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should succeed after recovery
@@ -384,7 +390,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
                 logger: mockContext.logger,
                 stateManager: mockContext.stateManager,
             }),
-            '[Storefront Setup]',
+            '[Storefront Setup]'
         );
         // configureDaLivePermissions called twice (fail + retry)
         expect(mockConfigurePerms).toHaveBeenCalledTimes(2);
@@ -403,7 +409,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should send auth-recovery progress for phase 2-3
@@ -412,7 +418,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             expect.objectContaining({
                 phase: 'auth-recovery',
                 progress: -1,
-            }),
+            })
         );
         // And: Should send resume progress
         expect(mockContext.sendMessage).toHaveBeenCalledWith(
@@ -420,7 +426,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             expect.objectContaining({
                 phase: 'code-sync',
                 message: expect.stringContaining('Resuming'),
-            }),
+            })
         );
     });
 
@@ -435,7 +441,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should return error
@@ -455,7 +461,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: configureDaLivePermissions called 3 times (initial + 2 retries)

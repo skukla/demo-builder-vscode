@@ -138,7 +138,11 @@ describe('reset notifications — success', () => {
     });
 
     it('warns with the config-write remedy when the site config could not be written', async () => {
-        await run({ success: true, errorType: 'CONFIG_WRITE_FAILED', error: 'PDP routing is off.' });
+        await run({
+            success: true,
+            errorType: 'CONFIG_WRITE_FAILED',
+            error: 'PDP routing is off.',
+        });
 
         expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith('PDP routing is off.');
     });
@@ -147,15 +151,19 @@ describe('reset notifications — success', () => {
         await run({ success: true, errorType: 'CONFIG_WRITE_FAILED' });
 
         expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(
-            'Site configuration incomplete.',
+            'Site configuration incomplete.'
         );
     });
 
     it('warns that Commerce features need a manual mesh redeploy when that step failed', async () => {
-        await run({ success: true, errorType: 'MESH_REDEPLOY_FAILED', error: 'Mesh deploy timed out.' });
+        await run({
+            success: true,
+            errorType: 'MESH_REDEPLOY_FAILED',
+            error: 'Mesh deploy timed out.',
+        });
 
         expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(
-            'Mesh deploy timed out. Commerce features may not work until mesh is manually redeployed.',
+            'Mesh deploy timed out. Commerce features may not work until mesh is manually redeployed.'
         );
     });
 });
@@ -170,13 +178,17 @@ describe('reset notifications — pages from before the reset (EDS-33)', () => {
             await run({ success: true, leftoverPages: { status, removed: 0, summary: sentence } });
 
             expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(sentence);
-        },
+        }
     );
 
     it('adds no warning when they were taken off', async () => {
         await run({
             success: true,
-            leftoverPages: { status: 'removed', removed: 2, summary: 'Took 2 pages from before the reset off h.' },
+            leftoverPages: {
+                status: 'removed',
+                removed: 2,
+                summary: 'Took 2 pages from before the reset off h.',
+            },
         });
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
@@ -205,7 +217,7 @@ describe('reset notifications — the App is missing', () => {
 
         expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
             expect.stringContaining('not installed on acme/shop'),
-            'Install GitHub App',
+            'Install GitHub App'
         );
         expect(vscode.env.openExternal).not.toHaveBeenCalled();
     });
@@ -230,7 +242,9 @@ describe('reset notifications — the App is missing', () => {
     it('still shows the error, and survives the button, when the result carried no details', async () => {
         (vscode.window.showErrorMessage as jest.Mock).mockResolvedValue('Install GitHub App');
 
-        await expect(run({ success: false, errorType: 'GITHUB_APP_NOT_INSTALLED' })).resolves.toMatchObject({
+        await expect(
+            run({ success: false, errorType: 'GITHUB_APP_NOT_INSTALLED' })
+        ).resolves.toMatchObject({
             success: false,
         });
 
@@ -288,7 +302,7 @@ describe('reset notifications — an added demo', () => {
 
         expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(
             MESSAGE,
-            'See the storefront report',
+            'See the storefront report'
         );
         expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });

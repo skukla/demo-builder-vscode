@@ -100,7 +100,7 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
             expect(downloadRepoContents).toHaveBeenCalledTimes(1);
             expect(downloadRepoContents).toHaveBeenCalledWith('test-owner', 'test-repo');
             expect(downloadRepoContents.mock.invocationCallOrder[0]).toBeLessThan(
-                copyContentFromSource.mock.invocationCallOrder[0],
+                copyContentFromSource.mock.invocationCallOrder[0]
             );
         });
 
@@ -114,7 +114,9 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
 
         it('still copies, on the fixed lists, when the repository cannot be read', async () => {
             installSiteFetch([]);
-            downloadRepoContents.mockRejectedValue(new Error('Failed to download archive: HTTP 404'));
+            downloadRepoContents.mockRejectedValue(
+                new Error('Failed to download archive: HTTP 404')
+            );
 
             const result = await run();
 
@@ -144,7 +146,10 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
             await run();
 
             expect(askedBeforePublish).toBe(0);
-            expect(site.asked().sort()).toEqual([`${LIVE}/cart.plain.html`, `${LIVE}/checkout.plain.html`]);
+            expect(site.asked().sort()).toEqual([
+                `${LIVE}/cart.plain.html`,
+                `${LIVE}/checkout.plain.html`,
+            ]);
         });
 
         it('puts what is missing on the result, in a sentence', async () => {
@@ -165,7 +170,9 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
 
             await run();
 
-            const lines = progress.filter((p) => p.operation === 'page-check').map((p) => p.message);
+            const lines = progress
+                .filter((p) => p.operation === 'page-check')
+                .map((p) => p.message);
             expect(lines).toEqual([
                 'Checking copied pages',
                 '⚠️ 1 page the source has is missing from this storefront: /checkout',
@@ -220,7 +227,8 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
             expect(result.missingPages).toEqual({
                 status: 'missing',
                 missing: ['/enrichment/category-banner'],
-                summary: '1 page the source has is missing from this storefront: /enrichment/category-banner',
+                summary:
+                    '1 page the source has is missing from this storefront: /enrichment/category-banner',
             });
         });
 

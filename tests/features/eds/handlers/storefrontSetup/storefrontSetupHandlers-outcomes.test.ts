@@ -264,18 +264,24 @@ describe('handleStartStorefrontSetup — what a refused sign-in tells the UI', (
 
 describe('handleStartStorefrontSetup — package settings are restored before any phase reads them', () => {
     it('looks the settings up by the package, the stack and the added demo', async () => {
-        const demo = { kind: 'demo', version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' } as const;
+        const demo = {
+            kind: 'demo',
+            version: 1,
+            name: 'Isle5 by Jen',
+            source: { owner: 'jen', repo: 'isle5-demo' },
+            storefrontKind: 'eds',
+        } as const;
         const context = createContext();
 
         await handleStartStorefrontSetup(
             context,
-            payload({ selectedPackage: 'citisignal', selectedStack: 'eds-accs', demo }),
+            payload({ selectedPackage: 'citisignal', selectedStack: 'eds-accs', demo })
         );
 
         expect(mockRehydrate).toHaveBeenCalledWith(
             EDS_CONFIG,
             { selectedPackage: 'citisignal', selectedStack: 'eds-accs', demo },
-            context.logger,
+            context.logger
         );
     });
 
@@ -294,13 +300,13 @@ describe('handleStartStorefrontSetup — package settings are restored before an
         expect(mockResolveByomOverlayConfig).toHaveBeenCalledWith(
             undefined,
             'demo-org',
-            'restored-site',
+            'restored-site'
         );
         expect(mockExecutePhases).toHaveBeenCalledWith(
             context,
             expect.objectContaining({ daLiveSite: 'restored-site' }),
             expect.anything(),
-            expect.anything(),
+            expect.anything()
         );
         expect(messagePayload(context, 'storefront-setup-complete')).toMatchObject({
             daLiveSite: 'https://da.live/demo-org/restored-site',
@@ -437,17 +443,23 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
     });
 
     it("copies an added demo's row onto the config the phases read", async () => {
-        const demo = { kind: 'demo', version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' } as const;
+        const demo = {
+            kind: 'demo',
+            version: 1,
+            name: 'Isle5 by Jen',
+            source: { owner: 'jen', repo: 'isle5-demo' },
+            storefrontKind: 'eds',
+        } as const;
         await handleStartStorefrontSetup(createContext(), payload({ demo }));
         expect(mockExecutePhases).toHaveBeenCalledWith(
             expect.anything(),
             expect.objectContaining({ demo }),
             expect.anything(),
-            expect.anything(),
+            expect.anything()
         );
     });
 
-    it("says what may not work on an added demo, under its own headline, not the PDP one", async () => {
+    it('says what may not work on an added demo, under its own headline, not the PDP one', async () => {
         mockExecutePhases.mockResolvedValue({
             success: true,
             repoUrl: 'https://github.com/demo-org/demo-repo',
@@ -463,7 +475,7 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
             expect.objectContaining({
                 message: 'Storefront created. A few things to know about this demo.',
                 warnings: ['Product links on this storefront use a different address format.'],
-            }),
+            })
         );
     });
 
@@ -474,7 +486,8 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
             repoOwner: 'demo-org',
             repoName: 'demo-repo',
             demoCaveats: ['Product links on this storefront use a different address format.'],
-            missingPages: '2 pages the source has are missing from this storefront: /cart, /checkout',
+            missingPages:
+                '2 pages the source has are missing from this storefront: /cart, /checkout',
         });
         const context = createContext();
 
@@ -487,7 +500,7 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
                     'Product links on this storefront use a different address format.',
                     '2 pages the source has are missing from this storefront: /cart, /checkout',
                 ],
-            }),
+            })
         );
     });
 
@@ -518,7 +531,7 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         await handleStartStorefrontSetup(context, payload());
 
         expect(messagePayload(context, 'storefront-setup-complete')?.brokenLinks).toStrictEqual(
-            brokenLinks,
+            brokenLinks
         );
     });
 
@@ -533,7 +546,7 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         await handleStartStorefrontSetup(context, payload());
 
         expect(messagePayload(context, 'storefront-setup-complete')).not.toHaveProperty(
-            'brokenLinks',
+            'brokenLinks'
         );
     });
 

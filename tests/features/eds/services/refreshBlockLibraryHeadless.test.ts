@@ -241,7 +241,9 @@ describe('refreshBlockLibraryHeadless', () => {
         await refreshBlockLibraryHeadless(deps({ onProgress: undefined }));
 
         const reportProgress = pipelineMock.mock.calls[0][2];
-        expect(() => reportProgress({ operation: 'block-library', message: 'configuring...' })).not.toThrow();
+        expect(() =>
+            reportProgress({ operation: 'block-library', message: 'configuring...' })
+        ).not.toThrow();
     });
 
     it('returns a cancelled result when the user declines re-auth', async () => {
@@ -270,10 +272,18 @@ describe('refreshBlockLibraryHeadless — its steps', () => {
     /** The pipeline as it runs a library-only rebuild, by the operations it reports. */
     function pipelineReporting(messages: Array<{ operation: string; message: string }>): void {
         pipelineMock.mockImplementation(
-            async (_params: unknown, _services: unknown, onProgress: (info: { operation: string; message: string }) => void) => {
+            async (
+                _params: unknown,
+                _services: unknown,
+                onProgress: (info: { operation: string; message: string }) => void
+            ) => {
                 messages.forEach((info) => onProgress(info));
-                return { success: true, contentFilesCopied: 0, libraryPaths: ['/.da/library/blocks.json'] };
-            },
+                return {
+                    success: true,
+                    contentFilesCopied: 0,
+                    libraryPaths: ['/.da/library/blocks.json'],
+                };
+            }
         );
     }
 
@@ -283,7 +293,10 @@ describe('refreshBlockLibraryHeadless — its steps', () => {
             { operation: 'block-library', message: 'Building block library: 5 blocks' },
             { operation: 'eds-settings', message: 'Applying DA.live settings' },
             { operation: 'library-publish', message: 'Publishing the block list: 2 pages' },
-            { operation: 'library-publish', message: 'Publishing the block list: Checking the block list is live' },
+            {
+                operation: 'library-publish',
+                message: 'Publishing the block list: Checking the block list is live',
+            },
         ]);
         const onStep = jest.fn();
 
@@ -294,7 +307,10 @@ describe('refreshBlockLibraryHeadless — its steps', () => {
             ['Building block library', 'Building block library: 5 blocks'],
             ['Applying DA.live settings', 'Applying DA.live settings'],
             ['Publishing the block list', 'Publishing the block list: 2 pages'],
-            ['Publishing the block list', 'Publishing the block list: Checking the block list is live'],
+            [
+                'Publishing the block list',
+                'Publishing the block list: Checking the block list is live',
+            ],
         ]);
     });
 
@@ -314,10 +330,14 @@ describe('refreshBlockLibraryHeadless — its steps', () => {
     it('says the DA.live sign-in ran out under the step it ran out in', async () => {
         pipelineMock
             .mockImplementationOnce(
-                async (_p: unknown, _s: unknown, onProgress: (info: { operation: string; message: string }) => void) => {
+                async (
+                    _p: unknown,
+                    _s: unknown,
+                    onProgress: (info: { operation: string; message: string }) => void
+                ) => {
                     onProgress({ operation: 'eds-settings', message: 'Applying DA.live settings' });
                     throw new DaLiveAuthError('DA.live token expired');
-                },
+                }
             )
             .mockResolvedValueOnce({ success: true, contentFilesCopied: 0, libraryPaths: [] });
         const onStep = jest.fn();
@@ -326,14 +346,16 @@ describe('refreshBlockLibraryHeadless — its steps', () => {
 
         expect(onStep).toHaveBeenCalledWith(
             'Applying DA.live settings',
-            'DA.live session expired. Please re-authenticate',
+            'DA.live session expired. Please re-authenticate'
         );
     });
 
     // Configure's Republish shows the whole rebuild under its own step and reads the
     // plain messages, as it did.
     it('still hands every plain message to onProgress', async () => {
-        pipelineReporting([{ operation: 'block-library', message: 'Building block library: 5 blocks' }]);
+        pipelineReporting([
+            { operation: 'block-library', message: 'Building block library: 5 blocks' },
+        ]);
         const onProgress = jest.fn();
 
         await refreshBlockLibraryHeadless(deps({ onProgress }));

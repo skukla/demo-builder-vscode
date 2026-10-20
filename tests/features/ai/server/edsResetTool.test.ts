@@ -196,12 +196,21 @@ describe('reset_project on an Edge Delivery project', () => {
     });
 
     it('adds the pages the source has that the storefront does not serve to the caveats (EDS-40)', async () => {
-        const missingPages = '2 pages the source has are missing from this storefront: /cart, /checkout';
+        const missingPages =
+            '2 pages the source has are missing from this storefront: /cart, /checkout';
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
 
-        executeEdsResetMock.mockResolvedValueOnce({ success: true, filesReset: 12, contentCopied: 5, missingPages });
-        expect(await s.call({ confirm: true })).toMatchObject({ reset: true, caveats: [missingPages] });
+        executeEdsResetMock.mockResolvedValueOnce({
+            success: true,
+            filesReset: 12,
+            contentCopied: 5,
+            missingPages,
+        });
+        expect(await s.call({ confirm: true })).toMatchObject({
+            reset: true,
+            caveats: [missingPages],
+        });
 
         executeEdsResetMock.mockResolvedValueOnce({
             success: true,
@@ -224,7 +233,8 @@ describe('reset_project on an Edge Delivery project', () => {
         const leftoverPages = {
             status: 'not-listed' as const,
             removed: 0,
-            summary: 'Pages from before the reset may still be live on main--r--o.aem.live: Helix could not list what is published (HTTP 401). Reset again to remove them.',
+            summary:
+                'Pages from before the reset may still be live on main--r--o.aem.live: Helix could not list what is published (HTTP 401). Reset again to remove them.',
         };
         executeEdsResetMock.mockResolvedValueOnce({
             success: true,
@@ -253,7 +263,9 @@ describe('reset_project on an Edge Delivery project', () => {
             productPages: 'Removed 18 product pages from the old catalog.',
         });
         const res = await s.call({ confirm: true });
-        expect(res.categoryPages).toBe('Wrote 4 category pages; left 1 page someone else made (sale).');
+        expect(res.categoryPages).toBe(
+            'Wrote 4 category pages; left 1 page someone else made (sale).'
+        );
         expect(res.productPages).toBe('Removed 18 product pages from the old catalog.');
     });
 
@@ -421,7 +433,11 @@ describe('reset_project on an Edge Delivery project', () => {
         await s.call({ confirm: true });
 
         expect(executeEdsResetMock).toHaveBeenCalledWith(
-            expect.objectContaining({ includeBlockLibrary: false, verifyCdn: false, applyDemoFixes: false }),
+            expect.objectContaining({
+                includeBlockLibrary: false,
+                verifyCdn: false,
+                applyDemoFixes: false,
+            }),
             expect.anything(),
             expect.anything(),
             expect.anything(),
