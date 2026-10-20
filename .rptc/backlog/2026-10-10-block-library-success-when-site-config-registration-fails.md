@@ -4,7 +4,7 @@ kind: question
 area: eds
 needs: []
 value: low
-status: open
+status: built
 ---
 
 # Should a block library report success when its site-config registration failed?
@@ -41,3 +41,4 @@ the same change.
 ## Shipped so far
 
 - 2026-10-20  Owner (2026-10-20): do the check and make the fix. Checked against DA.live's own documentation rather than by breaking a live site's config: the palette reads blocks only through the site config's library tab. Not done: the completion screen's caveat list does not carry the sentence; it shows on the progress line and in the log.
+- 2026-10-20  fix(eds): a block library whose palette will be empty says so (`5ff429e90`)

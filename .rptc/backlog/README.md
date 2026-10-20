@@ -288,7 +288,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-35` | fix | [The DA.live access token sat in plaintext globalState](2026-10-09-dalive-token-secretstorage.md) | — | med | built |
 | `EDS-36` | fix | [A block library install put back block entries the SC had deleted](2026-10-09-block-library-respects-hand-deletions.md) | — | med | built |
 | `EDS-37` | fix | [Storefront setup recorded its block libraries on the wrong project](2026-10-09-storefront-setup-records-block-libraries-on-the-open-project.md) | — | med | built |
-| `EDS-38` | question | [Should a block library report success when its site-config registration failed?](2026-10-10-block-library-success-when-site-config-registration-fails.md) | — | low | open |
+| `EDS-38` | question | [Should a block library report success when its site-config registration failed?](2026-10-10-block-library-success-when-site-config-registration-fails.md) | — | low | built |
 | `EDS-39` | feature | [Choose block libraries on Configure, not only in Edit](2026-10-12-block-libraries-on-configure.md) | — | med | active |
 | `EDS-41` | fix | [The Site Access screen's loading spinner matches the rest of the extension](2026-10-13-site-access-loading-spinner.md) | — | low | active |
 | `EDS-42` | feature | [Edit switches a project's repository or site](2026-10-13-edit-switches-repository-or-site.md) | PL-75 | med | backlog |
