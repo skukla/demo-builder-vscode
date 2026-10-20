@@ -34,6 +34,7 @@ describe('templateCatchUpOf', () => {
     it('offers a fork of one of our templates that is behind, on its own default branch', () => {
         const status = {
             isFork: true,
+            isYours: true,
             behindBy: 3,
             parentFullName: 'Adobe-Commerce/Boilerplate-B2B-Template',
             defaultBranch: 'main',
@@ -49,12 +50,12 @@ describe('templateCatchUpOf', () => {
 
     it.each([
         ['GitHub could not be read', null],
-        ['a generated repository (not a fork)', { isFork: false, behindBy: 0 }],
-        ['a fork already up to date', { isFork: true, behindBy: 0, parentFullName: 'adobe-commerce/boilerplate-b2b-template', defaultBranch: 'main' }],
-        ['a fork of a template we do not patch', { isFork: true, behindBy: 4, parentFullName: 'stephen-garner-adobe/isle5', defaultBranch: 'main' }],
-        ["a fork of a colleague's repository", { isFork: true, behindBy: 4, parentFullName: 'someone/aistore', defaultBranch: 'main' }],
-        ['a fork whose parent GitHub did not name', { isFork: true, behindBy: 4, defaultBranch: 'main' }],
-        ['a fork whose branch GitHub did not name', { isFork: true, behindBy: 4, parentFullName: 'adobe-commerce/boilerplate-b2b-template' }],
+        ['a generated repository (not a fork)', { isFork: false, isYours: true, behindBy: 0 }],
+        ['a fork already up to date', { isFork: true, isYours: true, behindBy: 0, parentFullName: 'adobe-commerce/boilerplate-b2b-template', defaultBranch: 'main' }],
+        ['a fork of a template we do not patch', { isFork: true, isYours: true, behindBy: 4, parentFullName: 'stephen-garner-adobe/isle5', defaultBranch: 'main' }],
+        ["a fork of a colleague's repository", { isFork: true, isYours: true, behindBy: 4, parentFullName: 'someone/aistore', defaultBranch: 'main' }],
+        ['a fork whose parent GitHub did not name', { isFork: true, isYours: true, behindBy: 4, defaultBranch: 'main' }],
+        ['a fork whose branch GitHub did not name', { isFork: true, isYours: true, behindBy: 4, parentFullName: 'adobe-commerce/boilerplate-b2b-template' }],
     ])('offers nothing for %s', (_label, status) => {
         expect(templateCatchUpOf(OWN, status, CATALOG)).toBeUndefined();
     });

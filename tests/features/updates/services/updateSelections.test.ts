@@ -88,6 +88,7 @@ describe('computeProjectUpdateSelections', () => {
         it('asks about the template source repo and selects a behind-upstream fork on its branch', async () => {
             mockCheckForkStatus.mockResolvedValue({
                 isFork: true,
+                isYours: true,
                 behindBy: 3,
                 defaultBranch: 'develop',
             });
@@ -109,7 +110,7 @@ describe('computeProjectUpdateSelections', () => {
         });
 
         it('falls back to main when the status names no default branch', async () => {
-            mockCheckForkStatus.mockResolvedValue({ isFork: true, behindBy: 1 });
+            mockCheckForkStatus.mockResolvedValue({ isFork: true, isYours: true, behindBy: 1 });
 
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
@@ -121,8 +122,11 @@ describe('computeProjectUpdateSelections', () => {
         });
 
         it.each([
-            ['not a fork', { isFork: false, behindBy: 2 }],
-            ['a fork that is up to date', { isFork: true, behindBy: 0 }],
+            ['not a fork', { isFork: false, isYours: true, behindBy: 2 }],
+            ['a fork that is up to date', { isFork: true, isYours: true, behindBy: 0 }],
+            // A colleague's repository behind its parent: merging into it would write to
+            // someone else's repository, so it is never offered.
+            ['a fork that is not yours', { isFork: true, isYours: false, behindBy: 2 }],
             ['no status at all', null],
         ])('selects nothing for %s, without warning', async (_label, status) => {
             mockCheckForkStatus.mockResolvedValue(status);
@@ -362,7 +366,7 @@ describe('computeProjectUpdateSelections', () => {
         };
 
         function everythingHasAnUpdate(project: ReturnType<typeof edsProject>): void {
-            mockCheckForkStatus.mockResolvedValue({ isFork: true, behindBy: 1 });
+            mockCheckForkStatus.mockResolvedValue({ isFork: true, isYours: true, behindBy: 1 });
             mockCheckTemplateUpdates.mockResolvedValue({ hasUpdates: true });
             mockCheckAllProjectsForUpdates.mockResolvedValue([componentResult({}, project)]);
             mockCheckMcpUpdates.mockResolvedValue({

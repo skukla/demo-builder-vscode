@@ -38,7 +38,7 @@ beforeEach(() => {
 
 describe('computeUpdateSelections', () => {
     it('asks about a template repository two projects share once, and selects one fork sync', async () => {
-        mockCheckForkStatus.mockResolvedValue({ isFork: true, behindBy: 2, defaultBranch: 'main' });
+        mockCheckForkStatus.mockResolvedValue({ isFork: true, isYours: true, behindBy: 2, defaultBranch: 'main' });
 
         const sel = await computeUpdateSelections(
             [alpha(), beta()],

@@ -24,7 +24,7 @@ let service: ForkSyncService;
 function forkRepo(
     parent: Record<string, unknown> = { full_name: 'upstream/site', default_branch: 'master' }
 ) {
-    return { fork: true, default_branch: 'main', parent };
+    return { fork: true, default_branch: 'main', parent, permissions: { admin: true, push: true } };
 }
 
 beforeEach(() => {
@@ -58,6 +58,7 @@ describe('checkForkStatus', () => {
 
         await expect(service.checkForkStatus('me', 'site')).resolves.toEqual({
             isFork: false,
+            isYours: false,
             behindBy: 0,
         });
         expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -75,10 +76,25 @@ describe('checkForkStatus', () => {
         );
         expect(result).toEqual({
             isFork: true,
+            isYours: true,
             behindBy: 5,
             parentFullName: 'upstream/site',
             defaultBranch: 'main',
         });
+    });
+
+    // Yours = the signed-in account administers it. A collaborator on a colleague's personal
+    // repository can push but never administer, so push alone does not make it yours.
+    it.each([
+        ['push without admin', { admin: false, push: true }],
+        ['no permissions reported (no token)', undefined],
+    ])('a fork with %s is not yours', async (_label, permissions) => {
+        respondOnce({ ...forkRepo(), permissions });
+        respondOnce({ ahead_by: 5 });
+
+        const result = await service.checkForkStatus('me', 'site');
+
+        expect(result?.isYours).toBe(false);
     });
 
     it("falls back to the fork's own branch name when the parent does not say", async () => {

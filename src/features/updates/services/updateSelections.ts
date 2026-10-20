@@ -144,7 +144,9 @@ async function checkForkSyncs(
         asked.add(key);
         try {
             const status = await service.checkForkStatus(source.owner, source.repo);
-            if (status?.isFork && status.behindBy > 0) {
+            // Only the SC's own repository. For an added demo the template source is the
+            // colleague's repository; merging upstream into it would write to someone else's.
+            if (status?.isFork && status.isYours && status.behindBy > 0) {
                 found.push({
                     owner: source.owner,
                     repo: source.repo,
