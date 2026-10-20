@@ -41,14 +41,6 @@ export interface SidebarProps {
     onNewAiChat?: () => void;
     /** Opens Claude Code's picker of earlier chats — a Chat menu item (AI-4b). */
     onPickAiChat?: () => void;
-    /** Callback to start demo */
-    onStartDemo?: () => void;
-    /** Callback to stop demo */
-    onStopDemo?: () => void;
-    /** Callback to open dashboard */
-    onOpenDashboard?: () => void;
-    /** Callback to open configure */
-    onOpenConfigure?: () => void;
 }
 
 /**
@@ -66,10 +58,6 @@ export function Sidebar({
     onShowPrompts,
     onNewAiChat,
     onPickAiChat,
-    onStartDemo: _onStartDemo,
-    onStopDemo: _onStopDemo,
-    onOpenDashboard: _onOpenDashboard,
-    onOpenConfigure: _onOpenConfigure,
 }: SidebarProps) {
     const showAiZone = onOpenAiChat && onShowPrompts;
     return (

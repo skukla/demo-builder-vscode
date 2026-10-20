@@ -128,26 +128,6 @@ function SidebarApp(): React.ReactElement {
         sendMessage('pickAiChat');
     }, []);
 
-    // Handle start demo
-    const handleStartDemo = useCallback(() => {
-        sendMessage('startDemo');
-    }, []);
-
-    // Handle stop demo
-    const handleStopDemo = useCallback(() => {
-        sendMessage('stopDemo');
-    }, []);
-
-    // Handle open dashboard
-    const handleOpenDashboard = useCallback(() => {
-        sendMessage('openDashboard');
-    }, []);
-
-    // Handle open configure
-    const handleOpenConfigure = useCallback(() => {
-        sendMessage('openConfigure');
-    }, []);
-
     // Apply VSCode dark theme class to body (unified theme system ignores user preferences)
     useEffect(() => {
         document.body.classList.add('vscode-dark');
@@ -181,10 +161,6 @@ function SidebarApp(): React.ReactElement {
                 onShowPrompts={handleShowPrompts}
                 onNewAiChat={chatMenu ? handleNewAiChat : undefined}
                 onPickAiChat={chatMenu ? handlePickAiChat : undefined}
-                onStartDemo={handleStartDemo}
-                onStopDemo={handleStopDemo}
-                onOpenDashboard={handleOpenDashboard}
-                onOpenConfigure={handleOpenConfigure}
             />
         </Provider>
     );

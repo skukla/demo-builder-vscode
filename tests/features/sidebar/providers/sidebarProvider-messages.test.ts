@@ -57,10 +57,6 @@ describe('SidebarProvider messages', () => {
             ['newAiChat', 'demoBuilder.newAiChat', undefined],
             ['pickAiChat', 'demoBuilder.pickAiChat', undefined],
             ['showPrompts', 'demoBuilder.showPromptsPicker', undefined],
-            ['startDemo', 'demoBuilder.startDemo', undefined],
-            ['stopDemo', 'demoBuilder.stopDemo', undefined],
-            ['openDashboard', 'demoBuilder.showProjectDashboard', undefined],
-            ['openConfigure', 'demoBuilder.configure', undefined],
         ])('runs %s as %s', async (type, command, argument) => {
             await view.deliver!({ type });
 
@@ -147,10 +143,6 @@ describe('SidebarProvider messages', () => {
             'newAiChat',
             'pickAiChat',
             'showPrompts',
-            'startDemo',
-            'stopDemo',
-            'openDashboard',
-            'openConfigure',
         ])('reports a failed %s instead of rejecting', async (type) => {
             await expect(view.deliver!({ type })).resolves.toBeUndefined();
 

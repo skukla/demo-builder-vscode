@@ -15917,10 +15917,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 370,
+            "line": 366,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body in sendAiChatMenu is a single logger.debug call. That the catch EXISTS is tested: sidebarProvider-messages 'still answers with the context, sends no Chat menu, and reports no error' makes the engine lookup throw and asserts the context is still sent, no aiChatMenu follows and the request is answered without an error. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Stryker planted the empty body against that test: green.",
+            "reason": "The catch body in sendAiChatMenu is a single logger.debug call. That the catch EXISTS is tested: sidebarProvider-messages 'still answers with the context, sends no Chat menu, and reports no error' makes the engine lookup throw and asserts the context is still sent, no aiChatMenu follows and the request is answered without an error. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Stryker planted the empty body against that test: green. Re-anchored 2026-10-20 (370 -> 366): unchanged code; four unused sidebar commands above it were removed.",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 MUT-02, 2026-10-10"

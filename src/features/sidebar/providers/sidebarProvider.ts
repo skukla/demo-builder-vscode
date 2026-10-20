@@ -71,10 +71,6 @@ const COMMAND_BUTTONS = new Map<string, CommandButton>(Object.entries({
     showPrompts: { label: 'Show prompts', command: 'demoBuilder.showPromptsPicker' },
     newAiChat: { label: 'New AI chat', command: 'demoBuilder.newAiChat' },
     pickAiChat: { label: 'Pick an earlier AI chat', command: 'demoBuilder.pickAiChat' },
-    startDemo: { label: 'Start demo', command: 'demoBuilder.startDemo' },
-    stopDemo: { label: 'Stop demo', command: 'demoBuilder.stopDemo' },
-    openDashboard: { label: 'Open dashboard', command: 'demoBuilder.showProjectDashboard' },
-    openConfigure: { label: 'Open configure', command: 'demoBuilder.configure' },
 }));
 
 /**
