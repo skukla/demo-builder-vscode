@@ -18,6 +18,7 @@ import * as vscode from 'vscode';
 import { readDaAuthHelperToken, writeDaAuthHelperToken } from '../daAuthHelperToken';
 import { serverVerdict } from './daLiveOrgOperations';
 import { createDaLiveTokenHome, type DaLiveTokenHome } from './daLiveTokenHome';
+import { DA_LIVE_TOKEN_MARGIN_MS } from './daLiveTokenValidation';
 import { getLogger } from '@/core/logging/debugLogger';
 import { decodeJwtPayload } from '@/core/utils/jwtPayload';
 
@@ -118,7 +119,7 @@ export class DaLiveAuthService {
         }
 
         // Check if token is expired (with 5-minute buffer)
-        if (expiresAt < Date.now() + 5 * 60 * 1000) {
+        if (expiresAt < Date.now() + DA_LIVE_TOKEN_MARGIN_MS) {
             return null;
         }
 
@@ -137,7 +138,7 @@ export class DaLiveAuthService {
             return null;
         }
         // Apply the same 5-minute expiry buffer as state tokens.
-        if (helperToken.expiresAt < Date.now() + 5 * 60 * 1000) {
+        if (helperToken.expiresAt < Date.now() + DA_LIVE_TOKEN_MARGIN_MS) {
             return null;
         }
 

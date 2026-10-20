@@ -39,6 +39,13 @@ export interface DaLiveTokenValidationResult {
 }
 
 /**
+ * How long a DA.live token must still have to be used. Every read refuses a token
+ * closer to its expiry than this (`daLiveAuthService`), so an operation never starts on
+ * one that lapses halfway; sign-in refuses it too, or it stores a token nothing will use.
+ */
+export const DA_LIVE_TOKEN_MARGIN_MS = 5 * 60 * 1000;
+
+/**
  * Validate a DA.live JWT token
  *
  * Checks:
@@ -151,6 +158,19 @@ export function validateDaLiveTokenStrict(token: string): StrictTokenValidation 
         return {
             valid: false,
             error: 'This DA.live token carries no expiry, so it cannot be stored safely. Use the bookmarklet on da.live to copy a fresh one.',
+        };
+    }
+    // Measured 2026-10-20: the bookmarklet handed over a token with 3 minutes left. Stored,
+    // then refused by every read, so each "Sign In" changed nothing and the SC was asked
+    // again. Refused here instead, with the fix in the SC's words.
+    const left = validation.expiresAt - Date.now();
+    if (left < DA_LIVE_TOKEN_MARGIN_MS) {
+        const minutes = Math.max(1, Math.round(left / 60_000));
+        return {
+            valid: false,
+            error:
+                `This DA.live token expires in ${minutes} minute${minutes === 1 ? '' : 's'}, too soon to use. ` +
+                'Reload da.live so it signs you in again, then run the bookmarklet for a fresh token.',
         };
     }
     return { valid: true, expiresAt: validation.expiresAt, email: validation.email };
