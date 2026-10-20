@@ -52,3 +52,4 @@ The agent's `apply_updates` keeps working against the same apply service either 
 - 2026-10-20  feat(updates): the Updates modal's rows, and the ticked ids back as a selection (`ddb590a6e`)
 - 2026-10-20  refactor(updates): one update check for one project or many (`b93508de1`)
 - 2026-10-20  chore(updates): lock in the cast the auto-updater took with it; name it in words (`04649dbd4`)
+- 2026-10-20  fix(projects-dashboard): the Updates window keeps one height from checking to result (`9798e1425`)
