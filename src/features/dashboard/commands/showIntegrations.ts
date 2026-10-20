@@ -169,6 +169,8 @@ export class ShowIntegrationsCommand extends BundledPanelCommand<IntegrationsIni
     }
 
     public async execute(): Promise<void> {
+        // The project this screen is for, kept after the current project moves (AI-15)
+        await this.openForCurrentProject();
         await this.createOrRevealPanel();
         if (!this.communicationManager) {
             await this.initializeCommunication();

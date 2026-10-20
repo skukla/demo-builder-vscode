@@ -169,11 +169,12 @@ export class CommandManager {
 
         // Start Demo
         const startDemo = new StartDemoCommand(this.context, this.stateManager, this.logger);
-        this.registerCommand('demoBuilder.startDemo', () => startDemo.execute());
+        // A screen or agent passes the project it means; the palette passes nothing (AI-15).
+        this.registerCommand('demoBuilder.startDemo', (projectPath?: unknown) => startDemo.execute(projectPath));
 
         // Stop Demo
         const stopDemo = new StopDemoCommand(this.context, this.stateManager, this.logger);
-        this.registerCommand('demoBuilder.stopDemo', () => stopDemo.execute());
+        this.registerCommand('demoBuilder.stopDemo', (projectPath?: unknown) => stopDemo.execute(projectPath));
 
         // View Status
         const viewStatus = new ViewStatusCommand(this.context, this.stateManager, this.logger);
@@ -189,13 +190,13 @@ export class CommandManager {
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.configureProject', async () => {
-            await configureProject.execute();
+        this.registerCommand('demoBuilder.configureProject', async (projectPath?: unknown) => {
+            await configureProject.execute(projectPath);
         });
 
         // Deploy Mesh
         const deployMesh = new DeployMeshCommand(this.context, this.stateManager, this.logger);
-        this.registerCommand('demoBuilder.deployMesh', () => deployMesh.execute());
+        this.registerCommand('demoBuilder.deployMesh', (projectPath?: unknown) => deployMesh.execute(projectPath));
 
         // Sync Storefront (EDS projects only — runs the same flow as the MCP
         // sync_storefront tool, with VS Code-native conflict resolution UX)
@@ -242,8 +243,8 @@ export class CommandManager {
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.repairSiteConfiguration', () =>
-            repairSiteConfiguration.execute(),
+        this.registerCommand('demoBuilder.repairSiteConfiguration', (projectPath?: unknown) =>
+            repairSiteConfiguration.execute(projectPath),
         );
 
         // Storefront Report — where the storefront comes from, what Demo Builder

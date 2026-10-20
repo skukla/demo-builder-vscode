@@ -248,7 +248,8 @@ describe('handleAddAppBuilderComponent', () => {
         // longer holds integration settings (AB-21); the add that asks for them
         // is AB-22.
         const vscode = require('vscode');
-        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.configureProject');
+        const commandsRun = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(([id]) => id);
+        expect(commandsRun).not.toContain('demoBuilder.configureProject');
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
         expect(result).toMatchObject({ success: false });
         expect(result.error).toMatch(/not supported yet\. Nothing was added\.$/);

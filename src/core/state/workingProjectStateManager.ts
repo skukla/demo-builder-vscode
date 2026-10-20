@@ -10,10 +10,13 @@
  *
  * - `getCurrentProject` loads the working project from disk, per call (`persistAfterLoad:
  *   false`: a read must not move the pointer). No working project: the current one.
- * - `saveProject` is today's save when the working project IS the current one, so the
- *   change event still fires and an open dashboard refreshes. When it is another
- *   project, it saves that project's manifest only (`saveProjectConfigOnly`): the real
- *   save makes the saved project current, which is the leak this view exists to stop.
+ * - `saveProject` is today's save when there is no working project, or the working project
+ *   IS the current one: the surface and the person agree, so nothing changes (the change
+ *   event fires, an open dashboard refreshes, a rename moves the pointer to the new folder,
+ *   and the projects list, which selects a project BY saving it, still can). When the
+ *   working project is another one, the save writes the manifest only
+ *   (`saveProjectConfigOnly`): the real save makes the saved project current, which is
+ *   the leak this view exists to stop.
  * - Everything else is the real manager's, called ON the real manager. The view this
  *   replaces (`scopedStateManager.ts`) inherited by prototype, so a method that assigns a
  *   field (`clearAll` replaces `this.state`) changed the copy and left the real one alone.
@@ -45,7 +48,8 @@ export function createWorkingProjectStateManager(
             return project ?? undefined;
         },
         saveProject: async (project: Project) => {
-            if (await isCurrent(real, project.path)) return real.saveProject(project);
+            const path = workingPath();
+            if (!path || (await isCurrent(real, path))) return real.saveProject(project);
             return real.saveProjectConfigOnly(project);
         },
     };

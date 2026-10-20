@@ -91,10 +91,12 @@ describe('Dashboard Action Handlers', () => {
 
     describe('handleConfigure', () => {
         it('should execute configureProject command', async () => {
-            const result = await handleConfigure(createMockHandlerContext());
+            // AI-15: Configure opens for the screen's own project, named by its path.
+            const { mockContext } = setupMocks();
+            const result = await handleConfigure(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject', '/path/to/project');
         });
     });
 
@@ -301,7 +303,7 @@ describe('Dashboard Action Handlers', () => {
             await flushPromises();
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject', '/path/to/project');
         });
 
         it('should not open Configure when the notification is dismissed', async () => {

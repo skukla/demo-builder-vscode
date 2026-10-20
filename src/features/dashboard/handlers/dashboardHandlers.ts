@@ -57,6 +57,7 @@ import {
     handleExportProjectSettings,
 } from './projectManagementHandlers';
 import { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
+import { executeCommandForWorkingProject } from '@/core/handlers/projectCommandHelper';
 import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -218,7 +219,7 @@ export const handleStartDemo: MessageHandler = async (context) => {
     // The tile already shows the transition: the command's own notification
     // would be a second, slower copy of it (PL-59 R5).
     await surfaceShowsItself(async () => {
-        await vscode.commands.executeCommand('demoBuilder.startDemo');
+        await executeCommandForWorkingProject(context, 'demoBuilder.startDemo');
     });
     // Update demo status only (don't re-check mesh)
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
@@ -234,7 +235,7 @@ export const handleStopDemo: MessageHandler = async (context) => {
     // The tile already shows the transition: the command's own notification
     // would be a second, slower copy of it (PL-59 R5).
     await surfaceShowsItself(async () => {
-        await vscode.commands.executeCommand('demoBuilder.stopDemo');
+        await executeCommandForWorkingProject(context, 'demoBuilder.stopDemo');
     });
     // Update demo status only (don't re-check mesh)
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
@@ -258,7 +259,7 @@ export const handleRestartDemo: MessageHandler = async (context) => {
     // The tile already shows the transition: the command's own notification
     // would be a second, slower copy of it (PL-59 R5).
     await surfaceShowsItself(async () => {
-        await vscode.commands.executeCommand('demoBuilder.restartDemo');
+        await executeCommandForWorkingProject(context, 'demoBuilder.restartDemo');
     });
     // Update demo status only (don't re-check mesh) — same as start/stop.
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
@@ -274,7 +275,7 @@ export const handleDeployMesh: MessageHandler<{ id?: string; progress?: 'modal' 
     narrateOutcomeToModal(
         async (context, payload) => {
             if (progressSurfaceOf(payload) !== 'modal') {
-                await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                await executeCommandForWorkingProject(context, 'demoBuilder.deployMesh');
                 return { success: true };
             }
             return deployMeshFromScreen(context, payload?.id ?? MESH_OPERATION_ID);

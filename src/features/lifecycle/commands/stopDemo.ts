@@ -105,7 +105,9 @@ export class StopDemoCommand extends BaseCommand {
         });
     }
 
-    public async execute(): Promise<void> {
+    public async execute(projectPath?: unknown): Promise<void> {
+        // The project a screen or agent named, else the current one (AI-15).
+        const state = this.stateFor(projectPath);
         // Prevent duplicate concurrent execution
         if (StopDemoCommand.lock.isLocked()) {
             this.logger.debug('[Stop Demo] Already in progress');
@@ -114,7 +116,7 @@ export class StopDemoCommand extends BaseCommand {
 
         await StopDemoCommand.lock.run(async () => {
             try {
-            const project = await this.stateManager.getCurrentProject();
+            const project = await state.getCurrentProject();
             if (!project) {
                 // Silently return - no project means nothing to stop
                 // (often called programmatically during cleanup/reset)
@@ -138,7 +140,7 @@ export class StopDemoCommand extends BaseCommand {
                 // STEP 1: Set status to 'stopping' immediately
                 project.status = 'stopping';
                 frontendComponent.status = 'stopping';
-                await this.stateManager.saveProject(project);
+                await state.saveProject(project);
 
                 // Get port for process discovery
                 const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
@@ -184,7 +186,7 @@ export class StopDemoCommand extends BaseCommand {
                 // Clear frontend env state (config changes don't matter when stopped)
                 project.frontendEnvState = undefined;
 
-                await this.stateManager.saveProject(project);
+                await state.saveProject(project);
 
                 // Notify extension to reset env change grace period
                 await vscode.commands.executeCommand('demoBuilder._internal.demoStopped');

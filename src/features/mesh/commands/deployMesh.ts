@@ -22,7 +22,9 @@ export class DeployMeshCommand extends BaseCommand {
         super(context, stateManager, logger);
     }
 
-    async execute(): Promise<void> {
+    async execute(projectPath?: unknown): Promise<void> {
+        // The project a screen or agent named, else the current one (AI-15).
+        const state = this.stateFor(projectPath);
         // Prevent duplicate concurrent execution
         if (meshDeployLock.isLocked()) {
             this.logger.debug('[Mesh Deployment] Already in progress');
@@ -35,7 +37,7 @@ export class DeployMeshCommand extends BaseCommand {
             );
 
             try {
-                const project = await this.stateManager.getCurrentProject();
+                const project = await state.getCurrentProject();
                 if (!project) {
                     vscode.window.showWarningMessage(
                         'No active project found. Create a project first.',
@@ -57,7 +59,7 @@ export class DeployMeshCommand extends BaseCommand {
                     secrets: ServiceLocator.getSecretStorage() ?? undefined,
                     commandManager: ServiceLocator.getCommandExecutor(),
                     project,
-                    stateManager: this.stateManager,
+                    stateManager: state,
                     logger: this.logger,
                     extensionPath: this.context.extensionPath,
                     republishStorefront: async (deployed) => {
@@ -69,7 +71,7 @@ export class DeployMeshCommand extends BaseCommand {
                             project: deployed,
                             secrets: this.context.secrets,
                             logger: this.logger,
-                            persist: (p) => this.stateManager.saveProject(p),
+                            persist: (p) => state.saveProject(p),
                             ensureDaLiveSession: () =>
                                 ensureDaLiveAuth(
                                     { context: this.context, logger: this.logger },

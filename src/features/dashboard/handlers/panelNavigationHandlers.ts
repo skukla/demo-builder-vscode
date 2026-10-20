@@ -8,15 +8,16 @@
  * everything here so import sites are unchanged.
  */
 
-import * as vscode from 'vscode';
 import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
+import { executeCommandForWorkingProject } from '@/core/handlers/projectCommandHelper';
 import { MessageHandler } from '@/types/handlers';
 
 /**
  * Handle 'configure' message - Open configuration UI
  */
-export const handleConfigure: MessageHandler = async () => {
-    await vscode.commands.executeCommand('demoBuilder.configureProject');
+export const handleConfigure: MessageHandler = async (context) => {
+    // Configure opens for this screen's project, not whichever is current (AI-15).
+    await executeCommandForWorkingProject(context, 'demoBuilder.configureProject');
     return { success: true };
 };
 

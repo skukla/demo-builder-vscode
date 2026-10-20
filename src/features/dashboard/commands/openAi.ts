@@ -48,7 +48,7 @@ export class ShowAiCommand extends BundledPanelCommand<AiOverviewInitialData> {
 
     public async execute(): Promise<void> {
         try {
-            const project = await this.stateManager.getCurrentProject();
+            const project = await this.openForCurrentProject();
             if (!project) {
                 await this.showWarning('No project found. Open a Demo Builder project to use AI.');
                 return;

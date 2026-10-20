@@ -262,5 +262,5 @@ describe('openSiteAccessLink', () => {
 it('repairSiteConfiguration runs the repair command', async () => {
     await siteAccessHandlers.repairSiteConfiguration(makeContext(PROJECT));
 
-    expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.repairSiteConfiguration');
+    expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.repairSiteConfiguration', '/projects/demo');
 });

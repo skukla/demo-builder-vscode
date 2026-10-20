@@ -88,7 +88,7 @@ describe('loadProject', () => {
 
         await h.handlerFor('demoBuilder.loadProject')('/p/other');
 
-        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.stopDemo');
+        expect((vscode.commands.executeCommand as jest.Mock).mock.calls.map(([id]) => id)).not.toContain('demoBuilder.stopDemo');
         expect(h.stateManager.loadProjectFromPath).not.toHaveBeenCalled();
     });
 

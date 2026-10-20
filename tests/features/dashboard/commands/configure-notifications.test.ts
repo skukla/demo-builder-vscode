@@ -356,7 +356,7 @@ describe('ConfigureProjectWebviewCommand - post-save notifications', () => {
 
             await notifications(command).handleCombinedMeshStorefrontNotification(project);
 
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh', freshProject.path);
             // The RE-READ project, not the stale one the prompt was raised for:
             // deployMesh rewrites mesh state, so republishing the pre-deploy copy
             // would publish the config that was just superseded.

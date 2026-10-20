@@ -632,11 +632,12 @@ function registerRuntimeCommands(
         vscode.commands.registerCommand('demoBuilder.showDebugLogs', () => {
             debugLogger.showDebug(false); // Show Debug channel, take focus
         }),
-        vscode.commands.registerCommand('demoBuilder.restartDemo', async () => {
-            await vscode.commands.executeCommand('demoBuilder.stopDemo');
+        vscode.commands.registerCommand('demoBuilder.restartDemo', async (projectPath?: unknown) => {
+            // The project a screen or agent named rides through both halves (AI-15).
+            await vscode.commands.executeCommand('demoBuilder.stopDemo', projectPath);
             // Small delay to ensure clean stop
             await sleep(TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
-            await vscode.commands.executeCommand('demoBuilder.startDemo');
+            await vscode.commands.executeCommand('demoBuilder.startDemo', projectPath);
         }),
         vscode.commands.registerCommand('demoBuilder.openBrowser', async () => {
             const project = await stateManager.getCurrentProject();

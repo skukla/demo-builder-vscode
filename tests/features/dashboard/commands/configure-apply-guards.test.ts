@@ -181,7 +181,8 @@ describe('ConfigureProjectWebviewCommand - apply prompts and their guards', () =
                 createMockProject({ status: 'stopped' })
             );
 
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh');
+            // AI-15: for this screen's project, named by its path.
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh', '/test/project');
             expect(sendMessage).toHaveBeenLastCalledWith('deployment-status', {
                 isDeploying: false,
             });
@@ -218,7 +219,8 @@ describe('ConfigureProjectWebviewCommand - apply prompts and their guards', () =
                 createMockProject({ status: 'stopped' })
             );
 
-            expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.startDemo');
+            const commandsRun = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(([id]) => id);
+            expect(commandsRun).not.toContain('demoBuilder.startDemo');
         });
 
         it('"Later" saves the decline when one was recorded', async () => {

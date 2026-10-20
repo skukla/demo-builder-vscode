@@ -71,7 +71,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStartDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo', '/path/to/project');
         });
 
         it('should return success even with stopped project', async () => {
@@ -80,7 +80,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStartDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo', '/path/to/project');
         });
     });
 
@@ -139,7 +139,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStartDemo(mockContext);
 
             expect(result).toStrictEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo', undefined);
         });
 
         it('leaves non-EDS projects alone', async () => {
@@ -149,7 +149,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStartDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo', '/path/to/project');
         });
     });
 
@@ -216,7 +216,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStopDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.stopDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.stopDemo', '/path/to/project');
         });
 
         it('should return success even with running project', async () => {
@@ -225,7 +225,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStopDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.stopDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.stopDemo', '/path/to/project');
         });
     });
 
@@ -245,7 +245,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleRestartDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.restartDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.restartDemo', '/path/to/project');
             expect(mockExecuteCommand).toHaveBeenCalledTimes(1);
         });
 
@@ -256,8 +256,9 @@ describe('Dashboard Lifecycle Handlers', () => {
 
             await handleRestartDemo(mockContext);
 
-            expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.stopDemo');
-            expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.startDemo');
+            const commandsRun = mockExecuteCommand.mock.calls.map(([id]) => id);
+            expect(commandsRun).not.toContain('demoBuilder.stopDemo');
+            expect(commandsRun).not.toContain('demoBuilder.startDemo');
         });
     });
 });

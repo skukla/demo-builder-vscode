@@ -136,10 +136,10 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         return { title: this.getWebviewTitle(), subtitle: this.loadingProjectName };
     }
 
-    public async execute(): Promise<void> {
+    public async execute(projectPath?: unknown): Promise<void> {
         try {
-            // Get current project
-            const project = await this.stateManager.getCurrentProject();
+            // The project this screen is for, kept after the current project moves (AI-15)
+            const project = await this.openForCurrentProject(projectPath);
             if (!project) {
                 await this.showWarning('No project found to configure.');
                 return;
@@ -412,6 +412,9 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         if (!renameResult.success) {
             throw new Error(renameResult.error || 'Failed to rename project');
         }
+        // The folder moved with the name: this screen follows it there (AI-15).
+        const newPath = renamedPathOf(renameResult.data);
+        if (newPath) this.followOwnProject(newPath);
         // Reload project after rename (path may have changed)
         const reloaded = await this.stateManager.getCurrentProject();
         if (!reloaded) {
@@ -646,7 +649,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             await this.ensureAuthAndApply(
                 () =>
                     this.withDeploymentStatus(async () => {
-                        await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                        await this.runForThisProject('demoBuilder.deployMesh');
                         const freshProject = await this.stateManager.getCurrentProject();
                         if (freshProject) {
                             await this.republishStorefront(freshProject);
@@ -737,7 +740,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             await this.ensureAuthAndApply(
                 () =>
                     this.withDeploymentStatus(async () => {
-                        await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                        await this.runForThisProject('demoBuilder.deployMesh');
                         if (isRunning) await this.restartDemo();
                     }),
                 isRunning ? 'redeploy mesh and restart demo' : 'redeploy mesh',
@@ -780,11 +783,17 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         return true;
     }
 
+    /** Run a project command for THIS screen's project, not whichever is current (AI-15). */
+    private async runForThisProject(commandId: string): Promise<void> {
+        const project = await this.stateManager.getCurrentProject();
+        await vscode.commands.executeCommand(commandId, project?.path);
+    }
+
     /** Stop and start the demo so it reads the new `.env`; a failure is logged. */
     private async restartDemo(): Promise<void> {
         try {
-            await vscode.commands.executeCommand('demoBuilder.stopDemo');
-            await vscode.commands.executeCommand('demoBuilder.startDemo');
+            await this.runForThisProject('demoBuilder.stopDemo');
+            await this.runForThisProject('demoBuilder.startDemo');
         } catch (error) {
             this.logger.error('[Configure] Failed to restart demo:', error as Error);
         }
@@ -837,4 +846,10 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             return false;
         }
     }
+}
+
+/** The folder a successful rename moved the project to (`renameProjectCore`'s `data.newPath`). */
+function renamedPathOf(data: unknown): string | undefined {
+    if (typeof data !== 'object' || data === null || !('newPath' in data)) return undefined;
+    return typeof data.newPath === 'string' ? data.newPath : undefined;
 }

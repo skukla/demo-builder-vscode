@@ -153,7 +153,9 @@ export class StartDemoCommand extends BaseCommand {
         this.logger.warn(`[Start Demo] Port ${port} still in use after killing processes`);
         return false;
     }
-    public async execute(): Promise<void> {
+    public async execute(projectPath?: unknown): Promise<void> {
+        // The project a screen or agent named, else the current one (AI-15).
+        const state = this.stateFor(projectPath);
         // Prevent duplicate concurrent execution
         if (StartDemoCommand.lock.isLocked()) {
             this.logger.debug('[Start Demo] Already in progress');
@@ -162,7 +164,7 @@ export class StartDemoCommand extends BaseCommand {
 
         await StartDemoCommand.lock.run(async () => {
             try {
-            const project = await this.stateManager.getCurrentProject();
+            const project = await state.getCurrentProject();
             if (!project) {
                 await this.showWarning('No project found. Create a project first.');
                 const create = await vscode.window.showInformationMessage(
@@ -294,7 +296,7 @@ export class StartDemoCommand extends BaseCommand {
                 project.status = 'starting';
                 frontendComponent.status = 'starting';
                 frontendComponent.port = port;
-                await this.stateManager.saveProject(project);
+                await state.saveProject(project);
 
                 // Create project-specific terminal name (allows us to identify which project is running)
                 const terminalName = `${project.name} - Frontend`;
@@ -322,7 +324,7 @@ export class StartDemoCommand extends BaseCommand {
                 // Capture frontend env vars for change detection
                 updateFrontendState(project);
 
-                await this.stateManager.saveProject(project);
+                await state.saveProject(project);
                 
                 // Notify extension to suppress env change notifications during startup
                 await vscode.commands.executeCommand('demoBuilder._internal.demoStarted');

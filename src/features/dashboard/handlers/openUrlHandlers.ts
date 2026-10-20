@@ -126,7 +126,7 @@ export const handleOpenAdminPanel: MessageHandler = async (context) => {
             .then((selection) => {
                 if (selection === 'Open Configure') {
                     // Returned (not voided) so a rejection reaches the handler below.
-                    return vscode.commands.executeCommand('demoBuilder.configureProject');
+                    return vscode.commands.executeCommand('demoBuilder.configureProject', project?.path);
                 }
                 return undefined;
             })

@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { createWorkingProjectStateManager } from '@/core/state/workingProjectStateManager';
 import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
 import { DisposableStore } from '@/core/utils/disposableStore';
 import { sleep } from '@/core/utils/sleep';
@@ -84,7 +85,18 @@ export abstract class BaseCommand implements vscode.Disposable {
      * start returns its outcome, so the screen's progress modal knows whether to
      * close or to show why it stopped (PL-59).
      */
-    public abstract execute(): Promise<unknown>;
+    public abstract execute(...args: unknown[]): Promise<unknown>;
+
+    /**
+     * The state a run acts on: the named project's, when a screen or an agent passed
+     * one, else the current project's (AI-15). A screen shown for project A runs
+     * "Start" on A even after another project became current. Anything but a path (a
+     * tree item from a menu, nothing from the palette) means the current project.
+     */
+    protected stateFor(projectPath: unknown): StateManager {
+        if (typeof projectPath !== 'string' || !projectPath) return this.stateManager;
+        return createWorkingProjectStateManager(this.stateManager, () => projectPath);
+    }
 
     /**
      * Dispose all resources owned by this command

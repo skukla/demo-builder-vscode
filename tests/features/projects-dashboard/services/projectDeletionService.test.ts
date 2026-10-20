@@ -317,7 +317,7 @@ describe('the surrounding cleanup that a delete must not skip', () => {
     it('does not try to stop a demo that is not running', async () => {
         await deleteProjectFiles(context(), plainProject({ status: 'ready' }));
 
-        expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.stopDemo');
+        expect((mockExecuteCommand).mock.calls.map(([id]) => id)).not.toContain('demoBuilder.stopDemo');
     });
 
     it('drops the project from the recent list', async () => {

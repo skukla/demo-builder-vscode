@@ -47,3 +47,18 @@ export async function executeCommandForProject(
 
     return { success: true };
 }
+
+/**
+ * Run a VS Code command for the project this context works on: a screen's own, or an
+ * agent session's (AI-15). The lifecycle commands read the CURRENT project unless they
+ * are handed a path, so a dashboard shown for project A started whichever project had
+ * become current since. Unlike {@link executeCommandForProject} this never makes the
+ * project current: an agent's start must not move the person's project.
+ *
+ * @param context - the handler's context; its stateManager answers for the working project
+ * @param commandId - a command that takes a project path first (`demoBuilder.startDemo`)
+ */
+export async function executeCommandForWorkingProject(context: HandlerContext, commandId: string): Promise<void> {
+    const project = await context.stateManager.getCurrentProject();
+    await vscode.commands.executeCommand(commandId, project?.path);
+}

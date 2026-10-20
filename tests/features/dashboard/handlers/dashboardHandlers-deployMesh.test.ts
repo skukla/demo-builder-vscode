@@ -55,7 +55,7 @@ describe('dashboardHandlers - handleDeployMesh', () => {
         });
 
         // Verify command was executed
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh');
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh', '/path/to/project');
 
         // CRITICAL: Verify sendMessage was NOT called (anti-pattern)
         expect(mockContext.sendMessage).not.toHaveBeenCalled();
@@ -131,7 +131,7 @@ describe('dashboardHandlers - handleDeployMesh', () => {
             const result = await handleDeployMesh(mockContext, { id: 'mesh-row-7' });
 
             expect(result).toStrictEqual({ success: true });
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh', '/path/to/project');
             expect(fromScreen).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).not.toHaveBeenCalled();
         });

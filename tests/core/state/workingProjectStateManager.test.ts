@@ -55,7 +55,7 @@ describe('createWorkingProjectStateManager', () => {
         expect(real.loadProjectFromPath).toHaveBeenCalledWith(WORKING, undefined, { persistAfterLoad: false });
     });
 
-    it('saves a project that is not the current one without making it current', async () => {
+    it('saves without moving the pointer while its project is not the current one', async () => {
         const real = makeReal(OTHER);
         const view = createWorkingProjectStateManager(real, () => WORKING);
         const project = createMockProject({ name: 'justrite', path: WORKING });
@@ -68,7 +68,7 @@ describe('createWorkingProjectStateManager', () => {
 
     // The common case must not change: an open dashboard refreshes on the change event
     // the real save fires, and the config-only save fires none.
-    it('saves the current project exactly as before, change event and all', async () => {
+    it('saves exactly as before while its project is the current one, change event and all', async () => {
         const real = makeReal(WORKING);
         const view = createWorkingProjectStateManager(real, () => WORKING);
         const project = createMockProject({ name: 'justrite', path: WORKING });
@@ -77,6 +77,30 @@ describe('createWorkingProjectStateManager', () => {
 
         expect(real.saveProject).toHaveBeenCalledWith(project);
         expect(real.saveProjectConfigOnly).not.toHaveBeenCalled();
+    });
+
+    // A rename saves the project at its NEW folder, which is not the current pointer yet.
+    // Deciding by the saved project's path would have left the pointer on a folder that
+    // no longer exists.
+    it('lets a rename of the current project move the pointer to the new folder', async () => {
+        const real = makeReal(WORKING);
+        const view = createWorkingProjectStateManager(real, () => WORKING);
+        const renamed = createMockProject({ name: 'justrite-2', path: '/projects/justrite-2' });
+
+        await view.saveProject(renamed);
+
+        expect(real.saveProject).toHaveBeenCalledWith(renamed);
+    });
+
+    // The projects list selects a project BY saving it, and has no working project.
+    it('saves exactly as before when it has no working project', async () => {
+        const real = makeReal(OTHER);
+        const view = createWorkingProjectStateManager(real, () => undefined);
+        const project = createMockProject({ name: 'justrite', path: WORKING });
+
+        await view.saveProject(project);
+
+        expect(real.saveProject).toHaveBeenCalledWith(project);
     });
 
     // The view this replaced inherited by prototype: a delegated method that assigned a

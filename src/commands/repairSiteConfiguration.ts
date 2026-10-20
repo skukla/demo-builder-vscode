@@ -31,16 +31,19 @@ import { repairSiteConfigForProject } from '@/features/eds/services/configServic
 import type { RepairSiteConfigResult } from '@/features/eds/services/configService/repairSiteConfigHeadless';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Project } from '@/types/base';
+import type { StateManager } from '@/types/state';
 
 export class RepairSiteConfigurationCommand extends BaseCommand {
-    public async execute(): Promise<void> {
-        const project = await this.stateManager.getCurrentProject();
+    public async execute(projectPath?: unknown): Promise<void> {
+        // The project a screen named, else the current one (AI-15).
+        const state = this.stateFor(projectPath);
+        const project = await state.getCurrentProject();
         if (!project) {
             await this.showWarning('No project loaded.');
             return;
         }
 
-        const result = await this.runRepair(project);
+        const result = await this.runRepair(project, state);
         if (!result) return;
 
         // BEFORE the failure branch. A failed repair can still have destroyed the
@@ -65,7 +68,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
             );
         }
 
-        await this.republish(project);
+        await this.republish(project, state);
     }
 
     /**
@@ -75,7 +78,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
      * tool shares it rather than rebuilding it; all this adds is the progress
      * notification, which is the only part an agent must not get.
      */
-    private async runRepair(project: Project): Promise<RepairSiteConfigResult | undefined> {
+    private async runRepair(project: Project, state: StateManager): Promise<RepairSiteConfigResult | undefined> {
         return vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -88,7 +91,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
             (progress) => {
                 progress.report({ message: OPERATION_STAGES.updatingSiteConfig.label });
                 return repairSiteConfigForProject(project, this.context, this.logger, (p) =>
-                    this.stateManager.saveProject(p),
+                    state.saveProject(p),
                 );
             },
         );
@@ -100,7 +103,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
      * Registration writes a routing rule; without this the live storefront keeps
      * serving what it last published.
      */
-    private async republish(project: Project): Promise<void> {
+    private async republish(project: Project, state: StateManager): Promise<void> {
         const result = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -110,7 +113,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
             (progress) => {
                 progress.report({ message: OPERATION_STAGES.publishingSettings.label });
                 return republishStorefrontConfig({
-                    persist: (p) => this.stateManager.saveProject(p),
+                    persist: (p) => state.saveProject(p),
                     project,
                     secrets: this.context.secrets,
                     logger: this.logger,
@@ -119,7 +122,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
         );
 
         if (result.success) {
-            await this.stateManager.saveProject(project);
+            await state.saveProject(project);
             await this.showSuccessMessage('Site configuration repaired and storefront republished');
             return;
         }

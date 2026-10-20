@@ -14,7 +14,7 @@
  * @module features/eds/handlers/siteAccessHandlers
  */
 
-import * as vscode from 'vscode';
+import { executeCommandForWorkingProject } from '@/core/handlers/projectCommandHelper';
 import { openUrl } from '@/core/utils/browserUtils';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { countLine } from '@/core/utils/storefrontJobs';
@@ -229,8 +229,9 @@ export const siteAccessHandlers = defineHandlers({
         return { success: true };
     },
 
-    repairSiteConfiguration: async (_context: HandlerContext): Promise<HandlerResponse> => {
-        await vscode.commands.executeCommand('demoBuilder.repairSiteConfiguration');
+    repairSiteConfiguration: async (context: HandlerContext): Promise<HandlerResponse> => {
+        // For the project this screen or agent works on, not whichever is current (AI-15).
+        await executeCommandForWorkingProject(context, 'demoBuilder.repairSiteConfiguration');
         return { success: true };
     },
 });

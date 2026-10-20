@@ -368,8 +368,8 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
     // ============================================================================
 
     public async execute(): Promise<void> {
-        // Check for existing project
-        const project = await this.stateManager.getCurrentProject();
+        // The project this screen is for, kept after the current project moves (AI-15)
+        const project = await this.openForCurrentProject();
         if (!project) {
             this.logger.warn('[Dashboard] No project found');
             return;
