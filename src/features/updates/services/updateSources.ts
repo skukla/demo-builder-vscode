@@ -1,7 +1,6 @@
 /**
  * Small, UI-free helpers the update check and apply share: where a storefront's template
- * comes from, the "N commits behind" wording, and whether a template sync already covered
- * a block library.
+ * comes from, and whether a template sync already covered a block library.
  *
  * Moved unchanged on 2026-10-20 (PL-80) from `commands/updateTypes.ts`, which held them
  * beside the picker's QuickPick item types; the picker is gone and the services use them.
@@ -12,12 +11,6 @@
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
-
-/** Format a "N commits behind" / "update available" label. */
-export function formatBehindLabel(count: number): string {
-    if (count <= 0) return 'update available';
-    return `${count} commit${count !== 1 ? 's' : ''} behind`;
-}
 
 /**
  * Extract template source owner/repo from a project's EDS storefront metadata.

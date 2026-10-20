@@ -18,10 +18,15 @@ import { DialogContainer, Text, View } from '@adobe/react-spectrum';
 import React from 'react';
 import type { UpdatesModalControls } from '../hooks/useUpdatesModal';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
+import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import type { ApplyUpdatesReport, PendingUpdateRow } from '@/types/pendingUpdates';
 
-const TITLE = 'Updates';
+const LIST_TITLE = 'Updates available';
+const REPORT_TITLE = 'Update results';
+/** What Apply does, before anyone presses it: everything it may stop to ask is a change it cannot undo. */
+const LEAD = "These updates are waiting. Untick any you want to skip; Apply runs the rest and asks before anything it can't undo.";
 const NO_ACTIONS: ActionButton[] = [];
 
 /** The rows under each heading, headings in the order they first appear. */
@@ -38,9 +43,10 @@ function groupsOf(rows: PendingUpdateRow[]): Array<{ key: string; title: string;
 function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: UpdatesModalControls }) {
     return (
         <>
+            <LeadText>{LEAD}</LeadText>
             {groupsOf(rows).map((group) => (
                 <View key={group.key} marginBottom="size-200">
-                    <Text UNSAFE_className="text-sm font-semibold text-gray-800">{group.title}</Text>
+                    <SectionLabel>{group.title}</SectionLabel>
                     {group.rows.map((row) => (
                         <CheckboxRow
                             key={row.id}
@@ -62,12 +68,10 @@ function Report({ report }: { report: ApplyUpdatesReport }) {
     const count = `${report.applied} update${report.applied === 1 ? '' : 's'} applied.`;
     return (
         <>
-            <View marginBottom="size-200">
-                <Text>{count}</Text>
-            </View>
+            <LeadText>{count}</LeadText>
             {report.problems.length > 0 && (
                 <View marginBottom="size-200">
-                    <Text UNSAFE_className="text-sm font-semibold text-gray-800">Not applied</Text>
+                    <SectionLabel>Not applied</SectionLabel>
                     {report.problems.map((line) => (
                         <View key={line}>
                             <Text UNSAFE_className="text-sm">{line}</Text>
@@ -77,7 +81,7 @@ function Report({ report }: { report: ApplyUpdatesReport }) {
             )}
             {report.notes.length > 0 && (
                 <View marginBottom="size-200">
-                    <Text UNSAFE_className="text-sm font-semibold text-gray-800">Notes</Text>
+                    <SectionLabel>Notes</SectionLabel>
                     {report.notes.map((line) => (
                         <View key={line}>
                             <Text UNSAFE_className="text-sm text-gray-700">{line}</Text>
@@ -109,7 +113,13 @@ export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): 
     return (
         <DialogContainer onDismiss={controls.close}>
             {open && (
-                <Modal title={TITLE} size="M" fitContent onClose={controls.close} actionButtons={actions}>
+                <Modal
+                    title={controls.view.phase === 'report' ? REPORT_TITLE : LIST_TITLE}
+                    size="M"
+                    fitContent
+                    onClose={controls.close}
+                    actionButtons={actions}
+                >
                     {body}
                 </Modal>
             )}

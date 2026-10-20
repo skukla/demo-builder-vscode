@@ -17,7 +17,6 @@
 import { OTHER_ORG_NOTE } from './integrationUpdates';
 import type { UpdateSelections } from './updateSelections';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import { formatBehindLabel } from '@/features/updates/services/updateSources';
 import type { Project } from '@/types/base';
 import type {
     PendingUpdateGroup,
@@ -35,12 +34,17 @@ const EXTENSION_GROUP: PendingUpdateGroup = { key: 'extension', title: 'Demo Bui
 const FORKS_GROUP: PendingUpdateGroup = { key: 'forks', title: 'Template repositories' };
 const EXTENSION_ID = 'extension';
 const LOCKED_OTHER_ORG = `This project ${OTHER_ORG_NOTE}`;
+/**
+ * What a version without a number of its own says. Not "N commits behind": a commit count
+ * is the developer's measure, and tells an SC nothing they would act on (owner, 2026-10-20).
+ */
+const NEWER = 'Newer version';
 
 type RowText = Pick<PendingUpdateRow, 'label' | 'detail'> & { lockedReason?: string };
 
 /** Each project kind's words for one of its entries. */
 const PROJECT_KINDS: { [K in ProjectKind]: (entry: UpdateSelections[K][number]) => RowText } = {
-    template: (t) => ({ label: 'EDS template', detail: formatBehindLabel(t.commitsBehind ?? 0) }),
+    template: () => ({ label: 'EDS template', detail: NEWER }),
     component: (c) => ({
         label: c.project.componentInstances?.[c.componentId]?.name ?? c.componentId,
         detail: c.currentVersion
@@ -53,15 +57,9 @@ const PROJECT_KINDS: { [K in ProjectKind]: (entry: UpdateSelections[K][number]) 
             ? `${a.currentVersion} → ${a.latestVersion}`
             : `version ${a.latestVersion}`,
     }),
-    blockLibrary: (b) => ({
-        label: b.library.name,
-        detail: formatBehindLabel(b.commitsBehind ?? 0),
-    }),
+    blockLibrary: (b) => ({ label: b.library.name, detail: NEWER }),
     blockLibraryInstall: (b) => ({ label: b.library.name, detail: 'install' }),
-    inspector: (i) => ({
-        label: 'Demo Inspector SDK',
-        detail: formatBehindLabel(i.commitsBehind ?? 0),
-    }),
+    inspector: () => ({ label: 'Demo Inspector SDK', detail: NEWER }),
     integration: (p) => ({
         label: p.label,
         detail: 'update available',
@@ -106,11 +104,10 @@ export function toPendingUpdateRows(
     }
     rows.push(...sortedByProject(projectRows(selections), currentProjectPath));
     selections.forkSync.forEach((f, i) => {
-        const behind = formatBehindLabel(f.behindBy ?? 0);
         rows.push(
             row(`forkSync:${i}`, 'forkSync', FORKS_GROUP, {
                 label: `${f.owner}/${f.repo}`,
-                detail: f.parentFullName ? `${behind} ${f.parentFullName}` : behind,
+                detail: f.parentFullName ? `${NEWER} from ${f.parentFullName}` : NEWER,
             }),
         );
     });

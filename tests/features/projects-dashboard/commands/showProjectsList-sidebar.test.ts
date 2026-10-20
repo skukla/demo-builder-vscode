@@ -82,7 +82,7 @@ interface CommandInternals {
 const CHECK: FoundUpdates = {
     selections: {
         forkSync: [],
-        template: [{ project: createMockProject({ name: 'bodea', path: '/p/bodea' }), commitsBehind: 1 }],
+        template: [{ project: createMockProject({ name: 'bodea', path: '/p/bodea' }) }],
         component: [],
         adobeMcp: [],
         blockLibrary: [],

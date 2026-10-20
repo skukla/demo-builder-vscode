@@ -48,7 +48,7 @@ describe('computeUpdateSelections', () => {
 
         expect(mockCheckForkStatus).toHaveBeenCalledTimes(1);
         expect(sel.forkSync).toEqual([
-            { owner: 'adobe', repo: 'aem-boilerplate-commerce', branch: 'main', behindBy: 2 },
+            { owner: 'adobe', repo: 'aem-boilerplate-commerce', branch: 'main' },
         ]);
     });
 

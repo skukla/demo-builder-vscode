@@ -36,7 +36,7 @@ const justrite = createMockProject({ name: 'justrite', title: 'JustRite', path: 
 function selections(): UpdateSelections {
     return {
         forkSync: [],
-        template: [{ project: bodea, commitsBehind: 2 }],
+        template: [{ project: bodea }],
         component: [],
         adobeMcp: [],
         blockLibrary: [justrite, bodea].map((project) => ({
@@ -49,7 +49,6 @@ function selections(): UpdateSelections {
                 installedAt: '',
             },
             latestCommit: 'b',
-            commitsBehind: 1,
         })),
         blockLibraryInstall: [],
         inspector: [],

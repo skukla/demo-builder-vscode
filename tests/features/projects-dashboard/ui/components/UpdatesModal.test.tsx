@@ -53,7 +53,7 @@ const ROWS: PendingUpdateRow[] = [
         kind: 'blockLibrary',
         group: { key: '/p/justrite', title: 'JustRite' },
         label: 'Demo Builder Blocks',
-        detail: '1 commit behind',
+        detail: 'Newer version',
         ticked: true,
     },
     {
@@ -95,7 +95,7 @@ describe('UpdatesModal', () => {
         expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([true, true, false]);
         expect(boxes.map((b) => (b as HTMLInputElement).disabled)).toEqual([false, false, true]);
         expect(screen.getByText('This project uses a different Adobe organization')).toBeInTheDocument();
-        expect(screen.getByText('1 commit behind')).toBeInTheDocument();
+        expect(screen.getByText('Newer version')).toBeInTheDocument();
     });
 
     it('counts the ticked rows on Apply, and ticks one through the controls', async () => {
@@ -129,6 +129,32 @@ describe('UpdatesModal', () => {
         expect(screen.getByText('Not applied')).toBeInTheDocument();
         expect(screen.getByText('Bodea: merge conflicts')).toBeInTheDocument();
         expect(screen.getByText('Added 3 blocks to Bodea.')).toBeInTheDocument();
+    });
+
+    it('says what Apply does, under the title "Updates available"', () => {
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
+
+        expect(screen.getByRole('dialog', { name: 'Updates available' })).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                "These updates are waiting. Untick any you want to skip; Apply runs the rest and asks before anything it can't undo.",
+            ),
+        ).toHaveClass('lead-text');
+    });
+
+    // The house section label, as Export and Add another ERP use: small grey capitals that
+    // sit back from the rows under them (owner, 2026-10-20).
+    it('heads each group with the house section label', () => {
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
+
+        expect(screen.getByText('JustRite')).toHaveClass('section-label');
+        expect(screen.getByText('Demo Builder')).toHaveClass('section-label');
+    });
+
+    it('titles the report "Update results"', () => {
+        render(<UpdatesModal controls={controls({ phase: 'report', report: { applied: 1, problems: [], notes: [] } })} />);
+
+        expect(screen.getByRole('dialog', { name: 'Update results' })).toBeInTheDocument();
     });
 
     it('closes through the controls', async () => {

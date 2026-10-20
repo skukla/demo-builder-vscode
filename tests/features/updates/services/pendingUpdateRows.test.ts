@@ -53,7 +53,7 @@ describe('toPendingUpdateRows', () => {
     it('words every kind of update, under its project, everything ticked', () => {
         const sel: UpdateSelections = {
             ...empty(),
-            template: [{ project: bodea, commitsBehind: 3 }],
+            template: [{ project: bodea }],
             component: [
                 {
                     project: bodea,
@@ -70,23 +70,23 @@ describe('toPendingUpdateRows', () => {
                     currentVersion: '1.0.0',
                 },
             ],
-            blockLibrary: [{ project: bodea, library, latestCommit: 'x', commitsBehind: 1 }],
+            blockLibrary: [{ project: bodea, library, latestCommit: 'x' }],
             blockLibraryInstall: [
                 { project: bodea, library: { name: 'Bodea Blocks', source: library.source } },
             ],
-            inspector: [{ project: bodea, latestCommit: 'y', commitsBehind: 2 }],
+            inspector: [{ project: bodea, latestCommit: 'y' }],
             integration: [pair(bodea, false)],
         };
 
         const rows = toPendingUpdateRows(sel, undefined, undefined);
 
         expect(rows.map((r) => [r.group.title, r.label, r.detail, r.ticked])).toEqual([
-            ['Bodea', 'EDS template', '3 commits behind', true],
+            ['Bodea', 'EDS template', 'Newer version', true],
             ['Bodea', 'eds-storefront', '6.0.0 → 6.1.0', true],
             ['Bodea', 'Adobe MCP', '1.0.0 → 1.1.0', true],
-            ['Bodea', 'Demo Builder Blocks', '1 commit behind', true],
+            ['Bodea', 'Demo Builder Blocks', 'Newer version', true],
             ['Bodea', 'Bodea Blocks', 'install', true],
-            ['Bodea', 'Demo Inspector SDK', '2 commits behind', true],
+            ['Bodea', 'Demo Inspector SDK', 'Newer version', true],
             ['Bodea', 'ERP Integration and Justrite ERP', 'update available', true],
         ]);
     });
@@ -116,7 +116,6 @@ describe('toPendingUpdateRows', () => {
                     owner: 'skukla',
                     repo: 'citisignal',
                     branch: 'main',
-                    behindBy: 4,
                     parentFullName: 'adobe/citisignal',
                 },
             ],
@@ -124,7 +123,6 @@ describe('toPendingUpdateRows', () => {
                 project,
                 library,
                 latestCommit: 'x',
-                commitsBehind: 1,
             })),
         };
 
@@ -147,7 +145,7 @@ describe('toPendingUpdateRows', () => {
         ]);
         expect([rows[4].label, rows[4].detail]).toEqual([
             'skukla/citisignal',
-            '4 commits behind adobe/citisignal',
+            'Newer version from adobe/citisignal',
         ]);
     });
 

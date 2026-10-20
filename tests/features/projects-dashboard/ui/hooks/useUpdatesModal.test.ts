@@ -23,7 +23,7 @@ const row = (id: string, overrides: Partial<PendingUpdateRow> = {}): PendingUpda
     kind: 'blockLibrary',
     group: { key: '/p/justrite', title: 'JustRite' },
     label: 'Demo Builder Blocks',
-    detail: '1 commit behind',
+    detail: 'Newer version',
     ticked: true,
     ...overrides,
 });

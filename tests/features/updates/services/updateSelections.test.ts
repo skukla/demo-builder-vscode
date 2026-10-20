@@ -104,7 +104,6 @@ describe('computeProjectUpdateSelections', () => {
                     owner: 'adobe',
                     repo: 'aem-boilerplate-commerce',
                     branch: 'develop',
-                    behindBy: 3,
                 },
             ]);
         });
@@ -166,7 +165,7 @@ describe('computeProjectUpdateSelections', () => {
             );
 
             expect(mockCheckTemplateUpdates).toHaveBeenCalledWith(project);
-            expect(sel.template).toEqual([{ project, commitsBehind: 2 }]);
+            expect(sel.template).toEqual([{ project }]);
         });
 
         it('selects nothing when it reports none', async () => {
@@ -309,9 +308,9 @@ describe('computeProjectUpdateSelections', () => {
             expect(mockCheckBlockLibraries).toHaveBeenCalledWith(project);
             expect(mockCheckInspectorSdk).toHaveBeenCalledWith(project);
             expect(sel.blockLibrary).toEqual([
-                { project, library: lib, latestCommit: 'bbb', commitsBehind: 1 },
+                { project, library: lib, latestCommit: 'bbb' },
             ]);
-            expect(sel.inspector).toEqual([{ project, latestCommit: 'sdk-new', commitsBehind: 2 }]);
+            expect(sel.inspector).toEqual([{ project, latestCommit: 'sdk-new' }]);
         });
 
         it('selects no inspector update when the SDK is current', async () => {

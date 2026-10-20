@@ -27,19 +27,18 @@ import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
- * Minimal, UI-free selection fields each apply core needs, plus a few optional numbers a
- * person reads before applying (commits behind, the version now). The apply cores ignore
- * those; the Updates modal (PL-80) shows them.
+ * Minimal, UI-free selection fields each apply core needs, plus two a person reads before
+ * applying: the version now (`currentVersion`) and a fork's upstream (`parentFullName`).
+ * The apply cores ignore those; the Updates modal (PL-80) shows them.
  */
 export interface UpdateSelections {
     forkSync: Array<{
         owner: string;
         repo: string;
         branch: string;
-        behindBy?: number;
         parentFullName?: string;
     }>;
-    template: Array<{ project: Project; commitsBehind?: number }>;
+    template: Array<{ project: Project }>;
     component: Array<{
         project: Project;
         componentId: string;
@@ -57,11 +56,10 @@ export interface UpdateSelections {
         project: Project;
         library: InstalledBlockLibrary;
         latestCommit: string;
-        commitsBehind?: number;
     }>;
     /** Selected but not yet in the storefront (EDS-28) — an install, not an update. */
     blockLibraryInstall: BlockLibraryInstallTarget[];
-    inspector: Array<{ project: Project; latestCommit: string; commitsBehind?: number }>;
+    inspector: Array<{ project: Project; latestCommit: string }>;
     /** Deployed integration pairs (an integration and its ERPs) with newer code (AB-73). */
     integration: IntegrationPairUpdate[];
 }
@@ -151,7 +149,6 @@ async function checkForkSyncs(
                     owner: source.owner,
                     repo: source.repo,
                     branch: status.defaultBranch || 'main',
-                    behindBy: status.behindBy,
                     parentFullName: status.parentFullName,
                 });
             }
@@ -171,7 +168,7 @@ async function checkTemplates(
     for (const project of projects) {
         try {
             const t = await checker?.checkForUpdates(project);
-            if (t?.hasUpdates) found.push({ project, commitsBehind: t.commitsBehind });
+            if (t?.hasUpdates) found.push({ project });
         } catch (error) {
             warnFailed(logger, 'Template', error);
         }
@@ -250,16 +247,11 @@ async function checkAddons(
                 project,
                 library: u.library,
                 latestCommit: u.latestCommit,
-                commitsBehind: u.commitsBehind,
             }));
             const insp = await checker.checkInspectorSdk(project);
             found.blockLibrary.push(...libraries);
             if (insp?.hasUpdate) {
-                found.inspector.push({
-                    project,
-                    latestCommit: insp.latestCommit,
-                    commitsBehind: insp.commitsBehind,
-                });
+                found.inspector.push({ project, latestCommit: insp.latestCommit });
             }
         } catch (error) {
             warnFailed(logger, 'Add-on', error);
