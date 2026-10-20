@@ -12,6 +12,12 @@ added for what had no row: Edit applying only what changed, block library remova
 integrations to another Adobe project, the Node 24 move, AI files on existing projects, and
 more. Rows that a later change made wrong are fixed or marked in Part 2.
 
+**Widened 2026-10-20.** 24 built items had no row. 20 rows were added: 1.13, 2.14, 2.15,
+3.22 to 3.29 and 6.12 to 6.16, plus four in Part 2's "Nothing to click" table for the
+tooling and the refactor. Two were checked the same day by the agent (row 3.27 and the
+patches release). None is starred. Row 2.15 replaces row 2.4's add: a second project on
+the same Commerce can no longer add the ERP integration.
+
 **101 checks in Part 1. About 3½ hours for all of them**, plus waiting (adding an ERP takes
 about 10 minutes, a fill about 3). **The 26 ★ rows alone take about 2 hours** and cover what
 is most likely to be broken. **Part 2 holds 65 more rows** (several need a second Commerce and cannot run now) carried from the 2026-10-04 plan,
@@ -53,6 +59,9 @@ screens 7 (3), agent tools 11 (0), cleanup 8 (2).
 5. **One project at a time.** A screen acts on the project that is current, not the project
    named in its title. If an agent or another window opens a different project, close and
    reopen the screen before you press anything on it. This is a known open problem [AI-15].
+   *Since 2026-10-19 (AI-15 built) a screen keeps acting on the project it shows, and an
+   agent's write stops if the open project changed under it (AI-76, row 6.16). Keep the
+   habit until row 6.16 passes.*
 6. **The button names.** An ERP card's menu says **Fill from Commerce**; the integration's says
    **Fill ERPs from Commerce**. Some messages still call this "Load demo data". They are the
    same thing.
@@ -76,10 +85,16 @@ Section 2's wizard rows make the scratch project the rest depends on, so start t
 **You, if there is time (about 45 minutes).** 1.2, 1.6, 2.1, 2.2, 2.3, 2.6, 2.9, 3.1, 3.4, 3.9,
 3.11, 3.19, 4.1, 4.7, 4.8, 4.13, 4.15, 4.17, 4.22, 4.23, 4.26, 5.4, 5.5, 5.6, 6.11, 7.7.
 
+**You, added 2026-10-20 (about 30 minutes).** 2.14, 2.15, 3.23, 3.24, 3.25, 3.26, 3.28, 3.29,
+6.12, 6.16. Rows 1.13 and 3.22 only when their condition holds (an update offered, an
+expired session).
+
 **Me, while you walk.** Agent-tool rows and checks I can read myself (GitHub, DA.live,
 aem.live, Commerce, the ERPs, Developer Console): 1.7, 1.8, 1.11, 2.7, 2.8, 2.10, 2.11, 3.3,
 3.6, 4.18, 4.20, 4.25, 5.1, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 7.2, 7.3, 7.5, 7.6,
-7.8. I also read back the result of your rows where a file or a page shows it (3.4, 3.7,
+7.8. Added 2026-10-20: 3.27 (done), 6.13, 6.14, 6.15. Row 6.15 needs one ask in your chat:
+my tool opens a new agent connection for every call, so a project it picks does not carry
+to the next call. I also read back the result of your rows where a file or a page shows it (3.4, 3.7,
 3.19, 7.4). The ones that change live data (3.3, 3.6, 4.25, 6.1, 6.2, 6.5, 6.7, 6.8, 7.6) each
 say how they are undone, and I run them only after your one go for the list. Row 6.1 needs
 you for a moment: it stops until you install the GitHub app.
@@ -105,6 +120,7 @@ you for a moment: it stops until you install the GitHub app.
 | 1.9 | *Only if you have a project in another Adobe org with an integration update waiting.* Run Check for Updates. | Its row is not ticked and says to open that project and update it from its Integrations screen [AB-73] | `[no cloud]` |  |
 | 1.11 | Add a line of your own to the AGENTS.md of a project made before this build (not bju). Run **Regenerate AI Files** on it. Open its sync-changes skill. | Your line is still there, and the result says AGENTS.md was skipped because you changed it. The skill says `promote_block_to_library` adds a block to this site's own DA.live block library, not "push back to source library" [AI-8, PL-58] | `[no cloud]` | pass 2026-10-14 (agent, on Justrite): result `skippedFiles: ["AGENTS.md"]`, the added line survived; sync-changes says "adds it to this site's own DA.live block library". Line removed afterwards |
 | 1.12 | Open Create Project and read the prerequisites Node row. Then start the demo on a headless project made before 2026-10-07. | The Node row is one line, Demo Builder's own Node. The demo starts and serves pages. If "Updating to Node 24" appears, it shows only "Preparing Node" and "Reinstalling packages (1 of N)", never fnm's own output. *This machine has probably already moved, since the dev build has been running this code* [PR-1a] | `[no cloud]` |  |
+| 1.13 | *Only if Check for Updates offers a storefront code update for an Edge Delivery project.* Apply it. If it reports a conflict, press **Reset to template**. **Changes live data** (a commit to that storefront's repository). | The update brings the storefront to the version the patches repo tested, not Adobe's newest commit; I read the recorded version against `npm run patches:released`. Demo Builder's fixes are still on it afterwards: a missing page shows the site's 404, and Quick Edit opens. A Reset to template puts them back too. If an agent applies it, it asks before a reset that rewrites the repository [EDS-51] | `[scratch project]` |  |
 
 ## 2. Creating a project (the wizard)
 
@@ -131,6 +147,8 @@ the plan did not say so). Rows 2.7 and 2.10 need products to check.
 | 2.11 | *Only if you made a new Adobe project in 2.1.* After creation, open it in Developer Console. | It has one workspace, Production. No Stage workspace was made [AB-24] | `[scratch project]` |  |
 | 2.12 | In the wizard's Adobe project picker, rename the scratch Adobe project's title, then rename it back. Try one title Adobe refuses. | The title changes in the picker and in Developer Console; the project's name and id do not. The refused title shows a plain message under the field [AB-23] | `[scratch project]` |  |
 | 2.13 | *Optional, a second scratch project.* Create a storefront from an added demo (for example `sayurihanki/aistore`). **Changes live data** (a repository and a site; delete them the same way as row 7.4). | On the new site, cart, checkout, search and wishlist open. `/metadata.json` and `/placeholders/cart.json` answer, and so do the two `/enrichment/` pages. If the demo is B2B, `config.json` has `commerce-b2b-enabled`. The finish names any page the source has that the copy lacks, or names none. *Proven on bodea by reset on 2026-10-12, not yet by a fresh create* [EDS-40, EDS-13] | `[scratch project]` |  |
+| 2.14 | In the store step, pick **Main Website** and its store view first. Then pick the Justrite website, store and store view. | With Main Website, a warning says shoppers who are not signed in will see no products. It is a warning, not a block: Continue still works. With the Justrite website it goes away [EDS-46] | `[scratch project]` |  |
+| 2.15 | In the Integrations area, open **Add Integration**. | The ERP Integration tile is greyed out, saying JustRite already has one on this Commerce instance. *Since 2026-10-15 this replaces row 2.4's add and remove: a second project on the same Commerce cannot add it* [AB-78] | `[scratch project]` |  |
 
 ## 3. The project dashboard and storefront
 
@@ -159,6 +177,14 @@ All on the scratch project. Deleting it is row 7.4, once nothing else needs it.
 | 3.19 | On GitHub, hand-edit one block from the library row 3.4 added. On Configure, Block Libraries, untick that library, save, press **Republish**. **Changes live data** (one commit to the scratch repository). | The prompt says "Block libraries: remove …". The library's blocks leave the repository and the DA.live block picker. The block you edited stays and is named [EDS-39] | `[scratch project]` | Pass, 2026-10-16, on Demo Team Block Collection (re-run after the fixes). The modal ends on "Removed Demo Team Block Collection (9 blocks)." Hand-edited-block read-back not done. |
 | 3.20 | *Only if the scratch project has the API Mesh.* On its Integrations screen press Deploy on the mesh card. **Changes live data** (redeploys the scratch mesh). | Progress stays in the modal and ends green. The storefront is republished; if your DA.live session has expired it asks you to sign in first. A product page still loads afterwards [EDS-8] | `[scratch project]` |  |
 | 3.21 | *Headless project that has an integration in its folder.* Press Reset and read the question. Cancel there unless it is a project you can lose. | The question says integrations are left as they are. If you run it, the integration's folder and card are unchanged; only the mesh is fetched again [AB-23] | `[no cloud]` |  |
+| 3.22 | *Only when your DA.live session has really expired, as for row 3.8.* Ask the agent "am I signed in to DA.live?" Then press **Republish** on the dashboard. | The agent says the DA.live sign-in has expired, not that you are signed in. Republish asks you to sign in to DA.live before it publishes anything. It never says "No publishable pages found", and Debug Logs show no "Failed to grant access … 401" with the run carrying on after it [EDS-30, EDS-29, EDS-54] | `[scratch project]` |  |
+| 3.23 | After row 3.2's store change and its Republish, open a category page and a product page on the live site. | Both show the new store's catalog. The product page opens, not "Page not found". No offer to add pages for the new store's categories follows [EDS-44] | `[scratch project]` |  |
+| 3.24 | Ask the agent to switch the scratch project to another website's store, and decline the republish it asks for. Reload the window. Then press **Republish**. **Changes live data** (the new store's pages; switch back the same way). | While the republish is pending, no "new categories have no page yet" offer appears, after the reload too. After the republish the new store's pages are in place [EDS-52] | `[scratch project]` |  |
+| 3.25 | *Only on a project with the API Mesh.* On Configure, change a setting the mesh reads (for example the store view code), save, answer **Later**. Change it back and save again. | After the first save the dashboard says the mesh needs a redeploy. After the second it does not [AB-79] | `[no cloud]` |  |
+| 3.26 | On a B2B storefront (its `config.json` has `commerce-b2b-enabled: true`; the scratch storefront does), open an address that does not exist, for example `/no-such-page`. | The site's 404 page, with header and footer. Not a blank page [EDS-45] | `[scratch project]` |  |
+| 3.27 | Read the served page settings of `/customer/account`, `/cart` and `/checkout` on the scratch storefront. | Account has template "My Account, Columns". Cart and checkout have robots "noindex, nofollow". Checkout has cache-control "no-store". The same as Adobe's own pages [EDS-50] | `[scratch project]` | pass 2026-10-20 (agent): all three read from aem.live as expected; CitiSignal's own account page has the same template |
+| 3.28 | At the next Reset of a project on CitiSignal's content (row 3.7 or row 6.5), read the result's warnings. | No sheet fails to publish; `/placeholders/checkout.json` is not named. The checkout shows text, not keys like `Checkout.LoginForm.title` [EDS-53] | `[scratch project]` |  |
+| 3.29 | The next time you add the blank starter app into a new workspace (row 3.16, or before row 4.28), watch the progress. Then press **Redeploy** on its card. | The add has no "Looking for old code to remove" step. The Redeploy still has it [AB-80] | `[scratch project]` |  |
 
 ## 4. Integrations and ERPs
 
@@ -236,6 +262,11 @@ Only the ones where a real window is the point. Ask in a project's chat.
 | 6.9 | Open Justrite's AGENTS.md. Then ask: "List the Adobe APIs on the ERP integration's own workspace." | AGENTS.md has an "Integration workspaces" list naming each ERP's workspace. The answer is that workspace's APIs, not the whole project's [AB-23] | `[needs Justrite]` | pass 2026-10-14 (agent), with a note: the API list is the integration workspace's. Justrite's AGENTS.md lacks the Justrite ERP line because the file was hand-edited after 2026-10-02 and is protected from overwrite, by design |
 | 6.10 | During row 1.4, while signed out of Adobe, ask the agent to list Justrite's Runtime packages. Cancel the sign-in. | A VS Code modal asks for the Adobe sign-in, not a corner notification. After you cancel, the agent says it is waiting on you, not "done" [AI-12] | `[needs Justrite]` |  |
 | 6.11 | Run **Register Global MCP**. Open `~/.claude.json` and `~/.copilot/mcp-config.json`. | Both files list demo-builder [AI-12] | `[no cloud]` |  |
+| 6.12 | Keep **Your Projects** open during row 6.1. Try to open, rename or delete the new tile while the agent works. | The tile appears soon after the agent starts and says it is being created. It cannot be opened, renamed or deleted. When the agent finishes, it turns into the finished project without reopening the screen [PL-82] | `[scratch project]` |  |
+| 6.13 | Just before row 7.4, while the scratch project still exists: "Create a project called my-commerce-demo." *A throwaway name on purpose: before this fix, a taken name deleted the existing project.* | It refuses before anything is built and says the name is taken. The scratch project's folder is untouched [AI-73] | `[no cloud]` |  |
+| 6.14 | *Only with `demoBuilder.cleanupBehavior` set to `deleteAll`.* Instead of row 6.2's wording, ask only "Delete agent-scratch." | Its question names the repository and the DA.live site as well, and both are deleted, as the Delete button does with the same setting [AI-71] | `[scratch project]` |  |
+| 6.15 | Open patch-canary-b2b (it has no Adobe workspace). Ask: "Read this store's store views through the Commerce REST API." | It answers with the store views, using your own Adobe sign-in. It does not refuse for lack of an Adobe workspace. *A write was proven the same way on 2026-10-17* [AI-72] | `[no cloud]` |  |
+| 6.16 | With Justrite open, ask "what's the current project?" Then open another project from Your Projects. Ask the agent to rename the ERP Integration to "Test". Then ask it to go back to Justrite, and do not let it rename. | The rename does not run: the answer says the open project changed from JustRite to the other one, and nothing is renamed. Going back works, and your screens stay on the project you opened [AI-76, AI-15] | `[needs Justrite]` |  |
 
 ## 7. Cleanup of what the test left behind
 
@@ -456,6 +487,10 @@ means 2026-10-04.
 | | The wizard's two config warnings reach Debug Logs | Only a hand-edited project file triggers them; `wizardHelpers` tests pin the sink [PL-65] | gate |
 | | Moving projects feature page | `docs/systems/moving-projects.md`, pinned by `cited-identifiers.test.ts` [PL-56g] | gate |
 | | ERP research the programme was built on | The findings are the deliverable; AB-26 used them [AB-26a, AB-26x] | gate |
+| | A mutation widen refuses a module with too many importers, or mixed test environments | `scripts/focusModule.selftest.mjs`, run by `tests/scripts/focusModule.test.ts` [PL-71] | gate |
+| | The hooks: the jest-concurrent proof cannot collide with a real pid; a shell edit after `cd` is checked in the folder it writes | `tests/hooks/rule-proofs.test.ts` runs `15-jest-concurrent.proof.sh` and `writtenPaths.probe.py` [PL-74, PL-83] | gate |
+| | Storefront warnings travel one route; an empty block palette is said on the completion screen | The storefront setup, reset and `edsPipeline` suites. DA.live's documentation says the palette reads blocks only through the site config's library tab, so a failed registration cannot be made on a live site without breaking it [EDS-55, EDS-38] | gate |
+| | The patches release keeps up with the drift gate | `npm run patches:released` on 2026-10-20: "main is released as v1.1.1"; the watchdog runs daily [EDS-48] | gate |
 | | The real-VS-Code UI tests | Run `npm run test:ui` and say whether it passes [PL-66] |  |
 
 **Known gaps as of 2026-10-04: do not report these as bugs** (not re-checked since)
