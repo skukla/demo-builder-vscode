@@ -29,7 +29,9 @@ import * as path from 'path';
 // took its two registry casts with it.
 // 2026-09-05: 29 → 28. Deleting the dead `getAddonSource` in demoPackageLoader
 // took its `stacksConfig as unknown as StacksConfig` cast with it.
-const BASELINE = 25;
+// 2026-10-20: 25 → 24. Deleting the old auto-updater (PL-80) took its
+// `error as unknown as Error` with it.
+const BASELINE = 24;
 
 const ROOT = path.join(__dirname, '../..');
 

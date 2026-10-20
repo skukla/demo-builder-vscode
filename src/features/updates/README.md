@@ -19,8 +19,9 @@ last, because it ends by offering a reload.
 The background check (the sidebar opening, then every four hours) runs the same check
 quietly and only notifies, "N Demo Builder updates available", with Review opening the
 modal. Nothing opens by itself. Until 2026-10-20 the command opened VS Code's picker, the
-picker had its own copy of the check and the apply, and `src/utils/autoUpdater.ts` showed
-its own "Update Now" every four hours; all three are gone.
+picker had its own copy of the check and the apply, and a second updater (the old
+auto-updater in the legacy utils folder) showed its own "Update Now" every four hours;
+all three are gone.
 
 A projects list that is not open yet cannot be pushed to, so the request is held
 (`handlers/updatesModalRequest.ts`) until the new screen asks for it once mounted.
