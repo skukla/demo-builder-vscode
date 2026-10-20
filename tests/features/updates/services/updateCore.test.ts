@@ -6,7 +6,6 @@
  * library never raises a dialog; the resolved path asks it before writing.
  */
 
-import { makeUpdateContext } from '../commands/updateExecutor.testUtils';
 import {
     applyBlockLibraryUpdateResolved,
     findInstalledLibrary,
@@ -15,6 +14,27 @@ import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import type { UpdateContext } from '@/features/updates/services/updateCore';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+
+// Carried from the picker's deleted updateExecutor.testUtils (PL-80), which this suite
+// imported for its context builder and which registered this installer stub on import.
+jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
+    installBlockCollections: jest.fn(),
+}));
+
+/** A context production could produce: every member from its canonical builder. */
+function makeUpdateContext(): UpdateContext {
+    return {
+        secrets: createMockSecretStorage().secrets,
+        extensionPath: '/ext',
+        commandManager: createMockCommandExecutor(),
+        stateManager: createMockStateManager(),
+        logger: createMockLogger(),
+    };
+}
 
 function makeLibrary(name: string): InstalledBlockLibrary {
     return {

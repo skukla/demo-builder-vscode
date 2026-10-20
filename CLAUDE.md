@@ -123,8 +123,7 @@ demo-builder-vscode/
 │   │   # ai, app-builder, authentication, components, dashboard, eds, lifecycle,
 │   │   # mesh, prerequisites, project-creation, projects-dashboard, sidebar, updates
 │   ├── mcp-server.ts      # MCP server exposed to Claude (→ docs/systems/mcp-server.md)
-│   ├── types/             # TypeScript definitions
-│   └── utils/             # Legacy location; only autoUpdater.ts remains
+│   └── types/             # TypeScript definitions
 ├── docs/                  # Documentation (→ docs/README.md index; ADRs in docs/architecture/adr/)
 ├── tests/                 # Jest suites mirroring src/ (→ tests/README.md)
 ├── dist/                  # Compiled output (never edit)

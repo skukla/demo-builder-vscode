@@ -14,7 +14,7 @@ import {
     applyBlockLibraryUpdateResolved,
     updateCommitShaWithRollback,
 } from '@/features/updates/services/updateCore';
-import { shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
+import { shouldSkipBlockLibrary } from '@/features/updates/services/updateSources';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -64,7 +64,7 @@ jest.mock('@/features/updates/services/updateCore', () => ({
     applyBlockLibraryUpdateResolved: jest.fn(),
     updateCommitShaWithRollback: jest.fn(),
 }));
-jest.mock('@/features/updates/commands/updateTypes', () => ({
+jest.mock('@/features/updates/services/updateSources', () => ({
     shouldSkipBlockLibrary: jest.fn(() => false),
 }));
 

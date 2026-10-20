@@ -1,8 +1,8 @@
 /**
  * useUpdatesModal — the Updates modal's state on the projects list (PL-80).
  *
- * Opens on the extension's `showUpdates` push (Check for Updates, or a background check's
- * Review), asks for the rows, and holds which stay ticked. Apply closes it and hands the
+ * Opens when Check for Updates (or a background check's Review) sends it here, asks for the
+ * rows, and holds which stay ticked. Apply closes it and hands the
  * run to the screen's progress modal; when the run ends with something the SC should
  * read (an update that did not apply, a note), the list comes back with the report once
  * the progress modal has been closed. One modal on screen at a time.
@@ -19,6 +19,7 @@ import type {
     ApplyUpdatesResponse,
     CheckUpdatesResponse,
     PendingUpdateRow,
+    TakeUpdatesRequestResponse,
 } from '@/types/pendingUpdates';
 
 /** What the modal shows. */
@@ -80,7 +81,17 @@ export function useUpdatesModal(
         );
     }, []);
 
+    // Opened for it: a panel already open is pushed `showUpdates`; one just created
+    // asks, since a push would have arrived before this listener (updatesModalRequest).
     useEffect(() => webviewClient.onMessage('showUpdates', check), [check]);
+    useEffect(() => {
+        webviewClient.request<TakeUpdatesRequestResponse>('takeUpdatesRequest').then(
+            (response) => {
+                if (response.data.show) check();
+            },
+            () => undefined,
+        );
+    }, [check]);
 
     const toggle = useCallback((id: string) => {
         setTicked((previous) => {

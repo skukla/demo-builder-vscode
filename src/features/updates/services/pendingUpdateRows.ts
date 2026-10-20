@@ -17,7 +17,7 @@
 import { OTHER_ORG_NOTE } from './integrationUpdates';
 import type { UpdateSelections } from './updateSelections';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import { formatBehindLabel } from '@/features/updates/commands/updateTypes';
+import { formatBehindLabel } from '@/features/updates/services/updateSources';
 import type { Project } from '@/types/base';
 import type {
     PendingUpdateGroup,

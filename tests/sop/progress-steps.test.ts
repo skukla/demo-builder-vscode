@@ -230,9 +230,11 @@ const scan = (find: (file: string, source: string) => Site[]): Site[] =>
 describe('SOP: progress steps come from the stage table', () => {
     it('CONTROL: reads a real tree, and finds the reporters it is meant to', () => {
         expect(SOURCES.length).toBeGreaterThan(500);
-        const checkUpdates = SOURCES.find((s) => s.file === 'src/features/updates/commands/checkUpdates.ts');
-        expect(checkUpdates).toBeDefined();
-        const names = reporterNames(parse(checkUpdates!.file, checkUpdates!.source));
+        // A file known to name both kinds of reporter. Until 2026-10-20 this was the update
+        // command; PL-80 moved its checking into a screen and it reports nothing itself.
+        const known = SOURCES.find((s) => s.file === 'src/features/updates/services/extensionUpdater.ts');
+        expect(known).toBeDefined();
+        const names = reporterNames(parse(known!.file, known!.source));
         expect([...names]).toEqual(expect.arrayContaining(['narrate', 'step']));
     });
 
@@ -268,10 +270,11 @@ describe('SOP: progress steps come from the stage table', () => {
     });
 
     // The census: how many step reports the scan reads across src/ (102 on
-    // 2026-10-16). Every one of them is checked below; if the scan stops finding them,
-    // the zero below proves nothing.
+    // 2026-10-16; 90 on 2026-10-20, when PL-80 deleted the update picker's dozen).
+    // Every one of them is checked below; if the scan stops finding them, the zero
+    // below proves nothing.
     it('CONTROL: finds the real corpus of step reports', () => {
-        expect(scan(stepCalls).length).toBeGreaterThan(90);
+        expect(scan(stepCalls).length).toBeGreaterThan(80);
     });
 
     it('every step reported in src/ is a reference, never written text', () => {

@@ -82,3 +82,9 @@ export interface ApplyUpdatesResponse {
     warning?: string;
     data?: ApplyUpdatesReport;
 }
+
+/** `takeUpdatesRequest` — whether the screen was opened to show the Updates modal. */
+export interface TakeUpdatesRequestResponse {
+    success: true;
+    data: { show: boolean };
+}

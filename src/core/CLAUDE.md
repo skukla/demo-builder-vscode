@@ -105,8 +105,8 @@ has behaviour a reader would otherwise have to infer — the ones above earned t
 
 ## History
 
-`core/` absorbed the former `src/utils/` and `src/shared/`. Both are gone;
-`src/utils/` retains only `autoUpdater.ts` and takes no new code.
+`core/` absorbed the former `src/utils/` and `src/shared/`. Both are gone: the last
+file, `autoUpdater.ts`, was deleted on 2026-10-20 (PL-80), with its `@/utils` alias.
 
 ## Related
 

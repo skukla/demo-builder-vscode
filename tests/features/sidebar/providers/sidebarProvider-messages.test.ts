@@ -61,7 +61,6 @@ describe('SidebarProvider messages', () => {
             ['stopDemo', 'demoBuilder.stopDemo', undefined],
             ['openDashboard', 'demoBuilder.showProjectDashboard', undefined],
             ['openConfigure', 'demoBuilder.configure', undefined],
-            ['checkUpdates', 'demoBuilder.checkUpdates', undefined],
         ])('runs %s as %s', async (type, command, argument) => {
             await view.deliver!({ type });
 
@@ -152,7 +151,6 @@ describe('SidebarProvider messages', () => {
             'stopDemo',
             'openDashboard',
             'openConfigure',
-            'checkUpdates',
         ])('reports a failed %s instead of rejecting', async (type) => {
             await expect(view.deliver!({ type })).resolves.toBeUndefined();
 

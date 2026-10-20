@@ -27,7 +27,6 @@ import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { describeUpdateLeftOut } from '@/features/eds/services/addedEntriesRecord';
-import { shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import {
     applyBlockLibraryInstall,
@@ -53,6 +52,7 @@ import {
     type UpdateContext,
 } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
+import { shouldSkipBlockLibrary } from '@/features/updates/services/updateSources';
 import type { Project } from '@/types/base';
 
 export type { TemplateConflictPolicy, UpdateQuestions } from '@/features/updates/services/updateApplyTemplate';

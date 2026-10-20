@@ -148,11 +148,6 @@ function SidebarApp(): React.ReactElement {
         sendMessage('openConfigure');
     }, []);
 
-    // Handle check updates
-    const handleCheckUpdates = useCallback(() => {
-        sendMessage('checkUpdates');
-    }, []);
-
     // Apply VSCode dark theme class to body (unified theme system ignores user preferences)
     useEffect(() => {
         document.body.classList.add('vscode-dark');
@@ -190,7 +185,6 @@ function SidebarApp(): React.ReactElement {
                 onStopDemo={handleStopDemo}
                 onOpenDashboard={handleOpenDashboard}
                 onOpenConfigure={handleOpenConfigure}
-                onCheckUpdates={handleCheckUpdates}
             />
         </Provider>
     );

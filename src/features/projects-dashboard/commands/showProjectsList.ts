@@ -19,6 +19,7 @@ import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import { loadProjectsForList } from '@/features/projects-dashboard/services/loadProjectsForList';
+import { requestUpdatesModal } from '@/features/updates/handlers/updatesModalRequest';
 import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -152,7 +153,13 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
     // Lifecycle Hooks
     // ============================================================================
 
-    public async execute(): Promise<void> {
+    /**
+     * Open (or reveal) the projects list.
+     *
+     * @param options - `showUpdates` opens the Updates modal on it (PL-80): pushed to a
+     *   panel already open, held for one just created until its screen asks
+     */
+    public async execute(options?: { showUpdates?: boolean }): Promise<void> {
         // Set context to show webview sidebar instead of tree view
         await vscode.commands.executeCommand('setContext', 'demoBuilder.showingProjectsList', true);
 
@@ -164,6 +171,7 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
 
         // Track if this is an existing panel being revealed vs new panel creation
         const isExistingPanel = this.communicationManager !== undefined;
+        if (options?.showUpdates && !isExistingPanel) requestUpdatesModal();
 
         // Create or reveal panel and initialize communication
         await this.createOrRevealPanel();
@@ -177,6 +185,7 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
         if (isExistingPanel) {
             await this.refreshProjectsList();
             await this.refreshConfig();
+            if (options?.showUpdates) await this.sendMessage('showUpdates', {});
         }
     }
 

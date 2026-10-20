@@ -49,8 +49,6 @@ export interface SidebarProps {
     onOpenDashboard?: () => void;
     /** Callback to open configure */
     onOpenConfigure?: () => void;
-    /** Callback to check for updates */
-    onCheckUpdates?: () => void;
 }
 
 /**
@@ -72,7 +70,6 @@ export function Sidebar({
     onStopDemo: _onStopDemo,
     onOpenDashboard: _onOpenDashboard,
     onOpenConfigure: _onOpenConfigure,
-    onCheckUpdates: _onCheckUpdates,
 }: SidebarProps) {
     const showAiZone = onOpenAiChat && onShowPrompts;
     return (

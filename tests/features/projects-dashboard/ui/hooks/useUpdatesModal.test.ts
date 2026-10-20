@@ -1,6 +1,6 @@
 /**
- * useUpdatesModal — the Updates modal's state (PL-80): it checks on the extension's
- * `showUpdates` push, holds the ticks, hands the run to the progress modal on Apply, and
+ * useUpdatesModal — the Updates modal's state (PL-80): it checks when the screen was opened
+ * for it (asked once mounted) or on the extension's `showUpdates` push, holds the ticks, hands the run to the progress modal on Apply, and
  * shows the report only once the progress modal has been closed.
  */
 
@@ -10,7 +10,12 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
 import { useUpdatesModal } from '@/features/projects-dashboard/ui/hooks/useUpdatesModal';
 import type { ScreenOperation } from '@/core/ui/hooks/useOperationRunner';
-import type { ApplyUpdatesResponse, CheckUpdatesResponse, PendingUpdateRow } from '@/types/pendingUpdates';
+import type {
+    ApplyUpdatesResponse,
+    CheckUpdatesResponse,
+    PendingUpdateRow,
+    TakeUpdatesRequestResponse,
+} from '@/types/pendingUpdates';
 
 const row = (id: string, overrides: Partial<PendingUpdateRow> = {}): PendingUpdateRow => ({
     id,
@@ -24,8 +29,16 @@ const row = (id: string, overrides: Partial<PendingUpdateRow> = {}): PendingUpda
 
 const ROWS = [row('blockLibrary:0'), row('template:0'), row('integration:0', { ticked: false, lockedReason: 'other org' })];
 
-function answers(check: CheckUpdatesResponse, apply?: ApplyUpdatesResponse): void {
-    mockRequest.mockImplementation(async (type: string) => (type === 'checkUpdates' ? check : apply));
+const NOT_OPENED_FOR_IT: TakeUpdatesRequestResponse = { success: true, data: { show: false } };
+
+/** What each request answers; the screen asks `takeUpdatesRequest` once, on mount. */
+function answers(
+    check: CheckUpdatesResponse,
+    apply?: ApplyUpdatesResponse,
+    take: TakeUpdatesRequestResponse = NOT_OPENED_FOR_IT,
+): void {
+    const byType: Record<string, unknown> = { checkUpdates: check, applyUpdates: apply, takeUpdatesRequest: take };
+    mockRequest.mockImplementation(async (type: string) => byType[type]);
 }
 
 function setup(open: ScreenOperation | null = null) {
@@ -50,9 +63,21 @@ beforeEach(() => {
 });
 
 describe('useUpdatesModal', () => {
+    // A panel just created cannot be pushed to; it asks once it has mounted.
+    it('checks at once when the screen was opened for it', async () => {
+        answers({ success: true, data: { rows: ROWS } }, undefined, { success: true, data: { show: true } });
+
+        const { result } = setup();
+
+        expect(mockRequest).toHaveBeenCalledWith('takeUpdatesRequest');
+        await waitFor(() => expect(result.current.view).toEqual({ phase: 'list', rows: ROWS }));
+    });
+
     it('starts closed, and checks when the extension asks to show it', async () => {
         const { result } = setup();
         expect(result.current.view).toEqual({ phase: 'closed' });
+
+        expect(mockRequest).not.toHaveBeenCalledWith('checkUpdates');
 
         await pushShowUpdates();
 

@@ -115,7 +115,6 @@ import type { Project } from '@/types/base';
 import type { AgentWorkingProject } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
-import { AutoUpdater } from '@/utils/autoUpdater';
 
 /**
  * Whether this window should re-home to the projects root on activation.
@@ -133,7 +132,6 @@ export function shouldReHomeToRoot(ws: string | undefined, projectsRoot: string)
 
 let logger: Logger;
 let stateManager: StateManager;
-let autoUpdater: AutoUpdater;
 let externalCommandManager: CommandExecutor;
 let authenticationService: AuthenticationService;
 let daLiveAuthService: DaLiveAuthService;
@@ -529,9 +527,14 @@ export async function activate(context: vscode.ExtensionContext) {
             }),
         );
 
-        // Initialize auto-updater (but don't check yet - wait for sidebar activation)
-        // Update checks are triggered when the user clicks the sidebar icon
-        autoUpdater = new AutoUpdater(context, logger);
+        // While VS Code stays open, check for updates every four hours, quietly: the check
+        // notifies only when something is waiting (PL-80). The first check runs when the
+        // sidebar opens. Until PL-80 a second updater did this with its own popup.
+        const updateTimer = setInterval(() => {
+            if (!vscode.workspace.getConfiguration('demoBuilder').get<boolean>('autoUpdate', true)) return;
+            void vscode.commands.executeCommand('demoBuilder.checkForUpdates', { background: true });
+        }, TIMEOUTS.AUTO_UPDATE_CHECK_INTERVAL);
+        context.subscriptions.push({ dispose: () => clearInterval(updateTimer) });
 
         // Clean up any stale flag files from previous versions
         await cleanupStaleFlagFiles();
@@ -680,7 +683,6 @@ export function deactivate() {
     logger?.info('Adobe Demo Builder extension is deactivating');
 
     // Clean up resources
-    autoUpdater?.dispose();
     inExtensionMcpServer?.dispose();
     stateManager?.dispose();
     externalCommandManager?.dispose();

@@ -9188,22 +9188,6 @@
             "openGaps": 0,
             "recorded": "2026-10-10T14:03:34.999Z"
         },
-        "src/features/updates/commands/updateExecutor.ts": {
-            "score": 88.58,
-            "killed": 194,
-            "survived": 25,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 7,
-                "logPresentation": 17,
-                "optionalChain": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 1,
-            "openGaps": 0
-        },
         "src/features/updates/services/addonUpdateChecker.ts": {
             "score": 72.86,
             "killed": 51,
@@ -9421,28 +9405,6 @@
             "equivalent": 1,
             "openGaps": 0,
             "recorded": "2026-10-10T20:07:00.484Z"
-        },
-        "src/utils/autoUpdater.ts": {
-            "score": 69.29,
-            "killed": 88,
-            "survived": 33,
-            "noCoverage": 6,
-            "timeout": 0,
-            "survivorCategories": {
-                "logPresentation": 11,
-                "block": 7,
-                "branch": 13,
-                "string": 2
-            },
-            "uncoveredCategories": {
-                "block": 2,
-                "logPresentation": 2,
-                "other": 2
-            },
-            "highValueSurvivors": 20,
-            "equivalent": 24,
-            "openGaps": 0,
-            "recorded": "2026-10-10T00:37:29.843Z"
         },
         "src/features/eds/services/pdp/pdp404Snippet.ts": {
             "score": 100,

@@ -31,7 +31,6 @@ const ALIASES: Record<string, string> = {
     '@/features/': 'src/features/',
     '@/services/': 'src/services/',
     '@/providers/': 'src/providers/',
-    '@/utils/': 'src/utils/',
     '@/types/': 'src/types/',
 };
 const EXACT: Record<string, string> = {

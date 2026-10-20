@@ -27,7 +27,9 @@ jest.mock('@/core/di/serviceLocator', () => ({
 
 // Import after mock setup
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { handleTakeUpdatesRequest } from '@/features/updates/handlers/updatesModalRequest';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
@@ -70,6 +72,7 @@ interface CommandInternals {
     refreshProjectsList: jest.Mock;
     refreshConfig: jest.Mock;
     communicationManager: unknown;
+    sendMessage: jest.Mock;
 }
 
 /** Reach the stubbed internals of the command under test. */
@@ -237,6 +240,51 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
             expect(internals(command).initializeCommunication).not.toHaveBeenCalled();
             expect(internals(command).refreshProjectsList).toHaveBeenCalled();
             expect(internals(command).refreshConfig).toHaveBeenCalled();
+        });
+
+        // Check for Updates (PL-80). A new panel's listeners attach after mount, so it
+        // cannot be pushed to: the request is held until the screen asks for it.
+        it('holds the Updates modal for a NEW panel, and pushes nothing at it', async () => {
+            const command = createCommand();
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(lastMintedPanel());
+            internals(command).initializeCommunication = jest.fn().mockResolvedValue({
+                on: jest.fn(),
+                sendMessage: jest.fn().mockResolvedValue(undefined),
+            });
+            internals(command).sendMessage = jest.fn().mockResolvedValue(undefined);
+
+            await command.execute({ showUpdates: true });
+
+            expect(internals(command).sendMessage).not.toHaveBeenCalledWith('showUpdates', {});
+            expect(await handleTakeUpdatesRequest(createMockHandlerContext())).toEqual({
+                success: true,
+                data: { show: true },
+            });
+            // Used up: a later panel is not opened for it.
+            expect(await handleTakeUpdatesRequest(createMockHandlerContext())).toEqual({
+                success: true,
+                data: { show: false },
+            });
+        });
+
+        it('pushes the Updates modal to an EXISTING panel, and holds nothing', async () => {
+            const command = createCommand();
+            internals(command).communicationManager = {
+                on: jest.fn(),
+                sendMessage: jest.fn().mockResolvedValue(undefined),
+            };
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(lastMintedPanel());
+            internals(command).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
+            internals(command).refreshConfig = jest.fn().mockResolvedValue(undefined);
+            internals(command).sendMessage = jest.fn().mockResolvedValue(undefined);
+
+            await command.execute({ showUpdates: true });
+
+            expect(internals(command).sendMessage).toHaveBeenCalledWith('showUpdates', {});
+            expect(await handleTakeUpdatesRequest(createMockHandlerContext())).toEqual({
+                success: true,
+                data: { show: false },
+            });
         });
     });
 

@@ -75,7 +75,6 @@ const COMMAND_BUTTONS = new Map<string, CommandButton>(Object.entries({
     stopDemo: { label: 'Stop demo', command: 'demoBuilder.stopDemo' },
     openDashboard: { label: 'Open dashboard', command: 'demoBuilder.showProjectDashboard' },
     openConfigure: { label: 'Open configure', command: 'demoBuilder.configure' },
-    checkUpdates: { label: 'Check updates', command: 'demoBuilder.checkUpdates' },
 }));
 
 /**
@@ -249,8 +248,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const previous = last > 0 ? last : undefined;
         void this._context.globalState.update(LAST_UPDATE_CHECK, now);
 
-        // Run in background, don't block sidebar activation
-        vscode.commands.executeCommand('demoBuilder.checkForUpdates').then(
+        // Run in background, don't block sidebar activation. `background`: it only
+        // notifies when something is waiting, and never opens a screen (PL-80).
+        vscode.commands.executeCommand('demoBuilder.checkForUpdates', { background: true }).then(
             () => {
                 // Success - no action needed
             },

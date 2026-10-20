@@ -1,302 +1,68 @@
-import * as vscode from 'vscode';
-import { performBlockLibraryInstalls } from './blockLibraryInstallExecutor';
-import {
-    detectIntegrationUpdateItems,
-    integrationPairUpdater,
-    performIntegrationUpdates,
-} from './integrationUpdatePicker';
-import {
-    performAddonUpdates,
-    performAdobeMcpUpdates,
-    performComponentUpdates,
-    performForkSyncUpdates,
-    performTemplateUpdates,
-    type UpdateContext,
-} from './updateExecutor';
-import {
-    buildUpdatePickerItems,
-    formatBehindLabel,
-    getTemplateSource,
-    hasPickerRows,
-    toAdobeMcpUpdateItem,
-    type AdobeMcpUpdateItem,
-    type BlockLibraryInstallItem,
-    type BlockLibraryUpdateItem,
-    type ForkSyncItem,
-    type InspectorUpdateItem,
-    type IntegrationUpdateItem,
-    type ProjectUpdateItem,
-    type TemplateUpdateItem,
-    type UpdateItem,
-    type UpdatePickerSources,
-} from './updateTypes';
-import { BaseCommand } from '@/core/base/baseCommand';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { ExecutionLock } from '@/core/utils/executionLock';
-import { numberedSteps } from '@/core/utils/numberedSteps';
-import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
-import { sleep } from '@/core/utils/sleep';
-import { stageLine } from '@/core/utils/stageLine';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { UPDATE_CHECK_STEPS } from '@/core/utils/updateStages';
-import { withProgressRegister } from '@/core/vscode/progressRegister';
-import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
-import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
-import {
-    describePendingInstall,
-    findUninstalledBlockLibraries,
-} from '@/features/updates/services/blockLibraryInstall';
-import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
-import { ForkSyncService } from '@/features/updates/services/forkSyncService';
-import { shouldOfferGraduation } from '@/features/updates/services/releaseTrack';
-import { TemplateUpdateChecker, TemplateUpdateResult } from '@/features/updates/services/templateUpdateChecker';
-import { UpdateManager } from '@/features/updates/services/updateManager';
-import { Project } from '@/types/base';
-
 /**
- * Command to check for and apply updates to extension and components.
- * User must confirm before updates are applied.
- * RESILIENCE: Checks if demo is running before updating (prevents file lock issues)
+ * Check for Updates (PL-80).
+ *
+ * Run by the SC, it opens the projects list with the Updates modal, which checks every
+ * project and the extension, lists what is waiting and applies what stays ticked
+ * (`features/updates/handlers/updatesModalHandlers`).
+ *
+ * Run in the background (the sidebar opening, then every four hours), it checks the same
+ * things quietly and, when something is waiting, says how many in one notification whose
+ * Review opens the modal. It never opens anything by itself. Until PL-80 a background
+ * check opened VS Code's picker on its own, and a second updater (`utils/autoUpdater.ts`,
+ * removed) showed its own "Update Now" every four hours.
+ *
+ * @module features/updates/commands/checkUpdates
  */
+
+import * as vscode from 'vscode';
+import { BaseCommand } from '@/core/base/baseCommand';
+import { ExecutionLock } from '@/core/utils/executionLock';
+import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
+import { integrationUpdateProbe } from '@/features/dashboard/handlers/integrationUpdateHandlers';
+import { findAllUpdates } from '@/features/updates/services/allUpdates';
+import { shouldOfferGraduation } from '@/features/updates/services/releaseTrack';
+import { UpdateManager } from '@/features/updates/services/updateManager';
+
+const REVIEW = 'Review';
+
 export class CheckUpdatesCommand extends BaseCommand {
-    /** Execution lock to prevent duplicate concurrent execution */
+    /** One background check at a time. */
     private static lock = new ExecutionLock('CheckUpdates');
 
-    async execute(): Promise<void> {
+    /**
+     * @param options - `background` for the quiet check that only notifies
+     */
+    async execute(options: { background?: boolean } = {}): Promise<void> {
+        if (options.background) {
+            await this.checkInBackground();
+            return;
+        }
+        await this.maybeOfferGraduation();
+        await vscode.commands.executeCommand('demoBuilder.showProjectsList', { showUpdates: true });
+    }
+
+    private async checkInBackground(): Promise<void> {
         if (CheckUpdatesCommand.lock.isLocked()) {
             this.logger.debug('[Updates] Already in progress');
             return;
         }
-
         await CheckUpdatesCommand.lock.run(async () => {
-            try {
-                // Through the shared register, so an agent hears the steps too; each a
-                // step from the stage table, numbered from the fixed list.
-                const { extensionUpdate, sources, currentProject, hasUpdates } = await withProgressRegister(
-                    { title: 'Checking for updates' },
-                    async (narrate) => {
-                        const step = numberedSteps(UPDATE_CHECK_STEPS, (stage, _step, at) =>
-                            narrate(stageLine(stage, at)),
-                        );
-                        step(S.checkingExtension.label);
-
-                        // Wait to ensure message is visible before making GitHub API call
-                        await sleep(TIMEOUTS.UPDATE_MESSAGE_DELAY);
-
-                        const updateManager = new UpdateManager(this.context, this.logger);
-                        const currentProject = await this.stateManager.getCurrentProject();
-
-                        // Phase 1: Check extension updates
-                        const extensionUpdate = await updateManager.checkExtensionUpdate();
-
-                        // Load ALL projects
-                        step(S.checkingAllProjects.label);
-                        const projectMetadata = await this.stateManager.getAllProjects();
-                        const allProjects: Project[] = [];
-
-                        for (const meta of projectMetadata) {
-                            const project = await this.stateManager.loadProjectFromPath(
-                                meta.path,
-                                undefined,
-                                { persistAfterLoad: false },
-                            );
-                            if (project) {
-                                allProjects.push(project);
-                            }
-                        }
-
-                        // Integrations (AB-73) run alongside the checks below: each
-                        // deployed pair costs a git fetch per clone, and the extension's
-                        // own update notice must not wait on that.
-                        const integrationCheck = detectIntegrationUpdateItems(
-                            this.pickerParts(), allProjects, currentProject ?? null,
-                        );
-
-                        // Phase 2: Check fork sync for source repos
-                        step(S.checkingSourceRepos.label);
-                        const forkSyncItems = await this.checkForkSyncUpdates(allProjects);
-
-                        // Phase 3: Check component updates across all projects
-                        step(S.checkingComponents.label);
-                        const multiProjectUpdates = allProjects.length > 0
-                            ? await updateManager.checkAllProjectsForUpdates(allProjects)
-                            : [];
-
-                        // Check template updates for EDS projects
-                        step(S.checkingTemplates.label);
-                        const templateUpdateChecker = new TemplateUpdateChecker(this.context.secrets, this.logger);
-                        const templateUpdates: Array<{ project: Project; update: TemplateUpdateResult }> = [];
-
-                        for (const project of allProjects) {
-                            const templateUpdate = await templateUpdateChecker.checkForUpdates(project);
-                            if (templateUpdate?.hasUpdates) {
-                                templateUpdates.push({ project, update: templateUpdate });
-                            }
-                        }
-
-                        // Phase 4: Check add-on updates
-                        step(S.checkingAddOns.label);
-                        const { blockLibraryItems, inspectorItems } = await this.checkAddonUpdates(
-                            allProjects, currentProject ?? null,
-                        );
-
-                        // Phase 5: Check Adobe MCP package updates per storefront
-                        step(S.checkingAiTools.label);
-                        const adobeMcpItems = await this.checkAdobeMcpUpdates(
-                            allProjects, currentProject ?? null,
-                        );
-
-                        step(S.checkingIntegrations.label);
-                        const integrationItems = await integrationCheck;
-
-                        const sources: UpdatePickerSources = {
-                            componentUpdates: multiProjectUpdates, templateUpdates, forkSyncItems,
-                            blockLibraryItems, inspectorItems, adobeMcpItems, integrationItems,
-                        };
-                        const hasUpdates = extensionUpdate.hasUpdate || hasPickerRows(sources);
-
-                        return { extensionUpdate, sources, currentProject, hasUpdates };
-                    },
-                );
-
-                // Early-access graduation off-ramp: if the user is on an alpha that a
-                // final release has superseded, offer to switch channels. Runs before the
-                // "no updates" early return because graduation has no update to report.
-                await this.maybeOfferGraduation(extensionUpdate.current);
-
-                if (!hasUpdates) {
-                    // A result, so it is the outcome once the progress closes, never a
-                    // progress line (progress vocabulary slice 8).
-                    await this.showSuccessMessage(`Demo Builder is up to date (v${extensionUpdate.current})`);
-                    return;
-                }
-
-                // Handle extension update separately
-                if (extensionUpdate.hasUpdate) {
-                    const action = await vscode.window.showInformationMessage(
-                        `Extension update available: v${extensionUpdate.current} → v${extensionUpdate.latest}`,
-                        'Update Extension',
-                        'Later',
-                    );
-
-                    if (action === 'Update Extension' && extensionUpdate.releaseInfo) {
-                        const extensionUpdater = new ExtensionUpdater(this.logger);
-                        await extensionUpdater.updateExtension(
-                            extensionUpdate.releaseInfo.downloadUrl,
-                            extensionUpdate.latest,
-                        );
-                        return;
-                    }
-                }
-
-                // Handle all non-extension updates with QuickPick
-                if (hasPickerRows(sources)) {
-                    await this.showMultiProjectUpdatePicker(sources, currentProject ?? null);
-                }
-            } catch (error) {
-                await this.showError('Failed to check for updates', error as Error);
+            const handlerCtx = createHeadlessHandlerContext(this.context, this.stateManager, this.logger);
+            const found = await findAllUpdates(handlerCtx, integrationUpdateProbe(handlerCtx));
+            await this.maybeOfferGraduation();
+            if (found.count === 0) {
+                this.logger.debug('[Updates] Background check: nothing waiting');
+                return;
+            }
+            const noun = found.count === 1 ? 'update' : 'updates';
+            const choice = await vscode.window.showInformationMessage(
+                `${found.count} Demo Builder ${noun} available.`,
+                REVIEW,
+            );
+            if (choice === REVIEW) {
+                await vscode.commands.executeCommand('demoBuilder.showProjectsList', { showUpdates: true });
             }
         });
-    }
-
-    // -----------------------------------------------------------------------
-    // QuickPick builder + dispatch
-    // -----------------------------------------------------------------------
-
-    private async showMultiProjectUpdatePicker(
-        sources: UpdatePickerSources,
-        currentProject: Project | null,
-    ): Promise<void> {
-        const { items, title } = buildUpdatePickerItems(sources, currentProject);
-
-        const selected = await vscode.window.showQuickPick(items, {
-            title,
-            placeHolder: 'Select updates to apply',
-            canPickMany: true,
-            ignoreFocusOut: true,
-        });
-
-        if (!selected || selected.length === 0) {
-            this.logger.debug('[Updates] User cancelled update selection');
-            return;
-        }
-
-        await this.dispatchSelectedUpdates(selected);
-    }
-
-    private async dispatchSelectedUpdates(selected: UpdateItem[]): Promise<void> {
-        // The flag's presence is the whole test: every member of UpdateItem declares
-        // its flag as the literal `true`, so `in` narrows the union on its own.
-        const selectedForks = selected.filter(
-            (item): item is ForkSyncItem => 'isForkSync' in item,
-        );
-        const selectedTemplates = selected.filter(
-            (item): item is TemplateUpdateItem => 'isTemplateUpdate' in item,
-        );
-        const selectedComponents = selected.filter(
-            (item): item is ProjectUpdateItem => 'isProjectUpdate' in item,
-        );
-        const selectedBlockLibraries = selected.filter(
-            (item): item is BlockLibraryUpdateItem => 'isBlockLibraryUpdate' in item,
-        );
-        const selectedLibraryInstalls = selected.filter(
-            (item): item is BlockLibraryInstallItem => 'isBlockLibraryInstall' in item,
-        );
-        const selectedInspectors = selected.filter(
-            (item): item is InspectorUpdateItem => 'isInspectorUpdate' in item,
-        );
-        const selectedAdobeMcp = selected.filter(
-            (item): item is AdobeMcpUpdateItem => 'isAdobeMcpUpdate' in item,
-        );
-        const selectedIntegrations = selected.filter(
-            (item): item is IntegrationUpdateItem => 'isIntegrationUpdate' in item,
-        );
-
-        this.logger.debug(
-            `[Updates] User selected: ${selectedForks.length} fork(s), ${selectedTemplates.length} template(s), `
-            + `${selectedComponents.length} component(s), ${selectedBlockLibraries.length} block lib(s), `
-            + `${selectedLibraryInstalls.length} block lib install(s), `
-            + `${selectedInspectors.length} inspector(s), ${selectedAdobeMcp.length} Adobe MCP package(s), `
-            + `${selectedIntegrations.length} integration pair(s)`,
-        );
-
-        const ctx = this.buildUpdateContext();
-
-        // Execution order: fork sync -> template -> components -> Adobe MCP -> add-ons.
-        // Adobe MCP runs before add-ons so the new MCP version is in place when the
-        // post-update Regenerate AI Files pass writes refreshed skill bundles.
-        if (selectedForks.length > 0) {
-            await performForkSyncUpdates(selectedForks, ctx);
-        }
-
-        const templateSyncSucceeded = selectedTemplates.length > 0
-            ? await performTemplateUpdates(selectedTemplates, ctx)
-            : new Set<string>();
-
-        if (selectedComponents.length > 0) {
-            await performComponentUpdates(selectedComponents, ctx);
-        }
-
-        if (selectedAdobeMcp.length > 0) {
-            await performAdobeMcpUpdates(selectedAdobeMcp, ctx);
-        }
-
-        if (selectedBlockLibraries.length > 0 || selectedInspectors.length > 0) {
-            await performAddonUpdates(
-                selectedBlockLibraries, selectedInspectors, templateSyncSucceeded, ctx,
-            );
-        }
-
-        // Last: an install is a commit to the storefront repository, and a
-        // template sync above may have just moved that branch.
-        if (selectedLibraryInstalls.length > 0) {
-            await performBlockLibraryInstalls(selectedLibraryInstalls, ctx);
-        }
-
-        // Integration pairs deploy to Adobe, independent of the storefront work above.
-        if (selectedIntegrations.length > 0) {
-            await performIntegrationUpdates(selectedIntegrations, ctx);
-        }
     }
 
     // -----------------------------------------------------------------------
@@ -309,7 +75,7 @@ export class CheckUpdatesCommand extends BaseCommand {
      * non-preview channel. Prompt-only: the channel is changed only on an
      * explicit choice.
      */
-    private async maybeOfferGraduation(installedVersion: string): Promise<void> {
+    private async maybeOfferGraduation(): Promise<void> {
         // Best-effort nicety: never let the off-ramp abort the core update flow.
         try {
             const channel = vscode.workspace.getConfiguration('demoBuilder')
@@ -318,6 +84,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                 return;
             }
 
+            const installedVersion: string = this.context.extension.packageJSON.version;
             const updateManager = new UpdateManager(this.context, this.logger);
             const latestFinal = await updateManager.getLatestFinalVersion();
             if (!shouldOfferGraduation(installedVersion, latestFinal)) {
@@ -346,145 +113,5 @@ export class CheckUpdatesCommand extends BaseCommand {
         await vscode.workspace.getConfiguration('demoBuilder')
             .update('updateChannel', channel, vscode.ConfigurationTarget.Global);
         this.logger.info(`[Updates] Update channel switched to ${channel} (graduation off-ramp)`);
-    }
-
-    // -----------------------------------------------------------------------
-    // Adobe MCP package check
-    // -----------------------------------------------------------------------
-
-    private async checkAdobeMcpUpdates(
-        allProjects: Project[],
-        currentProject: Project | null,
-    ): Promise<AdobeMcpUpdateItem[]> {
-        const checker = new AdobeMcpUpdateChecker(this.context.secrets, this.logger);
-        const items: AdobeMcpUpdateItem[] = [];
-        for (const project of allProjects) {
-            const result = await checker.checkForUpdates(project);
-            if (result?.hasUpdate) {
-                items.push(toAdobeMcpUpdateItem(project, result, currentProject));
-            }
-        }
-        return items;
-    }
-
-    // -----------------------------------------------------------------------
-    // Check helpers (build QuickPick items from API results)
-    // -----------------------------------------------------------------------
-
-    private async checkForkSyncUpdates(allProjects: Project[]): Promise<ForkSyncItem[]> {
-        this.logger.debug(`[Updates] Checking fork sync across ${allProjects.length} project(s)`);
-        const forkSyncService = new ForkSyncService(this.context.secrets, this.logger);
-        const forkSyncItems: ForkSyncItem[] = [];
-        const checkedForks = new Set<string>();
-
-        for (const project of allProjects) {
-            const source = getTemplateSource(project);
-            if (!source) continue;
-
-            const key = `${source.owner}/${source.repo}`;
-            if (checkedForks.has(key)) continue;
-            checkedForks.add(key);
-
-            const status = await forkSyncService.checkForkStatus(source.owner, source.repo);
-            if (status?.isFork && status.behindBy > 0) {
-                forkSyncItems.push({
-                    label: `$(repo-forked) ${source.repo}`,
-                    detail: `    ${formatBehindLabel(status.behindBy)} ${status.parentFullName}`,
-                    description: key,
-                    picked: true,
-                    owner: source.owner,
-                    repo: source.repo,
-                    branch: status.defaultBranch || 'main',
-                    behindBy: status.behindBy,
-                    parentFullName: status.parentFullName || '',
-                    isForkSync: true,
-                });
-            }
-        }
-
-        this.logger.debug(
-            `[Updates] Fork sync check complete: ${checkedForks.size} repo(s) checked, ${forkSyncItems.length} behind upstream`,
-        );
-
-        return forkSyncItems;
-    }
-
-    private async checkAddonUpdates(
-        allProjects: Project[],
-        currentProject: Project | null,
-    ): Promise<{
-        blockLibraryItems: Array<BlockLibraryUpdateItem | BlockLibraryInstallItem>;
-        inspectorItems: InspectorUpdateItem[];
-    }> {
-        this.logger.debug(`[Updates] Checking add-on updates across ${allProjects.length} project(s)`);
-        const addonChecker = new AddonUpdateChecker(this.context.secrets, this.logger);
-        const blockLibraryItems: Array<BlockLibraryUpdateItem | BlockLibraryInstallItem> = [];
-        const inspectorItems: InspectorUpdateItem[] = [];
-
-        for (const project of allProjects) {
-            const isCurrent = project.path === currentProject?.path;
-
-            const blockUpdates = await addonChecker.checkBlockLibraries(project);
-            for (const update of blockUpdates) {
-                blockLibraryItems.push({
-                    label: project.name,
-                    detail: `    $(package) ${update.library.name}  ${formatBehindLabel(update.commitsBehind)}`,
-                    picked: isCurrent,
-                    project,
-                    library: update.library,
-                    latestCommit: update.latestCommit,
-                    commitsBehind: update.commitsBehind,
-                    isBlockLibraryUpdate: true,
-                });
-            }
-
-            // Selected but never installed (EDS-28): offered as an install.
-            for (const library of findUninstalledBlockLibraries(project)) {
-                blockLibraryItems.push({
-                    label: project.name,
-                    detail: `    $(package) ${describePendingInstall(library)}`,
-                    description: `${library.source.owner}/${library.source.repo}`,
-                    picked: isCurrent,
-                    project,
-                    library,
-                    isBlockLibraryInstall: true,
-                });
-            }
-
-            const inspectorUpdate = await addonChecker.checkInspectorSdk(project);
-            if (inspectorUpdate?.hasUpdate) {
-                inspectorItems.push({
-                    label: project.name,
-                    detail: `    $(tools) Demo Inspector SDK  ${formatBehindLabel(inspectorUpdate.commitsBehind)}`,
-                    picked: isCurrent,
-                    project,
-                    latestCommit: inspectorUpdate.latestCommit,
-                    commitsBehind: inspectorUpdate.commitsBehind,
-                    isInspectorUpdate: true,
-                });
-            }
-        }
-
-        this.logger.debug(
-            `[Updates] Add-on check complete: ${blockLibraryItems.length} block lib(s), ${inspectorItems.length} inspector SDK(s) need updates`,
-        );
-
-        return { blockLibraryItems, inspectorItems };
-    }
-
-    private buildUpdateContext(): UpdateContext {
-        return {
-            secrets: this.context.secrets,
-            extensionPath: this.context.extensionPath,
-            stateManager: this.stateManager,
-            logger: this.logger,
-            commandManager: ServiceLocator.getCommandExecutor(),
-            updateIntegrationPair: integrationPairUpdater(this.pickerParts()),
-        };
-    }
-
-    /** What the integration picker builds its headless handler context from. */
-    private pickerParts() {
-        return { context: this.context, stateManager: this.stateManager, logger: this.logger };
     }
 }

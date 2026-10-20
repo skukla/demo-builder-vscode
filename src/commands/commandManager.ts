@@ -37,6 +37,7 @@ import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
+import { isRecord } from '@/types/typeGuards';
 
 export class CommandManager {
     private context: vscode.ExtensionContext;
@@ -59,11 +60,12 @@ export class CommandManager {
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.showProjectsList', async () => {
+        this.registerCommand('demoBuilder.showProjectsList', async (options?: unknown) => {
             // Close other webviews when showing Projects List (tab replacement)
             ProjectDashboardWebviewCommand.disposeActivePanel();
             ConfigureProjectWebviewCommand.disposeActivePanel();
-            await projectsList.execute();
+            // Check for Updates opens it with the Updates modal (PL-80).
+            await projectsList.execute({ showUpdates: isRecord(options) && options.showUpdates === true });
         });
 
         // Create Project (Webview version)
@@ -255,7 +257,10 @@ export class CommandManager {
 
         // Check Updates
         const checkUpdates = new CheckUpdatesCommand(this.context, this.stateManager, this.logger);
-        this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
+        // `background`: the startup and four-hourly checks, which notify instead of opening it.
+        this.registerCommand('demoBuilder.checkForUpdates', (options?: unknown) =>
+            checkUpdates.execute({ background: isRecord(options) && options.background === true }),
+        );
 
         // Open in Claude Code (CLI) — terminal launch, always. The URI-handler surface
         // was retired (ADR-019), and with it `demoBuilder.ai.harness`, which this comment

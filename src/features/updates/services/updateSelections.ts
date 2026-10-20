@@ -8,7 +8,6 @@
  */
 
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
-import { getTemplateSource } from '@/features/updates/commands/updateTypes';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import {
@@ -23,6 +22,7 @@ import {
 } from '@/features/updates/services/integrationUpdates';
 import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
 import { UpdateManager } from '@/features/updates/services/updateManager';
+import { getTemplateSource } from '@/features/updates/services/updateSources';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';

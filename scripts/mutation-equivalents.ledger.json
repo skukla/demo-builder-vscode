@@ -57,18 +57,6 @@
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
         },
         {
-            "module": "src/features/updates/commands/updateExecutor.ts",
-            "anchors": [
-                "projectUpdates.get(key)?.push(selection);"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "Stryker drops the `?.`, which would throw only if `projectUpdates.get(key)` were undefined. The two lines above set the key when it is absent, so by this line the entry always exists; the `?.` is there because Map.get is typed `T | undefined`. A test cannot reach the undefined case: there is no input to performComponentUpdates that skips the set. The grouping itself is tested (two selections on one project reach the updater twice and save once), so only the guard is unreachable, not the push.",
-            "decision": "none \u2014 the `?.` is required by the type. A rewrite (`const list = get(key); if (list) list.push(...) else set(key, [selection])`) would be fully killable, but is a style change to src, outside this batch's remit",
-            "recorded": "2026-09-03",
-            "source": "PL-22 batch MUT-01, updateExecutor focus run"
-        },
-        {
             "module": "src/features/updates/commands/checkUpdates.ts",
             "anchors": [
                 "this.logger.debug(`[Updates] Graduation off-ramp skipped: ${(error as Error).message}`);"
@@ -7977,10 +7965,10 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 846,
+            "line": 848,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation. Re-anchored 2026-10-19 (840 -> 841): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (841 -> 846): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation. Re-anchored 2026-10-19 (840 -> 841): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (841 -> 846): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (846 -> 848): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none \u2014 log-only.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -8002,10 +7990,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 576,
+            "line": 579,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest. Re-anchored 2026-10-19 (574 -> 576): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest. Re-anchored 2026-10-19 (574 -> 576): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (576 -> 579): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none \u2014 the remaining difference is message wording.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -8015,10 +8003,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 953,
+            "line": 955,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep. Re-anchored 2026-10-19 (947 -> 948): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (948 -> 953): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep. Re-anchored 2026-10-19 (947 -> 948): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (948 -> 953): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (953 -> 955): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none \u2014 log-only.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -8325,10 +8313,10 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 609,
+            "line": 614,
             "mutants": 1,
             "category": "block",
-            "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints. Re-anchored 2026-10-19 (608 -> 609): unchanged code, moved when screens kept their own project (AI-15).",
+            "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints. Re-anchored 2026-10-19 (608 -> 609): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-20 (609 -> 614): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none - log-only catch body; the reveal-anyway behaviour it guards is asserted.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
@@ -10137,162 +10125,6 @@
             "category": "branch",
             "reason": "Every behavioural mutant on this guard \u2014 the condition forced either way, the equality inverted, and the block emptied \u2014 changes only whether an error line is written. Both arms return to the same place: the catch swallows the failure and the polling interval continues until the process is observed gone, so no signal is sent or withheld, no promise settles differently, and no state changes. Distinguishing the arms would require asserting the logger's arguments, which pins wording rather than behaviour.",
             "decision": "none \u2014 the guard chooses a log line, not an action; the surrounding swallow-and-keep-polling is tested directly",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "this.checkAndNotify().catch(err => {"
-            ],
-            "line": 25,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this handler leaves the .catch() itself in place, so a background check that rejects is still swallowed and the four-hour interval still survives to run again, which is the whole point of attaching it. The only statement inside is a logger.warn carrying the message, so the sole difference the mutant makes is whether a warning prints, and asserting that would pin wording rather than behaviour.",
-            "decision": "none - swallowing the rejection IS the behaviour; the warning inside it is narration",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "if (!selected) {"
-            ],
-            "line": 82,
-            "mutants": 2,
-            "category": "block",
-            "reason": "Both survivors let a null selection through instead of returning early. The next statement then reads tag_name off null, which throws a TypeError that this method's own catch swallows and answers undefined to, which is exactly the value the guard returns. So the caller sees the same no-update either way, and the only visible difference is that an error line is logged where a debug line was. The guard is the right shape; nothing outside the method can tell it is there.",
-            "decision": "none - the early return and the swallowed TypeError produce the same answer to every caller",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "if (vsixAsset) {"
-            ],
-            "line": 98,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forced true, the body reads browser_download_url off an undefined asset, which throws a TypeError that checkForUpdates' own catch converts into the same undefined the guard produces by falling through. A release with no .vsix therefore yields no-update either way, and the only difference is an error line in place of a debug one. The guard prevents an internal throw that is already invisible from outside.",
-            "decision": "none - the guard avoids an exception the surrounding catch already renders unobservable",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "} catch (error) {"
-            ],
-            "line": 117,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this catch body removes the logging and the explicit return-undefined together, and the method's declared return permits undefined, so falling off the end answers undefined, the same value the deleted statement returned. The catch itself remains, so a failed request is still swallowed rather than propagated. Nothing a caller can observe changes.",
-            "decision": "none - an implicit undefined and an explicit one are the same answer here",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "if (error && typeof error === 'object' && 'response' in error) {"
-            ],
-            "line": 119,
-            "mutants": 8,
-            "category": "branch",
-            "reason": "Every behavioural mutant on this guard - the condition and each of its operands forced either way, the equality inverted, the operators swapped, the block emptied - selects a different log line and nothing else. Both arms fall to the same return-undefined, so a 404, a 500, a socket failure and a malformed payload are already indistinguishable to every caller. Separating them in a test would assert the logger's arguments, which pins wording, and would entrench an open product question about whether these outcomes should look the same to an SC.",
-            "decision": "none - the guard chooses a message; every arm answers the caller identically",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "if (axiosError.response?.status === 404) {"
-            ],
-            "line": 121,
-            "mutants": 4,
-            "category": "branch",
-            "reason": "The condition forced either way, the equality inverted, and the block emptied all choose between a debug line and an error line inside a catch whose every path answers undefined. The optional chain on the same line is deliberately NOT ledgered: removing it throws from inside the catch and makes the whole check reject, which is behaviour, and a test now pins it. What remains here is only which message is written.",
-            "decision": "none - only the message differs; the optional chain beside it is killed by a test instead",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "} else {"
-            ],
-            "line": 123,
-            "mutants": 1,
-            "category": "block",
-            "reason": "This is the arm taken when the failure carries a response that is not a 404. Its entire body is one logger.error call, and the catch returns undefined immediately afterwards whichever arm ran, so emptying it changes what is written to the log channel and nothing a caller can see. Distinguishing it from its sibling arm would mean asserting the logger's arguments.",
-            "decision": "none - a log-only arm of a catch whose every path answers undefined",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "} else {"
-            ],
-            "line": 126,
-            "mutants": 1,
-            "category": "block",
-            "reason": "The arm taken when the thrown value is not an axios-shaped object at all. Like its sibling it contains exactly one logger.error call and falls into the same return-undefined, so emptying the body leaves every caller with the same answer and only removes a line from the debug channel.",
-            "decision": "none - a log-only arm of a catch whose every path answers undefined",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "private getMockUpdateInfo(): UpdateInfo | undefined {"
-            ],
-            "line": 138,
-            "mutants": 1,
-            "category": "block",
-            "reason": "The whole body of this method is a return of undefined, and its declared return type permits undefined, so emptying the body produces exactly the value the statement produced. The method exists to short-circuit the development host away from the network, and a test already proves that path reaches the network never and answers undefined, which is all the method can be observed to do.",
-            "decision": "none - the body and its absence produce the same value",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "onDownloadProgress: (progressEvent) => {"
-            ],
-            "line": 154,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this callback removes a debug line reporting download percentage and nothing else: axios calls it purely as a notification, its return value is discarded, and it touches no state the install path reads. The bytes written, the command run and the prompt shown are all unaffected, so the only assertion that could separate the two versions is one about the logger's arguments.",
-            "decision": "none - a progress notification whose sole consumer is the debug channel",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "? Math.round((progressEvent.loaded * 100) / progressEvent.total)"
-            ],
-            "line": 156,
-            "mutants": 2,
-            "category": "other",
-            "reason": "The percentage computed here has exactly one consumer, the debug line on the next statement. Swapping the division for a multiplication, or moving the factor, changes the number in that message and nothing else: no state is kept, nothing is compared against it, and axios discards the callback's result. Killing these would mean asserting what the logger was called with.",
-            "decision": "none - arithmetic whose only output is a log message",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-04, 2026-09-05"
-        },
-        {
-            "module": "src/utils/autoUpdater.ts",
-            "anchors": [
-                "if (this.updateCheckInterval) {"
-            ],
-            "line": 196,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "The field this guard tests is assigned unconditionally in the constructor and is never cleared, so it is truthy on every path that can reach dispose - the guard has no false arm to take. Forcing it true therefore runs precisely the same clearInterval call with the same handle. A test proves the interval does stop after dispose; there is no second state for the guard to distinguish.",
-            "decision": "none - the guarded field is always set, so the guard has one reachable outcome",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-04, 2026-09-05"
         },
@@ -15701,10 +15533,10 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 183,
+            "line": 181,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (debugLogger.warn that the agent-trace file sink is unavailable). That the catch EXISTS is tested: extension-activationSeams 'degrades to channel-only when the storage path cannot be created' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (181 -> 183): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "The catch body is a single logger call (debugLogger.warn that the agent-trace file sink is unavailable). That the catch EXISTS is tested: extension-activationSeams 'degrades to channel-only when the storage path cannot be created' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (181 -> 183): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (183 -> 181): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15714,10 +15546,10 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 294,
+            "line": 292,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.error that seeding the default AI prompts failed). That the catch EXISTS is tested: extension-activationSeams 'does not abort activation when seeding fails' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (292 -> 294): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "The catch body is a single logger call (logger.error that seeding the default AI prompts failed). That the catch EXISTS is tested: extension-activationSeams 'does not abort activation when seeding fails' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (292 -> 294): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (294 -> 292): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15727,10 +15559,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 612,
+            "line": 615,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.warn that the global MCP entry could not be refreshed). That the catch EXISTS is tested: extension-mcpAndHome 'does not abort activation when the repair throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (610 -> 612): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "The catch body is a single logger call (logger.warn that the global MCP entry could not be refreshed). That the catch EXISTS is tested: extension-mcpAndHome 'does not abort activation when the repair throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (610 -> 612): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (612 -> 615): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15740,10 +15572,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 892,
+            "line": 894,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.debug that the secret sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed secret sweep stop the sweeps after it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (886 -> 887): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (887 -> 892): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "The catch body is a single logger call (logger.debug that the secret sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed secret sweep stop the sweeps after it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (886 -> 887): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (887 -> 892): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (892 -> 894): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15753,10 +15585,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 907,
+            "line": 909,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.debug that the DA.live token move was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed DA.live token move take activation down' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (901 -> 902): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (902 -> 907): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "The catch body is a single logger call (logger.debug that the DA.live token move was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed DA.live token move take activation down' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (901 -> 902): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (902 -> 907): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (907 -> 909): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15766,10 +15598,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 929,
+            "line": 931,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.debug that the publish-key renewal sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failing sweep take activation down with it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (923 -> 924): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (924 -> 929): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "The catch body is a single logger call (logger.debug that the publish-key renewal sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failing sweep take activation down with it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (923 -> 924): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (924 -> 929): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (929 -> 931): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15779,10 +15611,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1003,
+            "line": 1005,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.debug that the Node sweep was skipped). That the catch EXISTS is tested: extension-nodeSweep 'shows nothing, and does not fail activation, when the sweep throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (997 -> 998): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (998 -> 1003): unchanged code, moved when agents got their own working project (AI-15).",
+            "reason": "The catch body is a single logger call (logger.debug that the Node sweep was skipped). That the catch EXISTS is tested: extension-nodeSweep 'shows nothing, and does not fail activation, when the sweep throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (997 -> 998): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (998 -> 1003): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (1003 -> 1005): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"

@@ -195,13 +195,6 @@ jest.mock('@/core/shell/commandExecutor', () => ({
     })),
 }));
 
-jest.mock('@/utils/autoUpdater', () => ({
-    AutoUpdater: jest.fn().mockImplementation(() => ({
-        checkForUpdates: jest.fn().mockResolvedValue(undefined),
-        dispose: jest.fn(),
-    })),
-}));
-
 // Deterministic filesystem: the onboarding flag file "doesn't exist" on every
 // machine, instead of whatever the runner's real home directory holds.
 jest.mock('fs/promises', () => ({

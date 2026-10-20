@@ -110,7 +110,6 @@ module.exports = {
         '^@/services/(.*)$': '<rootDir>/src/services/$1',
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
-        '^@/utils/(.*)$': '<rootDir>/src/utils/$1',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
         '^@octokit/core$': '<rootDir>/tests/__mocks__/@octokit/core.ts',
@@ -178,7 +177,6 @@ module.exports = {
         '^@/services/(.*)$': '<rootDir>/src/services/$1',
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
-        '^@/utils/(.*)$': '<rootDir>/src/utils/$1',
         // Style mocks
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         // Adobe Spectrum mocks - prevents loading ~6MB library
