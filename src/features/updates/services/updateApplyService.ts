@@ -1,17 +1,14 @@
 /**
- * Headless update-apply service.
- *
- * The `perform*` functions in `commands/updateExecutor.ts` drive updates from the
- * QuickPick command — they own the UI shell (running-demo prompts, progress
- * notifications, summary toasts). This module is the modal-free counterpart used
- * by the MCP `apply_updates` tool: it applies the set `updateSelections.ts`
- * computed for a project, returning structured per-category results instead of
- * showing UI.
+ * The update apply: the ONE path both surfaces use (PL-80). The MCP `apply_updates`
+ * tool and the Updates modal on the projects list each hand it the set
+ * `updateSelections.ts` computed, and it returns structured per-category results
+ * instead of showing UI. Until 2026-10-20 the Check for Updates picker had its own
+ * apply beside this one (`commands/updateExecutor.ts`, deleted).
  *
  * The substantive work lives in shared services (ForkSyncService, TemplateSync-
  * Service, ComponentUpdater, ...) and — for the snapshot/marker-bearing block
- * library logic — in `applyBlockLibraryUpdateResolved`, which both paths call.
- * The only thing that diverges here is the thin per-item loop + result shaping.
+ * library logic — in `applyBlockLibraryUpdateResolved`. This module is the thin
+ * per-item loop and the result shaping.
  *
  * Headless block-library policy: when `demoBuilder.blockLibraries.syncBehavior`
  * is `ask` (which would prompt in the UI), this resolves to the SAFE `disabled`
@@ -112,7 +109,7 @@ async function applyComponents(
     const result = emptyResult();
     if (items.length === 0) return result;
 
-    // Group by project so we save once per project (mirrors performComponentUpdates).
+    // Group by project so we save once per project.
     const byProject = new Map<string, { project: Project; items: UpdateSelections['component'] }>();
     for (const item of items) {
         const entry = byProject.get(item.project.path) ?? { project: item.project, items: [] };
@@ -160,9 +157,8 @@ async function applyAdobeMcp(
     const result = emptyResult();
     // No empty-list return here: unlike its siblings this core constructs no
     // service, so the loop below already does nothing for nothing.
-    // The npm-update → regenerate → persist sequence lives in the ONE shared
-    // core (adobeMcpUpdateCore.ts), which the interactive sibling
-    // `performAdobeMcpUpdates` also calls. This loop only shapes results.
+    // The npm-update → regenerate → persist sequence lives in its own core
+    // (adobeMcpUpdateCore.ts). This loop only shapes results.
     // (Until 2026-08-04 this path carried its own copy that ran `npm update`
     // in the STOREFRONT dir — a silent no-op that re-offered the same update
     // forever. The shared core is what makes that drift impossible now.)
@@ -292,10 +288,9 @@ async function applyBlockLibraryInstalls(
 // ==========================================================
 
 /**
- * Apply all selected updates headlessly, in the same category order the QuickPick
- * command uses (fork → template → components → Adobe MCP → add-ons → block
- * library installs → integration pairs), threading template-sync successes into
- * the add-on dedup.
+ * Apply all selected updates, in category order (fork → template → components →
+ * Adobe MCP → add-ons → block library installs → integration pairs), threading
+ * template-sync successes into the add-on dedup.
  */
 export async function applyUpdatesHeadless(
     selections: UpdateSelections,

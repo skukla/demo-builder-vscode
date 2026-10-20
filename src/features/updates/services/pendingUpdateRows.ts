@@ -26,7 +26,7 @@ import type {
 } from '@/types/pendingUpdates';
 
 /** The extension's own update, when there is one. */
-export interface ExtensionUpdateSummary {
+interface ExtensionUpdateSummary {
     current: string;
     latest: string;
 }

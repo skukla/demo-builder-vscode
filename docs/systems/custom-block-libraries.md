@@ -31,7 +31,7 @@ are the SC's too, so the merge follows two rules:
 - **A hand deletion stays deleted.** The project records, per library, which entries
   the extension added (`installedBlockLibraries[].addedEntries`). On a later install
   or update, an entry it added before that is now missing was removed by hand: it is
-  left out, and the update says so (the Check for Updates notice, and
+  left out, and the update says so (a note in the Updates modal's report, and
   `categories.addon.leftOut` in `apply_updates`). An entry it never added is added
   and recorded. A project installed before 2026-10-09 has no record, so its next run
   adds what is missing, as it always did, and starts recording. A reset passes no

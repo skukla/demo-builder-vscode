@@ -47,7 +47,7 @@ export const questionsInModal: UpdateQuestions = {
 };
 
 /** What the running-demo question leaves to apply, and the sentences for what it left out. */
-export interface StoppedForUpdate {
+interface StoppedForUpdate {
     selections: UpdateSelections;
     skipped: string[];
 }

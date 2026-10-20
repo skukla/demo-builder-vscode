@@ -1,10 +1,8 @@
 /**
- * The ONE Adobe-MCP update core, shared by both apply paths:
- *
- * - `performAdobeMcpUpdates` (commands/updateExecutor.ts) — the QuickPick UI
- *   shell (running-demo guard, withProgress, error toasts).
- * - `applyAdobeMcp` (services/updateApplyService.ts) — the headless MCP
- *   `apply_updates` path (structured per-item results).
+ * The ONE Adobe-MCP update core, called by `applyAdobeMcp` in
+ * `services/updateApplyService.ts`, the apply both the Updates modal and the agent's
+ * `apply_updates` use. The Check for Updates picker's own caller
+ * (`commands/updateExecutor.ts`) was deleted on 2026-10-20 (PL-80).
  *
  * Sequence: `npm update` in the per-project ISOLATED tools dir
  * (`resolveMcpToolsDir` — never the storefront's node_modules) → regenerate
@@ -13,14 +11,11 @@
  * survive a partial failure) → WHY log naming the hash-and-skip skips →
  * freshness-stamp save.
  *
- * This lived duplicated (~40 near-identical lines) in both callers and
+ * This once lived duplicated (~40 near-identical lines) in both callers and
  * drifted twice — most expensively when the headless copy ran `npm update`
  * in the storefront path, a silent no-op that re-offered the same update
  * forever. Throws on any failure; callers own counting and surfacing.
  *
- * Lives in its own module (not updateApplyService.ts) because the apply
- * service imports from updateExecutor — hosting the core there would create
- * an import cycle between the two callers.
  */
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';

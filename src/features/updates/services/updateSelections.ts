@@ -1,10 +1,9 @@
 /**
- * What updates ONE project has waiting, across every category.
- *
- * The headless counterpart of the QuickPick command's check: it asks the same
- * checker services and returns the minimal selection fields each apply core in
- * `updateApplyService.ts` needs. The MCP `apply_updates` tool reports this set
- * without confirm and hands it to `applyUpdatesHeadless` with it.
+ * What updates are waiting, across every category: for one project (the MCP
+ * `apply_updates` tool, which reports this set without confirm and hands it to
+ * `applyUpdatesHeadless` with it) or for every project (Check for Updates' modal,
+ * through `allUpdates.ts`). It asks the checker services and returns the selection
+ * fields each apply core in `updateApplyService.ts` needs.
  */
 
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
@@ -104,6 +103,9 @@ export async function computeUpdateSelections(
     integrationProbe: IntegrationUpdateProbe,
 ): Promise<UpdateSelections> {
     const check: Check = { secrets: handlerCtx.context.secrets, logger: handlerCtx.logger };
+    // Started first and awaited last: each deployed pair costs a git fetch per clone, so it
+    // runs alongside the GitHub checks below instead of after them. It cannot reject.
+    const integration = checkIntegrations(projects, integrationProbe, handlerCtx.logger);
     const addons = await checkAddons(projects, check);
     return {
         forkSync: await checkForkSyncs(projects, check),
@@ -116,7 +118,7 @@ export async function computeUpdateSelections(
             findUninstalledBlockLibraries(project).map((library) => ({ project, library })),
         ),
         inspector: addons.inspector,
-        integration: await checkIntegrations(projects, integrationProbe, handlerCtx.logger),
+        integration: await integration,
     };
 }
 

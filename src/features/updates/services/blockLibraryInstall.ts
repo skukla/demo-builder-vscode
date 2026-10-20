@@ -134,8 +134,8 @@ export function describeInstallOutcome(outcome: BlockLibraryInstallOutcome, proj
  * record it in `installedBlockLibraries`.
  *
  * This WRITES to the SC's GitHub repository (one commit on `main`), so it runs
- * only from an explicit apply — the picked QuickPick row, or `apply_updates`
- * with `confirm:true`.
+ * only from an explicit apply — a row left ticked in the Updates modal, or
+ * `apply_updates` with `confirm:true`.
  *
  * When every block already exists in the storefront the installer writes
  * nothing and reports no version. The library is still recorded, with no block

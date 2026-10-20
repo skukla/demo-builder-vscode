@@ -1,13 +1,9 @@
 /**
  * Shared update-apply core — `UpdateContext`, the commit-sha rollback helper,
- * and the snapshot/marker-bearing block-library apply logic.
- *
- * Sibling of `adobeMcpUpdateCore.ts` for the same reason it exists: two apply
- * paths share this substance — `commands/updateExecutor.ts` (the QuickPick UI
- * shell) and `services/updateApplyService.ts` (the headless MCP
- * `apply_updates` path). Hosting it in a service keeps the import direction
- * command→service; it previously lived in updateExecutor, forcing the apply
- * service to import from a commands module (2026-08-14 review).
+ * and the snapshot/marker-bearing block-library apply logic, used by
+ * `services/updateApplyService.ts` (the one apply, since PL-80 deleted the
+ * picker's own in `commands/updateExecutor.ts`). It moved out of that commands
+ * module on 2026-08-14, when the apply service had to import from it.
  */
 
 import type * as vscode from 'vscode';
@@ -51,12 +47,11 @@ export interface UpdateContext {
     extensionPath: string;
     /**
      * Narrowed to the methods the update pipeline actually calls (updateCore's
-     * saveProject, updateExecutor's getCurrentProject, adobeMcpUpdateCore's
-     * saveProjectConfigOnly). This also lets the MCP applyUpdatesTool pass its
+     * saveProject, adobeMcpUpdateCore's saveProjectConfigOnly). This also lets the MCP applyUpdatesTool pass its
      * HandlerContext stateManager (typed via the @/types/state INTERFACE, not
      * the class) without a widening cast.
      */
-    stateManager: Pick<StateManager, 'saveProject' | 'getCurrentProject' | 'saveProjectConfigOnly'>;
+    stateManager: Pick<StateManager, 'saveProject' | 'saveProjectConfigOnly'>;
     logger: Logger;
     /** ADR-015: the shell executor, supplied by whichever boundary builds this. */
     commandManager: CommandExecutor;

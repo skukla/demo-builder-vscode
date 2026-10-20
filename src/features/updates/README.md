@@ -2,6 +2,29 @@
 
 Pulls component and extension updates from GitHub Releases.
 
+## Check for Updates is a modal on the projects list (PL-80)
+
+Run by the SC, `demoBuilder.checkForUpdates` opens Your Projects with the Updates modal
+(`projects-dashboard/ui/components/UpdatesModal.tsx`). The modal asks the extension to check
+(`checkUpdates`, in `handlers/updatesModalHandlers.ts`): the extension's own release and
+every project, through `services/allUpdates.ts` and the same `computeUpdateSelections` the
+agent's `apply_updates` uses. It lists every update grouped under Demo Builder, each project
+and the template repositories, all ticked except what cannot be applied from here. Apply
+(`applyUpdates`) runs the ticked rows through the same `applyUpdatesHeadless` the agent uses,
+told in the screen's progress modal, with its questions asked there: stop a running demo,
+reset a template that conflicts with the SC's edits, replace a library's blocks under the
+`ask` sync setting (`handlers/updateQuestionsInModal.ts`). The extension's own update runs
+last, because it ends by offering a reload.
+
+The background check (the sidebar opening, then every four hours) runs the same check
+quietly and only notifies, "N Demo Builder updates available", with Review opening the
+modal. Nothing opens by itself. Until 2026-10-20 the command opened VS Code's picker, the
+picker had its own copy of the check and the apply, and `src/utils/autoUpdater.ts` showed
+its own "Update Now" every four hours; all three are gone.
+
+A projects list that is not open yet cannot be pushed to, so the request is held
+(`handlers/updatesModalRequest.ts`) until the new screen asks for it once mounted.
+
 ## Every component update is snapshotted first
 
 `componentUpdater.ts` copies the component directory before touching it and restores
@@ -62,8 +85,8 @@ variable names.
 Ticking a block library on a project that already exists only records the id in
 `selectedBlockLibraries`. The update check turns that into an **install** item
 ("Demo Builder Blocks: install") whenever a selected library has no record in
-`installedBlockLibraries` (`services/blockLibraryInstall.ts`). Applying it — the
-picked row in Check for Updates, or `apply_updates` with `confirm:true` — makes
+`installedBlockLibraries` (`services/blockLibraryInstall.ts`). Applying it — a row left
+ticked in the Updates modal, or `apply_updates` with `confirm:true` — makes
 one commit to the storefront repository through the same installer updates and
 creation use, and writes the same record creation writes.
 
@@ -97,12 +120,13 @@ Justrite ERP"), alongside the other project checks so the extension's own update
 does not wait on it; a project with no deployed integration costs nothing, and each
 pair costs one `git fetch` per clone.
 
-Picking the row is the confirmation. It runs the same pair update the card's Update
+Applying the row is the confirmation. It runs the same pair update the card's Update
 button runs (`updateIntegrationPairFor`, dashboard/handlers/integrationUpdateHandlers;
 the order and loop in app-builder's `integrationPairUpdate.ts`): guards, then the ERPs
 with newer code, then the integration. A project other than the open one is saved in
 place, never made current. A pair whose project uses a different Adobe organization is
-listed unticked and not deployed from this org: its row says to open that project.
+listed unticked and locked, and not deployed from this org: its row says to open that
+project.
 That is decided by the guard chain's own org step (`orgGuard`, which `runGuards` runs),
 handed to the updates services as a probe bound at the boundary (`integrationUpdateProbe`),
 so nothing under `updates/services` reaches into the dashboard's handlers.

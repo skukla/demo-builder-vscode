@@ -13,9 +13,9 @@
  *  - WITH confirm:true: applies everything available, returning per-category
  *    counts + a phase timeline.
  *
- * It refuses to apply while the demo is running (the headless path won't stop it,
- * unlike the QuickPick command's prompt). Block libraries on the 'ask' sync
- * behavior are deferred to the safe 'disabled' action — see updateApplyService.
+ * It refuses to apply while the demo is running (the apply does not stop it; the
+ * Updates modal asks the SC instead). Block libraries on the 'ask' sync behavior
+ * are deferred to the safe 'disabled' action — see updateApplyService.
  */
 
 import { z } from 'zod';

@@ -36,7 +36,7 @@ Owner approved the design 2026-10-20 ("Yes"). Branch `feature/pl-80-updates-moda
   QuickPick builder and dispatch in `checkUpdates.ts` / `updateTypes.ts` and the suites
   that pin them, replaced by tests of the new path.
 
-## Slices (each passes the full gate before its commit)
+## Slices (each committed after its own tests, both typechecks and lint; the full gate runs before each push)
 
 1. **Check across projects.** `computeUpdateSelections(projects, ...)`, fork dedup; the
    per-project form delegates. Existing `updateSelections` suites pass unchanged.
@@ -63,3 +63,14 @@ Owner approved the design 2026-10-20 ("Yes"). Branch `feature/pl-80-updates-moda
   check and apply with the screen.
 - Mocks: the `updateSelections` and `applyUpdatesHeadless` fakes in the suites that use
   them, audited when their signatures change.
+
+## Outcome (2026-10-20)
+
+Built in eight commits on `feature/pl-80-updates-modal`. Three changes the slices found:
+the template part of the headless apply moved to `updateApplyTemplate.ts` (the questions
+took the service over its size limit); the API picker's row became the shared
+`CheckboxRow`, with its sheet `core/ui/styles/checkbox-row.css` (its classes lived in a
+project-creation sheet the projects list never loads); and a projects list just created is
+asked for the modal once mounted (`takeUpdatesRequest`), since a push would arrive before its
+listener. The check's eight progress stages and `UpdateContext`'s `getCurrentProject` went
+with the picker. Release rows 1.14 to 1.16.
