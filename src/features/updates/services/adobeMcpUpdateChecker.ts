@@ -2,28 +2,25 @@
  * Adobe MCP Update Checker
  *
  * Compares the storefront's installed `@adobe-commerce/commerce-extensibility-tools`
- * version (read from `node_modules/.../package.json`) against the latest GitHub
- * release for `adobe-commerce/commerce-extensibility-tools`. Surfaces in
- * `CheckUpdatesCommand` alongside the other update sources.
+ * version (read from `node_modules/.../package.json`) against the version npm publishes
+ * as `latest`, which is where its update (`npm update`) installs from. Until 2026-10-20 it
+ * asked GitHub for the repository's latest release; the repository is private and has no
+ * releases, so no Adobe MCP update was ever offered (PL-80).
  *
- * Mirrors `TemplateUpdateChecker` in shape — `(secrets, logger)` constructor,
- * single `checkForUpdates(project)` method, `null` for "skip", populated
- * result for both "current" and "available" states.
+ * Single `checkForUpdates(project)` method, `null` for "skip", populated result for both
+ * "current" and "available" states.
  */
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import semver from 'semver';
-import * as vscode from 'vscode';
-import { getLatestRelease } from './githubApiClient';
+import { getLatestNpmVersion } from './npmRegistry';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveMcpToolsDir } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 const ADOBE_MCP_PACKAGE = '@adobe-commerce/commerce-extensibility-tools';
-const ADOBE_MCP_OWNER = 'adobe-commerce';
-const ADOBE_MCP_REPO = 'commerce-extensibility-tools';
 
 export interface AdobeMcpUpdateResult {
     hasUpdate: boolean;
@@ -33,15 +30,12 @@ export interface AdobeMcpUpdateResult {
 }
 
 export class AdobeMcpUpdateChecker {
-    constructor(
-        private readonly secrets: vscode.SecretStorage,
-        private readonly logger: Logger,
-    ) {}
+    constructor(private readonly logger: Logger) {}
 
     /**
      * Check if the storefront has a newer Adobe MCP release available.
      * Returns `null` for any skip condition (no storefront, no install,
-     * GitHub down) and a populated result for "current" and "available".
+     * npm unreachable) and a populated result for "current" and "available".
      */
     async checkForUpdates(project: Project): Promise<AdobeMcpUpdateResult | null> {
         try {
@@ -57,16 +51,16 @@ export class AdobeMcpUpdateChecker {
             const currentVersion = await this.readInstalledVersion(project.path);
             if (!currentVersion) return null;
 
-            const latest = await getLatestRelease(this.secrets, ADOBE_MCP_OWNER, ADOBE_MCP_REPO);
-            if (!latest) {
-                this.logger.debug(`[AdobeMcpUpdates] Could not fetch latest release for ${ADOBE_MCP_PACKAGE}`);
+            const latest = await getLatestNpmVersion(ADOBE_MCP_PACKAGE);
+            if (!latest || !semver.valid(latest)) {
+                this.logger.debug(`[AdobeMcpUpdates] Could not read the latest version of ${ADOBE_MCP_PACKAGE} from npm`);
                 return null;
             }
 
             return {
-                hasUpdate: semver.gt(latest.version, currentVersion),
+                hasUpdate: semver.gt(latest, currentVersion),
                 currentVersion,
-                latestVersion: latest.version,
+                latestVersion: latest,
                 packageName: ADOBE_MCP_PACKAGE,
             };
         } catch (err) {

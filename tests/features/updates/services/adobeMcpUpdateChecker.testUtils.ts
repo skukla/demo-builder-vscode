@@ -1,7 +1,7 @@
 /**
  * Shared setup for the adobeMcpUpdateChecker family (ADR-016 / PL-14).
  *
- * The mock wall both suites need — the package file read and the GitHub release
+ * The mock wall both suites need — the package file read and the npm version
  * lookup — plus the EDS project both were building and the mock handles both cast.
  *
  * Import this FIRST in a suite: the jest.mock calls register when this file's body
@@ -14,20 +14,20 @@ jest.mock('fs/promises', () => ({
     readFile: jest.fn(),
 }));
 
-jest.mock('@/features/updates/services/githubApiClient', () => ({
-    getLatestRelease: jest.fn(),
+jest.mock('@/features/updates/services/npmRegistry', () => ({
+    getLatestNpmVersion: jest.fn(),
 }));
 
 import * as fsPromises from 'fs/promises';
 import { COMPONENT_IDS } from '@/core/constants';
-import { getLatestRelease } from '@/features/updates/services/githubApiClient';
+import { getLatestNpmVersion } from '@/features/updates/services/npmRegistry';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 
 export { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 
 export const readFileMock = fsPromises.readFile as jest.Mock;
-export const getLatestReleaseMock = getLatestRelease as jest.Mock;
+export const getLatestNpmVersionMock = getLatestNpmVersion as jest.Mock;
 
 export const ADOBE_MCP_PKG = '@adobe-commerce/commerce-extensibility-tools';
 

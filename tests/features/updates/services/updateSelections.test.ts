@@ -80,7 +80,7 @@ describe('computeProjectUpdateSelections', () => {
         expect(ForkSyncServiceCtor).toHaveBeenCalledWith(secrets, handlerCtx.logger);
         expect(TemplateUpdateCheckerCtor).toHaveBeenCalledWith(secrets, handlerCtx.logger);
         expect(UpdateManagerCtor).toHaveBeenCalledWith(handlerCtx.context, handlerCtx.logger);
-        expect(AdobeMcpUpdateCheckerCtor).toHaveBeenCalledWith(secrets, handlerCtx.logger);
+        expect(AdobeMcpUpdateCheckerCtor).toHaveBeenCalledWith(handlerCtx.logger);
         expect(AddonUpdateCheckerCtor).toHaveBeenCalledWith(secrets, handlerCtx.logger);
     });
 

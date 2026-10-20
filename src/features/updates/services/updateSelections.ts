@@ -208,10 +208,10 @@ async function checkComponents(
 
 async function checkAdobeMcp(
     projects: Project[],
-    { secrets, logger }: Check,
+    { logger }: Check,
 ): Promise<UpdateSelections['adobeMcp']> {
     const found: UpdateSelections['adobeMcp'] = [];
-    const checker = projects.length > 0 ? new AdobeMcpUpdateChecker(secrets, logger) : undefined;
+    const checker = projects.length > 0 ? new AdobeMcpUpdateChecker(logger) : undefined;
     for (const project of projects) {
         try {
             const a = await checker?.checkForUpdates(project);
