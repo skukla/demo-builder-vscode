@@ -26,6 +26,8 @@ export const GITHUB_API_BASE = 'https://api.github.com';
 
 export interface GitHubCompareResponse {
     ahead_by: number;
+    /** The changed files, at most 300 (GitHub's cap); a rename also names its old path. */
+    files?: Array<{ filename: string; previous_filename?: string }>;
 }
 
 export interface GitHubReleaseInfo {

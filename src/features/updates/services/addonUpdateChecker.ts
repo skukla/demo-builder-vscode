@@ -14,6 +14,7 @@ import * as vscode from 'vscode';
 import {
     compareCommits,
     getLatestBranchCommit,
+    type GitHubCompareResponse,
 } from './githubApiClient';
 import { SDK_SOURCE } from '@/features/eds/services/inspectorHelpers';
 import type { Project } from '@/types/base';
@@ -35,6 +36,42 @@ export interface InspectorSdkUpdateResult {
     currentCommit: string;
     latestCommit: string;
     commitsBehind: number;
+}
+
+// ---------------------------------------------------------------------------
+// What an install copies
+// ---------------------------------------------------------------------------
+
+/** The root files a library install merges (`installBlockCollections`); blocks come from `blocks/`. */
+const LIBRARY_ROOT_FILES = new Set(['component-definition.json', 'component-filters.json', 'component-models.json']);
+
+const libraryInstalls = (path: string): boolean => path.startsWith('blocks/') || LIBRARY_ROOT_FILES.has(path);
+
+/** The SDK install vendors the `.js` files under its source folder (`inspectorHelpers`). */
+const sdkInstalls = (path: string): boolean => path.startsWith(`${SDK_SOURCE.srcDir}/`) && path.endsWith('.js');
+
+/** GitHub lists at most this many changed files; a list this long may have left one out. */
+const COMPARE_FILE_CAP = 300;
+
+/**
+ * Whether the commits since the installed one changed nothing the install copies.
+ *
+ * A new commit alone is not an update: on 2026-10-20 a CI workflow added to the block
+ * library offered "1 commit behind" on every project that had it, with no block changed.
+ * When the list is missing or full, the answer is no: an update offered for nothing
+ * costs a click, one hidden costs the SC the change.
+ *
+ * @param comparison - GitHub's compare answer, or null when it could not be read
+ * @param installs - whether the install copies a repository path
+ * @returns true only when every listed file, by its new and its old name, is one the install ignores
+ */
+function changesNothingInstalled(
+    comparison: GitHubCompareResponse | null,
+    installs: (path: string) => boolean,
+): boolean {
+    const files = comparison?.files;
+    if (!files || files.length >= COMPARE_FILE_CAP) return false;
+    return !files.some((f) => installs(f.filename) || (f.previous_filename !== undefined && installs(f.previous_filename)));
 }
 
 // ---------------------------------------------------------------------------
@@ -89,6 +126,10 @@ export class AddonUpdateChecker {
                 const comparison = await compareCommits(
                     this.secrets, lib.source.owner, lib.source.repo, lib.commitSha, latestCommit,
                 );
+                if (changesNothingInstalled(comparison, libraryInstalls)) {
+                    this.logger.debug(`[Updates] Library "${lib.name}": newer commits change no block files`);
+                    continue;
+                }
 
                 results.push({ library: lib, latestCommit, commitsBehind: comparison?.ahead_by ?? 0 });
             } catch (error) {
@@ -133,6 +174,10 @@ export class AddonUpdateChecker {
             const comparison = await compareCommits(
                 this.secrets, SDK_SOURCE.owner, SDK_SOURCE.repo, currentCommit, latestCommit,
             );
+            if (changesNothingInstalled(comparison, sdkInstalls)) {
+                this.logger.debug(`[Updates] Inspector SDK: newer commits change no SDK files`);
+                return { hasUpdate: false, currentCommit, latestCommit, commitsBehind: 0 };
+            }
 
             return {
                 hasUpdate: true,
