@@ -186,7 +186,7 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (48)
+### ai  (49)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -194,7 +194,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-32` | fix | [read_runtime_activation cannot read the App Management installer's runs](2026-09-26-runtime-activation-read-fails-on-installer-runs.md) | — | med | built |
 | `AB-70` | feature | [Ownership reconcile: adding or removing an ERP leaves no products behind](2026-10-09-erp-ownership-reconcile.md) | — | high | built |
 | `AI-1` | epic | [Is the surface good enough for an agent to do the work?](epic-ai-surface-good-enough.md) | — | high | active |
-| `AI-1a` | question | └ [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) | AI-1c | high | open |
+| `AI-1a` | question | └ [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) | AI-1c | high | shipped |
 | `AI-1b` | question | └ [104 tools, and agents reach 20 of them (measured 2026-08-25; 121 tools now)](2026-08-25-agents-barely-use-the-tool-surface.md) | AI-1c | high | shipped |
 | `AI-1c` | feature | └ [The other half of suggestions: finding holes in OUR tools](2026-08-26-find-the-gaps-in-our-own-surface.md) | — | high | shipped |
 | `AI-1d` | feature | └ [Journeys, not prompts, are what the battery should measure](2026-08-26-journeys-not-prompts-are-the-battery.md) | AI-1c | high | shipped |
@@ -205,11 +205,12 @@ each item's own file; what has already landed against an item is in its
 | `AI-1i` | fix | └ [The battery destroys its own baseline on every run](2026-08-26-battery-results-are-overwritten.md) | — | high | shipped |
 | `AI-1j` | feature | └ [reload_window — the last manual step in the measure loop](2026-08-26-reload-window-mcp-tool.md) | — | high | shipped |
 | `AI-1k` | feature | └ [The agent can query Commerce now, but has to discover the schema every time](2026-08-26-commerce-schema-guidance.md) | — | med | dropped |
-| `AI-1l` | question | └ [Does a tool make the agent faster, or just move where it gets stuck?](2026-08-26-tools-must-not-narrow-what-works.md) | — | high | open |
+| `AI-1l` | question | └ [Does a tool make the agent faster, or just move where it gets stuck?](2026-08-26-tools-must-not-narrow-what-works.md) | — | high | shipped |
 | `AI-1m` | fix | └ [The storefront skills we mean to install have never installed, silently](2026-08-26-storefront-skills-never-install.md) | — | high | shipped |
 | `AI-1n` | fix | └ [The battery measures a world that does not exist, and feeds itself](2026-08-26-battery-measures-a-world-that-does-not-exist.md) | — | high | shipped |
 | `AI-1q` | feature | └ [Every tool and skill the modal promises gets a prompt that proves it](2026-08-27-full-surface-prompt-coverage.md) | — | high | shipped |
 | `AI-1r` | question | └ [34% of the surface is "agent-relevant and uncovered" — is any of it real?](2026-08-29-agent-surface-gap-34-percent.md) | — | med | shipped |
+| `AI-75` | feature | └ [An agent can look at the storefront it is changing, and judge the design](2026-10-20-agent-visual-design-feedback.md) | — | high | backlog |
 | `AI-1o` | fix | [Every project gets the App Builder skills, including projects with no App Builder app](2026-08-26-pair-skills-to-project-shape.md) | — | high | shipped |
 | `AI-1p` | feature | [Nothing checks that the AI bundle we ship is internally consistent](2026-08-26-ai-bundle-coherence-check.md) | — | high | shipped |
 | `AI-2` | epic | [Can you see what the agent is doing?](epic-ai-see-what-agent-does.md) | _parked by the owner (2026-10-03)_ | high | gated |
@@ -275,7 +276,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-22` | feature | [Shared storefront: read access to the colleague's DA.live site is the missing piece](2026-09-30-shared-storefront-read-access-to-the-source-dalive-site.md) | — | high | active |
 | `EDS-23` | fix | [An inner code status 400 can mean "the App is not on this repository", and the check calls it installed](2026-09-30-eds-code-status-400-is-not-installed.md) | — | high | built |
 | `EDS-24` | feature | [Category pages and the nav are generated from the Commerce category tree](2026-10-01-category-pages-and-nav-from-the-commerce-tree.md) | _the owner watching the first real run on Justrite_ | high | built |
-| `EDS-25` | question | [Should product pages use Adobe's prerender, and how?](2026-10-05-prerender-for-product-pages.md) | — | med | open |
+| `EDS-25` | question | [Should product pages use Adobe's prerender, and how?](2026-10-05-prerender-for-product-pages.md) | — | med | shipped |
 | `EDS-26` | fix | [Reset and delete leave a storefront's product pages published](2026-10-05-product-pages-survive-reset.md) | — | med | built |
 | `EDS-27` | feature | [New categories get their pages without a Republish](2026-10-05-new-categories-get-pages-automatically.md) | EDS-24 | med | built |
 | `EDS-28` | fix | [Existing storefront gains a block library](2026-10-05-existing-storefront-gains-a-block-library.md) | — | high | built |
@@ -302,7 +303,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-51` | fix | [Updates bring a storefront to the TESTED version, and keep Demo Builder's layer on it](2026-10-16-thin-layer-updates-tested-version.md) | — | high | built |
 | `EDS-52` | fix | [The new-category offer reads the SAVED store, before it is published](2026-10-17-category-offer-after-store-switch.md) | — | med | built |
 | `EDS-53` | fix | [CitiSignal's checkout label sheet will not preview on a copy](2026-10-18-citisignal-checkout-sheet-will-not-preview.md) | — | med | built |
-| `EDS-54` | fix | [An expired DA.live sign-in during the access grant is logged and passed over](2026-10-19-dalive-grant-401-passed-over.md) | — | low | backlog |
+| `EDS-54` | fix | [An expired DA.live sign-in during the access grant is logged and passed over](2026-10-19-dalive-grant-401-passed-over.md) | — | low | built |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (124)
@@ -321,7 +322,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-3` | fix | [Integration add must fail on install error](2026-08-27-integration-add-must-fail-on-install-error.md) | — | med | shipped |
 | `AB-6` | feature | [Event-provider lifecycle tooling — so eventing round-trips to zero](2026-08-28-event-provider-lifecycle-tooling.md) | — | high | built |
 | `AB-7` | fix | [remove_integration reports success while leaving deployed code running](2026-08-28-remove-integration-leaves-runtime-deployed.md) | — | high | shipped |
-| `AB-8` | question | [Where does event-provider management belong, and what does an SC do with it?](2026-09-09-event-provider-surface-design.md) | — | med | open |
+| `AB-8` | question | [Where does event-provider management belong, and what does an SC do with it?](2026-09-09-event-provider-surface-design.md) | — | med | shipped |
 | `AB-10` | feature | └ [An "ERP" section in Commerce Admin where a business user configures the integration](2026-09-16-erp-settings-in-commerce-admin.md) | — | med | superseded |
 | `AB-11` | feature | └ [Explain the optional App Management listing, and warn that unassociating deletes settings](2026-09-17-app-management-associate-handoff.md) | — | low | built |
 | `AB-12` | feature | └ [Removing an integration leaves it "Associated" in App Management](2026-09-17-app-management-teardown-order.md) | AB-11 | low | built |
@@ -440,7 +441,7 @@ each item's own file; what has already landed against an item is in its
 |---|---|---|---|---|---|
 | `DI-1` | feature | [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) | — | med | active |
 | `DI-2` | feature | [Instance wipe option — remove as much data as the service allows](2026-08-22-instance-wipe-option.md) | — | med | backlog |
-| `DI-4` | question | [Has the Data Installer superseded the ACO data ingestion tool?](2026-10-07-aco-ingestion-tool-vs-data-installer.md) | — | low | open |
+| `DI-4` | question | [Has the Data Installer superseded the ACO data ingestion tool?](2026-10-07-aco-ingestion-tool-vs-data-installer.md) | — | low | superseded |
 | `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | superseded |
 
 ### prerequisites  (4)
@@ -636,7 +637,7 @@ the table cannot hold: why the layers are ordered this way.*
 
 **A** — 3 items
 
-- `AI-1a` [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) — open
+- `AI-1a` [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) — shipped
 - `AI-1b` [104 tools, and agents reach 20 of them (measured 2026-08-25; 121 tools now)](2026-08-25-agents-barely-use-the-tool-surface.md) — shipped
 - `PL-22` [93% was the ceiling, not the norm — mutation scores fall as async density rises](2026-08-30-mutation-score-beyond-confident-modules.md) — shipped
 
@@ -656,7 +657,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `AI-1g` [The home AGENTS.md has two different contents, and which one you get is luck](2026-08-26-home-agents-md-flip-flops.md) — shipped
 - `AI-1h` [run_commerce_query — the agent finds the endpoint, then has to leave to use it](2026-08-26-run-commerce-query-tool.md) — shipped
 - `AI-1k` [The agent can query Commerce now, but has to discover the schema every time](2026-08-26-commerce-schema-guidance.md) — dropped
-- `AI-1l` [Does a tool make the agent faster, or just move where it gets stuck?](2026-08-26-tools-must-not-narrow-what-works.md) — open
+- `AI-1l` [Does a tool make the agent faster, or just move where it gets stuck?](2026-08-26-tools-must-not-narrow-what-works.md) — shipped
 - `AI-1m` [The storefront skills we mean to install have never installed, silently](2026-08-26-storefront-skills-never-install.md) — shipped
 - `EDS-5` [Block authoring has no oracle — the type scale exists and nothing points at it](2026-08-13-block-authoring-has-no-type-scale-oracle.md) — gated
 
@@ -692,7 +693,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*292 item(s) sit outside the A–G chain.*
+*293 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

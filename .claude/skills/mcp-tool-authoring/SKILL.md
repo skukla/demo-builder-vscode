@@ -23,6 +23,23 @@ with ~10 lines. The traps are in what qualifies and what else must move.
 3. Registered from `extension.ts` (descriptor modules import handler maps, so they stay
    out of the vscode-free server module).
 
+## A tool removes work; it does not add vocabulary (AI-1l, 2026-10-20)
+
+Before adding a constraint to an input, ask whether the agent could already say the right
+thing without it. In nine runs of a Commerce query the agent's first query was correct
+every time, and correct by hand before `run_commerce_query` existed. The tool's
+`endpoint` enum refused that correct reading ("catalogService") five times, and the
+agent abandoned a right query to discover our name for it.
+
+- Earn your keep on what the agent CANNOT do cheaply: store headers, credentials, round
+  trips saved. Not on naming things it already knows.
+- Prefer accepting the agent's natural form (a URL, a path, an HTTP verb) and resolving it,
+  over a closed list of our names for the same thing.
+- A closed list (`z.enum`, `z.literal`, `z.nativeEnum`) is allowed when the set IS the
+  agent's vocabulary: our screens, our states, a discriminator for which field follows.
+  Each one needs a row with that reason in `tests/sop/tool-input-constraints.ledger.json`;
+  `tests/sop/tool-input-constraints.test.ts` fails the build without it.
+
 ## Three things every tool declares (added 2026-08-25)
 
 None of these can be derived from the tool's NAME, and all three were derived from it

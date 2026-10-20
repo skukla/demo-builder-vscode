@@ -1157,6 +1157,18 @@ promising an agent that every response parses.
 > that it works — AB-7 is an open defect where `remove_integration` reported success
 > while leaving deployed code running, and this would not have caught it.
 
+> **Convention.** A tool removes work; it does not add vocabulary the agent has to guess.
+> Every closed list a tool's input accepts (`z.enum`, `z.literal`, `z.nativeEnum`) is recorded
+> with why the set is the agent's own words — our screens, our states, an HTTP verb — and not
+> a name for something it knows by another.
+> *Why:* every constraint a tool adds is a new way for a correct request to be refused.
+> Measured 2026-08-26 (AI-1l): in nine runs of a Commerce query, the agent's first query was
+> right every time, and was right by hand before `run_commerce_query` existed. The tool's
+> `endpoint` enum refused that correct reading five times, and the agent abandoned a right
+> query to work out our name for it. curl had never had that failure.
+> Enforced by `tests/sop/tool-input-constraints.test.ts`: a new closed list fails until its
+> row in `tool-input-constraints.ledger.json` says why; a removed one fails until the row goes.
+
 > **Convention.** A tool that fails says so — the result carries `isError: true`. Never
 > a successful result whose text happens to report a failure.
 > *Why:* MCP has two error mechanisms and they are not interchangeable. A JSON-RPC error
@@ -1825,11 +1837,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 61 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 62 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 130 conventions. 128 of them are enforced; 2 are not.**
+**This handbook states 131 conventions. 129 of them are enforced; 2 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

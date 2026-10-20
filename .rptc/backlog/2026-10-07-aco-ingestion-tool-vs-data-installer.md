@@ -4,7 +4,8 @@ kind: question
 area: data-installer
 needs: []
 value: low
-status: open
+status: superseded
+superseded-by: PL-60
 ---
 
 # Has the Data Installer superseded the ACO data ingestion tool?
@@ -53,3 +54,4 @@ job the Data Installer does not do yet?
 ## Shipped so far
 
 - 2026-10-07  docs(backlog): DI-4, has the Data Installer superseded the ACO ingestion tool? (`250462432`)
+- 2026-10-20  Superseded by PL-60 (owner 2026-10-19): the ACO data question is that item's decision P3.
