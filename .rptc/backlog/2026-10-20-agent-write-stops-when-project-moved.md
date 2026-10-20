@@ -46,3 +46,4 @@ stops it. An agent that has not looked at the project yet is not protected by th
 ## Shipped so far
 
 - 2026-10-20  fix(ai): an agent's write stops when the open project moved under it (`9c6843f63`)
+- 2026-10-20  docs(backlog): AI-76 built, with its commit and the four exempt tools (`b69820c03`)
