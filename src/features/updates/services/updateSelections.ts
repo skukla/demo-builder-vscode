@@ -47,10 +47,9 @@ export interface UpdateSelections {
 }
 
 /**
- * Compute available updates for ONE project across all categories, reusing the
- * same checker services the QuickPick command uses. Each category degrades
- * independently — a checker failure logs and yields an empty list rather than
- * aborting the whole computation.
+ * Compute available updates for ONE project across all categories: the multi-project
+ * check with one project. Each category degrades independently — a checker failure
+ * logs and yields an empty list rather than aborting the whole computation.
  *
  * @param project - the project to check
  * @param handlerCtx - the handler context the checkers are built from
@@ -63,112 +62,161 @@ export async function computeProjectUpdateSelections(
     handlerCtx: HandlerContext,
     integrationProbe: IntegrationUpdateProbe,
 ): Promise<UpdateSelections> {
-    const { secrets } = handlerCtx.context;
-    const logger = handlerCtx.logger;
-    const selections: UpdateSelections = {
-        forkSync: [],
-        template: [],
-        component: [],
-        adobeMcp: [],
-        blockLibrary: [],
-        blockLibraryInstall: [],
-        inspector: [],
-        integration: [],
+    return computeUpdateSelections([project], handlerCtx, integrationProbe);
+}
+
+/**
+ * Compute available updates for several projects across all categories (PL-80): what
+ * Check for Updates offers, and, with one project, what the agent's `apply_updates`
+ * reports. A template repository two projects share is one fork sync; components are
+ * asked about in one call; a checker that fails for one project costs that project's
+ * answer in that category only, with one warning.
+ *
+ * @param projects - the projects to check, in the order their updates are listed
+ * @param handlerCtx - the handler context the checkers are built from
+ * @param integrationProbe - see {@link computeProjectUpdateSelections}
+ * @returns every pending update, each carrying its project
+ */
+export async function computeUpdateSelections(
+    projects: Project[],
+    handlerCtx: HandlerContext,
+    integrationProbe: IntegrationUpdateProbe,
+): Promise<UpdateSelections> {
+    const check: Check = { secrets: handlerCtx.context.secrets, logger: handlerCtx.logger };
+    const addons = await checkAddons(projects, check);
+    return {
+        forkSync: await checkForkSyncs(projects, check),
+        template: await checkTemplates(projects, check),
+        component: await checkComponents(projects, handlerCtx),
+        adobeMcp: await checkAdobeMcp(projects, check),
+        blockLibrary: addons.blockLibrary,
+        // Selected but never installed. No network, so no try.
+        blockLibraryInstall: projects.flatMap((project) =>
+            findUninstalledBlockLibraries(project).map((library) => ({ project, library })),
+        ),
+        inspector: addons.inspector,
+        integration: await checkIntegrations(projects, integrationProbe, handlerCtx.logger),
     };
+}
 
-    // Fork sync
-    try {
+/** What every checker is built from. */
+interface Check {
+    secrets: HandlerContext['context']['secrets'];
+    logger: HandlerContext['logger'];
+}
+
+function warnFailed(logger: Check['logger'], what: string, error: unknown): void {
+    logger.warn(`[Updates] ${what} check failed: ${sanitizeErrorForLogging(error as Error)}`);
+}
+
+async function checkForkSyncs(projects: Project[], { secrets, logger }: Check): Promise<UpdateSelections['forkSync']> {
+    const found: UpdateSelections['forkSync'] = [];
+    const asked = new Set<string>();
+    const service = projects.length > 0 ? new ForkSyncService(secrets, logger) : undefined;
+    for (const project of projects) {
         const source = getTemplateSource(project);
-        if (source) {
-            const status = await new ForkSyncService(secrets, logger).checkForkStatus(
-                source.owner,
-                source.repo,
-            );
+        const key = source ? `${source.owner}/${source.repo}`.toLowerCase() : '';
+        if (!source || !service || asked.has(key)) continue;
+        asked.add(key);
+        try {
+            const status = await service.checkForkStatus(source.owner, source.repo);
             if (status?.isFork && status.behindBy > 0) {
-                selections.forkSync.push({
-                    owner: source.owner,
-                    repo: source.repo,
-                    branch: status.defaultBranch || 'main',
-                });
+                found.push({ owner: source.owner, repo: source.repo, branch: status.defaultBranch || 'main' });
             }
+        } catch (error) {
+            warnFailed(logger, 'Fork sync', error);
         }
-    } catch (error) {
-        logger.warn(`[Updates] Fork sync check failed: ${sanitizeErrorForLogging(error as Error)}`);
     }
+    return found;
+}
 
-    // Template
-    try {
-        const t = await new TemplateUpdateChecker(secrets, logger).checkForUpdates(project);
-        if (t?.hasUpdates) selections.template.push({ project });
-    } catch (error) {
-        logger.warn(`[Updates] Template check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    // Components
-    try {
-        const results = await new UpdateManager(
-            handlerCtx.context,
-            logger,
-        ).checkAllProjectsForUpdates([project]);
-        for (const r of results) {
-            const outdated = r.outdatedProjects.some((o) => o.project.path === project.path);
-            if (outdated && r.releaseInfo?.downloadUrl) {
-                selections.component.push({
-                    project,
-                    componentId: r.componentId,
-                    latestVersion: r.latestVersion,
-                    downloadUrl: r.releaseInfo.downloadUrl,
-                });
-            }
+async function checkTemplates(projects: Project[], { secrets, logger }: Check): Promise<UpdateSelections['template']> {
+    const found: UpdateSelections['template'] = [];
+    const checker = projects.length > 0 ? new TemplateUpdateChecker(secrets, logger) : undefined;
+    for (const project of projects) {
+        try {
+            if ((await checker?.checkForUpdates(project))?.hasUpdates) found.push({ project });
+        } catch (error) {
+            warnFailed(logger, 'Template', error);
         }
-    } catch (error) {
-        logger.warn(`[Updates] Component check failed: ${sanitizeErrorForLogging(error as Error)}`);
     }
+    return found;
+}
 
-    // Adobe MCP
+async function checkComponents(projects: Project[], handlerCtx: HandlerContext): Promise<UpdateSelections['component']> {
+    if (projects.length === 0) return [];
     try {
-        const a = await new AdobeMcpUpdateChecker(secrets, logger).checkForUpdates(project);
-        if (a?.hasUpdate)
-            selections.adobeMcp.push({
-                project,
-                packageName: a.packageName,
-                latestVersion: a.latestVersion,
-            });
+        const results = await new UpdateManager(handlerCtx.context, handlerCtx.logger).checkAllProjectsForUpdates(
+            projects,
+        );
+        const asked = new Set(projects.map((p) => p.path));
+        return results.flatMap((r) => {
+            const downloadUrl = r.releaseInfo?.downloadUrl;
+            if (!downloadUrl) return [];
+            return r.outdatedProjects
+                .filter((o) => asked.has(o.project.path))
+                .map((o) => ({ project: o.project, componentId: r.componentId, latestVersion: r.latestVersion, downloadUrl }));
+        });
     } catch (error) {
-        logger.warn(`[Updates] Adobe MCP check failed: ${sanitizeErrorForLogging(error as Error)}`);
+        warnFailed(handlerCtx.logger, 'Component', error);
+        return [];
     }
+}
 
-    // Add-ons (block libraries + inspector)
-    try {
-        const checker = new AddonUpdateChecker(secrets, logger);
-        for (const u of await checker.checkBlockLibraries(project)) {
-            selections.blockLibrary.push({
+async function checkAdobeMcp(projects: Project[], { secrets, logger }: Check): Promise<UpdateSelections['adobeMcp']> {
+    const found: UpdateSelections['adobeMcp'] = [];
+    const checker = projects.length > 0 ? new AdobeMcpUpdateChecker(secrets, logger) : undefined;
+    for (const project of projects) {
+        try {
+            const a = await checker?.checkForUpdates(project);
+            if (a?.hasUpdate) found.push({ project, packageName: a.packageName, latestVersion: a.latestVersion });
+        } catch (error) {
+            warnFailed(logger, 'Adobe MCP', error);
+        }
+    }
+    return found;
+}
+
+/** Block libraries and the inspector SDK: one checker, one failure per project costs both. */
+async function checkAddons(
+    projects: Project[],
+    { secrets, logger }: Check,
+): Promise<Pick<UpdateSelections, 'blockLibrary' | 'inspector'>> {
+    const found: Pick<UpdateSelections, 'blockLibrary' | 'inspector'> = { blockLibrary: [], inspector: [] };
+    const checker = projects.length > 0 ? new AddonUpdateChecker(secrets, logger) : undefined;
+    for (const project of projects) {
+        if (!checker) break;
+        try {
+            const libraries = (await checker.checkBlockLibraries(project)).map((u) => ({
                 project,
                 library: u.library,
                 latestCommit: u.latestCommit,
-            });
+            }));
+            const insp = await checker.checkInspectorSdk(project);
+            found.blockLibrary.push(...libraries);
+            if (insp?.hasUpdate) found.inspector.push({ project, latestCommit: insp.latestCommit });
+        } catch (error) {
+            warnFailed(logger, 'Add-on', error);
         }
-        const insp = await checker.checkInspectorSdk(project);
-        if (insp?.hasUpdate)
-            selections.inspector.push({ project, latestCommit: insp.latestCommit });
-    } catch (error) {
-        logger.warn(`[Updates] Add-on check failed: ${sanitizeErrorForLogging(error as Error)}`);
     }
+    return found;
+}
 
-    // Block libraries selected but never installed. No network, so no try.
-    for (const library of findUninstalledBlockLibraries(project)) {
-        selections.blockLibraryInstall.push({ project, library });
-    }
-
-    // Integration pairs (AB-73): the Integrations screen's own check, through the
-    // probe the boundary bound. Costs nothing for a project with no deployed integration.
+/**
+ * Integration pairs (AB-73): the Integrations screen's own check, through the probe the
+ * boundary bound. Costs nothing for a project with no deployed integration.
+ */
+async function checkIntegrations(
+    projects: Project[],
+    probe: IntegrationUpdateProbe,
+    logger: Check['logger'],
+): Promise<UpdateSelections['integration']> {
     try {
-        selections.integration = await findIntegrationPairUpdates([project], integrationProbe);
+        return await findIntegrationPairUpdates(projects, probe);
     } catch (error) {
-        logger.warn(`[Updates] Integration check failed: ${sanitizeErrorForLogging(error as Error)}`);
+        warnFailed(logger, 'Integration', error);
+        return [];
     }
-
-    return selections;
 }
 
 /** Total number of pending updates across a selection set. */

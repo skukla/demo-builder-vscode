@@ -5,7 +5,7 @@ area: platform
 parent: PL-81
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Check for Updates in a modal, with the updates already ticked
