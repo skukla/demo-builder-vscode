@@ -37,6 +37,7 @@ function selections(): UpdateSelections {
     return {
         forkSync: [],
         template: [{ project: bodea }],
+        boilerplate: [],
         component: [],
         adobeMcp: [],
         blockLibrary: [justrite, bodea].map((project) => ({

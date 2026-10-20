@@ -59,6 +59,8 @@ type RowText = Pick<PendingUpdateRow, 'label' | 'detail'> & { lockedReason?: str
 /** Each project kind's words for one of its entries. */
 const PROJECT_KINDS: { [K in ProjectKind]: (entry: UpdateSelections[K][number]) => RowText } = {
     template: (t) => ({ label: templateLabel(t.project), detail: LIVE_SITE_DETAIL }),
+    // Adobe's half of a colleague's storefront, to the version our daily gate tested (EDS-56).
+    boilerplate: () => ({ label: 'Adobe boilerplate', detail: `Tested version, ${LIVE_SITE}` }),
     component: (c) => ({
         label: c.project.componentInstances?.[c.componentId]?.name ?? c.componentId,
         detail: c.currentVersion
@@ -99,6 +101,7 @@ function templateLabel(project: Project): string {
 type ProjectKind = Exclude<PendingUpdateKind, 'extension' | 'forkSync'>;
 const PROJECT_KIND_ORDER: ProjectKind[] = [
     'template',
+    'boilerplate',
     'component',
     'adobeMcp',
     'blockLibrary',
@@ -201,6 +204,7 @@ export function selectionsForIds(
         selections: {
             forkSync: pick('forkSync', selections.forkSync),
             template: pick('template', selections.template),
+            boilerplate: pick('boilerplate', selections.boilerplate),
             component: pick('component', selections.component),
             adobeMcp: pick('adobeMcp', selections.adobeMcp),
             blockLibrary: pick('blockLibrary', selections.blockLibrary),

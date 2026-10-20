@@ -7,6 +7,7 @@
 
 import { findAllUpdates } from '@/features/updates/services/allUpdates';
 import type { IntegrationUpdateProbe } from '@/features/updates/services/integrationUpdates';
+import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -32,9 +33,10 @@ function contextWith(projects: Array<ReturnType<typeof createMockProject>>) {
     return ctx;
 }
 
-const oneTemplate = (project: ReturnType<typeof createMockProject>) => ({
+const oneTemplate = (project: ReturnType<typeof createMockProject>): UpdateSelections => ({
     forkSync: [],
     template: [{ project }],
+    boilerplate: [],
     component: [],
     adobeMcp: [],
     blockLibrary: [],

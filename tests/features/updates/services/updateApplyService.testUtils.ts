@@ -37,6 +37,7 @@ export const mockCheckAllProjectsForUpdates = jest.fn();
 export const mockCheckMcpUpdates = jest.fn();
 export const mockCheckBlockLibraries = jest.fn();
 export const mockCheckInspectorSdk = jest.fn();
+export const mockCheckBoilerplate = jest.fn();
 
 /** Constructor spies: what each service was BUILT with. */
 export const ForkSyncServiceCtor = jest.fn();
@@ -104,6 +105,11 @@ jest.mock('@/features/updates/services/adobeMcpUpdateChecker', () => ({
         }
         checkForUpdates = (...a: unknown[]) => mockCheckMcpUpdates(...a);
     },
+}));
+// An unset mock (jest's resetMocks clears it before each test) answers no updates, as the
+// real check does for a project with no Adobe base.
+jest.mock('@/features/updates/services/boilerplateCheck', () => ({
+    checkBoilerplate: async (...a: unknown[]) => (await mockCheckBoilerplate(...a)) ?? [],
 }));
 jest.mock('@/features/updates/services/addonUpdateChecker', () => ({
     AddonUpdateChecker: class {
@@ -179,6 +185,7 @@ export function emptySelections(): UpdateSelections {
     return {
         forkSync: [],
         template: [],
+        boilerplate: [],
         component: [],
         adobeMcp: [],
         blockLibrary: [],

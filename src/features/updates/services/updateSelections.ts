@@ -13,6 +13,8 @@ import {
     findUninstalledBlockLibraries,
     type BlockLibraryInstallTarget,
 } from '@/features/updates/services/blockLibraryInstall';
+import { checkBoilerplate, type BoilerplateUpdate } from '@/features/updates/services/boilerplateCheck';
+import { createBoilerplateGitHub } from '@/features/updates/services/boilerplateGitHub';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import {
     findIntegrationPairUpdates,
@@ -39,6 +41,11 @@ export interface UpdateSelections {
         parentFullName?: string;
     }>;
     template: Array<{ project: Project }>;
+    /**
+     * A colleague's storefront whose Adobe half can move to our tested version (EDS-56),
+     * beside its `template` entry, which follows the colleague's own repository.
+     */
+    boilerplate: BoilerplateUpdate[];
     component: Array<{
         project: Project;
         componentId: string;
@@ -108,6 +115,7 @@ export async function computeUpdateSelections(
     return {
         forkSync: await checkForkSyncs(projects, check),
         template: await checkTemplates(projects, check),
+        boilerplate: await checkAdobeBoilerplate(projects, check, handlerCtx),
         component: await checkComponents(projects, handlerCtx),
         adobeMcp: await checkAdobeMcp(projects, check),
         blockLibrary: addons.blockLibrary,
@@ -159,6 +167,25 @@ async function checkForkSyncs(
         }
     }
     return found;
+}
+
+/** The Adobe boilerplate check (EDS-56); a failure costs this category only, with one warning. */
+async function checkAdobeBoilerplate(
+    projects: Project[],
+    check: Check,
+    handlerCtx: HandlerContext,
+): Promise<UpdateSelections['boilerplate']> {
+    try {
+        return await checkBoilerplate(projects, {
+            secrets: check.secrets,
+            logger: handlerCtx.logger,
+            github: createBoilerplateGitHub(check.secrets),
+            save: (project) => handlerCtx.stateManager.saveProject(project),
+        });
+    } catch (error) {
+        warnFailed(check.logger, 'Adobe boilerplate', error);
+        return [];
+    }
 }
 
 async function checkTemplates(
@@ -284,6 +311,7 @@ export function countSelections(selections: UpdateSelections): number {
     return (
         selections.forkSync.length +
         selections.template.length +
+        selections.boilerplate.length +
         selections.component.length +
         selections.adobeMcp.length +
         selections.blockLibrary.length +

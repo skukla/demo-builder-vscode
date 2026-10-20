@@ -20,6 +20,7 @@ import {
     mockCheckAllProjectsForUpdates,
     mockCheckBlockLibraries,
     mockCheckForkStatus,
+    mockCheckBoilerplate,
     mockCheckInspectorSdk,
     mockCheckMcpUpdates,
     mockCheckTemplateUpdates,
@@ -378,11 +379,13 @@ describe('computeProjectUpdateSelections', () => {
                 { library: installedLibrary('Lib A'), latestCommit: 'b', commitsBehind: 1 },
             ]);
             mockCheckInspectorSdk.mockResolvedValue({ hasUpdate: true, latestCommit: 'n' });
+            mockCheckBoilerplate.mockResolvedValue([{ project, base: {}, tested: 'b'.repeat(40) }]);
         }
 
         it.each([
             ['fork', mockCheckForkStatus, 'forkSync'],
             ['template', mockCheckTemplateUpdates, 'template'],
+            ['Adobe boilerplate', mockCheckBoilerplate, 'boilerplate'],
             ['component', mockCheckAllProjectsForUpdates, 'component'],
             ['Adobe MCP', mockCheckMcpUpdates, 'adobeMcp'],
             ['add-on', mockCheckBlockLibraries, 'blockLibrary'],
@@ -419,7 +422,7 @@ describe('computeProjectUpdateSelections', () => {
                 recordsIntegrationProbe()
             );
 
-            expect(countSelections(sel)).toBe(8);
+            expect(countSelections(sel)).toBe(9);
         });
     });
 });
@@ -430,6 +433,18 @@ describe('countSelections', () => {
         const sel = {
             forkSync: [{ owner: 'a', repo: 'b', branch: 'main' }],
             template: [{ project }, { project }],
+            boilerplate: [
+                {
+                    project,
+                    base: {
+                        template: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
+                        commit: 'a'.repeat(40),
+                        lkgSource: { owner: 'skukla', repo: 'eds-demo-patches' },
+                        found: 'first-commit' as const,
+                    },
+                    tested: 'b'.repeat(40),
+                },
+            ],
             component: [],
             adobeMcp: [{ project, packageName: 'p', latestVersion: '1' }],
             blockLibrary: [
@@ -444,6 +459,6 @@ describe('countSelections', () => {
             integration: [],
         };
 
-        expect(countSelections(sel)).toBe(9);
+        expect(countSelections(sel)).toBe(10);
     });
 });

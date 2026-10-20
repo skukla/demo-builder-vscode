@@ -117,6 +117,7 @@ function emptySelections(): UpdateSelections {
     return {
         forkSync: [],
         template: [],
+        boilerplate: [],
         component: [],
         adobeMcp: [],
         blockLibrary: [],

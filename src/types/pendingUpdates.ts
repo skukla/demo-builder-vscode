@@ -18,6 +18,7 @@ export type PendingUpdateKind =
     | 'extension'
     | 'forkSync'
     | 'template'
+    | 'boilerplate'
     | 'component'
     | 'adobeMcp'
     | 'blockLibrary'

@@ -96,6 +96,7 @@ function runningProjects(selections: UpdateSelections): Project[] {
 function projectEntries(selections: UpdateSelections): Array<{ project: Project }> {
     return [
         ...selections.template,
+        ...selections.boilerplate,
         ...selections.component,
         ...selections.adobeMcp,
         ...selections.blockLibrary,
@@ -111,6 +112,7 @@ function withoutProjects(selections: UpdateSelections, paths: Set<string>): Upda
     return {
         forkSync: selections.forkSync,
         template: keep(selections.template),
+        boilerplate: keep(selections.boilerplate),
         component: keep(selections.component),
         adobeMcp: keep(selections.adobeMcp),
         blockLibrary: keep(selections.blockLibrary),

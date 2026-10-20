@@ -11,6 +11,7 @@ import {
     selectionsForIds,
     toPendingUpdateRows,
 } from '@/features/updates/services/pendingUpdateRows';
+import type { BoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
@@ -32,6 +33,7 @@ function empty(): UpdateSelections {
     return {
         forkSync: [],
         template: [],
+        boilerplate: [],
         component: [],
         adobeMcp: [],
         blockLibrary: [],
@@ -217,6 +219,39 @@ describe('toPendingUpdateRows', () => {
         );
 
         expect(new Set(ids).size).toBe(ids.length);
+    });
+});
+
+describe('a colleague\'s storefront that follows both (EDS-56)', () => {
+    const base: BoilerplateBase = {
+        template: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
+        commit: '71a67e027b4b288a67f5cda1fc106d2df9a34805',
+        lkgSource: { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' },
+        found: 'first-commit',
+    };
+    const colleague = storefront({ templateOwner: 'kmanns', templateRepo: 'justrite' });
+    const sel = (): UpdateSelections => ({
+        ...empty(),
+        template: [{ project: colleague }],
+        boilerplate: [{ project: colleague, base, tested: '48bed04d072fff094b49a46709b351bd719b287a' }],
+    });
+
+    it("lists the colleague's changes, then Adobe's tested boilerplate, both ticked", () => {
+        const rows = toPendingUpdateRows(sel(), undefined, undefined);
+
+        expect(rows.map((r) => [r.group.title, r.label, r.detail, r.ticked])).toEqual([
+            ['JustRite', 'Changes from kmanns/justrite', LIVE, true],
+            ['JustRite', 'Adobe boilerplate', 'Tested version, updates the live site', true],
+        ]);
+    });
+
+    it('applies the Adobe boilerplate row on its own', () => {
+        const boilerplateRow = toPendingUpdateRows(sel(), undefined, undefined).find((r) => r.kind === 'boilerplate');
+
+        const picked = selectionsForIds(sel(), [boilerplateRow?.id ?? '']).selections;
+
+        expect(picked.boilerplate).toHaveLength(1);
+        expect(picked.template).toStrictEqual([]);
     });
 });
 

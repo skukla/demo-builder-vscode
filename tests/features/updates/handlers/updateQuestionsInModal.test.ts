@@ -20,6 +20,7 @@ function selections(): UpdateSelections {
     return {
         forkSync: [{ owner: 'skukla', repo: 'citisignal', branch: 'main' }],
         template: [{ project: running }, { project: stopped }],
+        boilerplate: [],
         component: [{ project: running, componentId: 'mesh', latestVersion: '2' }],
         adobeMcp: [],
         blockLibrary: [],
