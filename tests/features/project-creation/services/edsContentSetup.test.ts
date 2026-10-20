@@ -11,6 +11,7 @@ import { STOREFRONT_JOBS } from '@/core/utils/storefrontJobs';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { EdsContentHelix } from '@/features/project-creation/services/edsContentSetup';
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
@@ -197,6 +198,13 @@ describe('ensureEdsContent', () => {
 
         expect(mockReadCodePaths).toHaveBeenCalledWith({ owner: 'test-owner', repo: 'test-repo' });
         expect(mockCopyContentFromSource.mock.calls[0][8]).toEqual(['/cart', '/placeholders/b2b']);
+    });
+
+    // EDS-54: the permissions step is non-fatal, except for an expired sign-in.
+    it('stops on an expired DA.live sign-in in the permissions step', async () => {
+        mockConfigureDaLivePermissions.mockRejectedValue(new DaLiveAuthError('Authentication expired. Please log in again.'));
+
+        await expect(ensureEdsContent(makeConfig(), makeDeps())).rejects.toBeInstanceOf(DaLiveAuthError);
     });
 
     it('does NOT fire the warning toast when no content patches failed', async () => {

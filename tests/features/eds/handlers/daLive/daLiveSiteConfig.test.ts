@@ -65,6 +65,7 @@ import {
     configureDaLivePermissions,
 } from '@/features/eds/handlers/daLive/daLiveSiteConfig';
 import { DaLiveConfigService } from '@/features/eds/services/daLive/daLiveConfigService';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import type {
     DaLiveContentOperations,
 } from '@/features/eds/services/daLive/daLiveContentOperations';
@@ -432,8 +433,9 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
 /**
  * configureDaLivePermissions — grant the SC write access to their own site.
  *
- * Same non-fatal contract as the config write above: it must never throw at its
- * callers (creation, reset and republish all call it mid-flow), and it must
+ * Same non-fatal contract as the config write above: it must not throw at its callers
+ * (creation, reset and republish all call it mid-flow) for anything but an expired
+ * DA.live sign-in, which every later step would hit too (EDS-54), and it must
  * report what happened in its return value rather than only in a log line. None
  * of that was driven — the entire function could have been deleted with the
  * suite green.
@@ -500,6 +502,14 @@ describe('configureDaLivePermissions', () => {
 
         expect(result).toEqual({ success: false, error: 'DA.live session expired' });
         expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('lets an expired DA.live sign-in through, the one failure that is not non-fatal', async () => {
+        mockGrantUserAccess.mockRejectedValue(new DaLiveAuthError('Authentication expired. Please log in again.'));
+
+        await expect(
+            configureDaLivePermissions(tokenProvider, DA_LIVE_ORG, DA_LIVE_SITE, USER_EMAIL, mockLogger),
+        ).rejects.toBeInstanceOf(DaLiveAuthError);
     });
 
     it('does not put the raw address in the success log', async () => {

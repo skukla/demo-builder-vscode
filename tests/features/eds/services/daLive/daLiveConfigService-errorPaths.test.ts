@@ -28,6 +28,8 @@ import {
     type MultiSheetConfig,
 } from './daLiveConfigService.testUtils';
 
+import { DaLiveAuthError } from '@/features/eds/services/types';
+
 jest.mock('@/core/utils/sleep');
 
 const emptyConfig: MultiSheetConfig = {
@@ -217,5 +219,35 @@ describe('a transport failure is re-wrapped', () => {
         await expect(service.updateConfig(testOrg, testSite, emptyConfig)).rejects.toThrow(
             /^Config API error: Network error: socket hang up$/,
         );
+    });
+});
+
+// EDS-54: a config 401 means an expired sign-in OR an identity that does not own the org,
+// and one HEAD on the org's listing tells them apart (a 401 there indicts the credential).
+describe('DaLiveConfigService — a 401 on a config read', () => {
+    let service: DaLiveConfigService;
+
+    beforeEach(() => {
+        mockFetch.mockReset();
+        ({ service } = setupConfigService());
+    });
+
+    it('is the expired sign-in when DA.live refuses the credential itself', async () => {
+        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce({ status: 401 });
+
+        await expect(service.getOrgConfig(testOrg)).rejects.toBeInstanceOf(DaLiveAuthError);
+        expect(mockFetch.mock.calls[1][0]).toBe(`https://admin.da.live/list/${testOrg}/`);
+    });
+
+    it('stays the plain 401 when the credential is fine: this identity does not own the org', async () => {
+        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce({ status: 200 });
+
+        await expect(service.getOrgConfig(testOrg)).rejects.toThrow(/^Failed to read org config: 401 Unauthorized$/);
+    });
+
+    it('stops the access grant with it, rather than logging and carrying on', async () => {
+        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce({ status: 401 });
+
+        await expect(service.grantUserAccess(testOrg, testSite, 'user@example.com')).rejects.toBeInstanceOf(DaLiveAuthError);
     });
 });

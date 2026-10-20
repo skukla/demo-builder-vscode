@@ -16,7 +16,7 @@
 
 import * as vscode from 'vscode';
 import { readDaAuthHelperToken, writeDaAuthHelperToken } from '../daAuthHelperToken';
-import { DA_LIVE_BASE_URL } from './daLiveConstants';
+import { serverVerdict } from './daLiveOrgOperations';
 import { createDaLiveTokenHome, type DaLiveTokenHome } from './daLiveTokenHome';
 import { getLogger } from '@/core/logging/debugLogger';
 import { decodeJwtPayload } from '@/core/utils/jwtPayload';
@@ -194,18 +194,7 @@ export class DaLiveAuthService {
         if (!token) {
             return 'refused';
         }
-        try {
-            const response = await fetch(
-                `${DA_LIVE_BASE_URL}/list/${encodeURIComponent(orgName)}/`,
-                {
-                    method: 'HEAD',
-                    headers: { Authorization: `Bearer ${token}` },
-                },
-            );
-            return response.status === 401 ? 'refused' : 'accepted';
-        } catch {
-            return 'unknown';
-        }
+        return serverVerdict(orgName, token);
     }
 
     /**

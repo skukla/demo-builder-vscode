@@ -28,6 +28,7 @@ import type { GitHubTokenService } from '@/features/eds/services/github/githubTo
 import type { SitePublishProgress } from '@/features/eds/services/helix/helixSiteContent';
 import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';
 import { readStorefrontCodePaths } from '@/features/eds/services/storefrontCodeReader';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
@@ -124,6 +125,8 @@ async function nonFatal(label: string, logger: Logger, run: () => Promise<void>)
     try {
         await run();
     } catch (error) {
+        // An expired DA.live sign-in fails every step after this one too (EDS-54).
+        if (error instanceof DaLiveAuthError) throw error;
         logger.warn(`[EDS Content] ${label} failed: ${(error as Error).message}`);
     }
 }

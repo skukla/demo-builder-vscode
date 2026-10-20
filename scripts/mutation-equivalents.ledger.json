@@ -4264,10 +4264,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 154,
+            "line": 157,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still returns false, so the copy runs anyway \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs. Re-anchored 2026-09-10 (142 -> 128): the probe moved into contentExistsInDaLive when ensureEdsContent was decomposed. Same code, new line. Re-anchored 2026-10-16 (135 -> 137): unchanged code; the progress lines above it now import the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-19 (137 -> 154): unchanged code; the copy now reads the storefront's code paths first (EDS-40).",
+            "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still returns false, so the copy runs anyway \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs. Re-anchored 2026-09-10 (142 -> 128): the probe moved into contentExistsInDaLive when ensureEdsContent was decomposed. Same code, new line. Re-anchored 2026-10-16 (135 -> 137): unchanged code; the progress lines above it now import the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-19 (137 -> 154): unchanged code; the copy now reads the storefront's code paths first (EDS-40). Re-anchored 2026-10-19 (154 -> 157): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54).",
             "decision": "none \u2014 the debug line is what tells a pasted log why the copy ran",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
@@ -4289,10 +4289,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 249,
+            "line": 252,
             "mutants": 1,
             "category": "block",
-            "reason": "The else body is one logger.info reporting the copied file count. Emptying it removes that line and changes nothing else \u2014 same reasoning as the condition above. Re-anchored 2026-09-10 (177 -> 207): unchanged code, shifted by the decomposition of ensureEdsContent. Re-anchored 2026-10-16 (218 -> 225): unchanged code; the copy now reports in the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-19 (225 -> 249): unchanged code; the copy now reads the storefront's code paths first (EDS-40).",
+            "reason": "The else body is one logger.info reporting the copied file count. Emptying it removes that line and changes nothing else \u2014 same reasoning as the condition above. Re-anchored 2026-09-10 (177 -> 207): unchanged code, shifted by the decomposition of ensureEdsContent. Re-anchored 2026-10-16 (218 -> 225): unchanged code; the copy now reports in the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-19 (225 -> 249): unchanged code; the copy now reads the storefront's code paths first (EDS-40). Re-anchored 2026-10-19 (249 -> 252): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54).",
             "decision": "none \u2014 the count is the only record of how much content was copied",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
@@ -5625,10 +5625,10 @@
             "anchors": [
                 "const errorText = await response.text().catch(() => '');"
             ],
-            "line": 177,
+            "line": 183,
             "mutants": 1,
             "category": "other",
-            "reason": "Re-triaged 2026-10-09 when the org and site reads and writes became readConfigAt and putConfigAt (PL-69 pairs 6 and 7); the four copies of this line are now two. In readConfigAt: Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart.",
+            "reason": "Re-triaged 2026-10-09 when the org and site reads and writes became readConfigAt and putConfigAt (PL-69 pairs 6 and 7); the four copies of this line are now two. In readConfigAt: Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart. Re-anchored 2026-10-19 (177 -> 183): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54).",
             "decision": "Equivalent: both the real value and the mutant's are falsy at the only site that reads it.",
             "recorded": "2026-10-09",
             "source": "PL-69 sitting 2 re-triage (readConfigAt, putConfigAt)"
@@ -5638,10 +5638,10 @@
             "anchors": [
                 "const errorText = await response.text().catch(() => '');"
             ],
-            "line": 219,
+            "line": 226,
             "mutants": 1,
             "category": "other",
-            "reason": "Re-triaged 2026-10-09 when the org and site reads and writes became readConfigAt and putConfigAt (PL-69 pairs 6 and 7); the four copies of this line are now two. In putConfigAt: Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart.",
+            "reason": "Re-triaged 2026-10-09 when the org and site reads and writes became readConfigAt and putConfigAt (PL-69 pairs 6 and 7); the four copies of this line are now two. In putConfigAt: Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart. Re-anchored 2026-10-19 (219 -> 226): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54).",
             "decision": "Equivalent: both the real value and the mutant's are falsy at the only site that reads it.",
             "recorded": "2026-10-09",
             "source": "PL-69 sitting 2 re-triage (readConfigAt, putConfigAt)"
@@ -5675,10 +5675,10 @@
             "anchors": [
                 "if (!config?.permissions?.data) {"
             ],
-            "line": 198,
+            "line": 202,
             "mutants": 4,
             "category": "branch",
-            "reason": "Same shape as hasUserAccess: the guard and the catch return the identical { configured: false, userCount: 0, users: [] }, so turning the guard off or dropping either ?. throws into the catch and produces the same value. Only a logger.warn differs.",
+            "reason": "Same shape as hasUserAccess: the guard and the catch return the identical { configured: false, userCount: 0, users: [] }, so turning the guard off or dropping either ?. throws into the catch and produces the same value. Only a logger.warn differs. Re-anchored 2026-10-19 (198 -> 202): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54).",
             "decision": "Equivalent: guard and catch return the same object.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
@@ -5688,10 +5688,10 @@
             "anchors": [
                 "if (!config?.permissions?.data) {"
             ],
-            "line": 153,
+            "line": 157,
             "mutants": 4,
             "category": "branch",
-            "reason": "hasUserAccess returns { hasAccess: false } from three places \u2014 this guard, the end of the loop, and the catch \u2014 so disabling the guard (or dropping either ?. so it throws) lands in the catch and returns the SAME object. Nothing observable differs: no argument changes, no request is made, and only a logger.warn separates the paths. The guard is still right to keep, because reaching the loop with no data is a thrown TypeError being swallowed rather than a decision.",
+            "reason": "hasUserAccess returns { hasAccess: false } from three places \u2014 this guard, the end of the loop, and the catch \u2014 so disabling the guard (or dropping either ?. so it throws) lands in the catch and returns the SAME object. Nothing observable differs: no argument changes, no request is made, and only a logger.warn separates the paths. The guard is still right to keep, because reaching the loop with no data is a thrown TypeError being swallowed rather than a decision. Re-anchored 2026-10-19 (153 -> 157): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54).",
             "decision": "Equivalent: every route returns { hasAccess: false }.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
@@ -6255,10 +6255,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 242,
+            "line": 231,
             "mutants": 1,
             "category": "block",
-            "reason": "The else branch of the response.ok check contains only a logger.warn. Both the taken and the untaken path fall through to the same return null at the end of fetchUserEmail, which the refused-response test asserts.",
+            "reason": "The else branch of the response.ok check contains only a logger.warn. Both the taken and the untaken path fall through to the same return null at the end of fetchUserEmail, which the refused-response test asserts. Re-anchored 2026-10-19 (242 -> 231): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54).",
             "decision": "none - equivalent; only the presence of one warn line differs.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
@@ -6268,10 +6268,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 245,
+            "line": 234,
             "mutants": 1,
             "category": "block",
-            "reason": "This catch body is a single logger.warn, and control falls through to the same return null either way - pinned by the test that makes fetch reject and asserts null. Emptying it changes only the log.",
+            "reason": "This catch body is a single logger.warn, and control falls through to the same return null either way - pinned by the test that makes fetch reject and asserts null. Emptying it changes only the log. Re-anchored 2026-10-19 (245 -> 234): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54).",
             "decision": "none - equivalent; only the presence of one warn line differs.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"

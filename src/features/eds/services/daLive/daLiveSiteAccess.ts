@@ -7,6 +7,7 @@
  * @module features/eds/services/daLive/daLiveSiteAccess
  */
 
+import { DaLiveAuthError } from '../types';
 import type {
     ConfigSheetStore,
     GrantAccessResult,
@@ -132,6 +133,9 @@ export class DaLiveSiteAccess {
             this.logger.info(`[DaLiveConfig] Access granted to ${userEmail} for ${org}/${site}`);
             return { success: true };
         } catch (error) {
+            // An expired sign-in stops the run with the sign-in message; logged and passed
+            // over, the run went on and failed later with a reason that misled (EDS-54).
+            if (error instanceof DaLiveAuthError) throw error;
             const message = error instanceof Error ? error.message : String(error);
             this.logger.error(`[DaLiveConfig] Failed to grant access: ${message}`);
             return { success: false, error: message };

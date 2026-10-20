@@ -19,6 +19,7 @@
  * @module features/eds/services/daLive/daLiveConfigService
  */
 
+import { DaLiveAuthError } from '../types';
 import { DaLiveApiClient, type TokenProvider } from './daLiveApiClient';
 import type {
     ContentReader,
@@ -28,6 +29,7 @@ import type {
 } from './daLiveConfigTypes';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
 import { DaLiveContentReaders } from './daLiveContentReaders';
+import { serverVerdict } from './daLiveOrgOperations';
 import { DaLiveSiteAccess } from './daLiveSiteAccess';
 import type { Logger } from '@/types/logger';
 
@@ -94,6 +96,7 @@ export class DaLiveConfigService {
         const token = await this.getDaLiveToken();
         this.logger.debug(`[DaLiveConfig] Getting org config for ${org}`);
         return this.readConfigAt(token, {
+            org,
             url: `${DA_LIVE_BASE_URL}/config/${org}/`,
             noun: 'org config',
             missing: `org ${org}`,
@@ -111,7 +114,7 @@ export class DaLiveConfigService {
     async updateOrgConfig(org: string, config: MultiSheetConfig): Promise<void> {
         const token = await this.getDaLiveToken();
         this.logger.debug(`[DaLiveConfig] Updating org config for ${org}`);
-        await this.putConfigAt(token, `${DA_LIVE_BASE_URL}/config/${org}/`, 'org config', config);
+        await this.putConfigAt(token, { org, url: `${DA_LIVE_BASE_URL}/config/${org}/`, noun: 'org config' }, config);
         this.logger.debug(`[DaLiveConfig] Org config updated for ${org}`);
     }
 
@@ -126,6 +129,7 @@ export class DaLiveConfigService {
         const token = await this.getDaLiveToken();
         this.logger.debug(`[DaLiveConfig] Getting config for ${org}/${site}`);
         return this.readConfigAt(token, {
+            org,
             url: `${DA_LIVE_BASE_URL}/config/${org}/${site}/`,
             noun: 'config',
             missing: `${org}/${site}`,
@@ -144,21 +148,22 @@ export class DaLiveConfigService {
     async updateConfig(org: string, site: string, config: MultiSheetConfig): Promise<void> {
         const token = await this.getDaLiveToken();
         this.logger.debug(`[DaLiveConfig] Updating config for ${org}/${site}`);
-        await this.putConfigAt(token, `${DA_LIVE_BASE_URL}/config/${org}/${site}/`, 'config', config);
+        await this.putConfigAt(token, { org, url: `${DA_LIVE_BASE_URL}/config/${org}/${site}/`, noun: 'config' }, config);
         this.logger.debug(`[DaLiveConfig] Config updated for ${org}/${site}`);
     }
 
     /**
      * GET one config sheet (org or site). A 404 means none exists yet and answers
-     * null. Any other failure throws "Failed to read <noun>: ..." and anything
-     * thrown on the way becomes "Config API error: ...".
+     * null. A 401 from an expired sign-in throws `DaLiveAuthError`. Any other failure
+     * throws "Failed to read <noun>: ..." and anything thrown on the way becomes
+     * "Config API error: ...".
      *
      * @param target.noun - how the error names the sheet: 'org config' or 'config'
      * @param target.missing - how the no-config debug line names the target
      */
     private async readConfigAt(
         token: string,
-        target: { url: string; noun: string; missing: string },
+        target: { org: string; url: string; noun: string; missing: string },
     ): Promise<MultiSheetConfig | null> {
         try {
             const response = await this.apiClient.fetchWithRetry(target.url, {
@@ -172,6 +177,7 @@ export class DaLiveConfigService {
                 this.logger.debug(`[DaLiveConfig] No config exists for ${target.missing}`);
                 return null;
             }
+            if (response.status === 401) await this.refuseExpiredSignIn(target.org, token);
 
             if (!response.ok) {
                 const errorText = await response.text().catch(() => '');
@@ -182,7 +188,7 @@ export class DaLiveConfigService {
 
             return await response.json();
         } catch (error) {
-            if ((error as Error).message.includes('Failed to read')) {
+            if (error instanceof DaLiveAuthError || (error as Error).message.includes('Failed to read')) {
                 throw error;
             }
             throw new Error(`Config API error: ${(error as Error).message}`);
@@ -196,10 +202,10 @@ export class DaLiveConfigService {
      */
     private async putConfigAt(
         token: string,
-        url: string,
-        noun: string,
+        target: { org: string; url: string; noun: string },
         config: MultiSheetConfig,
     ): Promise<void> {
+        const { url, noun } = target;
         try {
             // Factory: FormData bodies are one-shot, so each retry attempt gets
             // a fresh one (shared-client contract, 2026-08-22).
@@ -215,6 +221,7 @@ export class DaLiveConfigService {
                 };
             });
 
+            if (response.status === 401) await this.refuseExpiredSignIn(target.org, token);
             if (!response.ok) {
                 const errorText = await response.text().catch(() => '');
                 throw new Error(
@@ -222,10 +229,23 @@ export class DaLiveConfigService {
                 );
             }
         } catch (error) {
-            if ((error as Error).message.includes('Failed to update')) {
+            if (error instanceof DaLiveAuthError || (error as Error).message.includes('Failed to update')) {
                 throw error;
             }
             throw new Error(`Config API error: ${(error as Error).message}`);
+        }
+    }
+
+    /**
+     * A config 401 alone cannot say why: an expired sign-in, or an identity that does not
+     * own the org (`contentAccessManagerHeadless` reads that one as "not authorized"). One
+     * probe tells them apart. A refused sign-in throws the error every other DA.live call
+     * raises on a 401, so the run stops with the sign-in message (EDS-54); anything else
+     * returns, and the caller reports the 401 as it always has.
+     */
+    private async refuseExpiredSignIn(org: string, token: string): Promise<void> {
+        if ((await serverVerdict(org, token)) === 'refused') {
+            throw new DaLiveAuthError('Authentication expired. Please log in again.');
         }
     }
 
