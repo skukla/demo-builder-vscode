@@ -236,9 +236,14 @@ export class DaLiveBlockLibraryOperations {
                     path: `https://content.da.live/${org}/${site}/.da/library/blocks.json`,
                 },
             ]);
-            if (!configResult.success) {
-                this.logger.warn(`[DA.live] Failed to update config: ${configResult.error}`);
-            }
+            // DA.live's palette lists blocks only through the site config's `library`
+            // tab and its "Blocks" row (aem.live/docs/ew/administering/set-up-library),
+            // so without it the sheet below is never shown. Reported, not just logged
+            // (EDS-38): until 2026-10-20 setup said "library created" over an empty palette.
+            const paletteEmpty = configResult.success
+                ? undefined
+                : `The block palette in DA.live will be empty: the site configuration did not take the Blocks list (${configResult.error}).`;
+            if (paletteEmpty) this.logger.warn(`[DA.live] ${paletteEmpty}`);
 
             // Create single spreadsheet with all verified blocks
             const blocksResult = await this.sheet.createJsonSpreadsheet(
@@ -283,6 +288,7 @@ export class DaLiveBlockLibraryOperations {
                 paths.push(`/.da/library/blocks/${blockId}`);
             }
 
+            if (paletteEmpty) return { success: false, blocksCount: verifiedBlocks.length, paths, error: paletteEmpty };
             return { success: true, blocksCount: verifiedBlocks.length, paths };
         } catch (error) {
             this.logger.error(

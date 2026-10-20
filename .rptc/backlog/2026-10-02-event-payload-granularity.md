@@ -59,3 +59,31 @@ it is cheap: the ERP names what changed (AB-26y); Commerce sends `_origData` or 
 - 2026-10-02  docs(backlog): AB-60 filed — event payload granularity, with three live checks; the ERP product event fix joins AB-26y (`5a3a77be9`)
 - 2026-10-04  2026-10-04 loop (night 4): research written, .rptc/research/event-payload-granularity/research.md. Commerce->ERP: fields are a snapshot, rules (six operators in lib-app 2.0.0, incl. onChange) gate sending, _origData must be added as a field; our app config can declare rules but no parent. ERP->Commerce: our design; the product receiver re-reads the ERP record by sku/erpId, so finer ERP events change the journal, not what Commerce applies — and its schema.json requires sku AND price, so a name-only event is rejected today. Recommendation unchanged. The three live checks wait for the owner (each needs a test subscription deployed).
 - 2026-10-04  feat(eds,ai): adopt an empty org repository, explain GitHub org refusals, and a skill for building catalog data (`dd6784bb0`)
+
+## The three checks (2026-10-20, read-only: docs, code, both repos)
+
+1. **ACCS accepts rules, `onChange` and child events: documented yes, not proven live.**
+   The Admin subscription page is written for Cloud Service and offers a parent event and
+   six rule operators, `onChange` included (developer.adobe.com/commerce/extensibility/events/create-events);
+   the REST `eventSubscribe` payload takes `parent`, `fields` and `rules`. The only SaaS
+   limit found is "SaaS does not support all possible events".
+2. **The app config can declare rules; it cannot choose the parent.** `aio-commerce-lib-app`
+   2.0.0 types `rules?: { field; operator: regex|greaterThan|lessThan|equal|in|onChange; value }[]`
+   and always sets `parent` to the native event and the name to `<appid>.<event>`. So one app
+   gets ONE child per native event: "name changed" and "price changed" cannot be two
+   subscriptions from this app (read from the library, not run). `_origData` and
+   `_origData.name` pass the field-name check.
+3. **Does the product save carry `_origData` on ACCS: unknown.** `EVENTS_SCHEMA.json` lists
+   it, but that file came with the starter kit, not from Justrite. Read-only answer: Admin,
+   System > Events > Events List, open `catalog_product_save_commit_after`.
+
+**Correction to "What is true today".** The mock ERP already names what changed (AB-26y):
+`Product.Changed` carries `ChangedFields`, the journal says "Product changed: name", and stock
+and customer events carry previous values. The list stops at the integration:
+`translate.js` publishes `{ name, price, sku }` and drops `ChangedFields`.
+
+**Buildable now, all ours:** pass `ChangedFields` through `translate.js`; add previous values
+(`PrevProductName`, `PrevListPrice`) to the ERP's product event, as stock and customers do;
+declare `_origData.name` and `_origData.price` as fields on the Commerce product event (one
+config line; useful once check 3 passes). An `onChange` rule would also silence price-only
+saves, so it suits a demo-only subscription, not the sync.

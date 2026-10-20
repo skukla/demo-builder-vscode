@@ -313,6 +313,7 @@ export async function ensureEdsContent(
                 logger.info(`[EDS Content] Block library: ${libResult.blocksCount} blocks configured`);
                 libraryPaths = libResult.paths;
             }
+            if (!libResult.success && libResult.error) logger.warn(`[EDS Content] ${libResult.error}`);
         });
     }
 

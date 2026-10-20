@@ -451,6 +451,24 @@ describe('executeEdsPipeline - step detail', () => {
             expect(find('block-library', /: \d+ blocks$/)).toBeUndefined();
         });
 
+        // EDS-38: the palette lists blocks only through the site config, so a library whose
+        // registration failed is said out loud where the SC is looking.
+        it('warns that the palette will be empty when the library could not be registered', async () => {
+            mockCreateBlockLibrary.mockResolvedValue({
+                success: false,
+                blocksCount: 5,
+                paths: [],
+                error: 'The block palette in DA.live will be empty: the site configuration did not take the Blocks list (config 403).',
+            });
+
+            await executeEdsPipeline(withLibrary(), services, onProgress);
+
+            expect(progress).toContainEqual({
+                operation: 'block-library',
+                message: '⚠️ The block palette in DA.live will be empty: the site configuration did not take the Blocks list (config 403).',
+            });
+        });
+
         it('tolerates a source org the SC has no DA.live access to', async () => {
             // 403 means someone else owns the library org; the CDN fallback
             // inside the library build handles it.

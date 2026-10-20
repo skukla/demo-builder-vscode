@@ -37,3 +37,7 @@ fail on a throwaway site and look at the palette. If the palette is in fact fine
 close this with that evidence and leave the code alone. If the answer is to return the
 failure, the four ledger mutants become killable and their row should be deleted in
 the same change.
+
+## Shipped so far
+
+- 2026-10-20  Owner (2026-10-20): do the check and make the fix. Checked against DA.live's own documentation rather than by breaking a live site's config: the palette reads blocks only through the site config's library tab. Not done: the completion screen's caveat list does not carry the sentence; it shows on the progress line and in the log.

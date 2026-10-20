@@ -526,6 +526,11 @@ async function pipelineConfigureBlockLibrary(
             message: jobLine(STOREFRONT_JOBS.buildingBlockLibrary, itemCount(libResult.blocksCount, 'block')),
         });
     }
+    // The palette will be empty (EDS-38): said where the SC is looking, as a page-check gap is.
+    if (!libResult.success && libResult.error) {
+        logger.warn(`[EdsPipeline] ${libResult.error}`);
+        onProgress?.({ operation: 'block-library', message: `⚠️ ${libResult.error}` });
+    }
 
     return libResult.paths;
 }
