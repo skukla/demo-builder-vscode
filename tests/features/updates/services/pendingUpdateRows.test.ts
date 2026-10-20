@@ -50,7 +50,7 @@ const pair = (project: Project, otherOrg: boolean) => ({
 });
 
 describe('toPendingUpdateRows', () => {
-    it('words every kind of update, under its project, everything ticked', () => {
+    it('words every kind of update, under its project, everything ticked but the redeploy', () => {
         const sel: UpdateSelections = {
             ...empty(),
             template: [{ project: bodea }],
@@ -87,8 +87,20 @@ describe('toPendingUpdateRows', () => {
             ['Bodea', 'Demo Builder Blocks', 'Newer version', true],
             ['Bodea', 'Bodea Blocks', 'install', true],
             ['Bodea', 'Demo Inspector SDK', 'Newer version', true],
-            ['Bodea', 'ERP Integration and Justrite ERP', 'update available', true],
+            ['Bodea', 'ERP Integration and Justrite ERP', 'Newer version, redeploys to Adobe', false],
         ]);
+    });
+
+    // Applying a pair deploys it to the live Adobe workspace, and nothing asks first: the
+    // tick IS the confirmation, so the SC gives it rather than finds it given (owner,
+    // 2026-10-20). Unticked is not locked: it can be ticked.
+    it('starts an integration pair unticked, saying it redeploys, and leaves it tickable', () => {
+        const [row] = toPendingUpdateRows({ ...empty(), integration: [pair(bodea, false)] }, undefined, undefined);
+
+        expect(row).toMatchObject({ ticked: false, detail: 'Newer version, redeploys to Adobe' });
+        expect(row.lockedReason).toBeUndefined();
+        expect(selectionsForIds({ ...empty(), integration: [pair(bodea, false)] }, [row.id]).selections.integration)
+            .toHaveLength(1);
     });
 
     it("names a component by the project's own name for it", () => {

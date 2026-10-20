@@ -7,9 +7,12 @@
  * within that check: the extension keeps the check the screen was shown and applies the
  * ids against it.
  *
- * Everything that can be applied from here starts ticked. An integration pair in another
- * Adobe org cannot (the guard chain refuses it), so it is shown unticked and locked, and
- * `selectionsForIds` leaves it out even if its id comes back.
+ * Everything that can be applied from here starts ticked, except an integration pair:
+ * applying one redeploys it to the live Adobe workspace and nothing asks first, so the
+ * tick is the SC's confirmation and starts off (owner, 2026-10-20). A pair in another
+ * Adobe org cannot be applied from here at all (the guard chain refuses it), so it is
+ * shown unticked and locked, and `selectionsForIds` leaves it out even if its id comes
+ * back.
  *
  * @module features/updates/services/pendingUpdateRows
  */
@@ -40,7 +43,8 @@ const LOCKED_OTHER_ORG = `This project ${OTHER_ORG_NOTE}`;
  */
 const NEWER = 'Newer version';
 
-type RowText = Pick<PendingUpdateRow, 'label' | 'detail'> & { lockedReason?: string };
+/** `ticked: false` is a row that waits for the SC's tick; a locked row is never ticked. */
+type RowText = Pick<PendingUpdateRow, 'label' | 'detail'> & { lockedReason?: string; ticked?: false };
 
 /** Each project kind's words for one of its entries. */
 const PROJECT_KINDS: { [K in ProjectKind]: (entry: UpdateSelections[K][number]) => RowText } = {
@@ -62,7 +66,8 @@ const PROJECT_KINDS: { [K in ProjectKind]: (entry: UpdateSelections[K][number]) 
     inspector: () => ({ label: 'Demo Inspector SDK', detail: NEWER }),
     integration: (p) => ({
         label: p.label,
-        detail: 'update available',
+        detail: `${NEWER}, redeploys to Adobe`,
+        ticked: false,
         ...(p.otherOrg ? { lockedReason: LOCKED_OTHER_ORG } : {}),
     }),
 };
@@ -147,7 +152,7 @@ function row(
     group: PendingUpdateGroup,
     text: RowText,
 ): PendingUpdateRow {
-    return { id, kind, group, ...text, ticked: !text.lockedReason };
+    return { id, kind, group, ...text, ticked: text.ticked ?? !text.lockedReason };
 }
 
 /**

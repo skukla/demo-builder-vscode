@@ -10,7 +10,7 @@ Owner approved the design 2026-10-20 ("Yes"). Branch `feature/pl-80-updates-moda
 | Runs Check for Updates | "Checking for updates" notification, then VS Code's picker | Your Projects opens with an Updates modal: checking, then the list |
 | Startup or 4-hourly check finds updates | The picker opens by itself; a second updater shows its own "Update Now" | One notification, "N updates available", with **Review**, which opens the modal |
 | Background check finds nothing | "Demo Builder is up to date" | Nothing |
-| The list | Flat, by folder name, only the open project ticked | Grouped under each project's display name, everything ticked. A pair in another Adobe org is shown unticked and locked, with the reason |
+| The list | Flat, by folder name, only the open project ticked | Grouped under each project's display name, everything ticked but an integration pair, which redeploys to Adobe and so waits for the SC's tick (owner, 2026-10-20). Each project is a closed panel in the projects list's row style (Spectrum's Disclosure was tried and looked foreign) showing its count and how many rows wait for the SC, with a checkbox beside it for all its rows. A pair in another Adobe org is shown unticked and locked, with the reason |
 | Applying | A notification per category, results as toasts | One progress run in the modal; questions asked in it; one summary per project |
 | The extension's own update | A separate notification | The first row; it runs last, because it ends in a reload |
 

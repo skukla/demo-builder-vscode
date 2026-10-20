@@ -38,6 +38,8 @@ export interface UpdatesModalControls {
     /** The ids that stay ticked. */
     ticked: ReadonlySet<string>;
     toggle: (id: string) => void;
+    /** A project's heading: ticks all of `ids` when any is unticked, else unticks them all. */
+    toggleGroup: (ids: string[]) => void;
     apply: () => void;
     close: () => void;
 }
@@ -90,6 +92,18 @@ export function useUpdatesModal(
         });
     }, []);
 
+    const toggleGroup = useCallback((ids: string[]) => {
+        setTicked((previous) => {
+            const next = new Set(previous);
+            const allTicked = ids.every((id) => next.has(id));
+            for (const id of ids) {
+                if (allTicked) next.delete(id);
+                else next.add(id);
+            }
+            return next;
+        });
+    }, []);
+
     const { show } = operations;
     const apply = useCallback(() => {
         if (view.phase !== 'list') return;
@@ -126,5 +140,8 @@ export function useUpdatesModal(
 
     const close = useCallback(() => setView(CLOSED), []);
 
-    return useMemo(() => ({ view, ticked, toggle, apply, close }), [view, ticked, toggle, apply, close]);
+    return useMemo(
+        () => ({ view, ticked, toggle, toggleGroup, apply, close }),
+        [view, ticked, toggle, toggleGroup, apply, close],
+    );
 }

@@ -34,9 +34,9 @@ export interface PendingUpdateRow {
     group: PendingUpdateGroup;
     /** What it updates, in the SC's words: "Demo Builder Blocks", "EDS template". */
     label: string;
-    /** What changes: "3 commits behind", "1.2.0 → 1.3.0", "install". */
+    /** What changes: "Newer version", "1.2.0 → 1.3.0", "install". */
     detail: string;
-    /** Whether it starts ticked: everything that can be applied from here does. */
+    /** Whether it starts ticked: everything that can be applied from here does, but a redeploy. */
     ticked: boolean;
     /** Set when it cannot be applied from here; the row is shown unticked and locked. */
     lockedReason?: string;

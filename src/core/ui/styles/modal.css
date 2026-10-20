@@ -3,9 +3,9 @@
  *
  * FEATURE-SCOPED DESPITE LIVING IN core/ui (ADR-017 §6, and §3 as amended
  * 2026-09-09: reach, not global). `Modal` is in core/ui/components/ui, but only
- * FIVE entries render it — wizard, dashboard, integrations, aiOverview and
- * dataInstaller. `configure`, `sidebar` and `projectsList` do not, and do not
- * import this sheet.
+ * SIX entries render it — wizard, dashboard, integrations, aiOverview,
+ * dataInstaller and projectsList (the Updates modal, PL-80). `configure` and
+ * `sidebar` do not, and do not import this sheet.
  *
  * `.modal-body:has(.manage-apis-body)` travels with this family, not with
  * `.manage-*`: its first class decides ownership, and it styles the modal body.

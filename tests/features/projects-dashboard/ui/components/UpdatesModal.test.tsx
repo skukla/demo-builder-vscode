@@ -14,16 +14,20 @@ import type { PendingUpdateRow } from '@/types/pendingUpdates';
 jest.mock('@/core/ui/components/ui/Modal', () => ({
     Modal: ({
         title,
+        size,
+        fitContent,
         actionButtons = [],
         onClose,
         children,
     }: {
         title: string;
+        size?: string;
+        fitContent?: boolean;
         actionButtons?: ActionButton[];
         onClose: () => void;
         children: React.ReactNode;
     }) => (
-        <div role="dialog" aria-label={title}>
+        <div role="dialog" aria-label={title} data-size={size} data-fit-content={fitContent ? 'yes' : 'no'}>
             {children}
             <button onClick={onClose}>Close</button>
             {actionButtons.map((b) => (
@@ -72,6 +76,7 @@ function controls(view: UpdatesView, ticked: string[] = []): jest.Mocked<Updates
         view,
         ticked: new Set(ticked),
         toggle: jest.fn(),
+        toggleGroup: jest.fn(),
         apply: jest.fn(),
         close: jest.fn(),
     };
@@ -91,9 +96,10 @@ describe('UpdatesModal', () => {
 
         expect(screen.getByText('Demo Builder')).toBeInTheDocument();
         expect(screen.getByText('JustRite')).toBeInTheDocument();
-        const boxes = screen.getAllByRole('checkbox');
-        expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([true, true, false]);
-        expect(boxes.map((b) => (b as HTMLInputElement).disabled)).toEqual([false, false, true]);
+        // Heading, its row; heading, its two rows (closed, so hidden, but there).
+        const boxes = screen.getAllByRole('checkbox', { hidden: true });
+        expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([true, true, true, true, false]);
+        expect(boxes.map((b) => (b as HTMLInputElement).disabled)).toEqual([false, false, false, false, true]);
         expect(screen.getByText('This project uses a different Adobe organization')).toBeInTheDocument();
         expect(screen.getByText('Newer version')).toBeInTheDocument();
     });
@@ -102,7 +108,9 @@ describe('UpdatesModal', () => {
         const c = controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0']);
         render(<UpdatesModal controls={c} />);
 
-        await user().click(screen.getAllByRole('checkbox')[1]);
+        await user().click(screen.getByRole('button', { name: /JustRite/ }));
+        // Demo Builder's checkbox, JustRite's, then JustRite's rows: Demo Builder is closed.
+        await user().click(screen.getAllByRole('checkbox')[2]);
         await user().click(screen.getByRole('button', { name: 'Apply 2 updates' }));
 
         expect(c.toggle).toHaveBeenCalledWith('blockLibrary:0');
@@ -131,24 +139,80 @@ describe('UpdatesModal', () => {
         expect(screen.getByText('Added 3 blocks to Bodea.')).toBeInTheDocument();
     });
 
-    it('says what Apply does, under the title "Updates available"', () => {
-        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
+    // No sentence under the title: the ticks and the Apply count say it, and what cannot
+    // be undone says so on its own row (owner, 2026-10-20). Large, so the longest row
+    // ("…, Newer version, redeploys to Adobe") keeps to one line. Not fitted to its
+    // content: the window keeps one height and its list scrolls, so opening a project
+    // never resizes it (owner, 2026-10-20).
+    it('opens large and steady, titled "Updates available", straight onto the list', () => {
+        const { container } = render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
 
-        expect(screen.getByRole('dialog', { name: 'Updates available' })).toBeInTheDocument();
-        expect(
-            screen.getByText(
-                "These updates are waiting. Untick any you want to skip; Apply runs the rest and asks before anything it can't undo.",
-            ),
-        ).toHaveClass('lead-text');
+        const dialog = screen.getByRole('dialog', { name: 'Updates available' });
+        expect(dialog).toHaveAttribute('data-size', 'L');
+        expect(dialog).toHaveAttribute('data-fit-content', 'no');
+        expect(container.querySelector('.lead-text')).toBeNull();
     });
 
-    // The house section label, as Export and Add another ERP use: small grey capitals that
-    // sit back from the rows under them (owner, 2026-10-20).
-    it('heads each group with the house section label', () => {
-        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
+    // A project's name is the SC's own, so it is drawn as written, not in the section
+    // label's capitals; and it is a checkbox, so one click skips a whole demo (owner,
+    // 2026-10-20).
+    it("heads each project with a checkbox in the name's own casing that ticks its open rows", async () => {
+        const c = controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0']);
+        render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByText('JustRite')).toHaveClass('section-label');
-        expect(screen.getByText('Demo Builder')).toHaveClass('section-label');
+        // The projects list's own row name, as its list view draws it.
+        expect(screen.getByText('JustRite')).toHaveClass('project-row-name');
+        expect(screen.getByText('JustRite')).not.toHaveClass('section-label');
+        // Both groups closed: Demo Builder's checkbox, then JustRite's.
+        await user().click(screen.getAllByRole('checkbox')[1]);
+
+        expect(c.toggleGroup).toHaveBeenCalledWith(['blockLibrary:0']);
+        // Ticking a project is not opening it.
+        expect(screen.getByRole('button', { name: /JustRite/ })).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    // Closed, a project says what it holds: the count, and what still waits for the SC
+    // (owner, 2026-10-20). Its name opens it.
+    it('starts each project closed, and opens it on its name', async () => {
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
+
+        expect(screen.getByText('Demo Builder Blocks')).not.toBeVisible();
+        await user().click(screen.getByRole('button', { name: /JustRite/ }));
+
+        expect(screen.getByText('Demo Builder Blocks')).toBeVisible();
+        expect(screen.getByText('Demo Builder extension')).not.toBeVisible();
+    });
+
+    // A row that starts unticked is the one a closed project must not hide: the redeploy,
+    // or one locked in another org. Once ticked, it no longer waits.
+    it('says how many rows in a project wait for the SC, until they are ticked', () => {
+        const redeploy: PendingUpdateRow = { ...ROWS[2], id: 'integration:1', lockedReason: undefined };
+        const rows = [ROWS[0], ROWS[1], redeploy];
+        const { rerender } = render(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension'])} />);
+
+        expect(screen.getByText('0 of 2, 1 waiting for you')).toBeInTheDocument();
+        expect(screen.getByText('1 of 1')).toBeInTheDocument();
+
+        rerender(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension', 'integration:1'])} />);
+        expect(screen.getByText('1 of 2')).toBeInTheDocument();
+    });
+
+    it('shows a project partly ticked as mixed', () => {
+        const rows: PendingUpdateRow[] = [ROWS[1], { ...ROWS[1], id: 'template:0', label: 'EDS template' }];
+        render(<UpdatesModal controls={controls({ phase: 'list', rows }, ['template:0'])} />);
+
+        const heading = screen.getAllByRole('checkbox')[0];
+        expect(heading).toHaveAttribute('aria-checked', 'mixed');
+        expect(heading).not.toBeChecked();
+        expect(screen.getByText('1 of 2')).toBeInTheDocument();
+    });
+
+    // A locked row is not counted: it can be neither ticked nor applied from here.
+    it("counts a project's ticked rows beside its name, leaving out a locked one", () => {
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
+
+        expect(screen.getByText('1 of 1')).toBeInTheDocument();
+        expect(screen.getByText('1 of 1, 1 waiting for you')).toBeInTheDocument();
     });
 
     it('titles the report "Update results"', () => {

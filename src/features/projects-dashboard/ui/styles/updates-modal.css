@@ -1,0 +1,63 @@
+/**
+ * .updates-group-* — the Updates modal's groups (PL-80): each a panel in the projects
+ * list's own row style, its checkbox and a button that opens it on one line, its rows
+ * inside the same panel.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `projectsList` entry alone
+ * (ui/index.tsx), the one bundle that draws the modal.
+ *
+ * The panel takes `.project-row`'s surface (gray-50, a gray-300 border, 8px corners), and
+ * the name and chevron are that row's own classes; Spectrum's Disclosure was tried first
+ * and brought a look nothing else here has (owner, 2026-10-20).
+ */
+
+@layer theme {
+    /* Panels stacked with the cards' own gap, no divider lines. */
+    .updates-group-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--card-gap);
+    }
+
+    .updates-group {
+        background: var(--spectrum-global-color-gray-50);
+        border: 1px solid var(--spectrum-global-color-gray-300);
+        border-radius: 8px;
+        padding: 4px 12px;
+    }
+
+    .updates-group-header {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* The rest of the line opens the group: the name, its count, the chevron at the end. */
+    .updates-group-toggle {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        background: none;
+        border: 0;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .updates-group-toggle:focus-visible {
+        outline: 2px solid var(--spectrum-global-color-blue-400);
+        outline-offset: 2px;
+    }
+
+    .updates-group-chevron {
+        margin-left: auto;
+    }
+
+    /* Under the name, past the group's checkbox, so a row reads as part of the project. */
+    .updates-group-rows {
+        padding: 0 0 8px 28px;
+    }
+}

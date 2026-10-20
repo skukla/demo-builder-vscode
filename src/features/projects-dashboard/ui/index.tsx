@@ -43,6 +43,8 @@ import '@/core/ui/styles/utilities.css';
 // them — the family looked cross-cutting on a bare `project-` prefix match, which
 // was catching file paths and prose rather than class names.
 import './styles/project-cards.css';
+// The Updates modal's project headings (PL-80). This entry alone draws it.
+import './styles/updates-modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
 // .db-* — the shared detail drawer.

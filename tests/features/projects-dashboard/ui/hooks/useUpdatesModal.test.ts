@@ -105,6 +105,19 @@ describe('useUpdatesModal', () => {
         expect(result.current.ticked.has('template:0')).toBe(true);
     });
 
+    it("ticks a whole project's rows when any is unticked, and unticks them when all are ticked", async () => {
+        const { result } = setup();
+        await pushRows(ROWS);
+        const project = ['blockLibrary:0', 'template:0'];
+
+        act(() => result.current.toggle('template:0'));
+        act(() => result.current.toggleGroup(project));
+        expect([...result.current.ticked].sort()).toEqual(project.sort());
+
+        act(() => result.current.toggleGroup(project));
+        expect(result.current.ticked.size).toBe(0);
+    });
+
     it('applies the ticked rows, never a locked one, closing the list and showing the run', async () => {
         answers(NOT_OPENED_FOR_IT, { success: true, data: { applied: 1, problems: [], notes: [] } });
         const { result, show, onApplied } = setup();

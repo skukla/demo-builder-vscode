@@ -17,7 +17,7 @@ import React from 'react';
 export interface CheckboxRowProps {
     /** The name, in the primary register. */
     label: string;
-    /** A quieter second word or two after it: an API code, "3 commits behind". */
+    /** A quieter second word or two after it: an API code, "Newer version". */
     detail?: string;
     /** Why the row cannot change, shown after the detail. */
     reason?: string;

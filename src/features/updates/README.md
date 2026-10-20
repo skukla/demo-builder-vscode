@@ -11,7 +11,10 @@ uses. Nothing waiting says "Demo Builder is up to date". Anything waiting is han
 Updates modal (`presentUpdates`, `handlers/updatesModalHandlers.ts`), which opens on Your
 Projects (`projects-dashboard/ui/components/UpdatesModal.tsx`) with every update grouped
 under Demo Builder, each project and the template repositories, all ticked except what
-cannot be applied from here. The modal never checks itself.
+cannot be applied from here and an integration pair, which starts unticked because
+applying it redeploys to Adobe with nothing asking first. Each group starts closed, saying
+how many of its rows are ticked and how many wait for the SC; its name opens it, and the
+checkbox beside it ticks or unticks the whole group. The modal never checks itself.
 
 Apply (`applyUpdates`) runs the ticked rows, against the check they came from, through the
 same `applyUpdatesHeadless` the agent uses, told in the screen's progress modal, with its
