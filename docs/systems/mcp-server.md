@@ -265,15 +265,38 @@ are handed to the transport untouched). The server (`connectionScope.ts`)
 resolves the cwd to the containing project and, for that connection only:
 
 - current-project reads load THAT project fresh from disk per call;
-- saves route through `saveProjectConfigOnly` — a scoped session can NEVER
-  flip the dashboard's pointer (`workingProjectStateManager.ts`);
+- saves never move the dashboard's pointer to that project
+  (`workingProjectStateManager.ts`);
 - `get_current_project` answers `scope: "session-directory"` (vs
   `"dashboard-pointer"`), so an agent can always tell why it got the project
   it got.
 
 Decided by the owner after the battery's first tier-2 run measured an agent
-inspecting one project while its tools acted on another. The home chat and
-every unscoped client keep pointer semantics unchanged.
+inspecting one project while its tools acted on another.
+
+### Every connection has its own working project (AI-15, 2026-10-19)
+
+The same rule now covers every connection, not only scoped ones. A connection's
+working project (`HandlerContext.agentWorkingProject`) starts as the session
+directory's project, or unset; unset means it follows the person's current
+project. It moves only by the agent's own action, and never moves the person's:
+
+- `create_project`, `create_project_from_file` and `copy_project` build the new
+  project as its own (`runProjectCreation`), so creation's saves leave the
+  person's current project alone, and the agent's next tools act on what it made;
+- `set_current_project` sets the connection's working project only. It used to
+  run the projects list's "open project", which switched the person's project
+  and opened its dashboard on their screen;
+- `get_current_project` answers `scope: "agent-chosen"` once the agent has
+  created or picked a project.
+- while a connection follows the person's project, every tool answer gains one
+  line when the person opened another project since the agent's last call,
+  naming both and how to go back (`projectChangeNotice.ts`). An agent with its
+  own working project is never told: nothing it does changed.
+
+Screens keep their own project the same way (`openForCurrentProject` in
+`bundledPanelCommand.ts`), and the lifecycle commands they and agents run take
+the project's path rather than reading the current project.
 
 ## 8. The headless `HandlerContext`
 

@@ -62,6 +62,7 @@ import {
     type InExtensionMcpServerOptions,
 } from '@/features/ai/server/inExtensionMcpServer';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
+import { withProjectChangeNotice } from '@/features/ai/server/projectChangeNotice';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
@@ -111,6 +112,7 @@ import { registerThirdPartyToolingSettingListener } from '@/features/project-cre
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Project } from '@/types/base';
+import type { AgentWorkingProject } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
@@ -757,18 +759,21 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                     .getConfiguration('demoBuilder')
                     .get<boolean>('ai.requireAgentConsent', true) === false,
             trace: agentTrace,
-            registerExtraTools: (mcpServer, scopedProjectDir) => {
-                // Per-connection scope (owner decision 2026-08-28): a session
-                // whose directory sits inside a project acts on THAT project —
-                // reads load it fresh from disk, saves never flip the
-                // dashboard pointer (workingProjectStateManager). The home chat and
-                // bare clients arrive unscoped and keep pointer semantics.
-                const connState = scopedProjectDir
-                    ? createWorkingProjectStateManager(stateManager, () => scopedProjectDir)
-                    : stateManager;
-                const connCtxFactory = scopedProjectDir
-                    ? () => createHeadlessHandlerContext(context, connState, logger)
-                    : ctxFactory;
+            registerExtraTools: (connectionServer, scopedProjectDir) => {
+                // Each connection has its own working project (AI-15). A session
+                // whose directory sits inside a project starts on THAT project
+                // (owner decision 2026-08-28); any other follows the person's current
+                // project until the agent creates or picks one. Either way its saves
+                // never move the person's pointer to another project
+                // (workingProjectStateManager).
+                const working: AgentWorkingProject = { path: scopedProjectDir };
+                const connState = createWorkingProjectStateManager(stateManager, () => working.path);
+                const connCtxFactory = () => createHeadlessHandlerContext(context, connState, logger, working);
+                // While it follows the person's project, an agent is told when they move
+                // it (AI-15). Every tool below registers through this.
+                const mcpServer = withProjectChangeNotice(connectionServer, working, () =>
+                    stateManager.getCurrentProject(),
+                );
                 registerDescriptorTools(
                     mcpServer,
                     [

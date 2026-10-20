@@ -195,6 +195,19 @@ export interface HandlerContext {
 
     // Shared state (by reference - changes persist automatically)
     sharedState: SharedState;
+
+    /**
+     * The project one agent connection works on (AI-15). Set when the agent creates or
+     * picks a project, and from then on every tool on that connection acts on it while
+     * the person's current project stays where they left it. Absent on screens, which
+     * pin their project in their panel instead.
+     */
+    agentWorkingProject?: AgentWorkingProject;
+}
+
+/** An agent connection's own project: unset means it follows the person's current one. */
+export interface AgentWorkingProject {
+    path?: string;
 }
 
 /**

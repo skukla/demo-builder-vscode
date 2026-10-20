@@ -242,6 +242,7 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     list_stacks: { bytes: 4_000, why: 'catalog summary; 601 live' },
     get_auth_status: { bytes: 2_000, why: 'per-provider status flags; 120 live' },
     get_current_project: { bytes: 2_000, why: 'name + path; 110 live' },
+    set_current_project: { bytes: 1_000, why: 'one name + path and the scope (AI-15)' },
 
     get_project_status: {
         bytes: 2_000,

@@ -139,7 +139,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     configure_project: 'Updating the project settings',
     update_project_config: 'Writing the project config',
     export_project_settings: 'Exporting the project settings',
-    set_current_project: 'Switching project',
+    set_current_project: 'Choosing a project to work on',
     // Pins OR unpins — so the phrase cannot say "Pinning".
     set_project_pinned: 'Pinning or unpinning the project',
     set_project_destination: 'Moving the project',

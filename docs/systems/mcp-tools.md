@@ -52,7 +52,6 @@ server IS — transport, lifecycle, scoping, security — is in
 | `save_app_to_github` | **confirm** | Save a blank-starter App Builder app (a Custom integration still on the blank starter) |
 | `set_commerce_config` | **confirm** | Change one or more of this project's Commerce settings (Stores > Configuration) through |
 | `set_console_apis` | **confirm** | Set the OPTIONAL Adobe API subscriptions on this project's Developer Console |
-| `set_current_project` |  | Make a project the CURRENT one, which is what every project-scoped tool acts on |
 | `set_erp_appearance` |  | Change how the demo ERP's own screen looks, for a demo: a theme (its colour, logo |
 | `set_erp_settings` | **confirm** | Change one ERP's own settings (from get_erp_settings): which products it owns |
 | `set_integration_settings` |  | Change one integration's text Settings (from get_integration_settings), then |
@@ -203,6 +202,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | Tool | | What it does |
 |---|---|---|
 | `get_current_project` |  | Resolve the active project and its state in one call — name, path, running/stopped, port, Adobe org, whether the frontend config is stale, EDS publish state, mesh. Returns { currentProject: {...} \| nu |
+| `set_current_project` |  | Choose the project your other tools act on (get_project, configure_project, deploy_*, |
 
 ## `src/features/ai/server/dataInstallerDescriptors.ts`
 

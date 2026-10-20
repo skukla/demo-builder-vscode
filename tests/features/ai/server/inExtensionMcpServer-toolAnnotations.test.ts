@@ -234,11 +234,12 @@ describe('every registration site declares, at the source', () => {
         const missing: string[] = [];
 
         for (const { file, source } of registrars) {
-            // `inExtensionMcpServer.ts` re-wraps registerTool for logging and
-            // registers nothing of its own; `toolDescriptors.ts` registers on
-            // behalf of the 46 descriptor rows, whose declaration the COMPILER
-            // already requires (`ToolDescriptor.readOnly`).
-            if (/inExtensionMcpServer\.ts$|toolDescriptors\.ts$/.test(file)) continue;
+            // `inExtensionMcpServer.ts` re-wraps registerTool for logging, and
+            // `projectChangeNotice.ts` to add the moved-project note (AI-15); both
+            // pass each tool's own config through and register nothing of their own.
+            // `toolDescriptors.ts` registers on behalf of the 46 descriptor rows,
+            // whose declaration the COMPILER already requires (`ToolDescriptor.readOnly`).
+            if (/inExtensionMcpServer\.ts$|projectChangeNotice\.ts$|toolDescriptors\.ts$/.test(file)) continue;
 
             for (const m of source.matchAll(/^\s*server\.registerTool\(/gm)) {
                 // The config object ends at the handler; annotations must appear

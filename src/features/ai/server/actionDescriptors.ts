@@ -956,28 +956,6 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         type: 'restartDemo',
     },
     {
-        tool: 'set_current_project',
-        needsAuth: false,
-        readOnly: false,
-        description:
-            'Make a project the CURRENT one, which is what every project-scoped tool acts on ' +
-            '(get_project, configure_project, deploy_*, start_demo…). Takes the path from ' +
-            'list_projects. Note this is unrelated to select_project, which picks an Adobe ' +
-            'Console project.',
-        map: projectsListHandlers,
-        type: 'selectProject',
-        inputSchema: {
-            projectPath: z.string().describe('Absolute project path (from list_projects)'),
-        },
-        // Forced OFF, not defaulted. `forceNewWindow` is the shift-click gesture:
-        // it opens a SECOND VS Code window, which is a screen takeover no agent
-        // should be able to trigger — and it leaves the current window on the
-        // projects list, so the agent's own next call would act on a window the
-        // user is not looking at. Anything the caller should control belongs in
-        // `inputSchema`; this deliberately does not.
-        argDefaults: { forceNewWindow: false },
-    },
-    {
         tool: 'set_project_pinned',
         needsAuth: false,
         readOnly: false,

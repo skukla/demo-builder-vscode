@@ -374,9 +374,9 @@ describe('rows with no output safety net are classified', () => {
         'start_demo',
         'stop_demo',
         // Group 5. `restart_demo` is category 1 — success IS the outcome, and
-        // `get_project_status` confirms it. `set_current_project` and
-        // `set_project_pinned` are category 2: `handleSelectProject` returns
-        // `{data: {project}}` and `handleSetProjectPinned` returns `{pinned: {…}}`.
+        // `get_project_status` confirms it. `set_project_pinned` is category 2:
+        // `handleSetProjectPinned` returns `{pinned: {…}}`. (`set_current_project` left
+        // the descriptor table on 2026-10-19, AI-15.)
         //
         // `set_project_pinned` was FILED HERE AS CATEGORY 1 and that was wrong —
         // it claimed a confirming read that did not exist. Probing it live
@@ -387,7 +387,6 @@ describe('rows with no output safety net are classified', () => {
         // itself — "paired with a confirming read" is a claim about ANOTHER tool,
         // and nothing here checks it.
         'restart_demo',
-        'set_current_project',
         'set_project_pinned',
         // Group 7. Category 2, verified by reading the handler: every branch of
         // `handleInstallPrerequisite` now names its outcome — `{installed: {id,
@@ -558,11 +557,8 @@ describe('the ceiling table tracks the tool surface', () => {
         'list_ai_prompts',
         'list_console_apis',
         // Group 5. `restart_demo` mirrors start/stop_demo. `set_project_pinned`
-        // is a boolean write. `set_current_project` returns ONE project record
-        // — the same shape `get_project` already carries a 12,000-byte ceiling
-        // for, and bounded the same way.
+        // is a boolean write.
         'restart_demo',
-        'set_current_project',
         'set_project_pinned',
         // Group 7. Four short strings on the install branch, two on the
         // manual one — bounded by nothing that scales with the machine or

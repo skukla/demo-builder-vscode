@@ -21,7 +21,7 @@ import type * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
-import type { HandlerContext, SharedState } from '@/types/handlers';
+import type { AgentWorkingProject, HandlerContext, SharedState } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 
@@ -29,8 +29,10 @@ export function createHeadlessHandlerContext(
     context: vscode.ExtensionContext,
     stateManager: StateManager,
     logger: Logger,
+    agentWorkingProject?: AgentWorkingProject,
 ): HandlerContext {
     return {
+        ...(agentWorkingProject ? { agentWorkingProject } : {}),
         // Real, not undefined. `PrerequisitesManager` takes only an extension path
         // and a logger and contains ZERO `vscode.window` references, so it works
         // headlessly exactly as it does behind the panel

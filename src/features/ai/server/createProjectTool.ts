@@ -49,6 +49,7 @@ import { ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { isMeshComponentId } from '@/core/constants';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { whileCreating } from '@/core/state/creationsRunning';
+import { createWorkingProjectStateManager } from '@/core/state/workingProjectStateManager';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import {
     getAutoSelectedOptionalDependencies,
@@ -658,11 +659,25 @@ export async function runProjectCreation(ctx: HandlerContext, request: CreationR
     // folder already has this name, so a reused name deleted that project (AI-73).
     const problem = await projectNameProblem(ctx.stateManager, { projectName });
     if (problem) return asText({ created: false, error: problem.detail });
+    const target = creationPath({ projectName });
+    // Built as its own project, not as the person's current one (AI-15): creation saves
+    // the project at every phase, and each real save made it current, so an agent's
+    // create switched the project an SC had open on screen.
+    const building: HandlerContext = {
+        ...ctx,
+        stateManager: createWorkingProjectStateManager(ctx.stateManager, () => target),
+    };
     // Listed as running for the whole run, storefront included, so the projects list
     // shows the tile from the start rather than once the project file appears (PL-82).
-    return whileCreating(creationPath({ projectName }), () =>
-        resolveAndCreate(ctx, request),
-    );
+    const result = await whileCreating(target, () => resolveAndCreate(building, request));
+    // The agent goes on working on what it made: its next tools act on the new project.
+    if (ctx.agentWorkingProject && (await projectExistsAt(ctx, target))) ctx.agentWorkingProject.path = target;
+    return result;
+}
+
+/** Is there a project at this folder now (its manifest loads)? */
+async function projectExistsAt(ctx: HandlerContext, folder: string): Promise<boolean> {
+    return (await ctx.stateManager.loadProjectFromPath(folder, undefined, { persistAfterLoad: false })) !== null;
 }
 
 /** The run itself, once the name is known to be usable. */

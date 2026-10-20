@@ -186,25 +186,6 @@ describe('ACTION_DESCRIPTORS', () => {
             expect(d!.confirm).toBeUndefined();
         });
 
-        it('set_current_project FORCES forceNewWindow off', () => {
-            const d = row('set_current_project');
-            expect(d).toBeDefined();
-            expect(d!.map).toBe(projectsListHandlers);
-            expect(d!.type).toBe('selectProject');
-            expect(Object.keys(d!.inputSchema ?? {})).toEqual(['projectPath']);
-
-            // The load-bearing half. `forceNewWindow: true` is the shift-click
-            // gesture — it opens a SECOND VS Code window and leaves the current one
-            // on the projects list, so an agent could both take over the screen and
-            // then act on a window the user is not looking at. Forced, not
-            // defaulted: `runHandler` applies argDefaults LAST, so a caller sending
-            // `true` cannot win.
-            expect(d!.argDefaults).toEqual({ forceNewWindow: false });
-            // And it must not be offered as an argument either, or the force above
-            // would just be silently overriding something the schema advertised.
-            expect(Object.keys(d!.inputSchema ?? {})).not.toContain('forceNewWindow');
-        });
-
         it('set_project_pinned takes a path and a boolean, no confirm', () => {
             const d = row('set_project_pinned');
             expect(d).toBeDefined();
