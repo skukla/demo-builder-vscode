@@ -31,6 +31,7 @@ import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
+import { readBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import type { Project } from '@/types/base';
 import type { DaLiveContentSource, DemoIntegrations, DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -180,7 +181,11 @@ function builtWithOf(
     const carried: Omit<SharedDemoBuiltWith, 'extension'> = project.demo?.builtWith
         ? withoutExtension(project.demo.builtWith)
         : fromCatalog(catalog, metadata);
-    return { ...carried, ...(boilerplate ? { boilerplate } : {}), extension };
+    // A colleague's storefront whose Adobe half the updates keep (EDS-56): where its code is
+    // now, which the next colleague should start from, rather than the creation record.
+    const adobe = readBoilerplateBase(project);
+    const base = adobe ? { template: adobe.template, lkg: adobe.commit } : {};
+    return { ...carried, ...base, ...(boilerplate ? { boilerplate } : {}), extension };
 }
 
 function withoutExtension(builtWith: SharedDemoBuiltWith): Omit<SharedDemoBuiltWith, 'extension'> {

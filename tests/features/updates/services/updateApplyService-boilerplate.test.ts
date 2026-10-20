@@ -16,8 +16,13 @@ import {
     resetFakes,
 } from './updateApplyService.testUtils';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { refreshBaseFromColleague } from '@/features/updates/services/boilerplateBaseRefresh';
 import { readBoilerplateBase, type BoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
+
+// The refresh reads the colleague's repository; its decisions are boilerplateBaseRefresh.test's.
+jest.mock('@/features/updates/services/boilerplateBaseRefresh', () => ({ refreshBaseFromColleague: jest.fn() }));
+const mockRefresh = refreshBaseFromColleague as jest.Mock;
 
 const BASE: BoilerplateBase = {
     template: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
@@ -102,5 +107,31 @@ describe('Adobe boilerplate', () => {
         );
 
         expect(order).toEqual(['colleague', 'adobe']);
+    });
+
+    // EDS-56 D4: the colleague may have moved their own Adobe base with the update just taken.
+    it.each([
+        [true, 1],
+        [false, 0],
+    ])("re-reads the colleague's base after their update applies (moved: %s), saving when it moved", async (moved, saves) => {
+        mockSyncWithTemplate.mockResolvedValue({ success: true, strategy: 'merge', syncedCommit: COLLEAGUE_HEAD });
+        mockRefresh.mockResolvedValue(moved);
+        const ctx = makeCtx();
+        const project = storefront();
+
+        await applyUpdatesHeadless({ ...emptySelections(), template: [{ project }] }, ctx);
+
+        expect(mockRefresh).toHaveBeenCalledWith(project, { readFile: expect.any(Function), compare: expect.any(Function) });
+        // The colleague's commit is saved by updateLastSyncedCommit (mocked here); this save is
+        // the moved base's, so it happens only when the base moved.
+        expect(ctx.stateManager.saveProject).toHaveBeenCalledTimes(saves);
+    });
+
+    it("does not re-read the colleague's base when their update did not apply", async () => {
+        mockSyncWithTemplate.mockResolvedValue({ success: false, strategy: 'merge', error: 'merge aborted' });
+
+        await applyUpdatesHeadless({ ...emptySelections(), template: [{ project: storefront() }] }, makeCtx());
+
+        expect(mockRefresh).not.toHaveBeenCalled();
     });
 });

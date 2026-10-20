@@ -321,6 +321,19 @@ describe('executeEdsReset - the synced commit record', () => {
         expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, boilerplate }]);
     });
 
+    // EDS-56: reset returns the code to its source's, so the Adobe base is the source's
+    // again; the record goes, and the next check finds it from the source.
+    it("forgets the recorded Adobe base, which described the code the reset replaced", async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+        const { context, saved } = contextCapturingSaves();
+        const project = storefrontProject();
+        (storefrontMetadata(project) as Record<string, unknown>).boilerplateBase = { commit: RECORDED_SHA };
+
+        await runReset({ project }, context);
+
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA }]);
+    });
+
     it('leaves the recorded commit alone when the reset fails after the repository step', async () => {
         mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
         mockExecuteEdsPipeline.mockResolvedValue({ success: false, error: 'content copy failed' });

@@ -11,6 +11,8 @@ import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
+import { refreshBaseFromColleague, type BaseRefreshDeps } from '@/features/updates/services/boilerplateBaseRefresh';
+import { compareCommits } from '@/features/updates/services/githubApiClient';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
 import { isThinLayerProject } from '@/features/updates/services/thinLayerUpdate';
@@ -63,6 +65,15 @@ async function syncTemplateHeadless(
     return svc.syncWithTemplate(project, { strategy: 'reset' });
 }
 
+/** The colleague's description file and GitHub's compare, with the SC's token. */
+function baseRefreshDeps(ctx: UpdateContext): BaseRefreshDeps {
+    const { fileOperations } = getGitHubServices(ctx.secrets);
+    return {
+        readFile: async (owner, repo, path, ref) => (await fileOperations.getFileContent(owner, repo, path, ref))?.content,
+        compare: (owner, repo, base, head) => compareCommits(ctx.secrets, owner, repo, base, head),
+    };
+}
+
 export async function applyTemplate(
     items: UpdateSelections['template'],
     ctx: UpdateContext,
@@ -80,6 +91,10 @@ export async function applyTemplate(
             const r = await syncTemplateHeadless(svc, project, policy, questions);
             if (r.success) {
                 await svc.updateLastSyncedCommit(project, r.syncedCommit, ctx.stateManager);
+                // The colleague may have moved their own Adobe base; keep ours true (EDS-56 D4).
+                if (await refreshBaseFromColleague(project, baseRefreshDeps(ctx))) {
+                    await ctx.stateManager.saveProject(project);
+                }
                 succeededPaths.add(project.path);
                 result.successCount++;
                 ctx.logger.info(`[Updates] Template synced for ${project.name} (${r.strategy})`);

@@ -12,6 +12,7 @@ import {
     packageDraftFor,
 } from '@/features/eds/services/demoPackage/demoPackageService';
 import { COMPONENT_IDS } from '@/core/constants';
+import { writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import type { Project } from '@/types/base';
 import { makeAddedDemo, makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackageFixtures';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -230,6 +231,29 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
         });
 
         expect(file.builtWith).toEqual({ ...builtWith, extension: '1.0.0-beta.150' });
+    });
+
+    // EDS-56: the Adobe base the updates keep is newer than the creation record, and the next
+    // colleague should start from where this code actually is.
+    it.each([
+        ['a record carried from its package', makeAddedDemo({ builtWith: { template: B2B, lkg: LKG, extension: '1.0.0-beta.149' } })],
+        ['no record at all (JustRite)', makeAddedDemo()],
+    ])("writes a colleague's storefront's recorded Adobe base over %s", (_label, demo) => {
+        const MOVED = '48bed04d072fff094b49a46709b351bd719b287a';
+        const project = edsProject({ demo });
+        writeBoilerplateBase(project, {
+            template: B2B,
+            commit: MOVED,
+            lkgSource: { owner: LEDGER.owner, repo: LEDGER.repo, lkgFile: LEDGER.lkgFile },
+            found: 'first-commit',
+        });
+
+        const file = describeProject(project, { name: '', description: '' }, CONTENT, {
+            packages: THIN_LAYER,
+            extension: '1.0.0-beta.150',
+        });
+
+        expect(file.builtWith).toMatchObject({ template: B2B, lkg: MOVED, extension: '1.0.0-beta.150' });
     });
 
     it("records only the extension for a colleague's storefront that carried no record", () => {

@@ -14,6 +14,7 @@ import { redeployApiMesh, type MeshRedeployDeps } from './edsResetMeshHelper';
 import type { EdsResetParams, EdsResetResult } from './edsResetParams';
 import { COMPONENT_IDS } from '@/core/constants';
 import { RESET_STEP } from '@/core/utils/resetStages';
+import { writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -27,12 +28,15 @@ import type { StorefrontBoilerplate } from '@/types/projectFile';
  * than writing `undefined` over it.
  */
 export function recordSyncedCommit(project: Project, commitSha: string | undefined, logger: Logger): void {
-    const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
-    if (!commitSha || !metadata) {
+    if (!commitSha || !project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata) {
         logger.warn('[EdsReset] Synced template commit not recorded — update checks may be stale');
         return;
     }
-    metadata.lastSyncedCommit = commitSha;
+    // The recorded Adobe base described the code this reset replaced; the next check finds
+    // the source's again (EDS-56).
+    writeBoilerplateBase(project, undefined);
+    const metadata = project.componentInstances[COMPONENT_IDS.EDS_STOREFRONT].metadata;
+    if (metadata) metadata.lastSyncedCommit = commitSha;
 }
 
 /**
