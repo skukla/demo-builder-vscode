@@ -51,9 +51,9 @@ resets.
 | # | Decision | Who | Status |
 |---|---|---|---|
 | D1 | Two rows, one per source | owner, 2026-10-20 | approved |
-| D2 | This extends the 2026-10-04 ruling ("fork sync only for forks, never reset a generated repository onto the current boilerplate"). That ruling assumed a generated repository could only be modernised by a reset (`step-05-version-gap.md:29-31`); the 3-way apply (`5d805a57a`, 2026-09-15) is a fourth option the owner was not shown. It is not a reset, so the ruling's letter holds | owner | **confirm** |
+| D2 | This extends the 2026-10-04 ruling ("fork sync only for forks, never reset a generated repository onto the current boilerplate"). That ruling assumed a generated repository could only be modernised by a reset (`step-05-version-gap.md:29-31`); the 3-way apply (`5d805a57a`, 2026-09-15) is a fourth option the owner was not shown. It is not a reset, so the ruling's letter holds | owner, 2026-10-20 | confirmed |
 | D3 | The Adobe base lives in its own storefront metadata field (`boilerplateBase: { template, commit, lkgFile }`), never in `lastSyncedCommit` or `lkgSource` | plan | proposed |
-| D4 | Keeping the base honest when the colleague updates their own boilerplate (see step 05) | owner | **open** |
+| D4 | Keeping the base honest when the colleague updates their own boilerplate: A (re-read the colleague's description file) where it records a base, else B (let the 3-way apply absorb the replay). Where the file lives was checked (step 05) | owner, 2026-10-20 | approved |
 | D5 | Storefronts with no recorded base (JustRite) are out of scope; working the base out by matching files is a follow-up item | plan | proposed |
 | D6 | The opt-in fixes are not re-applied by this update; the storefront report keeps offering them | plan | proposed |
 
@@ -87,5 +87,7 @@ The fork-sync check runs against `getTemplateSource(project)`
 (`src/features/updates/services/updateSelections.ts:141-153`), which for a colleague's
 demo is the colleague's repository. If that repository is a fork and behind its parent,
 the Updates window offers to merge upstream into it (`updateApplyService.ts:79`): a write
-to a repository the SC does not own. No ownership check was found. Reported to the owner
-2026-10-20 for a fix-now-or-defer decision.
+to a repository the SC does not own. No ownership check was found. Owner, 2026-10-20: fix
+now. Fixed on `fix/fork-sync-own-repos`: the sync is offered only for a repository the
+signed-in account administers (GitHub's `permissions.admin` on the read the check already
+makes), so an SC's own fork, including a pre-2026-09-14 copy, keeps it.

@@ -61,3 +61,12 @@ pointer). They are different things and an SC may want one without the other.
 2026-10-04 (EDS-13f step 05): "report always, fix what fits, fork sync only for forks,
 never refuse on age, warn below a floor". This item extends boilerplate updates to
 storefronts that are not forks but meet the requirements above.
+
+## Owner decisions, 2026-10-20
+
+- **D2 confirmed:** this extends the 2026-10-04 ruling; the 3-way apply is not a reset.
+- **D4 approved:** after a colleague-track update, re-read the base from the colleague's
+  `demo.demo-builder.json` when it records one, else let the 3-way apply absorb the replay.
+  The file was checked: it lives in the repository, and its base moves only when the
+  colleague saves again (plan step 05).
+- **Fork-sync finding: fix now.** Done on `fix/fork-sync-own-repos`.
