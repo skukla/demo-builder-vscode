@@ -52,7 +52,7 @@ describe('ExtensionUpdater', () => {
             async (config, callback) => callback(mockProgress),
         );
         mockWindow.withProgress = mockWithProgress;
-        mockWindow.showInformationMessage = jest.fn();
+        mockWindow.showWarningMessage = jest.fn();
         mockCommands.executeCommand = jest.fn();
         (vscode.Uri as unknown as { file: (path: string) => unknown }).file = jest.fn((path: string) => ({ path }));
     });
@@ -78,7 +78,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should download and install extension update', async () => {
-            (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Reload Now');
+            (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reload Now');
 
             await updater.updateExtension(downloadUrl, newVersion);
 
@@ -168,10 +168,10 @@ describe('ExtensionUpdater', () => {
             await expect(updater.updateExtension(downloadUrl, newVersion)).resolves.not.toThrow();
         });
 
-        it('should prompt user to reload after installation', async () => {
+        it('asks to reload after installation (a notification outside the Updates modal)', async () => {
             await updater.updateExtension(downloadUrl, newVersion);
 
-            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
                 `Demo Builder updated to v${newVersion}. Reload window to apply changes?`,
                 'Reload Now',
                 'Later',
@@ -179,7 +179,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should reload window if user chooses "Reload Now"', async () => {
-            (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Reload Now');
+            (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reload Now');
 
             await updater.updateExtension(downloadUrl, newVersion);
 
@@ -192,7 +192,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should not reload window if user chooses "Later"', async () => {
-            (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Later');
+            (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Later');
 
             await updater.updateExtension(downloadUrl, newVersion);
 

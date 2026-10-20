@@ -62,3 +62,9 @@ export const CONFIGURE_REPUBLISH_OPERATION_ID = 'configure-republish-storefront'
 export function deleteOperationId(projectName: string): string {
     return `delete:${projectName}`;
 }
+
+/**
+ * Applying the updates the SC left ticked in the Updates modal (PL-80). One list
+ * across every project, so it names the operation rather than a target.
+ */
+export const UPDATES_OPERATION_ID = 'apply-updates';

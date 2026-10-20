@@ -27,7 +27,7 @@ export type PendingUpdateKind =
 
 /** One update the SC can tick. */
 export interface PendingUpdateRow {
-    /** Stable within one check; what `apply-updates` sends back. */
+    /** Stable within one check; what `applyUpdates` sends back. */
     id: string;
     kind: PendingUpdateKind;
     /** The heading the row sits under, in the order headings are drawn. */
@@ -50,14 +50,33 @@ export interface PendingUpdateGroup {
     title: string;
 }
 
-/** `check-updates` — the answer (Pattern B). */
+/** `checkUpdates` — the answer (Pattern B). */
 export interface CheckUpdatesResponse {
     success: boolean;
     data?: { rows: PendingUpdateRow[] };
     error?: string;
 }
 
-/** `apply-updates` — the ids of the rows the SC left ticked. */
+/** `applyUpdates` — the ids of the rows the SC left ticked. */
 export interface ApplyUpdatesRequest {
     ids: string[];
+    /** Always the modal: the run is told in the projects list's progress modal. */
+    progress?: 'modal';
+}
+
+/** What an apply did, as the Updates modal lists it once the run ends. */
+export interface ApplyUpdatesReport {
+    /** How many updates applied. */
+    applied: number;
+    /** What did not apply, one sentence each, naming the update and why. */
+    problems: string[];
+    /** What applied with something to know: a fix it could not put back, a block left out. */
+    notes: string[];
+}
+
+/** `applyUpdates` — the answer (Pattern B). */
+export interface ApplyUpdatesResponse {
+    success: boolean;
+    error?: string;
+    data?: ApplyUpdatesReport;
 }

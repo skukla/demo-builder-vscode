@@ -6,6 +6,7 @@ import { numberedSteps } from '@/core/utils/numberedSteps';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { stageLine } from '@/core/utils/stageLine';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
 import type { Logger } from '@/types/logger';
 
@@ -47,8 +48,8 @@ export class ExtensionUpdater {
                 // Ignore cleanup errors
             }
       
-            // Prompt for reload
-            const reload = await vscode.window.showInformationMessage(
+            // Asked in the Updates modal when it runs there (PL-80), otherwise a notification.
+            const reload = await askDuringOperation(
                 `Demo Builder updated to v${newVersion}. Reload window to apply changes?`,
                 'Reload Now',
                 'Later',
