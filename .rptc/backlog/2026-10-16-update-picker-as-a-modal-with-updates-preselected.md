@@ -54,3 +54,5 @@ The agent's `apply_updates` keeps working against the same apply service either 
 - 2026-10-20  chore(updates): lock in the cast the auto-updater took with it; name it in words (`04649dbd4`)
 - 2026-10-20  fix(projects-dashboard): the Updates window keeps one height from checking to result (`9798e1425`)
 - 2026-10-20  feat(updates): the notification checks again; the modal only replaces the picker (`688ae81ee`)
+- 2026-10-20  feat(projects-dashboard): the Updates window reads like the other modals (`a85153474`)
+- 2026-10-20  refactor(ui): SectionLabel and LeadText, the modal text styles five modals share (`b4f24ee84`)
