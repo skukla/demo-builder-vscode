@@ -68,6 +68,8 @@ interface Harness {
     pages: StorefrontPages;
     notify: jest.Mock<Promise<string | undefined>, [string, ...string[]]>;
     askToSignIn: jest.Mock<Promise<void>, [string]>;
+    /** The passing "that worked" line (the status bar), which needs no answer. */
+    confirm: jest.Mock<void, [string]>;
     save: jest.Mock<Promise<void>, [Project]>;
     warn: jest.Mock;
     /** The progress the SC sees while an answered offer adds its pages. */
@@ -87,6 +89,7 @@ async function harness(answer?: string): Promise<Harness> {
         pages: s.port,
         notify: jest.fn(async (_message: string, ..._actions: string[]) => answer),
         askToSignIn: jest.fn(async (_why: string) => undefined),
+        confirm: jest.fn((_message: string) => undefined),
         save: jest.fn(async (_project: Project) => undefined),
         warn: jest.fn(),
         inProgress: jest.fn((_title: string, job: () => Promise<unknown>) => job()),
@@ -106,6 +109,7 @@ async function harness(answer?: string): Promise<Harness> {
         save: h.save,
         notify: h.notify,
         askToSignIn: h.askToSignIn,
+        confirm: h.confirm,
         inProgress: h.inProgress,
         logger: { info: jest.fn(), warn: h.warn, debug: jest.fn() },
     });
@@ -367,8 +371,11 @@ describe('when it cannot look', () => {
         await h.watcher.check();
         await h.watcher.idle();
 
-        expect(h.notify).toHaveBeenCalledTimes(1);
-        expect(h.notify).toHaveBeenLastCalledWith('Checked "Justrite" again: no new categories.');
+        // A passing line, not a notification: nothing to answer, so it must not sit on
+        // screen until closed (owner, 2026-10-20).
+        expect(h.notify).not.toHaveBeenCalled();
+        expect(h.confirm).toHaveBeenCalledTimes(1);
+        expect(h.confirm).toHaveBeenLastCalledWith('Checked "Justrite" again: no new categories');
         expect(h.s.written).toStrictEqual([]);
     });
 
@@ -399,6 +406,7 @@ describe('when it cannot look', () => {
             save: h.save,
             notify: h.notify,
             askToSignIn: h.askToSignIn,
+            confirm: h.confirm,
             inProgress: h.inProgress,
             logger: { info: jest.fn(), warn: jest.fn(), debug: jest.fn() },
         });

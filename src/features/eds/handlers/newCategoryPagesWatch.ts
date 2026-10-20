@@ -19,6 +19,7 @@
 import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { catalogMenuSiteFor } from '@/features/ai/server/storefrontPages';
 import type { CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuStep';
 import {
@@ -97,6 +98,7 @@ export function registerNewCategoryPagesWatch(deps: NewCategoryPagesWatchDeps): 
         save: (project) => stateManager.saveProject(project),
         notify: (message, ...actions) =>
             Promise.resolve(vscode.window.showInformationMessage(message, ...actions)),
+        confirm: showSuccessInStatusBar,
         askToSignIn: askDaLiveSignIn,
         inProgress: (title, job) => withProgressRegister({ title }, () => job()),
         logger: deps.logger,

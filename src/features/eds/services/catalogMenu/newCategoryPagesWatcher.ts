@@ -54,6 +54,8 @@ export interface NewCategoryPagesWatcherDeps {
     save(project: Project): Promise<void>;
     /** Show a notice; answers the button pressed, or undefined when it is dismissed. */
     notify(message: string, ...actions: string[]): Promise<string | undefined>;
+    /** Say something worked, in passing (the status bar): nothing to answer or close. */
+    confirm(message: string): void;
     /** Ask the SC to sign in to DA.live, saying why; signs in only on a yes. */
     askToSignIn(why: string): Promise<void>;
     /** Show progress while `job` runs: an add the SC asked for takes about a minute. */
@@ -196,7 +198,7 @@ export function createNewCategoryPagesWatcher(deps: NewCategoryPagesWatcherDeps)
         if (found.status === 'nothing') {
             said.offered = undefined;
             // The sign-in question promised a check; say it happened, once.
-            if (promisedRecheck) void deps.notify(`Checked "${nameOf(project)}" again: no new categories.`);
+            if (promisedRecheck) deps.confirm(`Checked "${nameOf(project)}" again: no new categories`);
             return;
         }
         if (!resolveAutoAddCategoryPages(project, deps.autoAddByDefault())) {
