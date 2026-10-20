@@ -18,6 +18,7 @@
  */
 
 import {
+    DA_LIVE_TOKEN_MARGIN_MS,
     validateDaLiveToken,
     validateDaLiveTokenStrict,
 } from '@/features/eds/services/daLive/daLiveTokenValidation';
@@ -115,6 +116,31 @@ describe('validateDaLiveTokenStrict', () => {
         });
 
         expect(refusalFor(expired)).toMatch(/expired/i);
+    });
+
+    // Measured 2026-10-20: da.live's bookmarklet handed over a token with 3 minutes left.
+    // Sign-in stored it, every read refused it (they need 5 minutes), and each "Sign In"
+    // changed nothing. Sign-in now applies the same margin the reads do.
+    it('refuses a token too close to its expiry for the reads to accept it', () => {
+        const now = Date.now();
+        const nearlyExpired = makeDaLiveToken({
+            client_id: 'darkalley',
+            created_at: String(now - 3_600_000),
+            expires_in: String(3_600_000 + 3 * 60_000),
+        });
+
+        expect(refusalFor(nearlyExpired)).toMatch(/expires in 3 minutes/i);
+    });
+
+    it('accepts a token with more than the margin left', () => {
+        const now = Date.now();
+        const enough = makeDaLiveToken({
+            client_id: 'darkalley',
+            created_at: String(now),
+            expires_in: String(DA_LIVE_TOKEN_MARGIN_MS + 60_000),
+        });
+
+        expect(acceptanceOf(enough).expiresAt).toBeGreaterThan(now);
     });
 });
 
