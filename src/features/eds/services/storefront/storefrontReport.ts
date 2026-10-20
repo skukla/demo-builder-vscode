@@ -34,6 +34,11 @@ import {
 } from './storefrontProvenance';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
+import {
+    resolveBoilerplateBase,
+    type BoilerplateBase,
+    type BoilerplateGitHub,
+} from '@/features/updates/services/boilerplateBase';
 import type { Project } from '@/types/base';
 import type { CodePatchSource, DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -70,6 +75,11 @@ export interface StorefrontReport {
     brokenLinks?: StorefrontBrokenLink[];
     /** The DA.live site the content is edited in, for the "open" links. */
     contentSite?: { org: string; site: string };
+    /**
+     * An added demo's Adobe half (EDS-56): the Adobe commit it started from and our tested
+     * version, or why it does not follow our tested boilerplate. Read, never recorded here.
+     */
+    adobe?: { base: BoilerplateBase; tested?: string } | { reason: string };
 }
 
 export interface StorefrontReportDeps {
@@ -77,6 +87,8 @@ export interface StorefrontReportDeps {
     repoOps: Pick<GitHubRepoOperations, 'getRepository'>;
     /** The patches repo's last-known-good commit (`readLkgSha`); undefined when it cannot be read. */
     readLkg: (source: LkgSource) => Promise<string | undefined>;
+    /** The GitHub reads that find an added demo's Adobe base (EDS-56). */
+    boilerplateGitHub: BoilerplateGitHub;
     logger: Logger;
     packages?: readonly DemoPackage[];
 }
@@ -101,11 +113,12 @@ export async function readStorefrontReport(
 
     const origin = await originOf(project, deps);
     const fixSet = fixSetOf(project, origin, deps.packages);
-    const [boilerplate, current, written, fixes] = await Promise.all([
+    const [boilerplate, current, written, fixes, adobe] = await Promise.all([
         readRepoBoilerplate(deps.fileOps, repository, deps.logger),
         fixSet ? currentBoilerplate(fixSet, deps) : Promise.resolve(undefined),
         writtenPieces(repository, deps),
         fixSet ? checkFixes(deps, { ...repository, branch: 'main' }, fixSet.ids, fixSet.source) : Promise.resolve([]),
+        origin.kind === 'added' ? adobeHalf(project, deps) : Promise.resolve(undefined),
     ]);
     const offer = origin.kind === 'added' && origin.match ? fixes.filter((f) => f.state === 'fits').map((f) => f.patchId) : [];
     const brokenLinks = readBrokenLinks(project);
@@ -120,7 +133,20 @@ export async function readStorefrontReport(
         ...(offer.length ? { offer } : {}),
         ...(brokenLinks.length ? { brokenLinks } : {}),
         ...(contentSite ? { contentSite } : {}),
+        ...(adobe ? { adobe } : {}),
     };
+}
+
+/** An added demo's Adobe base and our tested version, or why there is none (EDS-56). */
+async function adobeHalf(project: Project, deps: StorefrontReportDeps): Promise<StorefrontReport['adobe']> {
+    const lookup = await resolveBoilerplateBase(project, {
+        github: deps.boilerplateGitHub,
+        logger: deps.logger,
+        ...(deps.packages ? { packages: deps.packages } : {}),
+    });
+    if ('reason' in lookup) return { reason: lookup.reason };
+    const tested = await deps.readLkg(lookup.base.lkgSource);
+    return { base: lookup.base, ...(tested ? { tested } : {}) };
 }
 
 async function originOf(project: Project, deps: StorefrontReportDeps): Promise<StorefrontOriginKind> {
@@ -222,6 +248,7 @@ export function storefrontReportLines(report: StorefrontReport): string[] {
         '## Where this storefront comes from',
         boilerplateLine(report),
         ...originLines(report.origin),
+        ...adobeLines(report.adobe),
         '## What Demo Builder wrote',
         `Product-page fallback (smart 404): ${PRESENCE_WORDS[report.written.smart404]}.`,
         `Content mount (fstab.yaml): ${PRESENCE_WORDS[report.written.fstab]}.`,
@@ -266,6 +293,17 @@ function boilerplateLine(report: StorefrontReport): string {
     const current = report.current?.status === 'read' ? ` Demo Builder's current one is ${report.current.value.version}.` : '';
     const warning = boilerplateFloorWarning(report.boilerplate.value);
     return `${built}${current}${warning ? ` ${warning}` : ''}`;
+}
+
+function adobeLines(adobe: StorefrontReport['adobe']): string[] {
+    if (!adobe) return [];
+    if ('reason' in adobe) return [`Adobe boilerplate updates: not offered, because ${adobe.reason}.`];
+    const { template, commit, found } = adobe.base;
+    const how = found === 'first-commit' ? 'matched by its first commit' : 'recorded in its demo package';
+    const started = `Adobe boilerplate: started at ${template.owner}/${template.repo} ${commit.slice(0, 7)} (${how}).`;
+    if (!adobe.tested) return [`${started} Demo Builder's tested version could not be read.`];
+    if (adobe.tested === commit) return [`${started} That is Demo Builder's tested version.`];
+    return [`${started} Demo Builder's tested version is ${adobe.tested.slice(0, 7)}; Check for Updates offers it.`];
 }
 
 function originLines(origin: StorefrontOriginKind): string[] {

@@ -97,6 +97,13 @@ function deps(own: Record<string, string | Error> = OWN_FILES, overrides: Partia
             })),
         },
         readLkg: jest.fn(async () => LKG),
+        // GitHub has nothing to say about the Adobe base unless a case sets one (EDS-56).
+        boilerplateGitHub: {
+            repository: jest.fn(async () => undefined),
+            firstCommitTree: jest.fn(async () => undefined),
+            commitsBefore: jest.fn(async () => undefined),
+            topLevel: jest.fn(async () => undefined),
+        },
         logger: createMockLogger(),
         packages: CATALOG,
         ...overrides,
@@ -152,6 +159,7 @@ describe('readStorefrontReport — a colleague’s storefront', () => {
             ],
             offer: ['product-teaser-sku-encoding', 'pdp-empty-data-redirect'],
             contentSite: { org: 'steve', site: 'aistore-copy' },
+            adobe: { reason: 'GitHub could not be read for sayurihanki/aistore' },
         });
     });
 
@@ -206,6 +214,7 @@ describe('storefrontReportLines — the SC-facing rendering', () => {
             "Built on Adobe's Commerce boilerplate 4.0.1. Demo Builder's current one is 6.0.0. " +
                 'Built on an older boilerplate (4.x); some fixes may not fit.',
             "GitHub records it as made from adobe-commerce/boilerplate-b2b-template, one of Demo Builder's templates.",
+            'Adobe boilerplate updates: not offered, because GitHub could not be read for sayurihanki/aistore.',
             '## What Demo Builder wrote',
             'Product-page fallback (smart 404): there.',
             'Content mount (fstab.yaml): there.',
@@ -217,6 +226,23 @@ describe('storefrontReportLines — the SC-facing rendering', () => {
             "Don't fit this code: AEM Assets images.",
         ]);
         expect(lines.join(' ')).not.toMatch(/sku-encoding|nav-tools|sidebar-selector/);
+    });
+
+    // EDS-56: an added demo whose Adobe starting point is known follows our tested version too.
+    it.each([
+        [LKG, "That is Demo Builder's tested version."],
+        ['71a67e027b4b288a67f5cda1fc106d2df9a34805', "Demo Builder's tested version is abcdef0; Check for Updates offers it."],
+    ])('says where its Adobe code started and how it stands against the tested version (%s)', async (base, ending) => {
+        const known = project(
+            { demo: makeAddedDemo({ source: { owner: 'sayurihanki', repo: 'aistore' } }) },
+            { boilerplateBase: { template: B2B, commit: base, lkgSource: LEDGER_SOURCE, found: 'first-commit' } },
+        );
+
+        const lines = storefrontReportLines(await read(known, deps()));
+
+        expect(lines).toContain(
+            `Adobe boilerplate: started at adobe-commerce/boilerplate-b2b-template ${base.slice(0, 7)} (matched by its first commit). ${ending}`,
+        );
     });
 
     it('warns only below the floor: a storefront on the current boilerplate gets no warning (step 05)', async () => {

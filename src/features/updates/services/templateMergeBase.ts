@@ -30,6 +30,16 @@ type TemplateChangeOutcome =
     | { kind: 'conflicts'; conflicts: string[]; restored: boolean }
     | { kind: 'failed'; reason: string };
 
+/**
+ * Left out of every template change: the template's own CI. A repository generated from the
+ * B2B template has none of Adobe's workflows (its cleanup-on-create workflow deletes them),
+ * so applying Adobe's edits to them stops the update on files the storefront does not have.
+ * Measured 2026-10-20: 14 such edits between 71a67e0 and the tested 48bed04, and our own
+ * storefront repositories keep only `sync-from-upstream.yml`. A storefront's own workflows
+ * are its owner's business, not the template's.
+ */
+const NEVER_APPLIED = ['.github'];
+
 interface TemplateChangeRequest {
     /** The recorded template version the change is measured from. */
     base: string;
@@ -98,7 +108,7 @@ async function writePatch(
     range: string,
     request: TemplateChangeRequest,
 ): Promise<boolean> {
-    const excludes = request.preserveFiles.map((file) => `":(exclude)${file}"`);
+    const excludes = [...NEVER_APPLIED, ...request.preserveFiles].map((file) => `":(exclude)${file}"`);
     const pathspec = ['.', ...excludes].join(' ');
     const listChanged = `git diff-tree -r --name-only ${range} -- ${pathspec}`;
     const changed = await git(listChanged, TIMEOUTS.NORMAL);

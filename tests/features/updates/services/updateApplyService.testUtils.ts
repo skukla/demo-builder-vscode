@@ -25,6 +25,7 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 export const mockSyncFork = jest.fn();
 export const mockCheckForkStatus = jest.fn();
 export const mockSyncWithTemplate = jest.fn();
+export const mockSyncBoilerplate = jest.fn();
 export const mockUpdateLastSyncedCommit = jest.fn();
 export const mockUpdateComponent = jest.fn();
 export const mockApplyAdobeMcpUpdate = jest.fn();
@@ -63,6 +64,7 @@ jest.mock('@/features/updates/services/templateSyncService', () => ({
             TemplateSyncServiceCtor(...args);
         }
         syncWithTemplate = (...a: unknown[]) => mockSyncWithTemplate(...a);
+        syncBoilerplate = (...a: unknown[]) => mockSyncBoilerplate(...a);
         updateLastSyncedCommit = (...a: unknown[]) => mockUpdateLastSyncedCommit(...a);
     },
 }));

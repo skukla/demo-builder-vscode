@@ -38,7 +38,7 @@ const computeMock = computeProjectUpdateSelections as jest.Mock;
 const applyMock = applyUpdatesHeadless as jest.Mock;
 const countMock = countSelections as jest.Mock;
 
-const EMPTY = { forkSync: [], template: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [], integration: [] };
+const EMPTY = { forkSync: [], template: [], boilerplate: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [], integration: [] };
 
 function fakeServer() {
 
@@ -159,6 +159,12 @@ describe('apply_updates', () => {
         computeMock.mockResolvedValueOnce({
             forkSync: [{ owner: 'skukla', repo: 'a-store' }],
             template: [{ x: 1 }, { x: 2 }],
+            boilerplate: [
+                {
+                    base: { template: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' }, commit: '71a67e027b4b288a67f5cda1fc106d2df9a34805' },
+                    tested: '48bed04d072fff094b49a46709b351bd719b287a',
+                },
+            ],
             component: [{ componentId: 'mesh', latestVersion: '2.0.0' }],
             adobeMcp: [{ packageName: '@adobe/aem-mcp', latestVersion: '3.1.0' }],
             blockLibrary: [{ library: { name: 'Bodea blocks' } }],
@@ -175,6 +181,8 @@ describe('apply_updates', () => {
         expect(res.summary).toStrictEqual({
             forkSync: ['skukla/a-store'],
             template: 2,
+            // A colleague's storefront's Adobe half: from its base to the tested version (EDS-56).
+            boilerplate: ['adobe-commerce/boilerplate-b2b-template 71a67e0 → 48bed04'],
             component: ['mesh → 2.0.0'],
             adobeMcp: ['@adobe/aem-mcp → 3.1.0'],
             blockLibrary: ['Bodea blocks'],
@@ -206,6 +214,23 @@ describe('apply_updates', () => {
         const res = await s.call({ confirm: true });
 
         expect(res.categories.blockLibraryInstall).toStrictEqual(installResult);
+    });
+
+    it("says in its description that a colleague's storefront can get the tested Adobe boilerplate, and reports it", async () => {
+        const boilerplate = { successCount: 1, failCount: 0, errors: [] };
+        applyMock.mockResolvedValueOnce({
+            forkSync: {}, template: {}, boilerplate, component: {}, adobeMcp: {}, addon: {}, blockLibraryInstall: {},
+            integration: {},
+            totalApplied: 1,
+            totalFailed: 0,
+        });
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        expect(s.definition().description).toMatch(/categories\.boilerplate/);
+        const res = await s.call({ confirm: true });
+
+        expect(res.categories.boilerplate).toStrictEqual(boilerplate);
     });
 
     it('refuses to apply while the demo is running', async () => {

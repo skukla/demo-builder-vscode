@@ -38,6 +38,7 @@ import {
     type CategoryResult,
 } from '@/features/updates/services/updateApplyResult';
 import {
+    applyBoilerplate,
     applyTemplate,
     type OnProgress,
     type TemplateConflictPolicy,
@@ -306,6 +307,7 @@ export async function applyUpdatesHeadless(
         options.templateConflicts,
         options.questions,
     );
+    const boilerplate = await applyBoilerplate(selections.boilerplate, ctx, onProgress);
     const component = await applyComponents(selections.component, ctx, onProgress);
     const adobeMcp = await applyAdobeMcp(selections.adobeMcp, ctx, onProgress);
     const addon = await applyAddons(
@@ -325,10 +327,11 @@ export async function applyUpdatesHeadless(
 
     const integration = await applyIntegrationUpdates(selections.integration, ctx, onProgress);
 
-    const cats = [forkSync, template, component, adobeMcp, addon, blockLibraryInstall, integration];
+    const cats = [forkSync, template, boilerplate, component, adobeMcp, addon, blockLibraryInstall, integration];
     return {
         forkSync,
         template,
+        boilerplate,
         component,
         adobeMcp,
         addon,

@@ -11,6 +11,7 @@ function result(overrides: Partial<ApplyUpdatesResult> = {}): ApplyUpdatesResult
     return {
         forkSync: emptyResult(),
         template: emptyResult(),
+        boilerplate: emptyResult(),
         component: emptyResult(),
         adobeMcp: emptyResult(),
         addon: emptyResult(),
@@ -31,6 +32,7 @@ describe('reportOf', () => {
         const report = reportOf(
             result({
                 template: { ...emptyResult(), failCount: 1, errors: ['Bodea: merge conflicts'] },
+                boilerplate: { ...emptyResult(), failCount: 1, errors: ['JustRite (Adobe boilerplate): 1 file conflicts'] },
                 component: { ...emptyResult(), failCount: 1, errors: ['eds-storefront in Bodea: download failed'] },
             }),
             ['JustRite: not updated, because its demo is running.'],
@@ -39,6 +41,7 @@ describe('reportOf', () => {
         expect(report.problems).toEqual([
             'JustRite: not updated, because its demo is running.',
             'Bodea: merge conflicts',
+            'JustRite (Adobe boilerplate): 1 file conflicts',
             'eds-storefront in Bodea: download failed',
         ]);
     });

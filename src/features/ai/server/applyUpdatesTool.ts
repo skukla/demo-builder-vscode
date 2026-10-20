@@ -42,6 +42,9 @@ function summarize(selections: UpdateSelections): Record<string, unknown> {
     return {
         forkSync: selections.forkSync.map((f) => `${f.owner}/${f.repo}`),
         template: selections.template.length,
+        boilerplate: selections.boilerplate.map(
+            (b) => `${b.base.template.owner}/${b.base.template.repo} ${b.base.commit.slice(0, 7)} → ${b.tested.slice(0, 7)}`,
+        ),
         component: selections.component.map((c) => `${c.componentId} → ${c.latestVersion}`),
         adobeMcp: selections.adobeMcp.map((a) => `${a.packageName} → ${a.latestVersion}`),
         blockLibrary: selections.blockLibrary.map((b) => b.library.name),
@@ -69,7 +72,7 @@ export function registerApplyUpdatesTool(
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK, and deployed integrations and their ERPs (the same pair update as update_integration, ERPs first) — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. An integration pair whose project uses a different Adobe organization is listed, not deployed: categories.integration.deferred says to open that project. A template update brings a storefront built on Demo Builder\'s tested boilerplate (most are) to that tested version, never Adobe\'s latest, and puts its fixes back; categories.template.applied names any it could not. A template update that conflicts with the user\'s edits stops and names the files; it is applied over them only with resetTemplateOnConflict:true, and never on a tested-boilerplate storefront, whose way through a conflict is reset_project. A block library update never puts back what the user removed by hand from the storefront: a block folder it copied, an entry it added to the component-definition, component-filters or component-models file, or an HTML example it filled in; categories.addon.leftOut names any it left out.',
+                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK, and deployed integrations and their ERPs (the same pair update as update_integration, ERPs first) — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. An integration pair whose project uses a different Adobe organization is listed, not deployed: categories.integration.deferred says to open that project. A template update brings a storefront built on Demo Builder\'s tested boilerplate (most are) to that tested version, never Adobe\'s latest, and puts its fixes back; categories.template.applied names any it could not. A template update that conflicts with the user\'s edits stops and names the files; it is applied over them only with resetTemplateOnConflict:true, and never on a tested-boilerplate storefront, whose way through a conflict is reset_project. On a storefront built from a colleague\'s demo, template follows the colleague\'s repository, and categories.boilerplate brings its Adobe half to the same tested version when the Adobe commit it started from is known; it never resets, so a conflict stops and names the files. A block library update never puts back what the user removed by hand from the storefront: a block folder it copied, an entry it added to the component-definition, component-filters or component-models file, or an HTML example it filled in; categories.addon.leftOut names any it left out.',
             inputSchema: {
                 confirm: z
                     .boolean()
@@ -158,6 +161,7 @@ export function registerApplyUpdatesTool(
                 categories: {
                     forkSync: result.forkSync,
                     template: result.template,
+                    boilerplate: result.boilerplate,
                     component: result.component,
                     adobeMcp: result.adobeMcp,
                     addon: result.addon,

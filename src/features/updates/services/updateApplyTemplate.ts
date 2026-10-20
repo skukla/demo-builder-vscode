@@ -10,6 +10,7 @@
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
 import { isThinLayerProject } from '@/features/updates/services/thinLayerUpdate';
@@ -94,4 +95,37 @@ export async function applyTemplate(
         }
     }
     return { result, succeededPaths };
+}
+
+/**
+ * Bring each colleague's storefront's Adobe half to our tested version (EDS-56). Runs after
+ * `applyTemplate`, so a storefront taking both gets the colleague's changes first, each its
+ * own commit. Records only `boilerplateBase.commit`: the colleague's `lastSyncedCommit` is
+ * the other track's. A stop on the SC's edits is a failure that names the files; no reset is
+ * offered on this track, by a person or by policy.
+ */
+export async function applyBoilerplate(
+    items: UpdateSelections['boilerplate'],
+    ctx: UpdateContext,
+    onProgress?: OnProgress,
+): Promise<CategoryResult> {
+    const result = emptyResult();
+    if (items.length === 0) return result;
+    const svc = new TemplateSyncService(getGitHubServices(ctx.secrets), ctx.logger, ctx.commandManager);
+    for (const { project, base, tested } of items) {
+        onProgress?.(S.updatingTemplate.label, `${project.name}: Adobe boilerplate`);
+        try {
+            const r = await svc.syncBoilerplate(project, { base, tested });
+            if (!r.success) throw new Error(r.error || 'Unknown error');
+            writeBoilerplateBase(project, { ...base, commit: r.syncedCommit });
+            await ctx.stateManager.saveProject(project);
+            result.successCount++;
+            ctx.logger.info(`[Updates] Adobe boilerplate updated for ${project.name}`);
+        } catch (error) {
+            result.failCount++;
+            result.errors.push(`${project.name} (Adobe boilerplate): ${sanitizeErrorForLogging(error as Error)}`);
+            ctx.logger.error(`[Updates] Adobe boilerplate update failed for ${project.name}`, error as Error);
+        }
+    }
+    return result;
 }

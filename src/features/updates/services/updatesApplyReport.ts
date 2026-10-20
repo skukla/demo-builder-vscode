@@ -23,6 +23,7 @@ export function reportOf(result: ApplyUpdatesResult, skipped: string[] = []): Ap
     const categories: CategoryResult[] = [
         result.forkSync,
         result.template,
+        result.boilerplate,
         result.component,
         result.adobeMcp,
         result.addon,

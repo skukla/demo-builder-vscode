@@ -12,6 +12,7 @@ import { readLkgSha } from '../patches/lkgReader';
 import type { StorefrontReportDeps } from './storefrontReport';
 import { templateCatchUpOf, type TemplateCatchUp } from './templateCatchUp';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { createBoilerplateGitHub } from '@/features/updates/services/boilerplateGitHub';
 import { ForkSyncService, type ForkSyncResult } from '@/features/updates/services/forkSyncService';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -25,6 +26,7 @@ export function createStorefrontReportDeps(secrets: vscode.SecretStorage, logger
         fileOps: fileOperations,
         repoOps: repoOperations,
         readLkg: (source) => readLkgSha(source, logger),
+        boilerplateGitHub: createBoilerplateGitHub(secrets),
         logger,
     };
 }

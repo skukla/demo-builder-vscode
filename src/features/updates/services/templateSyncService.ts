@@ -32,6 +32,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
+import type { BoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import { removeFilesNotBackedUp, restorePreservedFiles } from '@/features/updates/services/preservedFiles';
 import { commitAndPush, withCheckout, type SyncDeps } from '@/features/updates/services/templateCheckout';
 import {
@@ -66,6 +67,8 @@ import {
 } from '@/features/updates/services/thinLayerUpdate';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+
+const BOILERPLATE_COMMIT = 'chore: update the Adobe boilerplate to the tested version';
 
 /**
  * Template Sync Service
@@ -150,12 +153,47 @@ export class TemplateSyncService {
         const tested = lkgSource ? await readLkgSha(lkgSource, this.logger) : undefined;
         if (lkgSource && !tested) return failure('merge', TESTED_VERSION_UNREADABLE);
         const merged = await withCheckout(this.deps, 'merge', target, preserveFiles, (checkout) =>
-            this.mergeFromBase(checkout, target, { base, tested, preserveFiles }, project),
+            this.mergeFromBase(checkout, target, { base, tested, preserveFiles, fixes: Boolean(tested) }, project),
         );
         if (!merged.success || !tested) return merged;
         const pieces = await restoreDemoBuilderPieces(project, this.github.fileOperations, this.logger);
         if (pieces.length === 0) return merged;
         return { ...merged, notes: [...(merged.notes ?? []), ...pieces] };
+    }
+
+    /**
+     * Bring a colleague's storefront's Adobe half to our tested version (EDS-56): Adobe's
+     * change from the recorded base to `tested`, applied 3-way onto the SC's repository,
+     * the SC's and the colleague's edits kept. The storefront's own template fields belong
+     * to the colleague's track, so every coordinate here is named by the caller. Demo
+     * Builder's fixes are not re-applied (EDS-56 D6), and a conflict stops: no reset is
+     * ever offered on this track.
+     */
+    async syncBoilerplate(
+        project: Project,
+        update: { base: BoilerplateBase; tested: string },
+    ): Promise<TemplateSyncResult> {
+        const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata as
+            | Record<string, unknown>
+            | undefined;
+        const [repoOwner, repoName] = String(metadata?.githubRepo ?? '').split('/');
+        if (!repoOwner || !repoName) return failure('merge', 'Missing required metadata: githubRepo');
+        const { base, tested } = update;
+        const target: TemplateSyncTarget = {
+            repoOwner,
+            repoName,
+            templateOwner: base.template.owner,
+            templateRepo: base.template.repo,
+        };
+        const preserveFiles = [...DEFAULT_PRESERVE_FILES];
+        return withCheckout(this.deps, 'merge', target, preserveFiles, (checkout) =>
+            this.mergeFromBase(
+                checkout,
+                target,
+                { base: base.commit, tested, preserveFiles, fixes: false, message: BOILERPLATE_COMMIT },
+                project,
+            ),
+        );
     }
 
     /**
@@ -192,11 +230,11 @@ export class TemplateSyncService {
     private async mergeFromBase(
         checkout: Checkout,
         target: TemplateSyncTarget,
-        versions: { base: string; tested?: string; preserveFiles: string[] },
+        versions: { base: string; tested?: string; preserveFiles: string[]; fixes: boolean; message?: string },
         project: Project,
     ): Promise<TemplateSyncResult> {
         const { tempDir, repoDir } = checkout;
-        const { base, tested, preserveFiles } = versions;
+        const { base, tested, preserveFiles, fixes } = versions;
         const git: GitStep = (command, timeout) => this.git(repoDir, command, timeout);
         const patchFile = path.join(tempDir, 'template.patch');
         const outcome = await applyTemplateChangeSince(git, {
@@ -226,8 +264,9 @@ export class TemplateSyncService {
 
         await restorePreservedFiles(repoDir, checkout.backups, this.logger);
         // A thin-layer storefront's fixes ride in the same commit as the update.
-        const patched = tested ? await reapplyPatchesInCheckout(repoDir, project, this.logger) : [];
-        await commitAndPush(this.deps, repoDir, 'chore: sync with template', `git push origin ${checkout.branch}`);
+        const patched = fixes ? await reapplyPatchesInCheckout(repoDir, project, this.logger) : [];
+        const message = versions.message ?? 'chore: sync with template';
+        await commitAndPush(this.deps, repoDir, message, `git push origin ${checkout.branch}`);
 
         this.logger.info(`[TemplateSync] Merge completed successfully`);
         const notes = patchesNotPutBack(patched);

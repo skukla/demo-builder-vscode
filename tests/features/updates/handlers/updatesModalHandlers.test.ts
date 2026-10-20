@@ -65,6 +65,7 @@ function applied(overrides: Partial<ApplyUpdatesResult> = {}): ApplyUpdatesResul
     return {
         forkSync: emptyResult(),
         template: emptyResult(),
+        boilerplate: emptyResult(),
         component: emptyResult(),
         adobeMcp: emptyResult(),
         addon: emptyResult(),

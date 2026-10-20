@@ -36,6 +36,8 @@ export interface CategoryResult {
 export interface ApplyUpdatesResult {
     forkSync: CategoryResult;
     template: CategoryResult;
+    /** A colleague's storefront's Adobe half, to our tested version (EDS-56). */
+    boilerplate: CategoryResult;
     component: CategoryResult;
     adobeMcp: CategoryResult;
     addon: CategoryResult;

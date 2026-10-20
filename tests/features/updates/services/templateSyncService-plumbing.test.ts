@@ -43,8 +43,8 @@ const MISSING = 'Missing required metadata: githubRepo, templateOwner, or templa
 const NO_EDS = 'No EDS metadata found in project';
 /** The default preserved files: the site config, then every label sheet (EDS-53). */
 const DEFAULT_PRESERVED = ['fstab.yaml', 'config.json', ...LABEL_SHEET_FILES];
-/** The base..head range and the pathspec that leaves the default preserved files out. */
-const RANGE_AND_SPEC = `${BASE_SHA} ${TEMPLATE_HEAD} -- . ${DEFAULT_PRESERVED.map((f) => `":(exclude)${f}"`).join(' ')}`;
+/** The base..head range and the pathspec that leaves `.github` and the default preserved files out. */
+const RANGE_AND_SPEC = `${BASE_SHA} ${TEMPLATE_HEAD} -- . ":(exclude).github" ${DEFAULT_PRESERVED.map((f) => `":(exclude)${f}"`).join(' ')}`;
 
 /** The steps both strategies share once the user repo is on disk. */
 const FETCH_STEPS = [
@@ -212,6 +212,17 @@ describe('merge strategy — the exact git conversation', () => {
         // The TEMPLATE's commit, not the storefront's head: that is what the update
         // checker compares the record against.
         expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: TEMPLATE_HEAD });
+    });
+
+    // Measured 2026-10-20: a repository generated from the B2B template has none of
+    // Adobe's CI workflows (the template's cleanup-on-create deletes them; skukla/
+    // my-commerce-demo keeps only sync-from-upstream.yml), and Adobe's change from
+    // 71a67e0 to the tested 48bed04 edits 14 of them. Applied, every one stops the
+    // update on a file the storefront does not have.
+    it("leaves the template's .github out of every template change", async () => {
+        await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(gitCalls()).toContainEqual(expect.stringMatching(/^git diff-tree -r --name-only \S+ \S+ -- \. ":\(exclude\)\.github" /));
     });
 
     it('leaves the extra preserved files out of the template change too', async () => {
