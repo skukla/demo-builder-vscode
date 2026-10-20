@@ -544,7 +544,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-78` | feature | [Edit switches a project's Commerce backend](2026-10-13-edit-switches-backend.md) | PL-75 | med | backlog |
 | `PL-79` | feature | [Edit switches a project's stack](2026-10-13-edit-switches-stack.md) | PL-75 | med | backlog |
 | `PL-81` | epic | [Every choice the SC makes is asked in a modal, not a notification](2026-10-16-choices-in-modals-not-notifications.md) | — | med | backlog |
-| `PL-80` | feature | └ [Check for Updates in a modal, with the updates already ticked](2026-10-16-update-picker-as-a-modal-with-updates-preselected.md) | — | med | backlog |
+| `PL-80` | feature | └ [Check for Updates in a modal, with the updates already ticked](2026-10-16-update-picker-as-a-modal-with-updates-preselected.md) | — | med | built |
 | `PL-82` | fix | [The projects list shows a project an agent is building, with an honest status](2026-10-16-projects-list-creating-status.md) | — | med | built |
 | `PL-83` | fix | [The hooks resolve a shell edit's path against the wrong folder when the command starts with `cd`](2026-10-18-hook-shell-paths-ignore-cd.md) | — | low | built |
 
