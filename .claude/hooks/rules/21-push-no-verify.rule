@@ -18,7 +18,12 @@ rule_match() {
         *"git push"*) ;;
         *) return 1 ;;
     esac
-    case "$2" in
+    # Only the push's own arguments: up to the next pipe, `;` or `&`. Reading the
+    # whole line blocked `git push origin x; git status -sb | sed -n 1p` on the
+    # sed's `-n` (2026-10-20).
+    local push_args="${2#*git push}"
+    push_args="${push_args%%[|;&]*}"
+    case "$push_args" in
         *--no-verify*) return 0 ;;
         # `-n` is the short form and means the same thing.
         *" -n "*|*" -n") return 0 ;;
