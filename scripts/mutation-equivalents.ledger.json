@@ -16316,13 +16316,13 @@
             "source": "PL-70 batch MUT-05, 2026-10-10"
         },
         {
-            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "module": "src/features/ai/server/mcpToolServer.ts",
             "anchors": [
                 "?.annotations;"
             ],
             "mutants": 1,
             "category": "optionalChain",
-            "reason": "Stryker drops the hop that guards against a tool definition being undefined. declaredReadOnly is called only from the registerTool wrapper and from strictifyWriteSchema, which that wrapper calls, both with the definition the registrar passed. The SDK requires it: McpServer.registerTool destructures its config argument on its first working line, so a registration with no definition throws inside the SDK whether or not this hop is here, and no registration in src/ passes one. The decision this function makes - no readOnlyHint means the tool is treated as writing - is on the next line and is tested. Planted and re-run over the module's nine suites: all 74 tests pass. Control on the same line (reading a misspelt property): 6 tests fail.",
+            "reason": "Stryker drops the hop that guards against a tool definition being undefined. declaredReadOnly is called only from the in-extension registerTool wrapper, from strictifyWriteSchema, which that wrapper calls, and from the project-change wrapper (projectChangeNotice.ts, AI-76, moved here from inExtensionMcpServer.ts on 2026-10-20), all with the definition the registrar passed. The SDK requires it: McpServer.registerTool destructures its config argument on its first working line, so a registration with no definition throws inside the SDK whether or not this hop is here, and no registration in src/ passes one. The decision this function makes - no readOnlyHint means the tool is treated as writing - is on the next line and is tested. Planted and re-run over the module's nine suites: all 74 tests pass. Control on the same line (reading a misspelt property): 6 tests fail.",
             "decision": "none - the same unreachable no-definition case as the three hops already recorded in this file (shaped?.inputSchema, the consent description, extra?._meta)",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-05, 2026-10-10"

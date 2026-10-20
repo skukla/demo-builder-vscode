@@ -289,10 +289,16 @@ project. It moves only by the agent's own action, and never moves the person's:
   and opened its dashboard on their screen;
 - `get_current_project` answers `scope: "agent-chosen"` once the agent has
   created or picked a project.
-- while a connection follows the person's project, every tool answer gains one
+- while a connection follows the person's project, a read's answer gains one
   line when the person opened another project since the agent's last call,
-  naming both and how to go back (`projectChangeNotice.ts`). An agent with its
-  own working project is never told: nothing it does changed.
+  naming both and how to go back (`projectChangeNotice.ts`). A tool that
+  changes something (it does not declare `readOnlyHint: true`) does not run at
+  all then: its answer is an error naming both projects, and calling it again
+  runs it on the new one (AI-76). A line on the answer came too late for a
+  write, which had already landed. The project choosers (`set_current_project`
+  and the three creators) are never stopped. The first call on a connection has
+  nothing to compare with, so nothing stops it. An agent with its own working
+  project is never told or stopped: nothing it does changed.
 
 Screens keep their own project the same way (`openForCurrentProject` in
 `bundledPanelCommand.ts`), and the lifecycle commands they and agents run take

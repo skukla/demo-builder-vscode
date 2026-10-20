@@ -25,6 +25,7 @@ import { readCwdPreamble, resolveScopedProjectDir } from './connectionScope';
 import { askChatForConsent } from './consentViaChat';
 import { probeSocket } from './mcpSocketDiscovery';
 import { asRawText } from './mcpToolResult';
+import { declaredReadOnly } from './mcpToolServer';
 import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
 import {
     fingerprintArgs,
@@ -59,30 +60,6 @@ const SERVER_VERSION = '1.0.0';
  * a false negative is a live-CDN mutation running invisibly. A new tool
  * with a novel name fails CLOSED into "mutating".
  */
-/**
- * Does this tool's own definition say it only reads?
- *
- * THE classifier. Three things gate on it — the dry run, the chat's opening
- * line, and the phase sinks — and all three used to gate on
- * {@link isReadOnlyToolName}, a regex over the tool's name.
- *
- * A name cannot express "called `check_` and writes anyway". `check_github_app`
- * is exactly that (it triggers a Helix code sync on a 404) and the guard that
- * holds it closed had to be found by a hand audit of all 43 read-shaped tools,
- * because nothing could state it.
- *
- * FAILS CLOSED: no declaration means "assume it writes". A tool that forgets is
- * over-blocked under the dry run, which is recoverable; the other direction is a
- * real mutation during a mode that promises none. `inExtensionMcpServer-toolAnnotations.test.ts`
- * asserts every registered tool declares, so the fallback never runs in
- * production.
- */
-function declaredReadOnly(schema: unknown): boolean {
-    const annotations = (schema as { annotations?: { readOnlyHint?: unknown } } | undefined)
-        ?.annotations;
-    return annotations?.readOnlyHint === true;
-}
-
 /**
  * Name-shape guess at read-vs-write. NOT used to gate anything any more — see
  * {@link declaredReadOnly}, which reads the tool's own declaration.

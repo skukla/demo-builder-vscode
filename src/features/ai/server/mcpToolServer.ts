@@ -105,3 +105,31 @@ export interface McpToolServer {
         handler: (args?: any, extra?: unknown) => Promise<any>
     ): void;
 }
+
+/**
+ * Does this tool's own definition say it only reads?
+ *
+ * THE classifier. Four things gate on it — the dry run, the chat's opening
+ * line, the phase sinks (all three in `inExtensionMcpServer.ts`), and the stop on
+ * a write after the open project moved (`projectChangeNotice.ts`, AI-76). The
+ * first three used to gate on `isReadOnlyToolName`, a regex over the tool's name.
+ *
+ * A name cannot express "called `check_` and writes anyway". `check_github_app`
+ * is exactly that (it triggers a Helix code sync on a 404) and the guard that
+ * holds it closed had to be found by a hand audit of all 43 read-shaped tools,
+ * because nothing could state it.
+ *
+ * FAILS CLOSED: no declaration means "assume it writes". A tool that forgets is
+ * over-blocked, which is recoverable; the other direction is a real mutation
+ * where none was promised. `inExtensionMcpServer-toolAnnotations.test.ts`
+ * asserts every registered tool declares, so the fallback never runs in
+ * production.
+ *
+ * @param schema - the schema the tool registered with
+ * @returns true only when it declares `readOnlyHint: true`
+ */
+export function declaredReadOnly(schema: unknown): boolean {
+    const annotations = (schema as { annotations?: { readOnlyHint?: unknown } } | undefined)
+        ?.annotations;
+    return annotations?.readOnlyHint === true;
+}
