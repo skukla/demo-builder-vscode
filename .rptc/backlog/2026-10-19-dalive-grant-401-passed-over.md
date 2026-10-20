@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # An expired DA.live sign-in during the access grant is logged and passed over
@@ -40,3 +40,4 @@ and each needs its own look.
 ## Shipped so far
 
 - 2026-10-19  docs(loop): 2026-10-19 backlog-fix loop report; EDS-54 split from EDS-29 (`35c7e5097`)
+- 2026-10-20  fix(eds): an expired DA.live sign-in stops the access grant instead of being passed over (`d1027df3b`)

@@ -61,3 +61,4 @@ answer that the current project changed since its last call.
 - 2026-10-19  refactor(state): one per-project StateManager view for screens and agents (`36200a8b9`)
 - 2026-10-19  fix(dashboard): a project screen keeps acting on the project it shows (`8bbc8a9bd`)
 - 2026-10-19  feat(ai): each agent connection works on its own project (`7cb6f3192`)
+- 2026-10-19  docs(ai-15): changelog, the plan's outcome and its stated limits; AI-15 built (`c3ec0234f`)
