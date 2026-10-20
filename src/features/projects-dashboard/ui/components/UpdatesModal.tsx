@@ -17,11 +17,19 @@ import React from 'react';
 import type { UpdatesModalControls } from '../hooks/useUpdatesModal';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import type { ApplyUpdatesReport, PendingUpdateRow } from '@/types/pendingUpdates';
 
 const TITLE = 'Updates';
+/**
+ * The height every short state shares: checking, failed, up to date. Without one floor the
+ * window grew from the spinner to the result and everything in it jumped (owner,
+ * 2026-10-20). The list may be taller; `SteadyHeight` then grows, and never shrinks back.
+ */
+const FEEDBACK_HEIGHT = 240;
+const FEEDBACK_HEIGHT_PX = `${FEEDBACK_HEIGHT}px`;
 const NO_ACTIONS: ActionButton[] = [];
 
 /** The rows under each heading, headings in the order they first appear. */
@@ -100,6 +108,7 @@ function bodyFor(controls: UpdatesModalControls): { body: React.ReactNode; actio
                 body: (
                     <StatusDisplay
                         variant="error"
+                        height={FEEDBACK_HEIGHT_PX}
                         title="Couldn't check for updates"
                         message={view.error}
                         actions={[{ label: 'Check again', onPress: controls.check }]}
@@ -118,7 +127,7 @@ function listBody(controls: UpdatesModalControls): { body: React.ReactNode; acti
     const rows = controls.view.phase === 'list' ? controls.view.rows : [];
     if (rows.length === 0) {
         return {
-            body: <StatusDisplay variant="success" title="Everything is up to date" />,
+            body: <StatusDisplay variant="success" height={FEEDBACK_HEIGHT_PX} title="Everything is up to date" />,
             actions: NO_ACTIONS,
         };
     }
@@ -138,7 +147,7 @@ export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): 
         <DialogContainer onDismiss={controls.close}>
             {open && (
                 <Modal title={TITLE} size="M" fitContent onClose={controls.close} actionButtons={actions}>
-                    {body}
+                    <SteadyHeight minHeight={FEEDBACK_HEIGHT}>{body}</SteadyHeight>
                 </Modal>
             )}
         </DialogContainer>

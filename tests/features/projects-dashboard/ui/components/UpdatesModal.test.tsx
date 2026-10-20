@@ -155,6 +155,19 @@ describe('UpdatesModal', () => {
         expect(screen.getByText('Added 3 blocks to Bodea.')).toBeInTheDocument();
     });
 
+    // The window grew from the spinner to the result and everything in it jumped (owner,
+    // 2026-10-20). Every short state now sits on the same floor.
+    it.each<[string, UpdatesView]>([
+        ['checking', { phase: 'checking' }],
+        ['failed', { phase: 'failed', error: 'x' }],
+        ['up to date', { phase: 'list', rows: [] }],
+    ])('keeps the %s view on the shared 240px floor', (_label, view) => {
+        render(<UpdatesModal controls={controls(view)} />);
+
+        const reserved = screen.getByRole('dialog').firstElementChild;
+        expect(reserved).toHaveStyle({ minHeight: '240px' });
+    });
+
     it('closes through the controls', async () => {
         const c = controls({ phase: 'list', rows: ROWS });
         render(<UpdatesModal controls={c} />);
