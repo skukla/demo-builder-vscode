@@ -26,6 +26,7 @@ import type { ProbeState } from './useAddDemoFlow';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { StorefrontKind } from '@/types/projectFile';
 import type { SharedDemoRead } from '@/types/webviewRequests';
@@ -148,7 +149,7 @@ export function FoundStage({
                 data-testid="demo-description"
             />
             <div className="add-demo-found">
-                <p className="intflow-section-label">{COPY.found}</p>
+                <SectionLabel>{COPY.found}</SectionLabel>
                 {foundRows(result).map((row) => (
                     <SummaryRowItem key={row.label} row={row} showDone={false} testId={`found-${row.label}`} />
                 ))}

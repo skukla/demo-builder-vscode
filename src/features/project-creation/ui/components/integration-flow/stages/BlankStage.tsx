@@ -21,6 +21,7 @@ import React from 'react';
 import { ChoiceCard } from '../../ChoiceCard';
 import { BLANK_DEFAULT_LABEL } from '../flowStages';
 import { OptionalNameField } from '../OptionalNameField';
+import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 /** Keep seed descriptions to one card-sized thought. */
@@ -68,7 +69,7 @@ export function BlankStage({
     const defaultLabel = selectedSeed?.name ?? BLANK_DEFAULT_LABEL;
     return (
         <div className="intflow-blank">
-            <div className="intflow-section-label">Start from</div>
+            <SectionLabel>Start from</SectionLabel>
             <div className="intflow-kind-choices">
                 <ChoiceCard
                     name={BLANK_CARD_NAME}

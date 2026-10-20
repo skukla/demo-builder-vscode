@@ -17,6 +17,8 @@ import React from 'react';
 import { ChoiceCard } from '../ChoiceCard';
 import { COPY, type AddDemoDraft, type AddDemoMode, type AddDemoWay } from './addDemoFlow';
 import { GitHubLinkField } from '@/core/ui/components/forms/GitHubLinkField';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
+import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import type { AddedDemo } from '@/types/projectFile';
 
 export interface LinkStageProps {
@@ -37,7 +39,7 @@ export interface LinkStageProps {
 function WayChoice({ way, onWayChange }: Pick<NonNullable<LinkStageProps['zip']>, 'way' | 'onWayChange'>): React.ReactElement {
     return (
         <div>
-            <p className="intflow-section-label">{COPY.wayQuestion}</p>
+            <SectionLabel>{COPY.wayQuestion}</SectionLabel>
             <div className="intflow-kind-choices">
                 <ChoiceCard name={COPY.wayLink} description={COPY.wayLinkWhy} selected={way === 'link'} onSelect={() => onWayChange('link')} testId="add-demo-way-link" />
                 <ChoiceCard name={COPY.wayZip} description={COPY.wayZipWhy} selected={way === 'zip'} onSelect={() => onWayChange('zip')} testId="add-demo-way-zip" />
@@ -64,7 +66,7 @@ export function LinkStage({ addedDemos, source, onSourceChange, mode = 'add', zi
     const zipWay = mode === 'add' && zip !== undefined;
     return (
         <div className="add-demo-stage">
-            {mode === 'change' ? <p className="intflow-stage-lead">{COPY.change.lead}</p> : null}
+            {mode === 'change' ? <LeadText>{COPY.change.lead}</LeadText> : null}
             {zipWay ? <WayChoice way={zip.way} onWayChange={zip.onWayChange} /> : null}
             {zipWay && zip.way === 'zip' ? (
                 <ZipForm zip={zip} />

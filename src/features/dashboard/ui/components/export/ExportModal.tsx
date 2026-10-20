@@ -20,6 +20,7 @@ import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { ChoiceCard } from '@/features/project-creation/ui/components/ChoiceCard';
@@ -79,7 +80,7 @@ export interface ExportModalProps {
 function FormChoice({ form, onChange }: { form: ExportForm; onChange: (form: ExportForm) => void }): React.ReactElement {
     return (
         <div>
-            <p className="intflow-section-label">{EXPORT_COPY.how}</p>
+            <SectionLabel>{EXPORT_COPY.how}</SectionLabel>
             <div className="intflow-kind-choices" data-testid="export-form">
                 <ChoiceCard name={EXPORT_COPY.link} description={EXPORT_COPY.linkWhy} selected={form === 'link'} onSelect={() => onChange('link')} testId="export-form-link" />
                 <ChoiceCard name={EXPORT_COPY.file} description={EXPORT_COPY.fileWhy} selected={form === 'file'} onSelect={() => onChange('file')} testId="export-form-file" />
@@ -234,7 +235,7 @@ function FileForm({ isEds }: Pick<ExportModalProps, 'isEds'>): React.ReactElemen
     const nothing = !setup && !storefront;
     return (
         <div className="export-file-form" data-testid="export-file-form">
-            <p className="intflow-section-label">{EXPORT_COPY.whatFile}</p>
+            <SectionLabel>{EXPORT_COPY.whatFile}</SectionLabel>
             <ul className="export-parts">
                 <li className="export-part">
                     <Checkbox isSelected={setup} onChange={setSetup} data-testid="part-setup">

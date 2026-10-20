@@ -33,6 +33,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Rename in place | `forms/InlineRenameField` | a bespoke pencil + TextField |
 | A pasted GitHub link → `{owner, repo}`, with not-a-link and already-added messages | `forms/GitHubLinkField` (copy and the duplicate rule are props) | a TextField + `parseGitHubUrl` per flow |
 | Any modal | `ui/Modal` | `DialogContainer` assembled by hand |
+| A modal step's opening sentence, and the small grey capitals over a group inside it | `ui/LeadText`, `ui/SectionLabel` (Export, Add another ERP, add integration, add a demo and the Updates modal use them; a host bundle imports `modal-text.css`) | a `<p>` with per-feature classes, or bold body text as a heading |
 | A modal too tall or too narrow for its content | `ui/Modal` `fitContent` / `wide` props | CSS aimed at the Dialog — the constraint lives on Spectrum's wrapper, not the dialog's own box |
 | Slide-in right panel for detail beside a list or grid | `ui/Drawer` | Spectrum `Tray` (mobile-only, unmocked in the test stack) or a bespoke scrim + panel |
 | Page shell (header, back, footer) | `layout/PageLayout` + `PageHeader` + `PageFooter` | a bespoke page div |

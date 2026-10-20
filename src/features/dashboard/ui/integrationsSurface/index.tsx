@@ -31,6 +31,8 @@ import '../styles/ai.css';
 import '@/features/project-creation/ui/styles/add-integration-flow.css';
 // CheckboxRow, the API picker's rows (ADR-017 §6).
 import '@/core/ui/styles/checkbox-row.css';
+// SectionLabel and LeadText (ADR-017 §6).
+import '@/core/ui/styles/modal-text.css';
 // .integration-* — the card and its detail panel.
 import '@/core/ui/styles/integration-cards.css';
 // .add-card — the "Add an integration" card at the grid's end; after

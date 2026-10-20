@@ -33,6 +33,7 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { previewAsItStands, previewErpAdd, previewLines } from '@/features/app-builder/services/erpAddPreview';
 import { erpListIdFor } from '@/features/app-builder/services/erpListId';
 import { countOwnedAfterAdd, ownsProblem, rulesAfterAdd } from '@/features/app-builder/services/erpOwnership';
@@ -180,7 +181,7 @@ function AfterAdding({ store, options, added, onAssign }: {
     }
     return (
         <div>
-            <p className="intflow-section-label">{ADD_ERP_COPY.afterAdding}</p>
+            <SectionLabel>{ADD_ERP_COPY.afterAdding}</SectionLabel>
             {body}
         </div>
     );

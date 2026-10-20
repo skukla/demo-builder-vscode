@@ -32,24 +32,8 @@
     flex-direction: column;
 }
 
-.intflow-stage-lead {
-    margin: 0 0 12px;
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--spectrum-global-color-gray-700);
-}
-
-/* Section label inside a stage ("Start from"): small caps over a card group,
-   making the group read as a labeled sub-choice rather than the modal's main
-   event (the unlabeled seed row was the owner's 2026-08-27 design flag). */
-.intflow-section-label {
-    margin: 0 0 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--spectrum-global-color-gray-600);
-}
+/* A step's opening sentence and its section labels are `LeadText` and `SectionLabel`
+   (core/ui), styled in core/ui/styles/modal-text.css. */
 
 /* The optional name field sits a beat below the card group it follows. */
 .intflow-blank {

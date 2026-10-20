@@ -41,6 +41,8 @@ import '../styles/build-summary.css';
 import '../styles/add-integration-flow.css';
 // CheckboxRow, the API picker's rows (ADR-017 §6).
 import '@/core/ui/styles/checkbox-row.css';
+// SectionLabel and LeadText (ADR-017 §6).
+import '@/core/ui/styles/modal-text.css';
 // .timeline-* and .wizard-* — the SETUP PROGRESS rail and the wizard shell,
 // including the rail-collapse breakpoint. Wizard-only.
 import '../styles/wizard-timeline.css';

@@ -1,0 +1,34 @@
+/**
+ * .section-label and .lead-text — the two text styles a modal's body uses above its
+ * content (`ui/SectionLabel`, `ui/LeadText`).
+ *
+ * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `wizard` (add integration, add a
+ * demo), `dashboard` and `integrations` (Export, Add another ERP, add integration) and
+ * `projectsList` (the Updates modal, PL-80). A new host bundle imports it in its entry, or
+ * the text renders in the body style with no error.
+ *
+ * Moved unchanged on 2026-10-20 from the project-creation feature's add-integration-flow.css
+ * (.intflow-section-label, .intflow-stage-lead), in the same layer.
+ */
+
+@layer theme {
+    /* The sentence at the top of a step saying what it is for. */
+    .lead-text {
+        margin: 0 0 12px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--spectrum-global-color-gray-700);
+    }
+
+    /* Section label inside a modal ("Start from"): small caps over a group, making it read
+       as a labeled sub-part rather than the modal's main event (the unlabeled seed row was
+       the owner's 2026-08-27 design flag). */
+    .section-label {
+        margin: 0 0 8px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--spectrum-global-color-gray-600);
+    }
+}
