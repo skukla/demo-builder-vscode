@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # An agent's write stops when the open project moved under it
@@ -33,11 +33,16 @@ section does not name this.
   agent's last call. The answer is an error naming both projects: call again to act on
   the new one, or `set_current_project` to go back.
 - Calling again is the agent's confirmation: the refusal records the new project as seen.
-- `set_current_project` and `create_project` are exempt. They choose the project rather
-  than act on it, and the first is the way out of the refusal.
+- `set_current_project` and the three creators (`create_project`,
+  `create_project_from_file`, `copy_project`) are exempt. They choose the project rather
+  than act on it, and `set_current_project` is the way out of the refusal.
 - Reads keep AI-15's notice.
 
 ## Stated limit
 
 The first call on a new connection has no earlier project to compare with, so nothing
 stops it. An agent that has not looked at the project yet is not protected by this.
+
+## Shipped so far
+
+- 2026-10-20  fix(ai): an agent's write stops when the open project moved under it (`9c6843f63`)

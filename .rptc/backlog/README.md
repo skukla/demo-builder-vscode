@@ -238,7 +238,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-72` | fix | [The Commerce REST tools work on a project with no Adobe workspace](2026-10-16-commerce-rest-without-workspace.md) | — | med | built |
 | `AI-73` | fix | [An agent's create_project never deletes an existing project, and cleans up when it fails](2026-10-16-create-project-name-guard.md) | — | high | built |
 | `AI-74` | feature | [An agent can rebuild a project on a repository and site that already exist](2026-10-16-create-project-adopt-existing.md) | — | med | active |
-| `AI-76` | fix | [An agent's write stops when the open project moved under it](2026-10-20-agent-write-stops-when-project-moved.md) | — | high | active |
+| `AI-76` | fix | [An agent's write stops when the open project moved under it](2026-10-20-agent-write-stops-when-project-moved.md) | — | high | built |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
 ### eds  (62)
