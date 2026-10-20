@@ -29,6 +29,8 @@ import '../styles/ai.css';
 // AddIntegrationFlowAdapter and on the wizard's Integrations area. Both entries
 // import it; neither owns it alone.
 import '@/features/project-creation/ui/styles/add-integration-flow.css';
+// CheckboxRow, the API picker's rows (ADR-017 §6).
+import '@/core/ui/styles/checkbox-row.css';
 // .integration-* — the card and its detail panel.
 import '@/core/ui/styles/integration-cards.css';
 // .add-card — the "Add an integration" card at the grid's end; after

@@ -23,7 +23,6 @@
  * @module core/ui/components/selection/ApiAccessPicker
  */
 
-import { Checkbox } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { SearchHeader } from '../navigation/SearchHeader';
 import {
@@ -34,6 +33,7 @@ import {
     matchesQuery,
     pickableApis,
 } from './apiAccessFilters';
+import { CheckboxRow } from './CheckboxRow';
 import type { CloudGrouping } from '@/types/adobeApis';
 
 /** Show the filter only once the list is big enough to warrant it (catalog parity). */
@@ -149,21 +149,16 @@ function ApiRow({
     const pickable = isPickable(api);
     const reason = lockedReason(api);
     return (
-        <div className="intflow-api-row">
-            <Checkbox
-                isSelected={api.locked || (checked && pickable)}
-                isDisabled={!pickable}
-                onChange={() => {
-                    if (pickable) onToggle(api.code);
-                }}
-            >
-                <span className="intflow-api-name">{api.name}</span>
-                {isMeaningfulCode(api.code, api.name) && (
-                    <span className="intflow-api-code">{api.code}</span>
-                )}
-                {reason !== undefined && <span className="intflow-api-reason">{reason}</span>}
-            </Checkbox>
-        </div>
+        <CheckboxRow
+            label={api.name}
+            detail={isMeaningfulCode(api.code, api.name) ? api.code : undefined}
+            reason={reason}
+            isSelected={api.locked || (checked && pickable)}
+            isDisabled={!pickable}
+            onChange={() => {
+                if (pickable) onToggle(api.code);
+            }}
+        />
     );
 }
 

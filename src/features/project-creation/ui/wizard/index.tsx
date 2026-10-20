@@ -39,6 +39,8 @@ import '../styles/build-summary.css';
 // .intflow-* — the Add Integration modal. TWO entries render it; the dedicated
 // integrations surface imports this same sheet.
 import '../styles/add-integration-flow.css';
+// CheckboxRow, the API picker's rows (ADR-017 §6).
+import '@/core/ui/styles/checkbox-row.css';
 // .timeline-* and .wizard-* — the SETUP PROGRESS rail and the wizard shell,
 // including the rail-collapse breakpoint. Wizard-only.
 import '../styles/wizard-timeline.css';

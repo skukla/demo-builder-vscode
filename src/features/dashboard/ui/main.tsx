@@ -56,6 +56,8 @@ import '@/core/ui/styles/inline-controls.css';
 // the bundles whose entry imports it).
 import '@/features/project-creation/ui/styles/add-demo.css';
 import '@/features/project-creation/ui/styles/add-integration-flow.css';
+// CheckboxRow, the API picker's rows (ADR-017 §6).
+import '@/core/ui/styles/checkbox-row.css';
 import '@/features/project-creation/ui/styles/build-summary.css';
 import '@/features/project-creation/ui/styles/choice-cards.css';
 

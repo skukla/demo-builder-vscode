@@ -81,7 +81,7 @@ export function checkboxFor(name: string): HTMLInputElement {
 
 /** Row display names in DOM (render) order — the flat list, checked-first. */
 export function listNames(container: HTMLElement): (string | null)[] {
-    return Array.from(container.querySelectorAll('.intflow-api-name')).map((el) => el.textContent);
+    return Array.from(container.querySelectorAll('.checkbox-row-label')).map((el) => el.textContent);
 }
 
 /** Filter-pill labels in render order. */
@@ -91,5 +91,5 @@ export function chipLabels(container: HTMLElement): (string | null)[] {
 
 /** Secondary sdk-code texts in render order. */
 export function codeTexts(container: HTMLElement): (string | null)[] {
-    return Array.from(container.querySelectorAll('.intflow-api-code')).map((el) => el.textContent);
+    return Array.from(container.querySelectorAll('.checkbox-row-detail')).map((el) => el.textContent);
 }

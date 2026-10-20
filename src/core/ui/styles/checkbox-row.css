@@ -1,0 +1,38 @@
+/**
+ * .checkbox-row — one row of a checkbox list (`selection/CheckboxRow`): a name, a
+ * quieter detail, and the reason a locked row cannot change.
+ *
+ * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `wizard`, `dashboard` and
+ * `integrations` (the API picker) and `projectsList` (the Updates modal, PL-80). A new
+ * host bundle imports it in its entry, or the rows render unstyled with no error.
+ *
+ * Moved unchanged on 2026-10-20 from the project-creation feature's
+ * add-integration-flow.css (.intflow-api-row/-name/-code/-reason), in the same layer,
+ * when the projects list needed the row and did not load that sheet.
+ */
+
+@layer theme {
+    .checkbox-row {
+        padding: 2px 0;
+    }
+
+    /* The name primary, the detail secondary gray. */
+    .checkbox-row-label {
+        font-size: 13px;
+        color: var(--spectrum-global-color-gray-900);
+    }
+
+    .checkbox-row-detail {
+        margin-left: 8px;
+        font-size: 11px;
+        color: var(--spectrum-global-color-gray-600);
+    }
+
+    /* Why a row cannot change: the same register as the detail beside it. It had no
+       rule until 2026-09-08 (PL-20) and rendered at body size, louder than the detail. */
+    .checkbox-row-reason {
+        margin-left: 8px;
+        font-size: 11px;
+        color: var(--spectrum-global-color-gray-600);
+    }
+}

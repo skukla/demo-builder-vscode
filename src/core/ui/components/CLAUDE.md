@@ -39,6 +39,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Full-screen surface: sticky search band over a 960px body | `layout/FullScreenSurface` | re-inlining `.projects-sticky-header` + `.page-container-padded` |
 | Two-column / grid / sidebar layout | `layout/TwoColumnLayout`, `GridLayout`, `ContentWithSidebar` | raw flex (see the 450px trap) |
 | Search box over a list | `navigation/SearchHeader` / `SearchableList` | a TextField + filter |
+| One row of a checkbox list: name, quieter detail, the reason a locked row cannot change | `selection/CheckboxRow` (the API picker and the Updates modal use it; a host bundle imports `checkbox-row.css` in its entry) | a Spectrum `Checkbox` with per-feature spans and classes |
 | Copy-to-clipboard value | `ui/CopyableText` | a Button + clipboard call |
 | Numbered how-to steps | `ui/NumberedInstructions` | an `<ol>` |
 | Wizard config summary / step status | `wizard/ConfigurationSummary`, `StatusSection` | a bespoke summary |
