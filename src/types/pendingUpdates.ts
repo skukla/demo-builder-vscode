@@ -50,11 +50,9 @@ export interface PendingUpdateGroup {
     title: string;
 }
 
-/** `checkUpdates` — the answer (Pattern B). */
-export interface CheckUpdatesResponse {
-    success: boolean;
-    data?: { rows: PendingUpdateRow[] };
-    error?: string;
+/** `showUpdates` — pushed to a projects list already open: the rows to show. */
+export interface ShowUpdatesPayload {
+    rows: PendingUpdateRow[];
 }
 
 /** `applyUpdates` — the ids of the rows the SC left ticked. */
@@ -83,8 +81,8 @@ export interface ApplyUpdatesResponse {
     data?: ApplyUpdatesReport;
 }
 
-/** `takeUpdatesRequest` — whether the screen was opened to show the Updates modal. */
+/** `takeUpdatesRequest` — the rows to show when the screen was opened for them, else null. */
 export interface TakeUpdatesRequestResponse {
     success: true;
-    data: { show: boolean };
+    data: { rows: PendingUpdateRow[] | null };
 }

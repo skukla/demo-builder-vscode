@@ -1,15 +1,19 @@
 /**
  * Check for Updates (PL-80).
  *
- * Run by the SC, it opens the projects list with the Updates modal, which checks every
- * project and the extension, lists what is waiting and applies what stays ticked
- * (`features/updates/handlers/updatesModalHandlers`).
+ * Run by the SC, it checks the extension and every project in a "Checking for updates"
+ * notification. Nothing waiting says so ("Demo Builder is up to date"); anything waiting
+ * opens the projects list with the Updates modal on what this check found, and the modal
+ * applies what stays ticked (`features/updates/handlers/updatesModalHandlers`).
  *
  * Run in the background (the sidebar opening, then every four hours), it checks the same
  * things quietly and, when something is waiting, says how many in one notification whose
- * Review opens the modal. It never opens anything by itself. Until PL-80 a background
- * check opened VS Code's picker on its own, and a second updater (`utils/autoUpdater.ts`,
- * removed) showed its own "Update Now" every four hours.
+ * Review opens the modal. It never opens anything by itself.
+ *
+ * Until PL-80 the notification led to VS Code's picker, a background check opened that
+ * picker on its own, and a second updater (`utils/autoUpdater.ts`, removed) showed its own
+ * "Update Now" every four hours. The modal replaces only the picker: the notification is
+ * still the check (owner, 2026-10-20).
  *
  * @module features/updates/commands/checkUpdates
  */
@@ -17,52 +21,74 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { ExecutionLock } from '@/core/utils/executionLock';
+import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { integrationUpdateProbe } from '@/features/dashboard/handlers/integrationUpdateHandlers';
-import { findAllUpdates } from '@/features/updates/services/allUpdates';
+import { presentUpdates } from '@/features/updates/handlers/updatesModalHandlers';
+import { findAllUpdates, type FoundUpdates } from '@/features/updates/services/allUpdates';
 import { shouldOfferGraduation } from '@/features/updates/services/releaseTrack';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 
 const REVIEW = 'Review';
 
 export class CheckUpdatesCommand extends BaseCommand {
-    /** One background check at a time. */
+    /** One check at a time. */
     private static lock = new ExecutionLock('CheckUpdates');
 
     /**
      * @param options - `background` for the quiet check that only notifies
      */
     async execute(options: { background?: boolean } = {}): Promise<void> {
-        if (options.background) {
-            await this.checkInBackground();
-            return;
-        }
-        await this.maybeOfferGraduation();
-        await vscode.commands.executeCommand('demoBuilder.showProjectsList', { showUpdates: true });
-    }
-
-    private async checkInBackground(): Promise<void> {
         if (CheckUpdatesCommand.lock.isLocked()) {
             this.logger.debug('[Updates] Already in progress');
             return;
         }
-        await CheckUpdatesCommand.lock.run(async () => {
-            const handlerCtx = createHeadlessHandlerContext(this.context, this.stateManager, this.logger);
-            const found = await findAllUpdates(handlerCtx, integrationUpdateProbe(handlerCtx));
+        await CheckUpdatesCommand.lock.run(() =>
+            options.background ? this.checkInBackground() : this.checkInNotification(),
+        );
+    }
+
+    /** The SC's check: told in a notification, then the modal or "up to date". */
+    private async checkInNotification(): Promise<void> {
+        try {
+            const found = await withProgressRegister({ title: 'Checking for updates' }, () => this.findUpdates());
             await this.maybeOfferGraduation();
             if (found.count === 0) {
-                this.logger.debug('[Updates] Background check: nothing waiting');
+                const version: string = this.context.extension.packageJSON.version;
+                await this.showSuccessMessage(`Demo Builder is up to date (v${version})`);
                 return;
             }
-            const noun = found.count === 1 ? 'update' : 'updates';
-            const choice = await vscode.window.showInformationMessage(
-                `${found.count} Demo Builder ${noun} available.`,
-                REVIEW,
-            );
-            if (choice === REVIEW) {
-                await vscode.commands.executeCommand('demoBuilder.showProjectsList', { showUpdates: true });
-            }
-        });
+            await this.openModal(found);
+        } catch (error) {
+            await this.showError('Failed to check for updates', error as Error);
+        }
+    }
+
+    /** The startup and four-hourly check: quiet, and a notification only when something waits. */
+    private async checkInBackground(): Promise<void> {
+        const found = await this.findUpdates();
+        await this.maybeOfferGraduation();
+        if (found.count === 0) {
+            this.logger.debug('[Updates] Background check: nothing waiting');
+            return;
+        }
+        const noun = found.count === 1 ? 'update' : 'updates';
+        const choice = await vscode.window.showInformationMessage(
+            `${found.count} Demo Builder ${noun} available.`,
+            REVIEW,
+        );
+        if (choice === REVIEW) await this.openModal(found);
+    }
+
+    private findUpdates(): Promise<FoundUpdates> {
+        const handlerCtx = createHeadlessHandlerContext(this.context, this.stateManager, this.logger);
+        return findAllUpdates(handlerCtx, integrationUpdateProbe(handlerCtx));
+    }
+
+    /** Hand the check to the modal and open the projects list on it. */
+    private async openModal(found: FoundUpdates): Promise<void> {
+        presentUpdates(found);
+        await vscode.commands.executeCommand('demoBuilder.showProjectsList', { showUpdates: true });
     }
 
     // -----------------------------------------------------------------------

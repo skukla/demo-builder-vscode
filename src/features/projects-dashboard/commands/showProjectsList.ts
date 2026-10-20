@@ -19,7 +19,9 @@ import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import { loadProjectsForList } from '@/features/projects-dashboard/services/loadProjectsForList';
+import { presentedRows } from '@/features/updates/handlers/updatesModalHandlers';
 import { requestUpdatesModal } from '@/features/updates/handlers/updatesModalRequest';
+import type { ShowUpdatesPayload } from '@/types/pendingUpdates';
 import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -156,8 +158,9 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
     /**
      * Open (or reveal) the projects list.
      *
-     * @param options - `showUpdates` opens the Updates modal on it (PL-80): pushed to a
-     *   panel already open, held for one just created until its screen asks
+     * @param options - `showUpdates` opens the Updates modal on it with the rows Check for
+     *   Updates presented (PL-80): pushed to a panel already open, held for one just
+     *   created until its screen asks
      */
     public async execute(options?: { showUpdates?: boolean }): Promise<void> {
         // Set context to show webview sidebar instead of tree view
@@ -185,7 +188,9 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
         if (isExistingPanel) {
             await this.refreshProjectsList();
             await this.refreshConfig();
-            if (options?.showUpdates) await this.sendMessage('showUpdates', {});
+            if (options?.showUpdates) {
+                await this.sendMessage('showUpdates', { rows: presentedRows() } satisfies ShowUpdatesPayload);
+            }
         }
     }
 

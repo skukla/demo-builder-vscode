@@ -1,11 +1,16 @@
 /**
- * The Updates modal's two messages, on the projects list (PL-80).
+ * The Updates modal's state and its apply, on the projects list (PL-80).
  *
- * - `checkUpdates` checks the extension and every project and answers the rows to draw
- *   (Pattern B). The check is kept: it is what the ticked ids are applied against.
- * - `applyUpdates` applies the ticked rows through the same headless apply the agent's
- *   `apply_updates` uses, told in the projects list's progress modal, with its questions
- *   asked there. It answers the report the modal lists once the run ends.
+ * Check for Updates checks in its notification (`commands/checkUpdates.ts`) and hands
+ * what it found here (`presentUpdates`); the projects list then shows those rows, pushed
+ * to a panel already open or taken by a new one once mounted (`updatesModalRequest.ts`).
+ * The modal never checks itself: it only ever shows a list it was given (owner,
+ * 2026-10-20: the notification is the check, the modal replaces the picker).
+ *
+ * `applyUpdates` applies the ticked rows, against the check they came from, through the
+ * same headless apply the agent's `apply_updates` uses, told in the projects list's
+ * progress modal, with its questions asked there. It answers the report the modal lists
+ * once the run ends.
  *
  * A boundary (ADR-015): it fetches its services here and hands them in.
  *
@@ -18,46 +23,45 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { withOperationProgress, type OperationOutcome, type ReportStage } from '@/core/vscode/withOperationProgress';
-import {
-    integrationUpdateProbe,
-    updateIntegrationPairFor,
-} from '@/features/dashboard/handlers/integrationUpdateHandlers';
-import { findAllUpdates, type FoundUpdates } from '@/features/updates/services/allUpdates';
+import { updateIntegrationPairFor } from '@/features/dashboard/handlers/integrationUpdateHandlers';
+import type { FoundUpdates } from '@/features/updates/services/allUpdates';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import { selectionsForIds, toPendingUpdateRows } from '@/features/updates/services/pendingUpdateRows';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import { reportOf } from '@/features/updates/services/updatesApplyReport';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
-import type { ApplyUpdatesRequest } from '@/types/pendingUpdates';
+import type { ApplyUpdatesRequest, PendingUpdateRow } from '@/types/pendingUpdates';
 import { toError } from '@/types/typeGuards';
 
 /** The check the screen is showing; the ticked ids are applied against it, once. */
-let shown: FoundUpdates | undefined;
+let shown: { found: FoundUpdates; rows: PendingUpdateRow[] } | undefined;
 
-const CHECK_FAILED = "Couldn't check for updates. Details are in Debug Logs.";
 const OUT_OF_DATE = 'This list of updates is out of date. Check for updates again.';
 
-/** `checkUpdates`: the rows for everything waiting. */
-export const handleCheckUpdates: MessageHandler = async (context) => {
-    try {
-        const found = await findAllUpdates(context, integrationUpdateProbe(context));
-        shown = found;
-        const extension = found.extension && { current: found.extension.current, latest: found.extension.latest };
-        return {
-            success: true,
-            data: { rows: toPendingUpdateRows(found.selections, extension, found.currentProjectPath) },
-        };
-    } catch (error) {
-        context.logger.error('[Updates] The check for the Updates list failed', toError(error));
-        return { success: false, error: CHECK_FAILED };
-    }
-};
+/**
+ * Hand a check to the Updates modal: the rows it will show, kept with the check they
+ * are applied against.
+ *
+ * @param found - what Check for Updates found
+ * @returns the rows to show
+ */
+export function presentUpdates(found: FoundUpdates): PendingUpdateRow[] {
+    const extension = found.extension && { current: found.extension.current, latest: found.extension.latest };
+    const rows = toPendingUpdateRows(found.selections, extension, found.currentProjectPath);
+    shown = { found, rows };
+    return rows;
+}
+
+/** The rows of the check the modal was handed; empty once applied, or before any. */
+export function presentedRows(): PendingUpdateRow[] {
+    return shown?.rows ?? [];
+}
 
 /** `applyUpdates`: apply the ticked rows, in the progress modal. */
 export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOutcomeToModal(
     async (context, payload) => {
-        const found = shown;
+        const found = shown?.found;
         if (!found) return { success: false, error: OUT_OF_DATE };
         shown = undefined;
         return withOperationProgress({ id: UPDATES_OPERATION_ID, title: 'Applying updates', inModal: true }, (report) =>

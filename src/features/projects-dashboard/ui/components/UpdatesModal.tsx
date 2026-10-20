@@ -1,13 +1,15 @@
 /**
  * UpdatesModal — Check for Updates on the projects list (PL-80).
  *
- * Every update waiting, grouped under Demo Builder, each project and the template
- * repositories, everything that can be applied from here ticked; one Apply. The run is
- * told in the screen's `OperationProgressModal`, not here. After it, when something did
- * not apply or applied with a note, this shows the report.
+ * The updates Check for Updates found, grouped under Demo Builder, each project and the
+ * template repositories, everything that can be applied from here ticked; one Apply. It
+ * replaces VS Code's picker and nothing else: checking, and "up to date", stay in the
+ * notification (owner, 2026-10-20). The run is told in the screen's
+ * `OperationProgressModal`, not here. After it, when something did not apply or applied
+ * with a note, this shows the report.
  *
- * Built from the house pieces: `ui/Modal`, `LoadingDisplay`, `StatusDisplay` and
- * `CheckboxRow` (extracted from the API picker for this).
+ * Built from the house pieces: `ui/Modal` and `CheckboxRow` (extracted from the API picker
+ * for this).
  *
  * @module features/projects-dashboard/ui/components/UpdatesModal
  */
@@ -15,21 +17,11 @@
 import { DialogContainer, Text, View } from '@adobe/react-spectrum';
 import React from 'react';
 import type { UpdatesModalControls } from '../hooks/useUpdatesModal';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
-import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import type { ApplyUpdatesReport, PendingUpdateRow } from '@/types/pendingUpdates';
 
 const TITLE = 'Updates';
-/**
- * The height every short state shares: checking, failed, up to date. Without one floor the
- * window grew from the spinner to the result and everything in it jumped (owner,
- * 2026-10-20). The list may be taller; `SteadyHeight` then grows, and never shrinks back.
- */
-const FEEDBACK_HEIGHT = 240;
-const FEEDBACK_HEIGHT_PX = `${FEEDBACK_HEIGHT}px`;
 const NO_ACTIONS: ActionButton[] = [];
 
 /** The rows under each heading, headings in the order they first appear. */
@@ -100,37 +92,8 @@ function Report({ report }: { report: ApplyUpdatesReport }) {
 /** What the modal body shows, and the buttons beside Close. */
 function bodyFor(controls: UpdatesModalControls): { body: React.ReactNode; actions: ActionButton[] } {
     const { view } = controls;
-    switch (view.phase) {
-        case 'checking':
-            return { body: <LoadingDisplay size="L" message="Checking for updates" />, actions: NO_ACTIONS };
-        case 'failed':
-            return {
-                body: (
-                    <StatusDisplay
-                        variant="error"
-                        height={FEEDBACK_HEIGHT_PX}
-                        title="Couldn't check for updates"
-                        message={view.error}
-                        actions={[{ label: 'Check again', onPress: controls.check }]}
-                    />
-                ),
-                actions: NO_ACTIONS,
-            };
-        case 'report':
-            return { body: <Report report={view.report} />, actions: NO_ACTIONS };
-        default:
-            return listBody(controls);
-    }
-}
-
-function listBody(controls: UpdatesModalControls): { body: React.ReactNode; actions: ActionButton[] } {
-    const rows = controls.view.phase === 'list' ? controls.view.rows : [];
-    if (rows.length === 0) {
-        return {
-            body: <StatusDisplay variant="success" height={FEEDBACK_HEIGHT_PX} title="Everything is up to date" />,
-            actions: NO_ACTIONS,
-        };
-    }
+    if (view.phase === 'report') return { body: <Report report={view.report} />, actions: NO_ACTIONS };
+    const rows = view.phase === 'list' ? view.rows : [];
     const count = rows.filter((r) => controls.ticked.has(r.id) && !r.lockedReason).length;
     const label = count === 1 ? 'Apply 1 update' : `Apply ${count} updates`;
     return {
@@ -147,7 +110,7 @@ export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): 
         <DialogContainer onDismiss={controls.close}>
             {open && (
                 <Modal title={TITLE} size="M" fitContent onClose={controls.close} actionButtons={actions}>
-                    <SteadyHeight minHeight={FEEDBACK_HEIGHT}>{body}</SteadyHeight>
+                    {body}
                 </Modal>
             )}
         </DialogContainer>

@@ -27,10 +27,13 @@ jest.mock('@/core/di/serviceLocator', () => ({
 
 // Import after mock setup
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { presentUpdates } from '@/features/updates/handlers/updatesModalHandlers';
 import { handleTakeUpdatesRequest } from '@/features/updates/handlers/updatesModalRequest';
+import type { FoundUpdates } from '@/features/updates/services/allUpdates';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 import { lastMintedPanel, resetPanelState } from '../../../helpers/webviewCommandMocks';
@@ -74,6 +77,21 @@ interface CommandInternals {
     communicationManager: unknown;
     sendMessage: jest.Mock;
 }
+
+/** A check Check for Updates could have made: one template update on one project. */
+const CHECK: FoundUpdates = {
+    selections: {
+        forkSync: [],
+        template: [{ project: createMockProject({ name: 'bodea', path: '/p/bodea' }), commitsBehind: 1 }],
+        component: [],
+        adobeMcp: [],
+        blockLibrary: [],
+        blockLibraryInstall: [],
+        inspector: [],
+        integration: [],
+    },
+    count: 1,
+};
 
 /** Reach the stubbed internals of the command under test. */
 function internals(command: ShowProjectsListCommand): CommandInternals {
@@ -244,7 +262,8 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
 
         // Check for Updates (PL-80). A new panel's listeners attach after mount, so it
         // cannot be pushed to: the request is held until the screen asks for it.
-        it('holds the Updates modal for a NEW panel, and pushes nothing at it', async () => {
+        it('holds the Updates modal for a NEW panel, with the presented rows, and pushes nothing at it', async () => {
+            const rows = presentUpdates(CHECK);
             const command = createCommand();
             internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(lastMintedPanel());
             internals(command).initializeCommunication = jest.fn().mockResolvedValue({
@@ -255,19 +274,20 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
 
             await command.execute({ showUpdates: true });
 
-            expect(internals(command).sendMessage).not.toHaveBeenCalledWith('showUpdates', {});
+            expect(internals(command).sendMessage).not.toHaveBeenCalledWith('showUpdates', expect.anything());
             expect(await handleTakeUpdatesRequest(createMockHandlerContext())).toEqual({
                 success: true,
-                data: { show: true },
+                data: { rows },
             });
             // Used up: a later panel is not opened for it.
             expect(await handleTakeUpdatesRequest(createMockHandlerContext())).toEqual({
                 success: true,
-                data: { show: false },
+                data: { rows: null },
             });
         });
 
-        it('pushes the Updates modal to an EXISTING panel, and holds nothing', async () => {
+        it('pushes the presented rows to an EXISTING panel, and holds nothing', async () => {
+            const rows = presentUpdates(CHECK);
             const command = createCommand();
             internals(command).communicationManager = {
                 on: jest.fn(),
@@ -280,10 +300,10 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
 
             await command.execute({ showUpdates: true });
 
-            expect(internals(command).sendMessage).toHaveBeenCalledWith('showUpdates', {});
+            expect(internals(command).sendMessage).toHaveBeenCalledWith('showUpdates', { rows });
             expect(await handleTakeUpdatesRequest(createMockHandlerContext())).toEqual({
                 success: true,
-                data: { show: false },
+                data: { rows: null },
             });
         });
     });

@@ -74,3 +74,9 @@ project-creation sheet the projects list never loads); and a projects list just 
 asked for the modal once mounted (`takeUpdatesRequest`), since a push would arrive before its
 listener. The check's eight progress stages and `UpdateContext`'s `getCurrentProject` went
 with the picker. Release rows 1.14 to 1.16.
+
+**Changed after the first look (owner, 2026-10-20):** "I was only expecting the modal
+experience to replace the picker experience." The check went back to its notification
+(and "up to date" with it); the modal opens straight on the list the notification's check
+found and never checks itself. Its own `checkUpdates` message, its spinner, its failed and
+up-to-date views and their shared height floor were removed.

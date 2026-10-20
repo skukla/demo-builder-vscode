@@ -139,9 +139,9 @@ describe('projectsListHandlers', () => {
         // progress modal registers (getOperationProgress, backgroundOperation,
         // answerOperationPrompt, openDebugLogs — PL-59; the fourth arrived
         // 2026-09-20, when a question the work is paused on moved into the modal).
-        it('should have exactly 28 handlers', () => {
+        it('should have exactly 27 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers) as Array<keyof typeof projectsListHandlers>;
-            expect(types).toHaveLength(28);
+            expect(types).toHaveLength(27);
         });
 
         it('should have handlers as functions', () => {

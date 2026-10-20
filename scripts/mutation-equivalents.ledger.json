@@ -9964,10 +9964,10 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 327,
+            "line": 326,
             "mutants": 1,
             "category": "other",
-            "reason": "Nothing reads the queue after dispose. The only reader is flushMessageQueue, which runs once from the handshake completion handler, and that handler was registered with once() and deleted itself when it ran \u2014 a disposed manager cannot handshake again. Seeding the array rather than emptying it therefore leaves a value no code path can observe. Re-anchored 2026-10-18 (318 -> 322): unchanged code; four comment lines above it budget getErpOwnershipOptions.",
+            "reason": "Nothing reads the queue after dispose. The only reader is flushMessageQueue, which runs once from the handshake completion handler, and that handler was registered with once() and deleted itself when it ran \u2014 a disposed manager cannot handshake again. Seeding the array rather than emptying it therefore leaves a value no code path can observe. Re-anchored 2026-10-18 (318 -> 322): unchanged code; four comment lines above it budget getErpOwnershipOptions. Re-anchored 2026-10-20 (327 -> 326): unchanged code; the Updates modal's check timeout above it was removed (PL-80).",
             "decision": "none \u2014 clearing the queue is what dispose means, whether or not anything would read it",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -9977,10 +9977,10 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 506,
+            "line": 505,
             "mutants": 1,
             "category": "other",
-            "reason": "This assignment is what makes the flush non-repeating, but nothing flushes twice: flushMessageQueue is called only from the handshake completion handler, which once() deletes as it fires. So the array left behind here is read by nothing, and seeding it rather than emptying it cannot change a message sent or a piece of state observed. Re-anchored 2026-10-18 (497 -> 501): unchanged code; four comment lines above it budget getErpOwnershipOptions.",
+            "reason": "This assignment is what makes the flush non-repeating, but nothing flushes twice: flushMessageQueue is called only from the handshake completion handler, which once() deletes as it fires. So the array left behind here is read by nothing, and seeding it rather than emptying it cannot change a message sent or a piece of state observed. Re-anchored 2026-10-18 (497 -> 501): unchanged code; four comment lines above it budget getErpOwnershipOptions. Re-anchored 2026-10-20 (506 -> 505): unchanged code; the Updates modal's check timeout above it was removed (PL-80).",
             "decision": "none \u2014 copy-then-clear is the correct shape even though only one flush ever happens",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -9990,10 +9990,10 @@
             "anchors": [
                 "}).catch((hintError) => {"
             ],
-            "line": 383,
+            "line": 382,
             "mutants": 1,
             "category": "block",
-            "reason": "Emptying this catch body leaves the catch itself in place, so the timeout hint's failure is still swallowed and the handler still runs next \u2014 which is the documented contract, the hint is explicitly fire-and-forget so it cannot block. The only thing inside the body is a logger.warn, so the sole difference is whether a warning prints, and pinning that would mean asserting a logger call's arguments. Re-anchored 2026-10-18 (374 -> 378): unchanged code; four comment lines above it budget getErpOwnershipOptions.",
+            "reason": "Emptying this catch body leaves the catch itself in place, so the timeout hint's failure is still swallowed and the handler still runs next \u2014 which is the documented contract, the hint is explicitly fire-and-forget so it cannot block. The only thing inside the body is a logger.warn, so the sole difference is whether a warning prints, and pinning that would mean asserting a logger call's arguments. Re-anchored 2026-10-18 (374 -> 378): unchanged code; four comment lines above it budget getErpOwnershipOptions. Re-anchored 2026-10-20 (383 -> 382): unchanged code; the Updates modal's check timeout above it was removed (PL-80).",
             "decision": "none \u2014 the empty-looking catch IS the behaviour; the warning inside it is narration",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"

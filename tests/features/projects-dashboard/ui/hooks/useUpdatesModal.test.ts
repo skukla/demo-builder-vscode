@@ -1,7 +1,8 @@
 /**
- * useUpdatesModal — the Updates modal's state (PL-80): it checks when the screen was opened
- * for it (asked once mounted) or on the extension's `showUpdates` push, holds the ticks, hands the run to the progress modal on Apply, and
- * shows the report only once the progress modal has been closed.
+ * useUpdatesModal — the Updates modal's state (PL-80): it opens on the rows Check for
+ * Updates found (pushed to an open panel, or taken by a new one once mounted), never
+ * checks itself, holds the ticks, hands the run to the progress modal on Apply, and shows
+ * the report only once the progress modal has been closed.
  */
 
 // FIRST: the shared webview client double; its jest.mock must register before the hook binds.
@@ -12,8 +13,8 @@ import { useUpdatesModal } from '@/features/projects-dashboard/ui/hooks/useUpdat
 import type { ScreenOperation } from '@/core/ui/hooks/useOperationRunner';
 import type {
     ApplyUpdatesResponse,
-    CheckUpdatesResponse,
     PendingUpdateRow,
+    ShowUpdatesPayload,
     TakeUpdatesRequestResponse,
 } from '@/types/pendingUpdates';
 
@@ -29,15 +30,11 @@ const row = (id: string, overrides: Partial<PendingUpdateRow> = {}): PendingUpda
 
 const ROWS = [row('blockLibrary:0'), row('template:0'), row('integration:0', { ticked: false, lockedReason: 'other org' })];
 
-const NOT_OPENED_FOR_IT: TakeUpdatesRequestResponse = { success: true, data: { show: false } };
+const NOT_OPENED_FOR_IT: TakeUpdatesRequestResponse = { success: true, data: { rows: null } };
 
 /** What each request answers; the screen asks `takeUpdatesRequest` once, on mount. */
-function answers(
-    check: CheckUpdatesResponse,
-    apply?: ApplyUpdatesResponse,
-    take: TakeUpdatesRequestResponse = NOT_OPENED_FOR_IT,
-): void {
-    const byType: Record<string, unknown> = { checkUpdates: check, applyUpdates: apply, takeUpdatesRequest: take };
+function answers(take: TakeUpdatesRequestResponse = NOT_OPENED_FOR_IT, apply?: ApplyUpdatesResponse): void {
+    const byType: Record<string, unknown> = { takeUpdatesRequest: take, applyUpdates: apply };
     mockRequest.mockImplementation(async (type: string) => byType[type]);
 }
 
@@ -50,62 +47,57 @@ function setup(open: ScreenOperation | null = null) {
     return { ...hook, show, onApplied };
 }
 
-/** The extension asks the screen to show the modal. */
-async function pushShowUpdates(): Promise<void> {
+/** The extension pushes the rows to a panel already open. */
+async function pushRows(rows: PendingUpdateRow[]): Promise<void> {
+    const payload: ShowUpdatesPayload = { rows };
     await act(async () => {
-        webviewClientHandlers.get('showUpdates')?.(undefined);
+        webviewClientHandlers.get('showUpdates')?.(payload);
     });
 }
 
 beforeEach(() => {
     mockRequest.mockReset();
-    answers({ success: true, data: { rows: ROWS } });
+    answers();
 });
 
 describe('useUpdatesModal', () => {
-    // A panel just created cannot be pushed to; it asks once it has mounted.
-    it('checks at once when the screen was opened for it', async () => {
-        answers({ success: true, data: { rows: ROWS } }, undefined, { success: true, data: { show: true } });
-
+    it('stays closed when the screen was not opened for it', async () => {
         const { result } = setup();
 
-        expect(mockRequest).toHaveBeenCalledWith('takeUpdatesRequest');
-        await waitFor(() => expect(result.current.view).toEqual({ phase: 'list', rows: ROWS }));
+        await waitFor(() => expect(mockRequest).toHaveBeenCalledWith('takeUpdatesRequest'));
+        expect(result.current.view).toEqual({ phase: 'closed' });
     });
 
-    it('starts closed, and checks when the extension asks to show it', async () => {
+    // A panel just created cannot be pushed to; it asks once it has mounted.
+    it('opens on the rows a new screen takes once mounted, ticked as the check said', async () => {
+        answers({ success: true, data: { rows: ROWS } });
+
         const { result } = setup();
-        expect(result.current.view).toEqual({ phase: 'closed' });
 
-        expect(mockRequest).not.toHaveBeenCalledWith('checkUpdates');
-
-        await pushShowUpdates();
-
-        expect(mockRequest).toHaveBeenCalledWith('checkUpdates');
         await waitFor(() => expect(result.current.view).toEqual({ phase: 'list', rows: ROWS }));
         expect([...result.current.ticked]).toEqual(['blockLibrary:0', 'template:0']);
     });
 
-    it('fails with the answer it was given, or a plain sentence when the request itself fails', async () => {
-        answers({ success: false, error: 'GitHub is rate limiting.' });
+    it('opens on the rows pushed to a screen already open, and never asks the extension to check', async () => {
         const { result } = setup();
-        await pushShowUpdates();
-        await waitFor(() => expect(result.current.view).toEqual({ phase: 'failed', error: 'GitHub is rate limiting.' }));
 
-        mockRequest.mockRejectedValue(new Error('Request timeout: checkUpdates'));
-        act(() => result.current.check());
-        await waitFor(() =>
-            expect(result.current.view).toEqual({
-                phase: 'failed',
-                error: "Couldn't check for updates. Details are in Debug Logs.",
-            }),
-        );
+        await pushRows(ROWS);
+
+        expect(result.current.view).toEqual({ phase: 'list', rows: ROWS });
+        expect(mockRequest).not.toHaveBeenCalledWith('checkUpdates');
+    });
+
+    it('stays closed when it is handed no rows', async () => {
+        const { result } = setup();
+
+        await pushRows([]);
+
+        expect(result.current.view).toEqual({ phase: 'closed' });
     });
 
     it('unticks and reticks a row', async () => {
         const { result } = setup();
-        await pushShowUpdates();
-        await waitFor(() => expect(result.current.view.phase).toBe('list'));
+        await pushRows(ROWS);
 
         act(() => result.current.toggle('template:0'));
         expect(result.current.ticked.has('template:0')).toBe(false);
@@ -114,10 +106,9 @@ describe('useUpdatesModal', () => {
     });
 
     it('applies the ticked rows, never a locked one, closing the list and showing the run', async () => {
-        answers({ success: true, data: { rows: ROWS } }, { success: true, data: { applied: 1, problems: [], notes: [] } });
+        answers(NOT_OPENED_FOR_IT, { success: true, data: { applied: 1, problems: [], notes: [] } });
         const { result, show, onApplied } = setup();
-        await pushShowUpdates();
-        await waitFor(() => expect(result.current.view.phase).toBe('list'));
+        await pushRows(ROWS);
         act(() => result.current.toggle('template:0'));
         act(() => result.current.toggle('integration:0'));
 
@@ -139,7 +130,7 @@ describe('useUpdatesModal', () => {
 
     it('shows the report once the progress modal has been closed, not over it', async () => {
         const report = { applied: 1, problems: ['Bodea: merge conflicts'], notes: [] };
-        answers({ success: true, data: { rows: ROWS } }, { success: true, warning: '1 update did not apply.', data: report });
+        answers(NOT_OPENED_FOR_IT, { success: true, warning: '1 update did not apply.', data: report });
         const progress: ScreenOperation = {
             id: UPDATES_OPERATION_ID,
             name: 'updates',
@@ -151,8 +142,7 @@ describe('useUpdatesModal', () => {
             resume: false,
         };
         const { result, rerender, onApplied } = setup(progress);
-        await pushShowUpdates();
-        await waitFor(() => expect(result.current.view.phase).toBe('list'));
+        await pushRows(ROWS);
 
         act(() => result.current.apply());
         await waitFor(() => expect(onApplied).toHaveBeenCalled());

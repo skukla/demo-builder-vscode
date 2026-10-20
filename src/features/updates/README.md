@@ -2,29 +2,35 @@
 
 Pulls component and extension updates from GitHub Releases.
 
-## Check for Updates is a modal on the projects list (PL-80)
+## Check for Updates: the notification checks, the modal replaces the picker (PL-80)
 
-Run by the SC, `demoBuilder.checkForUpdates` opens Your Projects with the Updates modal
-(`projects-dashboard/ui/components/UpdatesModal.tsx`). The modal asks the extension to check
-(`checkUpdates`, in `handlers/updatesModalHandlers.ts`): the extension's own release and
-every project, through `services/allUpdates.ts` and the same `computeUpdateSelections` the
-agent's `apply_updates` uses. It lists every update grouped under Demo Builder, each project
-and the template repositories, all ticked except what cannot be applied from here. Apply
-(`applyUpdates`) runs the ticked rows through the same `applyUpdatesHeadless` the agent uses,
-told in the screen's progress modal, with its questions asked there: stop a running demo,
-reset a template that conflicts with the SC's edits, replace a library's blocks under the
-`ask` sync setting (`handlers/updateQuestionsInModal.ts`). The extension's own update runs
-last, because it ends by offering a reload.
+Run by the SC, `demoBuilder.checkForUpdates` checks the extension's own release and every
+project in a "Checking for updates" notification (`commands/checkUpdates.ts`), through
+`services/allUpdates.ts` and the same `computeUpdateSelections` the agent's `apply_updates`
+uses. Nothing waiting says "Demo Builder is up to date". Anything waiting is handed to the
+Updates modal (`presentUpdates`, `handlers/updatesModalHandlers.ts`), which opens on Your
+Projects (`projects-dashboard/ui/components/UpdatesModal.tsx`) with every update grouped
+under Demo Builder, each project and the template repositories, all ticked except what
+cannot be applied from here. The modal never checks itself.
+
+Apply (`applyUpdates`) runs the ticked rows, against the check they came from, through the
+same `applyUpdatesHeadless` the agent uses, told in the screen's progress modal, with its
+questions asked there: stop a running demo, reset a template that conflicts with the SC's
+edits, replace a library's blocks under the `ask` sync setting
+(`handlers/updateQuestionsInModal.ts`). The extension's own update runs last, because it
+ends by offering a reload.
 
 The background check (the sidebar opening, then every four hours) runs the same check
 quietly and only notifies, "N Demo Builder updates available", with Review opening the
-modal. Nothing opens by itself. Until 2026-10-20 the command opened VS Code's picker, the
-picker had its own copy of the check and the apply, and a second updater (the old
-auto-updater in the legacy utils folder) showed its own "Update Now" every four hours;
-all three are gone.
+modal on that check. Nothing opens by itself. Until 2026-10-20 the notification led to VS
+Code's picker, the picker had its own copy of the check and the apply, and a second updater
+(the old auto-updater in the legacy utils folder) showed its own "Update Now" every four
+hours; the modal replaces the picker, and the other two are gone (owner, 2026-10-20: the
+notification still checks).
 
 A projects list that is not open yet cannot be pushed to, so the request is held
-(`handlers/updatesModalRequest.ts`) until the new screen asks for it once mounted.
+(`handlers/updatesModalRequest.ts`) until the new screen takes it once mounted, with the
+rows; one already open is pushed `showUpdates` with them.
 
 ## Every component update is snapshotted first
 

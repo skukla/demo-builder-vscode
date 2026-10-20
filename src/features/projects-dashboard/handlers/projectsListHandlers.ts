@@ -36,7 +36,7 @@ import {
     handleOpenDebugLogs,
 } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
-import { handleApplyUpdates, handleCheckUpdates } from '@/features/updates/handlers/updatesModalHandlers';
+import { handleApplyUpdates } from '@/features/updates/handlers/updatesModalHandlers';
 import { handleTakeUpdatesRequest } from '@/features/updates/handlers/updatesModalRequest';
 import { defineHandlers } from '@/types/handlers';
 
@@ -96,8 +96,7 @@ export const projectsListHandlers = defineHandlers({
     // Pin / unpin a project — pinned projects sort first on the dashboard
     setProjectPinned: handleSetProjectPinned,
 
-    // The Updates modal (PL-80): every update waiting, and the ticked ones applied.
-    checkUpdates: handleCheckUpdates,
+    // The Updates modal (PL-80): the ticked rows of the check it was handed, applied.
     applyUpdates: handleApplyUpdates,
     // A screen opened by Check for Updates asks, once mounted, whether to show it.
     takeUpdatesRequest: handleTakeUpdatesRequest,

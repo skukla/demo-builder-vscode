@@ -1,7 +1,9 @@
 /**
- * CheckUpdatesCommand (PL-80) — Check for Updates opens the projects list with the Updates
- * modal; the background check (sidebar opening, every four hours) checks quietly and only
- * notifies, with Review opening the modal. Nothing opens by itself.
+ * CheckUpdatesCommand (PL-80) — Check for Updates checks in a notification, says when
+ * nothing is waiting, and otherwise hands its check to the Updates modal on the projects
+ * list. The background check (sidebar opening, every four hours) checks quietly and only
+ * notifies, with Review opening the modal on that check. Nothing opens by itself, and the
+ * modal never checks again.
  *
  * Both forms first run the early-access off-ramp: a preview build a final release has
  * superseded is offered a channel switch, written only on an explicit choice.
@@ -28,6 +30,10 @@ jest.mock('@/features/ai/server/headlessHandlerContext', () => ({
 jest.mock('@/features/dashboard/handlers/integrationUpdateHandlers', () => ({
     integrationUpdateProbe: jest.fn(() => ({ marker: 'probe' })),
 }));
+const mockPresentUpdates = jest.fn();
+jest.mock('@/features/updates/handlers/updatesModalHandlers', () => ({
+    presentUpdates: (...args: unknown[]) => mockPresentUpdates(...args),
+}));
 
 const executeCommand = vscode.commands.executeCommand as jest.Mock;
 const showInformationMessage = vscode.window.showInformationMessage as jest.Mock;
@@ -42,7 +48,10 @@ const OPEN_MODAL = ['demoBuilder.showProjectsList', { showUpdates: true }];
 beforeEach(() => {
     jest.clearAllMocks();
     mockFindAllUpdates.mockReset();
+    mockFindAllUpdates.mockResolvedValue({ count: 0 });
     showInformationMessage.mockReset();
+    // The check's notification runs its work straight through.
+    (vscode.window.withProgress as jest.Mock).mockImplementation((_options, task) => task({ report: jest.fn() }));
     // Not on early-access, so the off-ramp never asks.
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
         get: jest.fn((_key: string, fallback?: unknown) => fallback),
@@ -51,11 +60,57 @@ beforeEach(() => {
 });
 
 describe('CheckUpdatesCommand', () => {
-    it('run by the SC, opens the projects list with the Updates modal, and checks nothing itself', async () => {
-        await command().execute();
+    describe('run by the SC', () => {
+        // The "up to date" message hides itself on a timer; run it on fake time.
+        beforeEach(() => jest.useFakeTimers());
+        afterEach(() => jest.useRealTimers());
 
-        expect(executeCommand).toHaveBeenCalledWith(...OPEN_MODAL);
-        expect(mockFindAllUpdates).not.toHaveBeenCalled();
+        async function runBySc(): Promise<void> {
+            const running = command().execute();
+            await jest.runAllTimersAsync();
+            await running;
+        }
+
+        it('checks in a "Checking for updates" notification, with a headless context and the integration probe', async () => {
+            await runBySc();
+
+            expect(vscode.window.withProgress).toHaveBeenCalledWith(
+                expect.objectContaining({ title: 'Checking for updates' }),
+                expect.any(Function),
+            );
+            expect(mockFindAllUpdates).toHaveBeenCalledWith({ marker: 'headless' }, { marker: 'probe' });
+        });
+
+        it('says so when nothing is waiting, and opens nothing', async () => {
+            await runBySc();
+
+            expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+                '✅ Demo Builder is up to date (v1.0.0)',
+                expect.any(Number),
+            );
+            expect(mockPresentUpdates).not.toHaveBeenCalled();
+            expect(executeCommand).not.toHaveBeenCalledWith(...OPEN_MODAL);
+        });
+
+        it('hands what it found to the Updates modal and opens it', async () => {
+            const check = { count: 2 };
+            mockFindAllUpdates.mockResolvedValue(check);
+
+            await runBySc();
+
+            expect(mockPresentUpdates).toHaveBeenCalledWith(check);
+            expect(executeCommand).toHaveBeenCalledWith(...OPEN_MODAL);
+            expect(mockPresentUpdates.mock.invocationCallOrder[0]).toBeLessThan(executeCommand.mock.invocationCallOrder[0]);
+        });
+
+        it('says the check failed when it throws, and opens nothing', async () => {
+            mockFindAllUpdates.mockRejectedValue(new Error('rate limited'));
+
+            await runBySc();
+
+            expect(vscode.window.showErrorMessage).toHaveBeenCalled();
+            expect(executeCommand).not.toHaveBeenCalledWith(...OPEN_MODAL);
+        });
     });
 
     describe('in the background', () => {
@@ -69,13 +124,16 @@ describe('CheckUpdatesCommand', () => {
             expect(executeCommand).not.toHaveBeenCalled();
         });
 
-        it('says how many are waiting, and opens the modal only on Review', async () => {
-            mockFindAllUpdates.mockResolvedValue({ count: 3 });
+        it('says how many are waiting, and opens the modal on that check only on Review', async () => {
+            const check = { count: 3 };
+            mockFindAllUpdates.mockResolvedValue(check);
             showInformationMessage.mockResolvedValue('Review');
 
             await command().execute({ background: true });
 
+            expect(vscode.window.withProgress).not.toHaveBeenCalled();
             expect(showInformationMessage).toHaveBeenCalledWith('3 Demo Builder updates available.', 'Review');
+            expect(mockPresentUpdates).toHaveBeenCalledWith(check);
             expect(executeCommand).toHaveBeenCalledWith(...OPEN_MODAL);
         });
 

@@ -1,7 +1,7 @@
 /**
  * UpdatesModal — what the SC sees in Check for Updates on the projects list (PL-80):
  * the rows under their headings, which are ticked and which are locked, the Apply count,
- * and the checking, failed, up-to-date and report views. The controls are handed in, so
+ * and the report. Checking and "up to date" are the notification's, not this window's. The controls are handed in, so
  * each view is driven directly.
  */
 
@@ -71,7 +71,6 @@ function controls(view: UpdatesView, ticked: string[] = []): jest.Mocked<Updates
     return {
         view,
         ticked: new Set(ticked),
-        check: jest.fn(),
         toggle: jest.fn(),
         apply: jest.fn(),
         close: jest.fn(),
@@ -116,29 +115,6 @@ describe('UpdatesModal', () => {
         expect(screen.getByRole('button', { name: 'Apply 0 updates' })).toBeDisabled();
     });
 
-    it('says everything is up to date when nothing is waiting, with no Apply', () => {
-        render(<UpdatesModal controls={controls({ phase: 'list', rows: [] })} />);
-
-        expect(screen.getByText('Everything is up to date')).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /^Apply/ })).toBeNull();
-    });
-
-    it('shows that it is checking', () => {
-        render(<UpdatesModal controls={controls({ phase: 'checking' })} />);
-
-        expect(screen.getByText('Checking for updates')).toBeInTheDocument();
-    });
-
-    it('says the check failed and offers to check again', async () => {
-        const c = controls({ phase: 'failed', error: "Couldn't check for updates. Details are in Debug Logs." });
-        render(<UpdatesModal controls={c} />);
-
-        await user().click(screen.getByRole('button', { name: 'Check again' }));
-
-        expect(screen.getByText("Couldn't check for updates. Details are in Debug Logs.")).toBeInTheDocument();
-        expect(c.check).toHaveBeenCalledTimes(1);
-    });
-
     it('reports what applied, what did not and the notes', () => {
         render(
             <UpdatesModal
@@ -153,19 +129,6 @@ describe('UpdatesModal', () => {
         expect(screen.getByText('Not applied')).toBeInTheDocument();
         expect(screen.getByText('Bodea: merge conflicts')).toBeInTheDocument();
         expect(screen.getByText('Added 3 blocks to Bodea.')).toBeInTheDocument();
-    });
-
-    // The window grew from the spinner to the result and everything in it jumped (owner,
-    // 2026-10-20). Every short state now sits on the same floor.
-    it.each<[string, UpdatesView]>([
-        ['checking', { phase: 'checking' }],
-        ['failed', { phase: 'failed', error: 'x' }],
-        ['up to date', { phase: 'list', rows: [] }],
-    ])('keeps the %s view on the shared 240px floor', (_label, view) => {
-        render(<UpdatesModal controls={controls(view)} />);
-
-        const reserved = screen.getByRole('dialog').firstElementChild;
-        expect(reserved).toHaveStyle({ minHeight: '240px' });
     });
 
     it('closes through the controls', async () => {

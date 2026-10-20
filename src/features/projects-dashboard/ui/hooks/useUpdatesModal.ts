@@ -1,11 +1,16 @@
 /**
  * useUpdatesModal — the Updates modal's state on the projects list (PL-80).
  *
- * Opens when Check for Updates (or a background check's Review) sends it here, asks for the
- * rows, and holds which stay ticked. Apply closes it and hands the
- * run to the screen's progress modal; when the run ends with something the SC should
- * read (an update that did not apply, a note), the list comes back with the report once
- * the progress modal has been closed. One modal on screen at a time.
+ * The modal shows the rows Check for Updates found: pushed to a panel already open
+ * (`showUpdates`), or taken by a panel just created once it has mounted
+ * (`takeUpdatesRequest`), since a push would arrive before this listener. It never checks
+ * itself: the check, "Checking for updates" and "up to date" are the notification's
+ * (owner, 2026-10-20).
+ *
+ * It holds which rows stay ticked. Apply closes it and hands the run to the screen's
+ * progress modal; when the run ends with something the SC should read (an update that did
+ * not apply, a note), the report shows once the progress modal has been closed. One modal
+ * on screen at a time.
  *
  * @module features/projects-dashboard/ui/hooks/useUpdatesModal
  */
@@ -17,17 +22,14 @@ import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
 import type {
     ApplyUpdatesReport,
     ApplyUpdatesResponse,
-    CheckUpdatesResponse,
     PendingUpdateRow,
+    ShowUpdatesPayload,
     TakeUpdatesRequestResponse,
 } from '@/types/pendingUpdates';
 
 /** What the modal shows. */
 export type UpdatesView =
     | { phase: 'closed' }
-    | { phase: 'checking' }
-    | { phase: 'failed'; error: string }
-    /** The list; an empty one means everything is up to date. */
     | { phase: 'list'; rows: PendingUpdateRow[] }
     | { phase: 'report'; report: ApplyUpdatesReport };
 
@@ -35,15 +37,12 @@ export interface UpdatesModalControls {
     view: UpdatesView;
     /** The ids that stay ticked. */
     ticked: ReadonlySet<string>;
-    /** Check again, from the failure view. */
-    check: () => void;
     toggle: (id: string) => void;
     apply: () => void;
     close: () => void;
 }
 
 const CLOSED: UpdatesView = { phase: 'closed' };
-const CHECK_FAILED = "Couldn't check for updates. Details are in Debug Logs.";
 
 /** Whether the SC has anything to read once the run ends. */
 function worthShowing(report: ApplyUpdatesReport | undefined): report is ApplyUpdatesReport {
@@ -65,33 +64,22 @@ export function useUpdatesModal(
     const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
     const [waitingReport, setWaitingReport] = useState<ApplyUpdatesReport | null>(null);
 
-    const check = useCallback(() => {
-        setView({ phase: 'checking' });
-        webviewClient.request<CheckUpdatesResponse>('checkUpdates').then(
-            (response) => {
-                const rows = response.data?.rows;
-                if (!response.success || !rows) {
-                    setView({ phase: 'failed', error: response.error ?? CHECK_FAILED });
-                    return;
-                }
-                setTicked(new Set(rows.filter((r) => r.ticked).map((r) => r.id)));
-                setView({ phase: 'list', rows });
-            },
-            () => setView({ phase: 'failed', error: CHECK_FAILED }),
-        );
+    const openOn = useCallback((rows: PendingUpdateRow[] | null | undefined) => {
+        if (!rows || rows.length === 0) return;
+        setTicked(new Set(rows.filter((r) => r.ticked).map((r) => r.id)));
+        setView({ phase: 'list', rows });
     }, []);
 
-    // Opened for it: a panel already open is pushed `showUpdates`; one just created
-    // asks, since a push would have arrived before this listener (updatesModalRequest).
-    useEffect(() => webviewClient.onMessage('showUpdates', check), [check]);
+    useEffect(
+        () => webviewClient.onMessage('showUpdates', (data) => openOn((data as ShowUpdatesPayload | undefined)?.rows)),
+        [openOn],
+    );
     useEffect(() => {
         webviewClient.request<TakeUpdatesRequestResponse>('takeUpdatesRequest').then(
-            (response) => {
-                if (response.data.show) check();
-            },
+            (response) => openOn(response.data.rows),
             () => undefined,
         );
-    }, [check]);
+    }, [openOn]);
 
     const toggle = useCallback((id: string) => {
         setTicked((previous) => {
@@ -138,8 +126,5 @@ export function useUpdatesModal(
 
     const close = useCallback(() => setView(CLOSED), []);
 
-    return useMemo(
-        () => ({ view, ticked, check, toggle, apply, close }),
-        [view, ticked, check, toggle, apply, close],
-    );
+    return useMemo(() => ({ view, ticked, toggle, apply, close }), [view, ticked, toggle, apply, close]);
 }
