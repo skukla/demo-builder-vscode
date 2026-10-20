@@ -56,3 +56,4 @@ The agent's `apply_updates` keeps working against the same apply service either 
 - 2026-10-20  feat(updates): the notification checks again; the modal only replaces the picker (`688ae81ee`)
 - 2026-10-20  feat(projects-dashboard): the Updates window reads like the other modals (`a85153474`)
 - 2026-10-20  refactor(ui): SectionLabel and LeadText, the modal text styles five modals share (`b4f24ee84`)
+- 2026-10-20  fix(updates): the Adobe MCP update check reads npm, which publishes it (`841aa8906`)
