@@ -60,7 +60,11 @@ describe('computeProjectUpdateSelections', () => {
     it('with every checker silent, selects nothing, counts zero, and warns about nothing', async () => {
         const handlerCtx = createMockHandlerContext();
 
-        const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx, recordsIntegrationProbe());
+        const sel = await computeProjectUpdateSelections(
+            edsProject(),
+            handlerCtx,
+            recordsIntegrationProbe()
+        );
 
         expect(sel).toEqual(emptySelections());
         expect(countSelections(sel)).toBe(0);
@@ -91,12 +95,17 @@ describe('computeProjectUpdateSelections', () => {
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
                 createMockHandlerContext(),
-                recordsIntegrationProbe(),
+                recordsIntegrationProbe()
             );
 
             expect(mockCheckForkStatus).toHaveBeenCalledWith('adobe', 'aem-boilerplate-commerce');
             expect(sel.forkSync).toEqual([
-                { owner: 'adobe', repo: 'aem-boilerplate-commerce', branch: 'develop' },
+                {
+                    owner: 'adobe',
+                    repo: 'aem-boilerplate-commerce',
+                    branch: 'develop',
+                    behindBy: 3,
+                },
             ]);
         });
 
@@ -106,7 +115,7 @@ describe('computeProjectUpdateSelections', () => {
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
                 createMockHandlerContext(),
-                recordsIntegrationProbe(),
+                recordsIntegrationProbe()
             );
 
             expect(sel.forkSync[0].branch).toBe('main');
@@ -120,7 +129,11 @@ describe('computeProjectUpdateSelections', () => {
             mockCheckForkStatus.mockResolvedValue(status);
             const handlerCtx = createMockHandlerContext();
 
-            const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx, recordsIntegrationProbe());
+            const sel = await computeProjectUpdateSelections(
+                edsProject(),
+                handlerCtx,
+                recordsIntegrationProbe()
+            );
 
             expect(sel.forkSync).toStrictEqual([]);
             expect(handlerCtx.logger.warn).not.toHaveBeenCalled();
@@ -132,7 +145,7 @@ describe('computeProjectUpdateSelections', () => {
             const sel = await computeProjectUpdateSelections(
                 createMockProject({ componentInstances: {} }),
                 handlerCtx,
-                recordsIntegrationProbe(),
+                recordsIntegrationProbe()
             );
 
             expect(mockCheckForkStatus).not.toHaveBeenCalled();
@@ -146,10 +159,14 @@ describe('computeProjectUpdateSelections', () => {
             const project = edsProject();
             mockCheckTemplateUpdates.mockResolvedValue({ hasUpdates: true, commitsBehind: 2 });
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
+            const sel = await computeProjectUpdateSelections(
+                project,
+                createMockHandlerContext(),
+                recordsIntegrationProbe()
+            );
 
             expect(mockCheckTemplateUpdates).toHaveBeenCalledWith(project);
-            expect(sel.template).toEqual([{ project }]);
+            expect(sel.template).toEqual([{ project, commitsBehind: 2 }]);
         });
 
         it('selects nothing when it reports none', async () => {
@@ -158,7 +175,7 @@ describe('computeProjectUpdateSelections', () => {
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
                 createMockHandlerContext(),
-                recordsIntegrationProbe(),
+                recordsIntegrationProbe()
             );
 
             expect(sel.template).toStrictEqual([]);
@@ -170,7 +187,11 @@ describe('computeProjectUpdateSelections', () => {
             const project = edsProject();
             mockCheckAllProjectsForUpdates.mockResolvedValue([componentResult({}, project)]);
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
+            const sel = await computeProjectUpdateSelections(
+                project,
+                createMockHandlerContext(),
+                recordsIntegrationProbe()
+            );
 
             expect(mockCheckAllProjectsForUpdates).toHaveBeenCalledWith([project]);
             expect(sel.component).toEqual([
@@ -179,6 +200,7 @@ describe('computeProjectUpdateSelections', () => {
                     componentId: 'mesh',
                     latestVersion: '2.0.0',
                     downloadUrl: 'https://example.com/mesh.zip',
+                    currentVersion: '1.0.0',
                 },
             ]);
         });
@@ -194,7 +216,11 @@ describe('computeProjectUpdateSelections', () => {
                 }),
             ]);
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
+            const sel = await computeProjectUpdateSelections(
+                project,
+                createMockHandlerContext(),
+                recordsIntegrationProbe()
+            );
 
             expect(sel.component).toHaveLength(1);
         });
@@ -209,7 +235,11 @@ describe('computeProjectUpdateSelections', () => {
             mockCheckAllProjectsForUpdates.mockResolvedValue([result]);
             const handlerCtx = createMockHandlerContext();
 
-            const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx, recordsIntegrationProbe());
+            const sel = await computeProjectUpdateSelections(
+                edsProject(),
+                handlerCtx,
+                recordsIntegrationProbe()
+            );
 
             expect(sel.component).toStrictEqual([]);
             expect(handlerCtx.logger.warn).not.toHaveBeenCalled();
@@ -226,10 +256,16 @@ describe('computeProjectUpdateSelections', () => {
                 packageName: 'pkg',
             });
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
+            const sel = await computeProjectUpdateSelections(
+                project,
+                createMockHandlerContext(),
+                recordsIntegrationProbe()
+            );
 
             expect(mockCheckMcpUpdates).toHaveBeenCalledWith(project);
-            expect(sel.adobeMcp).toEqual([{ project, packageName: 'pkg', latestVersion: '1.1.0' }]);
+            expect(sel.adobeMcp).toEqual([
+                { project, packageName: 'pkg', latestVersion: '1.1.0', currentVersion: '1.0.0' },
+            ]);
         });
 
         it('selects nothing when the checker reports no update', async () => {
@@ -243,7 +279,7 @@ describe('computeProjectUpdateSelections', () => {
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
                 createMockHandlerContext(),
-                recordsIntegrationProbe(),
+                recordsIntegrationProbe()
             );
 
             expect(sel.adobeMcp).toStrictEqual([]);
@@ -264,12 +300,18 @@ describe('computeProjectUpdateSelections', () => {
                 commitsBehind: 2,
             });
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
+            const sel = await computeProjectUpdateSelections(
+                project,
+                createMockHandlerContext(),
+                recordsIntegrationProbe()
+            );
 
             expect(mockCheckBlockLibraries).toHaveBeenCalledWith(project);
             expect(mockCheckInspectorSdk).toHaveBeenCalledWith(project);
-            expect(sel.blockLibrary).toEqual([{ project, library: lib, latestCommit: 'bbb' }]);
-            expect(sel.inspector).toEqual([{ project, latestCommit: 'sdk-new' }]);
+            expect(sel.blockLibrary).toEqual([
+                { project, library: lib, latestCommit: 'bbb', commitsBehind: 1 },
+            ]);
+            expect(sel.inspector).toEqual([{ project, latestCommit: 'sdk-new', commitsBehind: 2 }]);
         });
 
         it('selects no inspector update when the SDK is current', async () => {
@@ -283,7 +325,7 @@ describe('computeProjectUpdateSelections', () => {
             const sel = await computeProjectUpdateSelections(
                 edsProject(),
                 createMockHandlerContext(),
-                recordsIntegrationProbe(),
+                recordsIntegrationProbe()
             );
 
             expect(sel.inspector).toStrictEqual([]);
@@ -310,7 +352,12 @@ describe('computeProjectUpdateSelections', () => {
                 },
                 componentInstances: {
                     ...base.componentInstances,
-                    'demo-erp': { id: 'demo-erp', name: 'Demo ERP', status: 'ready', path: '/p/demo/components/demo-erp' },
+                    'demo-erp': {
+                        id: 'demo-erp',
+                        name: 'Demo ERP',
+                        status: 'ready',
+                        path: '/p/demo/components/demo-erp',
+                    },
                 },
             };
         };
@@ -344,7 +391,11 @@ describe('computeProjectUpdateSelections', () => {
                 everythingHasAnUpdate(project);
                 checker.mockRejectedValue(new Error('boom'));
 
-                const sel = await computeProjectUpdateSelections(project, handlerCtx, recordsIntegrationProbe());
+                const sel = await computeProjectUpdateSelections(
+                    project,
+                    handlerCtx,
+                    recordsIntegrationProbe()
+                );
 
                 expect(sel[category]).toStrictEqual([]);
                 const others = (Object.keys(sel) as Array<keyof typeof sel>).filter(
@@ -359,7 +410,11 @@ describe('computeProjectUpdateSelections', () => {
             const project = everythingProject();
             everythingHasAnUpdate(project);
 
-            const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
+            const sel = await computeProjectUpdateSelections(
+                project,
+                createMockHandlerContext(),
+                recordsIntegrationProbe()
+            );
 
             expect(countSelections(sel)).toBe(8);
         });

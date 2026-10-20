@@ -40,10 +40,16 @@ describe('computeUpdateSelections', () => {
     it('asks about a template repository two projects share once, and selects one fork sync', async () => {
         mockCheckForkStatus.mockResolvedValue({ isFork: true, behindBy: 2, defaultBranch: 'main' });
 
-        const sel = await computeUpdateSelections([alpha(), beta()], createMockHandlerContext(), recordsIntegrationProbe());
+        const sel = await computeUpdateSelections(
+            [alpha(), beta()],
+            createMockHandlerContext(),
+            recordsIntegrationProbe()
+        );
 
         expect(mockCheckForkStatus).toHaveBeenCalledTimes(1);
-        expect(sel.forkSync).toEqual([{ owner: 'adobe', repo: 'aem-boilerplate-commerce', branch: 'main' }]);
+        expect(sel.forkSync).toEqual([
+            { owner: 'adobe', repo: 'aem-boilerplate-commerce', branch: 'main', behindBy: 2 },
+        ]);
     });
 
     it('asks the update manager about every project in one call, and selects each outdated one', async () => {
@@ -60,7 +66,11 @@ describe('computeUpdateSelections', () => {
             },
         ]);
 
-        const sel = await computeUpdateSelections([a, b], createMockHandlerContext(), recordsIntegrationProbe());
+        const sel = await computeUpdateSelections(
+            [a, b],
+            createMockHandlerContext(),
+            recordsIntegrationProbe()
+        );
 
         expect(mockCheckAllProjectsForUpdates).toHaveBeenCalledTimes(1);
         expect(mockCheckAllProjectsForUpdates).toHaveBeenCalledWith([a, b]);
@@ -70,9 +80,17 @@ describe('computeUpdateSelections', () => {
     it('asks each project its own template and Adobe MCP questions, in project order', async () => {
         const [a, b] = [alpha(), beta()];
         mockCheckTemplateUpdates.mockResolvedValue({ hasUpdates: true });
-        mockCheckMcpUpdates.mockResolvedValue({ hasUpdate: true, latestVersion: '2', packageName: 'p' });
+        mockCheckMcpUpdates.mockResolvedValue({
+            hasUpdate: true,
+            latestVersion: '2',
+            packageName: 'p',
+        });
 
-        const sel = await computeUpdateSelections([a, b], createMockHandlerContext(), recordsIntegrationProbe());
+        const sel = await computeUpdateSelections(
+            [a, b],
+            createMockHandlerContext(),
+            recordsIntegrationProbe()
+        );
 
         expect(sel.template.map((t) => t.project.path)).toEqual(['/p/alpha', '/p/beta']);
         expect(sel.adobeMcp.map((m) => m.project.path)).toEqual(['/p/alpha', '/p/beta']);
@@ -93,7 +111,11 @@ describe('computeUpdateSelections', () => {
     });
 
     it('selects nothing, and asks nothing, for no projects', async () => {
-        const sel = await computeUpdateSelections([], createMockHandlerContext(), recordsIntegrationProbe());
+        const sel = await computeUpdateSelections(
+            [],
+            createMockHandlerContext(),
+            recordsIntegrationProbe()
+        );
 
         expect(mockCheckAllProjectsForUpdates).not.toHaveBeenCalled();
         expect(sel.template).toStrictEqual([]);

@@ -27,21 +27,42 @@ import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { HandlerContext } from '@/types/handlers';
 
-/** Minimal, UI-free selection fields each apply core needs. */
+/**
+ * Minimal, UI-free selection fields each apply core needs, plus a few optional numbers a
+ * person reads before applying (commits behind, the version now). The apply cores ignore
+ * those; the Updates modal (PL-80) shows them.
+ */
 export interface UpdateSelections {
-    forkSync: Array<{ owner: string; repo: string; branch: string }>;
-    template: Array<{ project: Project }>;
+    forkSync: Array<{
+        owner: string;
+        repo: string;
+        branch: string;
+        behindBy?: number;
+        parentFullName?: string;
+    }>;
+    template: Array<{ project: Project; commitsBehind?: number }>;
     component: Array<{
         project: Project;
         componentId: string;
         latestVersion: string;
         downloadUrl?: string;
+        currentVersion?: string;
     }>;
-    adobeMcp: Array<{ project: Project; packageName: string; latestVersion: string }>;
-    blockLibrary: Array<{ project: Project; library: InstalledBlockLibrary; latestCommit: string }>;
+    adobeMcp: Array<{
+        project: Project;
+        packageName: string;
+        latestVersion: string;
+        currentVersion?: string;
+    }>;
+    blockLibrary: Array<{
+        project: Project;
+        library: InstalledBlockLibrary;
+        latestCommit: string;
+        commitsBehind?: number;
+    }>;
     /** Selected but not yet in the storefront (EDS-28) — an install, not an update. */
     blockLibraryInstall: BlockLibraryInstallTarget[];
-    inspector: Array<{ project: Project; latestCommit: string }>;
+    inspector: Array<{ project: Project; latestCommit: string; commitsBehind?: number }>;
     /** Deployed integration pairs (an integration and its ERPs) with newer code (AB-73). */
     integration: IntegrationPairUpdate[];
 }
@@ -109,7 +130,10 @@ function warnFailed(logger: Check['logger'], what: string, error: unknown): void
     logger.warn(`[Updates] ${what} check failed: ${sanitizeErrorForLogging(error as Error)}`);
 }
 
-async function checkForkSyncs(projects: Project[], { secrets, logger }: Check): Promise<UpdateSelections['forkSync']> {
+async function checkForkSyncs(
+    projects: Project[],
+    { secrets, logger }: Check,
+): Promise<UpdateSelections['forkSync']> {
     const found: UpdateSelections['forkSync'] = [];
     const asked = new Set<string>();
     const service = projects.length > 0 ? new ForkSyncService(secrets, logger) : undefined;
@@ -121,7 +145,13 @@ async function checkForkSyncs(projects: Project[], { secrets, logger }: Check): 
         try {
             const status = await service.checkForkStatus(source.owner, source.repo);
             if (status?.isFork && status.behindBy > 0) {
-                found.push({ owner: source.owner, repo: source.repo, branch: status.defaultBranch || 'main' });
+                found.push({
+                    owner: source.owner,
+                    repo: source.repo,
+                    branch: status.defaultBranch || 'main',
+                    behindBy: status.behindBy,
+                    parentFullName: status.parentFullName,
+                });
             }
         } catch (error) {
             warnFailed(logger, 'Fork sync', error);
@@ -130,12 +160,16 @@ async function checkForkSyncs(projects: Project[], { secrets, logger }: Check): 
     return found;
 }
 
-async function checkTemplates(projects: Project[], { secrets, logger }: Check): Promise<UpdateSelections['template']> {
+async function checkTemplates(
+    projects: Project[],
+    { secrets, logger }: Check,
+): Promise<UpdateSelections['template']> {
     const found: UpdateSelections['template'] = [];
     const checker = projects.length > 0 ? new TemplateUpdateChecker(secrets, logger) : undefined;
     for (const project of projects) {
         try {
-            if ((await checker?.checkForUpdates(project))?.hasUpdates) found.push({ project });
+            const t = await checker?.checkForUpdates(project);
+            if (t?.hasUpdates) found.push({ project, commitsBehind: t.commitsBehind });
         } catch (error) {
             warnFailed(logger, 'Template', error);
         }
@@ -143,19 +177,29 @@ async function checkTemplates(projects: Project[], { secrets, logger }: Check): 
     return found;
 }
 
-async function checkComponents(projects: Project[], handlerCtx: HandlerContext): Promise<UpdateSelections['component']> {
+async function checkComponents(
+    projects: Project[],
+    handlerCtx: HandlerContext,
+): Promise<UpdateSelections['component']> {
     if (projects.length === 0) return [];
     try {
-        const results = await new UpdateManager(handlerCtx.context, handlerCtx.logger).checkAllProjectsForUpdates(
-            projects,
-        );
+        const results = await new UpdateManager(
+            handlerCtx.context,
+            handlerCtx.logger,
+        ).checkAllProjectsForUpdates(projects);
         const asked = new Set(projects.map((p) => p.path));
         return results.flatMap((r) => {
             const downloadUrl = r.releaseInfo?.downloadUrl;
             if (!downloadUrl) return [];
             return r.outdatedProjects
                 .filter((o) => asked.has(o.project.path))
-                .map((o) => ({ project: o.project, componentId: r.componentId, latestVersion: r.latestVersion, downloadUrl }));
+                .map((o) => ({
+                    project: o.project,
+                    componentId: r.componentId,
+                    latestVersion: r.latestVersion,
+                    downloadUrl,
+                    currentVersion: o.currentVersion,
+                }));
         });
     } catch (error) {
         warnFailed(handlerCtx.logger, 'Component', error);
@@ -163,13 +207,23 @@ async function checkComponents(projects: Project[], handlerCtx: HandlerContext):
     }
 }
 
-async function checkAdobeMcp(projects: Project[], { secrets, logger }: Check): Promise<UpdateSelections['adobeMcp']> {
+async function checkAdobeMcp(
+    projects: Project[],
+    { secrets, logger }: Check,
+): Promise<UpdateSelections['adobeMcp']> {
     const found: UpdateSelections['adobeMcp'] = [];
     const checker = projects.length > 0 ? new AdobeMcpUpdateChecker(secrets, logger) : undefined;
     for (const project of projects) {
         try {
             const a = await checker?.checkForUpdates(project);
-            if (a?.hasUpdate) found.push({ project, packageName: a.packageName, latestVersion: a.latestVersion });
+            if (a?.hasUpdate) {
+                found.push({
+                    project,
+                    packageName: a.packageName,
+                    latestVersion: a.latestVersion,
+                    currentVersion: a.currentVersion,
+                });
+            }
         } catch (error) {
             warnFailed(logger, 'Adobe MCP', error);
         }
@@ -182,7 +236,10 @@ async function checkAddons(
     projects: Project[],
     { secrets, logger }: Check,
 ): Promise<Pick<UpdateSelections, 'blockLibrary' | 'inspector'>> {
-    const found: Pick<UpdateSelections, 'blockLibrary' | 'inspector'> = { blockLibrary: [], inspector: [] };
+    const found: Pick<UpdateSelections, 'blockLibrary' | 'inspector'> = {
+        blockLibrary: [],
+        inspector: [],
+    };
     const checker = projects.length > 0 ? new AddonUpdateChecker(secrets, logger) : undefined;
     for (const project of projects) {
         if (!checker) break;
@@ -191,10 +248,17 @@ async function checkAddons(
                 project,
                 library: u.library,
                 latestCommit: u.latestCommit,
+                commitsBehind: u.commitsBehind,
             }));
             const insp = await checker.checkInspectorSdk(project);
             found.blockLibrary.push(...libraries);
-            if (insp?.hasUpdate) found.inspector.push({ project, latestCommit: insp.latestCommit });
+            if (insp?.hasUpdate) {
+                found.inspector.push({
+                    project,
+                    latestCommit: insp.latestCommit,
+                    commitsBehind: insp.commitsBehind,
+                });
+            }
         } catch (error) {
             warnFailed(logger, 'Add-on', error);
         }
