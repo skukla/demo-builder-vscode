@@ -168,40 +168,27 @@ describe('reset notifications — success', () => {
     });
 });
 
-describe('reset notifications — pages from before the reset (EDS-33)', () => {
-    const sentence =
+// EDS-55: what the content pipeline could not do arrives as one list (old pages that may
+// still be live, pages the source has that did not arrive, an empty block palette); the
+// pipeline decides what is a warning, and the reset shows each one, in order.
+describe('reset notifications — what the content pipeline could not do (EDS-55)', () => {
+    const leftover =
         'Pages from before the reset may still be live on main--r--o.aem.live: Helix could not list what is published (HTTP 401). Reset again to remove them.';
+    const missing = '2 pages the source has are missing from this storefront: /cart, /checkout';
 
-    it.each(['not-listed', 'not-compared', 'some-left'] as const)(
-        'warns with the sentence when they may still be live (%s)',
-        async (status) => {
-            await run({ success: true, leftoverPages: { status, removed: 0, summary: sentence } });
+    it('warns with each sentence, in the order the pipeline gave them', async () => {
+        await run({ success: true, pipelineWarnings: [leftover, missing] });
 
-            expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(sentence);
-        }
-    );
+        const shown = (vscode.window.showWarningMessage as jest.Mock).mock.calls.map(
+            ([message]) => message
+        );
+        expect(shown.slice(-2)).toEqual([leftover, missing]);
+    });
 
-    it('adds no warning when they were taken off', async () => {
-        await run({
-            success: true,
-            leftoverPages: {
-                status: 'removed',
-                removed: 2,
-                summary: 'Took 2 pages from before the reset off h.',
-            },
-        });
+    it('adds no warning when the pipeline had nothing to say', async () => {
+        await run({ success: true });
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-    });
-});
-
-describe('reset notifications — pages the source has that did not arrive (EDS-40)', () => {
-    const sentence = '2 pages the source has are missing from this storefront: /cart, /checkout';
-
-    it('warns with the sentence', async () => {
-        await run({ success: true, missingPages: sentence });
-
-        expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(sentence);
     });
 });
 

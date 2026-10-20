@@ -149,6 +149,8 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
             removed: 1,
             summary: 'Took 1 page from before the reset off main--test-repo--test-owner.aem.live.',
         });
+        // Done is not a warning: nothing for the SC to act on (EDS-55).
+        expect(result.warnings).toStrictEqual([]);
     });
 
     // Found on the 2026-10-16 release walk: the republish missed three pages DA.live
@@ -196,6 +198,8 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
         const sentence = result.leftoverPages?.summary ?? '';
         expect(sentence).toContain('may still be live');
         expect(progress).toContainEqual({ operation: 'leftover-pages', message: `⚠️ ${sentence}` });
+        // On the one list every surface that ends a reset reads (EDS-55).
+        expect(result.warnings).toEqual([sentence]);
     });
 
     it('warns when it cannot tell what the republish published', async () => {
@@ -205,6 +209,7 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
 
         expect(helix.unpublishPages).not.toHaveBeenCalled();
         expect(result.leftoverPages?.status).toBe('not-compared');
+        expect(result.warnings).toEqual([result.leftoverPages?.summary]);
     });
 
     it('compares against nothing republished when the site has no pages to publish', async () => {

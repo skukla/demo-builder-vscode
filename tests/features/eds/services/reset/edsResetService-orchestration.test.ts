@@ -40,6 +40,8 @@ import {
     getGitHubServices,
 } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthError, GitHubAppNotInstalledError } from '@/features/eds/services/types';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
+import type { LeftoverPagesResult } from '@/features/eds/services/storefront/leftoverPages';
 
 jest.setTimeout(5000);
 
@@ -314,7 +316,9 @@ describe('executeEdsReset - content pipeline', () => {
     it('reports the session expiry and the resume on the content-copy step around a DA.live re-auth', async () => {
         mockExecuteEdsPipeline
             .mockRejectedValueOnce(new DaLiveAuthError('expired'))
-            .mockResolvedValueOnce({ success: true, contentFilesCopied: 3, libraryPaths: [] });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 3, libraryPaths: [] })
+            );
 
         const { progress } = await runReset();
 
@@ -436,17 +440,18 @@ describe('executeEdsReset - the product pages the overlay published (EDS-26)', (
 
 describe('executeEdsReset - the pages left over from before (EDS-33)', () => {
     it('carries what the pipeline did with them on the result', async () => {
-        const leftoverPages = {
+        const leftoverPages: LeftoverPagesResult = {
             status: 'not-listed',
             removed: 0,
             summary: 'Pages from before the reset may still be live.',
         };
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 3,
-            libraryPaths: [],
-            leftoverPages,
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 3,
+                libraryPaths: [],
+                leftoverPages,
+            })
+        );
 
         const { result } = await runReset();
 
@@ -454,16 +459,17 @@ describe('executeEdsReset - the pages left over from before (EDS-33)', () => {
     });
 
     it('adds nothing to the result when there were none', async () => {
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 3,
-            libraryPaths: [],
-            leftoverPages: {
-                status: 'none',
-                removed: 0,
-                summary: 'No pages from before the reset were left.',
-            },
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 3,
+                libraryPaths: [],
+                leftoverPages: {
+                    status: 'none',
+                    removed: 0,
+                    summary: 'No pages from before the reset were left.',
+                },
+            })
+        );
 
         const { result } = await runReset();
 
@@ -471,32 +477,33 @@ describe('executeEdsReset - the pages left over from before (EDS-33)', () => {
     });
 });
 
-describe('executeEdsReset - what the source has that did not arrive (EDS-40)', () => {
-    it('carries the pipeline’s sentence on the result', async () => {
+describe('executeEdsReset - what the content pipeline could not do (EDS-55)', () => {
+    it('carries the pipeline’s sentences on the result', async () => {
         const summary = '2 pages the source has are missing from this storefront: /cart, /checkout';
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 3,
-            libraryPaths: [],
-            missingPages: { status: 'missing', missing: ['/cart', '/checkout'], summary },
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 3,
+                libraryPaths: [],
+                warnings: [summary],
+            })
+        );
 
         const { result } = await runReset();
 
-        expect(result).toMatchObject({ success: true, missingPages: summary });
+        expect(result).toMatchObject({ success: true, pipelineWarnings: [summary] });
     });
 
-    it('adds nothing to the result when the storefront serves them all', async () => {
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 3,
-            libraryPaths: [],
-            missingPages: { status: 'complete', missing: [] },
-        });
+    it('adds nothing to the result when the pipeline had nothing to say', async () => {
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 3,
+                libraryPaths: [],
+            })
+        );
 
         const { result } = await runReset();
 
-        expect(result).not.toHaveProperty('missingPages');
+        expect(result).not.toHaveProperty('pipelineWarnings');
     });
 });
 

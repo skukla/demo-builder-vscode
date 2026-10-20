@@ -33,13 +33,13 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
-jest.mock('@/features/eds/services/edsPipeline', () => ({
-    executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true,
-        contentFilesCopied: 0,
-        libraryPaths: [],
-    }),
-}));
+jest.mock('@/features/eds/services/edsPipeline', () => {
+    // Typed through the canonical fake (EDS-55): a factory may load a module, not import one.
+    const { createMockPipelineResult } = jest.requireActual<
+        typeof import('../../../../helpers/pipelineResultFake')
+    >('../../../../helpers/pipelineResultFake');
+    return { executeEdsPipeline: jest.fn().mockResolvedValue(createMockPipelineResult()) };
+});
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),

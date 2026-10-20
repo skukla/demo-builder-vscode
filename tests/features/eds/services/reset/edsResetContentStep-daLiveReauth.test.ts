@@ -56,6 +56,7 @@ import { DaLiveAuthError } from '@/features/eds/services/types';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { createResetContext, meshDeps } from './edsResetService.testUtils';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
 
 // =============================================================================
 // Helpers
@@ -114,18 +115,21 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockContext = createResetContext();
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 5,
-            libraryPaths: [],
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 5,
+                libraryPaths: [],
+            })
+        );
     });
 
     it('should call ensureDaLiveAuth when pipeline throws DaLiveAuthError', async () => {
         // Given: Pipeline throws DaLiveAuthError on first attempt, succeeds on retry
         mockExecuteEdsPipeline
             .mockRejectedValueOnce(new DaLiveAuthError('DA.live token expired'))
-            .mockResolvedValueOnce({ success: true, contentFilesCopied: 5, libraryPaths: [] });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 5, libraryPaths: [] })
+            );
 
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 
@@ -146,7 +150,9 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
         // Given: First pipeline call fails, second succeeds
         mockExecuteEdsPipeline
             .mockRejectedValueOnce(new DaLiveAuthError('Token expired'))
-            .mockResolvedValueOnce({ success: true, contentFilesCopied: 10, libraryPaths: [] });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 10, libraryPaths: [] })
+            );
 
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 

@@ -38,8 +38,8 @@ function mapPipelineProgress(
 export interface ContentPipelineOutcome {
     contentCopied: number;
     leftoverPages?: LeftoverPagesResult;
-    /** The sentence for what the source has that the storefront does not serve (EDS-40). */
-    missingPages?: string;
+    /** The pipeline's sentences for the SC (EDS-55). */
+    pipelineWarnings: string[];
 }
 
 /**
@@ -149,7 +149,7 @@ export async function runContentPipeline(
             return {
                 contentCopied: pipelineResult.contentFilesCopied,
                 leftoverPages: pipelineResult.leftoverPages,
-                missingPages: pipelineResult.missingPages?.summary,
+                pipelineWarnings: pipelineResult.warnings,
             };
         },
         {

@@ -86,6 +86,7 @@ import { createMockLogger } from '../helpers/loggerFake';
 import { createMockStateManager } from '../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../helpers/extensionContextFake';
 import { createMockProject } from '../helpers/projectFake';
+import { createMockPipelineResult } from '../helpers/pipelineResultFake';
 
 const executePipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -134,11 +135,12 @@ const fakeHelix = {} as unknown as HelixService;
 describe('RefreshBlockLibraryCommand', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        executePipelineMock.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 0,
-            libraryPaths: ['/.da/library/blocks/hero'],
-        });
+        executePipelineMock.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 0,
+                libraryPaths: ['/.da/library/blocks/hero'],
+            })
+        );
 
         // vscode.window.withProgress should execute the callback with a real progress reporter
         (vscode.window.withProgress as jest.Mock).mockImplementation(
@@ -218,7 +220,7 @@ describe('RefreshBlockLibraryCommand', () => {
                     operation: 'library-publish',
                     message: 'Publishing the block list: 2 pages',
                 });
-                return { success: true, contentFilesCopied: 0, libraryPaths: [] };
+                return createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] });
             }
         );
     }
@@ -390,11 +392,12 @@ describe('RefreshBlockLibraryCommand', () => {
         // First call throws DaLiveAuthError; second succeeds.
         executePipelineMock
             .mockRejectedValueOnce(new DaLiveAuthError('DA.live authentication expired'))
-            .mockResolvedValueOnce({
-                success: true,
-                contentFilesCopied: 0,
-                libraryPaths: ['/.da/library/blocks/hero'],
-            });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({
+                    contentFilesCopied: 0,
+                    libraryPaths: ['/.da/library/blocks/hero'],
+                })
+            );
 
         // Auth recovery succeeds
         ensureAuthMock.mockResolvedValueOnce({ authenticated: true });

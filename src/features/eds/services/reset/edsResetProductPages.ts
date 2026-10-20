@@ -82,29 +82,25 @@ export async function takeOutProductPages(
  * Put the page sentences reset collected on its result — only the ones there are.
  *
  * @param result - the reset's result
- * @param sentences - what happened to the category pages and to the product pages, and
- *   which pages the source has that the storefront does not serve (EDS-40)
- * @returns the result with `catalogMenu`, `productPages` and `missingPages` when they
- *   have something to say
+ * @param sentences - what happened to the category pages and to the product pages
+ * @returns the result with `catalogMenu` and `productPages` when they have something to say
  */
 export function withPageSentences<T extends object>(
     result: T,
     sentences: {
         catalogMenu: string | undefined;
         productPages: string | undefined;
-        missingPages?: string;
     },
-): T & { catalogMenu?: string; productPages?: string; missingPages?: string } {
-    const { catalogMenu, productPages, missingPages } = sentences;
+): T & { catalogMenu?: string; productPages?: string } {
+    const { catalogMenu, productPages } = sentences;
     // The same object when there is nothing to add: callers compare the result they got.
-    if (catalogMenu === undefined && productPages === undefined && missingPages === undefined) {
+    if (catalogMenu === undefined && productPages === undefined) {
         return result;
     }
     return {
         ...result,
         ...(catalogMenu === undefined ? {} : { catalogMenu }),
         ...(productPages === undefined ? {} : { productPages }),
-        ...(missingPages === undefined ? {} : { missingPages }),
     };
 }
 

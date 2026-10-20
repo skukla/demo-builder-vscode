@@ -8,7 +8,6 @@
  * @module features/eds/services/reset/edsResetNotifications
  */
 
-import { LEFTOVERS_MAY_REMAIN } from '../storefront/leftoverPages';
 import type { EdsResetResult } from './edsResetParams';
 
 /** The reset result's button to the storefront report, where the fixes that fit are offered. */
@@ -51,13 +50,9 @@ function successWarnings(result: EdsResetResult): ResetWarning[] {
             offersReport: !!result.demoFixes?.offered?.length,
         });
     }
-    // Pages from before the reset that are, or may be, still live (EDS-33).
-    if (result.leftoverPages && LEFTOVERS_MAY_REMAIN.has(result.leftoverPages.status)) {
-        warnings.push({ message: result.leftoverPages.summary });
-    }
-    // Pages the source has that this storefront does not serve (EDS-40): the copy is
-    // done and the SC would otherwise meet them as blank pages.
-    if (result.missingPages) warnings.push({ message: result.missingPages });
+    // What the content pipeline could not do (EDS-55): old pages that may still be live,
+    // pages the source has that the storefront does not serve, an empty block palette.
+    for (const message of result.pipelineWarnings ?? []) warnings.push({ message });
     return warnings;
 }
 

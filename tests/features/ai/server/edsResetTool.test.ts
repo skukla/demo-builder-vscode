@@ -195,7 +195,7 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(res).toMatchObject({ reset: true, caveats: ['Product links may not work.'] });
     });
 
-    it('adds the pages the source has that the storefront does not serve to the caveats (EDS-40)', async () => {
+    it('adds what the content pipeline could not do to the caveats (EDS-40, EDS-55)', async () => {
         const missingPages =
             '2 pages the source has are missing from this storefront: /cart, /checkout';
         const s = fakeServer();
@@ -205,7 +205,7 @@ describe('reset_project on an Edge Delivery project', () => {
             success: true,
             filesReset: 12,
             contentCopied: 5,
-            missingPages,
+            pipelineWarnings: [missingPages],
         });
         expect(await s.call({ confirm: true })).toMatchObject({
             reset: true,
@@ -217,7 +217,7 @@ describe('reset_project on an Edge Delivery project', () => {
             filesReset: 12,
             contentCopied: 5,
             demoCaveats: ['Product links may not work.'],
-            missingPages,
+            pipelineWarnings: [missingPages],
         });
         expect(await s.call({ confirm: true })).toMatchObject({
             reset: true,

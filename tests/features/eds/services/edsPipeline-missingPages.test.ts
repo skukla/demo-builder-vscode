@@ -158,11 +158,10 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
             const result = await run();
 
             expect(result.success).toBe(true);
-            expect(result.missingPages).toEqual({
-                status: 'missing',
-                missing: ['/checkout'],
-                summary: '1 page the source has is missing from this storefront: /checkout',
-            });
+            // On the one list every surface reads (EDS-55).
+            expect(result.warnings).toEqual([
+                '1 page the source has is missing from this storefront: /checkout',
+            ]);
         });
 
         it('says so on the progress line, as a warning', async () => {
@@ -184,7 +183,7 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
 
             const result = await run();
 
-            expect(result.missingPages).toEqual({ status: 'complete', missing: [] });
+            expect(result.warnings).toStrictEqual([]);
         });
 
         it('never fails the pipeline when the storefront cannot be asked', async () => {
@@ -193,7 +192,9 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
             const result = await run();
 
             expect(result.success).toBe(true);
-            expect(result.missingPages?.status).toBe('not-checked');
+            expect(result.warnings).toEqual([
+                'Could not check whether every page the source has reached this storefront.',
+            ]);
         });
 
         it('asks for nothing when nothing was published', async () => {
@@ -202,7 +203,7 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
             const result = await run({ skipPublish: true });
 
             expect(site.asked()).toStrictEqual([]);
-            expect(result.missingPages).toBeUndefined();
+            expect(result.warnings).toStrictEqual([]);
         });
 
         it('also checks what the copy carried from the source’s index, and names one left unpublished', async () => {
@@ -224,12 +225,9 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
 
             const result = await run();
 
-            expect(result.missingPages).toEqual({
-                status: 'missing',
-                missing: ['/enrichment/category-banner'],
-                summary:
-                    '1 page the source has is missing from this storefront: /enrichment/category-banner',
-            });
+            expect(result.warnings).toEqual([
+                '1 page the source has is missing from this storefront: /enrichment/category-banner',
+            ]);
         });
 
         it('asks for nothing when the copy carried nothing', async () => {
@@ -246,7 +244,7 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
             const result = await run();
 
             expect(site.asked()).toStrictEqual([]);
-            expect(result.missingPages).toBeUndefined();
+            expect(result.warnings).toStrictEqual([]);
         });
     });
 });

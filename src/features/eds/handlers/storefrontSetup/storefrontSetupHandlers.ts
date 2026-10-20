@@ -177,11 +177,11 @@ function completionMessage(pdpBlocked: boolean, hasCaveats: boolean): string {
 }
 
 /**
- * The caveats after the PDP ones: what may not work on an added demo, then which
- * pages the source has that this storefront does not serve (EDS-40).
+ * The caveats after the PDP ones: what may not work on an added demo, then what the
+ * content pipeline could not do (EDS-55).
  */
-function otherCaveats(result: { demoCaveats?: string[]; missingPages?: string }): string[] {
-    return [...(result.demoCaveats ?? []), ...(result.missingPages ? [result.missingPages] : [])];
+function otherCaveats(result: { demoCaveats?: string[]; pipelineWarnings?: string[] }): string[] {
+    return [...(result.demoCaveats ?? []), ...(result.pipelineWarnings ?? [])];
 }
 
 export async function handleStartStorefrontSetup(

@@ -60,6 +60,7 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockPipelineResult } from '../../../helpers/pipelineResultFake';
 
 const pipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -109,11 +110,12 @@ describe('refreshBlockLibraryHeadless', () => {
             tokenService: {},
             fileOperations: { getFileContent: jest.fn() },
         });
-        pipelineMock.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 0,
-            libraryPaths: ['/.da/library/blocks/hero'],
-        });
+        pipelineMock.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 0,
+                libraryPaths: ['/.da/library/blocks/hero'],
+            })
+        );
     });
 
     it('runs the library-only pipeline and returns the real result', async () => {
@@ -278,11 +280,10 @@ describe('refreshBlockLibraryHeadless — its steps', () => {
                 onProgress: (info: { operation: string; message: string }) => void
             ) => {
                 messages.forEach((info) => onProgress(info));
-                return {
-                    success: true,
+                return createMockPipelineResult({
                     contentFilesCopied: 0,
                     libraryPaths: ['/.da/library/blocks.json'],
-                };
+                });
             }
         );
     }
@@ -339,7 +340,9 @@ describe('refreshBlockLibraryHeadless — its steps', () => {
                     throw new DaLiveAuthError('DA.live token expired');
                 }
             )
-            .mockResolvedValueOnce({ success: true, contentFilesCopied: 0, libraryPaths: [] });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] })
+            );
         const onStep = jest.fn();
 
         await refreshBlockLibraryHeadless(deps({ onStep }));

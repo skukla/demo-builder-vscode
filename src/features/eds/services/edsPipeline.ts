@@ -39,7 +39,7 @@ import {
     unpublishLeftoverPages,
     type LeftoverPagesResult,
 } from './storefront/leftoverPages';
-import { carriedWebPaths, findMissingPages, type MissingPagesResult } from './storefront/missingPages';
+import { carriedWebPaths, findMissingPages } from './storefront/missingPages';
 import { readStorefrontCodePaths } from './storefrontCodeReader';
 import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
 import { STOREFRONT_JOBS, countLine, itemCount, jobLine } from '@/core/utils/storefrontJobs';
@@ -170,11 +170,13 @@ export interface EdsPipelineResult {
     /** What step 7 did with the pages left over from before (EDS-33). Absent when it did not run. */
     leftoverPages?: LeftoverPagesResult;
     /**
-     * What the source has that the published storefront does not serve (EDS-40), with
-     * the sentence to show. Absent when the check did not run: nothing was published,
-     * or the storefront's code could not be read.
+     * Every sentence a step had for the SC, in the order the steps ran (EDS-55): pages the
+     * source has that the storefront does not serve (EDS-40), old pages that may still be
+     * live (EDS-33), a block palette that will be empty (EDS-38). Creation's completion
+     * card, the reset's warnings and the agent's caveats all read this one list, so a new
+     * warning is one `warnTheSc` call in its step. Empty when there is nothing to say.
      */
-    missingPages?: MissingPagesResult;
+    warnings: string[];
 }
 
 // ==========================================================
@@ -464,7 +466,7 @@ async function pipelineConfigureBlockLibrary(
     services: EdsPipelineServices,
     params: EdsPipelineParams,
     onProgress?: EdsPipelineProgressCallback,
-): Promise<string[]> {
+): Promise<{ paths: string[]; emptyPalette?: string }> {
     const { daLiveContentOps, githubFileOps, logger } = services;
     const {
         repoOwner,
@@ -526,13 +528,13 @@ async function pipelineConfigureBlockLibrary(
             message: jobLine(STOREFRONT_JOBS.buildingBlockLibrary, itemCount(libResult.blocksCount, 'block')),
         });
     }
-    // The palette will be empty (EDS-38): said where the SC is looking, as a page-check gap is.
+    // The palette will be empty (EDS-38): the step warns the SC with it.
     if (!libResult.success && libResult.error) {
         logger.warn(`[EdsPipeline] ${libResult.error}`);
-        onProgress?.({ operation: 'block-library', message: `⚠️ ${libResult.error}` });
+        return { paths: libResult.paths, emptyPalette: libResult.error };
     }
 
-    return libResult.paths;
+    return { paths: libResult.paths };
 }
 
 /**
@@ -592,7 +594,8 @@ interface PipelineContext {
     codePathsOnSource: string[];
     /** Everything else step 1 copied, as web paths; step 7.5 looks for these too. */
     carriedPaths: string[];
-    missingPages?: MissingPagesResult;
+    /** The sentences for the SC so far (EDS-55); see {@link EdsPipelineResult.warnings}. */
+    warnings: string[];
     libraryPaths: string[];
     patchReport: PatchReport;
     /** What step 5 published; undefined when it did not run or did not say. */
@@ -697,11 +700,9 @@ const PIPELINE_STEPS: PipelineStep[] = [
         name: 'block-library',
         when: ({ params }) => params.includeBlockLibrary,
         run: async (env) => {
-            env.ctx.libraryPaths = await pipelineConfigureBlockLibrary(
-                env.services,
-                env.params,
-                env.onProgress,
-            );
+            const library = await pipelineConfigureBlockLibrary(env.services, env.params, env.onProgress);
+            env.ctx.libraryPaths = library.paths;
+            if (library.emptyPalette) warnTheSc(env, 'block-library', library.emptyPalette);
         },
     },
     // Step 2.5: Block-targeting code patches (post-install).
@@ -969,8 +970,22 @@ async function pipelineUnpublishLeftovers({ params, services, ctx, onProgress }:
     );
     if (result.kept) await publishMissedPages(site, result.kept, services);
     ctx.leftoverPages = result;
-    const message = LEFTOVERS_MAY_REMAIN.has(result.status) ? `⚠️ ${result.summary}` : result.summary;
-    onProgress?.({ operation: 'leftover-pages', message });
+    if (LEFTOVERS_MAY_REMAIN.has(result.status)) warnTheSc({ ctx, onProgress }, 'leftover-pages', result.summary);
+    else onProgress?.({ operation: 'leftover-pages', message: result.summary });
+}
+
+/**
+ * Tell the SC something a step could not do (EDS-55): on the progress line now, with the
+ * warning sign, and on the result's `warnings`, which every surface that ends a create
+ * or a reset reads. The one way a step warns.
+ */
+function warnTheSc(
+    env: Pick<PipelineStepEnv, 'ctx' | 'onProgress'>,
+    operation: string,
+    sentence: string,
+): void {
+    env.ctx.warnings.push(sentence);
+    env.onProgress?.({ operation, message: `⚠️ ${sentence}` });
 }
 
 /**
@@ -1019,10 +1034,7 @@ async function pipelineCheckMissingPages({ params, services, ctx, onProgress }: 
         { fromCode: ctx.codePathsOnSource, carried: ctx.carriedPaths },
         services.logger,
     );
-    ctx.missingPages = result;
-    if (result.summary) {
-        onProgress?.({ operation: 'page-check', message: `⚠️ ${result.summary}` });
-    }
+    if (result.summary) warnTheSc({ ctx, onProgress }, 'page-check', result.summary);
 }
 
 /** Step 8 body: pre-warm the catalog; reporting only, all gating is in the descriptor. */
@@ -1075,6 +1087,7 @@ export async function executeEdsPipeline(
         sheetPaths: [],
         codePathsOnSource: [],
         carriedPaths: [],
+        warnings: [],
         libraryPaths: [],
         // Reuse the caller's report when threaded through (so canonical-phase
         // results from `resetRepoToTemplate` survive into the final result),
@@ -1108,7 +1121,7 @@ export async function executeEdsPipeline(
             libraryPaths: ctx.libraryPaths,
             patchReport: ctx.patchReport,
             ...(ctx.leftoverPages ? { leftoverPages: ctx.leftoverPages } : {}),
-            ...(ctx.missingPages ? { missingPages: ctx.missingPages } : {}),
+            warnings: ctx.warnings,
         };
     } catch (error) {
         // Re-throw auth errors so callers can offer re-authentication
@@ -1122,6 +1135,7 @@ export async function executeEdsPipeline(
             libraryPaths: ctx.libraryPaths,
             patchReport: ctx.patchReport,
             error: errorMessage,
+            warnings: ctx.warnings,
         };
     }
 }

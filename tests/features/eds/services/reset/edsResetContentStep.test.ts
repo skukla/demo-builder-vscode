@@ -19,6 +19,7 @@ import {
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
 import type { Project } from '@/types/base';
 import { createMockProject, edsStorefrontInstance } from '../../../../helpers/projectFake';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
 
 jest.setTimeout(5000);
 
@@ -45,7 +46,7 @@ beforeEach(() => {
     // The pipeline reports the links its copy found broken on the report it was handed.
     mockExecuteEdsPipeline.mockImplementation(async (options: { patchReport: PatchReport }) => {
         options.patchReport.brokenLinks = NEW_LINKS.map((l) => ({ ...l, pages: [...l.pages] }));
-        return { success: true, contentFilesCopied: 3, libraryPaths: [] };
+        return createMockPipelineResult({ contentFilesCopied: 3, libraryPaths: [] });
     });
 });
 

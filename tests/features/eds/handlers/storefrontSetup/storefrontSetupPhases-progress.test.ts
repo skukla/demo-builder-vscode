@@ -56,6 +56,7 @@ import type { StorefrontBrokenLink, StorefrontSetupProgressPayload } from '@/typ
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
 
 const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<typeof executeEdsPipeline>;
 
@@ -84,11 +85,12 @@ async function reportProgress(info: ProgressInfo) {
     // Cleared per call, not per test: a test that reports twice would otherwise
     // read the FIRST run's callback, which is bound to the first context.
     mockExecuteEdsPipeline.mockClear();
-    mockExecuteEdsPipeline.mockResolvedValue({
-        success: true,
-        contentFilesCopied: 0,
-        libraryPaths: [],
-    });
+    mockExecuteEdsPipeline.mockResolvedValue(
+        createMockPipelineResult({
+            contentFilesCopied: 0,
+            libraryPaths: [],
+        })
+    );
 
     await executeStorefrontSetupPhases(
         context,
@@ -321,7 +323,7 @@ describe('the result of a finished run', () => {
         mockExecuteEdsPipeline.mockImplementation(async (input) => {
             if (!input.patchReport) throw new Error('setup hands the pipeline its patch report');
             input.patchReport.brokenLinks = brokenLinks;
-            return { success: true, contentFilesCopied: 0, libraryPaths: [] };
+            return createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] });
         });
 
         const result = await executeStorefrontSetupPhases(
@@ -338,12 +340,13 @@ describe('the result of a finished run', () => {
 
     it('carries the sentence for what the source has that the storefront does not serve (EDS-40)', async () => {
         const summary = '2 pages the source has are missing from this storefront: /cart, /checkout';
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 0,
-            libraryPaths: [],
-            missingPages: { status: 'missing', missing: ['/cart', '/checkout'], summary },
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 0,
+                libraryPaths: [],
+                warnings: [summary],
+            })
+        );
 
         const result = await executeStorefrontSetupPhases(
             createSetupContext(),
@@ -354,16 +357,16 @@ describe('the result of a finished run', () => {
         );
 
         expect(result.success).toBe(true);
-        expect(result.missingPages).toBe(summary);
+        expect(result.pipelineWarnings).toEqual([summary]);
     });
 
     it('carries no such sentence when the storefront serves them all', async () => {
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 0,
-            libraryPaths: [],
-            missingPages: { status: 'complete', missing: [] },
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 0,
+                libraryPaths: [],
+            })
+        );
 
         const result = await executeStorefrontSetupPhases(
             createSetupContext(),
@@ -373,6 +376,6 @@ describe('the result of a finished run', () => {
             SERVICES
         );
 
-        expect(result).not.toHaveProperty('missingPages');
+        expect(result).not.toHaveProperty('pipelineWarnings');
     });
 });

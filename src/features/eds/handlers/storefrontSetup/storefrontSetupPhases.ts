@@ -234,7 +234,7 @@ async function runEdsPipelineWithRecovery(
                 onProgress,
             );
             if (!result.success) throw new Error(result.error || 'Content pipeline failed');
-            if (result.missingPages?.summary) repoInfo.missingPages = result.missingPages.summary;
+            if (result.warnings.length > 0) repoInfo.pipelineWarnings = result.warnings;
             return { libraryPaths: result.libraryPaths };
         },
         {

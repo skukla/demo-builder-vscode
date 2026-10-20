@@ -70,6 +70,7 @@ import { ensureDaLiveAuth, configureDaLivePermissions } from '@/features/eds/han
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
 
 // Get mock references
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
@@ -125,7 +126,9 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
         // Given: Pipeline throws DaLiveAuthError on first attempt, succeeds on second
         mockExecuteEdsPipeline
             .mockRejectedValueOnce(new DaLiveAuthError('DA.live token expired'))
-            .mockResolvedValueOnce({ success: true, contentFilesCopied: 0, libraryPaths: [] });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] })
+            );
 
         // And: Re-auth succeeds
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
@@ -161,7 +164,9 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
         // Given: First pipeline call fails with auth error
         mockExecuteEdsPipeline
             .mockRejectedValueOnce(new DaLiveAuthError('Token expired'))
-            .mockResolvedValueOnce({ success: true, contentFilesCopied: 0, libraryPaths: ['nav'] });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: ['nav'] })
+            );
 
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 
@@ -288,7 +293,9 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
         // Given: Pipeline throws auth error
         mockExecuteEdsPipeline
             .mockRejectedValueOnce(new DaLiveAuthError('Token expired'))
-            .mockResolvedValueOnce({ success: true, contentFilesCopied: 0, libraryPaths: [] });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] })
+            );
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 
         // When
@@ -355,11 +362,9 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
         jest.clearAllMocks();
         mockContext = createSetupContext();
         // Default: pipeline succeeds
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 0,
-            libraryPaths: [],
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] })
+        );
     });
 
     it('should recover when configureDaLivePermissions throws DaLiveAuthError', async () => {

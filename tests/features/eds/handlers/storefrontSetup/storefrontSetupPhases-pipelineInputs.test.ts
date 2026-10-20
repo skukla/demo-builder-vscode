@@ -84,6 +84,7 @@ import { installBlockCollections } from '@/features/eds/services/blockCollection
 import { getBlockLibrarySource } from '@/features/components/services/blockLibraryLoader';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
 
 const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<typeof executeEdsPipeline>;
 
@@ -150,11 +151,12 @@ function projectFor(githubRepo: string) {
 beforeEach(() => {
     jest.clearAllMocks();
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
-    mockExecuteEdsPipeline.mockResolvedValue({
-        success: true,
-        contentFilesCopied: 0,
-        libraryPaths: [],
-    });
+    mockExecuteEdsPipeline.mockResolvedValue(
+        createMockPipelineResult({
+            contentFilesCopied: 0,
+            libraryPaths: [],
+        })
+    );
 });
 
 // =============================================================================
@@ -450,12 +452,14 @@ describe('the rest of the pipeline instruction', () => {
 
 describe('when the run does not finish', () => {
     it('reports the pipeline failure and the repo it was working on', async () => {
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: false,
-            error: 'DA.live refused the copy',
-            contentFilesCopied: 0,
-            libraryPaths: [],
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                success: false,
+                error: 'DA.live refused the copy',
+                contentFilesCopied: 0,
+                libraryPaths: [],
+            })
+        );
 
         const result = await runSetup(createEdsConfig());
 
@@ -469,11 +473,13 @@ describe('when the run does not finish', () => {
     });
 
     it('names the phase when the pipeline failed without saying why', async () => {
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: false,
-            contentFilesCopied: 0,
-            libraryPaths: [],
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                success: false,
+                contentFilesCopied: 0,
+                libraryPaths: [],
+            })
+        );
 
         const result = await runSetup(createEdsConfig());
 
@@ -511,7 +517,7 @@ describe('when the run does not finish', () => {
         const controller = new AbortController();
         mockExecuteEdsPipeline.mockImplementation(async () => {
             controller.abort();
-            return { success: true, contentFilesCopied: 0, libraryPaths: [] };
+            return createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] });
         });
         const context = createSetupContext();
 
@@ -590,11 +596,12 @@ describe('when the run does not finish', () => {
 
 describe('when the run does finish', () => {
     it('says the site is live once library pages were published', async () => {
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 3,
-            libraryPaths: ['/docs/library/cards'],
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 3,
+                libraryPaths: ['/docs/library/cards'],
+            })
+        );
         const context = createSetupContext();
 
         const result = await executeStorefrontSetupPhases(

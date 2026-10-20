@@ -191,8 +191,13 @@ export async function executeEdsReset(
             configWritten,
             { demoCaveats: repoResetResult.demoCaveats, demoFixes: repoResetResult.demoFixes },
         );
-        const sentences = { catalogMenu, productPages, missingPages: content.missingPages };
-        return withLeftoverPages(withPageSentences(result, sentences), content.leftoverPages);
+        const sentences = { catalogMenu, productPages };
+        const withSentences = withPageSentences(result, sentences);
+        // The same object when there is nothing to add, as withPageSentences keeps it.
+        const warned = content.pipelineWarnings.length > 0
+            ? { ...withSentences, pipelineWarnings: content.pipelineWarnings }
+            : withSentences;
+        return withLeftoverPages(warned, content.leftoverPages);
     } catch (error) {
         return handleResetError(error, context.logger);
     }

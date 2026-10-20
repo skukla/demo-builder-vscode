@@ -144,12 +144,12 @@ export interface EdsResetResult extends HandlerResponse {
      */
     leftoverPages?: LeftoverPagesResult;
     /**
-     * Which pages the source has that the storefront does not serve after the reset
-     * (EDS-40), in SC words: "2 pages the source has are missing from this
-     * storefront: /cart, /checkout". Or that it could not be checked. Absent when
-     * everything arrived, or when nothing was copied.
+     * What the content pipeline could not do, in SC words (EDS-55): pages the source has
+     * that the storefront does not serve ("2 pages the source has are missing from this
+     * storefront: /cart, /checkout"), old pages that may still be live, an empty block
+     * palette. Absent when it had nothing to say.
      */
-    missingPages?: string;
+    pipelineWarnings?: string[];
     /**
      * A success's warnings as one line, for the progress modal's last view: set only
      * when the reset ran in a modal (`withModalWarning`).

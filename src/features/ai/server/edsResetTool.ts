@@ -35,11 +35,11 @@ import { getMeshComponentInstance } from '@/types/typeGuards';
 
 /** Silent Adobe IMS auth pre-flight. */
 /**
- * The reset's caveats for the agent: what may not work on an added demo, then which
- * pages the source has that the storefront does not serve. No key when there are none.
+ * The reset's caveats for the agent: what may not work on an added demo, then what the
+ * content pipeline could not do (EDS-55). No key when there are none.
  */
-function caveatsOf(result: Pick<EdsResetResult, 'demoCaveats' | 'missingPages'>): { caveats?: string[] } {
-    const caveats = [...(result.demoCaveats ?? []), ...(result.missingPages ? [result.missingPages] : [])];
+function caveatsOf(result: Pick<EdsResetResult, 'demoCaveats' | 'pipelineWarnings'>): { caveats?: string[] } {
+    const caveats = [...(result.demoCaveats ?? []), ...(result.pipelineWarnings ?? [])];
     return caveats.length > 0 ? { caveats } : {};
 }
 
@@ -157,8 +157,8 @@ export async function runEdsReset(
             reset: true,
             project: project.name,
             kind: 'storefront',
-            // What may not work on an added demo (D23), then which pages the source
-            // has that this storefront does not serve (EDS-40), in the words the SC sees.
+            // What may not work on an added demo (D23), then what the content pipeline
+            // could not do (EDS-55), in the words the SC sees.
             ...caveatsOf(result),
             // Applied by this reset, and fitting but left for the user to accept
             // (call again with applyFixes:true once they agree) (EDS-13f).

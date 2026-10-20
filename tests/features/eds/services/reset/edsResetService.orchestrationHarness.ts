@@ -97,6 +97,7 @@ import type { EdsResetProgress } from '@/features/eds/services/reset/edsResetPar
 import { mockEnsureDaLiveAuth } from './edsResetService.sharedMocks';
 import { createResetContext, meshDeps, resetParams } from './edsResetService.testUtils';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
 
 // =============================================================================
 // Fixtures
@@ -128,11 +129,12 @@ export function resetOrchestrationMocks(): void {
     mockResetRepoToTemplate.mockResolvedValue(REPO_RESULT);
     mockPreviewCode.mockResolvedValue(undefined);
     mockPublishConfig.mockResolvedValue({ configWritten: true });
-    mockExecuteEdsPipeline.mockResolvedValue({
-        success: true,
-        contentFilesCopied: 3,
-        libraryPaths: [],
-    });
+    mockExecuteEdsPipeline.mockResolvedValue(
+        createMockPipelineResult({
+            contentFilesCopied: 3,
+            libraryPaths: [],
+        })
+    );
     mockRedeployApiMesh.mockResolvedValue(null);
     mockTakeOutCatalogMenu.mockResolvedValue(CATALOG_MENU_SITE);
     mockTakeOutProductPages.mockResolvedValue(undefined);

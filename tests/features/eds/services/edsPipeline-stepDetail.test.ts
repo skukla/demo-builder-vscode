@@ -1,121 +1,27 @@
 /**
- * EDS Pipeline — what each step reports and how it handles its own edges.
+ * EDS Pipeline: what each step reports and how it handles its own edges.
  *
  * The copy step's account-chrome overlay, the publish step's one tolerated
- * failure, the block library's comp-def read, and the library publish's
- * verify-after-write. Each of these is a decision the pipeline makes on the
- * SC's behalf and then reports; the progress payloads are the only place most
- * of them become visible.
+ * failure, the block library's comp-def read. Each of these is a decision the
+ * pipeline makes on the SC's behalf and then reports; the progress payloads are
+ * the only place most of them become visible. Publishing the library and the
+ * sheets is in edsPipeline-stepDetail-publish.test.ts; the setup both share is in
+ * edsPipeline-stepDetail.testUtils.ts.
  */
 
-import { createMockLogger } from '../../../helpers/loggerFake';
-import {
-    basePipelineParams,
-    executeEdsPipeline,
-    pipelineServices,
-    type EdsPipelineParams,
-    type EdsPipelineServices,
-} from './edsPipeline.testUtils';
+import { executeEdsPipeline, stepDetailHarness } from './edsPipeline-stepDetail.testUtils';
 import { DaLiveError } from '@/features/eds/services/types';
 import { createPatchReport } from '@/features/eds/services/patches/patchReportHelper';
-
-const mockPublishLibraryPaths = jest.fn().mockResolvedValue(undefined);
-const mockPublishSheetPaths = jest.fn();
-const mockVerifyLibraryPreviewed = jest.fn().mockResolvedValue(true);
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    applyDaLiveOrgConfigSettings: jest.fn().mockResolvedValue(undefined),
-    publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
-    publishSheetPaths: (...args: unknown[]) => mockPublishSheetPaths(...args),
-    verifyLibraryPreviewed: (...args: unknown[]) => mockVerifyLibraryPreviewed(...args),
-}));
-
-type ProgressCall = {
-    operation: string;
-    message: string;
-    subMessage?: string;
-    current?: number;
-    total?: number;
-    percentage?: number;
-};
-
-const CONTENT_SOURCE = { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' };
+import type { EdsPipelineParams } from '@/features/eds/services/edsPipeline';
 
 describe('executeEdsPipeline - step detail', () => {
-    let mockCopyContentFromSource: jest.Mock;
-    let mockOverlayAccountChrome: jest.Mock;
-    let mockCreateBlockLibrary: jest.Mock;
-    let mockCopyContent: jest.Mock;
-    let mockReadSiteConfig: jest.Mock;
-    let mockPublishAllSiteContent: jest.Mock;
-    let mockGetFileContent: jest.Mock;
-    let services: EdsPipelineServices;
-    let params: EdsPipelineParams;
-    let progress: ProgressCall[];
-    let onProgress: (info: ProgressCall) => void;
-
-    beforeEach(() => {
-        jest.clearAllMocks();
-        progress = [];
-        onProgress = (info) => progress.push(info);
-        mockVerifyLibraryPreviewed.mockResolvedValue(true);
-
-        mockCopyContentFromSource = jest.fn().mockResolvedValue({
-            success: true,
-            totalFiles: 42,
-            copiedFiles: ['/page'],
-            failedFiles: [],
-            sheetPaths: [],
-            codePathsOnSource: [],
-        });
-        mockOverlayAccountChrome = jest.fn().mockResolvedValue({ success: true, copiedFiles: [], failedFiles: [], totalFiles: 8 });
-        mockCreateBlockLibrary = jest
-            .fn()
-            .mockResolvedValue({ success: true, blocksCount: 5, paths: ['/.da/library/blocks'] });
-        mockCopyContent = jest.fn().mockResolvedValue({ success: true });
-        mockReadSiteConfig = jest.fn().mockResolvedValue({ some: 'config' });
-        mockPublishAllSiteContent = jest.fn().mockResolvedValue(undefined);
-        mockGetFileContent = jest.fn().mockResolvedValue({ content: '{}', sha: 'abc' });
-
-        services = pipelineServices({
-            daLiveContentOps: {
-                copyOps: {
-                    copyContentFromSource: mockCopyContentFromSource,
-                    overlayAccountChrome: mockOverlayAccountChrome,
-                    copyContent: mockCopyContent,
-                },
-                blockLibOps: {
-                    createBlockLibraryFromTemplate: mockCreateBlockLibrary,
-                },
-                configOps: {
-                    readSiteConfigForDiagnostics: mockReadSiteConfig,
-                },
-                sourceOps: {
-                    deleteAllSiteContent: jest.fn(),
-                },
-            },
-            githubFileOps: { getFileContent: mockGetFileContent },
-            helixService: {
-                purgeCacheAll: jest.fn().mockResolvedValue(undefined),
-                publishAllSiteContent: mockPublishAllSiteContent,
-            } as unknown as EdsPipelineServices['helixService'],
-            logger: createMockLogger(),
-        });
-
-        params = { ...basePipelineParams(), contentSource: CONTENT_SOURCE };
-    });
-
-    const find = (operation: string, match: RegExp) =>
-        progress.find((p) => p.operation === operation && match.test(p.message));
-
-    // =========================================================================
-    // Copying content
-    // =========================================================================
+    const h = stepDetailHarness();
 
     describe('copying content', () => {
         it('names the source it is copying from', async () => {
-            await executeEdsPipeline(params, services, onProgress);
+            await executeEdsPipeline(h.params, h.services, h.onProgress);
 
-            expect(progress[0]).toEqual({
+            expect(h.progress[0]).toEqual({
                 operation: 'content-copy',
                 message: 'Copying the content',
                 subMessage: 'From src-org/src-site',
@@ -123,7 +29,7 @@ describe('executeEdsPipeline - step detail', () => {
         });
 
         it('passes the copier own status line through when it has one', async () => {
-            mockCopyContentFromSource.mockImplementation(
+            h.mockCopyContentFromSource.mockImplementation(
                 async (
                     _src: unknown,
                     _org: string,
@@ -137,13 +43,20 @@ describe('executeEdsPipeline - step detail', () => {
                         percentage: 30,
                         currentFile: '/products/shoes',
                     });
-                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
+                    return {
+                        success: true,
+                        totalFiles: 10,
+                        copiedFiles: [],
+                        failedFiles: [],
+                        sheetPaths: [],
+                        codePathsOnSource: [],
+                    };
                 }
             );
 
-            await executeEdsPipeline(params, services, onProgress);
+            await executeEdsPipeline(h.params, h.services, h.onProgress);
 
-            expect(progress).toContainEqual({
+            expect(h.progress).toContainEqual({
                 operation: 'content-copy',
                 message: 'Retrying /products/shoes',
                 subMessage: '/products/shoes',
@@ -154,7 +67,7 @@ describe('executeEdsPipeline - step detail', () => {
         });
 
         it('counts the files itself when the copier says nothing', async () => {
-            mockCopyContentFromSource.mockImplementation(
+            h.mockCopyContentFromSource.mockImplementation(
                 async (
                     _src: unknown,
                     _org: string,
@@ -162,19 +75,28 @@ describe('executeEdsPipeline - step detail', () => {
                     report: (p: Record<string, unknown>) => void
                 ) => {
                     report({ processed: 3, total: 10 });
-                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
+                    return {
+                        success: true,
+                        totalFiles: 10,
+                        copiedFiles: [],
+                        failedFiles: [],
+                        sheetPaths: [],
+                        codePathsOnSource: [],
+                    };
                 }
             );
 
-            await executeEdsPipeline(params, services, onProgress);
+            await executeEdsPipeline(h.params, h.services, h.onProgress);
 
-            expect(find('content-copy', /: 3 of/)?.message).toBe('Copying the content: 3 of 10 files');
+            expect(h.find('content-copy', /: 3 of/)?.message).toBe(
+                'Copying the content: 3 of 10 files'
+            );
         });
 
         it('says how many files it copied when it is done', async () => {
-            await executeEdsPipeline(params, services, onProgress);
+            await executeEdsPipeline(h.params, h.services, h.onProgress);
 
-            expect(progress).toContainEqual({
+            expect(h.progress).toContainEqual({
                 operation: 'content-copy',
                 message: 'Copying the content: 42 files copied',
             });
@@ -183,7 +105,7 @@ describe('executeEdsPipeline - step detail', () => {
         it('runs with no progress callback at all', async () => {
             // Including while the copier is reporting file-by-file — the reset
             // flow calls the pipeline without a callback.
-            mockCopyContentFromSource.mockImplementation(
+            h.mockCopyContentFromSource.mockImplementation(
                 async (
                     _src: unknown,
                     _org: string,
@@ -191,11 +113,18 @@ describe('executeEdsPipeline - step detail', () => {
                     report: (p: Record<string, unknown>) => void
                 ) => {
                     report({ processed: 1, total: 2 });
-                    return { success: true, totalFiles: 2, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
+                    return {
+                        success: true,
+                        totalFiles: 2,
+                        copiedFiles: [],
+                        failedFiles: [],
+                        sheetPaths: [],
+                        codePathsOnSource: [],
+                    };
                 }
             );
 
-            const result = await executeEdsPipeline(params, services);
+            const result = await executeEdsPipeline(h.params, h.services);
 
             expect(result.success).toBe(true);
         });
@@ -207,14 +136,14 @@ describe('executeEdsPipeline - step detail', () => {
 
     describe('the account-chrome overlay', () => {
         const hybrid = () => ({
-            ...params,
+            ...h.params,
             accountContentSource: { org: 'b2b-org', site: 'b2b-site' },
         });
 
         it('overlays the account pages on top of the brand content', async () => {
-            await executeEdsPipeline(hybrid(), services, onProgress);
+            await executeEdsPipeline(hybrid(), h.services, h.onProgress);
 
-            expect(mockOverlayAccountChrome).toHaveBeenCalledWith(
+            expect(h.mockOverlayAccountChrome).toHaveBeenCalledWith(
                 { org: 'b2b-org', site: 'b2b-site' },
                 'test-org',
                 'test-site',
@@ -223,15 +152,15 @@ describe('executeEdsPipeline - step detail', () => {
         });
 
         it('counts the overlaid files alongside the copied ones', async () => {
-            const result = await executeEdsPipeline(hybrid(), services, onProgress);
+            const result = await executeEdsPipeline(hybrid(), h.services, h.onProgress);
 
             expect(result.contentFilesCopied).toBe(50);
         });
 
         it('does not overlay anything for a brand-only package', async () => {
-            const result = await executeEdsPipeline(params, services, onProgress);
+            const result = await executeEdsPipeline(h.params, h.services, h.onProgress);
 
-            expect(mockOverlayAccountChrome).not.toHaveBeenCalled();
+            expect(h.mockOverlayAccountChrome).not.toHaveBeenCalled();
             expect(result.contentFilesCopied).toBe(42);
         });
 
@@ -239,7 +168,7 @@ describe('executeEdsPipeline - step detail', () => {
             // The brand source has no /customer/* pages by design when an
             // overlay is configured. Without this the audit reports a gap this
             // same run then fills.
-            const result = await executeEdsPipeline(hybrid(), services, onProgress);
+            const result = await executeEdsPipeline(hybrid(), h.services, h.onProgress);
 
             expect(result.patchReport?.deferredReferencePrefixes).toEqual(['/customer/']);
         });
@@ -250,8 +179,8 @@ describe('executeEdsPipeline - step detail', () => {
 
             const result = await executeEdsPipeline(
                 { ...hybrid(), patchReport },
-                services,
-                onProgress
+                h.services,
+                h.onProgress
             );
 
             expect(result.patchReport?.deferredReferencePrefixes).toEqual([
@@ -261,7 +190,7 @@ describe('executeEdsPipeline - step detail', () => {
         });
 
         it('defers nothing for a brand-only package', async () => {
-            const result = await executeEdsPipeline(params, services, onProgress);
+            const result = await executeEdsPipeline(h.params, h.services, h.onProgress);
 
             expect(result.patchReport?.deferredReferencePrefixes).toBeUndefined();
         });
@@ -277,21 +206,27 @@ describe('executeEdsPipeline - step detail', () => {
 
     describe('the jobs named once for every flow', () => {
         it('applies the DA.live settings under that name', async () => {
-            await executeEdsPipeline(params, services, onProgress);
+            await executeEdsPipeline(h.params, h.services, h.onProgress);
 
-            expect(progress).toContainEqual({ operation: 'eds-settings', message: 'Applying DA.live settings' });
+            expect(h.progress).toContainEqual({
+                operation: 'eds-settings',
+                message: 'Applying DA.live settings',
+            });
         });
 
         it('clears the cache under that name', async () => {
-            await executeEdsPipeline({ ...params, purgeCache: true }, services, onProgress);
+            await executeEdsPipeline({ ...h.params, purgeCache: true }, h.services, h.onProgress);
 
-            expect(progress).toContainEqual({ operation: 'cache-purge', message: 'Clearing the cache' });
+            expect(h.progress).toContainEqual({
+                operation: 'cache-purge',
+                message: 'Clearing the cache',
+            });
         });
 
         it('starts publishing the pages under that name', async () => {
-            await executeEdsPipeline(params, services, onProgress);
+            await executeEdsPipeline(h.params, h.services, h.onProgress);
 
-            expect(progress).toContainEqual({
+            expect(h.progress).toContainEqual({
                 operation: 'content-publish',
                 message: 'Publishing the pages',
                 subMessage: 'test-owner/test-repo',
@@ -303,7 +238,7 @@ describe('executeEdsPipeline - step detail', () => {
         it('falls back to the repo when the bulk job does not say which page', async () => {
             // The job reports counts but usually not a path; a blank detail row
             // under a counting title reads as a stall.
-            mockPublishAllSiteContent.mockImplementation(
+            h.mockPublishAllSiteContent.mockImplementation(
                 async (
                     _repo: string,
                     _branch: string,
@@ -315,9 +250,9 @@ describe('executeEdsPipeline - step detail', () => {
                 }
             );
 
-            await executeEdsPipeline(params, services, onProgress);
+            await executeEdsPipeline(h.params, h.services, h.onProgress);
 
-            expect(progress).toContainEqual({
+            expect(h.progress).toContainEqual({
                 operation: 'content-publish',
                 message: 'Publishing 10 of 40',
                 subMessage: 'test-owner/test-repo',
@@ -327,7 +262,7 @@ describe('executeEdsPipeline - step detail', () => {
         });
 
         it('names the page when the job does say', async () => {
-            mockPublishAllSiteContent.mockImplementation(
+            h.mockPublishAllSiteContent.mockImplementation(
                 async (
                     _repo: string,
                     _branch: string,
@@ -339,13 +274,13 @@ describe('executeEdsPipeline - step detail', () => {
                 }
             );
 
-            await executeEdsPipeline(params, services, onProgress);
+            await executeEdsPipeline(h.params, h.services, h.onProgress);
 
-            expect(find('content-publish', /^Publishing$/)?.subMessage).toBe('/products/shoes');
+            expect(h.find('content-publish', /^Publishing$/)?.subMessage).toBe('/products/shoes');
         });
 
         it('reports the bulk job with no progress callback at all', async () => {
-            mockPublishAllSiteContent.mockImplementation(
+            h.mockPublishAllSiteContent.mockImplementation(
                 async (
                     _repo: string,
                     _branch: string,
@@ -357,7 +292,7 @@ describe('executeEdsPipeline - step detail', () => {
                 }
             );
 
-            const result = await executeEdsPipeline(params, services);
+            const result = await executeEdsPipeline(h.params, h.services);
 
             expect(result.success).toBe(true);
         });
@@ -365,19 +300,19 @@ describe('executeEdsPipeline - step detail', () => {
         it('treats having nothing to publish as a finished run', async () => {
             // A Custom package with no content source reaches the publish step
             // with an empty site. That is not a failure.
-            mockPublishAllSiteContent.mockRejectedValue(
+            h.mockPublishAllSiteContent.mockRejectedValue(
                 new Error('No publishable pages found for site')
             );
 
-            const result = await executeEdsPipeline(params, services, onProgress);
+            const result = await executeEdsPipeline(h.params, h.services, h.onProgress);
 
             expect(result.success).toBe(true);
         });
 
         it('fails the run on any other publish error', async () => {
-            mockPublishAllSiteContent.mockRejectedValue(new Error('admin.hlx.page returned 401'));
+            h.mockPublishAllSiteContent.mockRejectedValue(new Error('admin.hlx.page returned 401'));
 
-            const result = await executeEdsPipeline(params, services, onProgress);
+            const result = await executeEdsPipeline(h.params, h.services, h.onProgress);
 
             expect(result.success).toBe(false);
             expect(result.error).toBe('admin.hlx.page returned 401');
@@ -390,7 +325,7 @@ describe('executeEdsPipeline - step detail', () => {
 
     describe('the block library', () => {
         const withLibrary = (over: Partial<EdsPipelineParams> = {}) => ({
-            ...params,
+            ...h.params,
             skipContent: true,
             includeBlockLibrary: true,
             ...over,
@@ -399,16 +334,16 @@ describe('executeEdsPipeline - step detail', () => {
         it('reads the component definition through the GitHub file operations', async () => {
             // The reader is handed in as a callback; if it stops delegating, the
             // library builds from nothing and every block silently disappears.
-            await executeEdsPipeline(withLibrary(), services, onProgress);
+            await executeEdsPipeline(withLibrary(), h.services, h.onProgress);
 
-            const readFile = mockCreateBlockLibrary.mock.calls[0]?.[4] as (
+            const readFile = h.mockCreateBlockLibrary.mock.calls[0]?.[4] as (
                 owner: string,
                 repo: string,
                 path: string
             ) => Promise<unknown>;
             const answer = await readFile('an-owner', 'a-repo', 'component-definition.json');
 
-            expect(mockGetFileContent).toHaveBeenCalledWith(
+            expect(h.mockGetFileContent).toHaveBeenCalledWith(
                 'an-owner',
                 'a-repo',
                 'component-definition.json'
@@ -417,11 +352,11 @@ describe('executeEdsPipeline - step detail', () => {
         });
 
         it('says it is configuring the library before it starts', async () => {
-            await executeEdsPipeline(withLibrary(), services, onProgress);
+            await executeEdsPipeline(withLibrary(), h.services, h.onProgress);
 
             // The second line names the storefront it is building into: the
             // step had no second line at all until 2026-09-20.
-            expect(progress).toContainEqual({
+            expect(h.progress).toContainEqual({
                 operation: 'block-library',
                 message: 'Building block library',
                 subMessage: 'test-org/test-site',
@@ -429,9 +364,9 @@ describe('executeEdsPipeline - step detail', () => {
         });
 
         it('says how many blocks it configured', async () => {
-            await executeEdsPipeline(withLibrary(), services, onProgress);
+            await executeEdsPipeline(withLibrary(), h.services, h.onProgress);
 
-            expect(progress).toContainEqual({
+            expect(h.progress).toContainEqual({
                 operation: 'block-library',
                 message: 'Building block library: 5 blocks',
             });
@@ -440,57 +375,64 @@ describe('executeEdsPipeline - step detail', () => {
         it('stays quiet when the library came back empty', async () => {
             // The control for the message above — and an empty library is worth
             // NOT announcing as a success.
-            mockCreateBlockLibrary.mockResolvedValue({
+            h.mockCreateBlockLibrary.mockResolvedValue({
                 success: true,
                 blocksCount: 0,
                 paths: [],
             });
 
-            await executeEdsPipeline(withLibrary(), services, onProgress);
+            await executeEdsPipeline(withLibrary(), h.services, h.onProgress);
 
-            expect(find('block-library', /: \d+ blocks$/)).toBeUndefined();
+            expect(h.find('block-library', /: \d+ blocks$/)).toBeUndefined();
         });
 
         // EDS-38: the palette lists blocks only through the site config, so a library whose
         // registration failed is said out loud where the SC is looking.
         it('warns that the palette will be empty when the library could not be registered', async () => {
-            mockCreateBlockLibrary.mockResolvedValue({
+            h.mockCreateBlockLibrary.mockResolvedValue({
                 success: false,
                 blocksCount: 5,
                 paths: [],
                 error: 'The block palette in DA.live will be empty: the site configuration did not take the Blocks list (config 403).',
             });
 
-            await executeEdsPipeline(withLibrary(), services, onProgress);
+            const result = await executeEdsPipeline(withLibrary(), h.services, h.onProgress);
 
-            expect(progress).toContainEqual({
+            expect(h.progress).toContainEqual({
                 operation: 'block-library',
-                message: '⚠️ The block palette in DA.live will be empty: the site configuration did not take the Blocks list (config 403).',
+                message:
+                    '⚠️ The block palette in DA.live will be empty: the site configuration did not take the Blocks list (config 403).',
             });
+            // And on the list the completion card and the reset's warnings read (EDS-55).
+            expect(result.warnings).toEqual([
+                'The block palette in DA.live will be empty: the site configuration did not take the Blocks list (config 403).',
+            ]);
         });
 
         it('tolerates a source org the SC has no DA.live access to', async () => {
             // 403 means someone else owns the library org; the CDN fallback
             // inside the library build handles it.
-            mockCopyContent.mockRejectedValue(new DaLiveError('Forbidden', 'FORBIDDEN', 403));
+            h.mockCopyContent.mockRejectedValue(new DaLiveError('Forbidden', 'FORBIDDEN', 403));
 
             const result = await executeEdsPipeline(
                 withLibrary({ libraryContentSources: [{ org: 'other-org', site: 'blocks' }] }),
-                services,
-                onProgress
+                h.services,
+                h.onProgress
             );
 
             expect(result.success).toBe(true);
-            expect(mockCreateBlockLibrary).toHaveBeenCalled();
+            expect(h.mockCreateBlockLibrary).toHaveBeenCalled();
         });
 
         it('fails the run on a DA.live error that is not a permission one', async () => {
-            mockCopyContent.mockRejectedValue(new DaLiveError('Gateway timeout', 'GATEWAY_TIMEOUT', 504));
+            h.mockCopyContent.mockRejectedValue(
+                new DaLiveError('Gateway timeout', 'GATEWAY_TIMEOUT', 504)
+            );
 
             const result = await executeEdsPipeline(
                 withLibrary({ libraryContentSources: [{ org: 'other-org', site: 'blocks' }] }),
-                services,
-                onProgress
+                h.services,
+                h.onProgress
             );
 
             expect(result.success).toBe(false);
@@ -498,12 +440,12 @@ describe('executeEdsPipeline - step detail', () => {
         });
 
         it('fails the run on an error that is not a DA.live error at all', async () => {
-            mockCopyContent.mockRejectedValue(new Error('socket hang up'));
+            h.mockCopyContent.mockRejectedValue(new Error('socket hang up'));
 
             const result = await executeEdsPipeline(
                 withLibrary({ libraryContentSources: [{ org: 'other-org', site: 'blocks' }] }),
-                services,
-                onProgress
+                h.services,
+                h.onProgress
             );
 
             expect(result.success).toBe(false);
@@ -514,216 +456,4 @@ describe('executeEdsPipeline - step detail', () => {
     // =========================================================================
     // Publishing the library
     // =========================================================================
-
-    describe('publishing the block library', () => {
-        const withPaths = (paths: string[]) => {
-            mockCreateBlockLibrary.mockResolvedValue({
-                success: true,
-                blocksCount: paths.length,
-                paths,
-            });
-            return { ...params, skipContent: true, includeBlockLibrary: true };
-        };
-
-        it('says how many pages it is publishing', async () => {
-            // A two-minute spinner with a static hint was the complaint; the
-            // count and then the half tell the SC what is happening.
-            await executeEdsPipeline(withPaths(['/a', '/b']), services, onProgress);
-
-            expect(progress).toContainEqual({
-                operation: 'library-publish',
-                message: 'Publishing the block list: 2 pages',
-                subMessage: 'test-owner/test-repo',
-            });
-        });
-
-        it('says page, not pages, when there is one', async () => {
-            await executeEdsPipeline(withPaths(['/a']), services, onProgress);
-
-            expect(find('library-publish', /: 1 page$/)?.message).toBe(
-                'Publishing the block list: 1 page'
-            );
-        });
-
-        it('says it is verifying before it verifies', async () => {
-            await executeEdsPipeline(withPaths(['/a']), services, onProgress);
-
-            expect(progress).toContainEqual({
-                operation: 'library-publish',
-                message: 'Publishing the block list: Checking the block list is live',
-                subMessage: 'test-owner/test-repo',
-            });
-        });
-
-        it('publishes exactly the paths the library produced', async () => {
-            await executeEdsPipeline(withPaths(['/a', '/b']), services, onProgress);
-
-            expect(mockPublishLibraryPaths).toHaveBeenCalledWith(
-                services.helixService,
-                'test-owner',
-                'test-repo',
-                ['/a', '/b'],
-                services.logger
-            );
-        });
-
-        it('reads the site config when the library did not preview', async () => {
-            // The bulk job reports success for paths that matched nothing, so a
-            // library that cannot preview a single block still logs "published".
-            // The site config is the state nobody can inspect afterwards.
-            mockVerifyLibraryPreviewed.mockResolvedValue(false);
-
-            await executeEdsPipeline(withPaths(['/a']), services, onProgress);
-
-            expect(mockReadSiteConfig).toHaveBeenCalledWith('test-org', 'test-site');
-        });
-
-        it('does not go looking for a cause when it previewed', async () => {
-            await executeEdsPipeline(withPaths(['/a']), services, onProgress);
-
-            expect(mockReadSiteConfig).not.toHaveBeenCalled();
-        });
-
-        it('publishes AND verifies with no progress callback at all', async () => {
-            // Both halves: the step reports between the publish and the verify,
-            // and a run with no callback must still reach the verify.
-            const result = await executeEdsPipeline(withPaths(['/a']), services);
-
-            expect(result.success).toBe(true);
-            expect(mockPublishLibraryPaths).toHaveBeenCalled();
-            expect(mockVerifyLibraryPreviewed).toHaveBeenCalled();
-        });
-
-        it('does not fail the run when the library publish throws', async () => {
-            // The library config exists; publishing it can be retried.
-            mockPublishLibraryPaths.mockRejectedValue(new Error('publish refused'));
-
-            const result = await executeEdsPipeline(withPaths(['/a']), services, onProgress);
-
-            expect(result.success).toBe(true);
-            expect(result.libraryPaths).toEqual(['/a']);
-        });
-    });
-
-    // =========================================================================
-    // Publishing the copied sheets
-    // =========================================================================
-
-    describe('publishing the copied sheets', () => {
-        // A sheet written to DA.live is served only once it is previewed and
-        // published, and the whole-site publish never touches one: it publishes
-        // .html documents and skips metadata, redirects and placeholders by name.
-        const SHEETS = ['/metadata.json', '/placeholders/cart.json'];
-        const withSheets = (sheetPaths: string[]) =>
-            mockCopyContentFromSource.mockResolvedValue({
-                success: true,
-                totalFiles: 3,
-                copiedFiles: ['/page', '/metadata', '/placeholders/cart'],
-                failedFiles: [],
-                sheetPaths,
-                codePathsOnSource: [],
-            });
-
-        beforeEach(() => {
-            mockPublishSheetPaths.mockResolvedValue({ published: 2, failed: 0 });
-        });
-
-        it('publishes exactly the sheet paths the copy reported, one page at a time', async () => {
-            withSheets(SHEETS);
-
-            await executeEdsPipeline(params, services, onProgress);
-
-            expect(mockPublishSheetPaths).toHaveBeenCalledTimes(1);
-            expect(mockPublishSheetPaths).toHaveBeenCalledWith(
-                services.helixService,
-                'test-owner',
-                'test-repo',
-                SHEETS,
-                services.logger
-            );
-        });
-
-        it('publishes them after the pages', async () => {
-            withSheets(SHEETS);
-            const order: string[] = [];
-            mockPublishAllSiteContent.mockImplementation(async () => {
-                order.push('pages');
-            });
-            mockPublishSheetPaths.mockImplementation(async () => {
-                order.push('sheets');
-                return { published: 2, failed: 0 };
-            });
-
-            await executeEdsPipeline(params, services, onProgress);
-
-            expect(order).toStrictEqual(['pages', 'sheets']);
-        });
-
-        it('says how many sheets it is publishing', async () => {
-            withSheets(SHEETS);
-
-            await executeEdsPipeline(params, services, onProgress);
-
-            expect(progress).toContainEqual({
-                operation: 'sheet-publish',
-                message: 'Publishing the sheets: 2 sheets',
-                subMessage: 'test-owner/test-repo',
-            });
-        });
-
-        it('says sheet, not sheets, when there is one', async () => {
-            withSheets(['/metadata.json']);
-
-            await executeEdsPipeline(params, services, onProgress);
-
-            expect(find('sheet-publish', /: 1 sheet$/)?.message).toBe(
-                'Publishing the sheets: 1 sheet'
-            );
-        });
-
-        it('publishes nothing when the copy wrote no sheet', async () => {
-            withSheets([]);
-
-            await executeEdsPipeline(params, services, onProgress);
-
-            expect(mockPublishSheetPaths).not.toHaveBeenCalled();
-            expect(progress.some((p) => p.operation === 'sheet-publish')).toBe(false);
-        });
-
-        it('publishes nothing when the run was told not to publish', async () => {
-            withSheets(SHEETS);
-
-            await executeEdsPipeline({ ...params, skipPublish: true }, services, onProgress);
-
-            expect(mockPublishSheetPaths).not.toHaveBeenCalled();
-        });
-
-        it('does not fail the run when the sheet publish throws', async () => {
-            // The sheets are in DA.live; publishing them can be retried.
-            withSheets(SHEETS);
-            mockPublishSheetPaths.mockRejectedValue(new Error('publish refused'));
-
-            const result = await executeEdsPipeline(params, services, onProgress);
-
-            expect(result.success).toBe(true);
-        });
-
-        it('keeps the sheets out of the block library publish, and the library out of the sheets', async () => {
-            withSheets(SHEETS);
-
-            await executeEdsPipeline(
-                { ...params, includeBlockLibrary: true },
-                services,
-                onProgress
-            );
-
-            expect(mockPublishSheetPaths.mock.calls.map((call) => call[3])).toStrictEqual([SHEETS]);
-            expect(mockPublishLibraryPaths.mock.calls.map((call) => call[3])).toStrictEqual([
-                ['/.da/library/blocks'],
-            ]);
-            expect(mockPublishSheetPaths.mock.invocationCallOrder[0]).toBeLessThan(
-                mockPublishLibraryPaths.mock.invocationCallOrder[0]
-            );
-        });
-    });
 });

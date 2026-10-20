@@ -486,8 +486,9 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
             repoOwner: 'demo-org',
             repoName: 'demo-repo',
             demoCaveats: ['Product links on this storefront use a different address format.'],
-            missingPages:
+            pipelineWarnings: [
                 '2 pages the source has are missing from this storefront: /cart, /checkout',
+            ],
         });
         const context = createContext();
 

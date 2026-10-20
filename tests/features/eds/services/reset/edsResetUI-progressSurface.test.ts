@@ -209,7 +209,7 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
             {
                 success: true,
                 leftoverPages: { status: 'not-listed', removed: 0, summary: leftover },
-                missingPages: missing,
+                pipelineWarnings: [leftover, missing],
             },
             { progress: 'modal' }
         );

@@ -54,13 +54,17 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/edsPipeline', () => ({
-    executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true,
-        contentFilesCopied: 5,
-        libraryPaths: [],
-    }),
-}));
+jest.mock('@/features/eds/services/edsPipeline', () => {
+    // Typed through the canonical fake (EDS-55): a factory may load a module, not import one.
+    const { createMockPipelineResult } = jest.requireActual<
+        typeof import('../../../../helpers/pipelineResultFake')
+    >('../../../../helpers/pipelineResultFake');
+    return {
+        executeEdsPipeline: jest
+            .fn()
+            .mockResolvedValue(createMockPipelineResult({ contentFilesCopied: 5 })),
+    };
+});
 
 // Mock fetch for placeholder files
 global.fetch = jest.fn().mockResolvedValue({ ok: false });
