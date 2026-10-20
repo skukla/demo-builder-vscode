@@ -17,6 +17,9 @@
  * is `ask` (which would prompt in the UI), this resolves to the SAFE `disabled`
  * action — it records the upstream marker without overwriting local edits, and
  * reports the library as deferred. Set the behavior to `enabled` to apply.
+ *
+ * A caller with a person to ask (the Updates modal, PL-80) passes `questions`: the
+ * `ask` setting and a template merge conflict are then asked rather than defaulted.
  */
 
 import * as vscode from 'vscode';
@@ -36,6 +39,7 @@ import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { applyIntegrationUpdates } from '@/features/updates/services/integrationUpdates';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
+import { isThinLayerProject } from '@/features/updates/services/thinLayerUpdate';
 import {
     emptyResult,
     type ApplyUpdatesResult,
@@ -103,17 +107,37 @@ async function applyForkSync(
  */
 export type TemplateConflictPolicy = 'stop' | 'reset';
 
+/**
+ * What a person is asked during an apply (PL-80): the Updates modal passes these, and
+ * asks them in its progress window. An agent passes none, and the defaults decide: a
+ * template conflict follows `templateConflicts`, a library under `ask` is kept.
+ */
+export interface UpdateQuestions {
+    /** A template update conflicts with the SC's edits: replace those files with the template's? */
+    resetTemplateOnConflict(project: Project, conflicts: string[]): Promise<boolean>;
+    /** A block library under the `ask` sync setting: replace its blocks with the new ones? */
+    replaceLibraryBlocks(libraryName: string, project: Project): Promise<boolean>;
+}
+
 export interface ApplyUpdatesOptions {
     templateConflicts?: TemplateConflictPolicy;
+    questions?: UpdateQuestions;
 }
 
 async function syncTemplateHeadless(
     svc: TemplateSyncService,
     project: Project,
     policy: TemplateConflictPolicy,
+    questions?: UpdateQuestions,
 ): Promise<TemplateSyncResult> {
     const merged = await svc.syncWithTemplate(project, { strategy: 'merge' });
-    if (merged.success || !merged.conflicts?.length || policy !== 'reset') return merged;
+    if (merged.success || !merged.conflicts?.length) return merged;
+    // A storefront on the tested boilerplate is never offered a reset to the bare
+    // template: it would drop Demo Builder's fixes (EDS-51); the service refuses it too.
+    const reset =
+        policy === 'reset' ||
+        (!isThinLayerProject(project) && (await questions?.resetTemplateOnConflict(project, merged.conflicts)));
+    if (!reset) return merged;
     return svc.syncWithTemplate(project, { strategy: 'reset' });
 }
 
@@ -122,6 +146,7 @@ async function applyTemplate(
     ctx: UpdateContext,
     onProgress?: OnProgress,
     policy: TemplateConflictPolicy = 'stop',
+    questions?: UpdateQuestions,
 ): Promise<{ result: CategoryResult; succeededPaths: Set<string> }> {
     const result = emptyResult();
     const succeededPaths = new Set<string>();
@@ -130,7 +155,7 @@ async function applyTemplate(
     for (const { project } of items) {
         onProgress?.(S.updatingTemplate.label, project.name);
         try {
-            const r = await syncTemplateHeadless(svc, project, policy);
+            const r = await syncTemplateHeadless(svc, project, policy, questions);
             if (r.success) {
                 await svc.updateLastSyncedCommit(project, r.syncedCommit, ctx.stateManager);
                 succeededPaths.add(project.path);
@@ -235,15 +260,19 @@ async function applyAddons(
     succeededTemplatePaths: Set<string>,
     ctx: UpdateContext,
     onProgress?: OnProgress,
+    questions?: UpdateQuestions,
 ): Promise<CategoryResult> {
     const result = emptyResult();
 
-    // Headless 'ask' → safe 'disabled' (record marker; do not overwrite local edits).
+    // 'ask' asks a person when there is one; headless, it is the safe 'disabled'
+    // (record the marker; do not overwrite local edits).
     const setting = vscode.workspace
         .getConfiguration('demoBuilder.blockLibraries')
         .get<'ask' | 'enabled' | 'disabled'>('syncBehavior', 'ask');
-    const effectiveBehavior: 'enabled' | 'disabled' =
-        setting === 'enabled' ? 'enabled' : 'disabled';
+    const behaviorFor = async (item: UpdateSelections['blockLibrary'][number]): Promise<'enabled' | 'disabled'> => {
+        if (setting !== 'ask') return setting === 'enabled' ? 'enabled' : 'disabled';
+        return (await questions?.replaceLibraryBlocks(item.library.name, item.project)) ? 'enabled' : 'disabled';
+    };
 
     for (const item of blockLibraries) {
         if (shouldSkipBlockLibrary(item.library, item.project, succeededTemplatePaths)) {
@@ -254,12 +283,12 @@ async function applyAddons(
         }
         onProgress?.(S.updatingAddOns.label, item.library.name);
         try {
-            const leftOut = await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
+            const behavior = await behaviorFor(item);
+            const leftOut = await applyBlockLibraryUpdateResolved(item, behavior, ctx);
             const note = describeUpdateLeftOut(item, leftOut);
             if (note) (result.leftOut ??= []).push(note);
-            // 'ask' always resolves to 'disabled' above, so the setting alone says
-            // whether this was a deferral rather than the user's own choice.
-            if (setting === 'ask') {
+            // Kept under 'ask', by a person's answer or by the headless default: not applied.
+            if (setting === 'ask' && behavior === 'disabled') {
                 (result.deferred ??= []).push(item.library.name);
             } else {
                 result.successCount++;
@@ -351,6 +380,7 @@ export async function applyUpdatesHeadless(
         ctx,
         onProgress,
         options.templateConflicts,
+        options.questions,
     );
     const component = await applyComponents(selections.component, ctx, onProgress);
     const adobeMcp = await applyAdobeMcp(selections.adobeMcp, ctx, onProgress);
@@ -360,6 +390,7 @@ export async function applyUpdatesHeadless(
         succeededPaths,
         ctx,
         onProgress,
+        options.questions,
     );
 
     const blockLibraryInstall = await applyBlockLibraryInstalls(
