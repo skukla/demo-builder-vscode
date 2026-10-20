@@ -237,6 +237,8 @@ Tracked in `.rptc/plans/thin-layer-storefront-adr-006/`. As of 2026-06-10 (live)
 
 **Live on develop** (updated 2026-08-14). Three demo packages drive the thin-layer pipeline — CitiSignal (`citisignal-b2b` ledger), `custom` (`b2b` ledger), and `bodea` (added 2026-08-14, hidden; shares the `b2b` ledger + LKG pin, with its brand delta shipped additively via the bodea-blocks library and the brand-assets vendor point). All three template on `adobe-commerce/boilerplate-b2b-template` and pin via `b2b/last-known-good`. The mechanism still supports multi-canonical patches repos (per-ledger `canonical` + `lkgFile`; the gate clones each unique canonical once and advances per-ledger LKG pointers independently). The earlier "dormant until Step 5b" framing is now historical.
 
+**A colleague's storefront follows the LKG for Adobe's half (2026-10-20, EDS-56).** A storefront added from a colleague's repository is not thin-layer (no `lkgSource`; its template track follows the colleague). When the Adobe commit its code started from is known (a saved package's `builtWith.lkg`, or its first commit matched to one of the template's commits), Check for Updates also offers "Adobe boilerplate": the template's change from that commit to the LKG, applied 3-way, recorded in its own `boilerplateBase` field. Demo Builder's patches are not re-applied on this track, and a conflict stops rather than resetting. Every template change, on either track, leaves `.github` out: generated repositories carry none of Adobe's CI. See `src/features/updates/README.md`.
+
 ---
 
 ## Cross-References

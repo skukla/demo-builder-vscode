@@ -29,6 +29,10 @@ mainline) is newer than a storefront a colleague wants to add, what should we do
    - A repository GENERATED from the template (Jen's): there is no shared git history, so a
      merge is impossible and the only mechanical path is a reset onto the current
      boilerplate, which throws away the colleague's customisations. Not offered.
+     **Corrected 2026-10-20 (EDS-56):** a reset was not the only path. The 3-way apply of the
+     template's change since a known commit (`5d805a57a`, 2026-09-15) needs no shared history
+     and keeps the edits; Check for Updates' "Adobe boilerplate" row now uses it on a
+     generated repository whose starting commit is known.
 4. **Never refuse on age.** A floor exists only as a warning: below the oldest boilerplate
    our drop-in and configuration assumptions were verified on, the card says "This storefront
    is older than the versions Demo Builder is tested with; some demo features may not work."

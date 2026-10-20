@@ -90,6 +90,32 @@ throws by name if a change ever makes this path reach for VS Code. Change the up
 and the canary runs your change, from whatever branch the patches repo's `EXTENSION_REF`
 variable names.
 
+## A template change never touches `.github`
+
+Every template update (and the Adobe boilerplate update below) leaves the template's
+`.github` out of the change (`templateMergeBase.ts`). A repository generated from the B2B
+template has none of Adobe's CI workflows, because the template's own `cleanup-on-create`
+workflow deletes them, so an edit to one stops the update on a file the storefront does
+not have. Measured 2026-10-20: Adobe's change from 71a67e0 to the tested 48bed04 edits 14
+of them, and our own storefront repositories keep only `sync-from-upstream.yml`.
+
+## A colleague's storefront follows two tracks (EDS-56)
+
+A storefront added from a colleague's demo follows the colleague's repository: the
+template row, worded "Changes from kmanns/justrite". When the Adobe commit its code
+started from is known, it also follows our tested boilerplate: the "Adobe boilerplate"
+row, which applies Adobe's change from that commit to the patches repo's last-known-good,
+3-way, keeping the SC's and the colleague's edits. The two are independent; one Apply
+runs the colleague's first, each its own commit.
+
+| | |
+|---|---|
+| The base | `boilerplateBase` in the storefront's metadata, its own field: never `lastSyncedCommit` (the colleague's track) or `lkgSource` (which would make the project thin-layer) |
+| Found by | `boilerplateBase.ts`: a saved package's `builtWith.lkg`; else GitHub says the colleague's repository was made from one of our templates and its first commit has the same files as one of that template's commits (`.github` aside). JustRite: 71a67e0, the 39th commit back |
+| Recorded | by the check (`boilerplateCheck.ts`), the one path, so new and existing projects get it alike |
+| Kept true | reset forgets it; after the colleague's update, their `demo.demo-builder.json` moves it forward when it is ahead (`boilerplateBaseRefresh.ts`); "Save as demo package" writes it as `builtWith.lkg`; changing the demo source keeps it (the code did not change) |
+| Never | a reset on a conflict, Demo Builder's fixes re-applied (D6), or a move backwards |
+
 ## A selected block library is installed here, not only at creation
 
 Ticking a block library on a project that already exists only records the id in

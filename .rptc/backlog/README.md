@@ -266,7 +266,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-13f` | feature | └ [Shared demos carry their boilerplate, their patches and a way to stay fixed](2026-09-14-shared-demo-patches-and-provenance.md) | EDS-13a, EDS-13b | high | active |
 | `EDS-13g` | feature | └ [A headless project keeps its code in a repository of the SC's own, as Edge Delivery does](2026-09-15-headless-storefront-repository.md) | — | med | backlog |
 | `EDS-40` | fix | └ [A storefront copied from a colleague's demo loses the demo's label sheets](2026-10-12-added-demo-copy-drops-the-label-sheets.md) | — | med | active |
-| `EDS-56` | feature | └ [A colleague's storefront gets the tested boilerplate updates too, when it qualifies](2026-10-20-colleague-storefront-tested-boilerplate-updates.md) | — | high | planned |
+| `EDS-56` | feature | └ [A colleague's storefront gets the tested boilerplate updates too, when it qualifies](2026-10-20-colleague-storefront-tested-boilerplate-updates.md) | — | high | active |
 | `EDS-14` | fix | [Template update falls back to a full reset on conflict, overwriting the SC's own edits](2026-09-11-template-update-conflict-fallback-overwrites-edits.md) | — | med | shipped |
 | `EDS-15` | fix | ["Cleanup DA.live sites" builds its DA.live calls on the Adobe token DA.live refuses](2026-09-13-dalive-cleanup-command-token.md) | — | low | shipped |
 | `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | — | high | shipped |

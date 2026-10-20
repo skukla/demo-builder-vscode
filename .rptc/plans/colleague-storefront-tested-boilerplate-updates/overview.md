@@ -54,7 +54,7 @@ resets.
 | D2 | This extends the 2026-10-04 ruling ("fork sync only for forks, never reset a generated repository onto the current boilerplate"). That ruling assumed a generated repository could only be modernised by a reset (`step-05-version-gap.md:29-31`); the 3-way apply (`5d805a57a`, 2026-09-15) is a fourth option the owner was not shown. It is not a reset, so the ruling's letter holds | owner, 2026-10-20 | confirmed |
 | D3 | The Adobe base lives in its own storefront metadata field (`boilerplateBase: { template, commit, lkgFile }`), never in `lastSyncedCommit` or `lkgSource` | plan | proposed |
 | D4 | Keeping the base honest when the colleague updates their own boilerplate: A (re-read the colleague's description file) where it records a base, else B (let the 3-way apply absorb the replay). Where the file lives was checked (step 05) | owner, 2026-10-20 | approved |
-| D5 | Storefronts with no recorded base (JustRite) are out of scope; working the base out by matching files is a follow-up item | plan | proposed |
+| D5 | Storefronts with no recorded base (JustRite) | owner, 2026-10-20: "figure out the JustRite thing first" | built: the base is found by matching the colleague's first commit to the template's history (see As built) |
 | D6 | The opt-in fixes are not re-applied by this update; the storefront report keeps offering them | plan | proposed |
 
 ## Steps
@@ -91,3 +91,27 @@ to a repository the SC does not own. No ownership check was found. Owner, 2026-1
 now. Fixed on `fix/fork-sync-own-repos`: the sync is offered only for a repository the
 signed-in account administers (GitHub's `permissions.admin` on the read the check already
 makes), so an SC's own fork, including a pre-2026-09-14 copy, keeps it.
+
+## As built (2026-10-20, branch `feature/eds-56-colleague-boilerplate`)
+
+- **JustRite qualifies.** GitHub says kmanns/justrite was made from
+  adobe-commerce/boilerplate-b2b-template on 2026-09-23. Its first commit has every file of
+  template commit 71a67e0 (2026-08-11), all 3,342, except `.github`: the template's
+  `cleanup-on-create` workflow deletes Adobe's CI when a repository is made. So the lookup
+  compares the top-level entries with `.github` left out, walking back from the day the
+  repository was made (the 39th commit for JustRite). Verified live with the real code. Our
+  tested version 48bed04 is 73 commits ahead, 300 files.
+- **`.github` is left out of every template change**, not only this track. Adobe's change
+  71a67e0..48bed04 edits 14 workflow files; generated repositories (JustRite's, and our own
+  skukla/my-commerce-demo and skukla/patch-canary-b2b) have none of them, so each would stop
+  the update. This was a defect in the existing template update too.
+- **Departures from the steps:**
+  - Step 01: creation does not write the base; the check records it the first time, the
+    one path for new and existing projects.
+  - Step 03: the row reads "Adobe boilerplate, Tested version, updates the live site",
+    matching the window's wording since PL-80's review.
+  - Step 05: changing the demo source KEEPS the base: the SC's code did not change, and
+    the base describes that code. Reset forgets it.
+  - Step 06: the report reads the base and never records it (a read).
+- **Not verified live:** an Apply onto a real storefront (step 04's done-when). It is a
+  cloud write; release test plan row 1.18 names it, on a throwaway storefront.

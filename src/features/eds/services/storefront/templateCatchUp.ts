@@ -7,8 +7,11 @@
  * only while it is behind. A fork shares the template's history, so GitHub's
  * merge-upstream brings the template's changes in and keeps the SC's own commits,
  * and stops on a conflict without changing anything. A repository GENERATED from a
- * template shares no history; the only way to modernise it would overwrite the
- * SC's work, so it is never offered.
+ * template shares no history, so merge-upstream cannot reach it; it is never
+ * offered here. Its Adobe half is updated instead by Check for Updates' "Adobe
+ * boilerplate" row, a 3-way apply of Adobe's change since the commit it started
+ * from (EDS-56, `features/updates/services/boilerplateBase.ts`). This header used
+ * to say that the only way to modernise one would overwrite the SC's work.
  *
  * Pure over the fork status `ForkSyncService.checkForkStatus` answers.
  *

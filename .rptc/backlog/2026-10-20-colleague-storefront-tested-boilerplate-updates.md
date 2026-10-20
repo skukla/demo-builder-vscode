@@ -5,7 +5,7 @@ area: eds
 parent: EDS-13
 needs: []
 value: high
-status: planned
+status: active
 ---
 
 # A colleague's storefront gets the tested boilerplate updates too, when it qualifies
