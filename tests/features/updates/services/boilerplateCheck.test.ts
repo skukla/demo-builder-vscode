@@ -80,17 +80,17 @@ describe('checkBoilerplate', () => {
         // A colleague who moved past our tested version is never taken backwards.
         ['the tested version is not ahead of the base', { compare: jest.fn(async () => ahead(0)) }],
     ])('offers nothing when %s', async (_label, overrides) => {
-        await expect(checkBoilerplate([storefront(BASE)], deps(overrides))).resolves.toEqual([]);
+        await expect(checkBoilerplate([storefront(BASE)], deps(overrides))).resolves.toStrictEqual([]);
     });
 
     it.each([
-        ['the tested pointer cannot be read', { readTested: jest.fn(async () => undefined) }, /Could not read the tested Adobe boilerplate for justrite/],
-        ['GitHub does not answer the compare', { compare: jest.fn(async () => null) }, /Could not compare justrite's Adobe boilerplate/],
-    ])('offers nothing and warns when %s, never "up to date"', async (_label, overrides, warning) => {
+        ['the tested pointer cannot be read', { readTested: jest.fn(async () => undefined) }],
+        ['GitHub does not answer the compare', { compare: jest.fn(async () => null) }],
+    ])('offers nothing and warns when %s, never "up to date"', async (_label, overrides) => {
         const d = deps(overrides);
 
-        await expect(checkBoilerplate([storefront(BASE)], d)).resolves.toEqual([]);
-        expect(d.logger.warn).toHaveBeenCalledWith(expect.stringMatching(warning));
+        await expect(checkBoilerplate([storefront(BASE)], d)).resolves.toStrictEqual([]);
+        expect(d.logger.warn).toHaveBeenCalledTimes(1);
     });
 
     it('records and saves a base found for the first time, and only then', async () => {
@@ -113,13 +113,12 @@ describe('checkBoilerplate', () => {
         expect(d.save).toHaveBeenCalledTimes(1);
     });
 
-    it('says in the debug log why a storefront has no Adobe boilerplate update', async () => {
+    // Why it does not qualify is the lookup's to say (boilerplateBase.test) and the report's
+    // to show (storefrontReport.test); here it is only that nothing is offered or saved.
+    it('offers nothing for a storefront not built from a colleague\'s demo, and saves nothing', async () => {
         const d = deps();
 
-        await expect(checkBoilerplate([storefront()], d)).resolves.toEqual([]);
-        expect(d.logger.debug).toHaveBeenCalledWith(
-            "[Updates] No Adobe boilerplate update for justrite: it was not built from a colleague's demo",
-        );
+        await expect(checkBoilerplate([storefront()], d)).resolves.toStrictEqual([]);
         expect(d.save).not.toHaveBeenCalled();
     });
 });

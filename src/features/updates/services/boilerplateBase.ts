@@ -48,7 +48,7 @@ export interface BoilerplateBase {
     found: 'built-with' | 'first-commit';
 }
 
-export type BaseLookup = { base: BoilerplateBase; recorded: boolean } | { reason: string };
+type BaseLookup = { base: BoilerplateBase; recorded: boolean } | { reason: string };
 
 /** What the lookup reads from GitHub. Each read answers undefined when it could not. */
 export interface BoilerplateGitHub {
@@ -61,7 +61,7 @@ export interface BoilerplateGitHub {
     topLevel(repo: RepositoryRef, tree: string): Promise<Record<string, string> | undefined>;
 }
 
-export interface BoilerplateBaseDeps {
+interface BoilerplateBaseDeps {
     github: BoilerplateGitHub;
     logger: Pick<Logger, 'debug'>;
     /** The catalog; defaults to the bundled one. */
