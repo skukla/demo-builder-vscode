@@ -38,7 +38,7 @@ import type { Logger } from '@/types/logger';
  */
 type MissingPagesStatus = 'complete' | 'missing' | 'not-checked';
 
-export interface MissingPagesResult {
+interface MissingPagesResult {
     status: MissingPagesStatus;
     /** What the source serves and the storefront does not, as a browser asks for it. */
     missing: string[];
