@@ -8,11 +8,14 @@
  *    normal check offers the newer update. A stale fix never goes out.
  * 2. Only the clash changed: compared with what the update applied when the clash was
  *    kept (`KeptClashRecord.applied`), the copy may differ only in the clashing files.
+ *    It is measured from the commit the clash was kept on, so a commit made since still
+ *    counts: the git-sync hook committed and pushed JustRite's whole update at the AI's
+ *    first edit (2026-10-21), and finishing then refused what was already on GitHub.
  * 3. Fixed: no conflict marker is left in those files, and each JavaScript or JSON one
  *    parses. A merge that parses can still be wrong; this catches broken code, not that.
  *
  * Then Demo Builder's fixes ride in the commit on a tested-boilerplate storefront, the
- * commit is pushed with the SC's token (the push the SC confirmed by applying or by the
+ * commit (when anything is left to commit) is pushed with the SC's token (the push the SC confirmed by applying or by the
  * agent tool's consent), and the version is recorded as the clean path records it.
  *
  * Leaving undoes the copy to its last commit and forgets the clash.
@@ -29,6 +32,7 @@ import {
     clearKeptClash,
     CONFLICT_MARKER_RE,
     readKeptClash,
+    type KeptClashRecord,
 } from '@/features/eds/services/storefront/keptClashMark';
 import { readBoilerplateBase, writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import { openLocalCopy, type LocalCopy } from '@/features/updates/services/localStorefrontRefresh';
@@ -42,6 +46,8 @@ import { BOILERPLATE_COMMIT, TEMPLATE_COMMIT } from '@/features/updates/services
 import { patchesNotPutBack, reapplyPatchesInCheckout } from '@/features/updates/services/thinLayerUpdate';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { Project } from '@/types/base';
+
+const COMMIT_SHA = /^[0-9a-f]{40}$/;
 
 export type FinishOutcome =
     | { kind: 'finished'; commit: string; files: string[]; notes: string[] }
@@ -113,12 +119,27 @@ async function forget(project: Project, copy: LocalCopy | undefined): Promise<vo
     writePendingClash(project, undefined);
 }
 
+/**
+ * The commit the clash was kept on: as recorded, or, for a clash kept before that was
+ * recorded, the last commit made before it was kept.
+ */
+async function keptOn(copy: LocalCopy, record: KeptClashRecord, clash: PendingClash): Promise<string | undefined> {
+    if (record.head && COMMIT_SHA.test(record.head)) return record.head;
+    const keptAt = new Date(clash.keptAt);
+    if (Number.isNaN(keptAt.getTime())) return undefined;
+    const found = await copy.git(`git rev-list -1 --first-parent --before="${keptAt.toISOString()}" HEAD`, TIMEOUTS.QUICK);
+    const commit = found.stdout.trim();
+    return found.code === 0 && COMMIT_SHA.test(commit) ? commit : undefined;
+}
+
 /** The checks before a push: the reason it cannot finish, or undefined. */
 async function readiness(copy: LocalCopy, clash: PendingClash, ctx: UpdateContext): Promise<string | undefined> {
     const record = await readKeptClash(copy.storefrontPath);
     if (!record) return "the local copy no longer says what the update changed; leave it and update again";
+    const since = await keptOn(copy, record, clash);
+    if (!since) return 'the local copy no longer shows where the update started; leave it and update again';
     if ((await copy.git('git add -A', TIMEOUTS.NORMAL)).code !== 0) return 'the local copy could not be staged';
-    const now = await stagedChange(copy);
+    const now = await stagedChange(copy, since);
     if (!now) return 'the local copy could not be read';
     const stray = strayChange(now, record.applied, clash.files);
     if (stray) return `${stray} changed too, and only ${clash.files.join(', ')} may`;
@@ -134,11 +155,13 @@ async function commitAndPush(copy: LocalCopy, clash: PendingClash, project: Proj
     const patched = clash.fixes ? await reapplyPatchesInCheckout(copy.storefrontPath, project, ctx.logger) : [];
     if (clash.fixes) await copy.git('git add -A', TIMEOUTS.NORMAL);
     const message = clash.track === 'boilerplate' ? BOILERPLATE_COMMIT : TEMPLATE_COMMIT;
-    if ((await copy.git(`git commit --quiet -m "${message}"`, TIMEOUTS.NORMAL)).code !== 0) return 'the commit failed';
+    // Nothing left to commit when the whole fixed update was committed already.
+    const staged = (await copy.git('git diff --cached --quiet', TIMEOUTS.QUICK)).code !== 0;
+    if (staged && (await copy.git(`git commit --quiet -m "${message}"`, TIMEOUTS.NORMAL)).code !== 0) return 'the commit failed';
     const pushed = await copy.git(`git push --quiet "${copy.remoteUrl}" HEAD:${copy.branch}`, TIMEOUTS.LONG);
     if (pushed.code !== 0) {
         // Not on GitHub, so not done: put the copy back to staged-and-fixed for another try.
-        await copy.git('git reset --soft --quiet HEAD~1', TIMEOUTS.QUICK);
+        if (staged) await copy.git('git reset --soft --quiet HEAD~1', TIMEOUTS.QUICK);
         return 'GitHub refused the push';
     }
     const commit = (await copy.git('git rev-parse HEAD', TIMEOUTS.QUICK)).stdout.trim();

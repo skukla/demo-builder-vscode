@@ -25,10 +25,13 @@ import {
     updateContext,
     write,
 } from './keptClash.testUtils';
+import { execFileSync } from 'child_process';
+import { markKeptClash, readKeptClash } from '@/features/eds/services/storefront/keptClashMark';
 import { readBoilerplateBase, writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import type { PendingClash } from '@/features/updates/services/pendingClash';
 import type { FinishDeps } from '@/features/updates/services/pendingClashFinish';
 import type { Project } from '@/types/base';
+import { gitEnv } from '../../../helpers/realGit';
 
 const FIXED_HEADER = "// nav start\nconst dropDown = 'drop-down line with aria attributes plus the quote icon';\n// nav end\n";
 
@@ -60,6 +63,14 @@ async function keptProject(): Promise<{ project: Project; deps: TestDeps }> {
 
 const pushedHead = () => git(fx.scBare, 'rev-parse', 'main');
 
+/** What the project's git-sync hook did before it learned to wait: commit everything, push. */
+function hookCommitsAndPushes(at?: Date): void {
+    git(fx.local, 'add', '-A');
+    const env = { ...gitEnv(fx.home), ...(at ? { GIT_COMMITTER_DATE: at.toISOString(), GIT_AUTHOR_DATE: at.toISOString() } : {}) };
+    execFileSync('git', ['commit', '-q', '-m', 'AI: sync files'], { cwd: fx.local, env, stdio: 'ignore' });
+    git(fx.local, 'push', '-q', fx.scBare, 'HEAD:main');
+}
+
 describe('finishClash', () => {
     it('pushes the fixed update as one commit and records the Adobe version', async () => {
         const { project, deps } = await keptProject();
@@ -77,6 +88,47 @@ describe('finishClash', () => {
         expect(readPendingClash(project)).toBeUndefined();
         await expect(hasKeptClash(fx.local)).resolves.toBe(false);
         expect(deps.ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    // The git-sync hook committed and pushed JustRite's whole update at the AI's first
+    // edit (2026-10-21); finishing then refused it as changing files beyond the clash.
+    it('finishes an update the git-sync hook already committed and pushed, with no second commit', async () => {
+        const { project, deps } = await keptProject();
+        write(fx.local, 'blocks/header/header.js', FIXED_HEADER);
+        hookCommitsAndPushes();
+        const pushedByHook = pushedHead();
+
+        const outcome = await finishClash(project, deps);
+
+        expect(outcome).toEqual({ kind: 'finished', commit: pushedByHook, files: ['blocks/header/header.js'], notes: [] });
+        expect(pushedHead()).toBe(pushedByHook);
+        expect(readBoilerplateBase(project)?.commit).toBe(fx.t2);
+        expect(readPendingClash(project)).toBeUndefined();
+        await expect(hasKeptClash(fx.local)).resolves.toBe(false);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    // A clash kept before the record named its commit: the last commit before it was kept.
+    it('finds where a clash kept before the record named its commit started, by when it was kept', async () => {
+        const { project, deps } = await keptProject();
+        const record = await readKeptClash(fx.local);
+        await markKeptClash(fx.local, { note: record?.note ?? '', applied: record?.applied ?? {} });
+        write(fx.local, 'blocks/header/header.js', FIXED_HEADER);
+        hookCommitsAndPushes(new Date(Date.now() + 60_000));
+
+        await expect(finishClash(project, deps)).resolves.toMatchObject({ kind: 'finished' });
+        expect(readBoilerplateBase(project)?.commit).toBe(fx.t2);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('still refuses a hook-committed fix that changed a file beyond the clash', async () => {
+        const { project, deps } = await keptProject();
+        write(fx.local, 'blocks/header/header.js', FIXED_HEADER);
+        write(fx.local, 'scripts/scripts.js', 'scripts edited by hand\n');
+        hookCommitsAndPushes();
+
+        await expect(finishClash(project, deps)).resolves.toEqual({
+            kind: 'not-fixed',
+            reason: 'scripts/scripts.js changed too, and only blocks/header/header.js may',
+        });
     }, REAL_GIT_TIMEOUT_MS);
 
     it('refuses while a conflict marker is left, pushing nothing', async () => {

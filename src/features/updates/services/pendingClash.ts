@@ -130,9 +130,13 @@ async function applyInCopy(copy: LocalCopy, request: KeepClashRequest, token: st
 /**
  * Each staged path and its git object id (null for a deletion): what the update changed
  * outside the clash, as `git diff --cached --raw` reports it in one call.
+ *
+ * @param since - the commit to measure from: the copy's latest by default, or the one
+ *   the clash was kept on, so what was committed since still counts
  */
-export async function stagedChange(copy: LocalCopy): Promise<Record<string, string | null> | undefined> {
-    const raw = await copy.git('git diff --cached --raw -z --no-renames --diff-filter=ADM', TIMEOUTS.NORMAL);
+export async function stagedChange(copy: LocalCopy, since = 'HEAD'): Promise<Record<string, string | null> | undefined> {
+    if (since !== 'HEAD' && !COMMIT_SHA.test(since)) return undefined;
+    const raw = await copy.git(`git diff --cached --raw -z --no-renames --diff-filter=ADM ${since}`, TIMEOUTS.NORMAL);
     if (raw.code !== 0) return undefined;
     return parseRawDiff(raw.stdout);
 }
@@ -171,7 +175,8 @@ export async function keepClash(project: Project, request: KeepClashRequest, ctx
         return notKept('what the update changed could not be read back');
     }
     const note = `${track} update ${clash.base.slice(0, 7)}..${clash.target.slice(0, 7)}: ${conflicts.join(', ')}`;
-    await markKeptClash(copy.storefrontPath, { note, applied });
+    const head = (await copy.git('git rev-parse HEAD', TIMEOUTS.QUICK)).stdout.trim();
+    await markKeptClash(copy.storefrontPath, { note, applied, ...(COMMIT_SHA.test(head) ? { head } : {}) });
     writePendingClash(project, {
         track,
         source: clash.source,

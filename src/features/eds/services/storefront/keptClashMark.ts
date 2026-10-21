@@ -40,6 +40,13 @@ export const CONFLICT_MARKER_RE = /^(<{7}|={7}|>{7})( |$)/m;
 export interface KeptClashRecord {
     note: string;
     applied: Record<string, string | null>;
+    /**
+     * The commit the copy was on when the clash was kept, which `applied` is measured
+     * from. Finishing compares the copy with it, not with the copy's latest commit, so a
+     * commit made since (the git-sync hook's, before it learned to wait) still counts as
+     * the update (2026-10-21). Absent on a clash kept before then.
+     */
+    head?: string;
 }
 
 const markPath = (storefrontPath: string) => path.join(storefrontPath, '.git', KEPT_CLASH_MARK);
