@@ -70,3 +70,14 @@ storefronts that are not forks but meet the requirements above.
   The file was checked: it lives in the repository, and its base moves only when the
   colleague saves again (plan step 05).
 - **Fork-sync finding: fix now.** Done on `fix/fork-sync-own-repos`.
+
+## Shipped so far
+
+- 2026-10-20  refactor(updates): keep two boilerplate lookup types private; check tests assert outcomes, not log wording (`91846359a`)
+- 2026-10-20  docs(updates): the two tracks a colleague's storefront follows, and what was built (`70952bd29`)
+- 2026-10-20  feat(updates): keep a colleague's storefront's Adobe base true through reset, their updates and a save (`cd06e7e00`)
+- 2026-10-20  feat(updates): apply the Adobe boilerplate update, and say where an added demo's Adobe code stands (`0fc23afbc`)
+- 2026-10-20  feat(updates): check for, and list, the Adobe boilerplate update on a colleague's storefront (`1759506b0`)
+- 2026-10-20  feat(updates): find the Adobe commit a colleague's storefront was built from (`c3c454542`)
+- 2026-10-20  docs(backlog): EDS-56 owner decisions, and where the description file lives (`69fb06c64`)
+- 2026-10-20  docs(backlog): EDS-56, tested boilerplate updates for a qualifying colleague's storefront, with its plan (`ba3da9ac8`)

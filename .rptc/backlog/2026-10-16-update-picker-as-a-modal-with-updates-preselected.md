@@ -59,3 +59,4 @@ The agent's `apply_updates` keeps working against the same apply service either 
 - 2026-10-20  fix(updates): the Adobe MCP update check reads npm, which publishes it (`841aa8906`)
 - 2026-10-20  test(visual-baseline): the harness answers the projects list's updates request (`724b5bc7f`)
 - 2026-10-20  feat(projects-dashboard): Updates groups are closed project panels; a redeploy waits for a tick (`84e3d0f7b`)
+- 2026-10-20  feat(projects-dashboard): Updates rows say what they change, and the list stays one size (`0e1047ec2`)

@@ -44,3 +44,8 @@ is; the Adobe row has no choice at all. Nothing an SC who does not read code can
 - The other ways out never involve code: "Leave it as it is" (nothing changes, the update
   stays offered), and on the colleague's row "Reset to template" as today.
 - Whether the Sync Storefront button stays is its own question: EDS-58.
+
+## Shipped so far
+
+- 2026-10-20  feat(updates): a storefront's local copy is brought up to GitHub after an update (`d5e06e558`)
+- 2026-10-20  docs(backlog): plan Fix with AI for a storefront update that clashes (`cc90205fe`)
