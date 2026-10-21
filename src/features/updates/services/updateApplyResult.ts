@@ -74,3 +74,41 @@ export interface ApplyUpdatesResult {
 export function emptyResult(): CategoryResult {
     return { successCount: 0, failCount: 0, errors: [] };
 }
+
+/**
+ * How one item of a run went, for a caller that shows each as it goes (the Updates
+ * modal, 2026-10-21): started, done (with what to know), failed or left alone (with why).
+ */
+export type ItemOutcome =
+    | { state: 'running' }
+    | { state: 'done'; note?: string }
+    | { state: 'failed' | 'skipped'; message: string };
+
+/**
+ * One item's outcome, from the result of applying it alone.
+ *
+ * @param result - what applying that one item answered
+ * @param deferredLine - how a deferral reads, when the core records only a name
+ * @returns failed when it failed, skipped when deferred, else done
+ */
+export function outcomeOf(result: CategoryResult, deferredLine?: (deferred: string) => string): ItemOutcome {
+    if (result.failCount > 0) return { state: 'failed', message: result.errors.join(' ') };
+    const deferred = result.deferred?.[0];
+    if (deferred) return { state: 'skipped', message: deferredLine ? deferredLine(deferred) : deferred };
+    const note = [...(result.applied ?? []), ...(result.installed ?? []), ...(result.leftOut ?? [])].join(' ');
+    return note ? { state: 'done', note } : { state: 'done' };
+}
+
+const LINE_LISTS = ['deferred', 'applied', 'installed', 'leftOut'] as const;
+
+/** Add one item's result to its category's. */
+export function mergeInto(target: CategoryResult, from: CategoryResult): void {
+    target.successCount += from.successCount;
+    target.failCount += from.failCount;
+    target.errors.push(...from.errors);
+    for (const key of LINE_LISTS) {
+        const lines = from[key];
+        if (lines?.length) (target[key] ??= []).push(...lines);
+    }
+    if (from.clashes?.length) (target.clashes ??= []).push(...from.clashes);
+}

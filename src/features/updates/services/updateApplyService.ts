@@ -17,6 +17,7 @@
  *
  * A caller with a person to ask (the Updates modal, PL-80) passes `questions`: the
  * `ask` setting and a template merge conflict are then asked rather than defaulted.
+ * One that shows each update as it goes passes `onItem` (`updateApplyEach.ts`).
  */
 
 import * as vscode from 'vscode';
@@ -33,9 +34,11 @@ import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { applyIntegrationUpdates } from '@/features/updates/services/integrationUpdates';
 import { refreshLocalStorefronts } from '@/features/updates/services/localStorefrontRefresh';
+import { eachItem, type ItemObserver } from '@/features/updates/services/updateApplyEach';
 import { applyFinish } from '@/features/updates/services/updateApplyFinish';
 import {
     emptyResult,
+    mergeInto,
     type ApplyUpdatesResult,
     type CategoryResult,
 } from '@/features/updates/services/updateApplyResult';
@@ -57,11 +60,15 @@ import type { Project } from '@/types/base';
 
 export type { TemplateConflictPolicy, UpdateQuestions } from '@/features/updates/services/updateApplyTemplate';
 
-/** How an apply decides what a person would be asked: a fixed policy, or the questions. */
+/** How an apply decides what a person would be asked, and who hears each item. */
 export interface ApplyUpdatesOptions {
     templateConflicts?: TemplateConflictPolicy;
     questions?: UpdateQuestions;
+    onItem?: ItemObserver;
 }
+
+/** A library kept under the `ask` setting: the core records only its name. */
+const KEPT_BLOCKS = (): string => 'Not updated; your blocks were kept.';
 
 
 // ==========================================================
@@ -301,41 +308,43 @@ export async function applyUpdatesHeadless(
     onProgress?: OnProgress,
     options: ApplyUpdatesOptions = {},
 ): Promise<ApplyUpdatesResult> {
-    const forkSync = await applyForkSync(selections.forkSync, ctx, onProgress);
+    const { onItem, questions, templateConflicts: policy } = options;
+    const forkSync = await eachItem('forkSync', selections.forkSync, (some) => applyForkSync(some, ctx, onProgress), onItem);
     // First among the storefront writes: a fixed clash finishes before anything else moves the repository.
-    const finish = await applyFinish(selections.finish, ctx, onProgress, options.questions);
-    const { result: template, succeededPaths } = await applyTemplate(
-        selections.template,
-        ctx,
-        onProgress,
-        options.templateConflicts,
-        options.questions,
-    );
-    const boilerplate = await applyBoilerplate(
+    const finish = await eachItem('finish', selections.finish, (some) => applyFinish(some, ctx, onProgress, questions), onItem);
+    const succeededPaths = new Set<string>();
+    const template = await eachItem('template', selections.template, async (some) => {
+        const applied = await applyTemplate(some, ctx, onProgress, policy, questions);
+        applied.succeededPaths.forEach((path) => succeededPaths.add(path));
+        return applied.result;
+    }, onItem);
+    const boilerplate = await eachItem(
+        'boilerplate',
         selections.boilerplate,
-        ctx,
-        onProgress,
-        options.templateConflicts,
-        options.questions,
+        (some) => applyBoilerplate(some, ctx, onProgress, policy, questions),
+        onItem,
     );
-    const component = await applyComponents(selections.component, ctx, onProgress);
-    const adobeMcp = await applyAdobeMcp(selections.adobeMcp, ctx, onProgress);
-    const addon = await applyAddons(
-        selections.blockLibrary,
-        selections.inspector,
-        succeededPaths,
-        ctx,
-        onProgress,
-        options.questions,
-    );
+    const component = await eachItem('component', selections.component, (some) => applyComponents(some, ctx, onProgress), onItem);
+    const adobeMcp = await eachItem('adobeMcp', selections.adobeMcp, (some) => applyAdobeMcp(some, ctx, onProgress), onItem);
+    // Libraries first, then the Inspector SDK: one category, as the agent reads it.
+    const addon = await eachItem('blockLibrary', selections.blockLibrary, (some) =>
+        applyAddons(some, [], succeededPaths, ctx, onProgress, questions), onItem, KEPT_BLOCKS);
+    mergeInto(addon, await eachItem('inspector', selections.inspector, (some) =>
+        applyAddons([], some, succeededPaths, ctx, onProgress, questions), onItem));
 
-    const blockLibraryInstall = await applyBlockLibraryInstalls(
+    const blockLibraryInstall = await eachItem(
+        'blockLibraryInstall',
         selections.blockLibraryInstall,
-        ctx,
-        onProgress,
+        (some) => applyBlockLibraryInstalls(some, ctx, onProgress),
+        onItem,
     );
 
-    const integration = await applyIntegrationUpdates(selections.integration, ctx, onProgress);
+    const integration = await eachItem(
+        'integration',
+        selections.integration,
+        (some) => applyIntegrationUpdates(some, ctx, onProgress),
+        onItem,
+    );
 
     // Every category above that writes a storefront writes it on GitHub; the local copy
     // agents edit is brought up to it here (EDS-57).

@@ -1,10 +1,8 @@
 import { View, Flex, Text } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React from 'react';
-import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { cn } from '@/core/ui/utils/classNames';
 import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
 
@@ -20,26 +18,6 @@ export function shouldShowPluginDetails(
 
     if (!nodeVersionStatus) return true;
     return nodeVersionStatus.every(v => v.installed);
-}
-
-/**
- * Get status icon for prerequisite check
- */
-export function getStatusIcon(status: PrerequisiteCheck['status']): React.ReactNode {
-    switch (status) {
-        case 'success':
-            return <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />;
-        case 'error':
-            return <CloseCircle size="S" UNSAFE_className="text-red-600" />;
-        case 'warning':
-            return <AlertCircle size="S" UNSAFE_className="text-yellow-600" />;
-        case 'checking':
-            return <Spinner size="S" />;
-        case 'pending':
-            return <Pending size="S" />;
-        default:
-            return <div className="placeholder-icon" />;
-    }
 }
 
 /**

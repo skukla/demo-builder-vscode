@@ -50,3 +50,10 @@ is; the Adobe row has no choice at all. Nothing an SC who does not read code can
 - 2026-10-20  feat(updates): a storefront's local copy is brought up to GitHub after an update (`d5e06e558`)
 - 2026-10-20  docs(backlog): plan Fix with AI for a storefront update that clashes (`cc90205fe`)
 - 2026-10-21  Built steps 1-5 on feature/update-clash-fix-with-ai: local copy refresh, keep the clash, the three-way question, Fix with AI opening the chosen engine, finish_storefront_update with its checks, Sync Storefront refusal. Not yet run live: release test plan rows 1.19 (JustRite, owner present) and 1.20.
+- 2026-10-20  feat(updates): a kept clash is offered as a Finish row (`89ce669a2`)
+- 2026-10-20  feat(updates): Fix with AI opens the chosen AI on a kept clash (`97cf24324`)
+- 2026-10-20  feat(ai): finish_storefront_update finishes a clash fixed with AI (`5db61f426`)
+- 2026-10-20  feat(updates): a clash fixed with AI can be finished, or left (`953b67c02`)
+- 2026-10-20  feat(eds): Sync Storefront refuses while an update's clash is kept (`67c2cfb1b`)
+- 2026-10-20  feat(updates): a clashing update asks Fix with AI, Leave it, or Reset (`72d063ae4`)
+- 2026-10-20  feat(updates): a stopped update's clash can be kept in the local copy (`fc1345248`)

@@ -164,14 +164,6 @@
     margin-top: var(--spectrum-global-dimension-size-200);
     font-size: var(--spectrum-global-dimension-font-size-75);
 }
-
-/* ===========================================
-   Placeholder Icon (for pending/unknown states)
-   =========================================== */
-.placeholder-icon {
-    width: 20px;
-    height: 20px;
-}
 }
 
 /* The animation(s) the rules above name. Moved out of the utility sheet

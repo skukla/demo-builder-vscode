@@ -3,9 +3,9 @@
  *
  * Check for Updates hands its check over (`presentUpdates`), which keeps it and answers
  * the rows; `applyUpdates` applies the ticked ids against that check through the shared
- * headless apply, in the progress modal, and answers the report. The progress plumbing is
- * the real one: what the screen is told is the subject. The apply and the extension's
- * installer are faked.
+ * headless apply, telling the screen each row's status as it starts and ends. The
+ * progress plumbing is the real one: what the screen is told is the subject. The apply
+ * and the extension's installer are faked.
  */
 
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
@@ -103,6 +103,11 @@ function handlers(): Handlers {
 }
 
 const modal = (ids: string[]): ApplyUpdatesRequest => ({ ids, progress: 'modal' });
+
+/** The row statuses the screen was told, in order. */
+function statusesSent(ctx: ReturnType<typeof createMockHandlerContext>): unknown[] {
+    return ctx.sendMessage.mock.calls.filter(([type]) => type === 'updateRowStatus').map(([, status]) => status);
+}
 const apply = (h: Handlers): MessageHandler<ApplyUpdatesRequest> => h.handleApplyUpdates;
 
 beforeEach(() => {
@@ -158,7 +163,28 @@ describe('applyUpdates', () => {
                 replaceLibraryBlocks: expect.any(Function),
             }),
         );
-        expect(answer).toEqual({ success: true, data: { applied: 1, problems: [], notes: [] } });
+        expect(options.onItem).toEqual(expect.any(Function));
+        expect(answer).toEqual({ success: true });
+    });
+
+    // The apply reports selection entries; the screen knows rows. An entry keeps the id
+    // of its place in the check the SC saw, whatever else was left unticked.
+    it("tells the screen each row's status by the id the SC saw, with its note or its reason", async () => {
+        mockApplyUpdatesHeadless.mockImplementation(async (sel: UpdateSelections, _ctx, _report, options) => {
+            const [library] = sel.blockLibrary;
+            options.onItem('blockLibrary', library, { state: 'running' });
+            options.onItem('blockLibrary', library, { state: 'done', note: 'One block left out.' });
+            return applied();
+        });
+
+        const { ctx } = await presentedThenApply((rows) =>
+            rows.filter((r) => r.group.key === '/p/bodea' && r.kind === 'blockLibrary').map((r) => r.id),
+        );
+
+        expect(statusesSent(ctx)).toEqual([
+            { id: 'blockLibrary:1', state: 'running' },
+            { id: 'blockLibrary:1', state: 'done', message: 'One block left out.' },
+        ]);
     });
 
     it('opens the SC\'s AI on the projects whose clash was kept, through the Chat command', async () => {
@@ -213,18 +239,16 @@ describe('applyUpdates', () => {
         expect(states[states.length - 1]).toBe('succeeded');
     });
 
-    it('answers what did not apply, and ends the run with one warning sentence saying so', async () => {
-        mockApplyUpdatesHeadless.mockResolvedValue(
-            applied({ template: { ...emptyResult(), failCount: 1, errors: ['bodea: merge conflicts'] }, totalApplied: 0 }),
-        );
-
-        const { answer } = await presentedThenApply((rows) => rows.map((r) => r.id));
-
-        expect(answer).toEqual({
-            success: true,
-            warning: '1 update did not apply. The Updates list says why.',
-            data: { applied: 0, problems: ['bodea: merge conflicts'], notes: [] },
+    it('ends the run with one warning sentence when a row did not apply, the row saying why', async () => {
+        mockApplyUpdatesHeadless.mockImplementation(async (sel: UpdateSelections, _ctx, _report, options) => {
+            options.onItem('template', sel.template[0], { state: 'failed', message: 'bodea: merge conflicts' });
+            return applied({ totalApplied: 0 });
         });
+
+        const { answer, ctx } = await presentedThenApply((rows) => rows.map((r) => r.id));
+
+        expect(answer).toEqual({ success: true, warning: '1 update did not apply.' });
+        expect(statusesSent(ctx)).toEqual([{ id: 'template:0', state: 'failed', message: 'bodea: merge conflicts' }]);
     });
 
     it('installs the extension update last, from the release the check found', async () => {
@@ -249,6 +273,26 @@ describe('applyUpdates', () => {
         expect(mockUpdateExtension.mock.invocationCallOrder[0]).toBeGreaterThan(
             mockApplyUpdatesHeadless.mock.invocationCallOrder[0],
         );
+    });
+
+    it('says on its row when the extension update fails, and counts it as not applied', async () => {
+        mockUpdateExtension.mockRejectedValueOnce(new Error('download failed'));
+        const check = found({
+            extension: {
+                hasUpdate: true,
+                current: '1.0.0',
+                latest: '1.1.0',
+                releaseInfo: { version: '1.1.0', downloadUrl: 'https://github.com/x.vsix', releaseNotes: '', publishedAt: '', isPrerelease: false },
+            },
+        });
+
+        const { answer, ctx } = await presentedThenApply((rows) => ['extension', rows[1].id], check);
+
+        expect(statusesSent(ctx)).toEqual([
+            { id: 'extension', state: 'running' },
+            { id: 'extension', state: 'failed', message: 'Not updated. Details are in Debug Logs.' },
+        ]);
+        expect(answer).toEqual({ success: true, warning: '1 update did not apply.' });
     });
 
     it('refuses with a plain sentence before any check, and applies a check only once', async () => {

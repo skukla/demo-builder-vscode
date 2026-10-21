@@ -221,3 +221,18 @@ export function selectionsForIds(
         },
     };
 }
+
+/**
+ * Each selection entry's row id, by the entry itself: how a run, which reports entries,
+ * names the rows it is working on.
+ *
+ * @param selections - the check the rows were made from
+ * @returns the row id of every entry in it
+ */
+export function rowIdsOf(selections: UpdateSelections): Map<object, string> {
+    const ids = new Map<object, string>();
+    for (const kind of Object.keys(selections) as Array<keyof UpdateSelections>) {
+        (selections[kind] as object[]).forEach((entry, i) => ids.set(entry, `${kind}:${i}`));
+    }
+    return ids;
+}

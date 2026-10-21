@@ -1627,7 +1627,7 @@
             "anchors": [
                 "const match = versionInfo.trim().match(/^([\\d.]+)\\s*(?:\\((.+)\\))?$/);"
             ],
-            "line": 79,
+            "line": 57,
             "mutants": 1,
             "category": "other",
             "reason": "Making the trailing group required rather than optional changes which inputs match, but not what is rendered: an entry with no component in parentheses either matches with group 2 undefined (component becomes '') or fails to match and falls back to versionInfo.trim() \u2014 and for an entry with no parentheses those two are the same string, because line 79 and line 80 both trim. No input renders differently.",
@@ -1640,7 +1640,7 @@
             "anchors": [
                 "if (unifiedProgress.command?.type === 'determinate' && unifiedProgress.command?.percent != null) {"
             ],
-            "line": 68,
+            "line": 46,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The SECOND optional chain on this line is unreachable as an optional: it is evaluated only when the first one has already produced 'determinate', which means command was not null or undefined. Dropping it cannot throw for any input.",
@@ -1822,7 +1822,7 @@
             "anchors": [
                 "if (scrollContainerRef.current) {"
             ],
-            "line": 27,
+            "line": 28,
             "mutants": 1,
             "category": "branch",
             "reason": "The ref is attached to a div this component always renders, so by the time any handler can call scrollToTop the current value is set. Forcing the guard true cannot reach a null dereference for any input a test can supply, because the only way to null it is to unmount \u2014 after which nothing calls this.",
@@ -1835,7 +1835,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 30,
+            "line": 31,
             "mutants": 1,
             "category": "other",
             "reason": "This is a useCallback dependency list. Replacing an empty array with an array holding one constant string leaves the callback equally stable across renders \u2014 the value never changes, so the memo never invalidates either way, and no render, message or payload differs.",
@@ -1848,7 +1848,7 @@
             "anchors": [
                 "() => (state.selectedAppBuilderComponents ?? []).filter(isMeshComponentId),"
             ],
-            "line": 36,
+            "line": 37,
             "mutants": 1,
             "category": "other",
             "reason": "This default applies only when selectedAppBuilderComponents is null or undefined, and whatever it holds is immediately passed through filter(isMeshComponentId). A string no component is ever named after is filtered out, so the result is the same empty array the empty default produces.",
@@ -1861,7 +1861,7 @@
             "anchors": [
                 "const versions = check.nodeVersionStatus"
             ],
-            "line": 159,
+            "line": 160,
             "mutants": 1,
             "category": "other",
             "reason": "The .filter((v) => v.installed) on the next line runs only inside the block gated on shouldShowPluginDetails, which returns false unless nodeVersionStatus.every(v => v.installed) \u2014 so every entry reaching the filter is already installed and dropping the filter changes nothing. The ARROW inside it is not equivalent and is killed by a test asserting the version list on the row.",

@@ -224,9 +224,9 @@ function ProjectsDashboardApp() {
     // screen's one progress modal (PL-59).
     const operations = useOperationRunner();
     const startOperation = operations.startWhenItBegins;
-    // Check for Updates (PL-80): its list here, its run in the progress modal below.
+    // Check for Updates (PL-80): its list, and then its run, in the Updates modal.
     const refreshAfterUpdates = useCallback(() => void fetchProjects(true), [fetchProjects]);
-    const updates = useUpdatesModal(operations, refreshAfterUpdates);
+    const updates = useUpdatesModal(refreshAfterUpdates);
 
     // Copy from a project: the modal asks which one, then the wizard opens with
     // its settings (picker-to-modal).

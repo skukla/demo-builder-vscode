@@ -9,11 +9,10 @@
 
 import {
     getProgressValue,
-    getStatusIcon,
     renderPluginStatusIcon,
     shouldShowPluginDetails,
 } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
-import type { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
+import type { UnifiedProgress } from '@/types/webview';
 import { html as markup } from './prerequisiteRenderers.testUtils';
 
 function progress(over: Partial<UnifiedProgress['overall']>, command?: UnifiedProgress['command']): UnifiedProgress {
@@ -22,44 +21,6 @@ function progress(over: Partial<UnifiedProgress['overall']>, command?: UnifiedPr
         command,
     };
 }
-
-describe('getStatusIcon', () => {
-    it('marks success with the green tick', () => {
-        expect(markup(getStatusIcon('success'))).toContain('class="text-green-600"');
-    });
-
-    it('marks error with the red cross', () => {
-        expect(markup(getStatusIcon('error'))).toContain('class="text-red-600"');
-    });
-
-    it('marks warning with the yellow alert', () => {
-        expect(markup(getStatusIcon('warning'))).toContain('class="text-yellow-600"');
-    });
-
-    it('shows a spinner, not an icon, while a check is running', () => {
-        const html = markup(getStatusIcon('checking'));
-        expect(html).toContain('role="progressbar"');
-        expect(html).not.toContain('text-');
-    });
-
-    it('shows an unstyled pending icon for a check that has not started', () => {
-        const html = markup(getStatusIcon('pending'));
-        expect(html).toContain('<svg');
-        expect(html).not.toContain('class=');
-        expect(html).not.toContain('role="progressbar"');
-    });
-
-    it('falls back to a bare placeholder for a status it does not know', () => {
-        expect(markup(getStatusIcon('nonsense' as PrerequisiteCheck['status'])))
-            .toBe('<div class="placeholder-icon"></div>');
-    });
-
-    it('gives every status its own icon', () => {
-        const statuses: PrerequisiteCheck['status'][] = ['success', 'error', 'warning', 'checking', 'pending'];
-        const rendered = statuses.map((s) => markup(getStatusIcon(s)));
-        expect(new Set(rendered).size).toBe(statuses.length);
-    });
-});
 
 describe('renderPluginStatusIcon', () => {
     it('shows pending while the check is running and the plugin verdict has not arrived', () => {

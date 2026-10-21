@@ -60,3 +60,7 @@ The agent's `apply_updates` keeps working against the same apply service either 
 - 2026-10-20  test(visual-baseline): the harness answers the projects list's updates request (`724b5bc7f`)
 - 2026-10-20  feat(projects-dashboard): Updates groups are closed project panels; a redeploy waits for a tick (`84e3d0f7b`)
 - 2026-10-20  feat(projects-dashboard): Updates rows say what they change, and the list stays one size (`0e1047ec2`)
+- 2026-10-21  fix(updates): drop the "1 of 2" count beside each group (`c11a7a0de`)
+- 2026-10-21  fix(updates): a click during the background check joins it (`67feaf5a0`)
+- 2026-10-21  feat(updates): show the apply run row by row in the Updates modal (`f01c45494`)
+- 2026-10-21  refactor(ui): move the Prerequisites status icon to core as StepStatusIcon (`f67d49669`)

@@ -1,8 +1,8 @@
 /**
  * UpdatesModal — what the SC sees in Check for Updates on the projects list (PL-80):
  * the rows under their headings, which are ticked and which are locked, the Apply count,
- * and the report. Checking and "up to date" are the notification's, not this window's. The controls are handed in, so
- * each view is driven directly.
+ * and then the run, row by row. Checking and "up to date" are the notification's, not
+ * this window's. The controls are handed in, so each view is driven directly.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -18,17 +18,19 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         size,
         actionButtons = [],
         onClose,
+        closeLabel,
         children,
     }: {
         title: string;
         size?: string;
         actionButtons?: ActionButton[];
         onClose: () => void;
+        closeLabel?: string;
         children: React.ReactNode;
     }) => (
         <div role="dialog" aria-label={title} data-size={size}>
             {children}
-            <button onClick={onClose}>Close</button>
+            <button onClick={onClose}>{closeLabel ?? 'Close'}</button>
             {actionButtons.map((b) => (
                 <button key={b.label} onClick={b.onPress} disabled={b.isDisabled}>
                     {b.label}
@@ -40,7 +42,13 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
 
 // Below the mock on purpose: it must register before the component binds to Modal.
 import { UpdatesModal } from '@/features/projects-dashboard/ui/components/UpdatesModal';
-import type { UpdatesModalControls, UpdatesView } from '@/features/projects-dashboard/ui/hooks/useUpdatesModal';
+import { groupStatusOf } from '@/features/projects-dashboard/ui/components/UpdatesRunView';
+import type {
+    RowStatuses,
+    UpdatesModalControls,
+    UpdatesView,
+} from '@/features/projects-dashboard/ui/hooks/useUpdatesModal';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 const ROWS: PendingUpdateRow[] = [
     {
@@ -78,6 +86,19 @@ function controls(view: UpdatesView, ticked: string[] = []): jest.Mocked<Updates
         toggleGroup: jest.fn(),
         apply: jest.fn(),
         close: jest.fn(),
+        statuses: {},
+        progress: null,
+        answer: jest.fn(),
+        onTyped: jest.fn(),
+    };
+}
+
+/** The run of the two open rows: where each is, and where the run is. */
+function running(statuses: RowStatuses, progress: Partial<OperationProgressPayload> = {}): jest.Mocked<UpdatesModalControls> {
+    return {
+        ...controls({ phase: 'applying', rows: [ROWS[0], ROWS[1]] }),
+        statuses,
+        progress: { id: 'updates', state: 'running', ...progress },
     };
 }
 
@@ -122,20 +143,76 @@ describe('UpdatesModal', () => {
         expect(screen.getByRole('button', { name: 'Apply 0 updates' })).toBeDisabled();
     });
 
-    it('reports what applied, what did not and the notes', () => {
-        render(
-            <UpdatesModal
-                controls={controls({
-                    phase: 'report',
-                    report: { applied: 2, problems: ['Bodea: merge conflicts'], notes: ['Added 3 blocks to Bodea.'] },
-                })}
-            />,
+    // Each ticked row as the Prerequisites step draws its checks (owner, 2026-10-21).
+    it('shows the run row by row: no checkboxes, the running row saying what it is doing', () => {
+        const c = running(
+            { extension: { id: 'extension', state: 'done' }, 'blockLibrary:0': { id: 'blockLibrary:0', state: 'running' } },
+            { stage: 'Updating add-ons', step: 'Demo Builder Blocks in JustRite' },
         );
+        const { container } = render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByText('2 updates applied.')).toBeInTheDocument();
-        expect(screen.getByText('Not applied')).toBeInTheDocument();
-        expect(screen.getByText('Bodea: merge conflicts')).toBeInTheDocument();
-        expect(screen.getByText('Added 3 blocks to Bodea.')).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Applying updates' })).toBeInTheDocument();
+        expect(screen.queryByRole('checkbox')).toBeNull();
+        expect(screen.getByText('Demo Builder Blocks in JustRite')).toBeInTheDocument();
+        expect(screen.getByText('1.0.0 → 1.1.0')).toBeInTheDocument();
+        expect(Array.from(container.querySelectorAll('.updates-run-row')).map((r) => r.getAttribute('data-state'))).toEqual([
+            'done',
+            'running',
+        ]);
+        expect(screen.getByRole('button', { name: 'Run in background' })).toBeInTheDocument();
+    });
+
+    it('says under a row why it did not apply, and titles the end by it', () => {
+        const c = running(
+            {
+                extension: { id: 'extension', state: 'done' },
+                'blockLibrary:0': { id: 'blockLibrary:0', state: 'failed', message: 'Demo Builder Blocks: rate limited' },
+            },
+            { state: 'succeeded', warning: '1 update did not apply.' },
+        );
+        render(<UpdatesModal controls={c} />);
+
+        expect(screen.getByText('Demo Builder Blocks: rate limited')).toHaveClass('updates-run-why');
+        expect(screen.getByRole('dialog', { name: "Some updates didn't apply" })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    });
+
+    it('titles a run where everything applied "Updates applied", a note under its row', () => {
+        const c = running(
+            {
+                extension: { id: 'extension', state: 'done' },
+                'blockLibrary:0': { id: 'blockLibrary:0', state: 'done', message: 'One block left out.' },
+            },
+            { state: 'succeeded' },
+        );
+        render(<UpdatesModal controls={c} />);
+
+        expect(screen.getByRole('dialog', { name: 'Updates applied' })).toBeInTheDocument();
+        expect(screen.getByText('One block left out.')).toHaveClass('updates-run-note');
+    });
+
+    it('says why a run failed outright, and offers the logs', () => {
+        const c = running({}, { state: 'failed', error: 'This list of updates is out of date. Check for updates again.' });
+        render(<UpdatesModal controls={c} />);
+
+        expect(screen.getByRole('dialog', { name: "Couldn't apply the updates" })).toBeInTheDocument();
+        expect(screen.getByText('This list of updates is out of date. Check for updates again.')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Open Debug Logs' })).toBeInTheDocument();
+    });
+
+    // A question takes the list's place, as it does in the progress modal.
+    it('asks a question the run is paused on in place of the list, its answers as the buttons', async () => {
+        const prompt = { message: 'Bodea is running. Stop it to update it?', actions: ['Stop and update', 'Skip'] };
+        const c = running({}, { prompt });
+        render(<UpdatesModal controls={c} />);
+
+        expect(screen.getByText('Bodea is running. Stop it to update it?')).toBeInTheDocument();
+        expect(screen.queryByText('Demo Builder Blocks')).toBeNull();
+        await user().click(screen.getByRole('button', { name: 'Skip' }));
+        await user().click(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(c.answer).toHaveBeenCalledWith('Skip');
+        expect(c.close).toHaveBeenCalledTimes(1);
     });
 
     // No sentence under the title: the ticks and the Apply count say it, and what cannot
@@ -187,11 +264,10 @@ describe('UpdatesModal', () => {
         const rows = [ROWS[0], ROWS[1], redeploy];
         const { rerender } = render(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension'])} />);
 
-        expect(screen.getByText('0 of 2, 1 waiting for you')).toBeInTheDocument();
-        expect(screen.getByText('1 of 1')).toBeInTheDocument();
+        expect(screen.getByText('1 waiting for you')).toBeInTheDocument();
 
         rerender(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension', 'integration:1'])} />);
-        expect(screen.getByText('1 of 2')).toBeInTheDocument();
+        expect(screen.queryByText(/waiting for you/)).not.toBeInTheDocument();
     });
 
     it('shows a project partly ticked as mixed', () => {
@@ -201,21 +277,14 @@ describe('UpdatesModal', () => {
         const heading = screen.getAllByRole('checkbox')[0];
         expect(heading).toHaveAttribute('aria-checked', 'mixed');
         expect(heading).not.toBeChecked();
-        expect(screen.getByText('1 of 2')).toBeInTheDocument();
     });
 
-    // A locked row is not counted: it can be neither ticked nor applied from here.
-    it("counts a project's ticked rows beside its name, leaving out a locked one", () => {
+    // The checkbox shows all, some or none ticked, so a count beside the name said it twice.
+    it("shows no ticked count beside a project's name", () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
 
-        expect(screen.getByText('1 of 1')).toBeInTheDocument();
-        expect(screen.getByText('1 of 1, 1 waiting for you')).toBeInTheDocument();
-    });
-
-    it('titles the report "Update results"', () => {
-        render(<UpdatesModal controls={controls({ phase: 'report', report: { applied: 1, problems: [], notes: [] } })} />);
-
-        expect(screen.getByRole('dialog', { name: 'Update results' })).toBeInTheDocument();
+        expect(screen.queryByText(/\d+ of \d+/)).not.toBeInTheDocument();
+        expect(screen.getByText('1 waiting for you')).toBeInTheDocument();
     });
 
     it('closes through the controls', async () => {
@@ -225,6 +294,19 @@ describe('UpdatesModal', () => {
         await user().click(screen.getByRole('button', { name: 'Close' }));
 
         expect(c.close).toHaveBeenCalledTimes(1);
+    });
+});
+
+// One icon per project: what went wrong first, else whether it is still going.
+describe('groupStatusOf', () => {
+    it.each([
+        [['done', 'failed', 'running'], 'error'],
+        [['done', 'running', 'waiting'], 'checking'],
+        [['done', 'waiting'], 'pending'],
+        [['done', 'skipped'], 'warning'],
+        [['done', 'done'], 'success'],
+    ] as const)('%j reads as %s', (states, icon) => {
+        expect(groupStatusOf([...states])).toBe(icon);
     });
 });
 
