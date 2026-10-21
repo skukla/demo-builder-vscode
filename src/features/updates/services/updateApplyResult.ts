@@ -59,6 +59,8 @@ export interface ApplyUpdatesResult {
     template: CategoryResult;
     /** A colleague's storefront's Adobe half, to our tested version (EDS-56). */
     boilerplate: CategoryResult;
+    /** Storefront updates kept to fix with AI, finished (EDS-57). */
+    finish: CategoryResult;
     component: CategoryResult;
     adobeMcp: CategoryResult;
     addon: CategoryResult;

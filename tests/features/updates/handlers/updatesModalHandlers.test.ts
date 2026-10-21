@@ -50,6 +50,7 @@ function selections(): UpdateSelections {
         forkSync: [],
         template: [{ project: bodea }],
         boilerplate: [],
+        finish: [],
         component: [],
         adobeMcp: [],
         blockLibrary: [justrite, bodea].map((project) => ({
@@ -78,6 +79,7 @@ function applied(overrides: Partial<ApplyUpdatesResult> = {}): ApplyUpdatesResul
         forkSync: emptyResult(),
         template: emptyResult(),
         boilerplate: emptyResult(),
+        finish: emptyResult(),
         component: emptyResult(),
         adobeMcp: emptyResult(),
         addon: emptyResult(),

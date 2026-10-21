@@ -12,13 +12,15 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { UpdateQuestions } from '@/features/updates/services/updateApplyService';
-import type { ClashAnswer, ClashQuestion } from '@/features/updates/services/updateClash';
+import type { ClashAnswer, ClashQuestion, UnfinishedAnswer } from '@/features/updates/services/updateClash';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
 
 const FIX_WITH_AI = 'Fix with AI';
 const LEAVE_IT = 'Leave it as it is';
 const RESET_TO_TEMPLATE = 'Reset to template';
+const KEEP_FOR_LATER = 'Keep it for later';
+const DROP_THE_FIX = 'Drop the fix';
 const REPLACE_BLOCKS = 'Replace blocks';
 const KEEP_BLOCKS = 'Keep my blocks';
 const STOP_AND_UPDATE = 'Stop and update';
@@ -42,6 +44,18 @@ export const questionsInModal: UpdateQuestions = {
         );
         if (answer === FIX_WITH_AI) return 'fix';
         return answer === RESET_TO_TEMPLATE && canReset ? 'reset' : 'leave';
+    },
+    async onUnfinished(project: Project, reason: string): Promise<UnfinishedAnswer> {
+        const answer = await askDuringOperation(
+            `${getProjectDisplayName(project)}: the update kept to fix with AI is not ready to finish, because ` +
+                `${reason}. "${FIX_WITH_AI}" opens your AI on it again; "${DROP_THE_FIX}" puts the storefront ` +
+                'back as it was and offers the update again.',
+            FIX_WITH_AI,
+            KEEP_FOR_LATER,
+            DROP_THE_FIX,
+        );
+        if (answer === FIX_WITH_AI) return 'fix';
+        return answer === DROP_THE_FIX ? 'leave' : 'later';
     },
     async replaceLibraryBlocks(libraryName: string, project: Project): Promise<boolean> {
         const answer = await askDuringOperation(
@@ -105,6 +119,7 @@ function projectEntries(selections: UpdateSelections): Array<{ project: Project 
     return [
         ...selections.template,
         ...selections.boilerplate,
+        ...selections.finish,
         ...selections.component,
         ...selections.adobeMcp,
         ...selections.blockLibrary,
@@ -121,6 +136,7 @@ function withoutProjects(selections: UpdateSelections, paths: Set<string>): Upda
         forkSync: selections.forkSync,
         template: keep(selections.template),
         boilerplate: keep(selections.boilerplate),
+        finish: keep(selections.finish),
         component: keep(selections.component),
         adobeMcp: keep(selections.adobeMcp),
         blockLibrary: keep(selections.blockLibrary),

@@ -24,6 +24,7 @@ import {
     type ClashAnswer,
     type ClashQuestion,
     type TemplateConflictPolicy,
+    type UnfinishedAnswer,
 } from '@/features/updates/services/updateClash';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
@@ -47,6 +48,8 @@ export type { TemplateConflictPolicy } from '@/features/updates/services/updateC
 export interface UpdateQuestions {
     /** A template or Adobe boilerplate update clashes with edits: Fix with AI, Leave, or Reset? */
     onClash(project: Project, question: ClashQuestion): Promise<ClashAnswer>;
+    /** A kept clash's fix is not ready to finish: Fix with AI again, keep it for later, or drop it? */
+    onUnfinished(project: Project, reason: string): Promise<UnfinishedAnswer>;
     /** A block library under the `ask` sync setting: replace its blocks with the new ones? */
     replaceLibraryBlocks(libraryName: string, project: Project): Promise<boolean>;
 }

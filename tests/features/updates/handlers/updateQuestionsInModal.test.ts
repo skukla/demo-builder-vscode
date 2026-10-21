@@ -21,6 +21,7 @@ function selections(): UpdateSelections {
         forkSync: [{ owner: 'skukla', repo: 'citisignal', branch: 'main' }],
         template: [{ project: running }, { project: stopped }],
         boilerplate: [],
+        finish: [],
         component: [{ project: running, componentId: 'mesh', latestVersion: '2' }],
         adobeMcp: [],
         blockLibrary: [],
@@ -76,6 +77,31 @@ describe('questionsInModal', () => {
         ask.mockResolvedValue(choice);
 
         expect(await questionsInModal.onClash(stopped, { track: 'template', files: ['head.html'], canReset })).toBe(expected);
+    });
+
+    it('asks what to do with a fix that is not ready, with three choices that need no code', async () => {
+        ask.mockResolvedValue('Fix with AI');
+
+        const answer = await questionsInModal.onUnfinished(stopped, 'blocks/header/header.js still has conflict markers');
+
+        expect(answer).toBe('fix');
+        expect(ask).toHaveBeenCalledWith(
+            expect.stringContaining('Bodea: the update kept to fix with AI is not ready to finish, because blocks/header/header.js still has conflict markers.'),
+            'Fix with AI',
+            'Keep it for later',
+            'Drop the fix',
+        );
+    });
+
+    it.each([
+        ['Drop the fix', 'leave'],
+        ['Keep it for later', 'later'],
+        // Dismissed: the fix is kept, nothing is lost.
+        [undefined, 'later'],
+    ])('answers %s as %s', async (choice, expected) => {
+        ask.mockResolvedValue(choice);
+
+        expect(await questionsInModal.onUnfinished(stopped, 'x')).toBe(expected);
     });
 
     it('asks whether to replace a library, and answers yes only on Replace blocks', async () => {

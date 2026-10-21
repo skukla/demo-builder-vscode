@@ -21,6 +21,7 @@ import {
     type IntegrationPairUpdate,
     type IntegrationUpdateProbe,
 } from '@/features/updates/services/integrationUpdates';
+import { readPendingClash, type PendingClash } from '@/features/updates/services/pendingClash';
 import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import { getTemplateSource } from '@/features/updates/services/updateSources';
@@ -46,6 +47,11 @@ export interface UpdateSelections {
      * beside its `template` entry, which follows the colleague's own repository.
      */
     boilerplate: BoilerplateUpdate[];
+    /**
+     * A storefront update whose clash was kept for fixing with AI (EDS-57): finishing it
+     * checks the fix and pushes it. It stands in for that track's own row until finished.
+     */
+    finish: Array<{ project: Project; clash: PendingClash }>;
     component: Array<{
         project: Project;
         componentId: string;
@@ -112,10 +118,20 @@ export async function computeUpdateSelections(
     // runs alongside the GitHub checks below instead of after them. It cannot reject.
     const integration = checkIntegrations(projects, integrationProbe, handlerCtx.logger);
     const addons = await checkAddons(projects, check);
+    // A kept clash is read from the project; no network. It replaces its track's own row.
+    const finish = projects.flatMap((project) => {
+        const clash = readPendingClash(project);
+        return clash ? [{ project, clash }] : [];
+    });
+    const waiting = (track: PendingClash['track']) =>
+        new Set(finish.filter((f) => f.clash.track === track).map((f) => f.project.path));
+    const notWaiting = <T extends { project: Project }>(list: T[], track: PendingClash['track']) =>
+        list.filter((item) => !waiting(track).has(item.project.path));
     return {
         forkSync: await checkForkSyncs(projects, check),
-        template: await checkTemplates(projects, check),
-        boilerplate: await checkAdobeBoilerplate(projects, check, handlerCtx),
+        template: notWaiting(await checkTemplates(projects, check), 'template'),
+        boilerplate: notWaiting(await checkAdobeBoilerplate(projects, check, handlerCtx), 'boilerplate'),
+        finish,
         component: await checkComponents(projects, handlerCtx),
         adobeMcp: await checkAdobeMcp(projects, check),
         blockLibrary: addons.blockLibrary,
@@ -312,6 +328,7 @@ export function countSelections(selections: UpdateSelections): number {
         selections.forkSync.length +
         selections.template.length +
         selections.boilerplate.length +
+        selections.finish.length +
         selections.component.length +
         selections.adobeMcp.length +
         selections.blockLibrary.length +

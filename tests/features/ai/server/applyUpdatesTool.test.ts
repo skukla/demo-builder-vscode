@@ -38,7 +38,7 @@ const computeMock = computeProjectUpdateSelections as jest.Mock;
 const applyMock = applyUpdatesHeadless as jest.Mock;
 const countMock = countSelections as jest.Mock;
 
-const EMPTY = { forkSync: [], template: [], boilerplate: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [], integration: [] };
+const EMPTY = { forkSync: [], template: [], boilerplate: [], finish: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [], integration: [] };
 
 function fakeServer() {
 
@@ -165,6 +165,7 @@ describe('apply_updates', () => {
                     tested: '48bed04d072fff094b49a46709b351bd719b287a',
                 },
             ],
+            finish: [{ clash: { track: 'boilerplate', files: ['blocks/header/header.js'] } }],
             component: [{ componentId: 'mesh', latestVersion: '2.0.0' }],
             adobeMcp: [{ packageName: '@adobe/aem-mcp', latestVersion: '3.1.0' }],
             blockLibrary: [{ library: { name: 'Bodea blocks' } }],
@@ -183,6 +184,8 @@ describe('apply_updates', () => {
             template: 2,
             // A colleague's storefront's Adobe half: from its base to the tested version (EDS-56).
             boilerplate: ['adobe-commerce/boilerplate-b2b-template 71a67e0 → 48bed04'],
+            // A clash kept to fix with AI, waiting to be finished (EDS-57).
+            finish: ['boilerplate: blocks/header/header.js'],
             component: ['mesh → 2.0.0'],
             adobeMcp: ['@adobe/aem-mcp → 3.1.0'],
             blockLibrary: ['Bodea blocks'],

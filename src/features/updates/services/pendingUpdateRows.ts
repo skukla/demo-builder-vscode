@@ -61,6 +61,11 @@ const PROJECT_KINDS: { [K in ProjectKind]: (entry: UpdateSelections[K][number]) 
     template: (t) => ({ label: templateLabel(t.project), detail: LIVE_SITE_DETAIL }),
     // Adobe's half of a colleague's storefront, to the version our daily gate tested (EDS-56).
     boilerplate: () => ({ label: 'Adobe boilerplate', detail: `Tested version, ${LIVE_SITE}` }),
+    // A clash kept to fix with AI (EDS-57): applying it checks the fix and pushes it.
+    finish: (f) => ({
+        label: f.clash.track === 'boilerplate' ? 'Finish the Adobe boilerplate update' : `Finish: ${templateLabel(f.project)}`,
+        detail: `Kept to fix with AI, ${LIVE_SITE}`,
+    }),
     component: (c) => ({
         label: c.project.componentInstances?.[c.componentId]?.name ?? c.componentId,
         detail: c.currentVersion
@@ -102,6 +107,7 @@ type ProjectKind = Exclude<PendingUpdateKind, 'extension' | 'forkSync'>;
 const PROJECT_KIND_ORDER: ProjectKind[] = [
     'template',
     'boilerplate',
+    'finish',
     'component',
     'adobeMcp',
     'blockLibrary',
@@ -205,6 +211,7 @@ export function selectionsForIds(
             forkSync: pick('forkSync', selections.forkSync),
             template: pick('template', selections.template),
             boilerplate: pick('boilerplate', selections.boilerplate),
+            finish: pick('finish', selections.finish),
             component: pick('component', selections.component),
             adobeMcp: pick('adobeMcp', selections.adobeMcp),
             blockLibrary: pick('blockLibrary', selections.blockLibrary),

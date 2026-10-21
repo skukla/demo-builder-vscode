@@ -35,6 +35,7 @@ function setSyncBehavior(value: 'ask' | 'enabled' | 'disabled'): void {
 function questions(answers: { clash?: ClashAnswer; replace?: boolean } = {}): jest.Mocked<UpdateQuestions> {
     return {
         onClash: jest.fn().mockResolvedValue(answers.clash ?? 'leave'),
+        onUnfinished: jest.fn().mockResolvedValue('later'),
         replaceLibraryBlocks: jest.fn().mockResolvedValue(answers.replace ?? false),
     };
 }

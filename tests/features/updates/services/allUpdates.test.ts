@@ -37,6 +37,7 @@ const oneTemplate = (project: ReturnType<typeof createMockProject>): UpdateSelec
     forkSync: [],
     template: [{ project }],
     boilerplate: [],
+    finish: [],
     component: [],
     adobeMcp: [],
     blockLibrary: [],

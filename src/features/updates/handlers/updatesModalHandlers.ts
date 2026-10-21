@@ -116,12 +116,12 @@ async function applyTicked(
 /** The projects whose clash the apply kept for fixing, each once. */
 function keptClashProjects(selections: UpdateSelections, result: ApplyUpdatesResult): Project[] {
     const kept = new Set(
-        [...(result.template.clashes ?? []), ...(result.boilerplate.clashes ?? [])]
+        [...(result.template.clashes ?? []), ...(result.boilerplate.clashes ?? []), ...(result.finish.clashes ?? [])]
             .filter((clash) => clash.keptIn)
             .map((clash) => clash.projectName),
     );
     const projects = new Map<string, Project>();
-    for (const { project } of [...selections.template, ...selections.boilerplate]) {
+    for (const { project } of [...selections.template, ...selections.boilerplate, ...selections.finish]) {
         if (kept.has(project.name)) projects.set(project.name, project);
     }
     return [...projects.values()];

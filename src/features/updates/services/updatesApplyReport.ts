@@ -24,6 +24,7 @@ export function reportOf(result: ApplyUpdatesResult, skipped: string[] = []): Ap
         result.forkSync,
         result.template,
         result.boilerplate,
+        result.finish,
         result.component,
         result.adobeMcp,
         result.addon,

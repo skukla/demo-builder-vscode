@@ -31,6 +31,9 @@ export type TemplateConflictPolicy = 'stop' | 'keep' | 'reset';
 /** A person's answer: Fix with AI, Leave it as it is, or Reset to template. */
 export type ClashAnswer = 'fix' | 'leave' | 'reset';
 
+/** A person's answer to a kept clash's fix that is not ready: Fix with AI, Keep it for later, or Drop the fix. */
+export type UnfinishedAnswer = 'fix' | 'later' | 'leave';
+
 /** What the clash question is asked about. */
 export interface ClashQuestion {
     track: ClashTrack;

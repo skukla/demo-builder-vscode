@@ -405,7 +405,8 @@ describe('computeProjectUpdateSelections', () => {
 
                 expect(sel[category]).toStrictEqual([]);
                 const others = (Object.keys(sel) as Array<keyof typeof sel>).filter(
-                    (k) => k !== category && !(category === 'blockLibrary' && k === 'inspector')
+                    // finish is read from the project, not checked: it has an entry only for a kept clash.
+                    (k) => k !== category && k !== 'finish' && !(category === 'blockLibrary' && k === 'inspector')
                 );
                 for (const k of others) expect(sel[k]).toHaveLength(1);
                 expect(handlerCtx.logger.warn).toHaveBeenCalledTimes(1);
@@ -445,6 +446,7 @@ describe('countSelections', () => {
                     tested: 'b'.repeat(40),
                 },
             ],
+            finish: [],
             component: [],
             adobeMcp: [{ project, packageName: 'p', latestVersion: '1' }],
             blockLibrary: [
@@ -460,5 +462,41 @@ describe('countSelections', () => {
         };
 
         expect(countSelections(sel)).toBe(10);
+    });
+});
+
+describe('a storefront update kept to fix with AI (EDS-57)', () => {
+    it('offers Finish in place of that track\'s own row, and counts it', async () => {
+        const project = edsProject();
+        const instance = project.componentInstances?.['eds-storefront'];
+        if (instance) {
+            instance.metadata = {
+                ...instance.metadata,
+                pendingClash: {
+                    track: 'boilerplate',
+                    source: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
+                    base: 'a'.repeat(40),
+                    target: 'b'.repeat(40),
+                    files: ['blocks/header/header.js'],
+                    fixes: false,
+                    keptAt: '2026-10-21T00:00:00.000Z',
+                },
+            };
+        }
+        // The Adobe check would offer the same update again; the kept clash stands in for it.
+        mockCheckBoilerplate.mockResolvedValue([{ project, base: {}, tested: 'b'.repeat(40) }]);
+
+        const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
+
+        expect(sel.finish).toEqual([{ project, clash: expect.objectContaining({ track: 'boilerplate' }) }]);
+        expect(sel.boilerplate).toStrictEqual([]);
+        // Nothing else is waiting in this project: the Finish row is the one update.
+        expect(countSelections(sel)).toBe(1);
+    });
+
+    it('offers no Finish row for a project with nothing kept', async () => {
+        const sel = await computeProjectUpdateSelections(edsProject(), createMockHandlerContext(), recordsIntegrationProbe());
+
+        expect(sel.finish).toStrictEqual([]);
     });
 });

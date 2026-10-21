@@ -552,6 +552,7 @@ describe('totals', () => {
                 forkSync: [fork],
                 template: [{ project }],
                 boilerplate: [],
+                finish: [],
                 component: [{ project, componentId: 'mesh', latestVersion: '2', downloadUrl: 'u' }],
                 adobeMcp: [{ project, packageName: 'p', latestVersion: '1' }],
                 blockLibrary: [

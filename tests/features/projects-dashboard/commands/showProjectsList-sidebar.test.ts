@@ -84,6 +84,7 @@ const CHECK: FoundUpdates = {
         forkSync: [],
         template: [{ project: createMockProject({ name: 'bodea', path: '/p/bodea' }) }],
         boilerplate: [],
+        finish: [],
         component: [],
         adobeMcp: [],
         blockLibrary: [],

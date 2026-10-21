@@ -42,6 +42,7 @@ function summarize(selections: UpdateSelections): Record<string, unknown> {
     return {
         forkSync: selections.forkSync.map((f) => `${f.owner}/${f.repo}`),
         template: selections.template.length,
+        finish: selections.finish.map((f) => `${f.clash.track}: ${f.clash.files.join(', ')}`),
         boilerplate: selections.boilerplate.map(
             (b) => `${b.base.template.owner}/${b.base.template.repo} ${b.base.commit.slice(0, 7)} → ${b.tested.slice(0, 7)}`,
         ),
@@ -165,6 +166,7 @@ export function registerApplyUpdatesTool(
                     forkSync: result.forkSync,
                     template: result.template,
                     boilerplate: result.boilerplate,
+                    finish: result.finish,
                     component: result.component,
                     adobeMcp: result.adobeMcp,
                     addon: result.addon,

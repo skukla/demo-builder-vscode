@@ -33,6 +33,7 @@ import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { applyIntegrationUpdates } from '@/features/updates/services/integrationUpdates';
 import { refreshLocalStorefronts } from '@/features/updates/services/localStorefrontRefresh';
+import { applyFinish } from '@/features/updates/services/updateApplyFinish';
 import {
     emptyResult,
     type ApplyUpdatesResult,
@@ -301,6 +302,8 @@ export async function applyUpdatesHeadless(
     options: ApplyUpdatesOptions = {},
 ): Promise<ApplyUpdatesResult> {
     const forkSync = await applyForkSync(selections.forkSync, ctx, onProgress);
+    // First among the storefront writes: a fixed clash finishes before anything else moves the repository.
+    const finish = await applyFinish(selections.finish, ctx, onProgress, options.questions);
     const { result: template, succeededPaths } = await applyTemplate(
         selections.template,
         ctx,
@@ -346,11 +349,12 @@ export async function applyUpdatesHeadless(
         ctx,
     );
 
-    const cats = [forkSync, template, boilerplate, component, adobeMcp, addon, blockLibraryInstall, integration];
+    const cats = [forkSync, finish, template, boilerplate, component, adobeMcp, addon, blockLibraryInstall, integration];
     return {
         forkSync,
         template,
         boilerplate,
+        finish,
         component,
         adobeMcp,
         addon,

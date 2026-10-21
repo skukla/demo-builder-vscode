@@ -34,6 +34,7 @@ function empty(): UpdateSelections {
         forkSync: [],
         template: [],
         boilerplate: [],
+        finish: [],
         component: [],
         adobeMcp: [],
         blockLibrary: [],
@@ -252,6 +253,39 @@ describe('a colleague\'s storefront that follows both (EDS-56)', () => {
 
         expect(picked.boilerplate).toHaveLength(1);
         expect(picked.template).toStrictEqual([]);
+    });
+});
+
+describe('a storefront update kept to fix with AI (EDS-57)', () => {
+    const colleague = storefront({ templateOwner: 'kmanns', templateRepo: 'justrite' });
+    const clash = (track: 'template' | 'boilerplate') => ({
+        track,
+        source: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
+        base: 'a'.repeat(40),
+        target: 'b'.repeat(40),
+        files: ['blocks/header/header.js'],
+        fixes: false,
+        keptAt: '2026-10-21T00:00:00.000Z',
+    });
+
+    it('lists a Finish row in the words of the update it belongs to, ticked', () => {
+        const rows = toPendingUpdateRows(
+            { ...empty(), finish: [{ project: colleague, clash: clash('boilerplate') }, { project: colleague, clash: clash('template') }] },
+            undefined,
+            undefined,
+        );
+
+        expect(rows.map((r) => [r.kind, r.label, r.detail, r.ticked])).toEqual([
+            ['finish', 'Finish the Adobe boilerplate update', 'Kept to fix with AI, updates the live site', true],
+            ['finish', 'Finish: Changes from kmanns/justrite', 'Kept to fix with AI, updates the live site', true],
+        ]);
+    });
+
+    it('applies the Finish row it came from', () => {
+        const sel = { ...empty(), finish: [{ project: colleague, clash: clash('boilerplate') }] };
+        const [row] = toPendingUpdateRows(sel, undefined, undefined);
+
+        expect(selectionsForIds(sel, [row.id]).selections.finish).toHaveLength(1);
     });
 });
 
