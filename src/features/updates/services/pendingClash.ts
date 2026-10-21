@@ -24,6 +24,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
+import { markKeptClash } from '@/features/eds/services/storefront/keptClashMark';
 import { openLocalCopy, refreshLocalStorefront, type LocalCopy } from '@/features/updates/services/localStorefrontRefresh';
 import { applyChangeKeepingConflicts } from '@/features/updates/services/templateMergeBase';
 import type { TemplateClash } from '@/features/updates/services/templateSyncTypes';
@@ -143,6 +144,7 @@ export async function keepClash(project: Project, request: KeepClashRequest, ctx
     if (problem) return notKept(problem);
 
     const { track, clash, conflicts, fixes } = request;
+    await markKeptClash(copy.storefrontPath, `${track} update ${clash.base.slice(0, 7)}..${clash.target.slice(0, 7)}: ${conflicts.join(', ')}`);
     writePendingClash(project, {
         track,
         source: clash.source,

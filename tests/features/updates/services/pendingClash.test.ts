@@ -17,6 +17,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
 import type { ExecuteOptions } from '@/core/shell/types';
+import { hasKeptClash } from '@/features/eds/services/storefront/keptClashMark';
 import {
     keepClash,
     readPendingClash,
@@ -206,6 +207,9 @@ describe('keepClash', () => {
         ]);
         expect(git(fx.local, 'diff', '--name-only', '--diff-filter=U')).toBe('blocks/header/header.js');
         expect(git(fx.scBare, 'rev-parse', 'main')).toBe(pushedBefore);
+        // Sync Storefront refuses while this mark is there; nothing git tracks shows it.
+        await expect(hasKeptClash(fx.local)).resolves.toBe(true);
+        expect(git(fx.local, 'status', '--porcelain')).not.toContain('kept-clash');
     }, REAL_GIT_TIMEOUT_MS);
 
     it('records the clash on the project, with the change it belongs to', async () => {
@@ -246,6 +250,7 @@ describe('keepClash', () => {
         expect(read('notes.txt')).toBe('only here\n');
         expect(read('blocks/header/header.js')).toBe(HEADER_KHALIL);
         expect(readPendingClash(project)).toBeUndefined();
+        await expect(hasKeptClash(fx.local)).resolves.toBe(false);
     }, REAL_GIT_TIMEOUT_MS);
 
     it('puts the copy back when the change does not clash there the way it did on GitHub', async () => {

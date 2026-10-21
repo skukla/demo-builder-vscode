@@ -27,6 +27,7 @@ import { promisify } from 'util';
 import { injectTokenIntoUrl } from '../github/githubHelpers';
 import { isRulesetRejection } from '../github/githubWriteRejection';
 import { previewAndPublishPage } from '../helix/helixApiClient';
+import { hasKeptClash, KEPT_CLASH_REFUSAL } from './keptClashMark';
 import { SECRET_FILES_PATHSPEC_EXCLUDE } from './neverShippedFiles';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
@@ -138,6 +139,11 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
         helixPublished: false,
         summary: '',
     };
+
+    // A kept clash means the copy holds a half-applied update; syncing would push it (EDS-57).
+    if (await hasKeptClash(input.storefrontPath)) {
+        throw new GitOperationError(KEPT_CLASH_REFUSAL, 'kept-clash');
+    }
 
     if (!input.skipCommit) {
         await fetchAndFastForward(input.storefrontPath, input.githubToken);
