@@ -281,6 +281,13 @@ describe('merging a template update from the recorded version (real git)', () =>
             strategy: 'merge',
             syncedCommit: '',
             conflicts: ['A.txt'],
+            // The change that clashed, so it can be applied again where the clash is kept (EDS-57).
+            clash: {
+                source: TEMPLATE,
+                base: fx.t1,
+                target: fx.t2,
+                preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
+            },
             error: 'Merge conflicts in 1 file (A.txt); the template update was not applied.',
         });
         expect(originHead(fx)).toBe(before);

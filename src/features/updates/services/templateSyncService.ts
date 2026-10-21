@@ -255,7 +255,9 @@ export class TemplateSyncService {
                 const note = restored ? '' : ' (temp clone not restored)';
                 const count = conflicts.length;
                 this.logger.warn(`[TemplateSync] Merge conflicts in ${count} file(s); not pushing${note}`);
-                return { ...failure('merge', describeTemplateConflicts(conflicts)), conflicts };
+                const source = { owner: target.templateOwner, repo: target.templateRepo };
+                const clash = { source, base, target: outcome.templateHead, preserveFiles };
+                return { ...failure('merge', describeTemplateConflicts(conflicts)), conflicts, clash };
             }
             case 'unchanged':
                 this.logger.info(`[TemplateSync] No template change to apply`);

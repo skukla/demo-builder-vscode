@@ -17,6 +17,18 @@ export interface TemplateSyncOptions {
     preserveFiles?: string[];
 }
 
+/** The change a stopped template update was applying (EDS-57). */
+export interface TemplateClash {
+    /** The source repository the change comes from. */
+    source: { owner: string; repo: string };
+    /** The commit the change starts from. */
+    base: string;
+    /** The commit it brings the storefront to. */
+    target: string;
+    /** Files left out of the change, as the update left them out. */
+    preserveFiles: string[];
+}
+
 /** Result of template sync operation */
 export interface TemplateSyncResult {
     /** Whether sync completed successfully */
@@ -32,6 +44,12 @@ export interface TemplateSyncResult {
      * happens next — a reset is a separate, explicit request, never a fallback.
      */
     conflicts?: string[];
+    /**
+     * With `conflicts`: the change that clashed, as the two commits of the source it runs
+     * between and the files left out of it, so the same change can be applied again where
+     * the clash is kept for fixing (EDS-57).
+     */
+    clash?: TemplateClash;
     /** Error message if sync failed */
     error?: string;
     /**

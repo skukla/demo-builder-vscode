@@ -27,7 +27,7 @@ type TemplateChangeOutcome =
     | { kind: 'applied'; templateHead: string }
     | { kind: 'unchanged'; templateHead: string }
     | { kind: 'not-in-template' }
-    | { kind: 'conflicts'; conflicts: string[]; restored: boolean }
+    | { kind: 'conflicts'; conflicts: string[]; restored: boolean; templateHead: string }
     | { kind: 'failed'; reason: string };
 
 /**
@@ -128,15 +128,20 @@ async function writePatch(
     return true;
 }
 
-/** A 3-way apply that did not succeed: conflicts (clone restored) or git's reason. */
-async function explainUnapplied(git: GitStep, stderr: string): Promise<TemplateChangeOutcome> {
+/** The files git left unmerged; empty when it names none. */
+async function unmergedFiles(git: GitStep): Promise<string[]> {
     const unmerged = await git(`git diff --name-only --diff-filter=U`, TIMEOUTS.QUICK);
-    const conflicts = unmerged.code === 0 ? unmerged.stdout.trim().split('\n').filter(Boolean) : [];
+    return unmerged.code === 0 ? unmerged.stdout.trim().split('\n').filter(Boolean) : [];
+}
+
+/** A 3-way apply that did not succeed: conflicts (clone restored) or git's reason. */
+async function explainUnapplied(git: GitStep, stderr: string, templateHead: string): Promise<TemplateChangeOutcome> {
+    const conflicts = await unmergedFiles(git);
     if (conflicts.length === 0) {
         return { kind: 'failed', reason: gitReason(stderr) };
     }
     const restored = await git(`git reset --hard HEAD`, TIMEOUTS.QUICK);
-    return { kind: 'conflicts', conflicts, restored: restored.code === 0 };
+    return { kind: 'conflicts', conflicts, restored: restored.code === 0, templateHead };
 }
 
 /**
@@ -164,7 +169,34 @@ export async function applyTemplateChangeSince(
 
     const applied = await git(`git apply --3way --index "${patchFile}"`, TIMEOUTS.NORMAL);
     if (applied.code !== 0) {
-        return explainUnapplied(git, applied.stderr);
+        return explainUnapplied(git, applied.stderr, templateHead);
     }
     return { kind: 'applied', templateHead };
+}
+
+/** How applying a change and keeping its clashes ended (EDS-57). */
+export type KeptChangeOutcome =
+    | { kind: 'kept'; conflicts: string[] }
+    | { kind: 'applied' }
+    | { kind: 'unchanged' }
+    | { kind: 'failed'; reason: string };
+
+/**
+ * Apply the change between two commits already present in the repository, 3-way, and
+ * LEAVE any clash in the working tree with git's markers: the clean files staged, the
+ * clashing ones unmerged. For the project's local storefront copy, where the SC's AI
+ * fixes the clash (EDS-57). Base and target are not re-checked against the template's
+ * history: the throwaway clone's apply did that before a clash was ever kept.
+ */
+export async function applyChangeKeepingConflicts(
+    git: GitStep,
+    request: Omit<TemplateChangeRequest, 'target'> & { target: string },
+): Promise<KeptChangeOutcome> {
+    if (!(await writePatch(git, `${request.base} ${request.target}`, request))) {
+        return { kind: 'unchanged' };
+    }
+    const applied = await git(`git apply --3way --index "${request.patchFile}"`, TIMEOUTS.NORMAL);
+    if (applied.code === 0) return { kind: 'applied' };
+    const conflicts = await unmergedFiles(git);
+    return conflicts.length > 0 ? { kind: 'kept', conflicts } : { kind: 'failed', reason: gitReason(applied.stderr) };
 }

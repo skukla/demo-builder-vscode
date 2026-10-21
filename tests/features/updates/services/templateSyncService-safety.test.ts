@@ -18,7 +18,9 @@
  */
 
 import {
+    BASE_SHA,
     REPO_DIR,
+    TEMPLATE_HEAD,
     applyStops,
     edsProject,
     failOn,
@@ -231,6 +233,12 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
             strategy: 'merge',
             syncedCommit: '',
             conflicts: ['blocks/hero/hero.js', 'styles/styles.css'],
+            clash: {
+                source: { owner: 'adobe', repo: 'aem-boilerplate-commerce' },
+                base: BASE_SHA,
+                target: TEMPLATE_HEAD,
+                preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
+            },
             error: 'Merge conflicts in 2 files (blocks/hero/hero.js, styles/styles.css); the template update was not applied.',
         });
         expect(gitCalls().some((c) => /reset --hard HEAD/.test(c))).toBe(true);

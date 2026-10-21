@@ -313,6 +313,12 @@ describe('merge strategy — the exact git conversation', () => {
             strategy: 'merge',
             syncedCommit: '',
             conflicts: ['blocks/hero/hero.js'],
+            clash: {
+                source: { owner: 'adobe', repo: 'aem-boilerplate-commerce' },
+                base: BASE_SHA,
+                target: TEMPLATE_HEAD,
+                preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
+            },
             error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
         });
         expect(mockRm).toHaveBeenCalledWith(TEMP_DIR, { recursive: true, force: true });

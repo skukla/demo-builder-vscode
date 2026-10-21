@@ -151,6 +151,25 @@ async function hasGitFolder(storefrontPath: string): Promise<boolean> {
     }
 }
 
+/** A project's local storefront copy, ready to run git in, with its GitHub fetch URL. */
+export interface LocalCopy extends LocalRefreshRequest {
+    git: GitStep;
+}
+
+/**
+ * The project's local copy when it exists on disk as a git repository, or undefined.
+ *
+ * @param token - the SC's GitHub token, injected into the fetch URL only
+ */
+export async function openLocalCopy(project: Project, ctx: UpdateContext, token: string): Promise<LocalCopy | undefined> {
+    const copy = localCopyOf(project);
+    if (!copy || !(await hasGitFolder(copy.storefrontPath))) return undefined;
+    const git: GitStep = (command, timeout) =>
+        ctx.commandManager.execute(command, { cwd: copy.storefrontPath, timeout, shell: DEFAULT_SHELL });
+    const remoteUrl = injectTokenIntoUrl(`https://github.com/${copy.repo}.git`, token);
+    return { storefrontPath: copy.storefrontPath, remoteUrl, branch: 'main', git };
+}
+
 /**
  * After an update pushed, refresh each touched project's local copy. Best effort: a copy
  * that cannot be refreshed is logged with the reason and never fails the update, which has
@@ -161,16 +180,13 @@ async function hasGitFolder(storefrontPath: string): Promise<boolean> {
 export async function refreshLocalStorefronts(projects: Project[], ctx: UpdateContext): Promise<void> {
     const seen = new Set<string>();
     const token = (await getGitHubServices(ctx.secrets).tokenService.getToken())?.token;
+    if (!token) return;
     for (const project of projects) {
-        const copy = localCopyOf(project);
+        const copy = await openLocalCopy(project, ctx, token);
         if (!copy || seen.has(copy.storefrontPath)) continue;
         seen.add(copy.storefrontPath);
-        if (!token || !(await hasGitFolder(copy.storefrontPath))) continue;
-        const git: GitStep = (command, timeout) =>
-            ctx.commandManager.execute(command, { cwd: copy.storefrontPath, timeout, shell: DEFAULT_SHELL });
-        const remoteUrl = injectTokenIntoUrl(`https://github.com/${copy.repo}.git`, token);
         try {
-            const outcome = await refreshLocalStorefront(git, { ...copy, remoteUrl, branch: 'main' });
+            const outcome = await refreshLocalStorefront(copy.git, copy);
             if (outcome.kind === 'left') {
                 ctx.logger.info(`[Updates] Local storefront copy of ${project.name} left as it is: ${outcome.reason}`);
             } else if (outcome.kind === 'refreshed') {
