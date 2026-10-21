@@ -1,8 +1,9 @@
 import { View, Flex, Text, Button, ProgressBar } from '@adobe/react-spectrum';
 import React, { useRef, useCallback, useMemo } from 'react';
 import { isMeshComponentId } from '@/core/constants';
+import { StepStatusIcon } from '@/core/ui/components/feedback/StepStatusIcon';
 import { cn } from '@/core/ui/utils/classNames';
-import { getProgressValue, getStatusIcon, renderPluginStatusIcon, renderPrerequisiteMessage, shouldShowPluginDetails } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
+import { getProgressValue, renderPluginStatusIcon, renderPrerequisiteMessage, shouldShowPluginDetails } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
 import { usePrerequisiteAutoScroll } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteAutoScroll';
 import { usePrerequisiteNavigation } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteNavigation';
 import { usePrerequisiteState } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteState';
@@ -85,7 +86,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                             )}
                         >
                             {/* Icon - spans both rows, centered vertically in the entire item */}
-                            <div className="prerequisite-icon">{getStatusIcon(check.status)}</div>
+                            <div className="prerequisite-icon"><StepStatusIcon status={check.status} /></div>
 
                             {/* Header content - row 1 */}
                             <div className="prerequisite-header">
