@@ -186,7 +186,7 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (50)
+### ai  (51)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -239,9 +239,10 @@ each item's own file; what has already landed against an item is in its
 | `AI-73` | fix | [An agent's create_project never deletes an existing project, and cleans up when it fails](2026-10-16-create-project-name-guard.md) | — | high | built |
 | `AI-74` | feature | [An agent can rebuild a project on a repository and site that already exist](2026-10-16-create-project-adopt-existing.md) | — | med | active |
 | `AI-76` | fix | [An agent's write stops when the open project moved under it](2026-10-20-agent-write-stops-when-project-moved.md) | — | high | built |
+| `AI-77` | fix | [The "ask" permission setting may not make Claude Code ask](2026-10-21-claude-ask-permission-may-not-ask.md) | — | med | backlog |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
-### eds  (63)
+### eds  (65)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -307,6 +308,8 @@ each item's own file; what has already landed against an item is in its
 | `EDS-53` | fix | [CitiSignal's checkout label sheet will not preview on a copy](2026-10-18-citisignal-checkout-sheet-will-not-preview.md) | — | med | built |
 | `EDS-54` | fix | [An expired DA.live sign-in during the access grant is logged and passed over](2026-10-19-dalive-grant-401-passed-over.md) | — | low | built |
 | `EDS-55` | chore | [The storefront pipeline's warnings travel one route, not one each](2026-10-20-storefront-warnings-one-channel.md) | — | med | built |
+| `EDS-57` | feature | [A storefront update that stops on a clash can be fixed with AI, from the builder](2026-10-21-update-clash-fix-with-ai.md) | — | high | backlog |
+| `EDS-58` | question | [Does the Sync Storefront button earn its keep when no SC edits code?](2026-10-21-sync-storefront-earns-its-keep.md) | — | med | open |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (124)
@@ -696,7 +699,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*296 item(s) sit outside the A–G chain.*
+*299 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
