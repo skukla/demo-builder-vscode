@@ -82,6 +82,7 @@ finding.
 | 18 | Delete Adobe project | Project picker | Notification with `Step n/N:` | Notification, new count wording (the picker is inside a larger flow; a modal on top would stack) | R2 wording |
 | 19 | Install prerequisite | Wizard prerequisites step | Per-row progress bar | unchanged; agent path gains steps | R4, R3 |
 | 20 | Check for updates; update extension; apply project updates | Palette / update prompt | Notifications; fork-sync and add-on updates show **nothing** | Notifications with the wording rules; the silent two get one | R2 |
+| 20a | Apply updates | The Updates modal on the projects list (PL-80) | The projects list's progress modal, then an Update results modal | **The Updates modal shows the run itself, row by row** (2026-10-21), as row 10: each ticked row's status icon, its reason under it, the question in place of the list, and the handover on close | R1 |
 | 21 | Sign in (Adobe, DA.live); switch org; site access; repair site config; migrate names; clean up sites/repos; diagnostics | Palette / guards | Notifications of varying style | Notifications with the wording rules; no change of surface | R2 |
 | 22 | Open live site in a private browser; detect store structure; check GitHub App | Buttons / wizard | Short notification or inline spinner | unchanged | R5 / R4 |
 

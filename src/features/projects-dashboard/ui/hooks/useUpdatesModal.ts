@@ -7,31 +7,41 @@
  * itself: the check, "Checking for updates" and "up to date" are the notification's
  * (owner, 2026-10-20).
  *
- * It holds which rows stay ticked. Apply closes it and hands the run to the screen's
- * progress modal; when the run ends with something the SC should read (an update that did
- * not apply, a note), the report shows once the progress modal has been closed. One modal
- * on screen at a time.
+ * It holds which rows stay ticked. Apply keeps the modal open and shows the run in it,
+ * row by row, as the Prerequisites step shows its checks (owner, 2026-10-21): each
+ * ticked row's status arrives as it starts and ends (`updateRowStatus`), and the stage,
+ * a question the run is paused on and the run's end arrive on the operation's progress
+ * channel. Until then a second modal told the run and a third listed what did not apply.
+ *
+ * Closing a run that is still going hands it to a progress notification, as the
+ * progress modal does; closing a question answers it as cancelled.
  *
  * @module features/projects-dashboard/ui/hooks/useUpdatesModal
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { OperationRunnerControls } from '@/core/ui/hooks/useOperationRunner';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
 import type {
-    ApplyUpdatesReport,
-    ApplyUpdatesResponse,
     PendingUpdateRow,
     ShowUpdatesPayload,
     TakeUpdatesRequestResponse,
+    UpdateRowStatus,
 } from '@/types/pendingUpdates';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
+
+/** The run's title: the modal's while it runs, and the notification's on handover. */
+export const APPLYING_TITLE = 'Applying updates';
 
 /** What the modal shows. */
 export type UpdatesView =
     | { phase: 'closed' }
     | { phase: 'list'; rows: PendingUpdateRow[] }
-    | { phase: 'report'; report: ApplyUpdatesReport };
+    | { phase: 'applying'; rows: PendingUpdateRow[] };
+
+/** Each applying row's status, by row id. */
+export type RowStatuses = Readonly<Record<string, UpdateRowStatus>>;
 
 export interface UpdatesModalControls {
     view: UpdatesView;
@@ -42,29 +52,42 @@ export interface UpdatesModalControls {
     toggleGroup: (ids: string[]) => void;
     apply: () => void;
     close: () => void;
+    /** While applying: where each row has got to. */
+    statuses: RowStatuses;
+    /** While applying: the run's stage, its question, its end; null before any arrives. */
+    progress: OperationProgressPayload | null;
+    /** Answer the question the run is paused on, with anything typed into its fields. */
+    answer: (chosen?: string) => void;
+    /** Every keystroke in a question's fields, for `answer` to hand back. */
+    onTyped: (values: Record<string, string>) => void;
 }
 
 const CLOSED: UpdatesView = { phase: 'closed' };
+const NO_STATUSES: RowStatuses = {};
 
-/** Whether the SC has anything to read once the run ends. */
-function worthShowing(report: ApplyUpdatesReport | undefined): report is ApplyUpdatesReport {
-    return Boolean(report && (report.problems.length > 0 || report.notes.length > 0));
+/** Whether the run has ended, either way. */
+function hasEnded(progress: OperationProgressPayload | null): boolean {
+    return progress?.state === 'succeeded' || progress?.state === 'failed';
+}
+
+/** Every row starts the run waiting. */
+function waitingAll(rows: PendingUpdateRow[]): RowStatuses {
+    return Object.fromEntries(rows.map((r) => [r.id, { id: r.id, state: 'waiting' as const }]));
 }
 
 /**
  * The modal's controls.
  *
- * @param operations - the screen's progress modal, which shows the run
  * @param onApplied - called once the run has answered, to refresh the projects
  * @returns the view and its actions
  */
-export function useUpdatesModal(
-    operations: Pick<OperationRunnerControls, 'show' | 'open'>,
-    onApplied: () => void,
-): UpdatesModalControls {
+export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
     const [view, setView] = useState<UpdatesView>(CLOSED);
     const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
-    const [waitingReport, setWaitingReport] = useState<ApplyUpdatesReport | null>(null);
+    const [statuses, setStatuses] = useState<RowStatuses>(NO_STATUSES);
+    const [run, setRun] = useState(0);
+    const applying = view.phase === 'applying';
+    const progress = useOperationProgress(applying ? UPDATES_OPERATION_ID : null, run, false);
 
     const openOn = useCallback((rows: PendingUpdateRow[] | null | undefined) => {
         if (!rows || rows.length === 0) return;
@@ -82,6 +105,14 @@ export function useUpdatesModal(
             () => undefined,
         );
     }, [openOn]);
+    useEffect(
+        () =>
+            webviewClient.onMessage('updateRowStatus', (data) => {
+                const status = data as UpdateRowStatus | undefined;
+                if (status?.id) setStatuses((previous) => ({ ...previous, [status.id]: status }));
+            }),
+        [],
+    );
 
     const toggle = useCallback((id: string) => {
         setTicked((previous) => {
@@ -104,44 +135,39 @@ export function useUpdatesModal(
         });
     }, []);
 
-    const { show } = operations;
     const apply = useCallback(() => {
         if (view.phase !== 'list') return;
-        const ids = view.rows.filter((r) => ticked.has(r.id) && !r.lockedReason).map((r) => r.id);
-        setView(CLOSED);
-        show({
-            id: UPDATES_OPERATION_ID,
-            name: 'updates',
-            message: 'applyUpdates',
-            title: 'Applying updates',
-            failureTitle: "Couldn't apply the updates",
-            successTitle: 'Updates applied',
-            payload: { ids },
-        });
+        const rows = view.rows.filter((r) => ticked.has(r.id) && !r.lockedReason);
+        const ids = rows.map((r) => r.id);
+        setStatuses(waitingAll(rows));
+        setRun((previous) => previous + 1);
+        setView({ phase: 'applying', rows });
         webviewClient
-            .request<ApplyUpdatesResponse>('applyUpdates', { ids, id: UPDATES_OPERATION_ID, progress: 'modal' })
-            .then(
-                (response) => {
-                    if (worthShowing(response.data)) setWaitingReport(response.data);
-                    onApplied();
-                },
-                onApplied,
-            );
-    }, [view, ticked, show, onApplied]);
+            .request('applyUpdates', { ids, id: UPDATES_OPERATION_ID, progress: 'modal' })
+            .then(onApplied, onApplied);
+    }, [view, ticked, onApplied]);
 
-    // The report waits for the progress modal to close: one modal at a time.
-    const progressOpen = operations.open !== null;
-    useEffect(() => {
-        if (waitingReport && !progressOpen) {
-            setView({ phase: 'report', report: waitingReport });
-            setWaitingReport(null);
+    // A ref, not state: every keystroke would otherwise re-render the list around the
+    // field being typed into, and nothing renders from it.
+    const typed = useRef<Record<string, string>>({});
+    const onTyped = useCallback((values: Record<string, string>) => {
+        typed.current = values;
+    }, []);
+    const answer = useCallback((chosen?: string) => {
+        webviewClient.postMessage('answerOperationPrompt', { id: UPDATES_OPERATION_ID, answer: chosen, values: typed.current });
+    }, []);
+
+    const close = useCallback(() => {
+        if (applying && progress?.prompt && !hasEnded(progress)) {
+            answer(undefined);
+        } else if (applying && !hasEnded(progress)) {
+            webviewClient.postMessage('backgroundOperation', { id: UPDATES_OPERATION_ID, title: APPLYING_TITLE });
         }
-    }, [waitingReport, progressOpen]);
-
-    const close = useCallback(() => setView(CLOSED), []);
+        setView(CLOSED);
+    }, [applying, progress, answer]);
 
     return useMemo(
-        () => ({ view, ticked, toggle, toggleGroup, apply, close }),
-        [view, ticked, toggle, toggleGroup, apply, close],
+        () => ({ view, ticked, toggle, toggleGroup, apply, close, statuses, progress, answer, onTyped }),
+        [view, ticked, toggle, toggleGroup, apply, close, statuses, progress, answer, onTyped],
     );
 }

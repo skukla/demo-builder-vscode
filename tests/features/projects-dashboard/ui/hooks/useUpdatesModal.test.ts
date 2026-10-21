@@ -1,22 +1,24 @@
 /**
  * useUpdatesModal — the Updates modal's state (PL-80): it opens on the rows Check for
  * Updates found (pushed to an open panel, or taken by a new one once mounted), never
- * checks itself, holds the ticks, hands the run to the progress modal on Apply, and shows
- * the report only once the progress modal has been closed.
+ * checks itself, holds the ticks, and on Apply stays open on the run: each ticked row's
+ * status, the run's progress and its question, and a close that hands a running run to
+ * a notification.
  */
 
 // FIRST: the shared webview client double; its jest.mock must register before the hook binds.
-import { mockRequest, webviewClientHandlers } from '../../../../helpers/webviewClientMock';
+import { mockPostMessage, mockRequest, webviewClientHandlers } from '../../../../helpers/webviewClientMock';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
 import { useUpdatesModal } from '@/features/projects-dashboard/ui/hooks/useUpdatesModal';
-import type { ScreenOperation } from '@/core/ui/hooks/useOperationRunner';
 import type {
     ApplyUpdatesResponse,
     PendingUpdateRow,
     ShowUpdatesPayload,
     TakeUpdatesRequestResponse,
+    UpdateRowStatus,
 } from '@/types/pendingUpdates';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 const row = (id: string, overrides: Partial<PendingUpdateRow> = {}): PendingUpdateRow => ({
     id,
@@ -38,13 +40,26 @@ function answers(take: TakeUpdatesRequestResponse = NOT_OPENED_FOR_IT, apply?: A
     mockRequest.mockImplementation(async (type: string) => byType[type]);
 }
 
-function setup(open: ScreenOperation | null = null) {
-    const show = jest.fn();
+function setup() {
     const onApplied = jest.fn();
-    const hook = renderHook(({ progress }) => useUpdatesModal({ show, open: progress }, onApplied), {
-        initialProps: { progress: open },
+    const hook = renderHook(() => useUpdatesModal(onApplied));
+    return { ...hook, onApplied };
+}
+
+/** The extension pushes something the run reports. */
+async function push(type: 'updateRowStatus' | 'operationProgress', payload: UpdateRowStatus | OperationProgressPayload) {
+    await act(async () => {
+        webviewClientHandlers.get(type)?.(payload);
     });
-    return { ...hook, show, onApplied };
+}
+
+/** Rows shown and the first two applied: the run under way. */
+async function applying() {
+    answers(NOT_OPENED_FOR_IT, { success: true });
+    const hook = setup();
+    await pushRows(ROWS);
+    act(() => hook.result.current.apply());
+    return hook;
 }
 
 /** The extension pushes the rows to a panel already open. */
@@ -57,6 +72,7 @@ async function pushRows(rows: PendingUpdateRow[]): Promise<void> {
 
 beforeEach(() => {
     mockRequest.mockReset();
+    mockPostMessage.mockReset();
     answers();
 });
 
@@ -118,51 +134,70 @@ describe('useUpdatesModal', () => {
         expect(result.current.ticked.size).toBe(0);
     });
 
-    it('applies the ticked rows, never a locked one, closing the list and showing the run', async () => {
-        answers(NOT_OPENED_FOR_IT, { success: true, data: { applied: 1, problems: [], notes: [] } });
-        const { result, show, onApplied } = setup();
+    it('applies the ticked rows, never a locked one, and stays open on them, each waiting', async () => {
+        answers(NOT_OPENED_FOR_IT, { success: true });
+        const { result, onApplied } = setup();
         await pushRows(ROWS);
         act(() => result.current.toggle('template:0'));
         act(() => result.current.toggle('integration:0'));
 
         act(() => result.current.apply());
 
-        expect(result.current.view).toEqual({ phase: 'closed' });
-        expect(show).toHaveBeenCalledWith(
-            expect.objectContaining({ id: UPDATES_OPERATION_ID, message: 'applyUpdates', payload: { ids: ['blockLibrary:0'] } }),
-        );
+        expect(result.current.view).toEqual({ phase: 'applying', rows: [ROWS[0]] });
+        expect(result.current.statuses).toEqual({ 'blockLibrary:0': { id: 'blockLibrary:0', state: 'waiting' } });
         expect(mockRequest).toHaveBeenCalledWith('applyUpdates', {
             ids: ['blockLibrary:0'],
             id: UPDATES_OPERATION_ID,
             progress: 'modal',
         });
         await waitFor(() => expect(onApplied).toHaveBeenCalledTimes(1));
-        // Nothing to read: the list does not come back.
+        // The run's end is read in the modal: it does not close itself.
+        expect(result.current.view.phase).toBe('applying');
+    });
+
+    it("follows each row's status and the run's progress as they are pushed", async () => {
+        const { result } = await applying();
+
+        await push('updateRowStatus', { id: 'template:0', state: 'failed', message: 'Bodea: merge conflicts' });
+        await push('operationProgress', { id: UPDATES_OPERATION_ID, state: 'running', stage: 'Updating add-ons', step: 'Lib A' });
+
+        expect(result.current.statuses['template:0']).toEqual({ id: 'template:0', state: 'failed', message: 'Bodea: merge conflicts' });
+        expect(result.current.statuses['blockLibrary:0'].state).toBe('waiting');
+        expect(result.current.progress).toMatchObject({ stage: 'Updating add-ons', step: 'Lib A' });
+    });
+
+    it('hands a run still going to a notification when closed', async () => {
+        const { result } = await applying();
+        await push('operationProgress', { id: UPDATES_OPERATION_ID, state: 'running', stage: 'Updating add-ons' });
+
+        act(() => result.current.close());
+
+        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: UPDATES_OPERATION_ID, title: 'Applying updates' });
         expect(result.current.view).toEqual({ phase: 'closed' });
     });
 
-    it('shows the report once the progress modal has been closed, not over it', async () => {
-        const report = { applied: 1, problems: ['Bodea: merge conflicts'], notes: [] };
-        answers(NOT_OPENED_FOR_IT, { success: true, warning: '1 update did not apply.', data: report });
-        const progress: ScreenOperation = {
-            id: UPDATES_OPERATION_ID,
-            name: 'updates',
-            message: 'applyUpdates',
-            title: 'Applying updates',
-            failureTitle: "Couldn't apply the updates",
-            successTitle: 'Updates applied',
-            run: 1,
-            resume: false,
-        };
-        const { result, rerender, onApplied } = setup(progress);
-        await pushRows(ROWS);
+    it('answers a question with what was typed, and closing it answers it as cancelled', async () => {
+        const { result } = await applying();
+        const prompt = { message: 'Bodea is running. Stop it to update it?', actions: ['Stop and update', 'Skip'] };
+        await push('operationProgress', { id: UPDATES_OPERATION_ID, state: 'running', prompt });
 
-        act(() => result.current.apply());
-        await waitFor(() => expect(onApplied).toHaveBeenCalled());
+        act(() => result.current.onTyped({ note: 'x' }));
+        act(() => result.current.answer('Skip'));
+        act(() => result.current.close());
+
+        expect(mockPostMessage.mock.calls).toEqual([
+            ['answerOperationPrompt', { id: UPDATES_OPERATION_ID, answer: 'Skip', values: { note: 'x' } }],
+            ['answerOperationPrompt', { id: UPDATES_OPERATION_ID, answer: undefined, values: { note: 'x' } }],
+        ]);
+    });
+
+    it('just closes once the run has ended', async () => {
+        const { result } = await applying();
+        await push('operationProgress', { id: UPDATES_OPERATION_ID, state: 'succeeded' });
+
+        act(() => result.current.close());
+
+        expect(mockPostMessage).not.toHaveBeenCalled();
         expect(result.current.view).toEqual({ phase: 'closed' });
-
-        rerender({ progress: null });
-
-        await waitFor(() => expect(result.current.view).toEqual({ phase: 'report', report }));
     });
 });

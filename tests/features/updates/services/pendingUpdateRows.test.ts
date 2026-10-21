@@ -8,6 +8,7 @@
  */
 
 import {
+    rowIdsOf,
     selectionsForIds,
     toPendingUpdateRows,
 } from '@/features/updates/services/pendingUpdateRows';
@@ -332,5 +333,23 @@ describe('selectionsForIds', () => {
         ]);
 
         expect(picked.selections.template).toStrictEqual([]);
+    });
+});
+
+describe('rowIdsOf', () => {
+    // A run reports the entry it is working on; this is how the modal finds its row.
+    it("names each entry by its row's id, the same entry object as the check holds", () => {
+        const sel: UpdateSelections = {
+            ...empty(),
+            template: [{ project: bodea }],
+            blockLibrary: [justrite, bodea].map((project) => ({ project, library, latestCommit: 'b' })),
+        };
+        const rows = toPendingUpdateRows(sel, undefined, undefined);
+
+        const ids = rowIdsOf(sel);
+
+        expect(ids.get(sel.blockLibrary[1])).toBe('blockLibrary:1');
+        expect(ids.get(sel.template[0])).toBe('template:0');
+        expect([...ids.values()].sort()).toEqual(rows.map((r) => r.id).sort());
     });
 });

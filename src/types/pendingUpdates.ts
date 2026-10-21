@@ -64,23 +64,23 @@ export interface ApplyUpdatesRequest {
     progress?: 'modal';
 }
 
-/** What an apply did, as the Updates modal lists it once the run ends. */
-export interface ApplyUpdatesReport {
-    /** How many updates applied. */
-    applied: number;
-    /** What did not apply, one sentence each, naming the update and why. */
-    problems: string[];
-    /** What applied with something to know: a fix it could not put back, a block left out. */
-    notes: string[];
+/** Where one ticked row has got to in a run. */
+export type UpdateRowState = 'waiting' | 'running' | 'done' | 'failed' | 'skipped';
+
+/** `updateRowStatus` — pushed as each ticked row starts and ends. */
+export interface UpdateRowStatus {
+    id: string;
+    state: UpdateRowState;
+    /** Done: what to know, when there is something. Failed or skipped: why. */
+    message?: string;
 }
 
-/** `applyUpdates` — the answer (Pattern B). */
+/** `applyUpdates` — the answer (Pattern B). Each row's own outcome was pushed as it ended. */
 export interface ApplyUpdatesResponse {
     success: boolean;
     error?: string;
-    /** Set when some updates did not apply; the run still ended, and `data` says which. */
+    /** Set when some updates did not apply; the run still ended, and their rows say why. */
     warning?: string;
-    data?: ApplyUpdatesReport;
 }
 
 /** `takeUpdatesRequest` — the rows to show when the screen was opened for them, else null. */

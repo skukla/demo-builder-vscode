@@ -110,4 +110,58 @@
     .updates-group-rows .checkbox-row label[class*='spectrum-Checkbox'] {
         min-height: 24px;
     }
+
+    /* The run (UpdatesRunView, 2026-10-21): an icon where the checkbox was, in a 28px
+       column so names line up with the list the SC ticked. */
+    /* A question the run is paused on, in place of the list: the list's own height, so
+       the window does not change size while it asks (modal-steady-height). */
+    .updates-run-question {
+        height: min(440px, 55vh);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .updates-run-header {
+        min-height: 40px;
+    }
+
+    .updates-run-icon {
+        flex-shrink: 0;
+        width: 28px;
+        display: flex;
+        align-items: center;
+    }
+
+    .updates-run-row {
+        display: flex;
+        align-items: flex-start;
+        padding: 3px 0;
+    }
+
+    .updates-run-row .updates-run-icon {
+        min-height: 20px;
+    }
+
+    .updates-run-text {
+        min-width: 0;
+        line-height: 20px;
+    }
+
+    /* A row that ended with something to read says it under its name: why it did not
+       apply, or what to know. */
+    .updates-run-why,
+    .updates-run-note {
+        font-size: 12px;
+        line-height: 16px;
+        margin: 2px 0 0;
+    }
+
+    .updates-run-why {
+        color: var(--spectrum-global-color-red-600);
+    }
+
+    .updates-run-note {
+        color: var(--spectrum-global-color-gray-700);
+    }
 }
