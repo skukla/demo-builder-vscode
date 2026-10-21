@@ -116,8 +116,8 @@ describe('toPendingUpdateRows', () => {
             ['Bodea', 'eds-storefront', '6.0.0 → 6.1.0', true],
             ['Bodea', 'Adobe MCP', '1.0.0 → 1.1.0', true],
             ['Bodea', 'Demo Builder Blocks', LIVE, true],
-            ['Bodea', 'Bodea Blocks', 'install, updates the live site', true],
             ['Bodea', 'Demo Inspector SDK', 'Newer version', true],
+            ['Bodea', 'Bodea Blocks', 'install, updates the live site', true],
             ['Bodea', 'ERP Integration and Justrite ERP', 'Newer version, redeploys to Adobe', false],
         ]);
     });
@@ -151,7 +151,9 @@ describe('toPendingUpdateRows', () => {
         expect([row.label, row.detail]).toEqual(['EDS Storefront', 'version 6.1.0']);
     });
 
-    it('puts Demo Builder first, the open project next, the others by name, and the template repositories last', () => {
+    // The order they apply (owner, 2026-10-21): the repositories a template update reads
+    // from first, Demo Builder last since it ends by offering a reload.
+    it('puts the template repositories first, the open project next, the others by name, and Demo Builder last', () => {
         const sel: UpdateSelections = {
             ...empty(),
             forkSync: [
@@ -176,19 +178,19 @@ describe('toPendingUpdateRows', () => {
         );
 
         expect(rows.map((r) => r.group.title)).toEqual([
-            'Demo Builder',
+            'Template repositories',
             'JustRite',
             'Bodea',
             'patch-canary-b2b',
-            'Template repositories',
+            'Demo Builder',
         ]);
         expect([rows[0].label, rows[0].detail]).toEqual([
-            'Demo Builder extension',
-            '1.0.0-beta.149 → 1.0.0-beta.150',
-        ]);
-        expect([rows[4].label, rows[4].detail]).toEqual([
             'skukla/citisignal',
             'Newer version from adobe/citisignal',
+        ]);
+        expect([rows[4].label, rows[4].detail]).toEqual([
+            'Demo Builder extension',
+            '1.0.0-beta.149 → 1.0.0-beta.150',
         ]);
     });
 

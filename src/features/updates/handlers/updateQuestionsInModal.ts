@@ -14,6 +14,7 @@ import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { UpdateQuestions } from '@/features/updates/services/updateApplyService';
 import type { ClashAnswer, ClashQuestion, UnfinishedAnswer } from '@/features/updates/services/updateClash';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
+import { projectsOf, selectionsWhere } from '@/features/updates/services/updateSelectionsByProject';
 import type { Project } from '@/types/base';
 
 const FIX_WITH_AI = 'Fix with AI';
@@ -57,10 +58,12 @@ export const questionsInModal: UpdateQuestions = {
         if (answer === FIX_WITH_AI) return 'fix';
         return answer === DROP_THE_FIX ? 'leave' : 'later';
     },
-    async replaceLibraryBlocks(libraryName: string, project: Project): Promise<boolean> {
+    async replaceLibraryBlocks(_libraryName: string, _project: Project): Promise<boolean> {
+        // Asked under the library's own row, beneath its project, so it names neither:
+        // it says what each answer does (owner, 2026-10-21).
         const answer = await askDuringOperation(
-            `${libraryName} has new blocks for ${getProjectDisplayName(project)}. Replacing them ` +
-                'overwrites any edits you made to this library\'s blocks.',
+            `"${REPLACE_BLOCKS}" puts in the new versions, and any edits you made to these blocks are lost. ` +
+                `"${KEEP_BLOCKS}" leaves them as they are.`,
             REPLACE_BLOCKS,
             KEEP_BLOCKS,
         );
@@ -90,7 +93,7 @@ export async function stopRunningDemos(
 ): Promise<StoppedForUpdate> {
     const skipped: string[] = [];
     const leftOut = new Set<string>();
-    for (const project of runningProjects(selections)) {
+    for (const project of projectsOf(selections).filter((p) => p.status === 'running')) {
         const name = getProjectDisplayName(project);
         const answer = await askDuringOperation(`${name} is running. Stop it to update it?`, STOP_AND_UPDATE, SKIP);
         if (answer !== STOP_AND_UPDATE) {
@@ -101,47 +104,6 @@ export async function stopRunningDemos(
             await sleep(TIMEOUTS.DEMO_STOP_WAIT);
         }
     }
-    return { selections: withoutProjects(selections, leftOut), skipped };
-}
-
-/** Each running project once, in the order its first update appears. */
-function runningProjects(selections: UpdateSelections): Project[] {
-    const seen = new Map<string, Project>();
-    for (const entry of projectEntries(selections)) {
-        if (entry.project.status === 'running' && !seen.has(entry.project.path)) {
-            seen.set(entry.project.path, entry.project);
-        }
-    }
-    return [...seen.values()];
-}
-
-function projectEntries(selections: UpdateSelections): Array<{ project: Project }> {
-    return [
-        ...selections.template,
-        ...selections.boilerplate,
-        ...selections.finish,
-        ...selections.component,
-        ...selections.adobeMcp,
-        ...selections.blockLibrary,
-        ...selections.blockLibraryInstall,
-        ...selections.inspector,
-        ...selections.integration,
-    ];
-}
-
-function withoutProjects(selections: UpdateSelections, paths: Set<string>): UpdateSelections {
-    if (paths.size === 0) return selections;
-    const keep = <T extends { project: Project }>(list: T[]): T[] => list.filter((e) => !paths.has(e.project.path));
-    return {
-        forkSync: selections.forkSync,
-        template: keep(selections.template),
-        boilerplate: keep(selections.boilerplate),
-        finish: keep(selections.finish),
-        component: keep(selections.component),
-        adobeMcp: keep(selections.adobeMcp),
-        blockLibrary: keep(selections.blockLibrary),
-        blockLibraryInstall: keep(selections.blockLibraryInstall),
-        inspector: keep(selections.inspector),
-        integration: keep(selections.integration),
-    };
+    const selected = leftOut.size === 0 ? selections : selectionsWhere(selections, (p) => !leftOut.has(p.path));
+    return { selections: selected, skipped };
 }

@@ -36,15 +36,21 @@ import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
-import type { ApplyUpdatesRequest, PendingUpdateRow, UpdateRowState, UpdateRowStatus } from '@/types/pendingUpdates';
+import {
+    localCopyRowId,
+    type ApplyUpdatesRequest,
+    type PendingUpdateRow,
+    type UpdateRowState,
+    type UpdateRowStatus,
+} from '@/types/pendingUpdates';
 import { toError } from '@/types/typeGuards';
 
 /** The check the screen is showing; the ticked ids are applied against it, once. */
 let shown: { found: FoundUpdates; rows: PendingUpdateRow[] } | undefined;
 
 const OUT_OF_DATE = 'This list of updates is out of date. Check for updates again.';
-const DEMO_RUNNING = 'Not updated, because its demo is running.';
-const EXTENSION_FAILED = 'Not updated. Details are in Debug Logs.';
+const DEMO_RUNNING = 'Not updated — its demo is running.';
+const EXTENSION_FAILED = 'Not updated — details are in Debug Logs.';
 
 /** Tells the screen where one row has got to, and counts the rows that did not apply. */
 interface RowTeller {
@@ -94,11 +100,11 @@ export function presentedRows(): PendingUpdateRow[] {
 /** `applyUpdates`: apply the ticked rows, in the progress modal. */
 export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOutcomeToModal(
     async (context, payload) => {
-        const found = shown?.found;
-        if (!found) return { success: false, error: OUT_OF_DATE };
+        const presented = shown;
+        if (!presented) return { success: false, error: OUT_OF_DATE };
         shown = undefined;
         return withOperationProgress({ id: UPDATES_OPERATION_ID, title: 'Applying updates', inModal: true }, (report) =>
-            applyTicked(context, found, payload?.ids ?? [], report),
+            applyTicked(context, presented, payload?.ids ?? [], report),
         );
     },
     () => UPDATES_OPERATION_ID,
@@ -106,7 +112,7 @@ export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOu
 
 async function applyTicked(
     context: HandlerContext,
-    found: FoundUpdates,
+    { found, rows: shownRows }: { found: FoundUpdates; rows: PendingUpdateRow[] },
     ids: string[],
     report: ReportStage,
 ): Promise<HandlerResponse & OperationOutcome> {
@@ -126,7 +132,18 @@ async function applyTicked(
         rows.tell(id, outcome.state, lineOf(outcome));
     };
     const updateContext = updateContextFor(context);
-    const result = await applyUpdatesHeadless(selections, updateContext, report, { questions: questionsInModal, onItem });
+    // Down the list the SC is watching: one project at a time, as its headings run.
+    const projectOrder = [...new Set(shownRows.map((row) => row.group.key))];
+    const result = await applyUpdatesHeadless(selections, updateContext, report, {
+        questions: questionsInModal,
+        onItem,
+        projectOrder,
+        // A step of its own, but not an update: told without counting toward "did not apply".
+        onLocalCopy: (project, outcome) => {
+            const message = lineOf(outcome);
+            void tellScreen(context, { id: localCopyRowId(project.path), state: outcome.state, ...(message ? { message } : {}) });
+        },
+    });
     // A clash the SC chose to fix with AI is kept; open their AI on it (EDS-57).
     await openFixWithAi(keptClashProjects(selections, result), updateContext, (request) =>
         vscode.commands.executeCommand('demoBuilder.openInClaude', request),

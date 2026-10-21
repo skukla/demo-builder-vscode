@@ -8,11 +8,18 @@
 import {
     edsProject,
     emptySelections,
+    installedLibrary,
     makeCtx,
     mockRefreshLocalStorefronts,
     resetFakes,
 } from './updateApplyService.testUtils';
+import * as vscode from 'vscode';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
+
+/** The block library sync setting: 'ask' puts the replace question to the SC. */
+function setSyncBehavior(value: 'ask'): void {
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: jest.fn(() => value) });
+}
 
 beforeEach(() => {
     resetFakes();
@@ -41,18 +48,53 @@ describe('local storefront refresh after an apply', () => {
             component: [{ project: component, componentId: 'citisignal-nextjs', currentVersion: '1', latestVersion: '2' }],
         };
         const ctx = makeCtx();
+        const onProgress = jest.fn();
+        const onLocalCopy = jest.fn();
 
-        await applyUpdatesHeadless(selections, ctx);
+        await applyUpdatesHeadless(selections, ctx, onProgress, { onLocalCopy });
 
-        expect(mockRefreshLocalStorefronts).toHaveBeenCalledTimes(1);
-        // A component update writes no storefront, so its project is not refreshed.
-        expect(mockRefreshLocalStorefronts).toHaveBeenCalledWith([template, adobe], ctx);
+        // Each project's copy right after its own updates (one project at a time,
+        // 2026-10-21). A component update writes no storefront, so its project is not
+        // refreshed. The run's progress goes with it, so the window says what it is doing.
+        expect(mockRefreshLocalStorefronts.mock.calls).toEqual([
+            [[template], ctx, onProgress, onLocalCopy],
+            [[adobe], ctx, onProgress, onLocalCopy],
+        ]);
     });
 
-    it('hands in an empty list when nothing wrote to a storefront', async () => {
-        await applyUpdatesHeadless(emptySelections(), makeCtx());
+    it('refreshes nothing when nothing wrote to a storefront', async () => {
+        const component = edsProject({ name: 'cmp', path: '/p/cmp' });
 
-        expect(mockRefreshLocalStorefronts).toHaveBeenCalledWith([], expect.anything());
+        await applyUpdatesHeadless(
+            { ...emptySelections(), component: [{ project: component, componentId: 'c', latestVersion: '2' }] },
+            makeCtx(),
+        );
+
+        expect(mockRefreshLocalStorefronts).not.toHaveBeenCalled();
+    });
+
+    // Told item by item (the Updates modal), a library the SC kept wrote nothing, so its
+    // copy is not refreshed (2026-10-21).
+    it('refreshes only the projects whose update applied, when told item by item', async () => {
+        const kept = edsProject({ name: 'kept', path: '/p/kept' });
+        const applied = edsProject({ name: 'applied', path: '/p/applied' });
+        const selections = {
+            ...emptySelections(),
+            blockLibrary: [
+                { project: kept, library: installedLibrary('Lib A'), latestCommit: 'b' },
+                { project: applied, library: installedLibrary('Lib A'), latestCommit: 'b' },
+            ],
+        };
+        setSyncBehavior('ask');
+        const questions = {
+            onClash: jest.fn(),
+            onUnfinished: jest.fn(),
+            replaceLibraryBlocks: jest.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true),
+        };
+
+        await applyUpdatesHeadless(selections, makeCtx(), undefined, { questions, onItem: jest.fn() });
+
+        expect(mockRefreshLocalStorefronts).toHaveBeenCalledWith([applied], expect.anything(), undefined, undefined);
     });
 
     it('includes block library installs', async () => {
@@ -64,6 +106,6 @@ describe('local storefront refresh after an apply', () => {
 
         await applyUpdatesHeadless(selections, makeCtx());
 
-        expect(mockRefreshLocalStorefronts).toHaveBeenCalledWith([project], expect.anything());
+        expect(mockRefreshLocalStorefronts).toHaveBeenCalledWith([project], expect.anything(), undefined, undefined);
     });
 });

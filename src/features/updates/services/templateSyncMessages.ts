@@ -9,11 +9,15 @@ import { PLACEHOLDER_STUB_PATHS } from '@/features/eds/services/placeholderStubs
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 import type { TemplateSyncResult, TemplateSyncTarget } from '@/features/updates/services/templateSyncTypes';
 
-/** The error text a conflicted merge carries, so every surface says the same thing. */
+/**
+ * The error text a conflicted merge carries, so every surface says the same thing. It
+ * says "the update", not "the template update": the Adobe boilerplate's merge carries it
+ * too (it read "template" under an Adobe boilerplate row until 2026-10-21).
+ */
 export function describeTemplateConflicts(conflicts: string[]): string {
     const noun = conflicts.length === 1 ? 'file' : 'files';
     return `Merge conflicts in ${conflicts.length} ${noun} (${conflicts.join(', ')}); `
-        + 'the template update was not applied.';
+        + 'the update was not applied.';
 }
 
 export const NO_RECORDED_VERSION = 'This storefront has no recorded template version to update from; '

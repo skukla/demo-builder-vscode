@@ -19,6 +19,12 @@ export interface ModalProps {
     /** Variant for the built-in close button (default "secondary"). */
     closeVariant?: 'primary' | 'secondary' | 'accent' | 'negative';
     /**
+     * Leave the built-in close button out, when the action buttons are every way on.
+     * The Updates modal asks a question this way: dismissing it would only repeat one
+     * of the answers. Escape still calls `onClose`.
+     */
+    hideClose?: boolean;
+    /**
      * Let the dialog collapse to its CONTENT's height instead of claiming a fixed
      * one. Spectrum's modal Dialog takes a height independent of what is inside it
      * — which is why `.modal-body` has to grow to push the footer down (below). On
@@ -105,6 +111,7 @@ export function Modal({
     onClose,
     closeLabel = 'Close',
     closeVariant = 'secondary',
+    hideClose = false,
     fitContent = false,
     wide = false,
     children,
@@ -134,9 +141,11 @@ export function Modal({
                 <div className="modal-body">{children}</div>
                 <div className="modal-footer-actions">
                     {/* Close/Cancel on left, primary actions on right (per Spectrum design guidelines) */}
-                    <FocusableButton variant={closeVariant} onPress={onClose}>
-                        {closeLabel}
-                    </FocusableButton>
+                    {!hideClose && (
+                        <FocusableButton variant={closeVariant} onPress={onClose}>
+                            {closeLabel}
+                        </FocusableButton>
+                    )}
                     {actionButtons.map((button, index) => (
                         <FocusableButton
                             key={index}

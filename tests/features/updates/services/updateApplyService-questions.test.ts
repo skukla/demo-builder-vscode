@@ -51,7 +51,7 @@ const CONFLICTED = {
         target: 'b'.repeat(40),
         preserveFiles: ['fstab.yaml', 'config.json'],
     },
-    error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
+    error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
 };
 
 /** A storefront built on the tested boilerplate: it records an LKG source (ADR-006). */
@@ -188,6 +188,52 @@ describe("Adobe's boilerplate update that clashes", () => {
         expect(mockKeepClash).toHaveBeenCalledWith(project, expect.objectContaining({ track: 'boilerplate', fixes: false }), expect.anything());
         expect(res.boilerplate.clashes?.[0]).toMatchObject({ track: 'boilerplate', keptIn: '/p/demo/components/eds-storefront' });
         expect(res.boilerplate.errors[0]).toMatch(/^demo \(Adobe boilerplate\): 1 file clashes/);
+    });
+
+    // The Updates modal's row: a clash the SC answered is their choice, not a failure
+    // (owner, 2026-10-21). The result still counts it as not applied, for the agent.
+    it('tells its row as left alone, not failed, on Leave', async () => {
+        mockSyncBoilerplate.mockResolvedValue(CONFLICTED);
+        const onItem = jest.fn();
+        const item = { project: edsProject(), base: BASE, tested: 'b'.repeat(40) };
+
+        const res = await applyUpdatesHeadless({ ...emptySelections(), boilerplate: [item] }, makeCtx(), undefined, {
+            questions: questions({ clash: 'leave' }),
+            onItem,
+        });
+
+        expect(onItem).toHaveBeenLastCalledWith('boilerplate', item, {
+            state: 'skipped',
+            message: 'Not updated — your edits in blocks/hero/hero.js were left as they are.',
+        });
+        expect(res.boilerplate.failCount).toBe(1);
+    });
+});
+
+describe("a template update's row, when its clash was answered", () => {
+    const tell = async (answer: ClashAnswer) => {
+        mockSyncWithTemplate.mockResolvedValue(CONFLICTED);
+        const onItem = jest.fn();
+        await applyUpdatesHeadless({ ...emptySelections(), template: [{ project: edsProject() }] }, makeCtx(), undefined, {
+            questions: questions({ clash: answer }),
+            onItem,
+        });
+        return onItem.mock.calls.at(-1)?.[2];
+    };
+
+    it('is left alone, saying where the clash is, when it was kept to fix with AI', async () => {
+        mockKeepClash.mockResolvedValue({ kind: 'kept', storefrontPath: '/p/demo/components/eds-storefront', files: ['blocks/hero/hero.js'] });
+
+        expect(await tell('fix')).toEqual({
+            state: 'skipped',
+            message: 'Not updated yet — kept in your local copy for your AI to fix. Nothing was pushed.',
+        });
+    });
+
+    it('fails, with the reason, when the clash could not be kept', async () => {
+        mockKeepClash.mockResolvedValue({ kind: 'not-kept', reason: 'this project has no local copy of its storefront' });
+
+        expect(await tell('fix')).toMatchObject({ state: 'failed', message: expect.stringContaining('could not be kept') });
     });
 });
 

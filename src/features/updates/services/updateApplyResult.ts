@@ -99,6 +99,31 @@ export function outcomeOf(result: CategoryResult, deferredLine?: (deferred: stri
     return note ? { state: 'done', note } : { state: 'done' };
 }
 
+/**
+ * A template or Adobe boilerplate item's outcome, when the SC was asked about its clash.
+ *
+ * The result counts a clash as not applied, which the agent's totals rely on. But the
+ * Updates modal always asks, so a clash it reports was the SC's answer: leave it, or
+ * keep it for their AI to fix. That reads as left alone, not failed (owner,
+ * 2026-10-21: a red "Merge conflicts" after choosing "Leave it as it is"). A clash that
+ * could not be kept, or any other failure alongside it, still fails with its reason.
+ *
+ * @param result - what applying that one item answered
+ * @returns skipped with what became of the clash, else as `outcomeOf` says
+ */
+export function answeredClashOutcome(result: CategoryResult): ItemOutcome {
+    const clashes = result.clashes ?? [];
+    const answered = clashes.length > 0 && clashes.length === result.failCount && clashes.every((c) => !c.notKept);
+    if (!answered) return outcomeOf(result);
+    return { state: 'skipped', message: clashes.map(answeredClashLine).join(' ') };
+}
+
+/** What a clash the SC answered says under its row, which already names the update. */
+function answeredClashLine(clash: ClashReport): string {
+    if (clash.keptIn) return 'Not updated yet — kept in your local copy for your AI to fix. Nothing was pushed.';
+    return `Not updated — your edits in ${clash.files.join(', ')} were left as they are.`;
+}
+
 const LINE_LISTS = ['deferred', 'applied', 'installed', 'leftOut'] as const;
 
 /** Add one item's result to its category's. */

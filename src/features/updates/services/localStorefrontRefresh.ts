@@ -23,10 +23,13 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
 import type { GitStep } from '@/features/updates/services/templateMergeBase';
+import type { ItemOutcome } from '@/features/updates/services/updateApplyResult';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { Project } from '@/types/base';
 
@@ -173,11 +176,20 @@ export async function openLocalCopy(project: Project, ctx: UpdateContext, token:
 /**
  * After an update pushed, refresh each touched project's local copy. Best effort: a copy
  * that cannot be refreshed is logged with the reason and never fails the update, which has
- * already landed on GitHub.
+ * already landed on GitHub. Each copy it refreshes is reported as a stage: it runs after
+ * the last update has ended, and a window told nothing looked finished but still running.
  *
  * @param projects - the projects whose storefront an update wrote to (repeats are ignored)
+ * @param onProgress - told the stage, and the project, as each copy is refreshed
+ * @param onCopy - told as each copy starts and ends, as a step of its own: done when it is
+ *   up to GitHub, left alone with why when it was left as it is
  */
-export async function refreshLocalStorefronts(projects: Project[], ctx: UpdateContext): Promise<void> {
+export async function refreshLocalStorefronts(
+    projects: Project[],
+    ctx: UpdateContext,
+    onProgress?: (stage: string, item?: string) => void,
+    onCopy?: (project: Project, outcome: ItemOutcome) => void,
+): Promise<void> {
     const seen = new Set<string>();
     const token = (await getGitHubServices(ctx.secrets).tokenService.getToken())?.token;
     if (!token) return;
@@ -185,15 +197,22 @@ export async function refreshLocalStorefronts(projects: Project[], ctx: UpdateCo
         const copy = await openLocalCopy(project, ctx, token);
         if (!copy || seen.has(copy.storefrontPath)) continue;
         seen.add(copy.storefrontPath);
+        onProgress?.(S.updatingLocalCopy.label, getProjectDisplayName(project));
+        onCopy?.(project, { state: 'running' });
         try {
             const outcome = await refreshLocalStorefront(copy.git, copy);
             if (outcome.kind === 'left') {
                 ctx.logger.info(`[Updates] Local storefront copy of ${project.name} left as it is: ${outcome.reason}`);
-            } else if (outcome.kind === 'refreshed') {
+                onCopy?.(project, { state: 'skipped', message: `Left as it is — ${outcome.reason}.` });
+                continue;
+            }
+            if (outcome.kind === 'refreshed') {
                 ctx.logger.info(`[Updates] Local storefront copy of ${project.name} brought up to GitHub`);
             }
+            onCopy?.(project, { state: 'done' });
         } catch (error) {
             ctx.logger.warn(`[Updates] Could not refresh the local storefront copy of ${project.name}: ${(error as Error).message}`);
+            onCopy?.(project, { state: 'skipped', message: 'Not brought up to date — details are in Debug Logs.' });
         }
     }
 }

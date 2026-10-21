@@ -275,7 +275,7 @@ describe('merging a template update from the recorded version (real git)', () =>
                 target: fx.t2,
                 preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
             },
-            error: 'Merge conflicts in 1 file (A.txt); the template update was not applied.',
+            error: 'Merge conflicts in 1 file (A.txt); the update was not applied.',
         });
         expect(originHead(fx)).toBe(before);
     }, REAL_GIT_TIMEOUT_MS);
