@@ -18,7 +18,11 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
-const MARK = 'demo-builder-kept-clash';
+/**
+ * The mark's file name inside `.git`. Exported for the git-sync hook Demo Builder writes
+ * into each project's AI settings, which must not commit and push while it is there.
+ */
+export const KEPT_CLASH_MARK = 'demo-builder-kept-clash';
 
 /** Said by Sync Storefront when it refuses. */
 export const KEPT_CLASH_REFUSAL =
@@ -38,7 +42,7 @@ export interface KeptClashRecord {
     applied: Record<string, string | null>;
 }
 
-const markPath = (storefrontPath: string) => path.join(storefrontPath, '.git', MARK);
+const markPath = (storefrontPath: string) => path.join(storefrontPath, '.git', KEPT_CLASH_MARK);
 
 /** Mark the copy as holding a kept clash. */
 export async function markKeptClash(storefrontPath: string, record: KeptClashRecord): Promise<void> {

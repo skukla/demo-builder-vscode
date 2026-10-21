@@ -11,14 +11,19 @@
  * Each case builds real repositories in a temp root, each with a local bare
  * repository as `origin`, pipes the PostToolUse payload Claude Code sends into
  * the generated command, and reads the bare repository to see whether a push
- * landed. Nothing leaves the machine.
+ * landed. Nothing leaves the machine. The project's own hook is run the same way for
+ * the one guard both share: a storefront update's clash kept in the copy.
  */
 
 import { execFileSync, spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { buildHomeGitSyncCommand } from '@/features/project-creation/services/aiBundle/claudeSettingsWriter';
+import {
+    buildHomeGitSyncCommand,
+    generateClaudeSettings,
+} from '@/features/project-creation/services/aiBundle/claudeSettingsWriter';
+import { createMockProject, edsStorefrontInstance } from '../../../../helpers/projectFake';
 
 /**
  * The environment every git command here runs with: this process's, WITHOUT any
@@ -60,10 +65,9 @@ function repoWithOrigin(root: string, dir: string): string {
  * that edit. The hook's exit code is not the question (a refused push exits
  * non-zero); what reached `origin` is.
  */
-function editAndRunHook(root: string, dir: string): void {
+function editAndRunHook(root: string, dir: string, command = buildHomeGitSyncCommand(root, process.execPath)): void {
     const file = path.join(dir, 'edited.txt');
     fs.writeFileSync(file, 'an agent edit\n');
-    const command = buildHomeGitSyncCommand(root, process.execPath);
     expect(command).not.toBe('');
     spawnSync('/bin/sh', ['-c', command], {
         input: JSON.stringify({ tool_name: 'Write', tool_input: { file_path: file } }),
@@ -99,6 +103,39 @@ describe('the home git-sync hook, run against real repositories', () => {
 
         editAndRunHook(root, storefront);
 
+        expect(commitsIn(origin)).toBe(2);
+    });
+
+    // An update's clash kept for fixing leaves the whole half-applied update in the copy;
+    // the first edit to the clashed file pushed all of it (2026-10-21, JustRite).
+    it("pushes nothing while a storefront update's clash is kept in the copy", () => {
+        const storefront = path.join(project, 'storefront');
+        const origin = repoWithOrigin(root, storefront);
+        writeManifest({ 'eds-storefront': { path: storefront } });
+        fs.writeFileSync(path.join(storefront, '.git', 'demo-builder-kept-clash'), '{}\n');
+
+        editAndRunHook(root, storefront);
+
+        expect(commitsIn(origin)).toBe(1);
+        expect(git(storefront, 'status', '--porcelain')).toContain('edited.txt');
+    });
+
+    it("pushes nothing from a project's own hook while a clash is kept, and pushes once it is not", () => {
+        const storefront = path.join(project, 'storefront');
+        const origin = repoWithOrigin(root, storefront);
+        const withStorefront = createMockProject({
+            componentInstances: { 'eds-storefront': { ...edsStorefrontInstance(), path: storefront } },
+        });
+        const settings = generateClaudeSettings(withStorefront, process.execPath);
+        const command = settings.hooks?.PostToolUse?.[0].hooks[0].command ?? '';
+        const mark = path.join(storefront, '.git', 'demo-builder-kept-clash');
+        fs.writeFileSync(mark, '{}\n');
+
+        editAndRunHook(root, storefront, command);
+        expect(commitsIn(origin)).toBe(1);
+
+        fs.rmSync(mark);
+        editAndRunHook(root, storefront, command);
         expect(commitsIn(origin)).toBe(2);
     });
 

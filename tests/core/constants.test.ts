@@ -139,7 +139,7 @@ describe('AI_CONTEXT_VERSION', () => {
     // v40: the ai-defaults tools launch from Demo Builder's Node folder (FNM_DIR in .mcp.json, PR-1a).
     // v41: the sync-changes skill stops calling promote_block_to_library "push back to source library".
     it('is 41 (promote_block_to_library is described as this site\'s own library)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(41);
+        expect(AI_CONTEXT_VERSION).toBe(42);
     });
 });
 

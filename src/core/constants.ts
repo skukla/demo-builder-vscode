@@ -292,7 +292,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // back to source library". The tool adds a block to this site's own DA.live block library; it
 // never saved a block for other projects. Existing projects get the corrected skill only
 // through this bump.
-export const AI_CONTEXT_VERSION = 41;
+// v42 (2026-10-21, EDS-57): the storefront git-sync hook in .claude/settings.json skips while
+// a storefront update's clash is kept in the local copy (`.git/demo-builder-kept-clash`).
+// An agent's first edit to the clashed file committed and pushed the whole half-applied
+// update, past finish_storefront_update. The home Chat's hook is rewritten at every start;
+// each project's only reaches existing projects through this bump.
+export const AI_CONTEXT_VERSION = 42;
 
 /**
  * Component IDs for standardized component instance access

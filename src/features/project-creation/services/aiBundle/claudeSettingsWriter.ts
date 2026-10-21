@@ -20,6 +20,7 @@
 
 import { projectNeedsAppBuilderTooling } from './aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
+import { KEPT_CLASH_MARK } from '@/features/eds/services/storefront/keptClashMark';
 import type { Project } from '@/types/base';
 
 // ─── Claude Settings types ────────────────────────────────────────────────────
@@ -366,7 +367,9 @@ function buildGitSyncCommand(storefrontPath: string, nodePath: string): string {
 
     return (
         buildToolFileExtraction(nodePath) +
-        `if [[ "$TOOL_FILE" == ${quoted}* ]]; then ` +
+        // Not while a storefront update's clash is kept in the copy for fixing: the copy
+        // holds the half-applied update, and the first edit pushed all of it (2026-10-21).
+        `if [[ "$TOOL_FILE" == ${quoted}* ]] && [ ! -e ${quoted}/.git/${KEPT_CLASH_MARK} ]; then ` +
         `git -C ${quoted} add -A && ` +
         `git -C ${quoted} commit -m "${GIT_SYNC_SIGNATURE}" && ` +
         `git -C ${quoted} push; fi`
@@ -430,7 +433,11 @@ function buildOwnStorefrontGuard(quotedRoot: string, nodePath: string): string {
  *      SOURCE, a shared repository, and without this guard an agent's edit there
  *      was committed and pushed to that source with no confirmation (found
  *      2026-09-15). No manifest, or no storefront in it, means no push.
- *   7. Commit + push the resolved repo top.
+ *   7. KEPT-CLASH guard: no commit while the copy holds a storefront update's clash kept
+ *      for fixing (`keptClashMark`). The copy then holds the whole half-applied update,
+ *      and an agent's first edit to the clashed file committed and pushed all of it,
+ *      past `finish_storefront_update`'s check (2026-10-21, JustRite).
+ *   8. Commit + push the resolved repo top.
  *
  * The root is double-quoted everywhere it is interpolated. The metachar guard
  * already rejects quotes, so quoting is purely to preserve spaces in the path.
@@ -453,6 +460,8 @@ export function buildHomeGitSyncCommand(projectsRoot: string, nodePath: string):
         `case "$TOP" in ${quotedRoot}/*) ;; *) exit 0 ;; esac; ` +
         `git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0; ` +
         buildOwnStorefrontGuard(quotedRoot, nodePath) +
+        // 7. KEPT-CLASH guard: see buildGitSyncCommand.
+        `[ -e "$TOP/.git/${KEPT_CLASH_MARK}" ] && exit 0; ` +
         `git -C "$TOP" add -A && ` +
         `git -C "$TOP" commit -m "${GIT_SYNC_SIGNATURE}" && ` +
         `git -C "$TOP" push`
