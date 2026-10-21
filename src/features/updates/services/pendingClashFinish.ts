@@ -197,3 +197,30 @@ export async function leaveClash(project: Project, ctx: UpdateContext): Promise<
     await forget(project, copy);
     await ctx.stateManager.saveProject(project);
 }
+
+/** A kept clash as an agent or person sees it before finishing: the files, and what would go live. */
+export interface KeptClashPreview {
+    track: PendingClash['track'];
+    files: string[];
+    /** Files still carrying conflict markers. */
+    markersLeft: string[];
+    /** `git diff HEAD` of the clashing files: what finishing changes in them on the live site. */
+    diff: string;
+}
+
+/** Describe the kept clash without changing anything; undefined when there is none. */
+export async function previewClash(project: Project, ctx: UpdateContext): Promise<KeptClashPreview | undefined> {
+    const clash = readPendingClash(project);
+    if (!clash) return undefined;
+    const token = (await getGitHubServices(ctx.secrets).tokenService.getToken())?.token;
+    const copy = token ? await openLocalCopy(project, ctx, token) : undefined;
+    if (!copy) return { track: clash.track, files: clash.files, markersLeft: clash.files, diff: '' };
+    const markersLeft: string[] = [];
+    for (const file of clash.files) {
+        const text = await fsPromises.readFile(path.join(copy.storefrontPath, file), 'utf8').catch(() => '');
+        if (!text || CONFLICT_MARKER_RE.test(text)) markersLeft.push(file);
+    }
+    const quoted = clash.files.map((file) => `"${file}"`).join(' ');
+    const diff = (await copy.git(`git diff HEAD -- ${quoted}`, TIMEOUTS.NORMAL)).stdout;
+    return { track: clash.track, files: clash.files, markersLeft, diff };
+}

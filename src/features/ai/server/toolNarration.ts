@@ -144,6 +144,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     set_project_pinned: 'Pinning or unpinning the project',
     set_project_destination: 'Moving the project',
     apply_updates: 'Applying available updates',
+    finish_storefront_update: 'Finishing the storefront update',
 
     // ── Demo lifecycle ──────────────────────────────────────────────────
     start_demo: 'Starting the demo',

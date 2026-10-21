@@ -243,6 +243,14 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // discards the user's own edits (EDS-51).
         sessionGrant: false,
     },
+    finish_storefront_update: {
+        action: 'Finish the storefront update fixed with AI',
+        consequence:
+            "Pushes the fixed update to the storefront's GitHub repository, which updates the live site; with leave, drops the fix in the local copy instead.",
+        target: ['project'],
+        // Each finish pushes to the live site: never repeatable on one approval.
+        sessionGrant: false,
+    },
     reset_project: {
         action: 'Reset this project',
         consequence:

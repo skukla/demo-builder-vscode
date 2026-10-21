@@ -25,6 +25,7 @@ import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTo
 import { registerEventProviderTools } from '@/features/ai/server/eventProviderTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
+import { registerFinishStorefrontUpdateTool } from '@/features/ai/server/finishStorefrontUpdateTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
@@ -158,6 +159,7 @@ describe('registration against the real MCP SDK', () => {
             registerDemoPackageTools(s, ctxFactory);
             registerDeleteProjectTool(s, ctxFactory);
             registerApplyUpdatesTool(s, ctxFactory);
+            registerFinishStorefrontUpdateTool(s, ctxFactory);
             registerViewTools(s, async () => undefined);
             registerLifecycleTools(s, ctxFactory, async () => undefined);
         }).not.toThrow();

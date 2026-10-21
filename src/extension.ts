@@ -56,6 +56,7 @@ import { registerDemoPackageTools } from '@/features/ai/server/demoPackageTools'
 import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEventProviderTools } from '@/features/ai/server/eventProviderTools';
+import { registerFinishStorefrontUpdateTool } from '@/features/ai/server/finishStorefrontUpdateTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import {
     InExtensionMcpServer,
@@ -834,6 +835,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerDemoPackageTools(mcpServer, connCtxFactory);
                 registerDeleteProjectTool(mcpServer, connCtxFactory);
                 registerApplyUpdatesTool(mcpServer, connCtxFactory);
+                registerFinishStorefrontUpdateTool(mcpServer, connCtxFactory);
                 registerViewTools(mcpServer, (commandId) =>
                     Promise.resolve(vscode.commands.executeCommand(commandId)),
                 );

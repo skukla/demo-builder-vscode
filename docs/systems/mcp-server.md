@@ -510,6 +510,15 @@ agent to fix (EDS-57). A storefront built on Demo Builder's tested boilerplate i
 that tested version with its fixes put back, and is never reset to the bare template;
 its way through a conflict is `reset_project`.
 
+`finish_storefront_update` (EDS-57) previews the same way: without `confirm` it returns the
+kept clash's files, the ones still carrying conflict markers, and the diff that would go
+live. With `confirm:true` it raises the consent dialog, then checks the fix (still the
+current update, only the clashing files changed, no markers, the JavaScript and JSON
+parse), pushes one commit with the user's token and records the version; with `leave:true`
+it drops the fix instead. It takes the project by name, because the Updates window's Fix
+with AI starts on Your Projects, where the open project can be any other. The agent never
+pushes a fixed clash itself: the tool is the one path that checks it and records it.
+
 **Extra-strict gating for irreversible ops.** Three tools require a `confirmName`
 that exactly echoes the resource, so an agent can't destroy the wrong one on a
 fuzzy match: `delete_project` (project name), `delete_github_repo` (`owner/repo`),

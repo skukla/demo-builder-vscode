@@ -696,6 +696,9 @@ describe('the ceiling table tracks the tool surface', () => {
          */
         const DIRECT_PENDING = new Set<string>([
             'apply_updates',
+            // 2026-10-21 (EDS-57): its preview carries the clashing files' diff, so its size
+            // depends on a real clash; measured on the first live run (JustRite's header).
+            'finish_storefront_update',
             'create_project',
             'copy_project',
             'create_project_from_file',

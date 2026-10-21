@@ -83,7 +83,7 @@ function recordClash(result: CategoryResult, clash: { line: string; report: Clas
 }
 
 /** The colleague's description file and GitHub's compare, with the SC's token. */
-function baseRefreshDeps(ctx: UpdateContext): BaseRefreshDeps {
+export function baseRefreshDeps(ctx: UpdateContext): BaseRefreshDeps {
     const { fileOperations } = getGitHubServices(ctx.secrets);
     return {
         readFile: async (owner, repo, path, ref) => (await fileOperations.getFileContent(owner, repo, path, ref))?.content,

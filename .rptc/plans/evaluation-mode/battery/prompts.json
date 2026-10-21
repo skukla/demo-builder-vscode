@@ -1397,5 +1397,14 @@
         ],
         "cwd": "project",
         "why": "The undo of app-save-to-github, which must ship with it. Deletes a repository for good, so confirm-gated."
+    },
+    {
+        "id": "finish-clash-fixed-with-ai",
+        "prompt": "I fixed the header file the Adobe update clashed on in justrite. Get that update finished and live.",
+        "expect": [
+            "finish_storefront_update"
+        ],
+        "cwd": "project",
+        "why": "Added 2026-10-21 with finish_storefront_update (EDS-57): the Updates window's Fix with AI keeps a clashing update in the project's local storefront copy and the agent finishes it. The tool is the one path that checks the fix, sends it to GitHub and records the version, so an agent must reach for it rather than for git itself. Confirm-gated, so what this judges is findability."
     }
 ]
