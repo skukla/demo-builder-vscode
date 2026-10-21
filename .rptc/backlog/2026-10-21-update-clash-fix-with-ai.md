@@ -57,3 +57,5 @@ is; the Adobe row has no choice at all. Nothing an SC who does not read code can
 - 2026-10-20  feat(eds): Sync Storefront refuses while an update's clash is kept (`67c2cfb1b`)
 - 2026-10-20  feat(updates): a clashing update asks Fix with AI, Leave it, or Reset (`72d063ae4`)
 - 2026-10-20  feat(updates): a stopped update's clash can be kept in the local copy (`fc1345248`)
+- 2026-10-21  fix(updates): finishing a kept clash accepts what was committed since (`377934fc0`)
+- 2026-10-21  fix(ai): the storefront git-sync hook waits while an update's clash is kept (`f9bcee141`)
