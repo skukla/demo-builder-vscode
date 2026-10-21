@@ -308,7 +308,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-53` | fix | [CitiSignal's checkout label sheet will not preview on a copy](2026-10-18-citisignal-checkout-sheet-will-not-preview.md) | — | med | built |
 | `EDS-54` | fix | [An expired DA.live sign-in during the access grant is logged and passed over](2026-10-19-dalive-grant-401-passed-over.md) | — | low | built |
 | `EDS-55` | chore | [The storefront pipeline's warnings travel one route, not one each](2026-10-20-storefront-warnings-one-channel.md) | — | med | built |
-| `EDS-57` | feature | [A storefront update that stops on a clash can be fixed with AI, from the builder](2026-10-21-update-clash-fix-with-ai.md) | — | high | backlog |
+| `EDS-57` | feature | [A storefront update that stops on a clash can be fixed with AI, from the builder](2026-10-21-update-clash-fix-with-ai.md) | — | high | active |
 | `EDS-58` | question | [Does the Sync Storefront button earn its keep when no SC edits code?](2026-10-21-sync-storefront-earns-its-keep.md) | — | med | open |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 

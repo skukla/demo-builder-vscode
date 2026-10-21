@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # A storefront update that stops on a clash can be fixed with AI, from the builder

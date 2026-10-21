@@ -32,6 +32,7 @@ import {
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { applyIntegrationUpdates } from '@/features/updates/services/integrationUpdates';
+import { refreshLocalStorefronts } from '@/features/updates/services/localStorefrontRefresh';
 import {
     emptyResult,
     type ApplyUpdatesResult,
@@ -326,6 +327,18 @@ export async function applyUpdatesHeadless(
     );
 
     const integration = await applyIntegrationUpdates(selections.integration, ctx, onProgress);
+
+    // Every category above that writes a storefront writes it on GitHub; the local copy
+    // agents edit is brought up to it here (EDS-57).
+    await refreshLocalStorefronts(
+        [
+            ...selections.template,
+            ...selections.boilerplate,
+            ...selections.blockLibrary,
+            ...selections.blockLibraryInstall,
+        ].map((item) => item.project),
+        ctx,
+    );
 
     const cats = [forkSync, template, boilerplate, component, adobeMcp, addon, blockLibraryInstall, integration];
     return {

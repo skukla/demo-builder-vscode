@@ -113,6 +113,11 @@ jest.mock('@/features/updates/services/adobeMcpUpdateChecker', () => ({
 jest.mock('@/features/updates/services/boilerplateCheck', () => ({
     checkBoilerplate: async (...a: unknown[]) => (await mockCheckBoilerplate(...a)) ?? [],
 }));
+// The local storefront copy's refresh runs real git; its rules are localStorefrontRefresh.test's.
+export const mockRefreshLocalStorefronts = jest.fn();
+jest.mock('@/features/updates/services/localStorefrontRefresh', () => ({
+    refreshLocalStorefronts: (...a: unknown[]) => mockRefreshLocalStorefronts(...a),
+}));
 jest.mock('@/features/updates/services/addonUpdateChecker', () => ({
     AddonUpdateChecker: class {
         constructor(...args: unknown[]) {
