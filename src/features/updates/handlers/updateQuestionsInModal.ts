@@ -12,11 +12,13 @@ import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { UpdateQuestions } from '@/features/updates/services/updateApplyService';
+import type { ClashAnswer, ClashQuestion } from '@/features/updates/services/updateClash';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
 
+const FIX_WITH_AI = 'Fix with AI';
+const LEAVE_IT = 'Leave it as it is';
 const RESET_TO_TEMPLATE = 'Reset to template';
-const KEEP_MY_EDITS = 'Keep my edits';
 const REPLACE_BLOCKS = 'Replace blocks';
 const KEEP_BLOCKS = 'Keep my blocks';
 const STOP_AND_UPDATE = 'Stop and update';
@@ -24,16 +26,22 @@ const SKIP = 'Skip';
 
 /** The two questions the shared apply asks, asked in the modal. */
 export const questionsInModal: UpdateQuestions = {
-    async resetTemplateOnConflict(project: Project, conflicts: string[]): Promise<boolean> {
-        const noun = conflicts.length === 1 ? 'file' : 'files';
+    async onClash(project: Project, { track, files, canReset }: ClashQuestion): Promise<ClashAnswer> {
+        const noun = files.length === 1 ? 'file' : 'files';
+        const update = track === 'boilerplate' ? "Adobe's boilerplate update" : 'The template update';
+        const reset = canReset
+            ? ` "${RESET_TO_TEMPLATE}" replaces them with the template's version and discards those edits.`
+            : '';
         const answer = await askDuringOperation(
-            `${getProjectDisplayName(project)}: the template update conflicts with your edits in ` +
-                `${conflicts.length} ${noun} (${conflicts.join(', ')}). "${RESET_TO_TEMPLATE}" replaces ` +
-                `them with the template's version and discards your edits to them.`,
-            RESET_TO_TEMPLATE,
-            KEEP_MY_EDITS,
+            `${getProjectDisplayName(project)}: ${update} clashes with edits in the storefront in ` +
+                `${files.length} ${noun} (${files.join(', ')}). "${FIX_WITH_AI}" opens your AI on the clash; ` +
+                `"${LEAVE_IT}" changes nothing.${reset}`,
+            FIX_WITH_AI,
+            LEAVE_IT,
+            ...(canReset ? [RESET_TO_TEMPLATE] : []),
         );
-        return answer === RESET_TO_TEMPLATE;
+        if (answer === FIX_WITH_AI) return 'fix';
+        return answer === RESET_TO_TEMPLATE && canReset ? 'reset' : 'leave';
     },
     async replaceLibraryBlocks(libraryName: string, project: Project): Promise<boolean> {
         const answer = await askDuringOperation(

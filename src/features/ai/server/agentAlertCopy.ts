@@ -237,7 +237,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     apply_updates: {
         action: "Apply this project's updates",
         consequence:
-            "Rewrites the storefront's code and redeploys components and integrations to their newer versions; with resetTemplateOnConflict, files that conflict with your own edits are replaced.",
+            "Rewrites the storefront's code and redeploys components and integrations to their newer versions; with onClash reset, files that clash with your own edits are replaced.",
         target: [],
         // Not repeatable on one approval: it rewrites code, and the conflict reset
         // discards the user's own edits (EDS-51).

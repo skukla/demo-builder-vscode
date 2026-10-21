@@ -12,12 +12,19 @@ import {
     installedLibrary,
     makeCtx,
     mockApplyBlockLibraryUpdateResolved,
+    mockSyncBoilerplate,
     mockSyncWithTemplate,
     resetFakes,
 } from './updateApplyService.testUtils';
 import * as vscode from 'vscode';
+import { keepClash } from '@/features/updates/services/pendingClash';
 import { applyUpdatesHeadless, type UpdateQuestions } from '@/features/updates/services/updateApplyService';
+import type { ClashAnswer } from '@/features/updates/services/updateClash';
 import type { Project } from '@/types/base';
+
+// Keeping a clash runs real git in the local copy; that is pendingClash.test's.
+jest.mock('@/features/updates/services/pendingClash', () => ({ keepClash: jest.fn() }));
+const mockKeepClash = keepClash as jest.Mock;
 
 const getConfigMock = vscode.workspace.getConfiguration as jest.Mock;
 
@@ -25,9 +32,9 @@ function setSyncBehavior(value: 'ask' | 'enabled' | 'disabled'): void {
     getConfigMock.mockReturnValue({ get: jest.fn((_k: string, def: unknown) => value ?? def) });
 }
 
-function questions(answers: { reset?: boolean; replace?: boolean } = {}): jest.Mocked<UpdateQuestions> {
+function questions(answers: { clash?: ClashAnswer; replace?: boolean } = {}): jest.Mocked<UpdateQuestions> {
     return {
-        resetTemplateOnConflict: jest.fn().mockResolvedValue(answers.reset ?? false),
+        onClash: jest.fn().mockResolvedValue(answers.clash ?? 'leave'),
         replaceLibraryBlocks: jest.fn().mockResolvedValue(answers.replace ?? false),
     };
 }
@@ -37,6 +44,12 @@ const CONFLICTED = {
     strategy: 'merge',
     syncedCommit: '',
     conflicts: ['blocks/hero/hero.js'],
+    clash: {
+        source: { owner: 'adobe', repo: 'aem-boilerplate-commerce' },
+        base: 'a'.repeat(40),
+        target: 'b'.repeat(40),
+        preserveFiles: ['fstab.yaml', 'config.json'],
+    },
     error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
 };
 
@@ -63,51 +76,117 @@ beforeEach(() => {
     setSyncBehavior('enabled');
 });
 
-describe('a template update that conflicts with the SC edits', () => {
-    it('asks, naming the files, and resets to the template when the answer is yes', async () => {
+describe('a template update that clashes with edits in the storefront', () => {
+    const apply = (project: Project, ask: UpdateQuestions, ctx = makeCtx()) =>
+        applyUpdatesHeadless({ ...emptySelections(), template: [{ project }] }, ctx, undefined, { questions: ask });
+
+    it('asks with the files and a reset offered, and resets to the template on Reset', async () => {
         mockSyncWithTemplate
             .mockResolvedValueOnce(CONFLICTED)
             .mockResolvedValueOnce({ success: true, strategy: 'reset', syncedCommit: 'r1' });
         const project = edsProject();
-        const ask = questions({ reset: true });
+        const ask = questions({ clash: 'reset' });
 
-        const res = await applyUpdatesHeadless({ ...emptySelections(), template: [{ project }] }, makeCtx(), undefined, {
-            questions: ask,
-        });
+        const res = await apply(project, ask);
 
-        expect(ask.resetTemplateOnConflict).toHaveBeenCalledWith(project, ['blocks/hero/hero.js']);
+        expect(ask.onClash).toHaveBeenCalledWith(project, { track: 'template', files: ['blocks/hero/hero.js'], canReset: true });
         expect(mockSyncWithTemplate).toHaveBeenLastCalledWith(project, { strategy: 'reset' });
         expect(res.template).toEqual({ successCount: 1, failCount: 0, errors: [] });
     });
 
-    it('keeps the storefront as it is when the answer is no', async () => {
+    it('changes nothing on Leave, and reports the files', async () => {
         mockSyncWithTemplate.mockResolvedValue(CONFLICTED);
 
-        const res = await applyUpdatesHeadless(
-            { ...emptySelections(), template: [{ project: edsProject() }] },
-            makeCtx(),
-            undefined,
-            { questions: questions({ reset: false }) },
-        );
+        const res = await apply(edsProject(), questions({ clash: 'leave' }));
 
         expect(mockSyncWithTemplate).toHaveBeenCalledTimes(1);
+        expect(mockKeepClash).not.toHaveBeenCalled();
         expect(res.template.failCount).toBe(1);
+        expect(res.template.clashes).toEqual([{ project: 'demo', track: 'template', files: ['blocks/hero/hero.js'] }]);
+    });
+
+    it('keeps the clash in the local copy on Fix with AI, saves the record and says where it is', async () => {
+        mockSyncWithTemplate.mockResolvedValue(CONFLICTED);
+        mockKeepClash.mockResolvedValue({ kind: 'kept', storefrontPath: '/p/demo/components/eds-storefront', files: ['blocks/hero/hero.js'] });
+        const project = edsProject();
+        const ctx = makeCtx();
+
+        const res = await apply(project, questions({ clash: 'fix' }), ctx);
+
+        expect(mockKeepClash).toHaveBeenCalledWith(
+            project,
+            { track: 'template', clash: CONFLICTED.clash, conflicts: ['blocks/hero/hero.js'], fixes: false },
+            ctx,
+        );
+        expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
+        expect(mockSyncWithTemplate).toHaveBeenCalledTimes(1);
+        expect(res.template.clashes).toEqual([
+            { project: 'demo', track: 'template', files: ['blocks/hero/hero.js'], keptIn: '/p/demo/components/eds-storefront' },
+        ]);
+        expect(res.template.errors).toEqual([
+            "demo: 1 file clashes with edits in the storefront (blocks/hero/hero.js). It is kept in the project's local copy to fix with AI; nothing was pushed.",
+        ]);
+    });
+
+    it('says why, when the clash could not be kept', async () => {
+        mockSyncWithTemplate.mockResolvedValue(CONFLICTED);
+        mockKeepClash.mockResolvedValue({ kind: 'not-kept', reason: 'this project has no local copy of its storefront' });
+        const ctx = makeCtx();
+
+        const res = await apply(edsProject(), questions({ clash: 'fix' }), ctx);
+
+        expect(ctx.stateManager.saveProject).not.toHaveBeenCalled();
+        expect(res.template.errors[0]).toMatch(/It could not be kept for fixing: this project has no local copy of its storefront\.$/);
+        expect(res.template.clashes?.[0]).toMatchObject({ notKept: 'this project has no local copy of its storefront' });
     });
 
     // Resetting it to the bare template would remove Demo Builder's fixes (EDS-51).
-    it('does not ask for a storefront built on the tested boilerplate', async () => {
+    it('asks a storefront built on the tested boilerplate without a reset, and never resets it', async () => {
         mockSyncWithTemplate.mockResolvedValue(CONFLICTED);
-        const ask = questions({ reset: true });
+        const project = thinLayerProject();
+        const ask = questions({ clash: 'reset' });
 
-        await applyUpdatesHeadless(
-            { ...emptySelections(), template: [{ project: thinLayerProject() }] },
+        await apply(project, ask);
+
+        expect(ask.onClash).toHaveBeenCalledWith(project, expect.objectContaining({ canReset: false }));
+        expect(mockSyncWithTemplate).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps a tested-boilerplate storefront's clash with its fixes to ride in the finishing commit", async () => {
+        mockSyncWithTemplate.mockResolvedValue(CONFLICTED);
+        mockKeepClash.mockResolvedValue({ kind: 'kept', storefrontPath: '/p/x', files: ['blocks/hero/hero.js'] });
+
+        await apply(thinLayerProject(), questions({ clash: 'fix' }));
+
+        expect(mockKeepClash).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ fixes: true }), expect.anything());
+    });
+});
+
+describe("Adobe's boilerplate update that clashes", () => {
+    const BASE = {
+        template: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
+        commit: 'a'.repeat(40),
+        lkgSource: { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' },
+        found: 'first-commit' as const,
+    };
+
+    it('asks without a reset, and keeps the clash on Fix with AI', async () => {
+        mockSyncBoilerplate.mockResolvedValue(CONFLICTED);
+        mockKeepClash.mockResolvedValue({ kind: 'kept', storefrontPath: '/p/demo/components/eds-storefront', files: ['blocks/hero/hero.js'] });
+        const project = edsProject();
+        const ask = questions({ clash: 'fix' });
+
+        const res = await applyUpdatesHeadless(
+            { ...emptySelections(), boilerplate: [{ project, base: BASE, tested: 'b'.repeat(40) }] },
             makeCtx(),
             undefined,
             { questions: ask },
         );
 
-        expect(ask.resetTemplateOnConflict).not.toHaveBeenCalled();
-        expect(mockSyncWithTemplate).toHaveBeenCalledTimes(1);
+        expect(ask.onClash).toHaveBeenCalledWith(project, { track: 'boilerplate', files: ['blocks/hero/hero.js'], canReset: false });
+        expect(mockKeepClash).toHaveBeenCalledWith(project, expect.objectContaining({ track: 'boilerplate', fixes: false }), expect.anything());
+        expect(res.boilerplate.clashes?.[0]).toMatchObject({ track: 'boilerplate', keptIn: '/p/demo/components/eds-storefront' });
+        expect(res.boilerplate.errors[0]).toMatch(/^demo \(Adobe boilerplate\): 1 file clashes/);
     });
 });
 

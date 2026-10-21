@@ -33,23 +33,49 @@ function selections(): UpdateSelections {
 beforeEach(() => ask.mockReset());
 
 describe('questionsInModal', () => {
-    it('asks about a template conflict, naming the project and the files, and answers yes on a reset', async () => {
-        ask.mockResolvedValue('Reset to template');
+    it('asks about a clash on the colleague\'s row with all three choices, naming the project and the files', async () => {
+        ask.mockResolvedValue('Fix with AI');
 
-        const answer = await questionsInModal.resetTemplateOnConflict(stopped, ['head.html', 'scripts/a.js']);
+        const answer = await questionsInModal.onClash(stopped, {
+            track: 'template',
+            files: ['head.html', 'scripts/a.js'],
+            canReset: true,
+        });
 
-        expect(answer).toBe(true);
+        expect(answer).toBe('fix');
         expect(ask).toHaveBeenCalledWith(
-            expect.stringContaining('Bodea: the template update conflicts with your edits in 2 files (head.html, scripts/a.js)'),
+            expect.stringContaining('Bodea: The template update clashes with edits in the storefront in 2 files (head.html, scripts/a.js)'),
+            'Fix with AI',
+            'Leave it as it is',
             'Reset to template',
-            'Keep my edits',
         );
     });
 
-    it.each([['Keep my edits'], [undefined]])('answers no to a reset on %s', async (choice) => {
+    it("never offers a reset on Adobe's row, and says which update it is", async () => {
+        ask.mockResolvedValue('Leave it as it is');
+
+        const answer = await questionsInModal.onClash(stopped, { track: 'boilerplate', files: ['blocks/header/header.js'], canReset: false });
+
+        expect(answer).toBe('leave');
+        expect(ask).toHaveBeenCalledWith(
+            expect.stringContaining("Adobe's boilerplate update clashes"),
+            'Fix with AI',
+            'Leave it as it is',
+        );
+        expect(ask.mock.calls[0][0]).not.toContain('Reset to template');
+    });
+
+    it.each([
+        ['Reset to template', true, 'reset'],
+        // A reset the question did not offer is never taken.
+        ['Reset to template', false, 'leave'],
+        ['Leave it as it is', true, 'leave'],
+        // Dismissed: nothing changes.
+        [undefined, true, 'leave'],
+    ])('answers %s (reset offered: %s) as %s', async (choice, canReset, expected) => {
         ask.mockResolvedValue(choice);
 
-        expect(await questionsInModal.resetTemplateOnConflict(stopped, ['head.html'])).toBe(false);
+        expect(await questionsInModal.onClash(stopped, { track: 'template', files: ['head.html'], canReset })).toBe(expected);
     });
 
     it('asks whether to replace a library, and answers yes only on Replace blocks', async () => {

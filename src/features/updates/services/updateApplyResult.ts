@@ -30,6 +30,25 @@ export interface CategoryResult {
      * because the SC had removed them by hand (EDS-36).
      */
     leftOut?: string[];
+    /**
+     * One per template or Adobe boilerplate update that stopped on a clash: the files,
+     * and where the clash is kept for fixing when it was (EDS-57).
+     */
+    clashes?: ClashReport[];
+}
+
+/** A clash a storefront update stopped on (EDS-57). */
+export interface ClashReport {
+    /** The project, as the SC names it. */
+    project: string;
+    /** `template`: the template's (or a colleague's) changes; `boilerplate`: Adobe's tested version. */
+    track: 'template' | 'boilerplate';
+    /** The clashing files, repository-relative. */
+    files: string[];
+    /** The local storefront copy holding the clash, when it was kept for fixing. */
+    keptIn?: string;
+    /** Why keeping it for fixing did not work, when that was tried. */
+    notKept?: string;
 }
 
 /** Aggregate outcome across all categories. */

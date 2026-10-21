@@ -258,20 +258,23 @@ describe('apply_updates', () => {
         );
     });
 
-    it('a template conflict stops by default; resetTemplateOnConflict:true is the only way to reset', async () => {
-        // The reset discards the user's edits to the conflicted files, so it is
-        // never the default and never inferred — the agent has to say so.
+    it('a clash stops by default; onClash says keep or reset, and nothing else is inferred', async () => {
+        // A reset discards the user's edits to the clashing files and a keep leaves
+        // markers in the local copy, so neither is the default: the agent has to say so.
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
-        await s.call({ confirm: true, resetTemplateOnConflict: true });
-        await s.call({ confirm: true, resetTemplateOnConflict: false });
+        await s.call({ confirm: true });
+        await s.call({ confirm: true, onClash: 'keep' });
+        await s.call({ confirm: true, onClash: 'reset' });
 
         expect(applyMock.mock.calls.map((c) => c[3])).toEqual([
-            { templateConflicts: 'reset' },
             { templateConflicts: 'stop' },
+            { templateConflicts: 'keep' },
+            { templateConflicts: 'reset' },
         ]);
-        expect(s.definition().inputSchema.resetTemplateOnConflict.isOptional()).toBe(true);
+        expect(s.definition().inputSchema.onClash.isOptional()).toBe(true);
+        expect(s.definition().inputSchema.resetTemplateOnConflict).toBeUndefined();
     });
 
     it('hands the updater the selections it just computed', async () => {

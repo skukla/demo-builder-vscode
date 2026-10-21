@@ -71,7 +71,7 @@ function gitEnv(home: string): NodeJS.ProcessEnv {
 }
 
 function git(cwd: string, ...args: string[]): string {
-    return execFileSync('git', args, { cwd, env: gitEnv(fx.home), encoding: 'utf8' }).trim();
+    return execFileSync('git', args, { cwd, env: gitEnv(fx.home), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
 function write(dir: string, file: string, content: string): void {

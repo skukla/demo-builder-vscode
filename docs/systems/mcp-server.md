@@ -504,8 +504,9 @@ Note the shape of the refusal differs by tool. Most return an error and do
 nothing. `apply_updates` is the one that reports what *would* happen: no
 `confirm` = a read-only "here's what's available". Don't assume the dry-run
 behavior generalizes. With `confirm:true` it raises the consent dialog (2026-10-16,
-EDS-51): it rewrites storefront code, and `resetTemplateOnConflict` discards the
-user's own edits. A storefront built on Demo Builder's tested boilerplate is brought to
+EDS-51): it rewrites storefront code, and `onClash: 'reset'` discards the
+user's own edits; `onClash: 'keep'` leaves a clash in the local storefront copy for the
+agent to fix (EDS-57). A storefront built on Demo Builder's tested boilerplate is brought to
 that tested version with its fixes put back, and is never reset to the bare template;
 its way through a conflict is `reset_project`.
 

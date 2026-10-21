@@ -140,7 +140,7 @@ describe('applyUpdates', () => {
         expect(sel.blockLibrary.map((b: { project: { path: string } }) => b.project.path)).toEqual(['/p/bodea']);
         expect(options.questions).toEqual(
             expect.objectContaining({
-                resetTemplateOnConflict: expect.any(Function),
+                onClash: expect.any(Function),
                 replaceLibraryBlocks: expect.any(Function),
             }),
         );

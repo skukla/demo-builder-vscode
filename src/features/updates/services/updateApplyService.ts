@@ -308,7 +308,13 @@ export async function applyUpdatesHeadless(
         options.templateConflicts,
         options.questions,
     );
-    const boilerplate = await applyBoilerplate(selections.boilerplate, ctx, onProgress);
+    const boilerplate = await applyBoilerplate(
+        selections.boilerplate,
+        ctx,
+        onProgress,
+        options.templateConflicts,
+        options.questions,
+    );
     const component = await applyComponents(selections.component, ctx, onProgress);
     const adobeMcp = await applyAdobeMcp(selections.adobeMcp, ctx, onProgress);
     const addon = await applyAddons(

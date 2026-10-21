@@ -15,8 +15,16 @@ import { refreshBaseFromColleague, type BaseRefreshDeps } from '@/features/updat
 import { compareCommits } from '@/features/updates/services/githubApiClient';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
-import { isThinLayerProject } from '@/features/updates/services/thinLayerUpdate';
-import { emptyResult, type CategoryResult } from '@/features/updates/services/updateApplyResult';
+import { emptyResult, type CategoryResult, type ClashReport } from '@/features/updates/services/updateApplyResult';
+import {
+    canResetOnClash,
+    decideClash,
+    keepForFixing,
+    stoppedClash,
+    type ClashAnswer,
+    type ClashQuestion,
+    type TemplateConflictPolicy,
+} from '@/features/updates/services/updateClash';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
@@ -29,12 +37,7 @@ import type { Project } from '@/types/base';
  */
 export type OnProgress = (stage: string, item?: string) => void;
 
-/**
- * What a headless template update does when the merge stops on conflicts.
- * `stop` (the default) reports the files and changes nothing; `reset` replaces
- * them with the template's version — only when the caller asked for exactly that.
- */
-export type TemplateConflictPolicy = 'stop' | 'reset';
+export type { TemplateConflictPolicy } from '@/features/updates/services/updateClash';
 
 /**
  * What a person is asked during an apply (PL-80): the Updates modal passes these, and
@@ -42,27 +45,41 @@ export type TemplateConflictPolicy = 'stop' | 'reset';
  * template conflict follows `templateConflicts`, a library under `ask` is kept.
  */
 export interface UpdateQuestions {
-    /** A template update conflicts with the SC's edits: replace those files with the template's? */
-    resetTemplateOnConflict(project: Project, conflicts: string[]): Promise<boolean>;
+    /** A template or Adobe boilerplate update clashes with edits: Fix with AI, Leave, or Reset? */
+    onClash(project: Project, question: ClashQuestion): Promise<ClashAnswer>;
     /** A block library under the `ask` sync setting: replace its blocks with the new ones? */
     replaceLibraryBlocks(libraryName: string, project: Project): Promise<boolean>;
 }
 
+/** A merge that stopped on a clash, and what was decided about it. */
+type ClashOutcome = { kind: 'settled'; result: TemplateSyncResult } | { kind: 'clash'; line: string; report: ClashReport };
+
+/**
+ * A template update, and on a clash the decision: reset (the colleague's row only, never
+ * a tested-boilerplate storefront, EDS-51; the service refuses that too), keep it for
+ * fixing with AI, or stop.
+ */
 async function syncTemplateHeadless(
     svc: TemplateSyncService,
     project: Project,
+    ctx: UpdateContext,
     policy: TemplateConflictPolicy,
     questions?: UpdateQuestions,
-): Promise<TemplateSyncResult> {
+): Promise<ClashOutcome> {
     const merged = await svc.syncWithTemplate(project, { strategy: 'merge' });
-    if (merged.success || !merged.conflicts?.length) return merged;
-    // A storefront on the tested boilerplate is never offered a reset to the bare
-    // template: it would drop Demo Builder's fixes (EDS-51); the service refuses it too.
-    const reset =
-        policy === 'reset' ||
-        (!isThinLayerProject(project) && (await questions?.resetTemplateOnConflict(project, merged.conflicts)));
-    if (!reset) return merged;
-    return svc.syncWithTemplate(project, { strategy: 'reset' });
+    if (merged.success || !merged.conflicts?.length) return { kind: 'settled', result: merged };
+    const question = { track: 'template' as const, files: merged.conflicts, canReset: canResetOnClash(project, 'template') };
+    const decision = await decideClash(project, question, policy, questions?.onClash);
+    if (decision === 'reset') return { kind: 'settled', result: await svc.syncWithTemplate(project, { strategy: 'reset' }) };
+    const clash = decision === 'keep' ? await keepForFixing(project, 'template', merged, ctx) : stoppedClash(project, 'template', merged);
+    return { kind: 'clash', ...clash };
+}
+
+/** Count a clash as not applied: its sentence, and its files for the agent. */
+function recordClash(result: CategoryResult, clash: { line: string; report: ClashReport }): void {
+    result.failCount++;
+    result.errors.push(clash.line);
+    (result.clashes ??= []).push(clash.report);
 }
 
 /** The colleague's description file and GitHub's compare, with the SC's token. */
@@ -88,7 +105,12 @@ export async function applyTemplate(
     for (const { project } of items) {
         onProgress?.(S.updatingTemplate.label, project.name);
         try {
-            const r = await syncTemplateHeadless(svc, project, policy, questions);
+            const outcome = await syncTemplateHeadless(svc, project, ctx, policy, questions);
+            if (outcome.kind === 'clash') {
+                recordClash(result, outcome);
+                continue;
+            }
+            const r = outcome.result;
             if (r.success) {
                 await svc.updateLastSyncedCommit(project, r.syncedCommit, ctx.stateManager);
                 // The colleague may have moved their own Adobe base; keep ours true (EDS-56 D4).
@@ -123,6 +145,8 @@ export async function applyBoilerplate(
     items: UpdateSelections['boilerplate'],
     ctx: UpdateContext,
     onProgress?: OnProgress,
+    policy: TemplateConflictPolicy = 'stop',
+    questions?: UpdateQuestions,
 ): Promise<CategoryResult> {
     const result = emptyResult();
     if (items.length === 0) return result;
@@ -131,6 +155,14 @@ export async function applyBoilerplate(
         onProgress?.(S.updatingTemplate.label, `${project.name}: Adobe boilerplate`);
         try {
             const r = await svc.syncBoilerplate(project, { base, tested });
+            if (!r.success && r.conflicts?.length) {
+                const question = { track: 'boilerplate' as const, files: r.conflicts, canReset: false };
+                const decision = await decideClash(project, question, policy, questions?.onClash);
+                recordClash(result, decision === 'keep'
+                    ? await keepForFixing(project, 'boilerplate', r, ctx)
+                    : stoppedClash(project, 'boilerplate', r));
+                continue;
+            }
             if (!r.success) throw new Error(r.error || 'Unknown error');
             writeBoilerplateBase(project, { ...base, commit: r.syncedCommit });
             await ctx.stateManager.saveProject(project);
