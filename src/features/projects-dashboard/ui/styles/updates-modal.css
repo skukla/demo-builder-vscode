@@ -62,7 +62,7 @@
         gap: 4px;
     }
 
-    /* The rest of the line opens the group: the name, its count, the chevron at the end. */
+    /* The rest of the line opens the group: the name, its note, the chevron at the end. */
     .updates-group-toggle {
         flex: 1;
         min-width: 0;
@@ -80,6 +80,14 @@
     .updates-group-toggle:focus-visible {
         outline: 2px solid var(--spectrum-global-color-blue-400);
         outline-offset: 2px;
+    }
+
+    /* "1 waiting for you" beside the name, at body size: small grey type made it read as
+       a footnote when it is the one thing a closed group must not hide. */
+    .updates-group-note {
+        margin-left: 8px;
+        font-size: 14px;
+        color: var(--spectrum-global-color-gray-800);
     }
 
     .updates-group-chevron {

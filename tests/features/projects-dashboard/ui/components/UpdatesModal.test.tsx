@@ -187,11 +187,10 @@ describe('UpdatesModal', () => {
         const rows = [ROWS[0], ROWS[1], redeploy];
         const { rerender } = render(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension'])} />);
 
-        expect(screen.getByText('0 of 2, 1 waiting for you')).toBeInTheDocument();
-        expect(screen.getByText('1 of 1')).toBeInTheDocument();
+        expect(screen.getByText('1 waiting for you')).toBeInTheDocument();
 
         rerender(<UpdatesModal controls={controls({ phase: 'list', rows }, ['extension', 'integration:1'])} />);
-        expect(screen.getByText('1 of 2')).toBeInTheDocument();
+        expect(screen.queryByText(/waiting for you/)).not.toBeInTheDocument();
     });
 
     it('shows a project partly ticked as mixed', () => {
@@ -201,15 +200,14 @@ describe('UpdatesModal', () => {
         const heading = screen.getAllByRole('checkbox')[0];
         expect(heading).toHaveAttribute('aria-checked', 'mixed');
         expect(heading).not.toBeChecked();
-        expect(screen.getByText('1 of 2')).toBeInTheDocument();
     });
 
-    // A locked row is not counted: it can be neither ticked nor applied from here.
-    it("counts a project's ticked rows beside its name, leaving out a locked one", () => {
+    // The checkbox shows all, some or none ticked, so a count beside the name said it twice.
+    it("shows no ticked count beside a project's name", () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
 
-        expect(screen.getByText('1 of 1')).toBeInTheDocument();
-        expect(screen.getByText('1 of 1, 1 waiting for you')).toBeInTheDocument();
+        expect(screen.queryByText(/\d+ of \d+/)).not.toBeInTheDocument();
+        expect(screen.getByText('1 waiting for you')).toBeInTheDocument();
     });
 
     it('titles the report "Update results"', () => {

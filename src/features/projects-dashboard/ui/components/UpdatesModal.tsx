@@ -56,14 +56,16 @@ function groupsOf(rows: PendingUpdateRow[]): RowGroup[] {
     return [...groups.values()];
 }
 
-/** What a closed group says about itself, and the rows its checkbox ticks. */
+/**
+ * The rows a group's checkbox ticks, and what a closed group says about itself. It
+ * says only how many rows wait for the SC, since a closed group could hide those. It
+ * said "1 of 2" as well until 2026-10-21; the checkbox already shows all, some or none.
+ */
 function summaryOf(group: RowGroup, ticked: ReadonlySet<string>): { open: string[]; tickedCount: number; text: string } {
     const open = group.rows.filter((r) => !r.lockedReason).map((r) => r.id);
     const tickedCount = open.filter((id) => ticked.has(id)).length;
     const waiting = group.rows.filter((r) => !r.ticked && !ticked.has(r.id)).length;
-    const parts = open.length > 0 ? [`${tickedCount} of ${open.length}`] : [];
-    if (waiting > 0) parts.push(`${waiting} waiting for you`);
-    return { open, tickedCount, text: parts.join(', ') };
+    return { open, tickedCount, text: waiting > 0 ? `${waiting} waiting for you` : '' };
 }
 
 function RowGroupView({ group, controls }: { group: RowGroup; controls: UpdatesModalControls }) {
@@ -88,7 +90,7 @@ function RowGroupView({ group, controls }: { group: RowGroup; controls: UpdatesM
                     onClick={() => setOpen(!isOpen)}
                 >
                     <span className="project-row-name">{group.title}</span>
-                    {text && <span className="checkbox-row-detail">{text}</span>}
+                    {text && <span className="updates-group-note">{text}</span>}
                     <Chevron size="S" UNSAFE_className="project-row-chevron updates-group-chevron" />
                 </button>
             </div>
