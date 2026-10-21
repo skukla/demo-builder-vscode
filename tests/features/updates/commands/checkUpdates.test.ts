@@ -103,6 +103,41 @@ describe('CheckUpdatesCommand', () => {
             expect(mockPresentUpdates.mock.invocationCallOrder[0]).toBeLessThan(executeCommand.mock.invocationCallOrder[0]);
         });
 
+        it('joins a background check already running: the notification at once, the modal on that check, no popup', async () => {
+            let finish!: (value: { count: number }) => void;
+            const check = { count: 5 };
+            mockFindAllUpdates.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+            const background = command().execute({ background: true });
+
+            const bySc = command().execute();
+            await Promise.resolve();
+            // Shown before the check ends, not after.
+            expect(vscode.window.withProgress).toHaveBeenCalledWith(
+                expect.objectContaining({ title: 'Checking for updates' }),
+                expect.any(Function),
+            );
+            finish(check);
+            await Promise.all([background, bySc]);
+
+            expect(mockFindAllUpdates).toHaveBeenCalledTimes(1);
+            expect(mockPresentUpdates).toHaveBeenCalledWith(check);
+            expect(executeCommand).toHaveBeenCalledWith(...OPEN_MODAL);
+            expect(showInformationMessage).not.toHaveBeenCalled();
+        });
+
+        it('starts nothing more on a second click while the first is checking', async () => {
+            let finish!: (value: { count: number }) => void;
+            mockFindAllUpdates.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+
+            const first = command().execute();
+            await command().execute();
+            finish({ count: 2 });
+            await first;
+
+            expect(vscode.window.withProgress).toHaveBeenCalledTimes(1);
+            expect(executeCommand).toHaveBeenCalledTimes(1);
+        });
+
         it('says the check failed when it throws, and opens nothing', async () => {
             mockFindAllUpdates.mockRejectedValue(new Error('rate limited'));
 

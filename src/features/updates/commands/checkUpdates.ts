@@ -10,6 +10,11 @@
  * things quietly and, when something is waiting, says how many in one notification whose
  * Review opens the modal. It never opens anything by itself.
  *
+ * One check runs at a time. An SC who asks while the background check is running joins
+ * it: the notification shows at once, the modal opens on that check, and the background
+ * run stays quiet. Until 2026-10-21 the SC's request was dropped instead, so the click did
+ * nothing and the background popup arrived seconds later.
+ *
  * Until PL-80 the notification led to VS Code's picker, a background check opened that
  * picker on its own, and a second updater (`utils/autoUpdater.ts`, removed) showed its own
  * "Update Now" every four hours. The modal replaces only the picker: the notification is
@@ -20,7 +25,6 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
-import { ExecutionLock } from '@/core/utils/executionLock';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { integrationUpdateProbe } from '@/features/dashboard/handlers/integrationUpdateHandlers';
@@ -32,26 +36,39 @@ import { UpdateManager } from '@/features/updates/services/updateManager';
 const REVIEW = 'Review';
 
 export class CheckUpdatesCommand extends BaseCommand {
-    /** One check at a time. */
-    private static lock = new ExecutionLock('CheckUpdates');
+    /** The check in flight. A second request joins it rather than starting another. */
+    private static running?: Promise<FoundUpdates>;
+    /** Whether the SC is waiting on the check in flight. The background run then stays quiet. */
+    private static scWaiting = false;
 
     /**
      * @param options - `background` for the quiet check that only notifies
      */
     async execute(options: { background?: boolean } = {}): Promise<void> {
-        if (CheckUpdatesCommand.lock.isLocked()) {
-            this.logger.debug('[Updates] Already in progress');
+        if (options.background) {
+            if (CheckUpdatesCommand.running) {
+                this.logger.debug('[Updates] Already in progress');
+                return;
+            }
+            await this.checkInBackground();
             return;
         }
-        await CheckUpdatesCommand.lock.run(() =>
-            options.background ? this.checkInBackground() : this.checkInNotification(),
-        );
+        if (CheckUpdatesCommand.scWaiting) {
+            this.logger.debug('[Updates] Already showing a check');
+            return;
+        }
+        CheckUpdatesCommand.scWaiting = true;
+        try {
+            await this.checkInNotification();
+        } finally {
+            CheckUpdatesCommand.scWaiting = false;
+        }
     }
 
     /** The SC's check: told in a notification, then the modal or "up to date". */
     private async checkInNotification(): Promise<void> {
         try {
-            const found = await withProgressRegister({ title: 'Checking for updates' }, () => this.findUpdates());
+            const found = await withProgressRegister({ title: 'Checking for updates' }, () => this.check());
             await this.maybeOfferGraduation();
             if (found.count === 0) {
                 const version: string = this.context.extension.packageJSON.version;
@@ -66,7 +83,9 @@ export class CheckUpdatesCommand extends BaseCommand {
 
     /** The startup and four-hourly check: quiet, and a notification only when something waits. */
     private async checkInBackground(): Promise<void> {
-        const found = await this.findUpdates();
+        const found = await this.check();
+        // The SC asked while this ran and is shown this same check.
+        if (CheckUpdatesCommand.scWaiting) return;
         await this.maybeOfferGraduation();
         if (found.count === 0) {
             this.logger.debug('[Updates] Background check: nothing waiting');
@@ -78,6 +97,14 @@ export class CheckUpdatesCommand extends BaseCommand {
             REVIEW,
         );
         if (choice === REVIEW) await this.openModal(found);
+    }
+
+    /** The check in flight, or a new one. */
+    private check(): Promise<FoundUpdates> {
+        CheckUpdatesCommand.running ??= this.findUpdates().finally(() => {
+            CheckUpdatesCommand.running = undefined;
+        });
+        return CheckUpdatesCommand.running;
     }
 
     private findUpdates(): Promise<FoundUpdates> {
