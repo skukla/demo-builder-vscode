@@ -112,12 +112,21 @@ function runTitleOf(progress: OperationProgressPayload | null): string {
     return progress.warning ? "Some updates didn't apply" : 'Updates applied';
 }
 
+/** The window's dismiss button and the buttons beside it. */
+interface Chrome {
+    closeLabel?: string;
+    hideClose?: boolean;
+    actions: ActionButton[];
+}
+
 /**
- * The run's dismiss label and buttons. A question's answers replace them, and its
- * dismiss is Cancel; a run still going dismisses into the background; an ended run
- * closes, a failed one offering its logs.
+ * The run's dismiss label and buttons. A question's answers are the only buttons: a
+ * dismiss would repeat its safe answer (it was a Cancel that did just that until
+ * 2026-10-21), and a run cannot go to the background with a question nobody can answer
+ * there. Escape still answers it as dismissed. A run still going dismisses into the
+ * background; an ended run closes, a failed one offering its logs.
  */
-function runChrome(controls: UpdatesModalControls): { closeLabel: string; actions: ActionButton[] } {
+function runChrome(controls: UpdatesModalControls): Chrome {
     const { progress } = controls;
     const ended = progress?.state === 'succeeded' || progress?.state === 'failed';
     if (!ended && progress?.prompt) {
@@ -126,7 +135,7 @@ function runChrome(controls: UpdatesModalControls): { closeLabel: string; action
             variant: index === 0 ? 'accent' : 'secondary',
             onPress: () => controls.answer(label),
         }));
-        return { closeLabel: 'Cancel', actions };
+        return { hideClose: true, actions };
     }
     if (!ended) return { closeLabel: 'Run in background', actions: NO_ACTIONS };
     if (progress?.state !== 'failed') return { closeLabel: 'Close', actions: NO_ACTIONS };
@@ -139,12 +148,7 @@ function runChrome(controls: UpdatesModalControls): { closeLabel: string; action
 }
 
 /** What the modal shows: its title, body, dismiss label and the buttons beside it. */
-function contentFor(controls: UpdatesModalControls): {
-    title: string;
-    body: React.ReactNode;
-    closeLabel?: string;
-    actions: ActionButton[];
-} {
+function contentFor(controls: UpdatesModalControls): Chrome & { title: string; body: React.ReactNode } {
     const { view } = controls;
     if (view.phase === 'applying') {
         const body = (
@@ -180,6 +184,7 @@ export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): 
                     fitContent
                     onClose={controls.close}
                     closeLabel={content.closeLabel}
+                    hideClose={content.hideClose}
                     actionButtons={content.actions}
                 >
                     {content.body}

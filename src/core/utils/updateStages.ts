@@ -44,6 +44,13 @@ export const UPDATE_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'Block libraries and the Inspector SDK',
     },
+    // FIRST ESTIMATE, NOT MEASURED: one git fetch of the storefront, after every
+    // update that wrote to it (`localStorefrontRefresh.ts`).
+    updatingLocalCopy: {
+        label: 'Updating your local copy',
+        expectation: 'Usually a few seconds',
+        detail: 'Bringing it up to GitHub',
+    },
     // FIRST ESTIMATE, NOT MEASURED: no integration update is in the logs. Each pair
     // redeploys, so it is the deploy's 1–2 minutes.
     updatingIntegrations: {

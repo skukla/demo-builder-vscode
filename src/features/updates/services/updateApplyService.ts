@@ -34,13 +34,16 @@ import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { applyIntegrationUpdates } from '@/features/updates/services/integrationUpdates';
 import { refreshLocalStorefronts } from '@/features/updates/services/localStorefrontRefresh';
-import { eachItem, type ItemObserver } from '@/features/updates/services/updateApplyEach';
+import { eachItem, watchingDone, type DescribeItem, type ItemObserver } from '@/features/updates/services/updateApplyEach';
 import { applyFinish } from '@/features/updates/services/updateApplyFinish';
 import {
+    answeredClashOutcome,
     emptyResult,
     mergeInto,
+    outcomeOf,
     type ApplyUpdatesResult,
     type CategoryResult,
+    type ItemOutcome,
 } from '@/features/updates/services/updateApplyResult';
 import {
     applyBoilerplate,
@@ -55,6 +58,7 @@ import {
     type UpdateContext,
 } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
+import { inOrder, projectsOf, selectionsWhere } from '@/features/updates/services/updateSelectionsByProject';
 import { shouldSkipBlockLibrary } from '@/features/updates/services/updateSources';
 import type { Project } from '@/types/base';
 
@@ -65,10 +69,14 @@ export interface ApplyUpdatesOptions {
     templateConflicts?: TemplateConflictPolicy;
     questions?: UpdateQuestions;
     onItem?: ItemObserver;
+    /** Project paths, first to last: the order the Updates modal lists them in. */
+    projectOrder?: readonly string[];
+    /** Told as each project's local copy starts and ends being brought up to GitHub. */
+    onLocalCopy?: (project: Project, outcome: ItemOutcome) => void;
 }
 
 /** A library kept under the `ask` setting: the core records only its name. */
-const KEPT_BLOCKS = (): string => 'Not updated; your blocks were kept.';
+const KEPT_BLOCKS: DescribeItem = (result) => outcomeOf(result, () => 'Not updated — your blocks were kept.');
 
 
 // ==========================================================
@@ -297,10 +305,63 @@ async function applyBlockLibraryInstalls(
 // Orchestrator
 // ==========================================================
 
+/** The categories an apply reports, each the sum of its projects'. */
+type CategoryKey = Exclude<keyof ApplyUpdatesResult, 'totalApplied' | 'totalFailed'>;
+
+/** What every core in one apply shares. */
+interface ApplyRun {
+    ctx: UpdateContext;
+    onProgress?: OnProgress;
+    options: ApplyUpdatesOptions;
+    onItem?: ItemObserver;
+    /** The items that applied, when told item by item; unknown otherwise. */
+    done?: ReadonlySet<object>;
+}
+
 /**
- * Apply all selected updates, in category order (fork → template → components →
- * Adobe MCP → add-ons → block library installs → integration pairs), threading
- * template-sync successes into the add-on dedup.
+ * One project's updates, in its kinds' order, each added to its category's result; then
+ * its local copy brought up to what they wrote.
+ */
+async function applyProject(s: UpdateSelections, run: ApplyRun, into: Record<CategoryKey, CategoryResult>): Promise<void> {
+    const { ctx, onProgress, onItem } = run;
+    const { questions, templateConflicts: policy } = run.options;
+    const add = (key: CategoryKey, result: CategoryResult): void => mergeInto(into[key], result);
+    // First among the storefront writes: a fixed clash finishes before anything else moves the repository.
+    add('finish', await eachItem('finish', s.finish, (some) => applyFinish(some, ctx, onProgress, questions), onItem));
+    const succeededPaths = new Set<string>();
+    add('template', await eachItem('template', s.template, async (some) => {
+        const applied = await applyTemplate(some, ctx, onProgress, policy, questions);
+        applied.succeededPaths.forEach((path) => succeededPaths.add(path));
+        return applied.result;
+    }, onItem, answeredClashOutcome));
+    add('boilerplate', await eachItem('boilerplate', s.boilerplate, (some) =>
+        applyBoilerplate(some, ctx, onProgress, policy, questions), onItem, answeredClashOutcome));
+    add('component', await eachItem('component', s.component, (some) => applyComponents(some, ctx, onProgress), onItem));
+    add('adobeMcp', await eachItem('adobeMcp', s.adobeMcp, (some) => applyAdobeMcp(some, ctx, onProgress), onItem));
+    // Libraries first, then the Inspector SDK: one category, as the agent reads it.
+    add('addon', await eachItem('blockLibrary', s.blockLibrary, (some) =>
+        applyAddons(some, [], succeededPaths, ctx, onProgress, questions), onItem, KEPT_BLOCKS));
+    add('addon', await eachItem('inspector', s.inspector, (some) =>
+        applyAddons([], some, succeededPaths, ctx, onProgress, questions), onItem));
+    add('blockLibraryInstall', await eachItem('blockLibraryInstall', s.blockLibraryInstall, (some) =>
+        applyBlockLibraryInstalls(some, ctx, onProgress), onItem));
+    add('integration', await eachItem('integration', s.integration, (some) =>
+        applyIntegrationUpdates(some, ctx, onProgress), onItem));
+    // Every kind above that writes a storefront writes it on GitHub; the local copy agents
+    // edit is brought up to it here (EDS-57). Told item by item, only what applied wrote.
+    const wrote = [...s.template, ...s.boilerplate, ...s.blockLibrary, ...s.blockLibraryInstall]
+        .filter((item) => !run.done || run.done.has(item))
+        .map((item) => item.project);
+    if (wrote.length > 0) await refreshLocalStorefronts(wrote, ctx, onProgress, run.options.onLocalCopy);
+}
+
+/**
+ * Apply all selected updates: the template repositories first, since a project's template
+ * update reads from them, then one project at a time (in `projectOrder`, the Updates
+ * modal's, when given), each in its kinds' order (`PROJECT_SELECTION_KINDS`). It ran by
+ * kind across every project until 2026-10-21, which moved the modal's run out of the
+ * order it lists (owner). Each category's result is the sum of its projects', so the
+ * agent reads the same totals either way.
  */
 export async function applyUpdatesHeadless(
     selections: UpdateSelections,
@@ -308,68 +369,26 @@ export async function applyUpdatesHeadless(
     onProgress?: OnProgress,
     options: ApplyUpdatesOptions = {},
 ): Promise<ApplyUpdatesResult> {
-    const { onItem, questions, templateConflicts: policy } = options;
-    const forkSync = await eachItem('forkSync', selections.forkSync, (some) => applyForkSync(some, ctx, onProgress), onItem);
-    // First among the storefront writes: a fixed clash finishes before anything else moves the repository.
-    const finish = await eachItem('finish', selections.finish, (some) => applyFinish(some, ctx, onProgress, questions), onItem);
-    const succeededPaths = new Set<string>();
-    const template = await eachItem('template', selections.template, async (some) => {
-        const applied = await applyTemplate(some, ctx, onProgress, policy, questions);
-        applied.succeededPaths.forEach((path) => succeededPaths.add(path));
-        return applied.result;
-    }, onItem);
-    const boilerplate = await eachItem(
-        'boilerplate',
-        selections.boilerplate,
-        (some) => applyBoilerplate(some, ctx, onProgress, policy, questions),
-        onItem,
-    );
-    const component = await eachItem('component', selections.component, (some) => applyComponents(some, ctx, onProgress), onItem);
-    const adobeMcp = await eachItem('adobeMcp', selections.adobeMcp, (some) => applyAdobeMcp(some, ctx, onProgress), onItem);
-    // Libraries first, then the Inspector SDK: one category, as the agent reads it.
-    const addon = await eachItem('blockLibrary', selections.blockLibrary, (some) =>
-        applyAddons(some, [], succeededPaths, ctx, onProgress, questions), onItem, KEPT_BLOCKS);
-    mergeInto(addon, await eachItem('inspector', selections.inspector, (some) =>
-        applyAddons([], some, succeededPaths, ctx, onProgress, questions), onItem));
-
-    const blockLibraryInstall = await eachItem(
-        'blockLibraryInstall',
-        selections.blockLibraryInstall,
-        (some) => applyBlockLibraryInstalls(some, ctx, onProgress),
-        onItem,
-    );
-
-    const integration = await eachItem(
-        'integration',
-        selections.integration,
-        (some) => applyIntegrationUpdates(some, ctx, onProgress),
-        onItem,
-    );
-
-    // Every category above that writes a storefront writes it on GitHub; the local copy
-    // agents edit is brought up to it here (EDS-57).
-    await refreshLocalStorefronts(
-        [
-            ...selections.template,
-            ...selections.boilerplate,
-            ...selections.blockLibrary,
-            ...selections.blockLibraryInstall,
-        ].map((item) => item.project),
-        ctx,
-    );
-
-    const cats = [forkSync, finish, template, boilerplate, component, adobeMcp, addon, blockLibraryInstall, integration];
+    const { onItem, done } = watchingDone(options.onItem);
+    const run: ApplyRun = { ctx, onProgress, options, onItem, done };
+    const into: Record<CategoryKey, CategoryResult> = {
+        forkSync: await eachItem('forkSync', selections.forkSync, (some) => applyForkSync(some, ctx, onProgress), onItem),
+        finish: emptyResult(),
+        template: emptyResult(),
+        boilerplate: emptyResult(),
+        component: emptyResult(),
+        adobeMcp: emptyResult(),
+        addon: emptyResult(),
+        blockLibraryInstall: emptyResult(),
+        integration: emptyResult(),
+    };
+    for (const project of inOrder(projectsOf(selections), options.projectOrder)) {
+        await applyProject(selectionsWhere(selections, (p) => p.path === project.path), run, into);
+    }
+    const cats = Object.values(into);
     return {
-        forkSync,
-        template,
-        boilerplate,
-        finish,
-        component,
-        adobeMcp,
-        addon,
-        blockLibraryInstall,
-        integration,
-        totalApplied: cats.reduce((s, c) => s + c.successCount, 0),
-        totalFailed: cats.reduce((s, c) => s + c.failCount, 0),
+        ...into,
+        totalApplied: cats.reduce((sum, c) => sum + c.successCount, 0),
+        totalFailed: cats.reduce((sum, c) => sum + c.failCount, 0),
     };
 }

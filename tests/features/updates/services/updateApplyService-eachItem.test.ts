@@ -72,6 +72,25 @@ describe('applyUpdatesHeadless, told each item', () => {
         expect(told.totalApplied).toBe(4);
     });
 
+    // One project at a time, in the order the Updates modal lists them (owner,
+    // 2026-10-21): by kind, the first project's template ran before the second's library.
+    it('runs one project at a time, in the order it is given', async () => {
+        const first = edsProject({ name: 'first', path: '/p/first' });
+        const second = edsProject({ name: 'second', path: '/p/second' });
+        const onItem = jest.fn();
+        const selections = {
+            ...emptySelections(),
+            forkSync: [forkA],
+            template: [{ project: second }],
+            blockLibrary: [{ project: first, library: installedLibrary('Lib A'), latestCommit: 'bbb' }],
+        } as UpdateSelections;
+
+        await applyUpdatesHeadless(selections, makeCtx(), undefined, { onItem, projectOrder: ['/p/first', '/p/second'] });
+
+        const started = onItem.mock.calls.filter(([, , o]) => o.state === 'running').map(([kind]) => kind);
+        expect(started).toEqual(['forkSync', 'blockLibrary', 'template']);
+    });
+
     it('tells a library the SC chose to keep as left alone, in a sentence', async () => {
         setSyncBehavior('ask');
         const questions = { replaceLibraryBlocks: jest.fn().mockResolvedValue(false) } as unknown as UpdateQuestions;
@@ -82,7 +101,7 @@ describe('applyUpdatesHeadless, told each item', () => {
 
         expect(onItem).toHaveBeenLastCalledWith('blockLibrary', item, {
             state: 'skipped',
-            message: 'Not updated; your blocks were kept.',
+            message: 'Not updated — your blocks were kept.',
         });
     });
 });

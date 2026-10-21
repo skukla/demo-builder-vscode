@@ -19,6 +19,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         actionButtons = [],
         onClose,
         closeLabel,
+        hideClose,
         children,
     }: {
         title: string;
@@ -26,11 +27,12 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         actionButtons?: ActionButton[];
         onClose: () => void;
         closeLabel?: string;
+        hideClose?: boolean;
         children: React.ReactNode;
     }) => (
         <div role="dialog" aria-label={title} data-size={size}>
             {children}
-            <button onClick={onClose}>{closeLabel ?? 'Close'}</button>
+            {!hideClose && <button onClick={onClose}>{closeLabel ?? 'Close'}</button>}
             {actionButtons.map((b) => (
                 <button key={b.label} onClick={b.onPress} disabled={b.isDisabled}>
                     {b.label}
@@ -177,6 +179,16 @@ describe('UpdatesModal', () => {
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
 
+    it("says why a row was left alone in grey, not a failure's red", () => {
+        const c = running(
+            { 'blockLibrary:0': { id: 'blockLibrary:0', state: 'skipped', message: 'Not updated — your blocks were kept.' } },
+            { state: 'succeeded', warning: '1 update did not apply.' },
+        );
+        render(<UpdatesModal controls={c} />);
+
+        expect(screen.getByText('Not updated — your blocks were kept.')).toHaveClass('updates-run-note');
+    });
+
     it('titles a run where everything applied "Updates applied", a note under its row', () => {
         const c = running(
             {
@@ -200,19 +212,69 @@ describe('UpdatesModal', () => {
         expect(screen.getByRole('button', { name: 'Open Debug Logs' })).toBeInTheDocument();
     });
 
-    // A question takes the list's place, as it does in the progress modal.
-    it('asks a question the run is paused on in place of the list, its answers as the buttons', async () => {
+    // A question is asked under the row it is about, the list still in view (owner,
+    // 2026-10-21); its answers are the only buttons, since a dismiss would repeat one.
+    it('asks a question under the row asking it, its answers the only buttons', async () => {
+        const prompt = { message: '"Replace blocks" puts in the new versions.', actions: ['Replace blocks', 'Keep my blocks'] };
+        const c = running({ 'blockLibrary:0': { id: 'blockLibrary:0', state: 'running' } }, { prompt, step: 'Lib A' });
+        const { container } = render(<UpdatesModal controls={c} />);
+
+        const row = container.querySelector('.updates-run-row[data-state="running"]') as HTMLElement;
+        expect(row).toHaveTextContent('Demo Builder Blocks');
+        expect(row.querySelector('.updates-run-question')).toHaveTextContent('"Replace blocks" puts in the new versions.');
+        expect(screen.getByText('Demo Builder extension')).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Applying updates' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /cancel|close|run in background/i })).toBeNull();
+        await user().click(screen.getByRole('button', { name: 'Keep my blocks' }));
+
+        expect(c.answer).toHaveBeenCalledWith('Keep my blocks');
+    });
+
+    it('asks a question no row is running for above the list', () => {
         const prompt = { message: 'Bodea is running. Stop it to update it?', actions: ['Stop and update', 'Skip'] };
         const c = running({}, { prompt });
+        const { container } = render(<UpdatesModal controls={c} />);
+
+        const list = container.querySelector('.updates-group-list') as HTMLElement;
+        expect(list.firstElementChild).toHaveClass('updates-run-question');
+        expect(list.firstElementChild).toHaveTextContent('Bodea is running. Stop it to update it?');
+        expect(screen.getByText('Demo Builder Blocks')).toBeInTheDocument();
+    });
+
+    // After a project's updates, its local copy is brought up to GitHub: one more step
+    // in its panel that keeps its outcome (owner, 2026-10-21: a stage line vanished).
+    it("shows the local copy as a step in its project's panel, the project running until it ends", () => {
+        const c = running({
+            'blockLibrary:0': { id: 'blockLibrary:0', state: 'done' },
+            'localCopy:/p/justrite': { id: 'localCopy:/p/justrite', state: 'running' },
+        });
+        const { container } = render(<UpdatesModal controls={c} />);
+
+        const justrite = Array.from(container.querySelectorAll('.updates-group')).find((p) =>
+            p.textContent?.includes('JustRite'),
+        ) as HTMLElement;
+        const step = Array.from(justrite.querySelectorAll('.updates-run-row')).at(-1) as HTMLElement;
+        expect(step).toHaveTextContent('Your local copy');
+        expect(step).toHaveTextContent('Bringing it up to GitHub');
+        expect(justrite.querySelector('.updates-run-header [role="progressbar"]')).not.toBeNull();
+    });
+
+    it('keeps the local copy step once it ends, with why when it was left as it is', () => {
+        const c = running(
+            {
+                'blockLibrary:0': { id: 'blockLibrary:0', state: 'done' },
+                'localCopy:/p/justrite': {
+                    id: 'localCopy:/p/justrite',
+                    state: 'skipped',
+                    message: 'Left as it is — it has commits GitHub does not have.',
+                },
+            },
+            { state: 'succeeded' },
+        );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByText('Bodea is running. Stop it to update it?')).toBeInTheDocument();
-        expect(screen.queryByText('Demo Builder Blocks')).toBeNull();
-        await user().click(screen.getByRole('button', { name: 'Skip' }));
-        await user().click(screen.getByRole('button', { name: 'Cancel' }));
-
-        expect(c.answer).toHaveBeenCalledWith('Skip');
-        expect(c.close).toHaveBeenCalledTimes(1);
+        expect(screen.getByText('Your local copy')).toBeInTheDocument();
+        expect(screen.getByText('Left as it is — it has commits GitHub does not have.')).toHaveClass('updates-run-note');
     });
 
     // No sentence under the title: the ticks and the Apply count say it, and what cannot

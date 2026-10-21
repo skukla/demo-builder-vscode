@@ -918,7 +918,10 @@ config when a project is created (and on "Regenerate AI files"):
   takes `tool_input.file_path`; it once read a `$CLAUDE_TOOL_INPUT` env var Claude
   Code never sets, so the hook silently did nothing from beta.109 until the
   AI_CONTEXT_VERSION 6 fix. It commits and pushes only — publishing is
-  `sync_content` / `sync_storefront`.
+  `sync_content` / `sync_storefront`. It does nothing while a storefront update's clash
+  is kept in the copy for fixing (`.git/demo-builder-kept-clash`, AI_CONTEXT_VERSION 42):
+  the copy then holds the whole half-applied update, which `finish_storefront_update`
+  pushes once the fix checks out.
 - **`.claude/settings.json`** also carries a `PreToolUse` **aio-global guard**
   (AI_CONTEXT_VERSION 21) for every project that gets the App Builder tooling
   (`projectNeedsAppBuilderTooling`) and unconditionally for the home Chat. It

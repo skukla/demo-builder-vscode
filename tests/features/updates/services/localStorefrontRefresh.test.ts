@@ -227,6 +227,24 @@ describe('refreshLocalStorefronts (after an update)', () => {
         expect(fs.readFileSync(path.join(fx.local, '.git', 'config'), 'utf8')).not.toContain('gh-token');
     }, REAL_GIT_TIMEOUT_MS);
 
+    it('tells the window it is updating the local copy, once per copy', async () => {
+        mockGetToken.mockResolvedValue({ token: 'gh-token' });
+        commitOnGitHub({ 'scripts/scripts.js': 'vendored\n' }, 'chore: vendor a snippet');
+        const project = storefrontProject(fx.local);
+        const onProgress = jest.fn();
+
+        const onCopy = jest.fn();
+
+        await refreshLocalStorefronts([project, project], updateContext(), onProgress, onCopy);
+
+        expect(onProgress.mock.calls).toEqual([['Updating your local copy', expect.any(String)]]);
+        // And as a step of its own, which keeps its outcome (2026-10-21).
+        expect(onCopy.mock.calls).toEqual([
+            [project, { state: 'running' }],
+            [project, { state: 'done' }],
+        ]);
+    }, REAL_GIT_TIMEOUT_MS);
+
     it('runs nothing without a GitHub token', async () => {
         mockGetToken.mockResolvedValue(undefined);
         const ctx = updateContext();
@@ -250,8 +268,14 @@ describe('refreshLocalStorefronts (after an update)', () => {
         const ctx = updateContext();
         (ctx.commandManager.execute as jest.Mock).mockRejectedValue(new Error('spawn failed'));
 
-        await expect(refreshLocalStorefronts([storefrontProject(fx.local)], ctx)).resolves.toBeUndefined();
+        const onCopy = jest.fn();
+
+        await expect(refreshLocalStorefronts([storefrontProject(fx.local)], ctx, undefined, onCopy)).resolves.toBeUndefined();
 
         expect(ctx.logger.warn).toHaveBeenCalled();
+        expect(onCopy).toHaveBeenLastCalledWith(expect.anything(), {
+            state: 'skipped',
+            message: 'Not brought up to date — details are in Debug Logs.',
+        });
     });
 });

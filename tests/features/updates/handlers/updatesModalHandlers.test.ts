@@ -129,10 +129,11 @@ describe('presentUpdates', () => {
         expect(h.presentedRows()).toEqual(rows);
     });
 
-    it('lists the extension update first when there is one', () => {
+    // Last, as it applies: it ends by offering a reload (owner, 2026-10-21).
+    it('lists the extension update last when there is one', () => {
         const rows = handlers().presentUpdates(found({ extension: { hasUpdate: true, current: '1.0.0', latest: '1.1.0' } }));
 
-        expect(rows[0]).toMatchObject({ kind: 'extension', detail: '1.0.0 → 1.1.0' });
+        expect(rows.at(-1)).toMatchObject({ kind: 'extension', detail: '1.0.0 → 1.1.0' });
     });
 
     it('presents nothing before any check', () => {
@@ -164,6 +165,8 @@ describe('applyUpdates', () => {
             }),
         );
         expect(options.onItem).toEqual(expect.any(Function));
+        // One project at a time, in the order the SC sees them: the open project first.
+        expect(options.projectOrder.filter((key: string) => key.startsWith('/p/'))).toEqual(['/p/justrite', '/p/bodea']);
         expect(answer).toEqual({ success: true });
     });
 
@@ -185,6 +188,29 @@ describe('applyUpdates', () => {
             { id: 'blockLibrary:1', state: 'running' },
             { id: 'blockLibrary:1', state: 'done', message: 'One block left out.' },
         ]);
+    });
+
+    // A step of its own, not an update: a copy left as it is says why, and the run's
+    // end still counts only the updates (2026-10-21).
+    it("tells the screen each project's local copy step, without counting it as an update", async () => {
+        mockApplyUpdatesHeadless.mockImplementation(async (sel: UpdateSelections, _ctx, _report, options) => {
+            const [library] = sel.blockLibrary;
+            options.onItem('blockLibrary', library, { state: 'done' });
+            options.onLocalCopy(library.project, { state: 'running' });
+            options.onLocalCopy(library.project, { state: 'skipped', message: 'Left as it is — GitHub could not be reached.' });
+            return applied();
+        });
+
+        const { answer, ctx } = await presentedThenApply((rows) =>
+            rows.filter((r) => r.group.key === '/p/bodea' && r.kind === 'blockLibrary').map((r) => r.id),
+        );
+
+        expect(statusesSent(ctx)).toEqual([
+            { id: 'blockLibrary:1', state: 'done' },
+            { id: 'localCopy:/p/bodea', state: 'running' },
+            { id: 'localCopy:/p/bodea', state: 'skipped', message: 'Left as it is — GitHub could not be reached.' },
+        ]);
+        expect(answer).toEqual({ success: true });
     });
 
     it('opens the SC\'s AI on the projects whose clash was kept, through the Chat command', async () => {
@@ -290,7 +316,7 @@ describe('applyUpdates', () => {
 
         expect(statusesSent(ctx)).toEqual([
             { id: 'extension', state: 'running' },
-            { id: 'extension', state: 'failed', message: 'Not updated. Details are in Debug Logs.' },
+            { id: 'extension', state: 'failed', message: 'Not updated — details are in Debug Logs.' },
         ]);
         expect(answer).toEqual({ success: true, warning: '1 update did not apply.' });
     });

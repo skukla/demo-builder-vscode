@@ -19,6 +19,7 @@
 
 import { OTHER_ORG_NOTE } from './integrationUpdates';
 import type { UpdateSelections } from './updateSelections';
+import { PROJECT_SELECTION_KINDS, type ProjectSelectionKind } from './updateSelectionsByProject';
 import { getTemplateSource } from './updateSources';
 import { COMPONENT_IDS } from '@/core/constants';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
@@ -57,7 +58,7 @@ const LIVE_SITE_DETAIL = 'Updates the live site';
 type RowText = Pick<PendingUpdateRow, 'label' | 'detail'> & { lockedReason?: string; ticked?: false };
 
 /** Each project kind's words for one of its entries. */
-const PROJECT_KINDS: { [K in ProjectKind]: (entry: UpdateSelections[K][number]) => RowText } = {
+const PROJECT_KINDS: { [K in ProjectSelectionKind]: (entry: UpdateSelections[K][number]) => RowText } = {
     template: (t) => ({ label: templateLabel(t.project), detail: LIVE_SITE_DETAIL }),
     // Adobe's half of a colleague's storefront, to the version our daily gate tested (EDS-56).
     boilerplate: () => ({ label: 'Adobe boilerplate', detail: `Tested version, ${LIVE_SITE}` }),
@@ -102,23 +103,12 @@ function templateLabel(project: Project): string {
     return `Changes from ${source.owner}/${source.repo}`;
 }
 
-/** The kinds that belong to one project, in the order a project's rows are listed. */
-type ProjectKind = Exclude<PendingUpdateKind, 'extension' | 'forkSync'>;
-const PROJECT_KIND_ORDER: ProjectKind[] = [
-    'template',
-    'boilerplate',
-    'finish',
-    'component',
-    'adobeMcp',
-    'blockLibrary',
-    'blockLibraryInstall',
-    'inspector',
-    'integration',
-];
-
 /**
- * The rows for one check: Demo Builder first, then the open project, the other projects
- * by display name, and the template repositories last.
+ * The rows for one check, in the order they apply (owner, 2026-10-21): the template
+ * repositories first, since a project's template update reads from them; then the open
+ * project and the other projects by display name, each one's rows in the order its kinds
+ * apply (`PROJECT_SELECTION_KINDS`); and Demo Builder last, since its update ends by
+ * offering a reload. It listed Demo Builder first and the repositories last until then.
  *
  * @param selections - the check, from `computeUpdateSelections`
  * @param extension - the extension's own update, when there is one
@@ -130,7 +120,13 @@ export function toPendingUpdateRows(
     extension: ExtensionUpdateSummary | undefined,
     currentProjectPath: string | undefined,
 ): PendingUpdateRow[] {
-    const rows: PendingUpdateRow[] = [];
+    const rows: PendingUpdateRow[] = selections.forkSync.map((f, i) =>
+        row(`forkSync:${i}`, 'forkSync', FORKS_GROUP, {
+            label: `${f.owner}/${f.repo}`,
+            detail: f.parentFullName ? `${NEWER} from ${f.parentFullName}` : NEWER,
+        }),
+    );
+    rows.push(...sortedByProject(projectRows(selections), currentProjectPath));
     if (extension) {
         rows.push(
             row(EXTENSION_ID, 'extension', EXTENSION_GROUP, {
@@ -139,20 +135,11 @@ export function toPendingUpdateRows(
             }),
         );
     }
-    rows.push(...sortedByProject(projectRows(selections), currentProjectPath));
-    selections.forkSync.forEach((f, i) => {
-        rows.push(
-            row(`forkSync:${i}`, 'forkSync', FORKS_GROUP, {
-                label: `${f.owner}/${f.repo}`,
-                detail: f.parentFullName ? `${NEWER} from ${f.parentFullName}` : NEWER,
-            }),
-        );
-    });
     return rows;
 }
 
 function projectRows(selections: UpdateSelections): Array<PendingUpdateRow & { project: Project }> {
-    return PROJECT_KIND_ORDER.flatMap((kind) =>
+    return PROJECT_SELECTION_KINDS.flatMap((kind) =>
         (selections[kind] as Array<{ project: Project }>).map((entry, i) => {
             const words = (PROJECT_KINDS[kind] as (e: unknown) => RowText)(entry);
             const group = { key: entry.project.path, title: getProjectDisplayName(entry.project) };

@@ -75,6 +75,19 @@ export interface UpdateRowStatus {
     message?: string;
 }
 
+/**
+ * The id a project's local copy step is told by. It is not a row of the check: after a
+ * project's updates wrote to GitHub, its panel gains one more step, bringing the copy
+ * agents edit up to it, which stays with its outcome (owner, 2026-10-21: it was a passing
+ * stage line that vanished).
+ *
+ * @param projectPath - the project, as its panel is keyed
+ * @returns the step's id
+ */
+export function localCopyRowId(projectPath: string): string {
+    return `localCopy:${projectPath}`;
+}
+
 /** `applyUpdates` — the answer (Pattern B). Each row's own outcome was pushed as it ended. */
 export interface ApplyUpdatesResponse {
     success: boolean;

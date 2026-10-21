@@ -110,7 +110,7 @@ describe('questionsInModal', () => {
         expect(await questionsInModal.replaceLibraryBlocks('Demo Builder Blocks', stopped)).toBe(true);
         expect(await questionsInModal.replaceLibraryBlocks('Demo Builder Blocks', stopped)).toBe(false);
         expect(ask).toHaveBeenCalledWith(
-            expect.stringContaining('Demo Builder Blocks has new blocks for Bodea'),
+            '"Replace blocks" puts in the new versions, and any edits you made to these blocks are lost. "Keep my blocks" leaves them as they are.',
             'Replace blocks',
             'Keep my blocks',
         );

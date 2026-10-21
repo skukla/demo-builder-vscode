@@ -3,6 +3,6 @@
 
     "noViewsOfItsOwn": {
         "src/features/dashboard/ui/aiSurface/components/PromptEditDialog.tsx": "Its two modes change the TITLE and which field takes focus. The body is one form either way, so there is no second height to jump to.",
-        "src/features/projects-dashboard/ui/components/UpdatesModal.tsx": "Every view it switches between is the same fixed-height box: the list of updates and the run that follows it are both .updates-group-list (height: min(440px, 55vh)), and a question the run is paused on takes .updates-run-question, set to the same height (2026-10-21). A failed run's reason is drawn inside the list rather than above it. Checking and up to date are the notification's, not this window's (PL-80, owner 2026-10-20)."
+        "src/features/projects-dashboard/ui/components/UpdatesModal.tsx": "Every view it switches between is the same fixed-height box: the list of updates and the run that follows it are both .updates-group-list (height: min(440px, 55vh)), and a question the run is paused on is asked inside that list, under the row it is about, so the box never changes (2026-10-21). A failed run's reason is drawn inside the list rather than above it. Checking and up to date are the notification's, not this window's (PL-80, owner 2026-10-20)."
     }
 }

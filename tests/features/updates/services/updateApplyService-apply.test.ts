@@ -160,7 +160,7 @@ describe('template sync', () => {
             strategy: 'merge',
             syncedCommit: '',
             conflicts: ['blocks/hero/hero.js'],
-            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
+            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
         };
 
         it('by default STOP: reported as a failure naming the file, no reset, no commit recorded', async () => {
