@@ -1243,7 +1243,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 613,
+            "line": 607,
             "mutants": 1,
             "category": "block",
             "reason": "The catch in readDaLiveToken holds only `return undefined;`, and a function that falls off the end of an empty catch also returns undefined, so the mutant is behaviourally identical. The explicit return cannot be deleted: tsconfig sets noImplicitReturns, which rejects a path that returns nothing when another path returns a value. The suite pins the outcome \u2014 a throwing auth service yields no DA.live token and the sync still runs.",

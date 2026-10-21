@@ -60,3 +60,9 @@ export const DEFAULT_PRESERVE_FILES = [
     'config.json',      // Commerce endpoint configuration
     ...LABEL_SHEET_FILES,
 ];
+
+/** The commit message of a template update (the template's, or a colleague's, changes). */
+export const TEMPLATE_COMMIT = 'chore: sync with template';
+
+/** The commit message of the Adobe boilerplate update on a colleague's storefront (EDS-56). */
+export const BOILERPLATE_COMMIT = 'chore: update the Adobe boilerplate to the tested version';

@@ -25,11 +25,35 @@ export const KEPT_CLASH_REFUSAL =
     "A storefront update's clash is waiting to be fixed in this project's local copy. Finish it " +
     '(Check for Updates, or ask your AI to finish it), or leave it, before syncing the storefront.';
 
+/** Git's conflict marker at the start of a line, as a 3-way merge writes it. */
+export const CONFLICT_MARKER_RE = /^(<{7}|={7}|>{7})( |$)/m;
+
+/**
+ * What the copy holds while the clash is kept: which update, and what that update changed
+ * outside the clash, as each path's git object id (null for a file it deleted). Finishing
+ * checks the copy against it, so a fix that touched anything else is caught.
+ */
+export interface KeptClashRecord {
+    note: string;
+    applied: Record<string, string | null>;
+}
+
 const markPath = (storefrontPath: string) => path.join(storefrontPath, '.git', MARK);
 
-/** Mark the copy as holding a kept clash; the text says which update, for a person reading it. */
-export async function markKeptClash(storefrontPath: string, note: string): Promise<void> {
-    await fsPromises.writeFile(markPath(storefrontPath), `${note}\n`, 'utf8');
+/** Mark the copy as holding a kept clash. */
+export async function markKeptClash(storefrontPath: string, record: KeptClashRecord): Promise<void> {
+    await fsPromises.writeFile(markPath(storefrontPath), `${JSON.stringify(record, null, 2)}\n`, 'utf8');
+}
+
+/** The kept clash's record, or undefined when there is none or it cannot be read. */
+export async function readKeptClash(storefrontPath: string): Promise<KeptClashRecord | undefined> {
+    try {
+        const parsed = JSON.parse(await fsPromises.readFile(markPath(storefrontPath), 'utf8')) as Partial<KeptClashRecord>;
+        if (typeof parsed.note !== 'string' || typeof parsed.applied !== 'object' || parsed.applied === null) return undefined;
+        return parsed as KeptClashRecord;
+    } catch {
+        return undefined;
+    }
 }
 
 /** Clear the mark (finished or left). Clearing an absent mark is fine. */
@@ -37,7 +61,7 @@ export async function clearKeptClash(storefrontPath: string): Promise<void> {
     await fsPromises.rm(markPath(storefrontPath), { force: true });
 }
 
-/** Whether the copy holds a kept clash. */
+/** Whether the copy holds a kept clash (any mark, readable or not, refuses a sync). */
 export async function hasKeptClash(storefrontPath: string): Promise<boolean> {
     try {
         await fsPromises.access(markPath(storefrontPath));

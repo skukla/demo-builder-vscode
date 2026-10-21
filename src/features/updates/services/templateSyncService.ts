@@ -42,9 +42,11 @@ import {
 } from '@/features/updates/services/templateMergeBase';
 import {
     COMMIT_SHA,
+    BOILERPLATE_COMMIT,
     DEFAULT_PRESERVE_FILES,
     describeTemplateConflicts,
     LABEL_SHEET_FILES,
+    TEMPLATE_COMMIT,
     failure,
     NO_RECORDED_VERSION,
     notInTemplateHistory,
@@ -68,7 +70,6 @@ import {
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
-const BOILERPLATE_COMMIT = 'chore: update the Adobe boilerplate to the tested version';
 
 /**
  * Template Sync Service
@@ -267,7 +268,7 @@ export class TemplateSyncService {
         await restorePreservedFiles(repoDir, checkout.backups, this.logger);
         // A thin-layer storefront's fixes ride in the same commit as the update.
         const patched = fixes ? await reapplyPatchesInCheckout(repoDir, project, this.logger) : [];
-        const message = versions.message ?? 'chore: sync with template';
+        const message = versions.message ?? TEMPLATE_COMMIT;
         await commitAndPush(this.deps, repoDir, message, `git push origin ${checkout.branch}`);
 
         this.logger.info(`[TemplateSync] Merge completed successfully`);

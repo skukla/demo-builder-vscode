@@ -41,6 +41,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { githubAccessFor } from '../../../helpers/githubAccessFake';
 import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
+import { gitEnv } from '../../../helpers/realGit';
 
 
 // A thin-layer storefront's network reads (EDS-51), faked; none is reached by a
@@ -87,20 +88,6 @@ const TEMPLATE_A = 'line 1\nline 2 from the template\nline 3\n';
 const SC_CONFLICTING_A = 'line 1\nline 2 from the SC\nline 3\n';
 const BINARY_B = Buffer.from([0, 1, 2, 255, 254, 0, 7]);
 const SC_CONFIG = '{"commerce-endpoint":"the SC\'s own"}\n';
-
-/** This process's environment with every GIT_* variable removed, plus a fixed identity. */
-function gitEnv(home: string): NodeJS.ProcessEnv {
-    const inherited = Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'));
-    return {
-        ...Object.fromEntries(inherited),
-        HOME: home,
-        XDG_CONFIG_HOME: home,
-        GIT_AUTHOR_NAME: 'test',
-        GIT_AUTHOR_EMAIL: 'test@example.com',
-        GIT_COMMITTER_NAME: 'test',
-        GIT_COMMITTER_EMAIL: 'test@example.com',
-    };
-}
 
 interface Fixture {
     root: string;

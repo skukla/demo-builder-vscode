@@ -21,6 +21,7 @@ import {
     readCloneCommit,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
+import { gitEnv } from '../../../helpers/realGit';
 
 const REAL_GIT_TIMEOUT_MS = 60_000;
 
@@ -30,19 +31,6 @@ interface Fixture {
     origin: string;
     clone: string;
     upstream: string;
-}
-
-function gitEnv(home: string): NodeJS.ProcessEnv {
-    const inherited = Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'));
-    return {
-        ...Object.fromEntries(inherited),
-        HOME: home,
-        XDG_CONFIG_HOME: home,
-        GIT_AUTHOR_NAME: 'test',
-        GIT_AUTHOR_EMAIL: 'test@example.com',
-        GIT_COMMITTER_NAME: 'test',
-        GIT_COMMITTER_EMAIL: 'test@example.com',
-    };
 }
 
 function git(fx: Fixture, cwd: string, ...args: string[]): string {

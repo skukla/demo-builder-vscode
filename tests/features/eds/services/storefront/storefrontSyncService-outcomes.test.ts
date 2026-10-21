@@ -211,7 +211,7 @@ describe('a kept clash (EDS-57)', () => {
     afterEach(() => fs.rmSync(copy, { recursive: true, force: true }));
 
     it('refuses to sync while a clash is kept in the copy, before running any git', async () => {
-        await markKeptClash(copy, 'boilerplate update 71a67e0..48bed04: blocks/header/header.js');
+        await markKeptClash(copy, { note: 'boilerplate update 71a67e0..48bed04: blocks/header/header.js', applied: {} });
 
         const err = await syncAndPublish({ storefrontPath: copy, commitMessage: 'msg' }).catch((e: unknown) => e);
 
@@ -222,7 +222,7 @@ describe('a kept clash (EDS-57)', () => {
     });
 
     it('syncs again once the clash is finished or left', async () => {
-        await markKeptClash(copy, 'note');
+        await markKeptClash(copy, { note: 'note', applied: {} });
         await clearKeptClash(copy);
 
         await syncAndPublish({ storefrontPath: copy, commitMessage: 'msg' });

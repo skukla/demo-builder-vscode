@@ -128,6 +128,27 @@ async function applyInCopy(copy: LocalCopy, request: KeepClashRequest, token: st
 }
 
 /**
+ * Each staged path and its git object id (null for a deletion): what the update changed
+ * outside the clash, as `git diff --cached --raw` reports it in one call.
+ */
+export async function stagedChange(copy: LocalCopy): Promise<Record<string, string | null> | undefined> {
+    const raw = await copy.git('git diff --cached --raw -z --no-renames --diff-filter=ADM', TIMEOUTS.NORMAL);
+    if (raw.code !== 0) return undefined;
+    return parseRawDiff(raw.stdout);
+}
+
+/** `--raw -z` output: ":<mode> <mode> <old> <new> <status>\0<path>\0" per entry. */
+export function parseRawDiff(output: string): Record<string, string | null> {
+    const parts = output.split('\0').filter(Boolean);
+    const change: Record<string, string | null> = {};
+    for (let i = 0; i + 1 < parts.length; i += 2) {
+        const [, , , next, status] = parts[i].split(' ');
+        change[parts[i + 1]] = status === 'D' ? null : next;
+    }
+    return change;
+}
+
+/**
  * Apply a stopped update's change in the project's local copy, keeping the clash, and
  * record it. The caller saves the project when the outcome is `kept`.
  */
@@ -144,7 +165,13 @@ export async function keepClash(project: Project, request: KeepClashRequest, ctx
     if (problem) return notKept(problem);
 
     const { track, clash, conflicts, fixes } = request;
-    await markKeptClash(copy.storefrontPath, `${track} update ${clash.base.slice(0, 7)}..${clash.target.slice(0, 7)}: ${conflicts.join(', ')}`);
+    const applied = await stagedChange(copy);
+    if (!applied) {
+        await copy.git('git reset --hard --quiet HEAD', TIMEOUTS.QUICK);
+        return notKept('what the update changed could not be read back');
+    }
+    const note = `${track} update ${clash.base.slice(0, 7)}..${clash.target.slice(0, 7)}: ${conflicts.join(', ')}`;
+    await markKeptClash(copy.storefrontPath, { note, applied });
     writePendingClash(project, {
         track,
         source: clash.source,

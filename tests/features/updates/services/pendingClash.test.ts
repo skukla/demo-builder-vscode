@@ -11,179 +11,26 @@
  * SAFETY. Every git process runs with every `GIT_*` variable removed and HOME in the temp root.
  */
 
-import { execFileSync, spawnSync } from 'child_process';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-import { pathToFileURL } from 'url';
-import type { ExecuteOptions } from '@/core/shell/types';
-import { hasKeptClash } from '@/features/eds/services/storefront/keptClashMark';
+// FIRST: this module owns the jest.mock calls the imports below must see.
 import {
+    HEADER_KHALIL,
+    REAL_GIT_TIMEOUT_MS,
+    TEMPLATE,
+    fx,
+    git,
+    hasKeptClash,
     keepClash,
+    mockGetToken,
+    read,
     readPendingClash,
+    request,
+    storefrontProject,
+    updateContext,
+    write,
     writePendingClash,
-    type KeepClashRequest,
-    type PendingClash,
-} from '@/features/updates/services/pendingClash';
-import type { UpdateContext } from '@/features/updates/services/updateCore';
-import type { Project } from '@/types/base';
-import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import { createMockLogger } from '../../../helpers/loggerFake';
+} from './keptClash.testUtils';
+import type { PendingClash } from '@/features/updates/services/pendingClash';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-
-const mockGetToken = jest.fn();
-jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
-    getGitHubServices: () => ({ tokenService: { getToken: () => mockGetToken() } }),
-}));
-
-const REAL_GIT_TIMEOUT_MS = 60_000;
-const SC_REPO = 'skukla/kukla-justrite';
-const TEMPLATE = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
-const GITHUB_URL = /https:\/\/(?:[^@\s"]+@)?github\.com\/([^/\s"]+)\/([^/\s"]+?)\.git/g;
-
-const HEADER_BASE = 'nav start\ndrop-down line\nnav end\n';
-const HEADER_ADOBE = 'nav start\ndrop-down line with aria attributes\nnav end\n';
-const HEADER_KHALIL = 'nav start\ndrop-down line plus the quote icon\nnav end\n';
-
-interface Fixture {
-    root: string;
-    home: string;
-    t1: string;
-    t2: string;
-    scBare: string;
-    local: string;
-}
-
-let fx: Fixture;
-
-function gitEnv(home: string): NodeJS.ProcessEnv {
-    const inherited = Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'));
-    return {
-        ...Object.fromEntries(inherited),
-        HOME: home,
-        XDG_CONFIG_HOME: home,
-        GIT_AUTHOR_NAME: 'test',
-        GIT_AUTHOR_EMAIL: 'test@example.com',
-        GIT_COMMITTER_NAME: 'test',
-        GIT_COMMITTER_EMAIL: 'test@example.com',
-    };
-}
-
-function git(cwd: string, ...args: string[]): string {
-    return execFileSync('git', args, { cwd, env: gitEnv(fx.home), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-}
-
-function write(dir: string, file: string, content: string): void {
-    fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
-    fs.writeFileSync(path.join(dir, file), content);
-}
-
-const read = (file: string) => fs.readFileSync(path.join(fx.local, file), 'utf8');
-
-function bare(ownerRepo: string): string {
-    const dir = path.join(fx.root, 'github', `${ownerRepo}.git`);
-    fs.mkdirSync(dir, { recursive: true });
-    git(dir, 'init', '-q', '--bare', '-b', 'main');
-    return dir;
-}
-
-/** Adobe's template: T1 (where the storefront started) → T2 (the tested version). */
-function buildTemplate(): { t1: string; t2: string } {
-    const work = path.join(fx.root, 'template-work');
-    fs.mkdirSync(work);
-    git(work, 'init', '-q', '-b', 'main');
-    write(work, 'blocks/header/header.js', HEADER_BASE);
-    write(work, 'scripts/scripts.js', 'scripts 1\n');
-    git(work, 'add', '-A');
-    git(work, 'commit', '-q', '-m', 'T1');
-    const t1 = git(work, 'rev-parse', 'HEAD');
-    write(work, 'blocks/header/header.js', HEADER_ADOBE);
-    write(work, 'scripts/scripts.js', 'scripts 2\n');
-    write(work, 'scripts/new.js', 'new in Adobe\n');
-    git(work, 'add', '-A');
-    git(work, 'commit', '-q', '-m', 'T2');
-    git(work, 'push', '-q', bare(`${TEMPLATE.owner}/${TEMPLATE.repo}`), 'main');
-    return { t1, t2: git(work, 'rev-parse', 'HEAD') };
-}
-
-/** The storefront: its own first commit with T1's files, then Khalil's header edit. */
-function buildStorefront(): string {
-    const work = path.join(fx.root, 'sc-work');
-    fs.mkdirSync(work);
-    git(work, 'init', '-q', '-b', 'main');
-    write(work, 'blocks/header/header.js', HEADER_BASE);
-    write(work, 'scripts/scripts.js', 'scripts 1\n');
-    git(work, 'add', '-A');
-    git(work, 'commit', '-q', '-m', 'Initial commit');
-    write(work, 'blocks/header/header.js', HEADER_KHALIL);
-    git(work, 'commit', '-q', '-am', 'edit nav bar and request a quote icon');
-    const scBare = bare(SC_REPO);
-    git(work, 'push', '-q', scBare, 'main');
-    return scBare;
-}
-
-function realGitExecutor() {
-    const execute = async (command: string, options: ExecuteOptions = {}) => {
-        if (!command.startsWith('git ')) throw new Error(`not a git command: ${command}`);
-        const local = command.replace(GITHUB_URL, (_url, owner: string, repo: string) =>
-            pathToFileURL(path.join(fx.root, 'github', owner, `${repo}.git`)).href,
-        );
-        const r = spawnSync('/bin/bash', ['-c', local], { cwd: options.cwd, env: gitEnv(fx.home), encoding: 'utf8' });
-        return { code: r.status, stdout: r.stdout, stderr: r.stderr, duration: 0 };
-    };
-    return createMockCommandExecutor({ execute: jest.fn(execute) });
-}
-
-function storefrontProject(): Project {
-    return createMockProject({
-        name: 'justrite',
-        componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                status: 'ready',
-                path: fx.local,
-                metadata: { githubRepo: SC_REPO },
-            },
-        },
-    });
-}
-
-function updateContext(): UpdateContext {
-    return {
-        secrets: createMockSecretStorage().secrets,
-        extensionPath: '/ext',
-        stateManager: createMockStateManager(),
-        commandManager: realGitExecutor(),
-        logger: createMockLogger(),
-    };
-}
-
-function request(conflicts = ['blocks/header/header.js']): KeepClashRequest {
-    return {
-        track: 'boilerplate',
-        clash: { source: TEMPLATE, base: fx.t1, target: fx.t2, preserveFiles: ['fstab.yaml', 'config.json'] },
-        conflicts,
-        fixes: false,
-    };
-}
-
-beforeEach(() => {
-    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'kept-clash-test-')));
-    const home = path.join(root, 'home');
-    fs.mkdirSync(home);
-    fx = { root, home, t1: '', t2: '', scBare: '', local: path.join(root, 'local') };
-    Object.assign(fx, buildTemplate());
-    fx.scBare = buildStorefront();
-    git(root, 'clone', '-q', fx.scBare, 'local');
-    mockGetToken.mockResolvedValue({ token: 'gh-token' });
-});
-
-afterEach(() => {
-    fs.rmSync(fx.root, { recursive: true, force: true });
-});
 
 describe('keepClash', () => {
     it('keeps the clash in the local copy: markers in the clashing file, the rest staged, nothing pushed', async () => {

@@ -40,6 +40,7 @@ import {
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { HelixApiError } from '@/features/eds/services/helix/helixApiClient';
+import { CONFLICT_MARKER_RE } from '@/features/eds/services/storefront/keptClashMark';
 import {
     PushRejectedError,
     syncAndPublish,
@@ -48,13 +49,6 @@ import {
 import type { Project } from '@/types/base';
 
 const execFile = promisify(childProcess.execFile);
-
-/**
- * Matches `git`'s standard 3-way merge conflict markers. The regex is
- * intentionally lenient on the trailing portion of each marker so we still
- * detect markers when the file has trailing CRLF/whitespace.
- */
-const CONFLICT_MARKER_RE = /^(<{7}|={7}|>{7})( |$)/m;
 
 /**
  * What the sync answers, so a caller can END its progress honestly (PL-59). The

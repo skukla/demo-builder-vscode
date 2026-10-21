@@ -10,21 +10,20 @@
  * root (the pre-push gate runs jest with GIT_DIR set; see templateMergeBase.test.ts).
  */
 
-import { execFileSync, spawnSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
-import type { ExecuteOptions } from '@/core/shell/types';
 import { refreshLocalStorefront, refreshLocalStorefronts } from '@/features/updates/services/localStorefrontRefresh';
 import type { GitStep } from '@/features/updates/services/templateMergeBase';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { Project } from '@/types/base';
-import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { gitEnv, realGitExecutor, runGit } from '../../../helpers/realGit';
 
 // The SC's GitHub token; the token service is the one thing faked on the wrapper's path.
 const mockGetToken = jest.fn();
@@ -34,21 +33,6 @@ jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
 
 const REAL_GIT_TIMEOUT_MS = 60_000;
 const SC_REPO = 'skukla/demo-storefront';
-/** A GitHub https URL, with or without credentials in it, as the code builds it. */
-const GITHUB_URL = /https:\/\/(?:[^@\s"]+@)?github\.com\/([^/\s"]+)\/([^/\s"]+?)\.git/g;
-
-function gitEnv(home: string): NodeJS.ProcessEnv {
-    const inherited = Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'));
-    return {
-        ...Object.fromEntries(inherited),
-        HOME: home,
-        XDG_CONFIG_HOME: home,
-        GIT_AUTHOR_NAME: 'test',
-        GIT_AUTHOR_EMAIL: 'test@example.com',
-        GIT_COMMITTER_NAME: 'test',
-        GIT_COMMITTER_EMAIL: 'test@example.com',
-    };
-}
 
 interface Fixture {
     root: string;
@@ -63,7 +47,7 @@ interface Fixture {
 let fx: Fixture;
 
 function git(cwd: string, ...args: string[]): string {
-    return execFileSync('git', args, { cwd, env: gitEnv(fx.home), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    return runGit(fx.home, cwd, ...args);
 }
 
 function write(dir: string, file: string, content: string): void {
@@ -203,19 +187,6 @@ describe('refreshLocalStorefront', () => {
     }, REAL_GIT_TIMEOUT_MS);
 });
 
-/** A CommandExecutor running real git, with GitHub URLs pointed at the local bare repositories. */
-function realGitExecutor() {
-    const execute = async (command: string, options: ExecuteOptions = {}) => {
-        if (!command.startsWith('git ')) throw new Error(`not a git command: ${command}`);
-        const local = command.replace(GITHUB_URL, (_url, owner: string, repo: string) =>
-            pathToFileURL(path.join(fx.root, 'github', owner, `${repo}.git`)).href,
-        );
-        const r = spawnSync('/bin/bash', ['-c', local], { cwd: options.cwd, env: gitEnv(fx.home), encoding: 'utf8' });
-        return { code: r.status, stdout: r.stdout, stderr: r.stderr, duration: 0 };
-    };
-    return createMockCommandExecutor({ execute: jest.fn(execute) });
-}
-
 function storefrontProject(storefrontPath: string): Project {
     return createMockProject({
         name: 'demo',
@@ -236,7 +207,7 @@ function updateContext(): UpdateContext & { logger: ReturnType<typeof createMock
         secrets: createMockSecretStorage().secrets,
         extensionPath: '/ext',
         stateManager: createMockStateManager(),
-        commandManager: realGitExecutor(),
+        commandManager: realGitExecutor(fx.root, fx.home),
         logger: createMockLogger(),
     };
 }
