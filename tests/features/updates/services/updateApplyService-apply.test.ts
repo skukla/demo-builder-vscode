@@ -179,7 +179,7 @@ describe('template sync', () => {
                 failCount: 1,
                 errors: [`demo: ${CONFLICTED.error}`],
                 // The files, for the agent, without parsing the sentence (EDS-57).
-                clashes: [{ project: 'demo', track: 'template', files: ['blocks/hero/hero.js'] }],
+                clashes: [{ project: 'demo', projectName: 'demo', track: 'template', files: ['blocks/hero/hero.js'] }],
             });
         });
 

@@ -26,10 +26,14 @@ import { withOperationProgress, type OperationOutcome, type ReportStage } from '
 import { updateIntegrationPairFor } from '@/features/dashboard/handlers/integrationUpdateHandlers';
 import type { FoundUpdates } from '@/features/updates/services/allUpdates';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
+import { openFixWithAi } from '@/features/updates/services/fixWithAi';
 import { selectionsForIds, toPendingUpdateRows } from '@/features/updates/services/pendingUpdateRows';
+import type { ApplyUpdatesResult } from '@/features/updates/services/updateApplyResult';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import { reportOf } from '@/features/updates/services/updatesApplyReport';
+import type { UpdateSelections } from '@/features/updates/services/updateSelections';
+import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 import type { ApplyUpdatesRequest, PendingUpdateRow } from '@/types/pendingUpdates';
 import { toError } from '@/types/typeGuards';
@@ -81,9 +85,14 @@ async function applyTicked(
     const { selections, skipped } = await stopRunningDemos(picked.selections, found.currentProjectPath, () =>
         vscode.commands.executeCommand('demoBuilder.stopDemo'),
     );
-    const result = await applyUpdatesHeadless(selections, updateContextFor(context), report, {
+    const updateContext = updateContextFor(context);
+    const result = await applyUpdatesHeadless(selections, updateContext, report, {
         questions: questionsInModal,
     });
+    // A clash the SC chose to fix with AI is kept; open their AI on it (EDS-57).
+    await openFixWithAi(keptClashProjects(selections, result), updateContext, (request) =>
+        vscode.commands.executeCommand('demoBuilder.openInClaude', request),
+    );
     // Last: it ends by offering a reload, which closes this screen.
     if (picked.extension && found.extension?.releaseInfo) {
         try {
@@ -102,6 +111,20 @@ async function applyTicked(
     // could not re-run a list that has been applied. The Updates list says why.
     const noun = data.problems.length === 1 ? 'update' : 'updates';
     return { success: true, warning: `${data.problems.length} ${noun} did not apply. The Updates list says why.`, data };
+}
+
+/** The projects whose clash the apply kept for fixing, each once. */
+function keptClashProjects(selections: UpdateSelections, result: ApplyUpdatesResult): Project[] {
+    const kept = new Set(
+        [...(result.template.clashes ?? []), ...(result.boilerplate.clashes ?? [])]
+            .filter((clash) => clash.keptIn)
+            .map((clash) => clash.projectName),
+    );
+    const projects = new Map<string, Project>();
+    for (const { project } of [...selections.template, ...selections.boilerplate]) {
+        if (kept.has(project.name)) projects.set(project.name, project);
+    }
+    return [...projects.values()];
 }
 
 /** What the apply cores are built from, under this screen's context. */

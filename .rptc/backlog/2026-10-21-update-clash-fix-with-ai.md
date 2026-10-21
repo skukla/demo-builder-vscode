@@ -49,3 +49,4 @@ is; the Adobe row has no choice at all. Nothing an SC who does not read code can
 
 - 2026-10-20  feat(updates): a storefront's local copy is brought up to GitHub after an update (`d5e06e558`)
 - 2026-10-20  docs(backlog): plan Fix with AI for a storefront update that clashes (`cc90205fe`)
+- 2026-10-21  Built steps 1-5 on feature/update-clash-fix-with-ai: local copy refresh, keep the clash, the three-way question, Fix with AI opening the chosen engine, finish_storefront_update with its checks, Sync Storefront refusal. Not yet run live: release test plan rows 1.19 (JustRite, owner present) and 1.20.

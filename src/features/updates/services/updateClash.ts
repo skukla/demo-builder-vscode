@@ -77,7 +77,7 @@ export function stoppedClash(
     const name = getProjectDisplayName(project);
     return {
         line: `${name}${LABEL[track]}: ${r.error ?? 'the update clashed'}${reason}`,
-        report: { project: name, track, files: r.conflicts ?? [], ...(notKept ? { notKept } : {}) },
+        report: { project: name, projectName: project.name, track, files: r.conflicts ?? [], ...(notKept ? { notKept } : {}) },
     };
 }
 
@@ -104,6 +104,6 @@ export async function keepForFixing(
             `${name}${LABEL[track]}: ${conflicts.length} ${noun} with edits in the storefront ` +
             `(${conflicts.join(', ')}). It is kept in the project's local copy to fix with AI; ` +
             'nothing was pushed.',
-        report: { project: name, track, files: conflicts, keptIn: outcome.storefrontPath },
+        report: { project: name, projectName: project.name, track, files: conflicts, keptIn: outcome.storefrontPath },
     };
 }

@@ -29,6 +29,18 @@ jest.mock('@/features/dashboard/handlers/integrationUpdateHandlers', () => ({
     updateIntegrationPairFor: jest.fn(),
 }));
 jest.mock('@/core/di/serviceLocator', () => ({ ServiceLocator: { getCommandExecutor: jest.fn(() => ({})) } }));
+// The handler loads in its own module sandbox (handlers() below), with its own vscode; the
+// Chat command it runs is recorded here, outside the sandbox.
+const mockExecuteCommand = jest.fn();
+jest.mock('vscode', () => {
+    const actual = jest.requireActual('vscode');
+    return { ...actual, commands: { ...actual.commands, executeCommand: (...args: unknown[]) => mockExecuteCommand(...args) } };
+});
+// Opening the AI reads the local copies; that is fixWithAi.test's (real git).
+const mockOpenFixWithAi = jest.fn();
+jest.mock('@/features/updates/services/fixWithAi', () => ({
+    openFixWithAi: (...args: unknown[]) => mockOpenFixWithAi(...args),
+}));
 
 const bodea = createMockProject({ name: 'bodea', title: 'Bodea', path: '/p/bodea', status: 'stopped' });
 const justrite = createMockProject({ name: 'justrite', title: 'JustRite', path: '/p/justrite', status: 'stopped' });
@@ -145,6 +157,45 @@ describe('applyUpdates', () => {
             }),
         );
         expect(answer).toEqual({ success: true, data: { applied: 1, problems: [], notes: [] } });
+    });
+
+    it('opens the SC\'s AI on the projects whose clash was kept, through the Chat command', async () => {
+        mockApplyUpdatesHeadless.mockResolvedValue(
+            applied({
+                template: {
+                    ...emptyResult(),
+                    failCount: 1,
+                    clashes: [{ project: 'Bodea', projectName: 'bodea', track: 'template', files: ['head.html'], keptIn: '/p/bodea/components/eds-storefront' }],
+                },
+            }),
+        );
+
+        await presentedThenApply((rows) => rows.map((r) => r.id));
+
+        const [projects, , open] = mockOpenFixWithAi.mock.calls[0];
+        expect(projects).toEqual([bodea]);
+        await open({ prompt: 'fix it', fresh: true, attachFiles: ['/p/bodea/components/eds-storefront/head.html'] });
+        expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.openInClaude', {
+            prompt: 'fix it',
+            fresh: true,
+            attachFiles: ['/p/bodea/components/eds-storefront/head.html'],
+        });
+    });
+
+    it('hands the AI no project whose clash was only reported, not kept', async () => {
+        mockApplyUpdatesHeadless.mockResolvedValue(
+            applied({
+                template: {
+                    ...emptyResult(),
+                    failCount: 1,
+                    clashes: [{ project: 'Bodea', projectName: 'bodea', track: 'template', files: ['head.html'] }],
+                },
+            }),
+        );
+
+        await presentedThenApply((rows) => rows.map((r) => r.id));
+
+        expect(mockOpenFixWithAi.mock.calls[0][0]).toStrictEqual([]);
     });
 
     it('tells the progress modal the run, and that it ended', async () => {

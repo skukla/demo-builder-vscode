@@ -116,6 +116,24 @@ runs the colleague's first, each its own commit.
 | Kept true | reset forgets it; after the colleague's update, their `demo.demo-builder.json` moves it forward when it is ahead (`boilerplateBaseRefresh.ts`); "Save as demo package" writes it as `builtWith.lkg`; changing the demo source keeps it (the code did not change) |
 | Never | a reset on a conflict, Demo Builder's fixes re-applied (D6), or a move backwards |
 
+## A clash is fixed with AI (EDS-57)
+
+A template or Adobe boilerplate update that clashes with edits in the storefront asks one
+question: Fix with AI, Leave it as it is, or (the colleague's row only) Reset to template
+(`updateClash.ts`). No choice involves reading code (owner, 2026-10-20).
+
+| | |
+|---|---|
+| Kept | the same change, applied 3-way in the project's local storefront copy after bringing it up to GitHub (`localStorefrontRefresh.ts`, `pendingClash.ts`); the clashing files carry markers, the rest is staged; `pendingClash` on the storefront, and a mark inside the copy's `.git` holding what the update changed |
+| Opened | the SC's chosen engine, by the Chat command, with the files and both sides' diffs (`fixWithAi.ts`, `clashPrompt.ts`) |
+| Finished | `finish_storefront_update` (`pendingClashFinish.ts`), the one place it is pushed: still the current update, only the clashing files changed, no markers, JavaScript and JSON parse; then commit, push with the SC's token, record the version |
+| Guarded | Sync Storefront refuses while the mark is there (`keptClashMark.ts`), for the button and `sync_storefront` alike |
+| Never | the AI committing or pushing; a stale fix going out (the update moved on: dropped, copy put back) |
+
+Every update that writes a storefront also brings the local copy up to GitHub afterwards,
+losing nothing: a local change GitHub already has is dropped, anything else leaves the copy
+as it is.
+
 ## A selected block library is installed here, not only at creation
 
 Ticking a block library on a project that already exists only records the id in

@@ -96,6 +96,29 @@ describe('OpenInClaudeCommand — per engine', () => {
             expect(mocks.createTerminalMock).not.toHaveBeenCalled();
         });
 
+        it('attaches the files it is handed to the chat (EDS-57: a kept update clash)', async () => {
+            setupVscodeMocks({ engine: 'copilot-vscode' });
+
+            await makeCommand(only()).execute({ prompt: 'fix it', attachFiles: ['/p/justrite/components/eds-storefront/blocks/header/header.js'] });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'workbench.action.chat.open',
+                expect.objectContaining({
+                    mode: 'agent',
+                    attachFiles: [expect.objectContaining({ fsPath: '/p/justrite/components/eds-storefront/blocks/header/header.js' })],
+                }),
+            );
+        });
+
+        it('attaches nothing when no files are handed in', async () => {
+            setupVscodeMocks({ engine: 'copilot-vscode' });
+
+            await makeCommand(only()).execute({ prompt: 'hi' });
+
+            const open = (vscode.commands.executeCommand as jest.Mock).mock.calls.find((c) => c[0] === 'workbench.action.chat.open');
+            expect(open?.[1]).not.toHaveProperty('attachFiles');
+        });
+
         it('starts a new chat first for New Chat', async () => {
             setupVscodeMocks({ engine: 'copilot-vscode' });
 

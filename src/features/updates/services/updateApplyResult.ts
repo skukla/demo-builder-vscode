@@ -41,6 +41,8 @@ export interface CategoryResult {
 export interface ClashReport {
     /** The project, as the SC names it. */
     project: string;
+    /** The project's folder name: what the project tools and finish_storefront_update take. */
+    projectName: string;
     /** `template`: the template's (or a colleague's) changes; `boilerplate`: Adobe's tested version. */
     track: 'template' | 'boilerplate';
     /** The clashing files, repository-relative. */

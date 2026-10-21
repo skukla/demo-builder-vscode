@@ -102,7 +102,7 @@ describe('a template update that clashes with edits in the storefront', () => {
         expect(mockSyncWithTemplate).toHaveBeenCalledTimes(1);
         expect(mockKeepClash).not.toHaveBeenCalled();
         expect(res.template.failCount).toBe(1);
-        expect(res.template.clashes).toEqual([{ project: 'demo', track: 'template', files: ['blocks/hero/hero.js'] }]);
+        expect(res.template.clashes).toEqual([{ project: 'demo', projectName: 'demo', track: 'template', files: ['blocks/hero/hero.js'] }]);
     });
 
     it('keeps the clash in the local copy on Fix with AI, saves the record and says where it is', async () => {
@@ -121,7 +121,7 @@ describe('a template update that clashes with edits in the storefront', () => {
         expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
         expect(mockSyncWithTemplate).toHaveBeenCalledTimes(1);
         expect(res.template.clashes).toEqual([
-            { project: 'demo', track: 'template', files: ['blocks/hero/hero.js'], keptIn: '/p/demo/components/eds-storefront' },
+            { project: 'demo', projectName: 'demo', track: 'template', files: ['blocks/hero/hero.js'], keptIn: '/p/demo/components/eds-storefront' },
         ]);
         expect(res.template.errors).toEqual([
             "demo: 1 file clashes with edits in the storefront (blocks/hero/hero.js). It is kept in the project's local copy to fix with AI; nothing was pushed.",

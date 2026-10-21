@@ -76,7 +76,18 @@ const CONVERSATION_PROBES: ConversationProbes = {
  */
 export type OpenInClaudeArg =
     | Project
-    | { project?: Project; prompt?: string; fresh?: boolean; pickPast?: boolean };
+    | {
+          project?: Project;
+          prompt?: string;
+          fresh?: boolean;
+          pickPast?: boolean;
+          /**
+           * Absolute paths to put in front of the agent with the prompt (EDS-57: the files a kept
+           * update clash names). Copilot gets them attached to the chat; Claude Code reads them
+           * from the prompt, which names them, since its command line attaches nothing.
+           */
+          attachFiles?: string[];
+      };
 
 /** Said when the SC asks to pick an earlier chat and none exist yet. */
 const NO_EARLIER_CHATS = 'There are no earlier chats to pick from yet.';
@@ -171,7 +182,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         // Only the prompt matters now — any project arg is ignored. The home Chat
         // always launches at the projects root so one session addresses any
         // project by name via the in-extension MCP tools.
-        const { prompt, fresh, pickPast } = normalizeArg(arg);
+        const { prompt, fresh, pickPast, attachFiles } = normalizeArg(arg);
         const cwd = resolveProjectsRoot();
 
         this.logger.info(
@@ -189,7 +200,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         try {
             const { launch } = descriptor;
             if (launch.kind === 'vscode-chat') {
-                await this.openVsCodeChat(prompt, currentProjectName, fresh, pickPast);
+                await this.openVsCodeChat(prompt, currentProjectName, { fresh, pickPast, attachFiles });
             } else if (pickPast) {
                 await this.launchPastChatPicker(launch, cwd, permissions);
             } else {
@@ -224,8 +235,7 @@ export class OpenInClaudeCommand extends BaseCommand {
     private async openVsCodeChat(
         prompt: string | undefined,
         currentProjectName: string | undefined,
-        fresh: boolean,
-        pickPast: boolean,
+        { fresh, pickPast, attachFiles }: { fresh: boolean; pickPast: boolean; attachFiles: string[] },
     ): Promise<void> {
         if (pickPast) {
             await vscode.commands.executeCommand('workbench.action.chat.focusAgentSessionsViewer');
@@ -236,9 +246,10 @@ export class OpenInClaudeCommand extends BaseCommand {
             await vscode.commands.executeCommand('workbench.action.chat.newChat');
         }
         const query = prompt ? buildRehomePrefix(currentProjectName) + prompt : undefined;
+        const attached = attachFiles.length ? { attachFiles: attachFiles.map((file) => vscode.Uri.file(file)) } : {};
         await vscode.commands.executeCommand(
             'workbench.action.chat.open',
-            query ? { mode: 'agent', query, isPartialQuery: false } : { mode: 'agent' },
+            query ? { mode: 'agent', query, isPartialQuery: false, ...attached } : { mode: 'agent', ...attached },
         );
         this.logger.info(
             `[Open in Claude] VS Code chat opened (agent mode, prompt=${prompt ? 'yes' : 'no'}, fresh=${fresh ? 'yes' : 'no'})`,
@@ -520,11 +531,14 @@ function normalizeArg(arg: OpenInClaudeArg | undefined): {
     prompt: string | undefined;
     fresh: boolean;
     pickPast: boolean;
+    attachFiles: string[];
 } {
-    const payload = arg as { prompt?: string; fresh?: boolean; pickPast?: boolean } | undefined;
+    const payload = arg as { prompt?: string; fresh?: boolean; pickPast?: boolean; attachFiles?: unknown } | undefined;
+    const files = Array.isArray(payload?.attachFiles) ? payload.attachFiles : [];
     return {
         prompt: payload?.prompt,
         fresh: payload?.fresh === true,
         pickPast: payload?.pickPast === true,
+        attachFiles: files.filter((file): file is string => typeof file === 'string'),
     };
 }
