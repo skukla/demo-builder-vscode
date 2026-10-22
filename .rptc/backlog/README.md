@@ -242,7 +242,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-77` | fix | [The "ask" permission setting may not make Claude Code ask](2026-10-21-claude-ask-permission-may-not-ask.md) | — | med | backlog |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 
-### eds  (66)
+### eds  (67)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -311,6 +311,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-57` | feature | [A storefront update that stops on a clash can be fixed with AI, from the builder](2026-10-21-update-clash-fix-with-ai.md) | — | high | active |
 | `EDS-58` | question | [Does the Sync Storefront button earn its keep when no SC edits code?](2026-10-21-sync-storefront-earns-its-keep.md) | — | med | open |
 | `EDS-59` | feature | [A storefront update can be undone from the builder](2026-10-21-undo-a-storefront-update.md) | — | med | backlog |
+| `EDS-60` | question | [Does a storefront update work on a machine with no git name or email?](2026-10-22-storefront-update-without-git-identity.md) | — | med | open |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (124)
@@ -700,7 +701,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*300 item(s) sit outside the A–G chain.*
+*301 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
