@@ -28,13 +28,28 @@ Commerce marks the order complete and paid 26.21; the company's credit is 5.00 l
 than before the order. The ERP's invoice holds only the product lines, so its payment
 reimburses only those. Every on-account order loses its shipping this way.
 
-## The decision it needs
+## The design (owner, 2026-10-22)
 
-When an order is split across ERPs, which ERP invoices the shipping? Recommendation:
-the ERP that holds the order's first line (the same order the split already uses),
-shown as its own invoice line, so its payment carries it back. Alternatives: the ERP
-that ships first (not known when invoicing a part that has not shipped), or a share per
-ERP (real ERPs do not split freight this way).
+Split the shipping with the lines. The integration already divides an order's lines
+between the ERPs; it divides the shipping the same way, in proportion to each ERP's
+share of the order value after discounts (value, not item count: a 500.00 item and a
+5.00 item must not share freight evenly). Cents that do not divide go to the larger
+part, so the shares always add up to the order's shipping exactly. An order that goes
+to one ERP gives it all the shipping.
+
+Each ERP shows its share as a Shipping line on its order and invoice, so its payment
+carries it back and the payments add up to the order total. A freight line on an
+invoice is a standard ERP feature (an SAP freight condition, a Business Central charge
+line), so it stays within what the mock ERP models.
+
+Rejected: the ERP holding the first line takes all of it (it would invoice freight for
+a box another ERP sent); the ERP that ships first (not known when a part is invoiced
+before it ships).
+
+Also in scope: a return or credit memo that refunds shipping gives back that ERP's
+share.
+
+Timing: after the release. It changes the integration's order split, its riskiest code.
 
 Code: demo-erp's invoice (`lib/fulfilment.js`, behind `actions/orders/index.js`) and the integration's order split, which
 today sends each ERP its lines and no shipping.
