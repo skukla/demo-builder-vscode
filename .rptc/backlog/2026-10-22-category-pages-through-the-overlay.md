@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Category pages through the same overlay as product pages
@@ -51,3 +51,7 @@ Open in design: which template the SC authors for category pages; how the overla
 category path from any other missing path (and returns 404 otherwise); caching and its
 invalidation; existing projects' written pages (the migration); the watcher (EDS-27)
 becomes unnecessary; what the agent surface says.
+
+## Shipped so far
+
+- 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)

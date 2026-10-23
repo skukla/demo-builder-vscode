@@ -65,3 +65,4 @@ The agent's `apply_updates` keeps working against the same apply service either 
 - 2026-10-21  feat(updates): show the apply run row by row in the Updates modal (`f01c45494`)
 - 2026-10-21  refactor(ui): move the Prerequisites status icon to core as StepStatusIcon (`f67d49669`)
 - 2026-10-21  feat(updates): ask under the row, run project by project, keep the local copy step (`dbcbaab08`)
+- 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)

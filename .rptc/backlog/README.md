@@ -312,7 +312,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-57` | feature | [A storefront update that stops on a clash can be fixed with AI, from the builder](2026-10-21-update-clash-fix-with-ai.md) | — | high | active |
 | `EDS-58` | question | [Does the Sync Storefront button earn its keep when no SC edits code?](2026-10-21-sync-storefront-earns-its-keep.md) | — | med | open |
 | `EDS-59` | feature | [A storefront update can be undone from the builder](2026-10-21-undo-a-storefront-update.md) | — | med | backlog |
-| `EDS-61` | feature | [Category pages through the same overlay as product pages](2026-10-22-category-pages-through-the-overlay.md) | — | high | backlog |
+| `EDS-61` | feature | [Category pages through the same overlay as product pages](2026-10-22-category-pages-through-the-overlay.md) | — | high | active |
 | `EDS-62` | fix | [A demo made before a storefront fix never gets it](2026-10-23-storefront-repairs-for-older-demos.md) | — | high | active |
 | `EDS-64` | fix | [The Storefront Report is readable, and its fixes are offered honestly](2026-10-23-storefront-report-readable-and-fixes-honest.md) | — | med | active |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |

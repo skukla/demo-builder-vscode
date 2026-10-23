@@ -40,3 +40,4 @@ button's result. `sync_content` is removed (no soft deprecation): its job is now
 ## Shipped so far
 
 - 2026-10-23  Built, not committed: republish runs republishStorefrontContent (the button's publish); sync_content removed; four generated skills renamed, AI_CONTEXT_VERSION 44; docs, catalog and pins updated; full suite green
+- 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)

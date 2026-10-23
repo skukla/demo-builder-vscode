@@ -53,3 +53,7 @@ screen; "Loading product..." then the product.
 - **Found on the way:** Check for Updates and its apply made every project they saved the
   open one, leaving the SC on whichever came last. Both now save through a view that never
   switches the open project.
+
+## Shipped so far
+
+- 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
