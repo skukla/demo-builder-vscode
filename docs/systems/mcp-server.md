@@ -409,7 +409,8 @@ agents it needed no confirmation. Judge against the rule, not the verb — and i
 checking whether something is gated, read the generated table rather than any prose.
 
 Merely *mutating* is deliberately not the bar. Deploys (`deploy_mesh`,
-`add_integration`, `deploy_integration`, `redeploy_integration`,
+`add_integration` for every entry but the ERP integration, which prepares the store and
+takes `confirm` (below), `deploy_integration`, `redeploy_integration`,
 `update_integration`, `install_integration`), lifecycle (`start_demo`,
 `stop_demo`) and config writes (`update_project_config`, `rename_project`) change
 state and are ungated, because they are idempotent or trivially reversible and
@@ -463,7 +464,11 @@ changed on the integration so the second puts it back newest first (a source it 
 disabled, not deleted: Commerce cannot). The third writes settings outside a catalog step and
 records the previous values on the project, which `undo: true` writes back. The setup
 checklist tools say which steps are applicable (`fix` on the item) and which were applied
-(`fixApplied`). Details: `docs/systems/erp-integration.md`, "Preparing the store".
+(`fixApplied`). `add_integration` for the ERP integration runs the same engine before its ERP
+is filled (owner, 2026-10-22), so it takes the same shape for that one entry: without
+`confirm` it answers what preparing the store will change (`data.preparation`) and adds
+nothing; with `confirm: true` it adds. Every other add is ungated, as above. Details:
+`docs/systems/erp-integration.md`, "Preparing the store".
 The ERP tools that act on one ERP (`load_erp_demo_data`,
 `open_erp_screen`, `run_erp_rest`, `write_erp_rest`, `get_erp_status`) take an optional `erp`,
 the ERP's component id, and default to the integration's first, except `load_erp_demo_data`,
@@ -641,58 +646,55 @@ answer carries `warnings: ["Guests won't see any products in this store view."]`
 same sentence the pickers show. It never blocks or fails creation, and a check that cannot
 answer (timeout, network, HTTP error) adds nothing.
 
-### Demo Builder's fixes on an added demo (EDS-13f, 2026-10-03)
+### The storefront report (EDS-13f, 2026-10-03)
 
 `get_storefront_report` (read-only, GitHub sign-in) answers the same report as **Demo
 Builder: Storefront Report** and the Diagnostics section: the storefront's boilerplate
-against Demo Builder's current one, its lineage, what Demo Builder wrote, and each fix's
-state, plus `offer`, the fixes that fit an added demo tied to our templates, and `summary`,
-the words the SC reads. Accepting the offer is a write with its own consent:
-`reset_project` and `create_project` take `applyFixes:true`, never defaulted, which
-applies the fits as one commit to the SC's own repository. Without it, both tools answer
-the offer (`fixes.offered`, `caveats`) and write none. A saved package's own fix list is
-applied on create and reset without asking, because both ends are the SC's; a storefront
-with no tie to our templates gets the check only.
+against Demo Builder's current one, its lineage, what Demo Builder wrote, the content's links
+to pages that do not exist, and `summary`, the words the SC reads. `needsReset: true` (and
+`storefrontNeedsReset: true` in `get_project_status`) says the storefront is behind how Demo
+Builder builds storefronts now (`storefrontChanges.ts`); `reset_project` is the way up to date.
+The SC reads the same report in a window over the project dashboard (`getStorefrontReport`,
+`StorefrontReportModal.tsx`); the command opens the dashboard with it showing.
 
-### Category pages and the catalog menu (EDS-24)
+It no longer lists Demo Builder's fixes, and `reset_project` and `create_project` no longer
+take `applyFixes`: there is nothing to ask. Creation and reset apply every live patch in the
+shipped ledgers that fits the storefront's code, an added demo's included (owner, 2026-10-23,
+EDS-64; `knownPatches.ts`).
 
-There is no catalog menu tool. Since 2026-10-05 the category pages and the nav switch
-are part of storefront setup: project creation, `reset_project` and `sync_content` (and
-the dashboard's Reset and Republish) each run the same step, `catalogMenuStep.ts`, when
-the storefront's own repository has `blocks/catalog-menu/` (the Demo Builder Blocks
-library). It writes one page per Commerce category marked Include in Menu, adds the menu
-line and the block to `/nav`, and keeps a record of what it wrote on the storefront
-instance (`metadata.catalogMenu`). A page someone else made, or one edited since, is left
-alone and named in the step's sentence, which `reset_project` and `sync_content` return
-as `categoryPages`. Reset takes the pages and the switch out with that record before it
-re-copies the content, then writes them again.
+### Category pages and the catalog menu (EDS-24, EDS-61)
+
+There is no catalog menu tool and no category page tool. The category pages and the nav
+switch are part of storefront setup: project creation, `reset_project` and `republish`
+(and the dashboard's Reset and Republish) each run the same step, `catalogMenuStep.ts`,
+when the storefront's own repository has `blocks/catalog-menu/` (the Demo Builder Blocks
+library) and the product page overlay is on. Each category's page is its own url path
+(`/signs`): an authored DA.live page there, or else the one the shared `render-pdp` overlay
+makes from the site's `/categories/default` template. The step first publishes
+`/authored-category-pages.json`, the sheet listing the authored addresses, which the
+overlay steps aside for (and without which it renders no category page); then it
+publishes every category page (generated ones on ACCS), writes a starter template when the
+site has none, takes down pages of categories the store no longer has, adds the menu line
+and the block to `/nav`, and keeps a record on the storefront instance
+(`metadata.catalogMenu`). The step's sentence comes back on `reset_project` and
+`republish` as `categoryPages`: how many pages were published, how many authored pages
+the sheet keeps, any removed, and any edited page it kept.
 
 So an agent that wants the menu gone deselects the library and resets (confirm-gated).
+A category added in Commerce later needs nothing: its page is published on its first
+visit, and `republish` publishes every page again (the way to make a template edit, a
+renamed category, or a page an author just wrote at a category's address show). `check_category_pages` and `add_category_pages` were removed on
+2026-10-22 with the per-category DA.live pages they wrote. See
+`docs/systems/category-pages.md`.
 
 After a store change (EDS-44) the pages belong to the old store. `configure_project`'s
 note then says the republish also replaces the product and category pages. `republish`
-and `sync_content` do it when the project's `edsStorefrontState.catalogPagesPending` is
-set and their own config publish reached the CDN: the old store's product pages come
-off, the category pages are swapped (edited ones kept), the new store's product pages
-are published. Both answer `storePages`, the one sentence the SC reads in Configure
-("Now on CitiSignal: 11 category pages and 39 product pages published. 30 old product
-pages removed."). One service does it for every door (`storeScopePages.ts`).
-
-For a category added in Commerce AFTER setup there are two tools (EDS-27,
-`categoryPageTools.ts`), on the same step file:
-
-- `check_category_pages`: a read. The menu categories with no page yet, and whether this
-  project adds such pages without asking (the `demoBuilder.categoryPages.autoAdd` setting
-  and the project's own choice).
-- `add_category_pages`: writes and publishes those pages, and only those. No page is
-  rewritten or removed and the nav is not touched. `confirm:true`, and it raises the
-  consent dialog. `sync_content` still does the same as part of a full republish.
-
-Both read first and report a refused DA.live sign-in as the `needsAuth` handoff. Neither
-asks the stored sign-in status, which can say yes after the sign-in has expired (EDS-30).
-An agent cannot switch automatic adding on: `get_settings` reads the setting,
-`set_setting` hands the change to the SC, and the per-project choice is set only from the
-notices the SC sees. See `docs/systems/category-pages.md`.
+does it when the project's `edsStorefrontState.catalogPagesPending` is
+set and its own config publish reached the CDN: the old store's product and category
+pages come off, the new store's are published (an edited page Demo Builder wrote is
+kept). Both answer `storePages`, the one sentence the SC reads in Configure ("Now on
+CitiSignal: 11 category pages and 39 product pages published. 30 old product pages
+removed."). One service does it for every door (`storeScopePages.ts`).
 
 ### Integrations live in Adobe workspaces of their own (AB-23)
 
@@ -918,7 +920,7 @@ config when a project is created (and on "Regenerate AI files"):
   takes `tool_input.file_path`; it once read a `$CLAUDE_TOOL_INPUT` env var Claude
   Code never sets, so the hook silently did nothing from beta.109 until the
   AI_CONTEXT_VERSION 6 fix. It commits and pushes only — publishing is
-  `sync_content` / `sync_storefront`. It does nothing while a storefront update's clash
+  `republish` / `sync_storefront`. It does nothing while a storefront update's clash
   is kept in the copy for fixing (`.git/demo-builder-kept-clash`, AI_CONTEXT_VERSION 42):
   the copy then holds the whole half-applied update, which `finish_storefront_update`
   pushes once the fix checks out.

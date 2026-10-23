@@ -147,6 +147,30 @@ describe('executePhaseHelixConfig — the smart-404 handler', () => {
     });
 });
 
+// Creation stamps the project with it ("Needs reset", storefrontChanges.ts): setup has no project.
+describe('executePhaseHelixConfig — whether the build step finished', () => {
+    it('hands creation a finished build when the storefront needed no fix', async () => {
+        const { promise, repoInfo } = runPhase();
+        await promise;
+
+        expect(repoInfo.storefrontBuildComplete).toBe(true);
+    });
+
+    it("hands creation an unfinished build when the build step's own read fails", async () => {
+        const fileOps = makeFileOps();
+        const read = fileOps.getFileContent.getMockImplementation();
+        // Only the build step's read of head.html: fstab and the rest read as before.
+        fileOps.getFileContent.mockImplementation(async (...args: Parameters<typeof fileOps.getFileContent>) => {
+            if (args[2] === 'head.html') throw new Error('rate limited');
+            return read ? read(...args) : null;
+        });
+        const { promise, repoInfo } = runPhase({ fileOps });
+        await promise;
+
+        expect(repoInfo.storefrontBuildComplete).toBe(false);
+    });
+});
+
 describe('executePhaseHelixConfig — Quick Edit', () => {
     it('wires it into the repo it just configured', async () => {
         const { promise, fileOps } = runPhase();

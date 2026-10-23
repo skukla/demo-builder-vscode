@@ -13,6 +13,8 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import type { CommerceConfigPrevious, StorePreparationRecord } from '@/types/storePreparation';
 import type { SetCommerceConfigRequestPayload } from '@/types/webviewRequests';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import type { PreparationDeps } from '@/features/app-builder/services/storePreparation/storePreparationEngine';
 
 const COMMERCE = { get: jest.fn(), send: jest.fn() };
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
@@ -63,6 +65,16 @@ function setup(integration: Partial<AppBuilderComponentState> = {}, projectOver:
     const saved = () => (stateManager.saveProject as jest.Mock).mock.calls.at(-1)?.[0] as Project | undefined;
     return { context, saved };
 }
+
+/** Every progress push the screen got, in order. */
+function pushes(context: HandlerContext): OperationProgressPayload[] {
+    return (context.sendMessage as jest.Mock).mock.calls
+        .filter(([type]) => type === 'operationProgress')
+        .map(([, payload]) => payload as OperationProgressPayload);
+}
+
+/** The last push: the result screen. */
+const endPush = (context: HandlerContext): OperationProgressPayload | undefined => pushes(context).at(-1);
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -150,6 +162,38 @@ describe('prepareCommerceStore', () => {
         expect(result).toMatchObject({ success: true, data: { warning: 'Price scope: x: no', counts: { rejected: 1 } } });
     });
 
+    // Live release test, 2026-10-22: the result said only "Store prepared for ERP Integration"
+    // after erp_owner went into twelve attribute sets. It lists what changed, step by step.
+    it('lists what each step changed on the result screen, and what Commerce refused', async () => {
+        const sets = ['Default', 'Phones', 'Watches'];
+        mockApply.mockResolvedValue({
+            reports: [
+                { id: 'erp-attributes', label: 'Product attributes', title: 't', state: 'applied', changes: sets.map((set) => `Added erp_owner to the attribute set ${set}`), rejected: [] },
+                { ...APPLIED_REPORT, state: 'rejected', changes: [], rejected: ['catalog/price/scope: no'] },
+                { ...APPLIED_REPORT, id: 'storefront-returns', label: 'Returns', state: 'skipped', changes: [] },
+            ],
+            record: RECORD,
+            checks: {},
+        });
+        const { context } = setup();
+        await handlePrepareCommerceStore(context, { id: 'erp-integration', confirm: true, progress: 'modal' });
+        const end = endPush(context);
+        expect(end).toMatchObject({ state: 'succeeded', warning: 'Price scope: catalog/price/scope: no' });
+        expect(end?.details).toStrictEqual([
+            'Product attributes:',
+            'Added erp_owner to the attribute set Default',
+            'Added erp_owner to the attribute set Phones',
+            'Added erp_owner to the attribute set Watches',
+        ]);
+    });
+
+    it('says nothing changed when every step was already done', async () => {
+        mockApply.mockResolvedValue({ reports: [{ ...APPLIED_REPORT, state: 'skipped', changes: [] }], record: undefined, checks: {} });
+        const { context } = setup();
+        await handlePrepareCommerceStore(context, { id: 'erp-integration', confirm: true, progress: 'modal' });
+        expect(endPush(context)?.details).toStrictEqual(['Nothing changed: every step was already done in the store.']);
+    });
+
     it('refuses without the Adobe sign-in, as an answer', async () => {
         const { context } = setup();
         const signedOut: HandlerContext = { ...context, authManager: undefined };
@@ -181,6 +225,20 @@ describe('undoCommerceStorePreparation', () => {
         expect(stepId).toBe('price-scope-website');
         expect(saved()?.appBuilderComponents?.['erp-integration']).not.toHaveProperty('storePreparation');
         expect(result).toMatchObject({ success: true, data: { confirmed: true, undone: true, counts: { undone: 1 } } });
+    });
+
+    // Live release test, 2026-10-22: an undo read "Preparing the store" under its spinner.
+    it('says it is undoing while it runs, and lists what it put back', async () => {
+        mockUndo.mockImplementation(async (_steps: unknown, _record: unknown, deps: PreparationDeps) => {
+            deps.onProgress?.({ id: 'erp-attributes', label: 'Product attributes', title: 't', why: '', where: '' }, 'Putting it back');
+            return { reports: [{ ...APPLIED_REPORT, state: 'undone', changes: ['Took erp_owner out of the attribute set Default'] }], record: undefined, checks: {} };
+        });
+        const { context } = setup({ storePreparation: RECORD });
+        await handleUndoCommerceStorePreparation(context, { id: 'erp-integration', confirm: true, progress: 'modal' });
+        const stages = pushes(context).filter((push) => push.stage).map((push) => [push.stage, push.step]);
+        expect(stages).toContainEqual(['Undoing the preparation', 'Product attributes: Putting it back']);
+        expect(stages.map(([stage]) => stage)).not.toContain('Preparing the store');
+        expect(endPush(context)?.details).toStrictEqual(['Price scope:', 'Took erp_owner out of the attribute set Default']);
     });
 });
 

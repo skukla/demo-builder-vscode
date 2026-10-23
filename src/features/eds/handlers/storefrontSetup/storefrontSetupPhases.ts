@@ -14,6 +14,8 @@
  */
 
 import * as vscode from 'vscode';
+import { authoredSheetRefresh } from '../../services/catalogMenu/authoredSheetRefresh';
+import { createCatalogMenuSite } from '../../services/catalogMenu/catalogMenuSiteDeps';
 import { ConfigurationService } from '../../services/configService/configurationService';
 import { withDaLiveAuthRetry, MAX_REAUTH_ATTEMPTS } from '../../services/daLive/daLiveAuthRetry';
 import { DaLiveContentOperations } from '../../services/daLive/daLiveContentOperations';
@@ -29,8 +31,9 @@ import {
     reportUnapplied,
     type PatchReport,
 } from '../../services/patches/patchReportHelper';
+import { confirmStorefrontCodeServed } from '../../services/storefront/codeServed';
 import { getDaLiveAuthService } from '../edsHelpers';
-import { runDemoFixes, withDemoContentSource } from './storefrontSetupDemo';
+import { withDemoContentSource } from './storefrontSetupDemo';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
@@ -48,6 +51,7 @@ import { getBlockLibraryContentSource } from '@/features/components/services/blo
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { projectTargetsStorefront } from '@/features/eds/services/storefrontIdentityGuard';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
@@ -152,6 +156,36 @@ async function runConfigCodeSyncPhases(
 }
 
 /**
+ * Before the bulk publish of an Edit that rebuilds onto an existing storefront: the hook
+ * that refreshes a live authored-pages sheet (EDS-61, `authoredSheetRefresh.ts`).
+ */
+function authoredSheetHook(
+    context: HandlerContext,
+    logger: Logger,
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    project: Project,
+): () => Promise<void> {
+    const site = createCatalogMenuSite({
+        project,
+        target: {
+            daLiveOrg: edsConfig.daLiveOrg,
+            daLiveSite: edsConfig.daLiveSite,
+            repoOwner: repoInfo.repoOwner,
+            repoName: repoInfo.repoName,
+        },
+        daLive: services.daLiveContentOps.sourceOps,
+        helix: services.helixService,
+        github: services.githubFileOps,
+        stateManager: context.stateManager,
+        logger,
+        overlay: edsConfig.byomOverlayUrl !== undefined,
+    });
+    return authoredSheetRefresh(project, site, logger, '[Storefront Setup]');
+}
+
+/**
  * Run the EDS content pipeline with DA.live auth recovery.
  * Returns the pipeline result including library paths.
  */
@@ -224,6 +258,9 @@ async function runEdsPipelineWithRecovery(
                     purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
                     byomOverlayUrl: edsConfig.byomOverlayUrl,
                     project: project ?? undefined,
+                    ...(project
+                        ? { beforeContentPublish: authoredSheetHook(context, logger, services, repoInfo, edsConfig, project) }
+                        : {}),
                 },
                 {
                     daLiveContentOps: services.daLiveContentOps,
@@ -235,6 +272,19 @@ async function runEdsPipelineWithRecovery(
             );
             if (!result.success) throw new Error(result.error || 'Content pipeline failed');
             if (result.warnings.length > 0) repoInfo.pipelineWarnings = result.warnings;
+            // After the copy, as a reset does: the code publish can miss the last
+            // commits, and a storefront whose site runs old code is not built.
+            const codeNotServed = await confirmStorefrontCodeServed(
+                services.githubFileOps,
+                services.helixService,
+                { owner: repoInfo.repoOwner, repo: repoInfo.repoName },
+                undefined,
+                logger,
+            );
+            if (codeNotServed) {
+                repoInfo.pipelineWarnings = [...(repoInfo.pipelineWarnings ?? []), codeNotServed];
+                repoInfo.storefrontBuildComplete = false;
+            }
             return { libraryPaths: result.libraryPaths };
         },
         {
@@ -377,9 +427,6 @@ export async function executeStorefrontSetupPhases(
             patchReport,
         );
         if (phase1Result) return phase1Result;
-
-        // An added demo: its fixes applied, offered, or only checked (D23, EDS-13f).
-        await runDemoFixes(edsConfig, repoInfo, services.githubFileOps, logger);
 
         const { blockCollectionIds, earlyReturn } = await runConfigCodeSyncPhases(
             context,

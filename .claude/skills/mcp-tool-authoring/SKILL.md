@@ -99,7 +99,7 @@ fields, and the dialog shows these and nothing else, because it answers one ques
 | `target` | argument keys naming WHICH thing, in reading order |
 
 `target` is `[]` when the tool acts on the open project and declares no argument naming
-it (`republish`, `sync_content`) — the dialog names the open project instead.
+it (`republish`) — the dialog names the open project instead.
 
 **Read the schema before writing `target`.** A key that does not exist renders a BLANK
 line, not an error, so the dialog quietly stops saying which thing it is about. Two of

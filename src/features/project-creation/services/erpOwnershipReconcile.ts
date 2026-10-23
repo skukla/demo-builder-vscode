@@ -185,17 +185,41 @@ function statusRefusedNote(row: ErpRow, left: StatusChange[], error: unknown): s
 }
 
 /**
+ * Whether the changes would discontinue EVERY product the ERP holds and sells today: the ERP's
+ * whole catalogue taken away at once.
+ */
+function emptiesTheErp(held: readonly { type?: string; salesStatus?: string }[], changes: readonly StatusChange[]): boolean {
+    const selling = held.filter((product) => product.type !== 'configurable' && product.salesStatus !== DISCONTINUED).length;
+    const marking = changes.filter((change) => change.to === DISCONTINUED).length;
+    return selling > 0 && marking === selling;
+}
+
+/**
+ * The note when an add would have emptied an ERP (Justrite, 2026-10-22): adding an ERP never
+ * asks to take another's whole catalogue away, so a pass that would is a rule gone wrong, and
+ * nothing is marked.
+ */
+function wouldEmptyNote(row: ErpRow, count: number): string {
+    return (
+        `${row.name}'s rule now gives it none of the ${count} product${count === 1 ? '' : 's'} it holds, ` +
+        "so none were marked discontinued: an add does not take an existing ERP's products away. " +
+        'Check its rule in the ERP settings.'
+    );
+}
+
+/**
  * Apply the status changes an ERP's held products need, one at a time (the ERP's PATCH takes
- * one SKU). The first refusal stops the pass for that ERP and is the note.
+ * one SKU). The first refusal stops the pass for that ERP and is the note. On an add, changes
+ * that would discontinue every product the ERP sells are refused whole (`emptiesTheErp`).
  */
 async function reconcileStatuses(
     row: ErpRow,
     owned: ReadonlySet<string>,
     deps: ErpFillForProjectDeps,
-    project: Project,
+    scope: { project: Project; moment: OwnershipMoment },
 ): Promise<StatusPassResult> {
     const auth = await deps.getAuth();
-    const urls = project.appBuilderComponents?.[row.erp]?.deployedUrls;
+    const urls = scope.project.appBuilderComponents?.[row.erp]?.deployedUrls;
     const none = { discontinued: 0, restored: 0 };
     if (!auth) return { ...none, note: `${row.name}: Adobe sign-in required to change product statuses.` };
     let held;
@@ -205,6 +229,9 @@ async function reconcileStatuses(
         return { ...none, note: `${row.name}'s products could not be read: ${(error as Error).message}` };
     }
     const changes = statusChangesFor(held, owned);
+    if (scope.moment === 'add' && emptiesTheErp(held, changes)) {
+        return { ...none, note: wouldEmptyNote(row, changes.filter((change) => change.to === DISCONTINUED).length) };
+    }
     const done = { ...none };
     for (const [index, change] of changes.entries()) {
         const verb = change.to === DISCONTINUED ? 'discontinued' : 'sellable again';
@@ -330,7 +357,7 @@ export async function applyErpOwnership(
     for (const row of rows) {
         const owned = ownedBy(owners, row.listId);
         const onProgress = (step: string) => deps.onProgress?.(rows.length > 1 ? `${row.name}: ${step}` : step);
-        const marked = await reconcileStatuses(row, owned, { ...deps, onProgress }, project);
+        const marked = await reconcileStatuses(row, owned, { ...deps, onProgress }, { project, moment });
         // The catch-all owning nothing (an empty store, or every product claimed) is not an action
         // item; a rule that matches nothing is.
         if (owned.size === 0 && row.owns.mode !== 'all') {

@@ -121,4 +121,5 @@ describe('computeUpdateSelections', () => {
         expect(sel.template).toStrictEqual([]);
         expect(sel.component).toStrictEqual([]);
     });
+
 });

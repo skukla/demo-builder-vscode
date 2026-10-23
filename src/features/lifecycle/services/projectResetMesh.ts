@@ -43,7 +43,7 @@ async function ensureAdobeContext(
         logger: context.logger,
         logPrefix,
         warningMessage:
-            'Your Adobe I/O session has expired. Sign in to redeploy the API Mesh, or skip to finish without redeploying.',
+            'Your Adobe sign-in has expired. Sign in to redeploy the API Mesh, or skip to finish without redeploying.',
     });
 
     return result.ready;

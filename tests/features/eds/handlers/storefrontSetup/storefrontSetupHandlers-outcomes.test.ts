@@ -314,31 +314,6 @@ describe('handleStartStorefrontSetup — package settings are restored before an
     });
 });
 
-describe("handleStartStorefrontSetup — applying an added demo's fixes is opt-in", () => {
-    /** The config the phases were handed on the first call. */
-    function phaseConfig(): Record<string, unknown> {
-        return mockExecutePhases.mock.calls[0]?.[1] as Record<string, unknown>;
-    }
-
-    it('tells the phases to apply the fixes when the SC asked for them', async () => {
-        await handleStartStorefrontSetup(createContext(), payload({ applyDemoFixes: true }));
-
-        expect(phaseConfig().applyDemoFixes).toBe(true);
-    });
-
-    it('says nothing about fixes when the SC declined them', async () => {
-        await handleStartStorefrontSetup(createContext(), payload({ applyDemoFixes: false }));
-
-        expect(phaseConfig()).not.toHaveProperty('applyDemoFixes');
-    });
-
-    it('says nothing about fixes when the payload never mentioned them', async () => {
-        await handleStartStorefrontSetup(createContext(), payload());
-
-        expect(phaseConfig()).not.toHaveProperty('applyDemoFixes');
-    });
-});
-
 describe('handleStartStorefrontSetup — what the phases are handed', () => {
     it('passes the resolved overlay URL and the selections, under an abort signal', async () => {
         const context = createContext();
@@ -459,33 +434,12 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         );
     });
 
-    it('says what may not work on an added demo, under its own headline, not the PDP one', async () => {
+    it('says which pages the source has that the storefront does not serve (EDS-40)', async () => {
         mockExecutePhases.mockResolvedValue({
             success: true,
             repoUrl: 'https://github.com/demo-org/demo-repo',
             repoOwner: 'demo-org',
             repoName: 'demo-repo',
-            demoCaveats: ['Product links on this storefront use a different address format.'],
-        });
-        const context = createContext();
-
-        await handleStartStorefrontSetup(context, payload());
-
-        expect(messagePayload(context, 'storefront-setup-complete')).toEqual(
-            expect.objectContaining({
-                message: 'Storefront created. A few things to know about this demo.',
-                warnings: ['Product links on this storefront use a different address format.'],
-            })
-        );
-    });
-
-    it('says which pages the source has that the storefront does not serve, after the demo’s caveats (EDS-40)', async () => {
-        mockExecutePhases.mockResolvedValue({
-            success: true,
-            repoUrl: 'https://github.com/demo-org/demo-repo',
-            repoOwner: 'demo-org',
-            repoName: 'demo-repo',
-            demoCaveats: ['Product links on this storefront use a different address format.'],
             pipelineWarnings: [
                 '2 pages the source has are missing from this storefront: /cart, /checkout',
             ],
@@ -497,10 +451,7 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         expect(messagePayload(context, 'storefront-setup-complete')).toEqual(
             expect.objectContaining({
                 message: 'Storefront created. A few things to know about this demo.',
-                warnings: [
-                    'Product links on this storefront use a different address format.',
-                    '2 pages the source has are missing from this storefront: /cart, /checkout',
-                ],
+                warnings: ['2 pages the source has are missing from this storefront: /cart, /checkout'],
             })
         );
     });
@@ -575,6 +526,21 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         expect(messagePayload(context, 'storefront-setup-complete')).toMatchObject({
             installedBlockLibraries: installed,
         });
+    });
+
+    it('hands over whether the build step finished, for creation to stamp ("Needs reset")', async () => {
+        mockExecutePhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/demo-org/demo-repo',
+            repoOwner: 'demo-org',
+            repoName: 'demo-repo',
+            storefrontBuildComplete: false,
+        });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-complete')).toMatchObject({ storefrontBuildComplete: false });
     });
 });
 

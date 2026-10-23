@@ -83,14 +83,14 @@ describe('session grants', () => {
     });
 
     it('grants ONE tool, not the surface', async () => {
-        // The failure a blanket grant would be. `sync_content` is also
-        // grantable, so this proves the grant is keyed by tool rather than by
-        // "the user said yes to something once".
+        // The failure a blanket grant would be: a session grant on `republish`
+        // must not let another tool through, so this proves the grant is keyed by
+        // tool rather than by "the user said yes to something once".
         mockShow.mockResolvedValue('Allow for the rest of this session');
         const gate = createAgentConsentGate(logger);
 
         await gate('republish', { confirm: true });
-        await gate('sync_content', { confirm: true });
+        await gate('publish_page', { confirm: true, path: '/about' });
 
         expect(mockShow).toHaveBeenCalledTimes(2);
     });
@@ -128,7 +128,7 @@ describe('what may be granted is decided by the AUTHORED copy', () => {
             .filter(([, c]) => c.sessionGrant)
             .map(([tool]) => tool);
 
-        expect(grantable.sort()).toEqual(['republish', 'sync_content']);
+        expect(grantable.sort()).toStrictEqual(['republish']);
     });
 
     it('never grants a tool whose own consequence says it cannot be undone', () => {

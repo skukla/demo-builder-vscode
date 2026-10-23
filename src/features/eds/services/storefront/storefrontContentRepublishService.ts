@@ -4,7 +4,7 @@
  * Republishes EVERYTHING a storefront serves: the DA.live site config, config.json
  * (through `republishStorefrontConfig`), the code, site permissions, every content
  * page, the category pages and catalog menu, and the pre-warmed product pages. The
- * dashboard's Republish button and the agent's `sync_content` tool both call this.
+ * dashboard's Republish button and the agent's `republish` tool both call this.
  *
  * After a store change (EDS-44: `edsStorefrontState.catalogPagesPending`), the
  * category and product pages are not refreshed but REPLACED with the new store's, by
@@ -25,7 +25,7 @@ import {
     isAppNotOnRepositoryError,
 } from '../appInstallationResolver';
 import { createCatalogMenuSite } from '../catalogMenu/catalogMenuSiteDeps';
-import { applyCatalogMenuStep } from '../catalogMenu/catalogMenuStep';
+import { applyCatalogMenuStep, publishAuthoredListStep, type CatalogMenuSite } from '../catalogMenu/catalogMenuStep';
 import { prewarmCatalog } from '../catalogPrewarmService';
 import { verifyConfigOnCdn } from '../configSyncService';
 import type { DaLiveAuthService } from '../daLive/daLiveAuthService';
@@ -117,28 +117,50 @@ const targetOf = (params: RepublishContentParams) => ({
     daLiveSite: params.daLiveSite,
 });
 
+/** The storefront as the catalog menu step sees it, on this pipeline's clients. */
+function catalogMenuSiteOf(
+    params: RepublishContentParams,
+    clients: PageClients,
+    overlayUrl: string | undefined,
+): CatalogMenuSite {
+    return createCatalogMenuSite({
+        project: params.project,
+        target: targetOf(params),
+        daLive: clients.daLiveContentOps.sourceOps,
+        helix: clients.helixService,
+        github: params.githubFiles,
+        stateManager: params.stateManager,
+        logger: params.logger,
+        overlay: overlayUrl !== undefined,
+    });
+}
+
+/** The overlay the storefront is registered with, or undefined (off, or a malformed setting). */
+function overlayUrlOf(daLiveOrg: string, daLiveSite: string, logger: Logger): string | undefined {
+    try {
+        return resolveByomOverlayConfig(undefined, daLiveOrg, daLiveSite);
+    } catch (error) {
+        logger.warn(`[Republish] The product page overlay setting could not be read: ${(error as Error).message}`);
+        return undefined;
+    }
+}
+
 /**
- * Category pages and the catalog menu (EDS-24) — the step storefront setup and reset
- * run — then the product pages. A category added since gets its page; ours are
- * refreshed only if unedited; every other page is left alone. Never throws.
+ * Category pages and the catalog menu (EDS-24, EDS-61) — the step storefront setup and
+ * reset run — then the product pages. Every category page is published again (so a
+ * template edit reaches them), pages of categories that are gone come down, and every
+ * authored page is left alone. Never throws.
  */
 async function refreshCatalogPages(
     params: RepublishContentParams,
     clients: PageClients,
     step: StoreScopeReport,
+    site: CatalogMenuSite,
+    overlayUrl: string | undefined,
 ): Promise<{ catalogMenu?: string }> {
     const { project, logger, persist, daLiveOrg, daLiveSite } = params;
     step(S.updatingCatalogMenu.label);
-    const catalogMenu = await applyCatalogMenuStep(
-        project,
-        createCatalogMenuSite({
-            project,
-            target: targetOf(params),
-            daLive: clients.daLiveContentOps.sourceOps,
-            helix: clients.helixService,
-            github: params.githubFiles,
-        }),
-    );
+    const catalogMenu = (await applyCatalogMenuStep(project, site))?.summary;
     if (catalogMenu !== undefined) {
         step(S.updatingCatalogMenu.label, catalogMenu);
         logger.info(`[Republish] Catalog menu: ${catalogMenu}`);
@@ -152,7 +174,6 @@ async function refreshCatalogPages(
     // previously-prewarmed PDPs, which the content publish never reaches (they are
     // synthetic pages, not DA content). Reset remains the heavyweight path.
     try {
-        const overlayUrl = resolveByomOverlayConfig(undefined, daLiveOrg, daLiveSite);
         if (overlayUrl) {
             step(S.warmingProductPages.label);
             const prewarm = await prewarmCatalog(
@@ -209,7 +230,7 @@ async function replaceStorePages(
  * `handleRepublishContent` wraps with UI (auth modal, progress, status).
  *
  * Single source of truth: both the dashboard's Republish button and the MCP
- * `sync_content` tool call this, so the pipeline never diverges. Callers are
+ * `republish` tool call this, so the pipeline never diverges. Callers are
  * responsible for ensuring DA.live + GitHub auth before invoking (the UI pops a
  * sign-in modal; the MCP tool returns a `needsAuth` handoff).
  */
@@ -278,7 +299,15 @@ export async function republishStorefrontContent(
             logger.warn('[Republish] No user email available for permissions');
         }
 
-        // Step 4: Purge stale cache + publish all content.
+        // Step 4: Purge stale cache + publish all content — after the authored-pages sheet
+        // (EDS-61): the bulk publish previews every DA.live page, and the overlay would
+        // replace an authored page at a category address the published sheet does not list.
+        const clients: PageClients = { helixService, daLiveContentOps, daLiveTokenProvider };
+        // One answer for the run: category pages and product pages come from the same overlay.
+        const overlayUrl = overlayUrlOf(daLiveOrg, daLiveSite, logger);
+        const catalogMenuSite = catalogMenuSiteOf(params, clients, overlayUrl);
+        const sheetProblem = await publishAuthoredListStep(project, catalogMenuSite);
+        if (sheetProblem !== undefined) logger.warn(`[Republish] ${sheetProblem}`);
         step(S.clearingCache.label);
         await helixService.purgeCacheAll(repoOwner, repoName, 'main');
         step(S.publishingPages.label);
@@ -293,12 +322,11 @@ export async function republishStorefrontContent(
         // Steps 4b-5: the catalog's pages. After a store change whose config reached the
         // CDN, the old store's product and category pages are replaced (EDS-44);
         // otherwise they are refreshed as before.
-        const clients: PageClients = { helixService, daLiveContentOps, daLiveTokenProvider };
         const storeChanged =
             hasCatalogPagesPending(project) && configResult.success && !configResult.cdnError;
         const sentences = storeChanged
             ? { storePages: await replaceStorePages(params, clients, step) }
-            : await refreshCatalogPages(params, clients, step);
+            : await refreshCatalogPages(params, clients, step, catalogMenuSite, overlayUrl);
 
         // Step 6: Verify config.json on the CDN (best-effort).
         step(S.checkingSettings.label);

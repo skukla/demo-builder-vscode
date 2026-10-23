@@ -211,7 +211,7 @@ describe('redeployApiMesh — skip and preflight', () => {
             logger: context.logger,
             logPrefix: '[EdsReset]',
             warningMessage:
-                'Your Adobe I/O session has expired. Please sign in to continue the mesh redeployment.',
+                'Your Adobe sign-in has expired. Sign in to redeploy the API Mesh.',
         });
     });
 
@@ -239,7 +239,7 @@ describe('redeployApiMesh — skip and preflight', () => {
 
         expect(result).toStrictEqual(
             partial(
-                'Reset completed but mesh redeployment skipped: Adobe I/O authentication required'
+                'Reset completed but mesh redeployment skipped: Adobe sign-in required'
             )
         );
         expect(mockWithOrgContext).not.toHaveBeenCalled();

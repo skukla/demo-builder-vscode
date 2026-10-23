@@ -4,9 +4,18 @@ import ImageAlbum from '@spectrum-icons/workflow/ImageAlbum';
 import Revert from '@spectrum-icons/workflow/Revert';
 import Settings from '@spectrum-icons/workflow/Settings';
 import React from 'react';
-import { DashboardTile } from './DashboardTile';
+import { DashboardTile, type DashboardTileStatus } from './DashboardTile';
 import { DashboardZone } from './DashboardZone';
 import { DataInstallerTile } from './DataInstallerTile';
+import { NEEDS_RESET_LABEL, NEEDS_RESET_LINE } from '@/features/eds/services/storefront/storefrontChanges';
+
+/** The Reset tile's dot, word and explanation, when the storefront is behind. */
+const NEEDS_RESET_STATUS: DashboardTileStatus = {
+    variant: 'warning',
+    tooltip: NEEDS_RESET_LINE,
+    label: NEEDS_RESET_LABEL,
+    testId: 'reset-tile-dot',
+};
 
 /**
  * Edit — reopens the creation wizard: which brand, stack, components and block
@@ -46,6 +55,10 @@ function EditTile({
  * The Build zone — what the demo contains, then Reset and Delete: the two
  * rare, destructive actions. Delete is last, per the overflow-menu convention;
  * the confirm dialog behind it remains the real safety net.
+ *
+ * Reset is the remedy tile for a storefront behind how Demo Builder builds
+ * storefronts now (`storefrontChanges.ts`): it wears the "Needs reset" dot, with
+ * the status's one line as its tooltip, and pressing it is the reset it asks for.
  */
 export function BuildZone({
     canEdit,
@@ -56,6 +69,7 @@ export function BuildZone({
     handleOpenAemAssets,
     handleResetProject,
     handleDeleteProject,
+    needsReset = false,
 }: {
     canEdit: boolean;
     isMeshActionDisabled: boolean;
@@ -65,6 +79,8 @@ export function BuildZone({
     handleConfigure: () => void;
     handleResetProject: () => void;
     handleDeleteProject: () => void;
+    /** The storefront is behind how Demo Builder builds storefronts now. */
+    needsReset?: boolean;
 }): React.ReactElement {
     return (
         <DashboardZone id="build" title="Build" compact>
@@ -101,6 +117,7 @@ export function BuildZone({
                     onPress={handleResetProject}
                     action="reset"
                     tooltip="Put the demo back to how it was first set up"
+                    status={needsReset ? NEEDS_RESET_STATUS : undefined}
                 />
                 <DashboardTile
                     label="Delete"

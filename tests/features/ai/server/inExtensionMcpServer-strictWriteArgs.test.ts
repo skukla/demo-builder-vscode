@@ -47,7 +47,7 @@ function registerProbes(srv: {
         ok('set_probe_value')
     );
 
-    // A write tool that declares NO arguments — republish/sync_content shape.
+    // A write tool that declares NO arguments — the republish shape.
     srv.registerTool(
         'republish_probe',
         { description: 'probe no-arg write', inputSchema: {} },

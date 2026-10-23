@@ -77,7 +77,7 @@ multi-site; skip).
 | VS Code settings writes | `getConfiguration(...).update(` | 4 files | four single-sited actions (zoom, save-defaults, legacy cleanup, channel switch); verdict: no spine, pin guards the NEGATIVE — MCP/AI tool code never writes settings | **PINNED** |
 | Secret storage writes | `secret*.store/delete(` | 4 | four owner modules, one key family each (helixKeyStore, githubTokenService, componentSettingSecrets, commerceSecretMigration — the data-installer routes through the migration) | **PINNED** |
 | Category pages + catalog menu (EDS-24) | `applyCatalogMenu(` / `removeCatalogMenu(` | 1 | `eds/services/catalogMenu/catalogMenuStep.ts`, reached only from creation (`catalogMenuPhase`), reset (`edsResetCatalogMenu`), republish (`storefrontContentRepublishService`) and a store change (`storeScopePages`, EDS-44); the button and its two agent tools were deleted 2026-10-05 | **PINNED** |
-| Pages after a store change (EDS-44) | `replaceStoreScopePages(` | 1 | `eds/services/storefront/storeScopePages.ts`, reached from Configure's Republish (`configureStorefrontRepublish`), the agent's `republish` (`storefrontTools`) and `republishStorefrontContent` (dashboard Republish, `sync_content`) | **PINNED** |
+| Pages after a store change (EDS-44) | `replaceStoreScopePages(` | 1 | `eds/services/storefront/storeScopePages.ts`, reached from Configure's Republish (`configureStorefrontRepublish`) and `republishStorefrontContent` (dashboard Republish and the agent's `republish`, EDS-63) | **PINNED** |
 | Dependency install | `npm install` | 6 | — | NOT A SPINE (different actions) |
 | Repo clone | `git clone` | ~5 real | — | NOT A SPINE (different actions) |
 

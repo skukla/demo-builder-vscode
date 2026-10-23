@@ -247,11 +247,11 @@ describe('erp-attributes-exist', () => {
         });
     });
 
-    it('names the attribute sets the products use that lack erp_owner (AB-74)', async () => {
+    it('counts the attribute sets the products use that lack erp_owner (AB-74)', async () => {
         const read = attributes({ erp_owner: OWNER, brand: BRAND }, false);
         expect(await attributeCheck(read)).toStrictEqual({
             done: false,
-            note: 'erp_owner is not in the attribute set Default (2 products), so an ERP tag written to those products is dropped. Demo Builder can add it.',
+            note: 'erp_owner is missing from 1 attribute set, which holds 2 products. An ERP tag on those products is dropped. Demo Builder can add it.',
         });
         expect(read).toHaveBeenCalledWith('products/attribute-sets/4/attributes');
     });

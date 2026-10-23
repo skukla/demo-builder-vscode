@@ -101,7 +101,7 @@ export function boilerplateFloorWarning(boilerplate: StorefrontBoilerplate): str
     if (boilerplate.name !== ADOBE_COMMERCE_BOILERPLATE) return undefined;
     const version = semver.coerce(boilerplate.version);
     if (!version || !semver.lt(version, OLDEST_TESTED_BOILERPLATE)) return undefined;
-    return `Built on an older boilerplate (${version.major}.x); some fixes may not fit.`;
+    return `Built on an older boilerplate (${version.major}.x) than Demo Builder tests on.`;
 }
 
 /** Which signal tied the storefront to one of our templates. */

@@ -45,7 +45,7 @@ export function ProjectRow({
 }: ProjectRowProps) {
     const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect);
 
-    const { statusText, statusVariant } = getProjectStatusDisplay(project);
+    const { statusText, statusVariant, statusExplanation } = getProjectStatusDisplay(project);
     const componentSummary = useMemo(() => getComponentSummary(project), [project]);
 
     const ariaLabel = `${getProjectDisplayName(project)}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;
@@ -104,7 +104,9 @@ export function ProjectRow({
                         isRunning={isRunning}
                         actions={actions}
                     />
-                    <Text UNSAFE_className="project-row-status">{statusText}</Text>
+                    <span title={statusExplanation} data-testid="project-row-status">
+                        <Text UNSAFE_className="project-row-status">{statusText}</Text>
+                    </span>
                     <ChevronRight size="S" UNSAFE_className="project-row-chevron" />
                 </Flex>
             </Flex>

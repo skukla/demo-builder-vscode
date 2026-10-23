@@ -16,6 +16,8 @@
  * to GitHub is one more step in its panel, told like a row and keeping its outcome, so
  * the window never looks finished while it is still going (owner, 2026-10-21: it was a
  * stage line, first under the list and then in the panel, that vanished once passed).
+ * A run that ends with rows the SC unticked still waiting says how many above the list
+ * (owner, 2026-10-22), inside it so the window keeps its height.
  *
  * @module features/projects-dashboard/ui/components/UpdatesRunView
  */
@@ -49,6 +51,13 @@ interface RunViewProps {
     statuses: RowStatuses;
     progress: OperationProgressPayload | null;
     onTyped: (values: Record<string, string>) => void;
+    /** Once the run has ended: how many rows the SC left unticked are still waiting. */
+    remaining: number;
+}
+
+/** "1 update still waiting", "2 updates still waiting". */
+function waitingLine(count: number): string {
+    return count === 1 ? '1 update still waiting' : `${count} updates still waiting`;
 }
 
 /** What one row says beside its name: what it is doing while it runs, else its detail. */
@@ -145,7 +154,7 @@ function RunGroup({ group, statuses, live }: { group: RowGroup; statuses: RowSta
 }
 
 /** Every ticked row and where it is; a question under the row asking it, or above the list. */
-export function UpdatesRunView({ rows, statuses, progress, onTyped }: RunViewProps): React.ReactElement {
+export function UpdatesRunView({ rows, statuses, progress, onTyped, remaining }: RunViewProps): React.ReactElement {
     const running = progress?.state !== 'failed' && progress?.state !== 'succeeded';
     const question = running ? progress?.prompt : undefined;
     const rowRunning = rows.some((r) => statuses[r.id]?.state === 'running');
@@ -154,6 +163,9 @@ export function UpdatesRunView({ rows, statuses, progress, onTyped }: RunViewPro
     return (
         <div className="updates-group-list">
             {progress?.state === 'failed' && <p className="updates-run-why">{progress.error}</p>}
+            {progress?.state === 'succeeded' && remaining > 0 && (
+                <p className="updates-run-note">{waitingLine(remaining)}</p>
+            )}
             {question && !rowRunning && <RunQuestion prompt={question} onTyped={onTyped} />}
             {groupsOf(rows).map((group) => (
                 <RunGroup key={group.key} group={group} statuses={statuses} live={live} />

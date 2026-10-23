@@ -1,14 +1,16 @@
 /**
- * The agent's doors for "Save as demo package" (step 09): the dashboard
- * dialog's three messages, on the same handlers, minus the dialog.
+ * The agent's doors for the dashboard's Share dialog (step 09; one dialog since
+ * 2026-10-22): its link form's three messages and its file form, on the same
+ * handlers, minus the dialog.
  *
  * - `get_demo_package_preview` — what the card would carry, the checks a
  *   project built from it will need, whether it is already on the SC's list,
  *   and the link. A read.
  * - `save_demo_package` — write the description file into the SC's own
- *   storefront repository, put the card on their Welcome step, mark the
- *   repository a template when asked, and answer the link. A write into the
- *   SC's GitHub, so `confirm:true`; the refusal says what it would write and where.
+ *   storefront repository, put the card on their Welcome step (unless
+ *   `addToWelcome:false`, the dialog's unticked box), and answer the link. A
+ *   write into the SC's GitHub, so `confirm:true`; the refusal says what it
+ *   would write and where.
  * - `remove_demo_package` — take back what save_demo_package did. Destructive
  *   for colleagues holding the link, so `confirm:true` and the consent dialog.
  * - `export_demo_bundle` — Export's "Send a file": one bundle of the ticked parts
@@ -38,6 +40,7 @@ import type {
 
 const HINT =
     'The card is on your Welcome step; create_project takes its id (list_demo_packages shows it). A colleague pastes the link into "Add a demo package", or hands it to add_shared_demo.';
+const HINT_NO_CARD = 'A colleague pastes the link into "Add a demo package", or hands it to add_shared_demo.';
 
 /**
  * Register the demo-package tools on `server`.
@@ -71,14 +74,18 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                "Save the open project's storefront as a demo package: write its description file (demo.demo-builder.json) into your own storefront repository and put the card on your Welcome step, so you and colleagues (from the link) can build new projects on it. Never overwrites a file it did not write. Requires confirm:true; remove_demo_package undoes it.",
+                "Share the open project's storefront by link (the dashboard's Share dialog): write its description file (demo.demo-builder.json) into your own storefront repository and put the card on your Welcome step, so you and colleagues (from the link) can build new projects on it. addToWelcome:false writes the file only and keeps the card off your Welcome step. Never overwrites a file it did not write. Requires confirm:true; remove_demo_package undoes it.",
             inputSchema: {
                 name: z.string().optional().describe('The name on the card; defaults to the brand or demo the project was built on'),
                 description: z.string().optional().describe('One or two sentences about the demo'),
+                addToWelcome: z
+                    .boolean()
+                    .optional()
+                    .describe('Put the card on your Welcome step (default true); false keeps it off, or takes it off'),
                 confirm: z.boolean().optional().describe('Must be true — a file is written into your repository'),
             },
         },
-        async (args: { name?: string; description?: string; confirm?: boolean }) => {
+        async (args: { name?: string; description?: string; addToWelcome?: boolean; confirm?: boolean }) => {
             const ctx = ctxFactory();
             const github = await requireGitHub(ctx);
             if (github) return asText(github);
@@ -88,10 +95,12 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
             const { draft, link, checks, saved, onList } = preview.data as DemoPackagePreview;
             const name = args.name?.trim() || draft.name;
             const description = args.description?.trim() || draft.description;
+            const addToWelcome = args.addToWelcome !== false;
+            const card = addToWelcome ? 'put the card on your Welcome step' : 'leave it off your Welcome step';
             if (args.confirm !== true) {
                 return asText({
                     error:
-                        `save_demo_package would write demo.demo-builder.json named "${name}" into ${link} and put the card on your Welcome step. ` +
+                        `save_demo_package would write demo.demo-builder.json named "${name}" into ${link} and ${card}. ` +
                         'Call again with confirm:true to do it.',
                     name,
                     description,
@@ -100,10 +109,10 @@ export function registerDemoPackageTools(server: McpToolServer, ctxFactory: () =
                     alreadyOnList: onList,
                 });
             }
-            const result = await handleSaveDemoPackage(ctx, { name, description });
+            const result = await handleSaveDemoPackage(ctx, { name, description, addToWelcome });
             if (!result.success || !result.data) return asText({ error: result.error });
             const data = result.data as SaveDemoPackageResult;
-            return asText({ ...data, hint: HINT });
+            return asText({ ...data, hint: data.onList ? HINT : HINT_NO_CARD });
         },
     );
 

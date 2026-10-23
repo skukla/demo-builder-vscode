@@ -16,16 +16,50 @@ import type { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { catalogMenuSiteFor } from '@/features/ai/server/storefrontPages';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
+import { authoredSheetRefresh } from '@/features/eds/services/catalogMenu/authoredSheetRefresh';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { writeBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
+import { recordStorefrontBuilt } from '@/features/eds/services/storefront/storefrontChanges';
 import { readRepoBoilerplate } from '@/features/eds/services/storefront/storefrontOrigin';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
+
+/**
+ * The import path's hook before its bulk publish: refresh a live authored-pages sheet
+ * (EDS-61, `authoredSheetRefresh.ts`), so a site whose published sheet is still live gets
+ * it current before every page is previewed. Nothing without a project or a storefront.
+ */
+function authoredSheetHookFor(
+    context: HandlerContext,
+    project: import('@/types/base').Project | undefined,
+): { beforeContentPublish?: () => Promise<void> } {
+    const site = project ? catalogMenuSiteFor(context, project) : null;
+    return project && site
+        ? { beforeContentPublish: authoredSheetRefresh(project, site, context.logger, '[EDS Content]') }
+        : {};
+}
+
+/**
+ * What the wizard's storefront setup found, recorded on the project it made. Each only when
+ * setup reported it: an edit runs no setup, and must not wipe the record.
+ */
+function recordWhatSetupFound(
+    project: import('@/types/base').Project,
+    edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
+): void {
+    // Links to pages the source lacks too, for the Storefront Report.
+    if (edsConfig.brokenLinks?.length) writeBrokenLinks(project, edsConfig.brokenLinks);
+    // Built the way Demo Builder builds storefronts now: the "Needs reset" status reads it.
+    if (typeof edsConfig.storefrontBuildComplete === 'boolean') {
+        recordStorefrontBuilt(project, edsConfig.storefrontBuildComplete);
+    }
+}
 
 /**
  * Populate EDS-specific metadata on the component instance after cloning.
@@ -119,12 +153,7 @@ export async function populateEdsMetadata(
         ...(lkgSource ? { lkgSource } : {}),
         ...(boilerplate ? { boilerplate } : {}),
     };
-    // What the wizard's storefront setup found while copying the content: links
-    // to pages the source lacks too, for the Storefront Report. Only when setup
-    // reported some: an edit copies nothing, and must not wipe the record.
-    if (typedConfig.edsConfig.brokenLinks?.length) {
-        writeBrokenLinks(project, typedConfig.edsConfig.brokenLinks);
-    }
+    recordWhatSetupFound(project, typedConfig.edsConfig);
     await context.stateManager.saveProject(project);
     context.logger.debug(
         `[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`,
@@ -307,6 +336,7 @@ export async function setupEdsContent(
                 onBrokenLinks: (links) => {
                     if (project) writeBrokenLinks(project, links);
                 },
+                ...authoredSheetHookFor(context, project),
             },
             // Reset's steps for the same work; they have no place in creation's own
             // count, because they run only when the storefront has no content yet.

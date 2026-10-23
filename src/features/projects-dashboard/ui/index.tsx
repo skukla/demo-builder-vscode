@@ -17,6 +17,7 @@ import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { COPY_SETTINGS_OPERATION_ID, deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
 import type {
@@ -251,9 +252,9 @@ function ProjectsDashboardApp() {
                     id: deleteOperationId(project.name),
                     name: project.name,
                     message: 'deleteProject',
-                    title: `Deleting ${project.name}`,
-                    failureTitle: `Couldn't delete ${project.name}`,
-                    successTitle: `${project.name} deleted`,
+                    title: `Deleting ${getProjectDisplayName(project)}`,
+                    failureTitle: `Couldn't delete ${getProjectDisplayName(project)}`,
+                    successTitle: `${getProjectDisplayName(project)} deleted`,
                     payload: { projectPath: project.path },
                 },
                 () => fetchProjects(true),
@@ -345,9 +346,9 @@ function ProjectsDashboardApp() {
                 id: resetOperationId(project.name),
                 name: project.name,
                 message: 'resetProject',
-                title: `Resetting ${project.name}`,
-                failureTitle: `Couldn't reset ${project.name}`,
-                successTitle: `${project.name} reset`,
+                title: `Resetting ${getProjectDisplayName(project)}`,
+                failureTitle: `Couldn't reset ${getProjectDisplayName(project)}`,
+                successTitle: `${getProjectDisplayName(project)} reset`,
                 // The list must reflect what the reset changed; the modal closes
                 // on success, so the refresh rides the same moment.
                 payload: { projectPath: project.path },

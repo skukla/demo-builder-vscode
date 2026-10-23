@@ -59,7 +59,7 @@ export interface AgentAlertCopy {
      * attention and none of them can be checked.
      *
      * An EMPTY array means the tool acts on the current project and takes no
-     * argument naming it — `republish`, `sync_content`, `reset_project`.
+     * argument naming it — `republish`, `reset_project`.
      * The dialog names the open project instead, so the reader is never asked
      * to approve an unnamed target.
      *
@@ -208,16 +208,6 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         action: 'Publish a page',
         consequence: "Puts the page's current DA.live content on the live storefront; visitors see it at once.",
         target: ['path'],
-        sessionGrant: false,
-    },
-    add_category_pages: {
-        action: 'Add pages for new categories',
-        consequence:
-            'Writes and publishes a page for each Commerce category that has none; visitors can open them at once. No existing page is changed.',
-        // Acts on the open project's storefront; the pages are named in the agent's
-        // own refusal, not in an argument.
-        target: [],
-        // New pages reach visitors, and running it again does not take them back.
         sessionGrant: false,
     },
     forget_added_demo: {
@@ -426,19 +416,12 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // The second sentence is EDS-44: after a store change the same call replaces the
         // old store's product and category pages, which the consent has to say.
         consequence:
-            'Pushes the current configuration live. Visitors see the change within minutes. ' +
-            "If the store changed, its product and category pages are replaced with the new store's.",
+            'Pushes the settings, code and every page live, as the Republish button does. Visitors ' +
+            "see it within minutes. If the store changed, its product and category pages are replaced " +
+            "with the new store's.",
         target: [],
         // Repeatable and recoverable, and it fires several times in one flow -
         // the case a grant exists for.
-        sessionGrant: true,
-    },
-    sync_content: {
-        action: 'Publish all storefront content',
-        consequence:
-            'Pushes every page, asset and config change to the live site. Visitors see it within minutes.',
-        target: [],
-        // Same as republish: run it again and the previous state returns.
         sessionGrant: true,
     },
     start_datapack_import: {

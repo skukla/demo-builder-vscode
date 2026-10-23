@@ -89,7 +89,9 @@ export function StorefrontZone({
                             ? {
                                   variant: 'info',
                                   tooltip: brokenLinksTooltip(brokenLinkCount),
-                                  label: 'Broken links',
+                                  // A dot without a word, as the Reset tile's "Needs reset": the
+                                  // word beside this tile's long name wrapped it onto two lines
+                                  // (owner, 2026-10-23). The tooltip says what the dot means.
                                   testId: 'storefront-report-dot',
                               }
                             : undefined

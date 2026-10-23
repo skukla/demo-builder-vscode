@@ -73,7 +73,10 @@ export async function ensureDaLiveAuth(
     // (owner, 2026-09-20). With no modal up, it is the notification it always was,
     // and its answer opens the input-box flow below.
     if (!modalIsAsking()) {
-        const selection = await askDuringOperation(`${expiry} Please sign in to continue.`, 'Sign In');
+        const selection = await askDuringOperation(
+            { title: 'Sign in to DA.live', message: `${expiry} Sign in to keep going.` },
+            'Sign In',
+        );
         if (selection !== 'Sign In') {
             return { authenticated: false, cancelled: true };
         }

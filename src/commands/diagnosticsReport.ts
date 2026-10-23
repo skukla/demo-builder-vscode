@@ -318,17 +318,12 @@ function storefrontLines(probe: StorefrontProbeResult, scope?: StorefrontScopeRe
     return lines;
 }
 
-/**
- * The storefront report as a Diagnostics section: its own lines under its own
- * headings (one computation, decision 8), then each fix by id, which a ticket
- * needs and an SC-facing surface never shows.
- */
+/** The storefront report as a Diagnostics section: its own lines under its own headings (one computation, decision 8). */
 function storefrontOriginLines(report: StorefrontReport): string[] {
     const body = storefrontReportLines(report).map((line) =>
         line.startsWith('## ') ? `  ${line.slice(3)}` : `    ${line}`,
     );
-    const ids = report.fixes.map((fix) => `    ${fix.patchId}: ${fix.state}`);
-    return ['', "Storefront origin and Demo Builder's fixes:", ...body, ...ids];
+    return ['', 'Storefront origin:', ...body];
 }
 
 /**

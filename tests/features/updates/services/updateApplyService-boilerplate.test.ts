@@ -66,6 +66,18 @@ describe('Adobe boilerplate', () => {
         expect(res.totalApplied).toBe(1);
     });
 
+    it("tells the person and the agent what the update put back (the template's page labels)", async () => {
+        const note = "Fixed the checkout page's labels.";
+        mockSyncBoilerplate.mockResolvedValue({ success: true, strategy: 'merge', syncedCommit: TESTED, notes: [note] });
+
+        const res = await applyUpdatesHeadless(
+            { ...emptySelections(), boilerplate: [{ project: storefront(), base: BASE, tested: TESTED }] },
+            makeCtx(),
+        );
+
+        expect(res.boilerplate).toEqual({ successCount: 1, failCount: 0, errors: [], applied: [note] });
+    });
+
     it('reports a stop as a failure, keeps the old base, and never resets', async () => {
         mockSyncBoilerplate.mockResolvedValue({
             success: false,

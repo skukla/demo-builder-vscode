@@ -11,6 +11,7 @@
  */
 
 import { withBrowserSignInNotice } from './browserSignInNotice';
+import { signInWasCancelled } from './signInSession';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
@@ -89,7 +90,7 @@ async function promptAndSignIn(
     logger.info(`${logPrefix} awaiting the sign-in prompt in the VS Code window`);
     let timedOut = false;
     const selection = await Promise.race([
-        askDuringOperation(warningMessage, 'Sign In', 'Cancel'),
+        askDuringOperation({ title: 'Sign in to Adobe', message: warningMessage }, 'Sign In', 'Cancel'),
         new Promise<undefined>((resolve) =>
             setTimeout(() => {
                 timedOut = true;
@@ -105,13 +106,13 @@ async function promptAndSignIn(
     }
 
     logger.info(`${logPrefix} Starting Adobe sign-in`);
-    // Signing in opens a browser window; surface progress so the click has visible effect.
+    // Signing in happens in the browser; say so where the SC is looking, with a Cancel.
     const loginSuccess = await withBrowserSignInNotice(() =>
         authManager.loginAndRestoreProjectContext(projectContext),
     );
 
     if (!loginSuccess || !(await authManager.isAuthenticated())) {
-        return { authenticated: false };
+        return signInWasCancelled() ? { authenticated: false, cancelled: true } : { authenticated: false };
     }
 
     logger.info(`${logPrefix} Adobe sign-in successful`);

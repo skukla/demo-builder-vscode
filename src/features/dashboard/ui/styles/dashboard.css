@@ -501,4 +501,43 @@
 .control-panel-single {
     padding: var(--spectrum-global-dimension-size-400);
 }
+
+    /* The storefront report's window (EDS-64): attention rows, then "About this storefront"
+       as label and sentence, then the detail folded under "Details". */
+    .storefront-report {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .storefront-report-links {
+        margin: 6px 0 0;
+        padding-left: 18px;
+    }
+
+    .storefront-report-about {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 6px 16px;
+        margin: 0;
+    }
+
+    .storefront-report-about dt {
+        color: var(--spectrum-global-color-gray-700);
+    }
+
+    .storefront-report-about dd {
+        margin: 0;
+    }
+
+    .storefront-report-details summary {
+        cursor: pointer;
+        color: var(--spectrum-global-color-blue-600);
+    }
+
+    .storefront-report-detail {
+        display: block;
+        margin-top: 4px;
+        color: var(--spectrum-global-color-gray-700);
+    }
 }

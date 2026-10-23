@@ -9,6 +9,8 @@
  * @module features/eds/services/reset/edsResetContentStep
  */
 
+import { authoredSheetRefresh } from '../catalogMenu/authoredSheetRefresh';
+import { createCatalogMenuSite } from '../catalogMenu/catalogMenuSiteDeps';
 import { withDaLiveAuthRetry } from '../daLive/daLiveAuthRetry';
 import type { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
@@ -91,6 +93,23 @@ export async function runContentPipeline(
 
     // tokenProvider required: DA.live content operations (copy, publish) need IMS token
     const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
+    // The take-out removed the authored-pages sheet before this; when that failed, the old
+    // one is still live during the bulk publish, so it is refreshed first (EDS-61).
+    const beforeContentPublish = authoredSheetRefresh(
+        project,
+        createCatalogMenuSite({
+            project,
+            target: params,
+            daLive: daLiveContentOps.sourceOps,
+            helix: helixService,
+            github: githubFileOps,
+            stateManager: context.stateManager,
+            logger: context.logger,
+            overlay: byomOverlayUrl !== undefined,
+        }),
+        context.logger,
+        '[EdsReset]',
+    );
     // The SHARED recovery, not a third hand-rolled copy. Reset, storefront setup
     // and (until 2026-08-16) nothing else each had their own loop; they must agree
     // on when a refusal is retryable, and a divergence there is invisible until a
@@ -125,6 +144,7 @@ export async function runContentPipeline(
                     skipPublish: false,
                     byomOverlayUrl,
                     project,
+                    beforeContentPublish,
                 },
                 { daLiveContentOps, githubFileOps, helixService, logger: context.logger },
                 (info) => mapPipelineProgress(info, report),

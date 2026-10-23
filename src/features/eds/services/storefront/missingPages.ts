@@ -27,7 +27,7 @@
  * @module features/eds/services/storefront/missingPages
  */
 
-import { EXCLUDED_FOLDERS } from '../helix/helixPageDiscovery';
+import { EXCLUDED_FOLDERS, EXCLUDED_NAMES } from '../helix/helixPageDiscovery';
 import { contentSiteBaseUrl, probePaths } from '../sitePathProbe';
 import { aemLiveBaseUrl } from './storefrontProbe';
 import type { Logger } from '@/types/logger';
@@ -77,7 +77,8 @@ export interface ExpectedPaths {
  * (`/placeholders/cart.json`), and every other document by its path (`/cart`).
  * Configuration under a dot folder (`/.da/...`) and files with an extension (an
  * image, a PDF) are not documents a storefront serves at that path, and are left out.
- * So are pages in a folder the publish never publishes (`EXCLUDED_FOLDERS`).
+ * So are pages the publish never publishes: in such a folder (`EXCLUDED_FOLDERS`), or
+ * with such a name (`EXCLUDED_NAMES`), as `leftoverPages` already reads them.
  *
  * @param copiedFiles - the copy's `copiedFiles`, content paths
  * @param sheetPaths - the copy's `sheetPaths`, already web paths
@@ -94,6 +95,10 @@ export function carriedWebPaths(copiedFiles: readonly string[], sheetPaths: read
         // A folder the publish skips on purpose (`experiments`, owner 2026-10-12) is
         // not missing when it is not on the site; it was never meant to be.
         if (segments.slice(0, -1).some((folder) => EXCLUDED_FOLDERS.includes(folder))) continue;
+        // So is a page the publish skips by name. Khalil's JustRite source has empty
+        // `/metadata` and `/redirects` documents, and every reset of a copy of it said
+        // they were "missing" (2026-10-23).
+        if (EXCLUDED_NAMES.includes(name)) continue;
         carried.add(path);
     }
     return [...carried];

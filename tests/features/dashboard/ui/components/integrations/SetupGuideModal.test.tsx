@@ -231,6 +231,39 @@ describe('SetupGuideModal', () => {
         expect(checkCalls()).toHaveLength(0);
     });
 
+    // Live release test, 2026-10-22: the guide opened with every step unchecked and offered
+    // Apply on steps the store already had, until the SC pressed Check all steps.
+    it('checks every step never checked as it opens, one at a time, and leaves the checked ones', async () => {
+        const items = [
+            step({ id: 'a', title: 'Step A', checkable: true, checkState: 'unchecked' }),
+            step({ id: 'b', title: 'Step B', checkable: true, checkState: 'passed', lastCheck: 'passed', state: 'done' }),
+            step({ id: 'c', title: 'Step C', checkable: true, checkState: 'unchecked' }),
+            step({ id: 'd', title: 'Step D', checkable: true, checkState: 'unchecked', state: 'dismissed' }),
+            step({ id: 'e', title: 'Step E', checkState: 'unchecked' }),
+        ];
+        const pending: Array<(answer: unknown) => void> = [];
+        answerChecks(() => new Promise((resolve) => pending.push(resolve)));
+        await renderGuide(items);
+        expect(checkCalls().map(([, payload]) => payload)).toStrictEqual([{ id: 'erp-integration', stepId: 'a' }]);
+        expect(screen.getByRole('tab', { name: /Step A/ })).toHaveAttribute('aria-busy', 'true');
+        await act(async () => pending[0]({ success: true, data: { items } }));
+        await act(async () => pending[1]({ success: true, data: { items } }));
+        expect(checkCalls().map(([, payload]) => (payload as { stepId: string }).stepId)).toStrictEqual(['a', 'c']);
+    });
+
+    it('checks on open once, not again when the pushed-back model redraws it', async () => {
+        const items = [step({ id: 'a', title: 'Step A', checkable: true, checkState: 'unchecked' })];
+        const { rerender } = await renderGuide(items);
+        rerender(<SetupGuideModal model={model([...items])} onClose={jest.fn()} onOpenAdmin={jest.fn()} />);
+        await act(async () => {});
+        expect(checkCalls()).toHaveLength(1);
+    });
+
+    it('checks nothing on open when every step has a saved check', async () => {
+        await renderGuide([step({ id: 'a', title: 'Step A', checkable: true, checkState: 'failed', lastCheck: 'failed' })]);
+        expect(checkCalls()).toHaveLength(0);
+    });
+
     it('says Connecting to Commerce while a run waits on that sign-in', async () => {
         let signedIn: (answer: unknown) => void = () => undefined;
         mockRequest.mockImplementation((type: string) =>
@@ -283,19 +316,36 @@ describe('SetupGuideModal', () => {
         });
     });
 
-    it('reopens a step that is done, and offers only Open Commerce Admin beside Close', async () => {
+    it('marks a done step as not done, and offers only Open Commerce Admin beside Close', async () => {
         await renderGuide();
         fireEvent.click(screen.getByRole('tab', { name: 'A' }));
         expect(screen.queryByRole('button', { name: 'Mark as done' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Open Commerce Admin' })).toBeInTheDocument();
         await act(async () => {
-            fireEvent.click(screen.getByRole('link', { name: 'Reopen' }));
+            fireEvent.click(screen.getByRole('link', { name: 'Mark as not done' }));
         });
         expect(mockRequest).toHaveBeenCalledWith('setSetupStep', {
             id: 'erp-integration',
             stepId: 'a',
             state: 'open',
         });
+    });
+
+    it('a skipped step offers Undo skip, which reopens it', async () => {
+        await renderGuide([step({ id: 'a', title: 'Step A', state: 'dismissed' })]);
+        await act(async () => {
+            fireEvent.click(within(shown()).getByRole('link', { name: 'Undo skip' }));
+        });
+        expect(mockRequest).toHaveBeenCalledWith('setSetupStep', { id: 'erp-integration', stepId: 'a', state: 'open' });
+    });
+
+    it('a step the check found set up has no link to take it back: the next check would redo it', async () => {
+        await renderGuide([
+            step({ id: 'a', title: 'Step A', checkable: true, state: 'done', note: 'Set.', lastCheck: 'passed' }),
+        ]);
+        // Positive control: the step and its result rendered.
+        expect(within(shown()).getByTestId('setup-guide-check-result')).toBeInTheDocument();
+        expect(within(shown()).queryByRole('link')).not.toBeInTheDocument();
     });
 
     it('offers Check all steps in place of Mark as done on a step Demo Builder can check', async () => {

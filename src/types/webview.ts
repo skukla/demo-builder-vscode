@@ -559,6 +559,8 @@ export interface EDSConfig {
     brokenLinks?: import('./webviewPayloads').StorefrontBrokenLink[];
     /** The block libraries preflight installed; creation records them on the project. */
     installedBlockLibraries?: import('./blockLibraries').InstalledBlockLibrary[];
+    /** Whether preflight's build step left all of Demo Builder's fixes; creation stamps it. */
+    storefrontBuildComplete?: boolean;
     // Note: previewUrl and liveUrl are NOT stored - they are derived from githubRepo
     // by getEdsPreviewUrl() and getEdsLiveUrl() in typeGuards.ts
     /** Whether to skip content copy (e.g., when using existing content) */

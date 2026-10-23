@@ -11,6 +11,7 @@
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
 import type { FoundUpdates } from '@/features/updates/services/allUpdates';
 import { emptyResult, type ApplyUpdatesResult } from '@/features/updates/services/updateApplyResult';
+import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { MessageHandler } from '@/types/handlers';
 import type { ApplyUpdatesRequest, PendingUpdateRow } from '@/types/pendingUpdates';
@@ -27,6 +28,12 @@ jest.mock('@/features/updates/services/extensionUpdater', () => ({
 }));
 jest.mock('@/features/dashboard/handlers/integrationUpdateHandlers', () => ({
     updateIntegrationPairFor: jest.fn(),
+    integrationUpdateProbe: jest.fn(() => jest.fn()),
+}));
+// The check run once the apply ends, to say what the SC left unticked that still waits.
+const mockFindAllUpdates = jest.fn();
+jest.mock('@/features/updates/services/allUpdates', () => ({
+    findAllUpdates: (...args: unknown[]) => mockFindAllUpdates(...args),
 }));
 jest.mock('@/core/di/serviceLocator', () => ({ ServiceLocator: { getCommandExecutor: jest.fn(() => ({})) } }));
 // The handler loads in its own module sandbox (handlers() below), with its own vscode; the
@@ -113,6 +120,9 @@ const apply = (h: Handlers): MessageHandler<ApplyUpdatesRequest> => h.handleAppl
 beforeEach(() => {
     jest.clearAllMocks();
     mockApplyUpdatesHeadless.mockResolvedValue(applied());
+    mockFindAllUpdates.mockReset();
+    mockExecuteCommand.mockReset();
+    mockFindAllUpdates.mockResolvedValue(found({ selections: { ...selections(), template: [], blockLibrary: [] }, count: 0 }));
 });
 
 describe('presentUpdates', () => {
@@ -149,6 +159,24 @@ describe('applyUpdates', () => {
         const answer = await apply(h)(ctx, modal(pick(rows)));
         return { answer, ctx, h };
     }
+
+    // The run saves every project it updates; the SC must not be left on the last one.
+    it('saves the projects it updates without making any of them the open one', async () => {
+        const updated = createMockProject({ name: 'bodea', path: '/p/bodea' });
+        mockApplyUpdatesHeadless.mockImplementation(async (_sel: UpdateSelections, runCtx: UpdateContext) => {
+            await runCtx.stateManager.saveProject(updated);
+            return applied();
+        });
+        const h = handlers();
+        const ctx = createMockHandlerContext();
+        (ctx.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ name: 'justrite', path: '/p/justrite' }));
+        const rows = h.presentUpdates(found());
+
+        await apply(h)(ctx, modal(rows.map((r) => r.id)));
+
+        expect(ctx.stateManager.saveProjectConfigOnly).toHaveBeenCalledWith(updated);
+        expect(ctx.stateManager.saveProject).not.toHaveBeenCalled();
+    });
 
     it('applies exactly the ticked rows through the shared apply, with the questions asked in the modal', async () => {
         const { answer } = await presentedThenApply((rows) =>
@@ -335,5 +363,112 @@ describe('applyUpdates', () => {
         expect(again).toEqual(outOfDate);
         expect(mockApplyUpdatesHeadless).toHaveBeenCalledTimes(1);
         expect(h.presentedRows()).toStrictEqual([]);
+    });
+});
+
+// Owner, 2026-10-22: after applying only some of the list, the SC can go back to the
+// rest. The run's answer says how many rows the SC left unticked are still waiting, by
+// a fresh check: the run has just changed storefronts, so the list it started from is stale.
+describe('applyUpdates: what the SC left unticked', () => {
+    const otherOrgPair = {
+        project: justrite,
+        componentId: 'erp-integration',
+        members: ['erp-integration'],
+        label: 'ERP Integration and Justrite ERP',
+        otherOrg: true,
+    };
+
+    async function applyOnly(pick: (rows: PendingUpdateRow[]) => string[], check = found()) {
+        const h = handlers();
+        const ctx = createMockHandlerContext();
+        const rows = h.presentUpdates(check);
+        return { answer: await apply(h)(ctx, modal(pick(rows))), ctx };
+    }
+    const bodeaOnly = (rows: PendingUpdateRow[]) => rows.filter((r) => r.group.key === '/p/bodea').map((r) => r.id);
+
+    it('counts an unticked row the fresh check still finds', async () => {
+        mockFindAllUpdates.mockResolvedValue(found());
+
+        const { answer } = await applyOnly(bodeaOnly);
+
+        expect(mockFindAllUpdates).toHaveBeenCalledTimes(1);
+        expect(answer).toEqual({ success: true, remaining: 1 });
+    });
+
+    it('does not count an unticked row the fresh check no longer finds', async () => {
+        const gone = { ...selections(), blockLibrary: selections().blockLibrary.filter((b) => b.project === bodea) };
+        mockFindAllUpdates.mockResolvedValue(found({ selections: gone }));
+
+        const { answer } = await applyOnly(bodeaOnly);
+
+        expect(answer).toEqual({ success: true });
+    });
+
+    // A failed row already says so on its own row; it is not "still waiting".
+    it('does not count a ticked row that did not apply, even when the fresh check finds it again', async () => {
+        mockApplyUpdatesHeadless.mockImplementation(async (sel: UpdateSelections, _ctx, _report, options) => {
+            options.onItem('template', sel.template[0], { state: 'failed', message: 'bodea: merge conflicts' });
+            return applied({ totalApplied: 1 });
+        });
+        mockFindAllUpdates.mockResolvedValue(found());
+
+        const { answer } = await applyOnly(bodeaOnly);
+
+        expect(answer).toEqual({ success: true, warning: '1 update did not apply.', remaining: 1 });
+    });
+
+    it('checks nothing when no row was left unticked', async () => {
+        const { answer } = await applyOnly((rows) => rows.map((r) => r.id));
+
+        expect(mockFindAllUpdates).not.toHaveBeenCalled();
+        expect(answer).toEqual({ success: true });
+    });
+
+    // A row locked in another org cannot be applied from here, so going back to it helps nobody.
+    it('never counts a locked row, and checks nothing when only locked rows were left', async () => {
+        const check = found({ selections: { ...selections(), integration: [otherOrgPair] } });
+        mockFindAllUpdates.mockResolvedValue(check);
+
+        const { answer } = await applyOnly((rows) => rows.filter((r) => !r.lockedReason).map((r) => r.id), check);
+
+        expect(mockFindAllUpdates).not.toHaveBeenCalled();
+        expect(answer).toEqual({ success: true });
+    });
+
+    it('still ends the run when the fresh check fails, saying nothing is waiting', async () => {
+        mockFindAllUpdates.mockRejectedValue(new Error('GitHub could not be reached'));
+
+        const { answer } = await applyOnly(bodeaOnly);
+
+        expect(answer).toEqual({ success: true });
+    });
+});
+
+// "Back to updates": the same check the window opens on, the Check for Updates command,
+// which tells "up to date" itself when nothing waits (owner, 2026-10-20: the notification
+// is the check).
+describe('recheckUpdates', () => {
+    it('runs Check for Updates and answers the rows it presented', async () => {
+        const h = handlers();
+        mockExecuteCommand.mockImplementation(async (command: string) => {
+            if (command === 'demoBuilder.checkForUpdates') h.presentUpdates(found());
+        });
+
+        const answer = await h.handleRecheckUpdates(createMockHandlerContext(), undefined);
+
+        expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.checkForUpdates');
+        expect(answer).toEqual({ success: true, data: { rows: h.presentedRows() } });
+        expect(answer.data.rows).toHaveLength(3);
+    });
+
+    it('answers no rows when the check found nothing, never the list the run applied', async () => {
+        const h = handlers();
+        h.presentUpdates(found());
+        await apply(h)(createMockHandlerContext(), modal(['template:0']));
+        mockExecuteCommand.mockResolvedValue(undefined);
+
+        const answer = await h.handleRecheckUpdates(createMockHandlerContext(), undefined);
+
+        expect(answer).toEqual({ success: true, data: { rows: [] } });
     });
 });

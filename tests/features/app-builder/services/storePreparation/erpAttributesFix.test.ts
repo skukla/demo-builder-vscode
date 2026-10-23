@@ -56,7 +56,8 @@ describe('apply', () => {
         ]);
         expect(textAttributeBody('brand').attribute).toMatchObject({ attribute_code: 'brand', frontend_input: 'text', is_user_defined: true });
         expect(applied).toEqual({
-            changes: ['Create the brand product attribute as a Text Field', 'Add erp_owner to the attribute set Default (1 products)'],
+            // Said as done: the result screen lists these after the run (2026-10-22).
+            changes: ['Created the brand product attribute as a Text Field', 'Added erp_owner to the attribute set Default (1 products)'],
             rejected: [],
             record: { kind: 'erp-attributes', createdAttributes: ['brand'], sets: [{ id: 4, name: 'Default' }] },
         });

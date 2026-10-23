@@ -151,7 +151,8 @@ function refName(ref: RepositoryRef): string {
     return `${ref.owner}/${ref.repo}`;
 }
 
-function storefrontMetadata(project: Project): Record<string, unknown> | undefined {
+/** The storefront's recorded metadata, when the project has a storefront. */
+export function storefrontMetadata(project: Project): Record<string, unknown> | undefined {
     return project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata as Record<string, unknown> | undefined;
 }
 

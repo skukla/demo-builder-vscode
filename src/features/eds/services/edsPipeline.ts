@@ -129,6 +129,15 @@ export interface EdsPipelineParams {
     skipPublish?: boolean;
 
     /**
+     * Runs after the content copy and right before the bulk content publish, when there is
+     * one. Storefront setup publishes the authored-pages sheet here (EDS-61): the bulk
+     * publish previews every DA.live page, and the overlay would replace an authored page
+     * at a category address the published sheet does not list. Never fatal: a hook that
+     * throws is logged and the publish goes on.
+     */
+    beforeContentPublish?: () => Promise<void>;
+
+    /**
      * BYOM overlay URL stamped onto the storefront's Configuration Service
      * registration. When set AND `skipPublish` is false, the pipeline also
      * publishes a smart `/404.html` page that handles PDP routing.
@@ -778,6 +787,15 @@ const PIPELINE_STEPS: PipelineStep[] = [
         when: ({ params }) => !params.skipPublish,
         skipLog: 'Skipping content publish (skipPublish=true)',
         run: async ({ params, services, ctx, onProgress }) => {
+            if (params.beforeContentPublish) {
+                try {
+                    await params.beforeContentPublish();
+                } catch (error) {
+                    services.logger.warn(
+                        `[EdsPipeline] Before the content publish: ${error instanceof Error ? error.message : String(error)}`,
+                    );
+                }
+            }
             ctx.republishedPages = await pipelinePublishContent(
                 services.helixService,
                 params.repoOwner,

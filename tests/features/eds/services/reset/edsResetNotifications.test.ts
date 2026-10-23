@@ -155,6 +155,21 @@ describe('reset notifications — success', () => {
         );
     });
 
+    it('warns first that the code is not published, when the reset could not publish it', async () => {
+        const codeNotPublished = 'The storefront code could not be published.';
+        await run({
+            success: true,
+            codeNotPublished,
+            errorType: 'CONFIG_WRITE_FAILED',
+            error: 'PDP routing is off.',
+        });
+
+        const shown = (vscode.window.showWarningMessage as jest.Mock).mock.calls.map(
+            ([message]) => message
+        );
+        expect(shown.slice(-2)).toEqual([codeNotPublished, 'PDP routing is off.']);
+    });
+
     it('warns that Commerce features need a manual mesh redeploy when that step failed', async () => {
         await run({
             success: true,
@@ -272,31 +287,22 @@ describe('reset notifications — failure', () => {
     });
 });
 
-// Found by the first mutation run of edsResetNotifications on its own (EDS-8,
-// 2026-10-08). The way to the storefront report is pinned in
-// edsResetUI-addedDemo.test.ts; what it does when NOT taken was not.
-describe('reset notifications — an added demo', () => {
-    const CAVEAT = 'Product links may not work.';
-    const MESSAGE = `A few things to know about this demo: ${CAVEAT}`;
+// The page steps' sentences (2026-10-23): "13 category pages couldn't be published"
+// reached only the Debug Logs. A step that left something undone is a warning.
+describe('reset notifications — the page steps', () => {
+    const UNDONE = "13 category pages couldn't be published; republish the storefront to try again.";
 
-    it('opens nothing when the storefront report offer is dismissed', async () => {
-        (vscode.window.showWarningMessage as jest.Mock)
-            .mockResolvedValueOnce(RESET)
-            .mockResolvedValueOnce(undefined);
+    it('warns with a page step that left pages undone', async () => {
+        await run({ success: true, catalogMenu: UNDONE, pageWarnings: [UNDONE] });
 
-        await run({ success: true, demoCaveats: [CAVEAT], demoFixes: { offered: ['pdp-fix'] } });
-        await flush();
-
-        expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(
-            MESSAGE,
-            'See the storefront report'
-        );
-        expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(UNDONE);
     });
 
-    it('offers no report when the fix pass applied fixes but offered none', async () => {
-        await run({ success: true, demoCaveats: [CAVEAT], demoFixes: { applied: ['pdp-fix'] } });
+    it('raises nothing for a page step that did all it set out to: a notification has no room for notes', async () => {
+        await run({ success: true, productPages: 'Removed 49 product pages.' });
 
-        expect(vscode.window.showWarningMessage).toHaveBeenLastCalledWith(MESSAGE);
+        // The confirmation prompt is the only warning shown.
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
     });
 });

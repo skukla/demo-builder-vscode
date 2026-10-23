@@ -118,14 +118,14 @@ export async function redeployApiMesh(
         logger: context.logger,
         logPrefix: '[EdsReset]',
         warningMessage:
-            'Your Adobe I/O session has expired. Please sign in to continue the mesh redeployment.',
+            'Your Adobe sign-in has expired. Sign in to redeploy the API Mesh.',
     });
 
     if (!preflight.ready) {
         const reason =
             preflight.blockedBy === 'org'
                 ? "the project's Adobe organization is not the one you're signed into"
-                : 'Adobe I/O authentication required';
+                : 'Adobe sign-in required';
         context.logger.warn(`[EdsReset] Mesh redeployment skipped before deploy: ${reason}`);
         return {
             success: true,

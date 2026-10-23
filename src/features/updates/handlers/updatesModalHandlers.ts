@@ -21,14 +21,21 @@
 import * as vscode from 'vscode';
 import { questionsInModal, stopRunningDemos } from './updateQuestionsInModal';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { withOperationProgress, type OperationOutcome, type ReportStage } from '@/core/vscode/withOperationProgress';
-import { updateIntegrationPairFor } from '@/features/dashboard/handlers/integrationUpdateHandlers';
-import type { FoundUpdates } from '@/features/updates/services/allUpdates';
+import { integrationUpdateProbe, updateIntegrationPairFor } from '@/features/dashboard/handlers/integrationUpdateHandlers';
+import { findAllUpdates, type FoundUpdates } from '@/features/updates/services/allUpdates';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import { openFixWithAi } from '@/features/updates/services/fixWithAi';
-import { rowIdsOf, selectionsForIds, toPendingUpdateRows } from '@/features/updates/services/pendingUpdateRows';
+import {
+    rowIdsOf,
+    selectionsForIds,
+    stillWaitingCount,
+    toPendingUpdateRows,
+    untickedRows,
+} from '@/features/updates/services/pendingUpdateRows';
 import type { ItemObserver } from '@/features/updates/services/updateApplyEach';
 import type { ApplyUpdatesResult, ItemOutcome } from '@/features/updates/services/updateApplyResult';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
@@ -40,6 +47,7 @@ import {
     localCopyRowId,
     type ApplyUpdatesRequest,
     type PendingUpdateRow,
+    type RecheckUpdatesResponse,
     type UpdateRowState,
     type UpdateRowStatus,
 } from '@/types/pendingUpdates';
@@ -86,10 +94,14 @@ function rowTellerFor(context: HandlerContext): RowTeller {
  * @returns the rows to show
  */
 export function presentUpdates(found: FoundUpdates): PendingUpdateRow[] {
-    const extension = found.extension && { current: found.extension.current, latest: found.extension.latest };
-    const rows = toPendingUpdateRows(found.selections, extension, found.currentProjectPath);
+    const rows = rowsOf(found);
     shown = { found, rows };
     return rows;
+}
+
+function rowsOf(found: FoundUpdates): PendingUpdateRow[] {
+    const extension = found.extension && { current: found.extension.current, latest: found.extension.latest };
+    return toPendingUpdateRows(found.selections, extension, found.currentProjectPath);
 }
 
 /** The rows of the check the modal was handed; empty once applied, or before any. */
@@ -97,14 +109,28 @@ export function presentedRows(): PendingUpdateRow[] {
     return shown?.rows ?? [];
 }
 
+/**
+ * `recheckUpdates`: "Back to updates" after a run (owner, 2026-10-22). The run changed
+ * storefronts, so the list it started from is stale: this runs Check for Updates again,
+ * the check the window opens on, which says "up to date" in its own notification when
+ * nothing waits and otherwise presents what it found.
+ */
+export const handleRecheckUpdates: MessageHandler<unknown, RecheckUpdatesResponse> = async () => {
+    shown = undefined;
+    await vscode.commands.executeCommand('demoBuilder.checkForUpdates');
+    return { success: true, data: { rows: presentedRows() } };
+};
+
 /** `applyUpdates`: apply the ticked rows, in the progress modal. */
 export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOutcomeToModal(
     async (context, payload) => {
         const presented = shown;
         if (!presented) return { success: false, error: OUT_OF_DATE };
         shown = undefined;
+        // The run saves every project it updates; none of them may become the open one.
+        const runContext = { ...context, stateManager: createNonSwitchingStateManager(context.stateManager) };
         return withOperationProgress({ id: UPDATES_OPERATION_ID, title: 'Applying updates', inModal: true }, (report) =>
-            applyTicked(context, presented, payload?.ids ?? [], report),
+            applyTicked(runContext, presented, payload?.ids ?? [], report),
         );
     },
     () => UPDATES_OPERATION_ID,
@@ -162,12 +188,30 @@ async function applyTicked(
             rows.tell('extension', 'failed', EXTENSION_FAILED);
         }
     }
+    const remaining = await stillWaiting(context, shownRows, ids);
+    const left = remaining > 0 ? { remaining } : {};
     const notApplied = rows.notApplied();
-    if (notApplied === 0) return { success: true };
+    if (notApplied === 0) return { success: true, ...left };
     // A success with a warning, not a failure: the run ended, and a failure's Retry
     // could not re-run a list that has been applied. Each row says why.
     const noun = notApplied === 1 ? 'update' : 'updates';
-    return { success: true, warning: `${notApplied} ${noun} did not apply.` };
+    return { success: true, warning: `${notApplied} ${noun} did not apply.`, ...left };
+}
+
+/**
+ * How many rows the SC left unticked are still waiting, by a fresh check (owner,
+ * 2026-10-22): what "Back to updates" would list again. Nothing left unticked checks
+ * nothing; a check that fails says nothing waits, since the run itself has ended.
+ */
+async function stillWaiting(context: HandlerContext, listed: PendingUpdateRow[], ids: string[]): Promise<number> {
+    if (untickedRows(listed, ids).length === 0) return 0;
+    try {
+        const fresh = await findAllUpdates(context, integrationUpdateProbe(context));
+        return stillWaitingCount(listed, ids, rowsOf(fresh));
+    } catch (error) {
+        context.logger.warn(`[Updates] Could not check what is still waiting: ${toError(error).message}`);
+        return 0;
+    }
 }
 
 /** What a row says under it once it has ended: a note when done, why when not. */

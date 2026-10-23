@@ -16,6 +16,12 @@ import {
     runReset,
 } from './edsResetService.orchestrationHarness';
 
+const mockPublishAuthoredListStep = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/eds/services/catalogMenu/catalogMenuStep', () => ({
+    ...jest.requireActual('@/features/eds/services/catalogMenu/catalogMenuStep'),
+    publishAuthoredListStep: (...a: unknown[]) => mockPublishAuthoredListStep(...a),
+}));
+
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
 import type { Project } from '@/types/base';
 import { createMockProject, edsStorefrontInstance } from '../../../../helpers/projectFake';
@@ -75,3 +81,25 @@ describe('runContentPipeline - the broken-links record', () => {
         expect(brokenLinks(project)).toStrictEqual(OLD_LINKS);
     });
 });
+
+/**
+ * EDS-61: reset takes the authored-pages sheet out before it re-publishes the content. When
+ * that take-out failed, the old sheet is still live during the bulk publish, so the pipeline's
+ * hook refreshes it first — only where the record says it is live (the failed take-out kept
+ * that flag). The take-out's own sentence already reports the failure.
+ */
+describe('runContentPipeline - the authored-pages sheet before the bulk publish', () => {
+    it('hands the pipeline a hook that refreshes a sheet still live, on this storefront', async () => {
+        const project = storefrontProject();
+
+        await runReset({ project, contentSource: CONTENT_SOURCE });
+        await mockExecuteEdsPipeline.mock.calls[0][0].beforeContentPublish?.();
+
+        expect(mockPublishAuthoredListStep).toHaveBeenCalledTimes(1);
+        const [passed, site, options] = mockPublishAuthoredListStep.mock.calls[0];
+        expect(passed).toBe(project);
+        expect(typeof site.categoryPages.publishAuthoredSheet).toBe('function');
+        expect(options).toEqual({ onlyWhenPublished: true });
+    });
+});
+

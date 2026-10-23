@@ -64,6 +64,12 @@ export interface ConfigStepServices {
  *
  * Step 7 (Config Service registration) runs after all code sync operations to avoid
  * a race where Helix's async bulk processing overwrites or clears the Config Service entry.
+ *
+ * UNVERIFIED (noted 2026-10-22): no measurement of that race is recorded anywhere;
+ * the order is kept on the owner's decision, not on evidence. What IS measured is
+ * the cost of it — a site with no config refuses the code publish ("config for site
+ * not found", scratch-1022) — so the reset publishes the code again after this step
+ * when the first publish failed (`republishCodeIfMissed` in `edsResetCodeSyncStep`).
  */
 export async function publishConfigAndRegisterSite(
     {

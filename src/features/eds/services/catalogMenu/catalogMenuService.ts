@@ -1,44 +1,57 @@
 /**
- * Catalog menu service — writes one page per Commerce category plus the nav switch,
- * and undoes both (EDS-24).
+ * Catalog menu service — category pages through the product page overlay, the sheet that
+ * keeps authored pages, their template, and the nav switch; and the undo (EDS-24, EDS-61).
  *
- * Every dependency is handed in (ADR-015): the category reader, and the storefront's
- * pages — read, write-and-publish, unpublish-and-delete, the same DA.live and Helix
- * operations the `read_page` / `write_page` / `delete_page` tools perform.
+ * Every dependency is handed in (ADR-015): the category reader, the storefront's pages
+ * (DA.live read / write-and-publish / unpublish-and-delete) and the overlay's category
+ * pages (`categoryPagePublish.ts`).
+ *
+ * ## Category pages are the overlay's, at each category's own address
+ *
+ * `/signs`, `/signs/danger-signs` (`categoryPagePlan.ts`; owner decision 2026-10-22),
+ * rendered by the shared `render-pdp` action from the site's `/categories/default`
+ * (`categoryTemplate.ts`). Helix asks the overlay FIRST on every preview, so an authored
+ * page at a category's address survives only because the overlay steps aside for the
+ * paths `/authored-category-pages.json` lists. One run, in this order:
+ *
+ * 1. read — the categories, the nav, the storefront's pages, and which category addresses
+ *    DA.live holds a document for — and stop before any change if a read fails;
+ * 2. remove the pages the old model wrote (one DA.live page per category, EDS-24) that
+ *    nobody edited, so they are not mistaken for authored ones; an edited one stays, and
+ *    is authored now;
+ * 3. write the starter template where there is none;
+ * 4. publish the sheet, then the category pages, then take down the pages of categories
+ *    that are gone (`publishCategoryPages`);
+ * 5. switch the menu on in `/nav`.
  *
  * ## An SC's hand edits are never overwritten
  *
- * ADR-013's rule, applied to DA.live pages: a page is rewritten or removed only when
- * its current content matches the hash recorded when this service wrote it. A page
- * that exists without a record is someone else's (`not-ours`); one whose content moved
- * is the SC's now (`edited`) and drops out of the record, so the undo will not touch
- * it either. The hash is taken from a read AFTER the write, so the record describes
- * what DA.live actually stores rather than what was sent.
- *
- * The nav is never replaced: the switch is merged into whatever the SC authored
- * (`navSwitch.ts`), and removing it takes out exactly the switch.
+ * ADR-013's rule, applied to DA.live pages (`ownedPages.ts`): the template is written only
+ * where there is none, and anything is removed only while it holds what was recorded.
  *
  * ## A hand-built page for a category is always honored
  *
- * Owner's rule, 2026-10-05. A category page may live at ANY address — its
- * `product-list-page` block names the category, not its path — so before writing, the
- * storefront's pages are read (`existingCategoryPages.ts`). A category that already has
- * a page gets none from us (`has-own-page`), and the nav's `catalog-menu` table gains a
- * "category → page" row so the menu links to it. A row the SC typed there themselves
- * counts the same way. If we wrote a page for that category earlier, it is removed —
- * but only when nobody has edited it.
+ * Owner's rule, 2026-10-05. A page at the category's own address is its page (and goes on
+ * the sheet). A page elsewhere whose `product-list-page` block names the category gets a
+ * "category → page" row in the nav's `catalog-menu` table, so the menu links to it; a row
+ * the SC typed counts the same way (`existingCategoryPages.ts`).
  *
- * ## Where the record lives
- *
- * On the project, `componentInstances['eds-storefront'].metadata.catalogMenu`
- * (`catalogMenuRecord.ts`). This service takes the previous record and returns the next
- * one; `catalogMenuStep.ts` reads and keeps it for storefront setup, reset and republish.
+ * The record lives on the project (`catalogMenuRecord.ts`); this service takes the
+ * previous record and returns the next one.
  *
  * @module features/eds/services/catalogMenu/catalogMenuService
  */
 
-import { createHash } from 'crypto';
-import { normaliseUrlPath, planCategoryPages, type CatalogCategory, type PlannedPage } from './categoryPages';
+import { authoredAddresses } from './authoredCategoryPages';
+import { planCategoryPages, categoryPagePath, normaliseUrlPath, type CatalogCategory } from './categoryPagePlan';
+import {
+    publishCategoryPages,
+    unpublishCategoryPages,
+    type CategoryPageHost,
+    type CategoryPublishOutcome,
+    type PageFailure,
+} from './categoryPagePublish';
+import { ensureCategoryTemplate, removeCategoryTemplate, type TemplateOutcome } from './categoryTemplate';
 import { findOwnCategoryPages } from './existingCategoryPages';
 import {
     addCatalogMenuSwitch,
@@ -48,136 +61,84 @@ import {
     type CategoryLink,
     type RemoveSwitchStatus,
 } from './navSwitch';
+import { hashOf, messageOf, removeOwnedPage, type StorefrontPages } from './ownedPages';
+import type { CategoryPageRemovalResult } from '@/features/eds/services/storefront/productPageRemoval';
 
-/** The storefront's pages, by web path (`/nav`, `/safety-signs`). */
-export interface StorefrontPages {
-    /**
-     * Every page that could be a category page, by web path: no product pages,
-     * fragments, drafts, nav or footer documents, and nothing that is not a page.
-     */
-    listPages(): Promise<string[]>;
-    /** The page's DA.live source, or null when there is none. */
-    read(path: string): Promise<string | null>;
-    /** Write the source and preview+publish it. Throws on failure. */
-    write(path: string, html: string): Promise<void>;
-    /** Unpublish the page and delete its source. Throws on failure. */
-    remove(path: string): Promise<void>;
-}
+export type { CategoryPageHost, PageFailure } from './categoryPagePublish';
 
 export interface CatalogMenuDeps {
     pages: StorefrontPages;
-    /** Categories with "Include in Menu" on, for the project's store view. */
+    /** Every category of the project's store view. */
     readCategories(): Promise<CatalogCategory[]>;
+    categoryPages: CategoryPageHost;
 }
 
-/** What this service wrote — the proof of authorship the undo needs. */
+/** What this service made — the proof of authorship the undo needs. */
 export interface CatalogMenuRecord {
-    pages: Array<{ path: string; hash: string }>;
+    /** Pages the old model wrote, one per category, still to be removed (stored as `pages`). */
+    legacyPages: Array<{ path: string; hash: string }>;
     /** The category → page rows this service wrote in the nav's `catalog-menu` table. */
     links: CategoryLink[];
     /** True once the nav switch has been added by this service. */
     navSwitch: boolean;
+    /** The starter `/categories/default`'s hash, while it is as Demo Builder wrote it. */
+    templateHash?: string;
+    /** The overlay category pages this service published, for taking down later. */
+    categoryPaths?: string[];
+    /** True once this service published the authored-pages sheet, which opts the site in. */
+    authoredSheet?: boolean;
 }
 
 export interface PageSkip {
     path: string;
-    reason: 'edited' | 'not-ours' | 'has-own-page';
-    /** The category the page is for, when the skip came from a build. */
+    reason: 'edited' | 'has-own-page';
+    /** The category the page is for. */
     name?: string;
     /** `has-own-page`: the page the category already has, which the menu links to. */
     ownPage?: string;
 }
 
-export interface PageFailure {
-    path: string;
-    error: string;
-}
-
-export interface ApplyReport {
-    written: string[];
-    /** Pages we wrote earlier and removed because the category now has a hand-built one. */
-    replaced: string[];
+export interface ApplyReport extends Omit<CategoryPublishOutcome, 'categoryPaths'> {
+    /** True when setup publishes no overlay page on this backend: a shopper's first visit does. */
+    deferred: boolean;
+    /** Pages the old model wrote, removed now. */
+    legacyRemoved: string[];
+    legacyFailed: PageFailure[];
     skipped: PageSkip[];
-    failed: PageFailure[];
     unsafe: Array<{ name: string; urlPath: string }>;
+    template: TemplateOutcome;
     nav: AddSwitchStatus | 'missing' | 'failed';
     navError?: string;
     record: CatalogMenuRecord;
 }
 
 export interface RemoveReport {
+    /** Pages the old model wrote, removed. */
     removed: string[];
     alreadyGone: string[];
     skipped: PageSkip[];
     failed: PageFailure[];
+    template: Awaited<ReturnType<typeof removeCategoryTemplate>>;
+    /** The overlay's category pages, when the caller asked for them to go too. */
+    categoryPages?: CategoryPageRemovalResult;
+    /** The authored-pages sheet: taken out, not this service's, or why it stayed. */
+    sheet: 'removed' | 'not-recorded' | { error: string };
     nav: RemoveSwitchStatus | 'not-recorded' | 'missing' | 'failed';
     navError?: string;
-    /** What is still claimed afterwards: the pages that failed to go. */
+    /** What is still claimed afterwards. */
     record: CatalogMenuRecord;
 }
 
 const NAV_PATH = '/nav';
 
-/** Why nothing is written: a menu switched on over an empty tree would only hide the SC's items. */
+/** Why nothing is changed: a menu switched on over an empty tree would only hide the SC's items. */
 const NO_MENU_CATEGORIES =
     'Catalog Service returned no categories marked "Include in Menu" for this store view';
 
 /** The nav outcomes that leave the switch in the nav. */
 const IN_NAV: Array<ApplyReport['nav']> = ['added', 'links-updated', 'already-present'];
 
-const EMPTY_RECORD: CatalogMenuRecord = { pages: [], links: [], navSwitch: false };
-
-/** The hash a page is recorded under: its stored source, trimmed. */
-export function hashOf(content: string): string {
-    return createHash('sha256').update(content.trim()).digest('hex');
-}
-
-const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
-
-type PageOutcome =
-    | { kind: 'written'; hash: string }
-    | { kind: 'skipped'; reason: 'edited' | 'not-ours' }
-    | { kind: 'failed'; error: string };
-
-/**
- * Write a page only when it is ours to write: the address is empty, or it holds what the
- * record says we wrote. Shared with the add-only path (`newCategoryPages.ts`).
- */
-export async function writeOwnedPage(
-    pages: StorefrontPages,
-    path: string,
-    html: string,
-    recordedHash: string | undefined,
-): Promise<PageOutcome> {
-    try {
-        const current = await pages.read(path);
-        if (current !== null) {
-            if (recordedHash === undefined) return { kind: 'skipped', reason: 'not-ours' };
-            if (hashOf(current) !== recordedHash) return { kind: 'skipped', reason: 'edited' };
-        }
-        await pages.write(path, html);
-        const stored = await pages.read(path);
-        return { kind: 'written', hash: hashOf(stored ?? html) };
-    } catch (error) {
-        return { kind: 'failed', error: messageOf(error) };
-    }
-}
-
-async function removeOwnedPage(
-    pages: StorefrontPages,
-    path: string,
-    hash: string,
-): Promise<'removed' | 'gone' | 'edited' | { error: string }> {
-    try {
-        const current = await pages.read(path);
-        if (current === null) return 'gone';
-        if (hashOf(current) !== hash) return 'edited';
-        await pages.remove(path);
-        return 'removed';
-    } catch (error) {
-        return { error: messageOf(error) };
-    }
-}
+const EMPTY_RECORD: CatalogMenuRecord = { legacyPages: [], links: [], navSwitch: false };
 
 /** The nav as it stands before the run: its source, or why it could not be read. */
 type NavRead = { html: string | null } | { error: string };
@@ -192,7 +153,7 @@ async function readNav(pages: StorefrontPages): Promise<NavRead> {
 
 /**
  * The page each category already has: a row the SC typed in the nav table first, then a
- * hand-built page found on the site. Keyed by normalised url path.
+ * hand-built page found elsewhere on the site.
  */
 async function ownPages(
     pages: StorefrontPages,
@@ -207,13 +168,9 @@ async function ownPages(
             .filter((l) => !ourRows.includes(`${normaliseUrlPath(l.urlPath)} ${l.path}`))
             .map((l) => [normaliseUrlPath(l.urlPath), l.path]),
     );
-    const hashes = new Map(previous.pages.map((p) => [p.path, p.hash]));
-    const found = await findOwnCategoryPages(
-        pages,
-        categories,
-        (path, html) => hashes.get(path) === hashOf(html),
-        new Set(previous.pages.map((p) => p.path)),
-    );
+    // A page the old model wrote, still as written, is ours — not a hand-built page.
+    const hashes = new Map(previous.legacyPages.map((p) => [p.path, p.hash]));
+    const found = await findOwnCategoryPages(pages, categories, (path, html) => hashes.get(path) === hashOf(html));
     return { typed, found };
 }
 
@@ -234,103 +191,111 @@ async function switchNavOn(
     }
 }
 
-/** A category that already has a page: write none, and take our earlier one away if unedited. */
-async function yieldToOwnPage(
+/** Remove the old model's pages while unedited; keep claiming the ones that failed. */
+async function removeLegacyPages(
     pages: StorefrontPages,
-    page: Pick<PlannedPage, 'path' | 'name'>,
-    ownPage: string,
-    recordedHash: string | undefined,
-    report: ApplyReport,
-): Promise<void> {
-    report.skipped.push({ path: page.path, reason: 'has-own-page', name: page.name, ownPage });
-    if (recordedHash === undefined) return;
-    const outcome = await removeOwnedPage(pages, page.path, recordedHash);
-    if (outcome === 'removed') report.replaced.push(page.path);
-    else if (outcome === 'edited') report.skipped.push({ path: page.path, reason: 'edited', name: page.name });
-    else if (typeof outcome !== 'string') {
-        report.failed.push({ path: page.path, error: `the earlier page could not be removed: ${outcome.error}` });
-        report.record.pages.push({ path: page.path, hash: recordedHash });
+    legacy: CatalogMenuRecord['legacyPages'],
+): Promise<Pick<RemoveReport, 'removed' | 'alreadyGone' | 'skipped' | 'failed'> & { kept: CatalogMenuRecord['legacyPages'] }> {
+    const outcome = { removed: [] as string[], alreadyGone: [] as string[], skipped: [] as PageSkip[], failed: [] as PageFailure[] };
+    const kept: CatalogMenuRecord['legacyPages'] = [];
+    for (const { path, hash } of legacy) {
+        const result = await removeOwnedPage(pages, path, hash);
+        if (result === 'removed') outcome.removed.push(path);
+        else if (result === 'gone') outcome.alreadyGone.push(path);
+        else if (result === 'edited') outcome.skipped.push({ path, reason: 'edited' });
+        else {
+            outcome.failed.push({ path, error: result.error });
+            kept.push({ path, hash });
+        }
     }
+    return { ...outcome, kept };
 }
 
-async function writePlannedPage(
-    pages: StorefrontPages,
-    page: PlannedPage,
-    recordedHash: string | undefined,
-    report: ApplyReport,
-): Promise<void> {
-    const outcome = await writeOwnedPage(pages, page.path, page.html, recordedHash);
-    if (outcome.kind === 'written') {
-        report.written.push(page.path);
-        report.record.pages.push({ path: page.path, hash: outcome.hash });
-    } else if (outcome.kind === 'skipped') {
-        report.skipped.push({ path: page.path, reason: outcome.reason, name: page.name });
-    } else {
-        report.failed.push({ path: page.path, error: outcome.error });
-        if (recordedHash !== undefined) report.record.pages.push({ path: page.path, hash: recordedHash });
+/** Which categories already have a page somewhere else, as skips the summary names. */
+function ownPageSkips(categories: CatalogCategory[], ownPageOf: (urlPath: string) => string | undefined): PageSkip[] {
+    const skips: PageSkip[] = [];
+    const seen = new Set<string>();
+    for (const { name, urlPath } of categories) {
+        const ownPage = urlPath ? ownPageOf(urlPath) : undefined;
+        const path = categoryPagePath(urlPath) ?? `/${urlPath}`;
+        if (ownPage === undefined || seen.has(path)) continue;
+        seen.add(path);
+        skips.push({ path, reason: 'has-own-page', name, ownPage });
     }
+    return skips;
 }
 
 /**
- * Write the category pages and switch the catalog menu on.
- *
- * Reads first — the tree, the nav, and the storefront's existing pages — and stops
- * before writing anything if the tree or the pages cannot be read, or the tree is empty:
- * a menu switched on over nothing would only hide the SC's own items, and pages written
- * blind could double a page somebody built by hand.
+ * Publish the authored-pages sheet and a page per category through the overlay, make sure
+ * the template exists, take down pages of categories that are gone, and switch the catalog
+ * menu on. Stops before changing anything if a read fails, or no category is in the menu.
  */
 export async function applyCatalogMenu(
     deps: CatalogMenuDeps,
     previous: CatalogMenuRecord = EMPTY_RECORD,
 ): Promise<ApplyReport> {
     const categories = await deps.readCategories();
-    if (categories.length === 0) {
+    if (!categories.some((c) => c.urlPath && c.inMenu !== false)) {
         throw new Error(NO_MENU_CATEGORIES);
     }
     const plan = planCategoryPages(categories);
+    const planned = plan.pages.map((p) => p.path);
     const nav = await readNav(deps.pages);
     const { typed, found } = await ownPages(deps.pages, categories, previous, nav);
+    // Read before any change; an old page of ours, as written, is never authored.
+    const authored = await authoredAddresses(deps.pages, planned, previous.legacyPages);
     const ownPageOf = (urlPath: string): string | undefined =>
         typed.get(normaliseUrlPath(urlPath)) ?? found.get(urlPath);
 
-    const recorded = new Map(previous.pages.map((p) => [p.path, p.hash]));
-    const report: ApplyReport = {
-        written: [],
-        replaced: [],
-        skipped: [],
-        failed: [],
-        unsafe: plan.unsafe.filter((u) => ownPageOf(u.urlPath) === undefined),
-        nav: 'missing',
-        record: { pages: [], links: [], navSwitch: previous.navSwitch },
-    };
-
-    for (const page of plan.pages) {
-        const ownPage = ownPageOf(page.urlPath);
-        const hash = recorded.get(page.path);
-        recorded.delete(page.path);
-        if (ownPage === undefined) await writePlannedPage(deps.pages, page, hash, report);
-        else await yieldToOwnPage(deps.pages, page, ownPage, hash, report);
-    }
-    for (const { name, urlPath } of plan.unsafe) {
-        const ownPage = ownPageOf(urlPath);
-        if (ownPage !== undefined) {
-            report.skipped.push({ path: `/${urlPath}`, reason: 'has-own-page', name, ownPage });
-        }
-    }
-    // Pages written on an earlier run whose category has since left the tree are
-    // still ours: keep claiming them so the undo can remove them.
-    recorded.forEach((hash, path) => report.record.pages.push({ path, hash }));
+    // The old model's unedited pages first, so the overlay serves their addresses next.
+    const legacy = await removeLegacyPages(deps.pages, previous.legacyPages);
+    const template = await ensureCategoryTemplate(deps.pages, previous.templateHash);
+    const { categoryPaths, ...published } = await publishCategoryPages(
+        deps.categoryPages,
+        deps.pages,
+        planned,
+        authored,
+        previous.categoryPaths ?? [],
+    );
 
     // Our rows: the pages we found. A row the SC typed is theirs, and stays as typed.
     const links = [...found]
         .filter(([urlPath]) => !typed.has(normaliseUrlPath(urlPath)))
         .map(([urlPath, path]) => ({ urlPath, path }));
     const switched = await switchNavOn(deps.pages, nav, links, previous);
-    report.nav = switched.nav;
-    report.navError = switched.navError;
-    report.record.links = switched.links;
-    if (IN_NAV.includes(report.nav)) report.record.navSwitch = true;
-    return report;
+    return {
+        ...published,
+        deferred: !deps.categoryPages.publishAtSetup,
+        legacyRemoved: legacy.removed,
+        legacyFailed: legacy.failed,
+        skipped: [...ownPageSkips(categories, ownPageOf), ...legacy.skipped],
+        unsafe: plan.unsafe.filter((u) => ownPageOf(u.urlPath) === undefined),
+        template,
+        nav: switched.nav,
+        navError: switched.navError,
+        record: {
+            legacyPages: legacy.kept,
+            links: switched.links,
+            navSwitch: IN_NAV.includes(switched.nav) || previous.navSwitch,
+            ...('hash' in template ? { templateHash: template.hash } : {}),
+            ...(categoryPaths.length ? { categoryPaths } : {}),
+            ...(published.sheet === 'published' || previous.authoredSheet ? { authoredSheet: true } : {}),
+        },
+    };
+}
+
+/** Take the sheet out, when the record says this service published it. */
+async function removeSheet(
+    host: CategoryPageHost | undefined,
+    record: CatalogMenuRecord,
+): Promise<RemoveReport['sheet']> {
+    if (!record.authoredSheet || !host) return 'not-recorded';
+    try {
+        await host.removeAuthoredSheet();
+        return 'removed';
+    } catch (error) {
+        return { error: messageOf(error) };
+    }
 }
 
 async function switchNavOff(
@@ -350,34 +315,48 @@ async function switchNavOff(
 }
 
 /**
- * The undo: remove the pages this service wrote (and the SC has not since edited) and
- * take the switch back out of the nav. Removes nothing it has no record of writing.
+ * The undo: remove what this service wrote in DA.live (and the SC has not since edited)
+ * and take the switch back out of the nav. With `unpublish`, the overlay category pages
+ * it published come off Helix too (never an authored address); otherwise they stay on the
+ * record for the next build to keep or take down. The
+ * authored-pages sheet goes LAST, after the pages, with the host: without it the overlay
+ * renders no category page and leaves every authored one alone, which is the site before
+ * Demo Builder opted it in. A build that follows writes it again first.
  */
 export async function removeCatalogMenu(
-    deps: Pick<CatalogMenuDeps, 'pages'>,
+    deps: { pages: StorefrontPages; categoryPages?: CategoryPageHost; unpublish?: boolean },
     record: CatalogMenuRecord,
 ): Promise<RemoveReport> {
-    const report: RemoveReport = {
-        removed: [],
-        alreadyGone: [],
-        skipped: [],
-        failed: [],
-        nav: 'not-recorded',
-        record: { pages: [], links: [], navSwitch: false },
-    };
-    for (const { path, hash } of record.pages) {
-        const outcome = await removeOwnedPage(deps.pages, path, hash);
-        if (outcome === 'removed') report.removed.push(path);
-        else if (outcome === 'gone') report.alreadyGone.push(path);
-        else if (typeof outcome === 'string') report.skipped.push({ path, reason: outcome });
-        else {
-            report.failed.push({ path, error: outcome.error });
-            report.record.pages.push({ path, hash });
-        }
-    }
-    Object.assign(report, await switchNavOff(deps.pages, record));
+    const legacy = await removeLegacyPages(deps.pages, record.legacyPages);
+    const template = await removeCategoryTemplate(deps.pages, record.templateHash);
+    const recorded = record.categoryPaths ?? [];
+    const unpublished = deps.categoryPages && deps.unpublish
+        ? await unpublishCategoryPages(deps.categoryPages, deps.pages, recorded)
+        : { remaining: recorded };
+    const sheet = await removeSheet(deps.categoryPages, record);
+    const nav = await switchNavOff(deps.pages, record);
     // A nav that could not be changed still holds the switch and our rows.
-    report.record.navSwitch = report.nav === 'failed';
-    if (report.nav === 'failed') report.record.links = record.links;
-    return report;
+    const navFailed = nav.nav === 'failed';
+    const templateFailed = typeof template !== 'string';
+    return {
+        removed: legacy.removed,
+        alreadyGone: legacy.alreadyGone,
+        skipped: legacy.skipped,
+        failed: [
+            ...legacy.failed,
+            ...(templateFailed ? [{ path: '/categories/default', error: template.error }] : []),
+        ],
+        template,
+        ...(unpublished.result ? { categoryPages: unpublished.result } : {}),
+        sheet,
+        ...nav,
+        record: {
+            legacyPages: legacy.kept,
+            links: navFailed ? record.links : [],
+            navSwitch: navFailed,
+            ...(templateFailed && record.templateHash ? { templateHash: record.templateHash } : {}),
+            ...(unpublished.remaining.length ? { categoryPaths: unpublished.remaining } : {}),
+            ...(typeof sheet === 'object' || (record.authoredSheet && !deps.categoryPages) ? { authoredSheet: true } : {}),
+        },
+    };
 }

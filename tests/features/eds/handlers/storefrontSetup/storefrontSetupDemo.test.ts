@@ -1,66 +1,33 @@
 /**
- * The create path's half of Demo Builder's fixes on an added demo (EDS-13f):
- * the fix pass runs against the SC's OWN new repository, reads the demo's
- * source only as the source, applies a colleague's fits only when the SC
- * asked, and its lines ride the completion card's caveats. A shipped brand
- * runs nothing.
+ * What an added demo adds to storefront setup: its content site joins the block
+ * library's content sources, so its blocks' example pages arrive (D20).
+ *
+ * The fix pass that also ran here (EDS-13f) is gone: an added demo's code is copied
+ * as it is (owner, 2026-10-23, EDS-64).
  */
 
-import { runDemoFixes } from '@/features/eds/handlers/storefrontSetup/storefrontSetupDemo';
-import { runDemoFixPass } from '@/features/eds/services/patches/demoFixPass';
+import { withDemoContentSource } from '@/features/eds/handlers/storefrontSetup/storefrontSetupDemo';
 import { makeAddedDemo } from '../../../../helpers/demoPackageFixtures';
-import { createMockLogger } from '../../../../helpers/loggerFake';
 
-jest.mock('@/features/eds/services/patches/demoFixPass', () => ({
-    ...jest.requireActual('@/features/eds/services/patches/demoFixPass'),
-    runDemoFixPass: jest.fn(),
-}));
-const mockPass = runDemoFixPass as jest.MockedFunction<typeof runDemoFixPass>;
+const LIBRARY = { org: 'skukla', site: 'demo-builder-block-library' };
 
-const fileOps = { getFileContent: jest.fn(), commitTreeToBranch: jest.fn() };
-const demo = makeAddedDemo({ source: { owner: 'sayurihanki', repo: 'aistore' } });
-const CONFIG = { demo, templateOwner: 'sayurihanki', templateRepo: 'aistore' };
+describe('withDemoContentSource', () => {
+    it("adds the demo's own content site after the libraries'", () => {
+        const contentSource = { org: 'kmanns', site: 'justrite', indexPath: '/query-index.json' };
+        const demo = makeAddedDemo({ contentSource });
 
-beforeEach(() => jest.clearAllMocks());
-
-describe('runDemoFixes (create)', () => {
-    it("runs the pass on the SC's repository, reads the source only as the source, and never applies unasked", async () => {
-        mockPass.mockResolvedValue({ by: 'template', offered: ['pdp-empty-data-redirect'], caveats: [] });
-        const repoInfo = { repoOwner: 'steve', repoName: 'aistore-copy' };
-        const logger = createMockLogger();
-
-        await runDemoFixes(CONFIG, repoInfo, fileOps, logger);
-
-        expect(mockPass).toHaveBeenCalledWith(
-            demo,
-            { owner: 'steve', repo: 'aistore-copy', branch: 'main' },
-            { owner: 'sayurihanki', repo: 'aistore' },
-            { fileOps, logger },
-            { applyOffered: false },
-        );
-        expect(repoInfo).toEqual({
-            repoOwner: 'steve',
-            repoName: 'aistore-copy',
-            demoCaveats: [
-                "1 of Demo Builder's fixes fits this storefront's code: empty product pages. It was not applied. Apply it from the storefront report.",
-            ],
-        });
+        expect(withDemoContentSource([LIBRARY], demo)).toStrictEqual([LIBRARY, contentSource]);
     });
 
-    it('applies the offer when the SC asked for it at creation', async () => {
-        mockPass.mockResolvedValue({ by: 'template', applied: ['pdp-empty-data-redirect'], caveats: [] });
+    it('leaves the sources as they are for a demo that names no content site', () => {
+        const sources = [LIBRARY];
 
-        await runDemoFixes({ ...CONFIG, applyDemoFixes: true }, { repoOwner: 'steve', repoName: 'x' }, fileOps, createMockLogger());
-
-        expect(mockPass.mock.calls[0][4]).toEqual({ applyOffered: true });
+        expect(withDemoContentSource(sources, makeAddedDemo({}))).toBe(sources);
     });
 
-    it('runs nothing for a shipped brand', async () => {
-        const repoInfo = { repoOwner: 'steve', repoName: 'bodea' };
+    it('leaves the sources as they are for a shipped brand', () => {
+        const sources = [LIBRARY];
 
-        await runDemoFixes({ templateOwner: 'adobe-commerce', templateRepo: 'boilerplate-b2b-template' }, repoInfo, fileOps, createMockLogger());
-
-        expect(mockPass).not.toHaveBeenCalled();
-        expect(repoInfo).not.toHaveProperty('demoCaveats');
+        expect(withDemoContentSource(sources, undefined)).toBe(sources);
     });
 });

@@ -35,7 +35,7 @@
  */
 
 import { findBlockTables, type BlockRow } from './blockTable';
-import { normaliseUrlPath } from './categoryPages';
+import { normaliseUrlPath } from './categoryPagePlan';
 import { escapeHtml } from '@/features/eds/services/daLive/daLiveSpreadsheetUtils';
 
 /** The line an author types to get one menu entry per top-level category. */

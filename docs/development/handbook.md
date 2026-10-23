@@ -1230,8 +1230,8 @@ promising an agent that every response parses.
 >
 > The declarations were transcribed mechanically and then VERIFIED against the ledger
 > row by row: 114 found in code, zero mismatches, zero missing. The field is an ARRAY
-> because four tools need two sign-ins — `check_github_app`, `create_project`,
-> `republish` and `sync_content` each need GitHub AND DA.live, and a single value would
+> because some tools need two sign-ins — `check_github_app`, `create_project` and
+> `republish` each need GitHub AND DA.live, and a single value would
 > have dropped exactly the sign-in an agent then fails to offer.
 >
 > **The surface is 114 tools, and no previous count was right**: the `tool-verdicts`

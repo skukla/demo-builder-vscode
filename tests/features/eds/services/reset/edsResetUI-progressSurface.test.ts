@@ -129,6 +129,26 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
         );
     });
 
+    // The card said "JustRite" and the modal said "Resetting justrite" (2026-10-23):
+    // the title is for a person, so it uses the name they gave the project.
+    it("names the project as the SC named it, and keeps the folder name in the id", async () => {
+        const project = createProject();
+        project.title = 'JustRite';
+        mockedReset.mockResolvedValue({ success: true });
+
+        await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project,
+            context: createContext(),
+        });
+
+        expect(withOperationProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ id: resetOperationId('test-project'), title: 'Resetting JustRite' }),
+            expect.any(Function),
+        );
+    });
+
     // The step under the stage is what a screen's modal shows on its second row.
     it('names each pre-flight check as the step under one stage, in order', async () => {
         const project = createProject();
@@ -219,20 +239,21 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
     });
 
-    it('points at the storefront report in the modal when the demo has fixes on offer', async () => {
+    // The page steps' sentences in the modal's last view: one that left pages undone is
+    // its warning (it reached only the Debug Logs until 2026-10-23), the rest a note.
+    it('ends the modal with a page warning, and the other page sentences as a note', async () => {
+        const undone = "13 category pages couldn't be published; republish the storefront to try again.";
         const result = await run(
             {
                 success: true,
-                demoCaveats: ['Product links may not work.'],
-                demoFixes: { offered: ['pdp'] },
+                catalogMenu: undone,
+                productPages: 'Removed 49 product pages.',
+                pageWarnings: [undone],
             },
             { progress: 'modal' }
         );
 
-        expect(result.warning).toBe(
-            'A few things to know about this demo: Product links may not work. ' +
-                'Storefront Report offers fixes for this.'
-        );
+        expect(result).toMatchObject({ warning: undone, note: 'Removed 49 product pages.' });
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
     });
 

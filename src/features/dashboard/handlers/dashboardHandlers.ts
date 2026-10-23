@@ -57,6 +57,7 @@ import {
     handleExportProjectSettings,
 } from './projectManagementHandlers';
 import { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
+import { handleGetStorefrontReport, handleTakeStorefrontReportRequest } from './storefrontReportHandlers';
 import { executeCommandForWorkingProject } from '@/core/handlers/projectCommandHelper';
 import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -324,8 +325,6 @@ export const handleOpenDataInstaller = openBesideDashboard('demoBuilder.showData
  * no project at all, from the palette.
  */
 export const handleOpenSiteAccess = openBesideDashboard('demoBuilder.manageSiteAccess', 'Site Access');
-/** Handle 'openStorefrontReport' — the report opens as a document beside the dashboard. */
-export const handleOpenStorefrontReport = openBesideDashboard('demoBuilder.storefrontReport', 'the Storefront Report');
 
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
@@ -362,7 +361,9 @@ export const dashboardHandlers = defineHandlers({
     setViewModeOverride: handleSetViewModeOverride,
     openDataInstaller: handleOpenDataInstaller,
     openSiteAccess: handleOpenSiteAccess,
-    openStorefrontReport: handleOpenStorefrontReport,
+    // The storefront report's window over the dashboard (EDS-64).
+    getStorefrontReport: handleGetStorefrontReport,
+    takeStorefrontReportRequest: handleTakeStorefrontReportRequest,
     showProjectDashboard: handleShowProjectDashboard,
 
     // Mesh handlers
@@ -470,7 +471,7 @@ export const dashboardHandlers = defineHandlers({
     // Adobe deploy destination (project-scoped — one target for every integration)
     setProjectDestination: handleSetProjectDestination,
 
-    // "Save as demo package": the description file into the project's own
+    // Share Demo's link form: the description file into the project's own
     // storefront repository, the card on the SC's Welcome step, the checks a
     // project built from it needs, and the undo.
     getDemoPackagePreview: handleGetDemoPackagePreview,

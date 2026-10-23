@@ -75,6 +75,9 @@ async function plan(get: CommerceGet): Promise<Plan> {
 const createLine = (code: string): string => `Create the ${code} product attribute as a Text Field`;
 const setLine = (set: { name: string; products?: number }): string =>
     `Add erp_owner to the attribute set ${set.name}${set.products === undefined ? '' : ` (${set.products} products)`}`;
+/** The same lines said as done, for what an apply reports (the result screen lists them). */
+const createdLine = (code: string): string => `Created the ${code} product attribute as a Text Field`;
+const addedLine = (set: { name: string; products?: number }): string => setLine(set).replace(/^Add /, 'Added ');
 
 export const erpAttributesFix: StepFix = {
     async preview(deps): Promise<FixPreview> {
@@ -94,14 +97,14 @@ export const erpAttributesFix: StepFix = {
             try {
                 await send('POST', 'products/attributes', textAttributeBody(code));
                 created.push(code);
-                changes.push(createLine(code));
+                changes.push(createdLine(code));
             } catch (error) {
                 rejected.push(`${createLine(code)}: ${errorText(error)}`);
             }
         }
         const ownerStands = !planned.missing.includes(OWNER_CODE) || created.includes(OWNER_CODE);
         const added = ownerStands && !planned.wrongType ? await addOwnerToSets(get, send, planned.sets) : { changed: [] };
-        changes.push(...added.changed.map((set) => setLine(planned.sets.find((wanted) => wanted.id === set.id) ?? set)));
+        changes.push(...added.changed.map((set) => addedLine(planned.sets.find((wanted) => wanted.id === set.id) ?? set)));
         if ('error' in added && added.error) rejected.push(`Add erp_owner to the attribute set ${added.error}`);
         if (!ownerStands) rejected.push(...planned.sets.map((set) => `${setLine(set)}: erp_owner was not created`));
         const record: ErpAttributesStepRecord | undefined =

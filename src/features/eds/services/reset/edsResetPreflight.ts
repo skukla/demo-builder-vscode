@@ -72,7 +72,7 @@ export async function checkAdobeAuth(
             projectId: project.adobe?.projectId,
             workspace: project.adobe?.workspace,
         },
-        warningMessage: 'Your Adobe I/O session has expired. Please sign in to continue.',
+        warningMessage: 'Your Adobe sign-in has expired. Sign in to keep going.',
     });
 
     if (result.authenticated) return null;
@@ -81,7 +81,7 @@ export async function checkAdobeAuth(
     await context.stateManager.saveProject(project);
     return {
         success: false,
-        error: 'Adobe I/O authentication required',
+        error: 'Adobe sign-in required',
         errorType: 'ADOBE_AUTH_REQUIRED',
         cancelled: result.cancelled,
     };
@@ -189,8 +189,12 @@ export async function checkGitHubAppInstallation(
     context.logger.warn(`${logPrefix} AEM Code Sync app not installed on ${repoOwner}/${repoName}`);
 
     const appWarning = await askDuringOperation(
-        'The AEM Code Sync GitHub App is not installed on this repository. ' +
-            'Without it, code changes will not sync to the CDN and the site may not work correctly.',
+        {
+            title: 'Install the AEM Code Sync app',
+            message:
+                'The AEM Code Sync GitHub App is not installed on this repository. ' +
+                'Without it, code changes will not sync to the CDN and the site may not work correctly.',
+        },
         'Install App',
         'Continue Anyway',
     );
@@ -200,7 +204,10 @@ export async function checkGitHubAppInstallation(
         await vscode.env.openExternal(vscode.Uri.parse(installUrl));
 
         const afterInstall = await askDuringOperation(
-            'After installing the app, click Continue to proceed with the reset.',
+            {
+                title: 'Finish installing the app',
+                message: 'Once the app is installed, choose Continue to go on with the reset.',
+            },
             'Continue',
             'Cancel',
         );

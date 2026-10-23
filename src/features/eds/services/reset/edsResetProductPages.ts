@@ -28,7 +28,7 @@ import { HelixService } from '../helix/helixService';
 import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import { removeProductPages, type ProductPageHelix } from '../storefront/productPageRemoval';
 import { productPageRemovalDepsFor } from '../storefront/projectProductPages';
-import type { EdsResetParams } from './edsResetParams';
+import type { EdsResetParams, PageSentence } from './edsResetParams';
 import { RESET_STEP } from '@/core/utils/resetStages';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
@@ -49,7 +49,8 @@ interface ResetClients {
  * @param clients - the DA.live and token clients reset built
  * @param report - the reset's progress reporter
  * @param helixSeam - Helix seam; production builds it from reset's clients
- * @returns the sentence for the reset's result, or undefined when there were none to remove
+ * @returns the sentence for the reset's result, a problem unless every page came off live and
+ *   preview; undefined when there were none to remove
  */
 export async function takeOutProductPages(
     params: EdsResetParams,
@@ -57,7 +58,7 @@ export async function takeOutProductPages(
     clients: ResetClients,
     report: (step: number, message: string) => void,
     helixSeam?: ProductPageHelix,
-): Promise<string | undefined> {
+): Promise<PageSentence | undefined> {
     const { logger, stateManager } = context;
     const { repoOwner, repoName, daLiveOrg, daLiveSite, project } = params;
     report(RESET_STEP.clearingOldContent, 'Removing the old product pages');
@@ -75,7 +76,7 @@ export async function takeOutProductPages(
     if (result.status === 'nothing') return undefined;
     logger.info(`[EdsReset] Product pages: ${result.summary}`);
     report(RESET_STEP.clearingOldContent, result.summary);
-    return result.summary;
+    return { sentence: result.summary, problem: result.status !== 'removed' };
 }
 
 /**
@@ -88,19 +89,23 @@ export async function takeOutProductPages(
 export function withPageSentences<T extends object>(
     result: T,
     sentences: {
-        catalogMenu: string | undefined;
-        productPages: string | undefined;
+        catalogMenu: PageSentence | undefined;
+        productPages: PageSentence | undefined;
     },
-): T & { catalogMenu?: string; productPages?: string } {
+): T & { catalogMenu?: string; productPages?: string; pageWarnings?: string[] } {
     const { catalogMenu, productPages } = sentences;
     // The same object when there is nothing to add: callers compare the result they got.
     if (catalogMenu === undefined && productPages === undefined) {
         return result;
     }
+    const pageWarnings = [catalogMenu, productPages]
+        .filter((s): s is PageSentence => s?.problem === true)
+        .map((s) => s.sentence);
     return {
         ...result,
-        ...(catalogMenu === undefined ? {} : { catalogMenu }),
-        ...(productPages === undefined ? {} : { productPages }),
+        ...(catalogMenu === undefined ? {} : { catalogMenu: catalogMenu.sentence }),
+        ...(productPages === undefined ? {} : { productPages: productPages.sentence }),
+        ...(pageWarnings.length ? { pageWarnings } : {}),
     };
 }
 

@@ -210,6 +210,29 @@ describe('the progress modal', () => {
         ).not.toBeInTheDocument();
     });
 
+    // Live release test, 2026-10-22: "Store prepared" named nothing it changed. The lines
+    // come before how long it took, and the modal waits for them to be read.
+    it('lists what a run that succeeded changed above how long it took, and stays until closed', async () => {
+        const user = setupUser();
+        renderGrid({ appBuilderComponents: NOT_DEPLOYED });
+        const modal = await startDeploy(user);
+
+        push({
+            id: 'custom-app',
+            state: 'succeeded',
+            details: ['Product attributes:', 'Added erp_owner to the attribute set Default'],
+            tookMs: 58000,
+        });
+
+        const lines = within(modal).getAllByTestId('status-detail').map((line) => line.textContent);
+        expect(lines).toStrictEqual(['Product attributes:', 'Added erp_owner to the attribute set Default', 'Took 58 seconds']);
+        expect(within(modal).getByTestId('status-display')).toHaveAttribute('data-variant', 'success');
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
+        });
+        expect(screen.getByRole('dialog', { name: 'Deploying custom-app' })).toBeInTheDocument();
+    });
+
     it('stays open on failure with the reason', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });

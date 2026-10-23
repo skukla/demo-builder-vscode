@@ -38,7 +38,7 @@ import type { Stack } from '@/types/stacks';
 /**
  * Generated-file banner. Since ADR-013 (hash-and-skip) a hand edit is KEPT, not
  * overwritten: the refresh skips an edited file, reports it, and the AI
- * Capabilities modal shows "Edited — kept your version" — but the file then
+ * Capabilities modal says "Regenerate keeps your edits to …" — but the file then
  * stops receiving bundle updates until it is deleted and regenerated. The
  * banner states that trade honestly. (settings.json, which users customize
  * most, is MERGED instead — see claudeSettingsWriter.)

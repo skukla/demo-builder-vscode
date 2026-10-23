@@ -16,6 +16,11 @@
  * Closing a run that is still going hands it to a progress notification, as the
  * progress modal does; closing a question answers it as cancelled.
  *
+ * A run that leaves rows the SC unticked, and a fresh check still lists, says how many
+ * (`remaining`, from the run's answer), and `back` returns to the list on Check for
+ * Updates run again, since the run has just changed what is waiting (owner, 2026-10-22).
+ * That check says "up to date" in its own notification, and the window then closes.
+ *
  * @module features/projects-dashboard/ui/hooks/useUpdatesModal
  */
 
@@ -24,7 +29,9 @@ import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
 import type {
+    ApplyUpdatesResponse,
     PendingUpdateRow,
+    RecheckUpdatesResponse,
     ShowUpdatesPayload,
     TakeUpdatesRequestResponse,
     UpdateRowStatus,
@@ -60,6 +67,12 @@ export interface UpdatesModalControls {
     answer: (chosen?: string) => void;
     /** Every keystroke in a question's fields, for `answer` to hand back. */
     onTyped: (values: Record<string, string>) => void;
+    /** Once the run has answered: how many rows the SC left unticked are still waiting. */
+    remaining: number;
+    /** Back to the list, on a fresh check. */
+    back: () => void;
+    /** Whether that check is running. */
+    rechecking: boolean;
 }
 
 const CLOSED: UpdatesView = { phase: 'closed' };
@@ -86,6 +99,8 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
     const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
     const [statuses, setStatuses] = useState<RowStatuses>(NO_STATUSES);
     const [run, setRun] = useState(0);
+    const [remaining, setRemaining] = useState(0);
+    const [rechecking, setRechecking] = useState(false);
     const applying = view.phase === 'applying';
     const progress = useOperationProgress(applying ? UPDATES_OPERATION_ID : null, run, false);
 
@@ -140,12 +155,29 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
         const rows = view.rows.filter((r) => ticked.has(r.id) && !r.lockedReason);
         const ids = rows.map((r) => r.id);
         setStatuses(waitingAll(rows));
+        setRemaining(0);
         setRun((previous) => previous + 1);
         setView({ phase: 'applying', rows });
         webviewClient
-            .request('applyUpdates', { ids, id: UPDATES_OPERATION_ID, progress: 'modal' })
-            .then(onApplied, onApplied);
+            .request<ApplyUpdatesResponse | undefined>('applyUpdates', { ids, id: UPDATES_OPERATION_ID, progress: 'modal' })
+            .then((answer) => {
+                setRemaining(answer?.remaining ?? 0);
+                onApplied();
+            }, onApplied);
     }, [view, ticked, onApplied]);
+
+    const back = useCallback(() => {
+        setRechecking(true);
+        webviewClient.request<RecheckUpdatesResponse>('recheckUpdates').then(
+            (answer) => {
+                setRechecking(false);
+                setRemaining(0);
+                if (answer.data.rows.length > 0) openOn(answer.data.rows);
+                else setView(CLOSED);
+            },
+            () => setRechecking(false),
+        );
+    }, [openOn]);
 
     // A ref, not state: every keystroke would otherwise re-render the list around the
     // field being typed into, and nothing renders from it.
@@ -167,7 +199,7 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
     }, [applying, progress, answer]);
 
     return useMemo(
-        () => ({ view, ticked, toggle, toggleGroup, apply, close, statuses, progress, answer, onTyped }),
-        [view, ticked, toggle, toggleGroup, apply, close, statuses, progress, answer, onTyped],
+        () => ({ view, ticked, toggle, toggleGroup, apply, close, statuses, progress, answer, onTyped, remaining, back, rechecking }),
+        [view, ticked, toggle, toggleGroup, apply, close, statuses, progress, answer, onTyped, remaining, back, rechecking],
     );
 }

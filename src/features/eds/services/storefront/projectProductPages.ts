@@ -1,18 +1,19 @@
 /**
- * The product-page removal's deps for ONE project's own storefront (EDS-26, EDS-44).
+ * The overlay-page removals' deps for ONE project's own storefront: product pages
+ * (EDS-26, EDS-44) and category pages (EDS-61).
  *
  * Reset and the store-change republish remove the same pages the same way: the
  * authored pages under `/products` are read from the project's DA.live site, folder by
  * folder (a listing that fails stops the removal), and "another project" is any other
  * local project on the same repository. The rules themselves are
- * `productPageRemoval.ts`.
+ * `productPageRemoval.ts`. Category pages share the helix and the refusal.
  *
  * @module features/eds/services/storefront/projectProductPages
  */
 
 import { listDaLivePages } from '../daLive/daLivePageWalk';
 import type { DaLiveSourceOperations } from '../daLive/daLiveSourceOperations';
-import type { ProductPageHelix, ProductPageRemovalDeps } from './productPageRemoval';
+import type { CategoryPageRemovalDeps, ProductPageHelix, ProductPageRemovalDeps } from './productPageRemoval';
 import { otherProjectsPublishingTo } from './sharedRepoProjects';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
@@ -43,4 +44,13 @@ export function productPageRemovalDepsFor(input: ProjectProductPagesInput): Prod
             otherProjectsPublishingTo(stateManager, `${target.repoOwner}/${target.repoName}`, input.projectPath),
         logger: input.logger,
     };
+}
+
+/**
+ * @param input - the project, its storefront and the clients the caller holds
+ * @returns what `removeCategoryPages` needs for that storefront
+ */
+export function categoryPageRemovalDepsFor(input: ProjectProductPagesInput): CategoryPageRemovalDeps {
+    const { helix, otherProjectsOnRepo, logger } = productPageRemovalDepsFor(input);
+    return { helix, otherProjectsOnRepo, logger };
 }

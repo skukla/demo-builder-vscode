@@ -173,7 +173,14 @@ name that no ERP in the project has, compared without case — made to end in "E
 1. adds a demo-erp system `demo-erp-2` (then `-3`, …) in an Adobe workspace of its own, named
    for it, and deploys it with `ERP_DISPLAY_NAME` = the name and `ERP_ID` = its id;
 2. links it to the integration (`systems` / `usedBy`) and sends the integration the whole
-   list (`PUT erp/erps`, `erpListSync.ts`), keeping the settings each ERP already has there;
+   list (`PUT erp/erps`, `erpListSync.ts`), keeping the settings each ERP already has there.
+   When the list grows from ONE ERP, the rule that ERP holds as the lone ERP (everything,
+   unless the integration's shared rule says otherwise) is pinned on its own entry in the same
+   PUT: once there are several, the integration reads an entry with no rule of its own as
+   `erp_owner=<its id>` (commerce-erp-integration `router/ownership.js` `ownershipOf`). Without
+   the pin, adding Accuform on Justrite (2026-10-22) left Justrite ERP on a rule nobody set,
+   owning none of 321 products. Every path that grows the list sends it here, so the pin holds
+   for the card's add, `add_erp` and a deploy's relist alike;
 3. saves the new ERP's ownership rule onto its entry (`PATCH erp/erps`, `erpOwnershipSync.ts`)
    and, only when the new ERP is split by website, the narrowing of an existing ERP on
    everything to the websites left over (below);
@@ -235,6 +242,9 @@ ERP's. The SC never resets by hand to make the ERPs match the rules. Per ERP, in
    configurable parent carries no sales status and is left, so is a product already marked.
    A real ERP discontinues, it does not delete, and the demo ERP has no product delete for
    that reason (its contract v17). Reset ERPs stays the only wipe.
+   After an ADD, a pass that would mark every product an ERP sells discontinued marks none
+   and says so: an add never asks to take an existing ERP's catalogue away, so that is a rule
+   gone wrong (Justrite, 2026-10-22), not a change to carry out.
 
 When a removal leaves ONE ERP, its rule is set back to everything before the fills, so a
 single-ERP project looks as it did before the second ERP was added; with no ERP on everything
@@ -400,8 +410,20 @@ has a check the engine runs it fresh (the preview all of them at once, the apply
 before deciding) and decides from that answer alone; the saved checklist is never consulted,
 because a store changes after a check passes (Justrite 2026-10-10: two settings switched off
 by hand still previewed as Done and were skipped). The fresh answers are saved on the
-checklist, so the guide and the card agree afterwards. The guide offers "Apply this step" on a
-step saved done as well, for the same reason. A step applied twice keeps its first record.
+checklist, so the guide and the card agree afterwards. The guide offers "Apply this step" only
+on a step still open; a step saved done shows no Apply, and "Undo this step" only when Demo
+Builder applied it (owner, 2026-10-22). The guide checks every never-checked step as it opens,
+so a saved done is fresh enough, and a stale one is corrected by **Check all steps**, which
+opens it again. A step applied twice keeps its first record.
+
+What the SC sees (live release test, 2026-10-22). The guide checks every step that has never
+been checked as it opens, once per open; a step with a saved check keeps it until **Check all
+steps**. A step's Apply confirm reads that step's preview as it opens and lists what it would
+change, or says the store already has it. The result of an apply or undo lists each step that
+changed something, then its lines (`details` on the progress payload); what Commerce refused
+is the warning. An undo runs under its own stage, "Undoing the preparation". The attribute-set
+check counts the sets missing `erp_owner` and the products in them; the names are in the
+preview and the result.
 
 Two rules whatever the step: a step is checked first and SKIPPED when its check says done,
 so a datapack that already loaded the attributes, sources or shared catalogs is never redone
@@ -428,6 +450,23 @@ fixes in JSON alone.
 | A shared catalog per company | a custom catalog (`POST sharedCatalog`) and `assignCompanies` for each company the check finds in no catalog or sharing a custom one | unassigns (the company returns to the public catalog) and deletes only a catalog it created | — |
 | "Confirmed in ERP", "Partially Held" | nothing: `POST /V1/order-statuses` is 404 | — | the whole step |
 
+**Adding the integration prepares the store** (owner, 2026-10-22). The add of the ERP
+INTEGRATION (not of another ERP) runs the same engine once its first install stands and
+BEFORE its ERP is filled, because the fill relies on `erp_owner` being in the attribute sets
+and on the ERP's warehouse (`erpStorePreparation.ts`, the runner's `prepareStore` dep in
+`erpRunnerDeps.ts`). It saves the record and the checked steps exactly as Prepare this store
+does (`recordsAfterRun`), so Undo per step and the removal's teardown work unchanged; a step
+without a fix stays in the setup guide. Every way of adding it reaches this: the
+Integrations screen, `add_integration`, project creation and an Edit that adds it all run the
+runner's add. What it will change is confirmed first, because some steps change settings
+every website on a shared Commerce shares (`fixReach.ts`: a settings item at the default
+scope, the attributes, the shared catalogs; the warehouse is the project's website's only):
+the Integrations screen's add opens a confirm that reads the store
+(`PrepareOnAddDialog.tsx`), `add_integration` for the ERP integration answers that preview
+without `confirm: true` and adds nothing, and the wizard's Review names the steps from the
+catalog (no store can be read before the project exists). A preparation that stops never
+stops the add or the fill; the progress says why and that Prepare this store runs it again.
+
 `set_commerce_config` is the one settings write outside a catalog step: the same read-first,
 write-only-what-differs, read-`errors` path, recording the previous values on the project
 (`commerceConfigChange`, the last write only) so `undo: true` puts them back.
@@ -446,7 +485,13 @@ are in, the fill pre-fills the integration's mapping (AB-26y, `erpFillMapping.ts
 on the ERP, each naming the website it serves) and saves each website's sales organization
 and its name onto that ERP's entry in the integration's list (`PATCH erp/erps` with
 `website`), **only where none is set** for that ERP, at the website or on the entry itself.
-A value set on the Admin page is never replaced. The answer's `mapping` block says what
+A value set on the Admin page is never replaced. The structure the fill sends the ERP names the PROJECT's
+website first (its store scope, `ACCS_WEBSITE_CODE`), and beside it only the websites given a
+sales organization of their own (`structureWebsites`), because the ERP takes the first
+website on its default sales organization as that organization's home: on a shared Commerce
+that was another demo's `base`, so the mapping named "Main Website" and the ERP called the
+project's own website and four others "unmapped" (Justrite, 2026-10-22). With no project
+website, or one Commerce does not have, every website is sent as before. The answer's `mapping` block says what
 happened: `filled` and `kept` (rows of `{ erp, website, salesOrg }`; a kept row adds
 `erpSalesOrg` when the ERP names a different one), `skipped` (the ERP names a website
 Commerce does not have) and `failed` (a save the integration refused, also said in

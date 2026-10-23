@@ -13,6 +13,9 @@ import { createFailureResult, createSuccessResult } from '../../../helpers/comma
 import { createMockDebugLogger } from '../../../helpers/debugLoggerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStepLogger } from './authenticationService.testUtils';
+import { cancelSignIn, signInLink } from '@/core/auth/signInSession';
+import type { ExecuteOptions } from '@/core/shell/types';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     forgetPreviousSignIn,
     runAdobeLogin,
@@ -64,6 +67,30 @@ describe('forgetPreviousSignIn', () => {
 });
 
 describe('runAdobeLogin', () => {
+    // 2026-10-23: no browser opened, the link aio printed was thrown away, and the
+    // command was given one minute — then left running when that minute ran out.
+    it('gives a person five minutes, hands on the link it prints, and can be cancelled', async () => {
+        const { deps, execute } = buildDeps();
+        const link = 'https://aio-login.example/applogin?id=abc';
+        const waiting = signInLink();
+        let abortedOnCancel: boolean | undefined;
+        execute.mockImplementation(async (_command: string, options: ExecuteOptions) => {
+            options.onOutput?.('  Visit this url to log in:\n');
+            options.onOutput?.(`${link}\n- Waiting for browser login...\n`);
+            cancelSignIn();
+            abortedOnCancel = options.signal?.aborted;
+            return createSuccessResult(VALID_TOKEN);
+        });
+
+        await runAdobeLogin(deps, false);
+
+        await expect(waiting).resolves.toBe(link);
+        expect(abortedOnCancel).toBe(true);
+        expect(execute.mock.calls[0][1]).toEqual(
+            expect.objectContaining({ timeout: TIMEOUTS.AUTH.SIGN_IN, streaming: true }),
+        );
+    });
+
     it('a plain sign-in that returns a token answers true and forgets the previous sign-in', async () => {
         const { deps, execute, cacheManager, sdkClient } = buildDeps();
         execute.mockResolvedValue(createSuccessResult(VALID_TOKEN));

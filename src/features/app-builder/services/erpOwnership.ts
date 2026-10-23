@@ -14,7 +14,8 @@
  * 3. then website rules, for what is still unowned.
  *
  * So adding an ERP by attribute changes no other rule: the ERP on everything keeps what the
- * attribute does not claim. Adding one by WEBSITE is the one case that narrows an ERP on
+ * attribute does not claim. (A lone ERP that never saved a rule is on everything only while it
+ * is alone; the list sync pins that rule on its entry as the list grows, `erpListSync.ts`.) Adding one by WEBSITE is the one case that narrows an ERP on
  * everything (`existingRulesToChange`): a catch-all comes before a website rule, so it would
  * take every product before the website ERP saw any. It is given the websites nobody's rule
  * names; when none is left it is left alone, the new ERP owns nothing, and the pass says so.

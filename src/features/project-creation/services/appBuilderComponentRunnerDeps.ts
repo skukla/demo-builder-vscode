@@ -97,7 +97,7 @@ export interface RunnerDepsContext {
  */
 async function promptForToolchainRefresh(): Promise<boolean> {
     const choice = await askDuringOperation(
-        'Adobe CLI is out of date. Update and retry?',
+        { title: 'Update the Adobe CLI', message: 'The Adobe CLI is out of date. Update it and try again?' },
         'Update & Retry',
         'Not Now',
     );

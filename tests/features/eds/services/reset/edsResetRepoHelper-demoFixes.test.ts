@@ -1,11 +1,9 @@
 /**
- * resetRepoToTemplate and Demo Builder's fixes on an added demo (EDS-13f).
- *
- * A saved package's ledger is applied where it fits, in one commit to the
- * SC's OWN repository (never the demo's source); a colleague's storefront with
- * our lineage is offered the fits, and they are written only when the reset
- * was asked to (`applyDemoFixes`). The ledger fetch and GitHub are the
- * boundaries; the engine and the decision are real.
+ * resetRepoToTemplate on an added demo: its code is copied as it is (owner,
+ * 2026-10-23, EDS-64). Demo Builder's fixes used to be applied to a saved
+ * package, and offered to a colleague's storefront with our lineage (EDS-13f);
+ * neither happens now, even when every fix in the ledger would fit. The ledger
+ * answers with fixes that fit, so a write would have something to write.
  */
 
 import { buildParams, installDefaults, resetRepoToTemplate } from './edsResetRepoHelper.testUtils';
@@ -42,17 +40,21 @@ function githubFileOps() {
     };
 }
 
-async function reset(demo: ReturnType<typeof makeAddedDemo>, applyDemoFixes?: boolean) {
+async function reset(demo: ReturnType<typeof makeAddedDemo>) {
     const ops = githubFileOps();
     const params = buildParams({
         templateOwner: 'sayurihanki',
         templateRepo: 'aistore',
         project: createMockProject({ name: 'p', path: '/p', selectedBlockLibraries: [], demo }),
-        ...(applyDemoFixes ? { applyDemoFixes } : {}),
     });
     const context = createMockHandlerContext({ logger: createMockLogger() });
     const result = await resetRepoToTemplate(params, context, ops as unknown as GitHubFileOperations, jest.fn());
     return { ops, result };
+}
+
+/** Whether the reset wrote a commit of Demo Builder's fixes. */
+function wroteFixes(ops: ReturnType<typeof githubFileOps>): boolean {
+    return ops.commitTreeToBranch.mock.calls.some(([, , , , message]) => String(message).startsWith('Demo Builder: '));
 }
 
 beforeEach(() => {
@@ -60,8 +62,8 @@ beforeEach(() => {
     mockLedger.mockResolvedValue(LEDGER);
 });
 
-describe('resetRepoToTemplate — fixes on an added demo (EDS-13f)', () => {
-    it("re-applies a saved package's ledger to the SC's own repository, and says so", async () => {
+describe('resetRepoToTemplate — an added demo is copied as it is', () => {
+    it("writes no fixes to a saved package's storefront, though its ledger fits", async () => {
         const saved = makeAddedDemo({
             source: { owner: 'sayurihanki', repo: 'aistore' },
             builtWith: {
@@ -74,27 +76,18 @@ describe('resetRepoToTemplate — fixes on an added demo (EDS-13f)', () => {
 
         const { ops, result } = await reset(saved);
 
-        expect(ops.commitTreeToBranch).toHaveBeenCalledWith('me', 'shop', 'main', expect.any(Array), 'Demo Builder: 1 fix\n\npdp-empty-data-redirect');
-        expect(result.demoFixes).toEqual({ applied: ['pdp-empty-data-redirect'], offered: undefined });
-        expect(result.demoCaveats).toEqual(['Demo Builder applied 1 fix to this storefront: empty product pages.']);
+        expect(wroteFixes(ops)).toBe(false);
+        expect('demoFixes' in result).toBe(false);
     });
 
-    it("offers a colleague's fits and writes nothing when the reset was not asked to apply them", async () => {
+    it("writes no fixes to a colleague's storefront made from one of our templates, and offers none", async () => {
         const colleague = makeAddedDemo({ source: { owner: 'sayurihanki', repo: 'aistore' }, lineage: { templateRepository: B2B } });
 
         const { ops, result } = await reset(colleague);
 
-        expect(ops.commitTreeToBranch).not.toHaveBeenCalled();
-        expect(result.demoFixes?.offered).toEqual(['pdp-empty-data-redirect', 'header-nav-tools-defensive']);
-    });
-
-    it("writes a colleague's fits to the SC's repository when the reset was asked to", async () => {
-        const colleague = makeAddedDemo({ source: { owner: 'sayurihanki', repo: 'aistore' }, lineage: { templateRepository: B2B } });
-
-        const { ops, result } = await reset(colleague, true);
-
-        expect(ops.commitTreeToBranch).toHaveBeenCalledWith('me', 'shop', 'main', expect.any(Array), expect.stringMatching(/^Demo Builder: 2 fixes/));
-        expect(result.demoFixes?.applied).toEqual(['pdp-empty-data-redirect', 'header-nav-tools-defensive']);
+        expect(wroteFixes(ops)).toBe(false);
+        expect('demoFixes' in result).toBe(false);
+        expect('demoCaveats' in result).toBe(false);
     });
 
     it('reads what the repository is built on after the reset', async () => {

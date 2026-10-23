@@ -23,6 +23,7 @@ import { useHandoverDialogs } from './hooks/useHandoverDialogs';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
 import { useOrgSwitchFlow } from './hooks/useOrgSwitchFlow';
+import { useStorefrontReportDialog } from './hooks/useStorefrontReport';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayout';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
@@ -94,7 +95,8 @@ export function ProjectDashboardScreen({
     // change mode (rendered by DashboardDialogs).
     const [changeSourceOpen, setChangeSourceOpen] = useState(false);
     const openChangeSource = demo ? () => setChangeSourceOpen(true) : undefined;
-    const handover = useHandoverDialogs(isEdsStable); // Export, Save as demo package
+    const handover = useHandoverDialogs(); // the Share dialog
+    const storefrontReport = useStorefrontReportDialog(); // the storefront report's window (EDS-64)
     // Inline title rename commit (null = success; string = inline error).
     const renameInline = useInlineRename();
 
@@ -132,7 +134,6 @@ export function ProjectDashboardScreen({
         handleEditProject,
         handleOpenAemAssets,
         handleOpenSiteAccess,
-        handleOpenStorefrontReport,
         handleRestartDemo,
         handleNavigateBack,
         handleReAuthenticate,
@@ -241,7 +242,7 @@ export function ProjectDashboardScreen({
                             <DemoSourceNotice
                                 issue={demoSourceIssue}
                                 onChangeSource={openChangeSource}
-                                onSaveDemoPackage={handover.openDemoPackage}
+                                onKeepAsOwn={isEdsStable ? handover.openShare : undefined}
                             />
                         </>
                     }
@@ -278,13 +279,11 @@ export function ProjectDashboardScreen({
                                     handleConfigure={handleConfigure}
                                     handleOpenAemAssets={handleOpenAemAssets}
                                     handleOpenSiteAccess={isEdsStable ? handleOpenSiteAccess : undefined}
-                                    handleOpenStorefrontReport={
-                                        isEdsStable ? handleOpenStorefrontReport : undefined
-                                    }
+                                    handleOpenStorefrontReport={isEdsStable ? storefrontReport.open : undefined}
                                     brokenLinkCount={projectStatus?.brokenLinkCount ?? 0}
+                                    needsReset={projectStatus?.storefrontNeedsReset === true}
                                     handleEditProject={handleEditProject}
-                                    handleExportProject={handover.openExport}
-                                    handleSaveDemoPackage={handover.openDemoPackage}
+                                    handleShareDemo={handover.openShare}
                                     handleChangeDemoSource={openChangeSource}
                                     handleResetProject={handleResetProject}
                                     handleDeleteProject={handleDeleteProject}
@@ -300,6 +299,9 @@ export function ProjectDashboardScreen({
                 changeSourceDemo={changeSourceOpen ? demo : undefined}
                 onCloseChangeSource={() => setChangeSourceOpen(false)}
                 handover={handover}
+                storefrontReport={storefrontReport}
+                projectName={displayName}
+                onResetProject={handleResetProject}
                 operations={operations}
                 capabilitiesOpen={showCapabilities}
                 onCloseCapabilities={() => setShowCapabilities(false)}

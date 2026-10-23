@@ -1,33 +1,41 @@
 /**
- * The catalog menu as a storefront step (EDS-24, redesigned 2026-10-05): storefront setup,
- * reset and republish each run it; there is no button.
+ * The catalog menu as a storefront step (EDS-24, EDS-61): storefront setup, reset and
+ * republish each run it; there is no button.
  *
- * Boundaries faked: the storefront's pages (an in-memory DA.live site), whether the
- * repository has the block, and the category read. The service, the record and the
- * summary are real.
+ * Boundaries faked: the storefront's pages (an in-memory DA.live site), the overlay's
+ * category pages (an in-memory Helix), whether the repository has the block, and the
+ * category read. The service, the record and the summary are real.
  *
  * The promises under test:
+ * - every storefront with the product page overlay keeps the authored-pages sheet, block
+ *   or not, because the overlay answers at category addresses either way;
  * - only a storefront whose own copy has `blocks/catalog-menu/` gets pages and the switch;
- * - a page someone else made is never touched, and is named in the summary (a clash);
- * - reset's removal then re-apply round-trips: `/nav` comes back byte-for-byte and no
- *   page Demo Builder wrote is left behind (CLAUDE.md property 1);
- * - a hand-built page for a category, at ANY address, is honored: no second page is
- *   written, the menu links to theirs, and the summary names it;
+ * - a storefront without the product page overlay gets neither, and a sentence saying why
+ *   (owner decision D5);
+ * - reset's removal then re-apply round-trips: `/nav` comes back byte-for-byte and the
+ *   site is as setup left it (CLAUDE.md property 1);
+ * - a hand-built page for a category, at ANY address, is honored;
  * - the step never throws: a storefront without a catalog menu is still a storefront.
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
 import { readCatalogMenuRecord } from '@/features/eds/services/catalogMenu/catalogMenuRecord';
-import type { StorefrontPages } from '@/features/eds/services/catalogMenu/catalogMenuService';
 import {
     applyCatalogMenuStep,
+    publishAuthoredListStep,
     removeCatalogMenuStep,
     type CatalogMenuSite,
 } from '@/features/eds/services/catalogMenu/catalogMenuStep';
-import type { CatalogCategory } from '@/features/eds/services/catalogMenu/categoryPages';
+import type { CatalogCategory } from '@/features/eds/services/catalogMenu/categoryPagePlan';
+import { hashOf } from '@/features/eds/services/catalogMenu/ownedPages';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../../helpers/projectFake';
-import { fakeStorefront } from './catalogMenuService.testUtils';
+import {
+    fakeCategoryHelix,
+    fakeStorefront,
+    type FakeCategoryHelix,
+    type FakeStorefront,
+} from './catalogMenuService.testUtils';
 
 const NAV =
     '<body><header></header><main><div><p>Brand</p></div>' +
@@ -39,19 +47,20 @@ const CATEGORIES: CatalogCategory[] = [
     { id: '201', name: 'Apparel', urlPath: 'apparel', level: 2, parentId: '119' },
 ];
 
-/** A colleague's hand-made category page, already on the site. */
-const HAND_MADE_APPAREL = '<body><main><div><h1>Apparel</h1><p>Our own words</p></div></main></body>';
-
-const fakeSite = (initial: Record<string, string> = { '/nav': NAV }) => fakeStorefront(initial);
+const PAGES = ['/signs', '/signs/danger-signs', '/apparel'];
+const EMPTY = { legacyPages: [], links: [], navSwitch: false };
 
 function site(
-    pages: StorefrontPages,
+    s: FakeStorefront,
+    helix: FakeCategoryHelix,
     overrides: Partial<CatalogMenuSite> = {},
 ): CatalogMenuSite & { readCategories: jest.Mock } {
     return {
-        pages,
+        pages: s.port,
         hasBlock: async () => true,
         readCategories: jest.fn(async () => CATEGORIES),
+        overlay: true,
+        categoryPages: helix.host,
         ...overrides,
     } as CatalogMenuSite & { readCategories: jest.Mock };
 }
@@ -71,154 +80,182 @@ function storefrontProject(metadata: Record<string, unknown> = {}): Project {
 }
 
 describe('applyCatalogMenuStep', () => {
-    it('writes a page per category and switches the menu on, and keeps the record on the project', async () => {
+    it('publishes a page per category, writes the template, switches the menu on, and keeps the record', async () => {
         const project = storefrontProject();
-        const s = fakeSite();
+        const s = fakeStorefront({ '/nav': NAV });
+        const helix = fakeCategoryHelix();
 
-        const summary = await applyCatalogMenuStep(project, site(s.port));
+        const step = await applyCatalogMenuStep(project, site(s, helix));
+        const summary = step?.summary;
 
-        expect([...s.pages.keys()].sort()).toEqual(['/apparel', '/nav', '/signs', '/signs/danger-signs']);
+        expect(helix.published).toEqual(PAGES);
+        expect([...s.pages.keys()].sort()).toEqual(['/categories/default', '/nav']);
         expect(s.pages.get('/nav')).toContain('catalog-menu');
         const record = readCatalogMenuRecord(project);
         expect(record.navSwitch).toBe(true);
-        expect(record.pages.map((p) => p.path).sort()).toEqual(['/apparel', '/signs', '/signs/danger-signs']);
-        expect(summary).toContain('Wrote and published 3 category pages.');
+        expect(record.templateHash).toBeDefined();
+        expect(summary).toContain('Published 3 category pages.');
+        expect(step?.ok).toBe(true);
     });
 
-    it('does nothing at all when the storefront does not have the block', async () => {
+    it('does nothing at all when the storefront does not have the block: no sheet, so the overlay stays off', async () => {
         const project = storefrontProject();
-        const s = fakeSite();
-        const reader = site(s.port, { hasBlock: async () => false });
+        const s = fakeStorefront({ '/nav': NAV, '/apparel': '<body>ours</body>' });
+        const helix = fakeCategoryHelix();
+        const reader = site(s, helix, { hasBlock: async () => false });
 
-        const summary = await applyCatalogMenuStep(project, reader);
+        const step = await applyCatalogMenuStep(project, reader);
+        const summary = step?.summary;
 
         expect(summary).toBeUndefined();
-        expect([...s.pages.keys()]).toEqual(['/nav']);
         expect(s.pages.get('/nav')).toBe(NAV);
+        expect(helix.events).toStrictEqual([]);
         expect(reader.readCategories).not.toHaveBeenCalled();
-        expect(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata).not.toHaveProperty(
-            'catalogMenu',
+    });
+
+    it('without the product page overlay: no category pages, no menu switch, and one sentence why', async () => {
+        const project = storefrontProject();
+        const s = fakeStorefront({ '/nav': NAV });
+        const helix = fakeCategoryHelix();
+        const reader = site(s, helix, { overlay: false });
+
+        const step = await applyCatalogMenuStep(project, reader);
+        const summary = step?.summary;
+
+        expect(summary).toBe(
+            'Category pages come from the product page overlay, which is off for this storefront, ' +
+                'so no category pages were published and the catalog menu was not added.',
         );
+        expect(s.pages.get('/nav')).toBe(NAV);
+        expect(s.written).toStrictEqual([]);
+        expect(helix.published).toStrictEqual([]);
+        expect(reader.readCategories).not.toHaveBeenCalled();
     });
 
-    it("leaves a colleague's hand-made category page untouched and names it in the summary", async () => {
+    it('takes its menu back out when the overlay has been turned off since', async () => {
         const project = storefrontProject();
-        const s = fakeSite({ '/nav': NAV, '/apparel': HAND_MADE_APPAREL });
+        const s = fakeStorefront({ '/nav': NAV });
+        const helix = fakeCategoryHelix();
+        await applyCatalogMenuStep(project, site(s, helix));
 
-        const summary = await applyCatalogMenuStep(project, site(s.port));
+        const step = await applyCatalogMenuStep(project, site(s, helix, { overlay: false }));
+        const summary = step?.summary;
 
-        expect(s.pages.get('/apparel')).toBe(HAND_MADE_APPAREL);
-        expect(readCatalogMenuRecord(project).pages.map((p) => p.path)).not.toContain('/apparel');
-        expect(summary).toContain("Demo Builder didn't write it (Apparel (/apparel))");
+        expect(s.pages.get('/nav')).toBe(NAV);
+        expect(readCatalogMenuRecord(project)).toEqual(EMPTY);
+        expect(summary).toMatch(/^Category pages come from the product page overlay.*Took the catalog menu out/);
     });
 
-    it('re-applied (republish): a new category gets its page, an edited page keeps the edit', async () => {
-        const project = storefrontProject();
-        const s = fakeSite();
-        await applyCatalogMenuStep(project, site(s.port, { readCategories: jest.fn(async () => CATEGORIES.slice(0, 2)) }));
-        s.pages.set('/signs', '<body><main><div><h1>Signs, edited by the SC</h1></div></main></body>');
+    it('removes the pages the old model wrote, at the next republish, and publishes the overlay there', async () => {
+        const old = '<body><main><div><h1>Apparel</h1></div></main></body>';
+        const project = storefrontProject({
+            catalogMenu: { pages: [{ path: '/apparel', hash: hashOf(old) }], links: [], navSwitch: true },
+        });
+        const s = fakeStorefront({ '/nav': NAV, '/apparel': old });
 
-        const summary = await applyCatalogMenuStep(project, site(s.port));
+        const helix = fakeCategoryHelix();
+        const step = await applyCatalogMenuStep(project, site(s, helix));
+        const summary = step?.summary;
 
-        expect(s.pages.has('/apparel')).toBe(true);
-        expect(s.pages.get('/signs')).toContain('edited by the SC');
-        expect(summary).toContain('Wrote and published 2 category pages.');
-        expect(summary).toContain('because you edited it (Signs and Labels (/signs))');
-        expect(readCatalogMenuRecord(project).pages.map((p) => p.path)).not.toContain('/signs');
+        expect(s.removed).toEqual(['/apparel']);
+        expect(helix.sheet).toStrictEqual([]);
+        expect(helix.published).toContain('/apparel');
+        expect(readCatalogMenuRecord(project).legacyPages).toStrictEqual([]);
+        expect(summary).toContain('Removed 1 category page Demo Builder wrote in DA.live');
     });
 
     it('changes nothing and says why when the catalog has no menu categories yet', async () => {
         const project = storefrontProject();
-        const s = fakeSite();
+        const s = fakeStorefront({ '/nav': NAV });
 
-        const summary = await applyCatalogMenuStep(project, site(s.port, { readCategories: jest.fn(async () => []) }));
+        const step = await applyCatalogMenuStep(
+            project,
+            site(s, fakeCategoryHelix(), { readCategories: jest.fn(async () => []) }),
+        );
+        const summary = step?.summary;
 
         expect([...s.pages.keys()]).toEqual(['/nav']);
-        expect(summary).toMatch(/^Category pages were not written: .*Include in Menu.*Republish the storefront/);
+        expect(summary).toMatch(/^Category pages were not published: .*Include in Menu.*Republish the storefront/);
     });
 
     it('never throws: a failed check for the block is reported, and nothing is written', async () => {
         const project = storefrontProject();
-        const s = fakeSite();
+        const s = fakeStorefront({ '/nav': NAV });
 
-        const summary = await applyCatalogMenuStep(
+        const step = await applyCatalogMenuStep(
             project,
-            site(s.port, {
+            site(s, fakeCategoryHelix(), {
                 hasBlock: async () => {
                     throw new Error('GitHub 502');
                 },
             }),
         );
+        const summary = step?.summary;
 
         expect([...s.pages.keys()]).toEqual(['/nav']);
         expect(summary).toContain('GitHub 502');
+        // A step that could not run says so to its caller, which shows it as a warning.
+        expect(step?.ok).toBe(false);
     });
 
-    it('takes its own pages and switch back out when the block has left the storefront', async () => {
+    it('takes its own template and switch back out when the block has left the storefront', async () => {
         const project = storefrontProject();
-        const s = fakeSite();
-        await applyCatalogMenuStep(project, site(s.port));
+        const s = fakeStorefront({ '/nav': NAV });
+        const helix = fakeCategoryHelix();
+        await applyCatalogMenuStep(project, site(s, helix));
 
-        const summary = await applyCatalogMenuStep(project, site(s.port, { hasBlock: async () => false }));
+        const step = await applyCatalogMenuStep(project, site(s, helix, { hasBlock: async () => false }));
+        const summary = step?.summary;
 
         expect([...s.pages.keys()]).toEqual(['/nav']);
         expect(s.pages.get('/nav')).toBe(NAV);
-        expect(readCatalogMenuRecord(project)).toEqual({ pages: [], links: [], navSwitch: false });
+        expect(helix.live.size).toBe(0);
+        // Without the sheet the overlay leaves every category address alone again.
+        expect(helix.sheet).toBeNull();
+        expect(readCatalogMenuRecord(project)).toEqual(EMPTY);
         expect(summary).toContain('no longer has the catalog menu block');
     });
 });
 
 describe('removeCatalogMenuStep', () => {
-    it('round trip: setup then reset returns /nav byte-for-byte and leaves no page Demo Builder wrote', async () => {
+    it('round trip: setup then reset returns /nav byte-for-byte; the re-apply leaves the site as setup did', async () => {
         const project = storefrontProject();
-        const s = fakeSite({ '/nav': NAV, '/apparel': HAND_MADE_APPAREL });
-        await applyCatalogMenuStep(project, site(s.port));
-
-        const summary = await removeCatalogMenuStep(project, s.port);
-
-        expect(s.pages.get('/nav')).toBe(NAV);
-        expect([...s.pages.keys()].sort()).toEqual(['/apparel', '/nav']);
-        expect(s.pages.get('/apparel')).toBe(HAND_MADE_APPAREL);
-        expect(readCatalogMenuRecord(project)).toEqual({ pages: [], links: [], navSwitch: false });
-        expect(summary).toContain('Removed 2 category pages.');
-    });
-
-    it('then setup re-applies and the site is as it was after the first setup', async () => {
-        const project = storefrontProject();
-        const s = fakeSite();
-        await applyCatalogMenuStep(project, site(s.port));
+        const s = fakeStorefront({ '/nav': NAV });
+        const helix = fakeCategoryHelix();
+        await applyCatalogMenuStep(project, site(s, helix));
         const afterSetup = new Map(s.pages);
+        const liveAfterSetup = new Set(helix.live);
 
-        await removeCatalogMenuStep(project, s.port);
-        await applyCatalogMenuStep(project, site(s.port));
+        await removeCatalogMenuStep(project, site(s, helix));
+        expect(s.pages.get('/nav')).toBe(NAV);
+        expect([...s.pages.keys()]).toEqual(['/nav']);
+        // The published paths stay on the record, for the re-apply to keep or take down.
+        expect(readCatalogMenuRecord(project).categoryPaths).toEqual(PAGES);
 
+        await applyCatalogMenuStep(project, site(s, helix));
         expect(s.pages).toEqual(afterSetup);
+        expect(helix.live).toEqual(liveAfterSetup);
     });
 
-    it('says nothing and touches nothing when Demo Builder never wrote a menu here', async () => {
+    it("a reset after a category left the store takes that category's page down", async () => {
         const project = storefrontProject();
-        const s = fakeSite({ '/nav': NAV, '/apparel': HAND_MADE_APPAREL });
+        const s = fakeStorefront({ '/nav': NAV });
+        const helix = fakeCategoryHelix();
+        await applyCatalogMenuStep(project, site(s, helix));
 
-        expect(await removeCatalogMenuStep(project, s.port)).toBeUndefined();
-        expect(s.pages.get('/apparel')).toBe(HAND_MADE_APPAREL);
+        await removeCatalogMenuStep(project, site(s, helix));
+        await applyCatalogMenuStep(project, site(s, helix, { readCategories: jest.fn(async () => CATEGORIES.slice(0, 2)) }));
+
+        expect(helix.live.has('/apparel')).toBe(false);
     });
 
-    it('keeps claiming a page whose removal failed, so the next reset can retry it', async () => {
+    it('says nothing and touches nothing when Demo Builder never made a menu here', async () => {
         const project = storefrontProject();
-        const s = fakeSite();
-        await applyCatalogMenuStep(project, site(s.port));
-        const failing: StorefrontPages = {
-            ...s.port,
-            remove: async (path) => {
-                if (path === '/signs') throw new Error('unpublish refused');
-                s.pages.delete(path);
-            },
-        };
+        const s = fakeStorefront({ '/nav': NAV });
+        const helix = fakeCategoryHelix();
 
-        const summary = await removeCatalogMenuStep(project, failing);
-
-        expect(readCatalogMenuRecord(project).pages.map((p) => p.path)).toEqual(['/signs']);
-        expect(summary).toContain("couldn't be removed; reset the storefront again to retry");
+        expect(await removeCatalogMenuStep(project, site(s, helix))).toBeUndefined();
+        expect(helix.events).toStrictEqual([]);
     });
 });
 
@@ -231,14 +268,13 @@ describe('a category that already has a hand-built page at another address', () 
         '<body><header></header><main><div><h1>Safety signage</h1><div class="product-list-page">' +
         '<div><div><p>urlPath</p></div><div><p>signs</p></div></div></div></div></main><footer></footer></body>';
 
-    it('writes no second page, links the menu to theirs, and says so by name', async () => {
+    it('links the menu to theirs, and says so by name', async () => {
         const project = storefrontProject();
-        const s = fakeSite({ '/nav': NAV, '/safety-signage': SAFETY_SIGNAGE });
+        const s = fakeStorefront({ '/nav': NAV, '/safety-signage': SAFETY_SIGNAGE });
 
-        const summary = await applyCatalogMenuStep(project, site(s.port));
+        const step = await applyCatalogMenuStep(project, site(s, fakeCategoryHelix()));
+        const summary = step?.summary;
 
-        expect(s.written).toEqual(['/signs/danger-signs', '/apparel', '/nav']);
-        expect(s.pages.has('/signs')).toBe(false);
         expect(s.pages.get('/safety-signage')).toBe(SAFETY_SIGNAGE);
         expect(s.pages.get('/nav')).toContain('<div><div>signs</div><div>/safety-signage</div></div>');
         expect(summary).toContain('Signs and Labels uses your page at /safety-signage.');
@@ -247,43 +283,107 @@ describe('a category that already has a hand-built page at another address', () 
 
     it('round trip: setup then reset returns /nav byte-for-byte and never touches their page', async () => {
         const project = storefrontProject();
-        const s = fakeSite({ '/nav': NAV, '/safety-signage': SAFETY_SIGNAGE });
-        await applyCatalogMenuStep(project, site(s.port));
+        const s = fakeStorefront({ '/nav': NAV, '/safety-signage': SAFETY_SIGNAGE });
+        const helix = fakeCategoryHelix();
+        await applyCatalogMenuStep(project, site(s, helix));
 
-        await removeCatalogMenuStep(project, s.port);
+        await removeCatalogMenuStep(project, site(s, helix));
 
         expect(s.pages.get('/nav')).toBe(NAV);
-        expect(s.removed.sort()).toEqual(['/apparel', '/signs/danger-signs']);
         expect([...s.pages.keys()].sort()).toEqual(['/nav', '/safety-signage']);
         expect(s.pages.get('/safety-signage')).toBe(SAFETY_SIGNAGE);
-        expect(readCatalogMenuRecord(project)).toEqual({ pages: [], links: [], navSwitch: false });
+        expect(readCatalogMenuRecord(project)).toEqual({ ...EMPTY, categoryPaths: PAGES });
+        // Reset takes the sheet out before the content is published again, and setup writes it first.
+        expect(helix.sheet).toBeNull();
     });
 
-    it('then setup re-applies and the site is as it was after the first setup', async () => {
+    it('changes nothing and says why when the storefront pages cannot be listed', async () => {
         const project = storefrontProject();
-        const s = fakeSite({ '/nav': NAV, '/safety-signage': SAFETY_SIGNAGE });
-        await applyCatalogMenuStep(project, site(s.port));
-        const afterSetup = new Map(s.pages);
-
-        await removeCatalogMenuStep(project, s.port);
-        await applyCatalogMenuStep(project, site(s.port));
-
-        expect(s.pages).toEqual(afterSetup);
-    });
-
-    it('writes nothing and says why when the storefront pages cannot be listed', async () => {
-        const project = storefrontProject();
-        const s = fakeSite();
-        const unlistable: StorefrontPages = {
+        const s = fakeStorefront({ '/nav': NAV });
+        const helix = fakeCategoryHelix();
+        const unlistable = {
             ...s.port,
-            listPages: async () => {
+            listPages: async (): Promise<string[]> => {
                 throw new Error('DA.live 401');
             },
         };
 
-        const summary = await applyCatalogMenuStep(project, site(unlistable));
+        const step = await applyCatalogMenuStep(project, site(s, helix, { pages: unlistable }));
+        const summary = step?.summary;
 
         expect(s.written).toStrictEqual([]);
-        expect(summary).toMatch(/^Category pages were not written: DA\.live 401\./);
+        expect(helix.published).toStrictEqual([]);
+        expect(summary).toMatch(/^Category pages were not published: DA\.live 401\./);
+    });
+});
+
+/**
+ * Republish publishes every DA.live page before the step runs. An authored page at a
+ * category address must already be on the published sheet then, or the overlay replaces it
+ * during that bulk publish (owner, 2026-10-22). So republish publishes the sheet first, with
+ * the same computation the step uses; the step later writes it again and re-publishes.
+ */
+describe('publishAuthoredListStep', () => {
+    it('publishes the sheet of authored category addresses and records it, publishing no page', async () => {
+        const project = storefrontProject();
+        const s = fakeStorefront({ '/nav': NAV, '/apparel': '<body>hand-built</body>' });
+        const helix = fakeCategoryHelix();
+
+        const summary = await publishAuthoredListStep(project, site(s, helix));
+
+        expect(summary).toBeUndefined();
+        expect(helix.events).toEqual(['sheet']);
+        expect(helix.sheet).toEqual(['/apparel']);
+        expect(readCatalogMenuRecord(project).authoredSheet).toBe(true);
+        expect(s.written).toStrictEqual([]);
+    });
+
+    it("never lists Demo Builder's own unedited old page", async () => {
+        const old = '<body><main><div><h1>Signs</h1></div></main></body>';
+        const project = storefrontProject({
+            catalogMenu: { pages: [{ path: '/signs', hash: hashOf(old) }], links: [], navSwitch: true },
+        });
+        const s = fakeStorefront({ '/nav': NAV, '/signs': old });
+        const helix = fakeCategoryHelix();
+
+        await publishAuthoredListStep(project, site(s, helix));
+
+        expect(helix.sheet).toStrictEqual([]);
+    });
+
+    it('does nothing where the step would publish nothing: no block, or no overlay', async () => {
+        const project = storefrontProject();
+        const s = fakeStorefront({ '/nav': NAV });
+        const helix = fakeCategoryHelix();
+
+        await publishAuthoredListStep(project, site(s, helix, { hasBlock: async () => false }));
+        await publishAuthoredListStep(project, site(s, helix, { overlay: false }));
+
+        expect(helix.events).toStrictEqual([]);
+    });
+
+    it('with onlyWhenPublished: refreshes a sheet the record says is live, and opts no new site in', async () => {
+        const s = fakeStorefront({ '/nav': NAV, '/apparel': '<body>hand-built</body>' });
+        const fresh = storefrontProject();
+        const freshHelix = fakeCategoryHelix();
+        await publishAuthoredListStep(fresh, site(s, freshHelix), { onlyWhenPublished: true });
+        expect(freshHelix.events).toStrictEqual([]);
+
+        const optedIn = storefrontProject({ catalogMenu: { links: [], navSwitch: true, authoredSheet: true } });
+        const helix = fakeCategoryHelix();
+        await publishAuthoredListStep(optedIn, site(s, helix), { onlyWhenPublished: true });
+        expect(helix.sheet).toEqual(['/apparel']);
+    });
+
+    it('never throws: a sheet that could not be published comes back as a sentence', async () => {
+        const project = storefrontProject();
+        const s = fakeStorefront({ '/nav': NAV });
+
+        const summary = await publishAuthoredListStep(project, site(s, fakeCategoryHelix({ failSheet: true })));
+
+        expect(summary).toBe(
+            "Couldn't publish the list of pages you wrote at category addresses before publishing the content " +
+                '(Helix 502 publishing the sheet); the catalog menu step tries again after it.',
+        );
     });
 });

@@ -17,12 +17,19 @@ import {
     PLACEHOLDER_STUB_PATHS,
     addPlaceholderStubOverrides,
     buildPlaceholderStubJson,
+    isPlaceholderStub,
+    placeholderLabelFiles,
     placeholderStubPathsFor,
     placeholderStubTreeEntries,
     removeShadowingPlaceholderFiles,
 } from '@/features/eds/services/placeholderStubs';
 import type { GitHubFileContent } from '@/features/eds/services/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import {
+    B2B_TEMPLATE_CHECKOUT_JSON,
+    B2B_TEMPLATE_CHECKOUT_ROWS,
+    OLD_SINGLE_SHEET_STUB_JSON,
+} from '../../../helpers/placeholderLabelFixtures';
 import { installSiteFetch, restoreFetch } from '../../../helpers/siteFetchFake';
 
 afterEach(restoreFetch);
@@ -91,6 +98,95 @@ describe('buildPlaceholderStubJson', () => {
         expect(row.Key).toBe('_stub');
         expect(row.Value).toMatch(/DA\.live/);
     });
+
+    it('does not claim built-in labels take over: some blocks have none', () => {
+        // The B2B checkout block reads Checkout.Summary.heading and .Edit with no fallback,
+        // so "the built-in defaults apply until then" was false there: it showed "undefined".
+        expect(dataSheet().data[0].Value).not.toMatch(/defaults apply/);
+    });
+});
+
+/**
+ * Which label file each stubbed area gets. Where the repository's tree already holds a label
+ * file that is not our stub, its rows are kept, in the shape the storefront can read. Measured
+ * 2026-10-22 on a live storefront made from the B2B template: the stub had replaced the
+ * template's placeholders/checkout.json, and the checkout's item-list heading and Edit link
+ * read "undefined".
+ */
+describe('placeholderLabelFiles', () => {
+    const multiSheet = (content: string | undefined): Record<string, unknown> =>
+        JSON.parse(content ?? 'null') as Record<string, unknown>;
+    const reader = (files: Record<string, string>) =>
+        jest.fn(async (path: string): Promise<string | undefined> => files[path]);
+
+    it("keeps the B2B template's two checkout labels, as a sheet called data, with no stub row", async () => {
+        const files = await placeholderLabelFiles(
+            ['placeholders/checkout', 'placeholders/cart'],
+            reader({ 'placeholders/checkout.json': B2B_TEMPLATE_CHECKOUT_JSON }),
+        );
+
+        const checkout = multiSheet(files.get('placeholders/checkout.json'));
+        expect(checkout[':type']).toBe('multi-sheet');
+        expect(checkout[':names']).toStrictEqual(['data']);
+        expect(checkout.data).toStrictEqual({ total: 2, offset: 0, limit: 2, data: B2B_TEMPLATE_CHECKOUT_ROWS });
+        expect(files.get('placeholders/checkout.json')).not.toContain('_stub');
+        // Control: an area with no file gets the plain stub.
+        expect(files.get('placeholders/cart.json')).toBe(buildPlaceholderStubJson());
+    });
+
+    it('keeps the rows of a label file already in the multi-sheet shape', async () => {
+        const authored = JSON.stringify({ data: { total: 1, offset: 0, limit: 1, data: [{ Key: 'Cart.Title', Value: 'Basket' }] }, ':names': ['data'], ':version': 3, ':type': 'multi-sheet' });
+
+        const files = await placeholderLabelFiles(['placeholders/cart'], reader({ 'placeholders/cart.json': authored }));
+
+        expect((multiSheet(files.get('placeholders/cart.json')).data as { data: unknown }).data).toStrictEqual([
+            { Key: 'Cart.Title', Value: 'Basket' },
+        ]);
+    });
+
+    it.each([
+        ['our current stub', buildPlaceholderStubJson()],
+        ['our older single-sheet stub', OLD_SINGLE_SHEET_STUB_JSON],
+        ['a file that is not JSON', 'not json'],
+        ['a sheet with no rows', '{"data":[]}'],
+        ['JSON with no rows at all', '{"other":true}'],
+    ])('writes the plain stub over %s', async (_name, content) => {
+        const files = await placeholderLabelFiles(['placeholders/checkout'], reader({ 'placeholders/checkout.json': content }));
+
+        expect(files.get('placeholders/checkout.json')).toBe(buildPlaceholderStubJson());
+    });
+
+    it('writes the plain stub when the read fails, and reads only the areas it stubs', async () => {
+        const read = jest.fn(async (): Promise<string | undefined> => {
+            throw new Error('rate limited');
+        });
+
+        const files = await placeholderLabelFiles(['placeholders/checkout'], read);
+
+        expect([...files.entries()]).toStrictEqual([['placeholders/checkout.json', buildPlaceholderStubJson()]]);
+        expect(read.mock.calls).toStrictEqual([['placeholders/checkout.json']]);
+    });
+});
+
+/**
+ * Recognising a file Demo Builder wrote: an update repairs only those, and never a label
+ * file the SC or a colleague authored.
+ */
+describe('isPlaceholderStub', () => {
+    it.each([
+        ['our current stub', buildPlaceholderStubJson()],
+        ['our older single-sheet stub', OLD_SINGLE_SHEET_STUB_JSON],
+    ])('recognises %s', (_name, content) => {
+        expect(isPlaceholderStub(content)).toBe(true);
+    });
+
+    it.each([
+        ["the B2B template's own checkout labels", B2B_TEMPLATE_CHECKOUT_JSON],
+        ['a file that is not JSON', 'not json'],
+        ['a sheet with no rows', '{"data":[]}'],
+    ])('does not take %s for a stub', (_name, content) => {
+        expect(isPlaceholderStub(content)).toBe(false);
+    });
 });
 
 describe('placeholderStubPathsFor: which areas get a stub for this source', () => {
@@ -144,10 +240,15 @@ describe('placeholderStubPathsFor: which areas get a stub for this source', () =
     });
 });
 
+const LABEL_FILES = new Map([
+    ['placeholders/global.json', buildPlaceholderStubJson()],
+    ['placeholders/auth.json', buildPlaceholderStubJson()],
+]);
+
 describe('addPlaceholderStubOverrides', () => {
     it('adds one <path>.json override per area it is given without touching existing entries', () => {
         const overrides = new Map<string, string>([['fstab.yaml', 'mountpoint']]);
-        addPlaceholderStubOverrides(overrides, ['placeholders/global', 'placeholders/auth']);
+        addPlaceholderStubOverrides(overrides, LABEL_FILES);
 
         expect(overrides.get('fstab.yaml')).toBe('mountpoint');
         expect([...overrides.keys()]).toEqual([
@@ -161,7 +262,7 @@ describe('addPlaceholderStubOverrides', () => {
 
 describe('placeholderStubTreeEntries', () => {
     it('returns one blob entry per area it is given for a commitTreeToBranch call', () => {
-        const entries = placeholderStubTreeEntries(['placeholders/global', 'placeholders/auth']);
+        const entries = placeholderStubTreeEntries(LABEL_FILES);
         expect(entries.map((entry) => entry.path)).toEqual([
             'placeholders/global.json',
             'placeholders/auth.json',
@@ -182,12 +283,16 @@ describe('placeholderStubTreeEntries', () => {
  * repository file wins over the DA.live sheet at the same path, and the publish
  * service refused to preview CitiSignal's checkout sheet ("invalid sheet; unknown
  * type"). Deleting the file on the scratch site made the sheet preview (owner,
- * 2026-10-18). After the stubs are written, a file at a label-sheet path that is
- * NOT our stub can only be such a leftover, and the area has a real sheet.
+ * 2026-10-18). So a file is removed at every area the content source serves a sheet
+ * for, and only there: at an area it serves none for, the file written there (a stub, or
+ * the template's own labels kept) is what the storefront reads.
  */
 describe('removeShadowingPlaceholderFiles', () => {
-    const REPO = { owner: 'skukla', repo: 'my-commerce-demo' };
+    const AT = { owner: 'skukla', repo: 'my-commerce-demo', ref: 'reset-commit' };
     const TEMPLATE_CHECKOUT = '{"data":[{"Key":"Checkout.Summary.Edit","Value":"Edit"}]}';
+    /** Every area but these, as the content source would leave them stubbed. */
+    const stubbedExcept = (...served: string[]): string[] =>
+        PLACEHOLDER_STUB_PATHS.filter((sheetPath) => !served.includes(sheetPath));
 
     function fileOps(files: Record<string, string>) {
         return {
@@ -199,13 +304,15 @@ describe('removeShadowingPlaceholderFiles', () => {
         };
     }
 
-    it('deletes a template file at a label-sheet path, in one commit, reading the given ref', async () => {
+    it('deletes a template file at an area the source serves, in one commit, reading the given ref', async () => {
         const ops = fileOps({
             'placeholders/checkout.json': TEMPLATE_CHECKOUT,
             'placeholders/company.json': buildPlaceholderStubJson(),
         });
 
-        const removed = await removeShadowingPlaceholderFiles(ops, REPO, 'reset-commit', createMockLogger());
+        const removed = await removeShadowingPlaceholderFiles(
+            ops, AT, stubbedExcept('placeholders/checkout'), createMockLogger(),
+        );
 
         expect(removed).toEqual(['placeholders/checkout.json']);
         expect(ops.getFileContent).toHaveBeenCalledWith(
@@ -221,19 +328,37 @@ describe('removeShadowingPlaceholderFiles', () => {
         );
     });
 
-    it('keeps our own stubs, which stand in for sheets nobody authored', async () => {
-        const ops = fileOps({ 'placeholders/cart.json': buildPlaceholderStubJson() });
+    it('keeps what was written at an area the source serves no sheet for, and does not read it', async () => {
+        // The two rules agree: the template's checkout labels are kept where the source has no
+        // checkout sheet (placeholderLabelFiles), so they are not then deleted here.
+        const ops = fileOps({
+            'placeholders/cart.json': buildPlaceholderStubJson(),
+            'placeholders/checkout.json': TEMPLATE_CHECKOUT,
+        });
 
-        const removed = await removeShadowingPlaceholderFiles(ops, REPO, 'c', createMockLogger());
+        const removed = await removeShadowingPlaceholderFiles(ops, AT, [...PLACEHOLDER_STUB_PATHS], createMockLogger());
 
         expect(removed).toStrictEqual([]);
+        expect(ops.getFileContent).not.toHaveBeenCalled();
         expect(ops.commitTreeToBranch).not.toHaveBeenCalled();
     });
 
-    it('commits nothing when no label-sheet path has a file', async () => {
+    it('deletes our own stub too at an area the source serves: it hides the sheet just the same', async () => {
+        const ops = fileOps({ 'placeholders/cart.json': OLD_SINGLE_SHEET_STUB_JSON });
+
+        const removed = await removeShadowingPlaceholderFiles(
+            ops, AT, stubbedExcept('placeholders/cart'), createMockLogger(),
+        );
+
+        expect(removed).toStrictEqual(['placeholders/cart.json']);
+    });
+
+    it('commits nothing when no served area has a file', async () => {
         const ops = fileOps({});
 
-        expect(await removeShadowingPlaceholderFiles(ops, REPO, 'c', createMockLogger())).toStrictEqual([]);
+        expect(
+            await removeShadowingPlaceholderFiles(ops, AT, stubbedExcept('placeholders/cart'), createMockLogger()),
+        ).toStrictEqual([]);
         expect(ops.commitTreeToBranch).not.toHaveBeenCalled();
     });
 
@@ -242,7 +367,7 @@ describe('removeShadowingPlaceholderFiles', () => {
         ops.commitTreeToBranch.mockRejectedValue(new Error('409'));
 
         await expect(
-            removeShadowingPlaceholderFiles(ops, REPO, 'c', createMockLogger()),
+            removeShadowingPlaceholderFiles(ops, AT, stubbedExcept('placeholders/checkout'), createMockLogger()),
         ).resolves.toStrictEqual([]);
     });
 });

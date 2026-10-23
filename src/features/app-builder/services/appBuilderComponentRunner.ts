@@ -283,6 +283,12 @@ export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
         entry: AppBuilderComponentCatalogEntry,
         onStep: (step: string) => void
     ) => Promise<{ status: 'filled' } | { status: 'failed'; detail: string }>;
+    /** Prepare the store just before `fillSystem`, recorded as Prepare does; never fails the deploy. */
+    prepareStore?: (
+        project: Project,
+        entry: AppBuilderComponentCatalogEntry,
+        onStep: (step: string) => void
+    ) => Promise<{ status: 'prepared'; warning?: string } | { status: 'failed'; detail: string }>;
     /** The version an app's manifest declares (appManifestVersion); optional for bare tests. */
     readAppVersion?: (componentPath: string) => Promise<string | undefined>;
     /**

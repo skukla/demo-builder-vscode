@@ -16,6 +16,7 @@
 import { mapAfterFill } from './erpMappingAfterFill';
 import { publishPricesAfterFill, type ErpPricesPublished } from './erpPricesAfterFill';
 import { otherErpNames, readErpRules } from './erpRules';
+import { buildCommerceEndpoints } from '@/features/ai/server/commerceEndpointsTool';
 import {
     requestRest,
     resolveRestTargetFor,
@@ -266,6 +267,8 @@ export async function fillErpForProject(
         },
         onProgress: deps.onProgress,
         ...(deps.onlySkus ? { onlySkus: deps.onlySkus } : {}),
+        // The ERP's default sales organisation is the project's website's, not the store's first.
+        homeWebsite: buildCommerceEndpoints(project).scope.websiteCode,
     };
     let result: ErpFillResult;
     try {

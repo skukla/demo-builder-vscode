@@ -297,7 +297,18 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // An agent's first edit to the clashed file committed and pushed the whole half-applied
 // update, past finish_storefront_update. The home Chat's hook is rewritten at every start;
 // each project's only reaches existing projects through this bump.
-export const AI_CONTEXT_VERSION = 42;
+// v43 (2026-10-22, EDS-61): category pages come from the product page overlay, at each
+// category's own url path, filled from the site's /categories/default, and authored pages at
+// those addresses are kept by /authored-category-pages.json. author-commerce-data
+// and header-nav-footer drop check_category_pages, add_category_pages and the autoAdd
+// setting (all removed), and say a new category's page appears on first visit and that
+// sync_content re-publishes every one (so a template edit reaches them). Existing projects
+// would keep naming two removed tools without this bump.
+// v44 (2026-10-23, EDS-63): the agent's `republish` does what the dashboard's Republish
+// does (settings, code and every page), and `sync_content`, which did that job under
+// another name, is removed. sync-changes, diagnose-demo, header-nav-footer and
+// author-commerce-data name `republish`; existing projects would keep naming a removed tool.
+export const AI_CONTEXT_VERSION = 44;
 
 /**
  * Component IDs for standardized component instance access

@@ -208,7 +208,10 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
             filesReset: RESET_RESULT.fileCount,
             blockCollectionIds: undefined,
             libraryContentSources: [],
+            resetCommitSha: RESET_RESULT.commitSha,
             canonicalCodePatchResults: [PATCH_RESULT],
+            // Whether the build step's fixes landed is storefrontUpToDate.test's to say.
+            buildComplete: expect.any(Boolean),
         });
     });
 

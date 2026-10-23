@@ -74,10 +74,10 @@ describe('boilerplateFloorWarning — warn, never refuse, below the oldest teste
 
     it('warns in plain words, naming the major line, for a storefront below the floor', () => {
         expect(boilerplateFloorWarning(adobe('4.0.1'))).toBe(
-            'Built on an older boilerplate (4.x); some fixes may not fit.',
+            'Built on an older boilerplate (4.x) than Demo Builder tests on.',
         );
         expect(boilerplateFloorWarning(adobe('5.9.9'))).toBe(
-            'Built on an older boilerplate (5.x); some fixes may not fit.',
+            'Built on an older boilerplate (5.x) than Demo Builder tests on.',
         );
     });
 

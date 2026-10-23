@@ -223,3 +223,42 @@ export function rowIdsOf(selections: UpdateSelections): Map<object, string> {
     }
     return ids;
 }
+
+/**
+ * What a row is across two checks. Its id is only its place in one check, so a fresh
+ * check is matched by where the row sits, what it updates and what it is called.
+ */
+function sameUpdate(row: PendingUpdateRow): string {
+    return JSON.stringify([row.group.key, row.kind, row.label]);
+}
+
+/**
+ * The rows the SC left unticked, never a locked one, that a fresh check still lists
+ * (owner, 2026-10-22). A ticked row that did not apply is not counted: its own row
+ * already says why.
+ *
+ * @param listed - the rows the SC was shown
+ * @param appliedIds - the ids the SC left ticked
+ * @param fresh - the rows of a check made after the run
+ * @returns how many of the unticked rows are still waiting
+ */
+export function stillWaitingCount(
+    listed: PendingUpdateRow[],
+    appliedIds: string[],
+    fresh: PendingUpdateRow[],
+): number {
+    const waiting = new Set(fresh.map(sameUpdate));
+    return untickedRows(listed, appliedIds).filter((row) => waiting.has(sameUpdate(row))).length;
+}
+
+/**
+ * The rows the SC could have ticked and did not.
+ *
+ * @param listed - the rows the SC was shown
+ * @param appliedIds - the ids the SC left ticked
+ * @returns the unticked rows that are not locked
+ */
+export function untickedRows(listed: PendingUpdateRow[], appliedIds: string[]): PendingUpdateRow[] {
+    const applied = new Set(appliedIds);
+    return listed.filter((row) => !row.lockedReason && !applied.has(row.id));
+}

@@ -10,8 +10,8 @@
             "reason": "Same derivation (dashboardStatusService); the handler pushes it to the dashboard, the tool returns it."
         },
         "republishContent": {
-            "tool": "sync_content",
-            "reason": "Both call republishStorefrontContent (DA.live pages to the CDN). NOT `republish`, which regenerates and publishes config.json only."
+            "tool": "republish",
+            "reason": "Both call republishStorefrontContent (settings, code and pages to the CDN). Until 2026-10-23 this was `sync_content`, and `republish` published config.json only (EDS-63)."
         },
         "exportProject": {
             "tool": "export_project_settings",

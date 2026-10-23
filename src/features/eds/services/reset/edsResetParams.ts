@@ -70,12 +70,6 @@ export interface EdsResetParams {
      * added demo's content site cannot be reached (content is not forkable).
      */
     keepContent?: boolean;
-    /**
-     * The SC accepted the offer of Demo Builder's fixes for an added demo that
-     * shows our lineage (EDS-13f step 03). Never defaulted on: a reset without
-     * it offers the fixes and writes none.
-     */
-    applyDemoFixes?: boolean;
     /** Content patches to apply during content copy */
     contentPatches?: string[];
     /** External source for content patches (sibling of codePatchSource). */
@@ -102,6 +96,12 @@ export interface EdsResetProgress {
     message: string;
 }
 
+/** A page step's sentence, and whether it reports something not done. */
+export interface PageSentence {
+    sentence: string;
+    problem: boolean;
+}
+
 /**
  * Result of EDS reset operation
  */
@@ -115,15 +115,11 @@ export interface EdsResetResult extends HandlerResponse {
     /** Specific error type for UI handling */
     errorType?: string;
     /**
-     * What the dry check of the load-bearing patches found on an added demo's
-     * code (D23), in SC words. Present only for a project built on an added demo.
+     * Set when the reset could not publish the storefront's code, even after the
+     * site was registered: a sentence for the SC, shown first among the warnings,
+     * because the site serves no pages until it lands (2026-10-22).
      */
-    demoCaveats?: string[];
-    /**
-     * Demo Builder's fixes on an added demo (EDS-13f): what this reset applied,
-     * and what fits and was left for the SC to accept. Absent for a shipped brand.
-     */
-    demoFixes?: { applied?: string[]; offered?: string[] };
+    codeNotPublished?: string;
     /**
      * What happened to the category pages and the catalog menu (EDS-24), in SC words —
      * pages written, and pages someone else made left alone by name. Absent when the
@@ -136,6 +132,12 @@ export interface EdsResetResult extends HandlerResponse {
      * kept, or that they could not be listed. Absent when Helix listed none.
      */
     productPages?: string;
+    /**
+     * The page sentences above that say something did not happen (a page that could not
+     * be published, product pages left live). The SC reads them as warnings; the rest of
+     * those sentences are notes. Absent when every page step did all it set out to.
+     */
+    pageWarnings?: string[];
     /**
      * What happened to the pages still published from before the reset that it did not
      * republish (EDS-33): removed, some left, or that Helix could not say what is

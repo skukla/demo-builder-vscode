@@ -8,7 +8,7 @@
  * @module features/eds/services/catalogMenu/storefrontPageAdapter
  */
 
-import type { StorefrontPages } from './catalogMenuService';
+import type { StorefrontPages } from './ownedPages';
 import { resolveDaPath } from '@/features/eds/services/daLive/daLiveContentHelpers';
 import { listDaLivePages } from '@/features/eds/services/daLive/daLivePageWalk';
 import type { DaLiveSourceOperations } from '@/features/eds/services/daLive/daLiveSourceOperations';
@@ -28,6 +28,8 @@ function sourcePathOf(webPath: string): string {
 /** Folders that hold no category page: product pages, fragments, work in progress. */
 const SKIPPED_FOLDERS = new Set(['fragments', 'drafts']);
 const PRODUCT_PAGES = '/products';
+/** The overlay's category pages and their template (EDS-61): nobody's hand-built page. */
+const CATEGORY_PAGES = '/categories';
 /** Documents the header and footer load; never a page of their own. */
 const CHROME_DOCUMENTS = new Set(['nav', 'footer']);
 
@@ -35,14 +37,15 @@ const lastSegment = (path: string): string => path.slice(path.lastIndexOf('/') +
 
 function isSkippedFolder(path: string): boolean {
     const name = lastSegment(path);
-    return path === PRODUCT_PAGES || name.startsWith('.') || SKIPPED_FOLDERS.has(name);
+    return path === PRODUCT_PAGES || path === CATEGORY_PAGES || name.startsWith('.') || SKIPPED_FOLDERS.has(name);
 }
 
 /**
  * Every page that could be a category page, found by walking the site's folders: one
  * DA.live list call per folder, folders one after another (`daLivePageWalk.ts`). Product
- * pages (`/products`), `fragments`, `drafts` and dot-folders (`.da`, the block library's
- * own pages) are never opened; nav and footer documents, sheets and media are left out.
+ * pages (`/products`), category pages (`/categories`), `fragments`, `drafts` and
+ * dot-folders (`.da`, the block library's own pages) are never opened; nav and footer
+ * documents, sheets and media are left out.
  */
 async function listCandidatePages(
     daLive: PageTransport['daLive'],

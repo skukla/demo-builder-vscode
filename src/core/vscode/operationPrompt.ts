@@ -72,18 +72,26 @@ export async function withModalAsking<T>(id: string, work: () => Promise<T>): Pr
     }
 }
 
+/** A question with buttons: its heading, and the sentence under it. */
+export interface Question {
+    /** What the SC is asked to do, in a few words: "Sign in to Adobe". The modal's heading. */
+    title: string;
+    /** Why, and what each answer does. It must stand alone: a notification shows only this. */
+    message: string;
+}
+
 /**
  * Ask the SC something the work cannot continue without.
  *
- * Same shape as `vscode.window.showWarningMessage`, and the same answer: the action
- * they chose, or `undefined` when they dismissed it.
+ * The same answer as `vscode.window.showWarningMessage`: the action they chose, or
+ * `undefined` when they dismissed it.
  *
- * @param message - the question, as a sentence
+ * @param question - the heading and the sentence
  * @param actions - the answers, the first being the one that continues the work
  * @returns the chosen action, or undefined if dismissed
  */
 export async function askDuringOperation(
-    message: string,
+    { title, message }: Question,
     ...actions: string[]
 ): Promise<string | undefined> {
     const id = hosting.getStore();
@@ -99,7 +107,7 @@ export async function askDuringOperation(
         return vscode.window.showWarningMessage(message, ...actions);
     }
 
-    return (await askInModal(id, { message, actions })).action;
+    return (await askInModal(id, { title, message, actions })).action;
 }
 
 /**
@@ -179,6 +187,16 @@ export function answerOperationPrompt(
     values: Record<string, string> = {},
 ): void {
     waiting.get(id)?.({ action: answer, values });
+}
+
+/**
+ * Take this operation's open question down without an answer: the work stopped
+ * needing one (the sign-in it was waiting on finished in the browser). The asker
+ * reads it as dismissed, so it must check for itself why it was taken down.
+ */
+export function withdrawQuestion(): void {
+    const id = hosting.getStore();
+    if (id) waiting.get(id)?.({ action: undefined, values: {} });
 }
 
 /** Whether this operation is waiting on an answer — the modal's Cancel state. */

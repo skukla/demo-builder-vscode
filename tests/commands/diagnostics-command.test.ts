@@ -324,7 +324,6 @@ describe('the storefront origin section (EDS-13f)', () => {
             boilerplate: { status: 'absent' },
             origin: { kind: 'shipped', package: 'citisignal' },
             written: { smart404: 'present', fstab: 'present', config: 'present', description: 'absent' },
-            fixes: [],
         };
         jest.mocked(readStorefrontReport).mockResolvedValue(origin);
         const project = edsProject();

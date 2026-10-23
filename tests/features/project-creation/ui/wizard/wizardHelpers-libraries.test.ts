@@ -417,6 +417,12 @@ describe('buildProjectConfig', () => {
             expect(withEds({})).not.toHaveProperty('installedBlockLibraries');
         });
 
+        it('should hand over whether setup built the storefront in full, and no key when setup did not run', () => {
+            expect(withEds({ storefrontBuildComplete: false })).toMatchObject({ storefrontBuildComplete: false });
+            expect(withEds({ storefrontBuildComplete: true })).toMatchObject({ storefrontBuildComplete: true });
+            expect(withEds({})).not.toHaveProperty('storefrontBuildComplete');
+        });
+
         it('should hand over the broken links storefront setup found, and no key when it found none', () => {
             const brokenLinks: StorefrontBrokenLink[] = [{ link: '/fr', pages: ['/footer'] }];
 

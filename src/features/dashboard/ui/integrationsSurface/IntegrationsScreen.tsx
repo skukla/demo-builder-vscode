@@ -23,6 +23,7 @@ import { Flex, Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { ErpAssignDialogs, useErpAssignDialogs } from '../components/integrations/ErpAssignDialogs';
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
+import { PrepareOnAddDialog, usePrepareOnAdd } from '../components/integrations/PrepareOnAddDialog';
 import { PrepareStoreDialogs, usePrepareStoreDialogs } from '../components/integrations/PrepareStoreDialogs';
 import {
     SetupGuideModal,
@@ -109,6 +110,8 @@ export function IntegrationsScreen({
     const erpAssign = useErpAssignDialogs(operations);
     // "Prepare this store" and its undo (AB-77): from a card's menu and the setup guide's steps.
     const storePrep = usePrepareStoreDialogs(operations);
+    // Adding the ERP integration prepares the store: confirmed first (owner, 2026-10-22).
+    const prepareOnAdd = usePrepareOnAdd(operations.started);
 
     // Status has not resolved yet — the mesh card would otherwise pop in a beat
     // after the integration cards. Same LoadingDisplay as ProjectsDashboard's gate.
@@ -215,6 +218,7 @@ export function IntegrationsScreen({
                     adobeWorkspaceTitle={destination?.workspaceTitle}
                     adobeOrgId={adobeOrgId}
                     onAddStarted={operations.started}
+                    onConfirmAdd={prepareOnAdd.confirmAdd}
                     onDestinationChosen={actions.handleDestinationChosen}
                 />
 
@@ -231,6 +235,7 @@ export function IntegrationsScreen({
                 <SetupGuideModal {...guideModal} onFix={storePrep.prepareStep} />
                 <ErpAssignDialogs {...erpAssign.dialogs} />
                 <PrepareStoreDialogs {...storePrep.dialogs} />
+                <PrepareOnAddDialog {...prepareOnAdd.dialog} />
             </FullScreenSurface>
         </PageLayout>
     );

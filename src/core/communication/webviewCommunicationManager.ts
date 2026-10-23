@@ -29,11 +29,11 @@ interface CommunicationConfig {
  */
 const REQUEST_TIMEOUTS: Record<string, number> = {
     // Authentication
-    authenticate: TIMEOUTS.AUTH.BROWSER, // 60s - browser-based auth flow
+    authenticate: TIMEOUTS.AUTH.SIGN_IN + TIMEOUTS.AUTH.BROWSER, // the sign-in, then a minute to finish
     // Awaits the SAME browser sign-in as 'authenticate', then restores project context
     // and refreshes status — so it needs at least the same budget. Callers await it to
     // know when sign-in finished (the API picker re-fetches on success).
-    reAuthenticate: TIMEOUTS.AUTH.BROWSER, // 60s - browser sign-in + context restore
+    reAuthenticate: TIMEOUTS.AUTH.SIGN_IN + TIMEOUTS.AUTH.BROWSER, // the sign-in, then context restore
 
     // Data loading (wizard UI)
     // 30s was NOT enough and timed out on work that would have finished: each of
@@ -92,6 +92,8 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // The Updates modal (PL-80): the apply runs every ticked update, integration deploys
     // among them.
     applyUpdates: TIMEOUTS.UPDATES_APPLY, // 30min - the whole run, reported at its end
+    // "Back to updates": Check for Updates again, every project and the extension.
+    recheckUpdates: TIMEOUTS.LONG, // 180s - the whole check, then its notification
 
     // Project deletion (EDS cleanup involves multiple external APIs)
     deleteProject: TIMEOUTS.LONG, // 180s - DA.live + GitHub + local cleanup

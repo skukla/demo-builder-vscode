@@ -8,7 +8,8 @@
  *  - it goes to the LKG, never to Adobe's latest commit, which nothing has checked;
  *  - it re-applies the patches in the same commit (a patch added to the ledger since the
  *    project was made is applied; one already present is left alone);
- *  - it puts back the 404 handling and Quick Edit if they are missing;
+ *  - it puts back the 404 handling and Quick Edit if they are missing, and brings the
+ *    storefront up to Demo Builder's current fixes (`bringStorefrontUpToDate`);
  *  - it never resets to the bare template, which would drop the layer: the project's
  *    own Reset rebuilds code at the LKG with the layer, and is the way out of a conflict.
  *
@@ -28,7 +29,7 @@ import {
 import type { LkgSource } from '@/features/eds/services/patches/lkgReader';
 import { installQuickEdit } from '@/features/eds/services/quickEditPublisher';
 import { extractResetParams, resolveStorefrontConfig } from '@/features/eds/services/reset/edsResetParams';
-import { installMissingPageHandling } from '@/features/eds/services/storefront/notFoundPage';
+import { bringStorefrontUpToDate } from '@/features/eds/services/storefront/storefrontUpToDate';
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -117,8 +118,9 @@ export function patchesNotPutBack(results: readonly CodePatchResult[]): string[]
 }
 
 /**
- * Put back the 404 handling and Quick Edit if an update left them out. Both installers
- * check for their own markers first, so a storefront that still has them is untouched.
+ * Put back the 404 handling and Quick Edit if an update left them out, and run the storefront
+ * repairs creation and reset run. Each checks for its own markers first, so a storefront that
+ * already has them is untouched.
  *
  * @returns one plain line per piece that could not be put back
  */
@@ -130,10 +132,10 @@ export async function restoreDemoBuilderPieces(
     const extracted = extractResetParams(project);
     if (!extracted.success) return [];
     const { repoOwner, repoName, byomOverlayUrl, daLiveOrg, daLiveSite } = extracted.params;
-    const lines: string[] = [];
-    const smart404 = await installMissingPageHandling(
+    const { smart404 } = await bringStorefrontUpToDate(
         fileOps, repoOwner, repoName, byomOverlayUrl, logger, daLiveOrg, daLiveSite,
     );
+    const lines: string[] = [];
     if (!smart404.installed && byomOverlayUrl) {
         lines.push(`The missing-product page handling could not be put back: ${smart404.reason ?? 'unknown reason'}.`);
     }

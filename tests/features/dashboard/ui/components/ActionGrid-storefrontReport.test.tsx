@@ -20,13 +20,15 @@ describe('Storefront zone — the Storefront Report tile', () => {
         expect(handleOpenStorefrontReport).toHaveBeenCalledTimes(1);
     });
 
-    it('wears an info dot, with words, when the content has broken links', () => {
+    // A dot and its tooltip, no word beside the name: "Broken links" next to
+    // "Storefront Report" wrapped the name onto two lines (owner, 2026-10-23).
+    it('wears an info dot, explained in its tooltip, when the content has broken links', () => {
         const { container } = render(
             <ActionGrid {...edsProps} handleOpenStorefrontReport={jest.fn()} brokenLinkCount={2} />,
         );
 
         expect(screen.getByTestId('storefront-report-dot')).toHaveAttribute('data-variant', 'info');
-        expect(within(getZone(container, 'storefront')).getByText('Broken links')).toBeInTheDocument();
+        expect(within(getZone(container, 'storefront')).queryByText('Broken links')).not.toBeInTheDocument();
         expect(within(getZone(container, 'storefront')).getByText(/2 links go to pages that don't exist/)).toBeInTheDocument();
     });
 

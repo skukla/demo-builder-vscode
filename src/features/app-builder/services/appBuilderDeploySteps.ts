@@ -345,6 +345,29 @@ export async function installIfAppManagement(
 }
 
 /**
+ * Prepare the store before the fill reads it (the fill relies on `erp_owner` in the attribute
+ * sets and on the ERP's warehouse). A preparation that stops never stops the fill or the
+ * deploy; the line says why and where the SC runs it again.
+ */
+async function prepareBeforeFill(
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+    deps: AppBuilderComponentRunnerDeps,
+): Promise<void> {
+    if (!deps.prepareStore) return;
+    const stage = OPERATION_STAGES.preparingStore.label;
+    deps.onProgress?.(stage);
+    const outcome = await deps.prepareStore(project, entry, (step) => deps.onProgress?.(stage, step));
+    if (outcome.status === 'prepared') {
+        if (outcome.warning) deps.onProgress?.(stage, outcome.warning);
+        return;
+    }
+    deps.logger.warn(`[AppBuilderComponent Runner] ${entry.id} installed but the store was not prepared: ${outcome.detail}`);
+    const reason = outcome.detail.replace(/[.\s]*$/u, '');
+    deps.onProgress?.(stage, `The store was not prepared: ${reason}. Use Prepare this store on the card.`);
+}
+
+/**
  * Fill the system the entry serves from Commerce, once the install stands. No-op for an
  * entry that does not fill a system, and when the caller wired no fill. A failure never
  * fails the deploy (the pair is installed, merely empty), and the line says why.
@@ -357,6 +380,7 @@ async function fillAfterInstall(
     if (!entry.fillsSystem || !deps.fillSystem) {
         return;
     }
+    await prepareBeforeFill(project, entry, deps);
     const stage = OPERATION_STAGES.loadingErpDemoData.label;
     deps.onProgress?.(stage, 'Reading Commerce');
     const outcome = await deps.fillSystem(project, entry, (step) => deps.onProgress?.(stage, step));

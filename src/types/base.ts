@@ -44,7 +44,7 @@ export interface AiPrompt {
  * Project - Core project definition
  */
 
-/** What "Save as demo package" left behind, so it can be undone exactly. */
+/** What Share Demo's link save left behind, so it can be undone exactly. */
 export interface SavedDemoPackage {
     /** Blob sha of the description file as we last wrote it. */
     fileSha: string;
@@ -127,7 +127,7 @@ export interface Project {
     /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
     /**
-     * "Save as demo package" wrote the description file into this project's
+     * Share Demo's link save wrote the description file into this project's
      * storefront repository: the blob sha GitHub answered (the proof the file is
      * ours, so a hand edit is never clobbered and Remove takes out only what we
      * wrote). Absent when the storefront is not a demo package.

@@ -142,7 +142,7 @@ For EDS projects these are two different things, and the gap is the most common 
 1. **Push** — git commit + push. A PostToolUse hook does this automatically for Write/Edit
    inside the storefront directory. It does NOT publish.
 2. **Publish** — Helix preview + publish. Only `sync_storefront` (when Helix credentials
-   are available) or `sync_content` does this.
+   are available) or `republish` does this.
 
 If a change is in GitHub but not on the live site, you are between the two. Call
 `sync_storefront`; it is idempotent.

@@ -279,7 +279,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
                     projectId: 'proj-456',
                     workspace: 'ws-789',
                 }),
-                warningMessage: expect.stringContaining('Adobe I/O session has expired'),
+                warningMessage: expect.stringContaining('Adobe sign-in has expired'),
             })
         );
 
@@ -305,7 +305,7 @@ describe('edsResetUI - checkAdobeAuth (refactored to use ensureAdobeIOAuth)', ()
         // Then: Should return ADOBE_AUTH_REQUIRED
         expect(result.success).toBe(false);
         expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
-        expect(result.error).toBe('Adobe I/O authentication required');
+        expect(result.error).toBe('Adobe sign-in required');
         expect(result.cancelled).toBe(true);
     });
 

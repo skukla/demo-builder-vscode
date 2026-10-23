@@ -61,12 +61,20 @@ export function OperationProgressBody({
         );
     }
     if (prompt) {
-        return <StatusDisplay variant="warning" title="Waiting for you" message={prompt.message} />;
+        // The question's own heading. One with none (nothing asks that way) shows its
+        // sentence as the heading rather than a generic one.
+        return prompt.title ? (
+            <StatusDisplay variant="warning" title={prompt.title} message={prompt.message} />
+        ) : (
+            <StatusDisplay variant="warning" title={prompt.message} />
+        );
     }
     if (failed) {
         return <StatusDisplay variant="error" title={failureTitle} message={progress?.error} details={took} />;
     }
     if (succeeded) {
+        // What the run changed, one line each, then how long it took.
+        const lines = [...(progress?.details ?? []), ...(took ?? [])];
         return (
             // Centred under the centred tick and title (owner, 2026-10-16). A failure's
             // message stays left-aligned: it can run to several lines.
@@ -74,7 +82,7 @@ export function OperationProgressBody({
                 variant={warned ? 'warning' : 'success'}
                 title={successTitle}
                 message={successMessage}
-                details={took}
+                details={lines.length > 0 ? lines : undefined}
                 centerMessage
             />
         );

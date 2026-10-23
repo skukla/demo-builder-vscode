@@ -33,6 +33,7 @@ import {
     productsFrom,
     salesOrgOf,
     structureFrom,
+    structureWebsites,
     type CommerceCompanyRow,
     type CommerceProductRow,
     type ErpPartnerRow,
@@ -97,6 +98,12 @@ export interface ErpFillDeps {
      * products alone would change how it prices the rest. Absent, everything is sent.
      */
     onlySkus?: readonly string[];
+    /**
+     * The project's own Commerce website (its store scope): the home of the ERP's default
+     * sales organisation in the structure it is sent (`structureWebsites`). Absent, every
+     * website is named, as before.
+     */
+    homeWebsite?: string;
 }
 
 export interface ErpFillResult {
@@ -168,7 +175,8 @@ export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<E
 
     if (!only) {
         deps.onProgress?.(`Sending ${partners.length} customers`);
-        const structure = structureFrom(read.websites, read.configs, settingsByWebsite);
+        const sites = structureWebsites(read.websites, settingsByWebsite, deps.homeWebsite);
+        const structure = structureFrom(sites, read.configs, settingsByWebsite);
         await deps.importRecords({ partners, projectName, structure });
     }
     let done = 0;

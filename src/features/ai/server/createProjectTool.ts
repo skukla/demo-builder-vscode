@@ -282,8 +282,6 @@ interface CreateArgs {
     seed?: CreationSeed;
     /** The store scope the caller chose, already checked by `parseStoreScope` (AI-11). */
     storeScope?: StoreScope;
-    /** The user accepted Demo Builder's fixes for an added demo (EDS-13f). */
-    applyFixes?: boolean;
     /** EDS: the repository and DA.live site already exist; use them as they are. */
     adoptExisting?: boolean;
     /** Added to a successful answer (what a file brought, what is still needed). */
@@ -498,10 +496,9 @@ async function createEds(
             // A project file's settings and libraries, which the wizard sends
             // here too; absent for a plain create_project.
             ...seededSetup(args),
-            // The row rides too: the phases read it for the repo branch, the
-            // pages and the dry check, exactly as the wizard sends it.
+            // The row rides too: the phases read it for the repo branch and the
+            // pages, exactly as the wizard sends it.
             demo: args.demo,
-            ...(args.applyFixes === true ? { applyDemoFixes: true } : {}),
             edsConfig: edsConfigInput,
         }),
     );
@@ -523,9 +520,9 @@ async function createEds(
     // saved without its repository and reset refused it.
     const complete: Partial<StorefrontSetupCompletePayload> = lastCompleteData(events) ?? {};
     const repoUrl = complete.githubRepo;
-    // What the setup said about the storefront, in the words the wizard's card shows:
-    // an added demo's caveats and the offer of Demo Builder's fixes (EDS-13f). The
-    // agent never heard them before; the card was the only reader.
+    // What the setup said about the storefront, in the words the wizard's card shows
+    // (what the content copy could not do, among others). The agent never heard them
+    // before; the card was the only reader.
     const caveats = complete.warnings;
     // Recorded on the project for the Storefront Report, as the wizard does.
     const brokenLinks = complete.brokenLinks;
@@ -562,6 +559,8 @@ async function createEds(
             ...(brokenLinks?.length ? { brokenLinks } : {}),
             // Recorded on THIS project by creation, as the wizard does (EDS-37).
             installedBlockLibraries: complete.installedBlockLibraries,
+            // Stamped on THIS project by creation, as the wizard does ("Needs reset").
+            storefrontBuildComplete: complete.storefrontBuildComplete,
         },
     };
 
@@ -636,8 +635,6 @@ interface CreationRequest {
     accsEndpoint?: string;
     /** Already checked by `parseStoreScope`. */
     storeScope?: StoreScope;
-    /** The user accepted Demo Builder's fixes for an added demo (EDS-13f); never defaulted on. */
-    applyFixes?: boolean;
     /** EDS: the repository and DA.live site already exist; use them as they are. */
     adoptExisting?: boolean;
     seed?: CreationSeed;
@@ -758,13 +755,6 @@ export function registerCreateProjectTool(
                 // The same input configure_project takes (AI-11), so the demo's codes
                 // need not be published first and corrected after.
                 storeScope: storeScopeSchema.optional(),
-                applyFixes: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Added demos only: apply the Demo Builder fixes that fit the demo's code (one commit to the new repo). " +
-                            'Only when the user said yes to them; the default offers them and writes none',
-                    ),
                 confirm: z
                     .boolean()
                     .optional()
@@ -803,7 +793,6 @@ export function registerCreateProjectTool(
                 daLiveSite: args.daLiveSite ? String(args.daLiveSite) : undefined,
                 accsEndpoint: args.accsEndpoint ? String(args.accsEndpoint) : undefined,
                 storeScope: scope.storeScope,
-                ...(args.applyFixes === true ? { applyFixes: true } : {}),
                 ...(args.adoptExisting === true ? { adoptExisting: true } : {}),
             });
         },

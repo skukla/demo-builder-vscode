@@ -674,6 +674,11 @@ export interface EdsMetadata {
     /** The `package.json` name and version the repository was built on, read at
      *  creation and after each reset (EDS-13f). Absent when it could not be read. */
     boilerplate?: StorefrontBoilerplate;
+    /** The newest storefront change (`STOREFRONT_CHANGES`) the version that last created or
+     *  reset the storefront knew, `YYYY-MM-DD`. Older than a listed change reads "Needs reset". */
+    storefrontBuiltThrough?: string;
+    /** Set when that build's own fixes did not all land; also reads "Needs reset". */
+    storefrontBuildIncomplete?: true;
 }
 
 /**

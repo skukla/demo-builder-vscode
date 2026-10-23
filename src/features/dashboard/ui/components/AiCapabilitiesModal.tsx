@@ -10,12 +10,15 @@
  * the list to invoke them; the disclosure exists for trust and debugging.
  *
  * The Regenerate AI files action sits in the footer because it writes both
- * sets: regenerating refreshes the modal's lists in place.
+ * sets: regenerating refreshes the modal's lists in place. The one sentence
+ * about edited files sits just above it, because Regenerate is the only thing
+ * that fact is about (owner, 2026-10-22). No middle dots anywhere.
  */
 
 import { Flex, Heading, Text, View } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import React from 'react';
+import { regenerateKeepsSentence } from './aiEditedNote';
 import { buildIntegrationSections } from './aiIntegrations';
 import { AiMcpsList } from './AiMcpsList';
 import { AiSkillsList } from './AiSkillsList';
@@ -65,9 +68,9 @@ export interface AiCapabilitiesModalProps {
     progress?: AiRegenerateProgress;
     /**
      * ADR-013: user-edited bundle files (project-relative posix paths, from
-     * `inventory.editedFiles`). Skill files flag their row in `AiSkillsList`;
-     * the rest ("AGENTS.md", ".mcp.json", …) render as a compact
-     * "Edited — kept your version" note. Nothing renders when empty.
+     * `inventory.editedFiles`). All of them, skills included, render as ONE
+     * sentence above the Regenerate button ("Regenerate keeps your edits to
+     * AGENTS.md."), see `aiEditedNote`. Nothing renders when empty.
      */
     editedFiles?: string[];
     /** Tool-driving skills the project qualifies for but lacks, with why. */
@@ -84,9 +87,6 @@ export interface AiCapabilitiesModalProps {
      */
     errorMessage?: string | null;
 }
-
-/** Bundle prefix that routes an edited file to the skills list instead of the note. */
-const SKILLS_PREFIX = '.claude/skills/';
 
 /** Stable empty array — a fresh `[]` prop would rerender the gated-only list. */
 const EMPTY_SKILLS: SkillInventoryEntry[] = [];
@@ -105,13 +105,10 @@ export function AiCapabilitiesModal({
     gatedSkills,
     errorMessage,
 }: AiCapabilitiesModalProps): React.ReactElement {
-    const editedNonSkillFiles = (editedFiles ?? []).filter((f) => !f.startsWith(SKILLS_PREFIX));
+    const keepsSentence = regenerateKeepsSentence(editedFiles, skills);
     // Adobe pairs each MCP server with its skill set; show them that way so a
     // missing half reads as a gap. See `aiIntegrations`.
-    const sections = React.useMemo(
-        () => buildIntegrationSections(mcps, skills),
-        [mcps, skills],
-    );
+    const sections = React.useMemo(() => buildIntegrationSections(mcps, skills), [mcps, skills]);
     // Pairs are for the populated, healthy case. Whenever a half is missing or
     // errored, fall back to the flat two-list body — it owns the "checking…",
     // "none wired" and inspector-error copy, and a sectioned view would hide
@@ -207,103 +204,109 @@ export function AiCapabilitiesModal({
                     /* ONE scroll region for everything beneath the modal heading —
                        MCP servers and skills scroll together; the frame stays put.
                        A plain div, not Spectrum Flex, for the columns: Flex caps
-                       width at ~450px (see the spectrum-webview-ui skill). */
-                    <div className="ai-capabilities-body">
-                        {/* The last regenerate failed — say so inline (the
+                       width at ~450px (see the spectrum-webview-ui skill). The
+                       Regenerate sentence sits OUTSIDE it, so it stays put just
+                       above the footer button it is about. */
+                    <>
+                        <div className="ai-capabilities-body">
+                            {/* The last regenerate failed — say so inline (the
                             handler's message, or the rejection). Without this
                             the modal returned to idle with no signal. Cleared
                             by the next successful regenerate. */}
-                        {errorMessage && (
-                            <Flex gap="size-100" alignItems="center" data-testid="ai-regen-error">
-                                <AlertCircle size="S" UNSAFE_className="text-red-600" />
-                                <Text UNSAFE_className="text-gray-700">{errorMessage}</Text>
-                            </Flex>
-                        )}
-                        {/* ADR-013: user-edited non-skill bundle files were kept
-                            on the last refresh — say so, compactly, above the
-                            lists. Edited SKILL files flag their row in
-                            AiSkillsList instead. Absent when nothing is edited. */}
-                        {editedNonSkillFiles.length > 0 && (
-                            <Text
-                                data-testid="ai-edited-files-note"
-                                UNSAFE_className="text-gray-700"
+                            {errorMessage && (
+                                <Flex
+                                    gap="size-100"
+                                    alignItems="center"
+                                    data-testid="ai-regen-error"
+                                >
+                                    <AlertCircle size="S" UNSAFE_className="text-red-600" />
+                                    <Text UNSAFE_className="text-gray-700">{errorMessage}</Text>
+                                </Flex>
+                            )}
+                            <div
+                                className="ai-capabilities-columns"
+                                data-testid="ai-capabilities-columns"
                             >
-                                Edited — kept your version: {editedNonSkillFiles.join(', ')}
-                            </Text>
-                        )}
-                        <div
-                            className="ai-capabilities-columns"
-                            data-testid="ai-capabilities-columns"
-                        >
-                            {!useSections ? (
-                                // Loading, errored, or one half empty — see
-                                // `useSections`.
-                                <>
-                                    <Flex direction="column" gap="size-150">
-                                        <Heading
-                                            level={4}
-                                            UNSAFE_className="ai-section-heading"
-                                            data-testid="ai-mcps-heading"
-                                        >
-                                            MCP servers · {mcps.length}
-                                        </Heading>
-                                        <AiMcpsList
-                                            mcps={mcps}
-                                            hasError={hasMcpsError}
-                                            isLoading={isLoading}
-                                        />
-                                    </Flex>
-                                    <AiSkillsList
-                                        skills={skills}
-                                        hasError={hasSkillsError}
-                                        isLoading={isLoading}
-                                        editedFiles={editedFiles}
-                                        gatedSkills={gatedSkills}
-                                    />
-                                </>
-                            ) : (
-                                sections.map((section) => (
-                                    <Flex
-                                        key={section.key}
-                                        direction="column"
-                                        gap="size-150"
-                                        data-testid={`ai-integration-${section.key}`}
-                                    >
-                                        <Heading
-                                            level={4}
-                                            UNSAFE_className="ai-section-heading"
-                                            data-testid="ai-integration-heading"
-                                        >
-                                            {section.label}
-                                        </Heading>
-                                        {section.mcps.length > 0 && (
+                                {!useSections ? (
+                                    // Loading, errored, or one half empty — see
+                                    // `useSections`.
+                                    <>
+                                        <Flex direction="column" gap="size-150">
+                                            <Heading
+                                                level={4}
+                                                UNSAFE_className="ai-section-heading"
+                                                data-testid="ai-mcps-heading"
+                                            >
+                                                MCP servers ({mcps.length})
+                                            </Heading>
                                             <AiMcpsList
-                                                mcps={section.mcps}
+                                                mcps={mcps}
                                                 hasError={hasMcpsError}
+                                                isLoading={isLoading}
                                             />
-                                        )}
-                                        {section.skills.length > 0 && (
-                                            <AiSkillsList
-                                                skills={section.skills}
-                                                hasError={hasSkillsError}
-                                                editedFiles={editedFiles}
-                                                flat
-                                            />
-                                        )}
-                                    </Flex>
-                                ))
-                            )}
-                            {/* Gated skills are a project-wide absence, not one
+                                        </Flex>
+                                        <AiSkillsList
+                                            skills={skills}
+                                            hasError={hasSkillsError}
+                                            isLoading={isLoading}
+                                            gatedSkills={gatedSkills}
+                                        />
+                                    </>
+                                ) : (
+                                    sections.map((section) => (
+                                        <Flex
+                                            key={section.key}
+                                            direction="column"
+                                            gap="size-150"
+                                            data-testid={`ai-integration-${section.key}`}
+                                        >
+                                            <Heading
+                                                level={4}
+                                                UNSAFE_className="ai-section-heading"
+                                                data-testid="ai-integration-heading"
+                                            >
+                                                {section.label}
+                                            </Heading>
+                                            {section.mcps.length > 0 && (
+                                                <AiMcpsList
+                                                    mcps={section.mcps}
+                                                    hasError={hasMcpsError}
+                                                />
+                                            )}
+                                            {section.skills.length > 0 && (
+                                                <AiSkillsList
+                                                    skills={section.skills}
+                                                    hasError={hasSkillsError}
+                                                    flat
+                                                />
+                                            )}
+                                        </Flex>
+                                    ))
+                                )}
+                                {/* Gated skills are a project-wide absence, not one
                                 pair's — render them once, under everything. */}
-                            {useSections && (
-                                <AiSkillsList
-                                    skills={EMPTY_SKILLS}
-                                    gatedSkills={gatedSkills}
-                                    flat
-                                />
-                            )}
+                                {useSections && (
+                                    <AiSkillsList
+                                        skills={EMPTY_SKILLS}
+                                        gatedSkills={gatedSkills}
+                                        flat
+                                    />
+                                )}
+                            </div>
                         </div>
-                    </div>
+                        {/* ADR-013: which edited files Regenerate leaves alone.
+                            Absent when nothing is edited. A plain <p>: its margin
+                            is ours to set, where Spectrum Text's own rule would
+                            win a tie on specificity. */}
+                        {keepsSentence && (
+                            <p
+                                data-testid="ai-edited-files-note"
+                                className="ai-regenerate-note text-gray-700"
+                            >
+                                {keepsSentence}
+                            </p>
+                        )}
+                    </>
                 )}
             </View>
         </Modal>

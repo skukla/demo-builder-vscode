@@ -484,11 +484,10 @@ export class CommandManager {
                     path.join(this.context.extensionPath, 'dist'),
                 );
                 this.logger.info(`[MCP] global registration written to ${written.join(', ')}`);
+                // Just the files, by the paths an SC recognises: the longer sentence this
+                // replaced was cut off in the toast before the second path (2026-10-22).
                 const files = written.map((file) => file.replace(os.homedir(), '~')).join(' and ');
-                void vscode.window.showInformationMessage(
-                    `Demo Builder MCP registered globally in ${files}. ` +
-                        'Your agent can now reach a running Demo Builder window from any directory.',
-                );
+                void vscode.window.showInformationMessage(`Registered in ${files}.`);
             } catch (error) {
                 this.logger.error('[MCP] global registration failed', error as Error);
                 void vscode.window.showErrorMessage(

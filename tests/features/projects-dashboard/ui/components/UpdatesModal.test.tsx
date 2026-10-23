@@ -92,6 +92,9 @@ function controls(view: UpdatesView, ticked: string[] = []): jest.Mocked<Updates
         progress: null,
         answer: jest.fn(),
         onTyped: jest.fn(),
+        remaining: 0,
+        back: jest.fn(),
+        rechecking: false,
     };
 }
 
@@ -347,6 +350,55 @@ describe('UpdatesModal', () => {
 
         expect(screen.queryByText(/\d+ of \d+/)).not.toBeInTheDocument();
         expect(screen.getByText('1 waiting for you')).toBeInTheDocument();
+    });
+
+    // Owner, 2026-10-22: after applying only some, the SC can go back to the rest.
+    describe('once a run leaves updates the SC unticked still waiting', () => {
+        const ended = (remaining: number, progress: Partial<OperationProgressPayload> = { state: 'succeeded' }) => ({
+            ...running({ extension: { id: 'extension', state: 'done' } }, progress),
+            remaining,
+        });
+
+        it('says how many inside the list, and offers Back to updates beside Close', async () => {
+            const c = ended(2, { state: 'succeeded', warning: '1 update did not apply.' });
+            const { container } = render(<UpdatesModal controls={c} />);
+
+            const list = container.querySelector('.updates-group-list') as HTMLElement;
+            expect(list.firstElementChild).toHaveTextContent('2 updates still waiting');
+            expect(screen.getByRole('dialog', { name: "Some updates didn't apply" })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+            await user().click(screen.getByRole('button', { name: 'Back to updates' }));
+
+            expect(c.back).toHaveBeenCalledTimes(1);
+        });
+
+        it('says one in the singular', () => {
+            render(<UpdatesModal controls={ended(1)} />);
+
+            expect(screen.getByText('1 update still waiting')).toHaveClass('updates-run-note');
+            expect(screen.getByRole('dialog', { name: 'Updates applied' })).toBeInTheDocument();
+        });
+
+        it('offers only Close when nothing the SC left is waiting', () => {
+            render(<UpdatesModal controls={ended(0)} />);
+
+            expect(screen.queryByText(/still waiting/)).toBeNull();
+            expect(screen.queryByRole('button', { name: 'Back to updates' })).toBeNull();
+            expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+        });
+
+        it('says it is checking while the check runs, and cannot be pressed again', () => {
+            render(<UpdatesModal controls={{ ...ended(1), rechecking: true }} />);
+
+            expect(screen.getByRole('button', { name: 'Checking for updates' })).toBeDisabled();
+        });
+
+        it('offers nothing new while the run is still going', () => {
+            render(<UpdatesModal controls={ended(1, { state: 'running' })} />);
+
+            expect(screen.queryByRole('button', { name: 'Back to updates' })).toBeNull();
+            expect(screen.queryByText(/still waiting/)).toBeNull();
+        });
     });
 
     it('closes through the controls', async () => {

@@ -261,6 +261,31 @@ describe('apply_updates', () => {
         );
     });
 
+    // Owner, 2026-10-22: the window says what is still waiting after a run; so does the
+    // agent's answer, by the same check run again on the project as it now is.
+    it('says how many updates the same check still finds once it has applied', async () => {
+        const after = { name: 'p', path: '/p', status: 'stopped', version: 'after' };
+        getCurrentProject.mockResolvedValueOnce({ name: 'p', path: '/p', status: 'stopped' }).mockResolvedValueOnce(after);
+        countMock.mockReturnValueOnce(2).mockReturnValueOnce(1);
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        const res = await s.call({ confirm: true });
+
+        expect(res.remaining).toBe(1);
+        expect(computeMock).toHaveBeenCalledTimes(2);
+        expect(computeMock.mock.calls[1][0]).toBe(after);
+        expect(s.definition().description).toMatch(/remaining/);
+    });
+
+    it('answers remaining 0 when nothing is left', async () => {
+        countMock.mockReturnValueOnce(1).mockReturnValueOnce(0);
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        expect((await s.call({ confirm: true })).remaining).toBe(0);
+    });
+
     it('a clash stops by default; onClash says keep or reset, and nothing else is inferred', async () => {
         // A reset discards the user's edits to the clashing files and a keep leaves
         // markers in the local copy, so neither is the default: the agent has to say so.

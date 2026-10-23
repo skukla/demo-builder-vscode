@@ -107,6 +107,8 @@ export function useStorefrontSetup(
                     brokenLinks: data.brokenLinks,
                     // Saved onto the project by creation; setup has no project to write.
                     installedBlockLibraries: data.installedBlockLibraries,
+                    // Stamped on the project by creation ("Needs reset", storefrontChanges.ts).
+                    storefrontBuildComplete: data.storefrontBuildComplete,
                 },
             });
         },

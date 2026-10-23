@@ -1,7 +1,8 @@
 /**
  * The storefront report (EDS-13f, plan `.rptc/plans/shareable-demo-patches/`,
- * steps 04 and 07): where a project's storefront comes from, what Demo Builder
- * wrote into it, and the state of each of Demo Builder's fixes on its code.
+ * steps 04 and 07): where a project's storefront comes from, and what Demo
+ * Builder wrote into it. It no longer lists Demo Builder's fixes or offers them:
+ * creation and reset apply every one that fits (EDS-64, `knownPatches.ts`).
  *
  * ONE computation (`readStorefrontReport`) and ONE rendering
  * (`storefrontReportLines`); the command, Diagnostics and the agent tool all
@@ -20,10 +21,9 @@
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import type { LkgSource } from '../patches/lkgReader';
-import { fixGroupsLabel, resolveFixLedger, STOREFRONT_FIX_IDS } from '../patches/loadBearingPatches';
-import { checkFixes, type FixOutcome, type FixState } from '../patches/storefrontFixes';
 import { SMART_404_MARKER_START } from '../pdp/pdp404Snippet';
 import { readBrokenLinks } from './brokenLinksRecord';
+import { NEEDS_RESET_LABEL, NEEDS_RESET_LINE, storefrontNeedsReset } from './storefrontChanges';
 import { readRepoBoilerplate, type ReadOutcome } from './storefrontOrigin';
 import {
     asLineage,
@@ -33,7 +33,7 @@ import {
     type LineageMatch,
 } from './storefrontProvenance';
 import { COMPONENT_IDS } from '@/core/constants';
-import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
+import { bundledDemoPackages, resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import {
     resolveBoilerplateBase,
     type BoilerplateBase,
@@ -49,7 +49,7 @@ import {
     type StorefrontLineage,
 } from '@/types/projectFile';
 import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
-import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
+import type { StorefrontBrokenLink, StorefrontReportView } from '@/types/webviewPayloads';
 
 /** Whether a file Demo Builder writes is in the repository. */
 export type Presence = 'present' | 'absent' | 'unreadable';
@@ -65,9 +65,6 @@ export interface StorefrontReport {
     current?: ReadOutcome<StorefrontBoilerplate>;
     origin: StorefrontOriginKind;
     written: { smart404: Presence; fstab: Presence; config: Presence; description: Presence };
-    fixes: FixOutcome[];
-    /** Fixes that fit an added demo tied to our templates: what the SC may accept. */
-    offer?: string[];
     /**
      * Links in the content to pages its content source does not have either,
      * from the last create or reset (`brokenLinksRecord`). Absent when none.
@@ -80,6 +77,11 @@ export interface StorefrontReport {
      * version, or why it does not follow our tested boilerplate. Read, never recorded here.
      */
     adobe?: { base: BoilerplateBase; tested?: string } | { reason: string };
+    /**
+     * The storefront is behind how Demo Builder builds storefronts now (`storefrontChanges.ts`),
+     * from the project's record, no read. Present only when true.
+     */
+    needsReset?: true;
 }
 
 export interface StorefrontReportDeps {
@@ -93,11 +95,10 @@ export interface StorefrontReportDeps {
     packages?: readonly DemoPackage[];
 }
 
-/** The fixes the report checks, the ledger they live in, and the template that ledger pins. */
-interface FixSet {
-    ids: string[];
+/** What "Demo Builder's current boilerplate" is read from: a template, at its ledger's last-known-good. */
+interface BoilerplateReference {
     source: CodePatchSource;
-    template?: RepositoryRef;
+    template: RepositoryRef;
 }
 
 /**
@@ -112,15 +113,13 @@ export async function readStorefrontReport(
     if (!repository) return undefined;
 
     const origin = await originOf(project, deps);
-    const fixSet = fixSetOf(project, origin, deps.packages);
-    const [boilerplate, current, written, fixes, adobe] = await Promise.all([
+    const reference = referenceOf(project, origin, deps.packages);
+    const [boilerplate, current, written, adobe] = await Promise.all([
         readRepoBoilerplate(deps.fileOps, repository, deps.logger),
-        fixSet ? currentBoilerplate(fixSet, deps) : Promise.resolve(undefined),
+        reference ? currentBoilerplate(reference, deps) : Promise.resolve(undefined),
         writtenPieces(repository, deps),
-        fixSet ? checkFixes(deps, { ...repository, branch: 'main' }, fixSet.ids, fixSet.source) : Promise.resolve([]),
         origin.kind === 'added' ? adobeHalf(project, deps) : Promise.resolve(undefined),
     ]);
-    const offer = origin.kind === 'added' && origin.match ? fixes.filter((f) => f.state === 'fits').map((f) => f.patchId) : [];
     const brokenLinks = readBrokenLinks(project);
     const contentSite = getEdsDaLiveTarget(project);
     return {
@@ -129,11 +128,10 @@ export async function readStorefrontReport(
         ...(current ? { current } : {}),
         origin,
         written,
-        fixes,
-        ...(offer.length ? { offer } : {}),
         ...(brokenLinks.length ? { brokenLinks } : {}),
         ...(contentSite ? { contentSite } : {}),
         ...(adobe ? { adobe } : {}),
+        ...(storefrontNeedsReset(project) ? { needsReset: true as const } : {}),
     };
 }
 
@@ -181,27 +179,43 @@ async function originOf(project: Project, deps: StorefrontReportDeps): Promise<S
     return { kind: 'added', lineage, ...(match ? { match } : {}) };
 }
 
-/** A shipped brand's own ledger; a saved package's; otherwise the five and the two, from the shipped ledger. */
-function fixSetOf(project: Project, origin: StorefrontOriginKind, packages?: readonly DemoPackage[]): FixSet | undefined {
+/**
+ * The template a storefront is compared against, and its ledger: a shipped brand's own; a
+ * saved package's; otherwise the shipped storefront made from the template GitHub says this
+ * one came from. Undefined when none of ours is known.
+ */
+function referenceOf(
+    project: Project,
+    origin: StorefrontOriginKind,
+    packages: readonly DemoPackage[] = bundledDemoPackages,
+): BoilerplateReference | undefined {
     if (origin.kind === 'shipped') {
-        const storefront = resolveStorefrontForProject(project, packages)?.storefront;
-        if (!storefront?.codePatchSource || !storefront.codePatches?.length) return undefined;
-        return { ids: storefront.codePatches, source: storefront.codePatchSource, template: origin.template };
+        const source = resolveStorefrontForProject(project, packages)?.storefront?.codePatchSource;
+        return source && origin.template ? { source, template: origin.template } : undefined;
     }
     const builtWith = project.demo?.builtWith;
-    if (origin.match?.by === 'built-with' && builtWith?.codePatchSource && builtWith.codePatches?.length) {
-        return { ids: builtWith.codePatches, source: builtWith.codePatchSource, template: builtWith.template };
+    if (origin.match?.by === 'built-with' && builtWith?.codePatchSource && builtWith.template) {
+        return { source: builtWith.codePatchSource, template: builtWith.template };
     }
-    const ledger = resolveFixLedger(packages);
-    return ledger ? { ids: [...STOREFRONT_FIX_IDS], source: ledger.source, template: ledger.template } : undefined;
+    const template = origin.match?.template;
+    if (!template) return undefined;
+    for (const pkg of packages) {
+        for (const storefront of Object.values(pkg.storefronts)) {
+            const same = storefront.templateOwner === template.owner && storefront.templateRepo === template.repo;
+            if (same && storefront.codePatchSource) return { source: storefront.codePatchSource, template };
+        }
+    }
+    return undefined;
 }
 
-async function currentBoilerplate(fixSet: FixSet, deps: StorefrontReportDeps): Promise<ReadOutcome<StorefrontBoilerplate> | undefined> {
-    if (!fixSet.template) return undefined;
-    const { owner, repo, lkgFile } = fixSet.source;
+async function currentBoilerplate(
+    reference: BoilerplateReference,
+    deps: StorefrontReportDeps,
+): Promise<ReadOutcome<StorefrontBoilerplate> | undefined> {
+    const { owner, repo, lkgFile } = reference.source;
     const lkg = await deps.readLkg({ owner, repo, ...(lkgFile ? { lkgFile } : {}) });
     if (!lkg) return { status: 'unreadable', reason: 'The last-known-good commit could not be read' };
-    return readRepoBoilerplate(deps.fileOps, fixSet.template, deps.logger, lkg);
+    return readRepoBoilerplate(deps.fileOps, reference.template, deps.logger, lkg);
 }
 
 /** The integration pieces Demo Builder writes into a storefront (decision 5). */
@@ -230,21 +244,10 @@ async function writtenPieces(repository: RepositoryRef, deps: StorefrontReportDe
 
 const PRESENCE_WORDS: Record<Presence, string> = { present: 'there', absent: 'not there', unreadable: 'could not read' };
 
-/** The fix states in the order the report names them, with their words. */
-const STATE_LINES: ReadonlyArray<[FixState, string]> = [
-    ['applied', 'Already on the code'],
-    ['fits', 'Fit, not applied'],
-    ['missing', "Don't fit this code"],
-    ['target-missing', 'Not in this storefront'],
-    ['unreadable', 'Could not check'],
-];
-
-/**
- * The report in SC words, as markdown lines under three headings. Never a
- * patch id: fixes are named by what they fix.
- */
+/** The report in SC words, as markdown lines under its headings. */
 export function storefrontReportLines(report: StorefrontReport): string[] {
     return [
+        ...(report.needsReset ? [`${NEEDS_RESET_LABEL}: ${NEEDS_RESET_LINE}`] : []),
         '## Where this storefront comes from',
         boilerplateLine(report),
         ...originLines(report.origin),
@@ -254,10 +257,38 @@ export function storefrontReportLines(report: StorefrontReport): string[] {
         `Content mount (fstab.yaml): ${PRESENCE_WORDS[report.written.fstab]}.`,
         `Store settings (config.json): ${PRESENCE_WORDS[report.written.config]}.`,
         `Demo package description: ${PRESENCE_WORDS[report.written.description]}.`,
-        "## Demo Builder's fixes",
-        ...fixLines(report.fixes),
         ...brokenLinkLines(report),
     ];
+}
+
+/**
+ * The report as the dashboard's report window shows it (EDS-64): the attention items, then
+ * where the storefront comes from, then the detail folded away. The same sentences as
+ * {@link storefrontReportLines}, so the window, the markdown and the agent never disagree.
+ *
+ * @param report - the computed report
+ * @returns what the window renders
+ */
+export function storefrontReportView(report: StorefrontReport): StorefrontReportView {
+    const site = report.contentSite;
+    return {
+        ...(report.needsReset ? { needsReset: NEEDS_RESET_LINE } : {}),
+        brokenLinks: (report.brokenLinks ?? []).map(({ link, pages }) => ({
+            link,
+            pages: pages.map((path) => (site ? { path, editUrl: daLiveEditUrl(site, path) } : { path })),
+        })),
+        about: [
+            { label: 'Comes from', text: originLines(report.origin).join(' ') },
+            { label: 'Built on', text: boilerplateLine(report) },
+        ],
+        details: [
+            ...adobeLines(report.adobe),
+            `Product-page fallback (smart 404): ${PRESENCE_WORDS[report.written.smart404]}.`,
+            `Content mount (fstab.yaml): ${PRESENCE_WORDS[report.written.fstab]}.`,
+            `Store settings (config.json): ${PRESENCE_WORDS[report.written.config]}.`,
+            `Demo package description: ${PRESENCE_WORDS[report.written.description]}.`,
+        ],
+    };
 }
 
 /**
@@ -330,14 +361,4 @@ function originLines(origin: StorefrontOriginKind): string[] {
 /** The catalog name would be friendlier; the id is what the report has without another read. */
 function packageName(id: string): string {
     return id ? id.charAt(0).toUpperCase() + id.slice(1) : 'shipped';
-}
-
-function fixLines(fixes: readonly FixOutcome[]): string[] {
-    if (fixes.length === 0) return ["No Demo Builder fixes apply to this storefront's code."];
-    const lines: string[] = [];
-    for (const [state, words] of STATE_LINES) {
-        const ids = fixes.filter((f) => f.state === state).map((f) => f.patchId);
-        if (ids.length) lines.push(`${words}: ${fixGroupsLabel(ids)}.`);
-    }
-    return lines;
 }

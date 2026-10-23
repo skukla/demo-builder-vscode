@@ -6,7 +6,7 @@
  * whole job of this view is which method, with which flags, on which project.
  */
 
-import { createWorkingProjectStateManager } from '@/core/state/workingProjectStateManager';
+import { createNonSwitchingStateManager, createWorkingProjectStateManager } from '@/core/state/workingProjectStateManager';
 import { createMockProject } from '../../helpers/projectFake';
 import { createMockStateManager } from '../../helpers/stateManagerFake';
 
@@ -116,5 +116,36 @@ describe('createWorkingProjectStateManager', () => {
         await view.clearAll();
 
         expect(seen).toEqual([real]);
+    });
+});
+
+describe('createNonSwitchingStateManager', () => {
+    // Check for Updates and its apply walk every project; none may become the open one.
+    it('writes a project that is not open to disk only, leaving the open one where it is', async () => {
+        const real = makeReal(OTHER);
+        const project = createMockProject({ name: 'justrite', path: WORKING });
+
+        await createNonSwitchingStateManager(real).saveProject(project);
+
+        expect(real.saveProjectConfigOnly).toHaveBeenCalledWith(project);
+        expect(real.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('gives the open project the ordinary save, so its screens see the change', async () => {
+        const real = makeReal(WORKING);
+        const project = createMockProject({ name: 'justrite', path: WORKING });
+
+        await createNonSwitchingStateManager(real).saveProject(project);
+
+        expect(real.saveProject).toHaveBeenCalledWith(project);
+        expect(real.saveProjectConfigOnly).not.toHaveBeenCalled();
+    });
+
+    it('runs every other method on the real manager itself', async () => {
+        const real = makeReal(OTHER);
+
+        await createNonSwitchingStateManager(real).getCurrentProject();
+
+        expect(real.getCurrentProject).toHaveBeenCalled();
     });
 });

@@ -33,6 +33,12 @@ function selections(): UpdateSelections {
 
 beforeEach(() => ask.mockReset());
 
+
+/** A question with this heading, whose sentence contains `part`. */
+function question(title: string, part: string): unknown {
+    return { title, message: expect.stringContaining(part) };
+}
+
 describe('questionsInModal', () => {
     it('asks about a clash on the colleague\'s row with all three choices, naming the project and the files', async () => {
         ask.mockResolvedValue('Fix with AI');
@@ -45,7 +51,7 @@ describe('questionsInModal', () => {
 
         expect(answer).toBe('fix');
         expect(ask).toHaveBeenCalledWith(
-            expect.stringContaining('Bodea: The template update clashes with edits in the storefront in 2 files (head.html, scripts/a.js)'),
+            question('The update clashes with your edits', 'Bodea: The template update clashes with edits in the storefront in 2 files (head.html, scripts/a.js)'),
             'Fix with AI',
             'Leave it as it is',
             'Reset to template',
@@ -59,11 +65,11 @@ describe('questionsInModal', () => {
 
         expect(answer).toBe('leave');
         expect(ask).toHaveBeenCalledWith(
-            expect.stringContaining("Adobe's boilerplate update clashes"),
+            question('The update clashes with your edits', "Adobe's boilerplate update clashes"),
             'Fix with AI',
             'Leave it as it is',
         );
-        expect(ask.mock.calls[0][0]).not.toContain('Reset to template');
+        expect(ask.mock.calls[0][0].message).not.toContain('Reset to template');
     });
 
     it.each([
@@ -86,7 +92,7 @@ describe('questionsInModal', () => {
 
         expect(answer).toBe('fix');
         expect(ask).toHaveBeenCalledWith(
-            expect.stringContaining('Bodea: the update kept to fix with AI is not ready to finish, because blocks/header/header.js still has conflict markers.'),
+            question('The fix is not finished', 'Bodea: the update kept to fix with AI is not ready to finish, because blocks/header/header.js still has conflict markers.'),
             'Fix with AI',
             'Keep it for later',
             'Drop the fix',
@@ -110,7 +116,11 @@ describe('questionsInModal', () => {
         expect(await questionsInModal.replaceLibraryBlocks('Demo Builder Blocks', stopped)).toBe(true);
         expect(await questionsInModal.replaceLibraryBlocks('Demo Builder Blocks', stopped)).toBe(false);
         expect(ask).toHaveBeenCalledWith(
-            '"Replace blocks" puts in the new versions, and any edits you made to these blocks are lost. "Keep my blocks" leaves them as they are.',
+            {
+                title: 'Replace the blocks?',
+                message:
+                    '"Replace blocks" puts in the new versions, and any edits you made to these blocks are lost. "Keep my blocks" leaves them as they are.',
+            },
             'Replace blocks',
             'Keep my blocks',
         );
@@ -125,7 +135,11 @@ describe('stopRunningDemos', () => {
         const out = await stopRunningDemos(selections(), '/p/justrite', stopDemo);
 
         expect(ask).toHaveBeenCalledTimes(1);
-        expect(ask).toHaveBeenCalledWith('JustRite is running. Stop it to update it?', 'Stop and update', 'Skip');
+        expect(ask).toHaveBeenCalledWith(
+            { title: 'Stop the demo to update it?', message: 'JustRite is running. Stop it to update it?' },
+            'Stop and update',
+            'Skip',
+        );
         expect(stopDemo).toHaveBeenCalledTimes(1);
         expect(out).toEqual({ selections: selections(), skipped: [] });
     });

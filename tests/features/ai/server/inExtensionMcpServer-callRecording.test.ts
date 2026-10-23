@@ -45,7 +45,7 @@ function registerProbes(srv: {
         },
         ok,
     );
-    // A write tool that declares an EMPTY shape — the republish / sync_content
+    // A write tool that declares an EMPTY shape — the republish
     // shape, and what a real no-argument tool looks like.
     srv.registerTool(
         'set_probe_noargs',

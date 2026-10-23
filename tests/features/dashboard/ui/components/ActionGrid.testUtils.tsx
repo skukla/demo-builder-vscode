@@ -138,7 +138,7 @@ export const defaultProps = {
     handleOpenAemAssets: jest.fn(),
     handleDeleteProject: jest.fn(),
     handleEditProject: jest.fn(),
-    handleExportProject: jest.fn(),
+    handleShareDemo: jest.fn(),
     handleResetProject: jest.fn(),
     handleRestartDemo: jest.fn(),
 };

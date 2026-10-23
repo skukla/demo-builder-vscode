@@ -1,48 +1,42 @@
 /**
- * The catalog menu as a storefront step (EDS-24, owner-approved 2026-10-05).
+ * The catalog menu as a storefront step (EDS-24; category pages through the overlay,
+ * EDS-61).
  *
  * There is no button. Storefront setup (project creation), reset and republish each run
- * {@link applyCatalogMenuStep}; reset first runs {@link removeCatalogMenuStep} with the
- * stored record, so what it wrote comes out before the content is re-copied and goes back
- * in after. After a store change (EDS-44), {@link replaceCatalogMenuStep} runs those two
- * in that order for the store-change service (`storefront/storeScopePages.ts`). These are
- * the only callers — `tests/templates/spine-chokepoints.test.ts` pins them.
+ * {@link applyCatalogMenuStep}; reset first runs {@link removeCatalogMenuStep}, so what it
+ * made comes out before the content is re-copied and goes back in after. After a store
+ * change (EDS-44), {@link replaceCatalogMenuStep} runs those two in that order for the
+ * store-change service (`storefront/storeScopePages.ts`). These are the only callers —
+ * `tests/templates/spine-chokepoints.test.ts` pins them.
  *
  * - The step acts only when the storefront's OWN repository has `blocks/catalog-menu/`
- *   (the Demo Builder Blocks library). When the block has gone, it takes out what it
- *   wrote, so the nav never names a block the site does not have.
- * - Pages someone else made are never touched (`catalogMenuService`, ADR-013 in spirit);
- *   they come back in the summary by category name and address — the clash report.
- * - A category that already has a hand-built page, at any address, gets no page from us:
- *   the menu links to theirs, and the summary says so ("Signs uses your page at
- *   /safety-signage.").
+ *   (the Demo Builder Blocks library) and the product page overlay is on (owner decision
+ *   D5). Then it publishes the authored-pages sheet (`authoredCategoryPages.ts`), which is
+ *   also what opts the site in: the overlay renders category pages only where that sheet
+ *   exists. Without the block or the overlay it takes out what it made earlier — sheet
+ *   included, so the site is back to the overlay leaving every category address alone.
+ * - Each category's page is its own url path (`/signs`), published through the overlay and
+ *   filled from `/categories/default`. A category added in Commerce later gets its page at
+ *   the next republish, or on a shopper's first visit when the smart-404 script has it.
+ * - A category that already has a hand-built page, at any address, keeps it: the menu
+ *   links to theirs, and the summary says so ("Signs uses your page at /safety-signage.").
  * - The record of what was written lives on the project
  *   (`componentInstances['eds-storefront'].metadata.catalogMenu`). The step changes the
  *   project in place; the caller's own save keeps it.
  * - Never throws. A storefront without its category pages is still a working storefront,
- *   and none of the three flows should fail over it. Every outcome comes back as one
- *   plain sentence for the flow's progress line and log; `undefined` means there was
- *   nothing to say (no block and nothing of ours on the site).
- *
- * ## Categories added afterwards (EDS-27)
- *
- * {@link findNewCategoryPagesStep} and {@link addNewCategoryPagesStep} are the same step
- * for the watcher that runs while a project is open, and for agents: find the categories
- * with no page, and add those. ADD-ONLY — no page is rewritten or removed and the nav is
- * not touched (`newCategoryPages.ts`). They act only on a storefront that has the block
- * AND that this step has already set the menu up on (a record exists): a storefront never
- * set up would otherwise have every category "missing", and its first run belongs to
- * Republish, which also puts the menu in the nav.
+ *   and none of the flows should fail over it. Every outcome comes back as one plain
+ *   sentence for the flow's progress line and log; `undefined` means there was nothing to
+ *   say (no block and nothing of ours on the site).
  *
  * @module features/eds/services/catalogMenu/catalogMenuStep
  */
 
+import { authoredAddresses } from './authoredCategoryPages';
 import { isEmptyRecord, readCatalogMenuRecord, writeCatalogMenuRecord } from './catalogMenuRecord';
-import { applyCatalogMenu, removeCatalogMenu, type StorefrontPages } from './catalogMenuService';
-import { describeAdded, describeBuild, describeRemoval } from './catalogMenuSummary';
-import type { CatalogCategory } from './categoryPages';
-import { addMissingCategoryPages, findMissingCategoryPages } from './newCategoryPages';
-import { DaLiveAuthError } from '@/features/eds/services/types';
+import { applyCatalogMenu, removeCatalogMenu, type CategoryPageHost } from './catalogMenuService';
+import { describeBuild, describeRemoval } from './catalogMenuSummary';
+import { planCategoryPages, type CatalogCategory } from './categoryPagePlan';
+import { messageOf, type StorefrontPages } from './ownedPages';
 import type { Project } from '@/types/base';
 
 /** One storefront, as the step needs it. Built by `createCatalogMenuSite`. */
@@ -50,24 +44,41 @@ export interface CatalogMenuSite {
     pages: StorefrontPages;
     /** Whether the storefront's repository has the block. Throws when it cannot tell. */
     hasBlock(): Promise<boolean>;
-    /** Categories with "Include in Menu" on, for the project's store view. */
+    /** Every category of the project's store view. */
     readCategories(): Promise<CatalogCategory[]>;
+    /** Whether the product page overlay is registered for this storefront. */
+    overlay: boolean;
+    /** The overlay's category pages on Helix. */
+    categoryPages: CategoryPageHost;
 }
 
-const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+/** Owner decision D5: one sentence for a storefront whose overlay is off. */
+const OVERLAY_OFF =
+    'Category pages come from the product page overlay, which is off for this storefront, ' +
+    'so no category pages were published and the catalog menu was not added.';
 
 /** What one run of a step did: its sentence, and the counts a store change reports. */
 interface StepOutcome {
     summary: string;
     /** False when a page or the nav could not be changed, or the step could not run. */
     ok: boolean;
-    /** Category pages written and published. */
+    /** Category pages published. */
     written: number;
     /** Pages Demo Builder wrote that the SC has edited since, so were left alone. */
     edited: string[];
 }
 
 const failedStep = (summary: string): StepOutcome => ({ summary, ok: false, written: 0, edited: [] });
+
+/**
+ * What a step did, for its callers: the sentence, and whether it did everything. A
+ * reset shows a step that did not as a warning, and one that did as a note (2026-10-23:
+ * "13 category pages couldn't be published" reached only the Debug Logs).
+ */
+export type CatalogMenuStepResult = Pick<StepOutcome, 'summary' | 'ok'>;
+
+const resultOf = (outcome: StepOutcome | undefined): CatalogMenuStepResult | undefined =>
+    outcome && { summary: outcome.summary, ok: outcome.ok };
 
 function outcomeOf(
     summary: string,
@@ -82,51 +93,74 @@ function outcomeOf(
     };
 }
 
-async function removal(project: Project, pages: StorefrontPages): Promise<StepOutcome | undefined> {
-    if (isEmptyRecord(readCatalogMenuRecord(project))) return undefined;
+/**
+ * Take out what Demo Builder made, when the record says it made anything — the sheet
+ * included. `unpublish`: take the overlay category pages it published down too — when no
+ * build follows (no block, no overlay). Before a build (reset, a store change) they stay on
+ * the record, and the build keeps the ones the store still has and takes the rest down.
+ */
+async function removal(project: Project, site: CatalogMenuSite, unpublish: boolean): Promise<StepOutcome | undefined> {
+    const record = readCatalogMenuRecord(project);
+    if (isEmptyRecord(record)) return undefined;
     try {
-        const { record, ...facts } = await removeCatalogMenu({ pages }, readCatalogMenuRecord(project));
-        writeCatalogMenuRecord(project, record);
+        const { record: next, ...facts } = await removeCatalogMenu(
+            { pages: site.pages, categoryPages: site.categoryPages, unpublish },
+            record,
+        );
+        writeCatalogMenuRecord(project, next);
         return outcomeOf(describeRemoval(facts), facts, 0);
     } catch (error) {
-        return failedStep(`The category pages Demo Builder wrote could not be removed: ${messageOf(error)}.`);
+        return failedStep(`The category pages Demo Builder made could not be removed: ${messageOf(error)}.`);
     }
 }
 
 /**
- * Take out the pages and the switch Demo Builder recorded writing — and nothing else.
+ * Take out the template, the old model's pages and the switch Demo Builder made — and
+ * nothing else. The overlay category pages it published stay on the record: the build
+ * that follows keeps those the store still has and takes the rest down.
  *
  * @param project - the project, whose record is read and then replaced in place
- * @param pages - the storefront's pages
+ * @param site - the storefront
  * @returns what happened, or undefined when there was nothing of ours to remove
  */
 export async function removeCatalogMenuStep(
     project: Project,
-    pages: StorefrontPages,
-): Promise<string | undefined> {
-    return (await removal(project, pages))?.summary;
+    site: CatalogMenuSite,
+): Promise<CatalogMenuStepResult | undefined> {
+    return resultOf(await removal(project, site, false));
 }
 
 async function applyWithBlock(project: Project, site: CatalogMenuSite): Promise<StepOutcome> {
     let report;
     try {
-        report = await applyCatalogMenu(
-            { pages: site.pages, readCategories: site.readCategories },
-            readCatalogMenuRecord(project),
-        );
+        report = await applyCatalogMenu(site, readCatalogMenuRecord(project));
     } catch (error) {
-        // `applyCatalogMenu` throws only while reading — the category tree, or the
-        // storefront's existing pages — before any write.
+        // `applyCatalogMenu` throws only while reading — the categories, or the
+        // storefront's existing pages — before any change.
         return failedStep(
-            `Category pages were not written: ${messageOf(error)}. Republish the storefront to try again.`,
+            `Category pages were not published: ${messageOf(error)}. Republish the storefront to try again.`,
         );
     }
     const { record, ...facts } = report;
     writeCatalogMenuRecord(project, record);
-    return outcomeOf(describeBuild(facts), facts, facts.written.length);
+    const outcome = outcomeOf(describeBuild(facts), facts, facts.published.length);
+    return facts.legacyFailed.length ? { ...outcome, ok: false } : outcome;
+}
+
+/** No block, or no overlay: take out what we made, with the sentence that says why. */
+async function takeOut(project: Project, site: CatalogMenuSite, why: string | undefined): Promise<StepOutcome | undefined> {
+    const removed = await removal(project, site, true);
+    if (why === undefined) {
+        return removed && {
+            ...removed,
+            summary: `The storefront no longer has the catalog menu block, so Demo Builder took its menu out. ${removed.summary}`,
+        };
+    }
+    return removed ? { ...removed, summary: `${why} ${removed.summary}` } : { summary: why, ok: true, written: 0, edited: [] };
 }
 
 async function build(project: Project, site: CatalogMenuSite): Promise<StepOutcome | undefined> {
+    if (!site.overlay) return takeOut(project, site, OVERLAY_OFF);
     let hasBlock: boolean;
     try {
         hasBlock = await site.hasBlock();
@@ -135,26 +169,19 @@ async function build(project: Project, site: CatalogMenuSite): Promise<StepOutco
             `Couldn't check the storefront for the catalog menu block (${messageOf(error)}), so its category pages were not changed.`,
         );
     }
-    if (hasBlock) {
-        try {
-            return await applyWithBlock(project, site);
-        } catch (error) {
-            return failedStep(`Category pages were not written: ${messageOf(error)}.`);
-        }
+    if (!hasBlock) return takeOut(project, site, undefined);
+    try {
+        return await applyWithBlock(project, site);
+    } catch (error) {
+        return failedStep(`Category pages were not published: ${messageOf(error)}.`);
     }
-    const removed = await removal(project, site.pages);
-    return removed === undefined
-        ? undefined
-        : {
-              ...removed,
-              summary: `The storefront no longer has the catalog menu block, so Demo Builder took its menu out. ${removed.summary}`,
-          };
 }
 
 /**
- * Write a page per menu category and switch the catalog menu on in `/nav` — when the
- * storefront has the block. Re-running refreshes our unedited pages, adds pages for new
- * categories, and leaves every other page alone.
+ * Publish a page per category through the overlay, write the template when there is none,
+ * and switch the catalog menu on in `/nav` — when the storefront has the block and the
+ * overlay. Re-running re-publishes every page (so a template edit reaches them), takes
+ * down pages of categories that are gone, and leaves every authored page alone.
  *
  * @param project - the project, whose record is read and then replaced in place
  * @param site - the storefront
@@ -163,15 +190,15 @@ async function build(project: Project, site: CatalogMenuSite): Promise<StepOutco
 export async function applyCatalogMenuStep(
     project: Project,
     site: CatalogMenuSite,
-): Promise<string | undefined> {
-    return (await build(project, site))?.summary;
+): Promise<CatalogMenuStepResult | undefined> {
+    return resultOf(await build(project, site));
 }
 
 /** What replacing the category pages after a store change did (EDS-44). */
 export interface CatalogMenuReplacement {
-    /** Category pages written and published for the store now live. */
+    /** Category pages published for the store now live. */
     written: number;
-    /** Web paths of pages Demo Builder wrote for the old store that the SC edited; kept. */
+    /** Web paths of pages Demo Builder wrote that the SC edited; kept. */
     kept: string[];
     /** Both steps' sentences, for the log; undefined when there was nothing to say. */
     summary?: string;
@@ -180,7 +207,7 @@ export interface CatalogMenuReplacement {
 }
 
 /**
- * After a store change: take the old store's category pages out, then write the new
+ * After a store change: take the old store's category pages down, then publish the new
  * store's — reset's two steps in reset's order. A page the SC edited stays (the record's
  * hash guard) and comes back in `kept`. Never throws.
  *
@@ -192,7 +219,7 @@ export async function replaceCatalogMenuStep(
     project: Project,
     site: CatalogMenuSite,
 ): Promise<CatalogMenuReplacement> {
-    const removed = await removal(project, site.pages);
+    const removed = await removal(project, site, false);
     const built = await build(project, site);
     const outcomes = [removed, built].filter((o): o is StepOutcome => o !== undefined);
     const join = (sentences: string[]): string | undefined => sentences.join(' ') || undefined;
@@ -204,82 +231,43 @@ export async function replaceCatalogMenuStep(
     };
 }
 
-/** A category, as the SC knows it, and the address its page goes at. */
-export interface NewCategory {
-    name: string;
-    path: string;
-}
-
-/** What a look for unpaged categories found. `signIn`: the DA.live sign-in was refused. */
-type NewCategoryPagesCheck =
-    | { status: 'nothing' }
-    | { status: 'missing'; categories: NewCategory[] }
-    | { status: 'failed'; error: string; signIn: boolean };
-
-interface NewCategoryPagesAdded {
-    added: NewCategory[];
-    /** One sentence for the notice, the log and the agent. */
-    summary: string;
-    /** True when nothing was added because the DA.live sign-in was refused. */
-    signIn: boolean;
-}
-
-const failure = (error: unknown): { error: string; signIn: boolean } => ({
-    error: messageOf(error),
-    signIn: error instanceof DaLiveAuthError,
-});
-
-/** Whether this is a storefront the add-only path acts on: set up by the step, block present. */
-async function isSetUpWithBlock(project: Project, site: CatalogMenuSite): Promise<boolean> {
-    if (isEmptyRecord(readCatalogMenuRecord(project))) return false;
-    return site.hasBlock();
-}
-
 /**
- * The menu categories that have no page yet. A READ: it writes nothing, removes nothing,
- * and does not change the project.
+ * Before republish's bulk publish: publish the authored-pages sheet, so no authored page at
+ * a category address is replaced by the overlay while every DA.live page is previewed
+ * (owner, 2026-10-22). Only where the step will publish category pages (block and overlay
+ * on). The same computation as the step's (`authoredAddresses`); the step writes the sheet
+ * again after the content, then the category pages. Publishes no page. Never throws: a
+ * category or block read that fails is the step's to report, and says nothing here.
  *
- * A read that fails comes back as `failed` — never as "these are all missing".
- *
- * @param project - the project, whose record is read
+ * @param project - the project, whose record notes the sheet
  * @param site - the storefront
- * @returns the categories without pages, nothing, or why it could not tell
+ * @param options.onlyWhenPublished - only refresh a sheet the record says is live: writing
+ *   one opts the site in, which is the category step's to do (storefront setup, EDS-61)
+ * @returns a sentence when the sheet could not be published, else undefined
  */
-export async function findNewCategoryPagesStep(
+export async function publishAuthoredListStep(
     project: Project,
     site: CatalogMenuSite,
-): Promise<NewCategoryPagesCheck> {
+    options: { onlyWhenPublished?: boolean } = {},
+): Promise<string | undefined> {
+    if (options.onlyWhenPublished && !readCatalogMenuRecord(project).authoredSheet) return undefined;
+    let planned: string[];
     try {
-        if (!(await isSetUpWithBlock(project, site))) return { status: 'nothing' };
-        const missing = await findMissingCategoryPages(site, readCatalogMenuRecord(project));
-        if (missing.length === 0) return { status: 'nothing' };
-        return { status: 'missing', categories: missing.map(({ name, path }) => ({ name, path })) };
-    } catch (error) {
-        return { status: 'failed', ...failure(error) };
+        if (!site.overlay || !(await site.hasBlock())) return undefined;
+        planned = planCategoryPages(await site.readCategories()).pages.map((p) => p.path);
+    } catch {
+        return undefined;
     }
-}
-
-/**
- * Write and publish a page for each menu category that has none. Add-only; never throws.
- *
- * @param project - the project, whose record is read and then replaced in place
- * @param site - the storefront
- * @returns the categories that got a page, and the sentence that says so
- */
-export async function addNewCategoryPagesStep(
-    project: Project,
-    site: CatalogMenuSite,
-): Promise<NewCategoryPagesAdded> {
     try {
-        if (!(await isSetUpWithBlock(project, site))) {
-            return { added: [], summary: describeAdded([], []), signIn: false };
-        }
-        const report = await addMissingCategoryPages(site, readCatalogMenuRecord(project));
-        writeCatalogMenuRecord(project, report.record);
-        const added = report.written.map(({ name, path }) => ({ name, path }));
-        return { added, summary: describeAdded(added, report.failed), signIn: false };
+        const record = readCatalogMenuRecord(project);
+        const authored = await authoredAddresses(site.pages, planned, record.legacyPages);
+        await site.categoryPages.publishAuthoredSheet(planned.filter((path) => authored.has(path)));
+        writeCatalogMenuRecord(project, { ...record, authoredSheet: true });
+        return undefined;
     } catch (error) {
-        const { error: message, signIn } = failure(error);
-        return { added: [], summary: `No category pages were added: ${message}.`, signIn };
+        return (
+            `Couldn't publish the list of pages you wrote at category addresses before publishing the content ` +
+            `(${messageOf(error)}); the catalog menu step tries again after it.`
+        );
     }
 }

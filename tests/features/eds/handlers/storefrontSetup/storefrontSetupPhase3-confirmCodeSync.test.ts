@@ -48,8 +48,12 @@ import type {
     SetupServices,
 } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import {
+    makePhase3Context,
+    makePhase3Services,
+    progressMessages,
+    sentTypes,
+} from './storefrontSetupPhase3.testUtils';
 import { PREVIEW_CODE_APP_NOT_ON_REPO_ERROR } from '../../../../helpers/helixAdminFixtures';
 
 const REPO: RepoInfo = {
@@ -61,24 +65,8 @@ const REPO: RepoInfo = {
 /** Records the sequence whose ORDER is the thing under test. */
 let order: string[];
 
-function makeContext(): HandlerContext {
-    return createMockHandlerContext({
-        logger: createMockLogger(),
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-    });
-}
-
-function makeServices(): SetupServices {
-    return {
-        helixService: { previewCode: jest.fn().mockResolvedValue(undefined) },
-        daLiveAuthService: { getUserEmail: jest.fn().mockResolvedValue('k@adobe.com') },
-        daLiveTokenProvider: {},
-        githubAppService: {
-            isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true, codeStatus: 200 }),
-            getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync'),
-        },
-    } as unknown as SetupServices;
-}
+const makeContext = makePhase3Context;
+const makeServices = (): SetupServices => makePhase3Services(() => order.push('publishCode'));
 
 const EDS_CONFIG = {
     daLiveOrg: 'skukla',
@@ -100,11 +88,7 @@ const appRequiredPayload = (context: HandlerContext): { message: string; isTeamO
     return send.mock.calls.find((c) => c[0] === 'storefront-setup-github-app-required')?.[1];
 };
 
-const messages = (context: HandlerContext): string =>
-    (context.sendMessage as unknown as jest.Mock).mock.calls
-        .filter((c) => c[0] === 'storefront-setup-progress')
-        .map((c) => String((c[1] as { message?: string }).message))
-        .join('\n');
+const messages = progressMessages;
 
 const progressPayloads = (context: HandlerContext): unknown[] =>
     (context.sendMessage as unknown as jest.Mock).mock.calls
@@ -114,8 +98,6 @@ const progressPayloads = (context: HandlerContext): unknown[] =>
 const mockConfigurePermissions = configureDaLivePermissions as jest.Mock;
 
 
-const sentTypes = (context: HandlerContext): string[] =>
-    (context.sendMessage as unknown as jest.Mock).mock.calls.map((c) => c[0] as string);
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -135,7 +117,7 @@ describe('the App verdict waits for the site', () => {
 
         await run(context, makeServices());
 
-        expect(order).toEqual(['registerSite', 'appCheck']);
+        expect(order).toEqual(['registerSite', 'publishCode', 'appCheck']);
     });
 
     it('tells the resolver the site was just created, so a lagging code sync is not a verdict', async () => {
@@ -308,19 +290,19 @@ describe('what the phase reports and calls', () => {
                 progress: 40,
             },
             {
+                phase: 'site-config',
+                message: STOREFRONT_JOBS.settingSitePermissions,
+                progress: 46,
+            },
+            {
                 phase: 'code-sync',
                 message: STOREFRONT_JOBS.publishingCode,
-                progress: 43,
+                progress: 47,
             },
             {
                 phase: 'code-sync',
                 message: expect.stringContaining('Code synchronized'),
-                progress: 45,
-            },
-            {
-                phase: 'site-config',
-                message: STOREFRONT_JOBS.settingSitePermissions,
-                progress: 46,
+                progress: 47,
             },
             {
                 phase: 'site-config',
@@ -353,17 +335,24 @@ describe('what the phase reports and calls', () => {
         );
     });
 
-    it('carries on when the CDN preview fails — the code is on GitHub either way', async () => {
+    it('fails the setup when the code publish fails — a site with no code is not ready', async () => {
+        // It used to carry on ("the code is on GitHub either way"), and the project
+        // was marked ready while aem.page served no scripts (scratch-1022, 2026-10-22).
         const services = makeServices();
         (services.helixService.previewCode as jest.Mock).mockRejectedValue(new Error('helix 503'));
         const context = makeContext();
 
         const result = await run(context, services);
 
-        expect(result).toBeNull();
-        // …but says so. It used to report "Code synchronized" over the failure.
+        expect(result).toMatchObject({
+            success: false,
+            error: expect.stringContaining('helix 503'),
+            repoOwner: 'skukla',
+            repoName: 'kukla-bodea',
+        });
         expect(messages(context)).toMatch(/Code not published to the CDN: helix 503/);
         expect(messages(context)).not.toMatch(/Code synchronized/);
+        expect(messages(context)).not.toMatch(/Site configuration complete/);
     });
 });
 
@@ -557,16 +546,20 @@ describe('the code endpoint says the App is not on the repository', () => {
         );
     });
 
-    it('stops waiting once the endpoint gives a different reason — the App is no longer the blocker', async () => {
+    it('stops waiting once the endpoint gives a different reason — and reports that reason', async () => {
+        // The App is no longer the blocker, but the code is still not on the CDN,
+        // so the run must not go on to call the storefront ready.
         const services = makeServices();
         (services.helixService.previewCode as jest.Mock)
             .mockRejectedValueOnce(appMissing())
             .mockRejectedValue(new Error('helix 503'));
+        const context = makeContext();
 
-        const result = await run(makeContext(), services);
+        const result = await run(context, services);
 
-        expect(result).toBeNull();
         expect(services.helixService.previewCode).toHaveBeenCalledTimes(2);
+        expect(result).toMatchObject({ success: false, error: expect.stringContaining('helix 503') });
+        expect(messages(context)).not.toMatch(/Site configuration complete/);
     });
 
     it('fails honestly when the App never covers the repository within the wait', async () => {
@@ -594,7 +587,10 @@ describe('an inner 400 from /status', () => {
         expect(sentTypes(context)).not.toContain('storefront-setup-github-app-required');
     });
 
-    it('is NOT verified when the code publish failed for another reason', async () => {
+    it('cannot turn a FAILED code publish into success', async () => {
+        // scratch-1022, 2026-10-22: the publish failed, /status read 400 twice, and
+        // the run logged "Setup succeeded". After a failed publish the 400 is not
+        // asked at all — the publish's own failure is the answer.
         mockResolve.mockResolvedValue({ kind: 'undetermined', codeStatus: 400 });
         const services = makeServices();
         (services.helixService.previewCode as jest.Mock).mockRejectedValue(new Error('helix 503'));
@@ -602,9 +598,10 @@ describe('an inner 400 from /status', () => {
 
         const result = await run(context, services);
 
-        expect(result).toBeNull();
+        expect(result).toMatchObject({ success: false, error: expect.stringContaining('helix 503') });
+        expect(mockResolve).not.toHaveBeenCalled();
         expect(messages(context)).not.toMatch(/AEM Code Sync verified/);
-        expect(messages(context)).toMatch(/could not verify/i);
+        expect(messages(context)).not.toMatch(/setup completed anyway/i);
     });
 
     it('is NOT verified when the answer was a definite "not installed"', async () => {

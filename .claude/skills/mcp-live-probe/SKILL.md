@@ -154,7 +154,7 @@ grep -c 'registerContentAuthoringTools' dist/extension.js   # 0 — esbuild RENA
 ```
 
 That zero looks exactly like a failed build. It cost a wrong "the build is broken" conclusion
-until a negative control (`not_a_real_tool` → 0) and a positive one (`sync_content` → 1) showed
+until a negative control (`not_a_real_tool` → 0) and a positive one (`republish` → 1) showed
 the check itself was wrong, not the build.
 
 A fresh worktree has an **empty `dist/`** — nothing is built until `npm run compile` or F5's

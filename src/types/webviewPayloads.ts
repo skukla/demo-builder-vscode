@@ -360,6 +360,11 @@ export interface DashboardStatusUpdatePayload {
      * (`brokenLinksRecord`). Above zero, the Storefront Report tile wears a dot.
      */
     brokenLinkCount?: number;
+    /**
+     * The storefront is behind how Demo Builder builds storefronts now (`storefrontChanges.ts`):
+     * the Reset tile says "Needs reset". Present only when true.
+     */
+    storefrontNeedsReset?: true;
 }
 
 /** `meshStatusUpdate` — mesh-only status push (deploy flows). */
@@ -426,6 +431,11 @@ export interface OperationProgressPayload {
     warning?: string;
     /** What a run that succeeded leaves the SC to know; shown as a plain success, not a warning. */
     note?: string;
+    /**
+     * What a run that succeeded changed, one line each, listed under its result ("Store
+     * prepared": the attribute sets erp_owner went into). A run that carries them waits to be read.
+     */
+    details?: string[];
     /** Set while the work is paused on a question only the SC can answer. */
     prompt?: OperationPrompt;
     /** A next step a run that succeeded offers on its success view (AB-74). */
@@ -462,6 +472,13 @@ export interface OperationOffer {
  * in place of the spinner and hands back the action the SC chose.
  */
 export interface OperationPrompt {
+    /**
+     * The heading: what the SC is asked to do ("Sign in to Adobe"). Every question
+     * with buttons has its own; one generic heading over all of them, "Waiting for
+     * you", said nothing the sentence under it did not (owner, 2026-10-23). A
+     * question with fields sits under the modal's title and needs none.
+     */
+    title?: string;
     message: string;
     /** The answers, the first being the one that continues the work. */
     actions: string[];
@@ -817,6 +834,37 @@ export interface StorefrontBrokenLink {
     pages: string[];
 }
 
+/**
+ * The storefront report as the dashboard's report window shows it (EDS-64): what needs the
+ * SC's attention first, then where the storefront comes from. Built by
+ * `storefrontReportView` from the one report computation the agent and Diagnostics read.
+ */
+export interface StorefrontReportView {
+    /** Present when the storefront is behind how Demo Builder builds storefronts now: the line to show. */
+    needsReset?: string;
+    /** Links in the content to pages that do not exist, each with the pages it is on. */
+    brokenLinks: Array<{
+        link: string;
+        /** Each page that carries the link, with its DA.live editor address when the site is known. */
+        pages: Array<{ path: string; editUrl?: string }>;
+    }>;
+    /** About this storefront: one labelled sentence each ("Comes from", "Built on"). */
+    about: Array<{ label: string; text: string }>;
+    /** What someone looking closer needs (the Adobe commit, the files Demo Builder wrote); shown folded. */
+    details: string[];
+}
+
+/** `takeStorefrontReportRequest` — whether the dashboard was opened to show the report. */
+export interface TakeStorefrontReportRequestResponse {
+    success: true;
+    data: { show: boolean };
+}
+
+/** `getStorefrontReport` — the report for the dashboard's project, or why there is none. */
+export type GetStorefrontReportResponse =
+    | { success: true; data: StorefrontReportView }
+    | { success: false; error: string };
+
 /** `storefront-setup-complete` — the pipeline finished. */
 export interface StorefrontSetupCompletePayload {
     message: string;
@@ -835,6 +883,8 @@ export interface StorefrontSetupCompletePayload {
      * the wizard it runs before the project exists.
      */
     installedBlockLibraries?: InstalledBlockLibrary[];
+    /** Whether the build step's fixes all landed; creation stamps the project with it. */
+    storefrontBuildComplete?: boolean;
 }
 
 /** `storefront-setup-error` — the pipeline failed; the wizard offers Retry. */

@@ -268,6 +268,14 @@ describe('ensureEdsContent', () => {
         expect(mockPublishLibraryPaths).toHaveBeenCalledTimes(1);
     });
 
+    it('runs the caller hook after the copy and before the publish; a failing hook stops nothing (EDS-61)', async () => {
+        const hook = jest.fn().mockRejectedValue(new Error('DA.live 503'));
+        await ensureEdsContent(makeConfig(), { ...makeDeps(), beforeContentPublish: hook });
+        const at = hook.mock.invocationCallOrder[0];
+        expect(mockCopyContentFromSource.mock.invocationCallOrder[0]).toBeLessThan(at);
+        expect(at).toBeLessThan(mockPublishAllSiteContent.mock.invocationCallOrder[0]);
+    });
+
     it('permission failure is non-fatal', async () => {
         mockConfigureDaLivePermissions.mockRejectedValue(new Error('permission denied'));
         const deps = makeDeps();

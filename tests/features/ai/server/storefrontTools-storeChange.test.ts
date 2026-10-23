@@ -1,18 +1,14 @@
 /**
- * The agent's `republish` and `sync_content` after a store change (EDS-44).
+ * The agent's `republish` after a store change (EDS-44).
  *
- * `republish` publishes config.json; when that puts another store live (the marker is
- * set) and the CDN took it, it also replaces the old store's product and category
- * pages through the one store-change service, and answers with the same sentence the
- * SC reads. `sync_content` goes through the content pipeline, which does the same; the
- * tool hands it the state manager and carries the sentence back.
+ * `republish` runs the dashboard Republish's content pipeline (EDS-63), which replaces
+ * the old store's product and category pages itself; the tool hands it the state manager
+ * and carries its sentence back. The replacement is the pipeline's, tested in
+ * `storefrontContentRepublishService-storeChange.test.ts`.
  *
  * Services walled; asserted by what each is handed.
  */
 
-jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
-    republishStorefrontConfig: jest.fn(),
-}));
 jest.mock('@/features/eds/services/storefront/storefrontContentRepublishService', () => ({
     republishStorefrontContent: jest.fn(),
 }));
@@ -25,20 +21,6 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
     getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
     runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
 }));
-const TOKEN_PROVIDER = { getAccessToken: jest.fn() };
-jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
-    createDaLiveServiceTokenProvider: jest.fn(() => TOKEN_PROVIDER),
-}));
-const mockReplaceStoreScopePages = jest.fn();
-jest.mock('@/features/eds/services/storefront/storeScopePages', () => ({
-    ...jest.requireActual('@/features/eds/services/storefront/storeScopePages'),
-    replaceStoreScopePages: (...a: unknown[]) => mockReplaceStoreScopePages(...a),
-}));
-const STORE_DEPS = { tag: 'store-scope-deps' };
-const mockCreateStoreScopePagesDeps = jest.fn((..._a: unknown[]) => STORE_DEPS);
-jest.mock('@/features/eds/services/storefront/storeScopePagesDeps', () => ({
-    createStoreScopePagesDeps: (...a: unknown[]) => mockCreateStoreScopePagesDeps(...a),
-}));
 
 import { COMPONENT_IDS } from '@/core/constants';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
@@ -47,7 +29,6 @@ import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontContentRepublishService';
-import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import type { Project } from '@/types/base';
 import { expectWithinCeiling } from './responseCeilings';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
@@ -111,67 +92,9 @@ beforeEach(() => {
     jest.clearAllMocks();
     (getGitHubServices as jest.Mock).mockReturnValue({ tokenService, fileOperations });
     (getDaLiveAuthService as jest.Mock).mockReturnValue(daLiveAuthService);
-    (republishStorefrontConfig as jest.Mock).mockResolvedValue({ success: true, cdnPublished: true, cdnVerified: true });
-    mockReplaceStoreScopePages.mockResolvedValue({
-        sentence: SENTENCE,
-        counts: { categoryPages: 11, productPages: 39, oldProductPagesRemoved: 30 },
-    });
 });
 
 describe('republish', () => {
-    it('replaces the pages after a store change and answers with the sentence', async () => {
-        const project = storefront(true);
-        getCurrentProject.mockResolvedValue(project);
-
-        const answer = await server()('republish');
-
-        expect(mockReplaceStoreScopePages).toHaveBeenCalledWith(project, STORE_DEPS, expect.any(Function));
-        expect(answer).toMatchObject({ success: true, storePages: SENTENCE });
-        // The sentence rides in the answer: it must still fit the tool's ceiling.
-        expectWithinCeiling('republish', JSON.stringify(answer));
-    });
-
-    it('builds the service deps from the session clients, for this project\'s storefront', async () => {
-        const project = storefront(true);
-        getCurrentProject.mockResolvedValue(project);
-
-        await server()('republish');
-
-        expect(mockCreateStoreScopePagesDeps).toHaveBeenCalledWith({
-            project,
-            target: { repoOwner: 'me', repoName: 'shop', daLiveOrg: 'acme', daLiveSite: 'shop' },
-            daLiveTokenProvider: TOKEN_PROVIDER,
-            githubTokenService: tokenService,
-            githubFiles: fileOperations,
-            stateManager,
-            persist: expect.any(Function),
-            logger,
-        });
-        const { persist } = mockCreateStoreScopePagesDeps.mock.calls[0][0] as { persist: (p: Project) => Promise<void> };
-        await persist(project);
-        expect(stateManager.saveProject).toHaveBeenCalledWith(project);
-    });
-
-    it('only republishes the config when the store did not change', async () => {
-        getCurrentProject.mockResolvedValue(storefront(false));
-
-        const answer = await server()('republish');
-
-        expect(mockReplaceStoreScopePages).not.toHaveBeenCalled();
-        expect(answer).not.toHaveProperty('storePages');
-    });
-
-    it('leaves the pages alone when the CDN did not take the new config', async () => {
-        getCurrentProject.mockResolvedValue(storefront(true));
-        (republishStorefrontConfig as jest.Mock).mockResolvedValue({ success: true, cdnError: 'HTTP 401' });
-
-        await server()('republish');
-
-        expect(mockReplaceStoreScopePages).not.toHaveBeenCalled();
-    });
-});
-
-describe('sync_content', () => {
     it('hands the pipeline the state manager and answers with its store-change sentence', async () => {
         getCurrentProject.mockResolvedValue(storefront(true));
         (republishStorefrontContent as jest.Mock).mockResolvedValue({
@@ -180,11 +103,11 @@ describe('sync_content', () => {
             storePages: SENTENCE,
         });
 
-        const answer = await server()('sync_content');
+        const answer = await server()('republish');
 
         expect((republishStorefrontContent as jest.Mock).mock.calls[0][0].stateManager).toBe(stateManager);
         expect(answer).toMatchObject({ success: true, storePages: SENTENCE });
-        expectWithinCeiling('sync_content', JSON.stringify(answer));
+        expectWithinCeiling('republish', JSON.stringify(answer));
     });
 });
 
@@ -201,28 +124,7 @@ describe('the steps an agent is told', () => {
         return phases;
     }
 
-    it('republish: the settings, then the store-change steps', async () => {
-        getCurrentProject.mockResolvedValue(storefront(true));
-        mockReplaceStoreScopePages.mockImplementation(
-            async (_p: Project, _d: unknown, report: (stage: string, step?: string, at?: unknown) => void) => {
-                report(S.removingProductPages.label);
-                report(S.removingProductPages.label, "Removing the old store's product pages (30)");
-                report(S.updatingCatalogMenu.label);
-                report(S.warmingProductPages.label);
-                report(S.warmingProductPages.label, 'Warming product pages: 1 of 39 pages', { index: 1, total: 39 });
-                return { sentence: SENTENCE, counts: { categoryPages: 11, productPages: 39, oldProductPagesRemoved: 30 } };
-            },
-        );
-
-        expect(await phasesOf('republish')).toStrictEqual([
-            S.publishingSettings.label,
-            S.removingProductPages.label,
-            S.updatingCatalogMenu.label,
-            S.warmingProductPages.label,
-        ]);
-    });
-
-    it('sync_content: each step of the content publish, once', async () => {
+    it('republish: each step of the content publish, once', async () => {
         getCurrentProject.mockResolvedValue(storefront(false));
         (republishStorefrontContent as jest.Mock).mockImplementation(
             async (params: { onStage?: (stage: string, step?: string) => void }) => {
@@ -235,7 +137,7 @@ describe('the steps an agent is told', () => {
             },
         );
 
-        expect(await phasesOf('sync_content')).toStrictEqual([
+        expect(await phasesOf('republish')).toStrictEqual([
             S.publishingSettings.label,
             S.publishingPages.label,
             S.checkingSettings.label,

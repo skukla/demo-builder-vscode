@@ -133,7 +133,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 95 handlers', () => {
+        it('should have exactly 96 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
@@ -303,7 +303,10 @@ describe('dashboardHandlers', () => {
             // per-step Apply, its undo, and the one settings write outside a catalog step.
             // +1 (AB-78, 2026-10-15): whether another project already runs an ERP
             // integration on this Commerce instance, for the Add Integration modal.
-            expect(types).toHaveLength(95);
+            // openStorefrontReport → getStorefrontReport + takeStorefrontReportRequest
+            // (95 → 96, EDS-64, 2026-10-23): the report is a window over the dashboard,
+            // read on open, and opened by the Command Palette through a held request.
+            expect(types).toHaveLength(96);
         });
 
         it('should have handlers as functions', () => {

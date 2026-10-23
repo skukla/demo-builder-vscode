@@ -149,7 +149,7 @@ export class AdobeCliFallback {
                 const tokenValid = (await this.config.isTokenValid?.()) ?? false;
                 if (!tokenValid) {
                     throw new Error(
-                        'AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.',
+                        'AUTH_EXPIRED: Your Adobe sign-in has expired. Sign in again.',
                     );
                 }
                 throw new Error(

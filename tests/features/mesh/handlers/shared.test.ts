@@ -105,7 +105,7 @@ describe('ensureAuthenticated', () => {
             await ensureAuthenticated(panelContext);
 
             expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-                expect.stringContaining('Adobe authentication required'),
+                expect.stringContaining('Sign in to Adobe from the project dashboard'),
                 'Open Dashboard'
             );
         });

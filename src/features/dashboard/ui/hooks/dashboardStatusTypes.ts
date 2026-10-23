@@ -177,7 +177,7 @@ export interface UseDashboardStatusReturn {
     aiMcps: McpInventoryEntry[];
     /** True when the MCP inspector errored (list shows a warning row) */
     aiMcpsError: boolean;
-    /** ADR-013: user-edited bundle files (relative posix paths) — the modal's "kept your version" flags. */
+    /** ADR-013: user-edited bundle files (relative posix paths) — the modal's "Regenerate keeps your edits" sentence. */
     aiEditedFiles: string[];
     /** Tool-driving skills the project qualifies for but lacks, with why (modal "Not available" rows). */
     aiGatedSkills: Array<{

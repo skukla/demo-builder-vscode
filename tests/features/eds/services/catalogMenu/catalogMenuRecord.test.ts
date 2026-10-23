@@ -31,33 +31,58 @@ function withMetadata(metadata: Record<string, unknown> | undefined): Project {
     });
 }
 
-const RECORD = {
+/** As kept on disk: the old model's pages under `pages`, the template's hash. */
+const STORED = {
     pages: [{ path: '/safety-signs', hash: 'abc' }],
     links: [{ urlPath: 'signs', path: '/safety-signage' }],
     navSwitch: true,
+    templateHash: 'def',
+    categoryPaths: ['/signs', '/signs/danger-signs'],
+    authoredSheet: true,
 };
 
+const RECORD = {
+    legacyPages: [{ path: '/safety-signs', hash: 'abc' }],
+    links: [{ urlPath: 'signs', path: '/safety-signage' }],
+    navSwitch: true,
+    templateHash: 'def',
+    categoryPaths: ['/signs', '/signs/danger-signs'],
+    authoredSheet: true,
+};
+
+const EMPTY = { legacyPages: [], links: [], navSwitch: false };
+
 describe('readCatalogMenuRecord', () => {
-    it('reads the record kept on the storefront instance', () => {
-        const project = withMetadata({ githubRepo: 'steve/kukla-justrite', catalogMenu: RECORD });
+    it('reads the record kept on the storefront instance, the old pages from `pages`', () => {
+        const project = withMetadata({ githubRepo: 'steve/kukla-justrite', catalogMenu: STORED });
         expect(readCatalogMenuRecord(project)).toEqual(RECORD);
     });
 
     it('is the empty record when there is none', () => {
-        expect(readCatalogMenuRecord(withMetadata({ githubRepo: 'a/b' }))).toEqual({ pages: [], links: [], navSwitch: false });
-        expect(readCatalogMenuRecord(withMetadata(undefined))).toEqual({ pages: [], links: [], navSwitch: false });
+        expect(readCatalogMenuRecord(withMetadata({ githubRepo: 'a/b' }))).toEqual(EMPTY);
+        expect(readCatalogMenuRecord(withMetadata(undefined))).toEqual(EMPTY);
     });
 
-    it('drops page entries that do not read as a path and a hash, and a non-boolean switch', () => {
+    it('drops page entries that do not read as a path and a hash, a non-boolean switch and a non-string hash', () => {
         const project = withMetadata({
-            catalogMenu: { pages: [{ path: '/a' }, { path: '/b', hash: 'h' }, 'x'], navSwitch: 'yes' },
+            catalogMenu: {
+                pages: [{ path: '/a' }, { path: '/b', hash: 'h' }, 'x'],
+                navSwitch: 'yes',
+                templateHash: 3,
+                categoryPaths: ['/ok', 7, 'no-slash'],
+                authoredSheet: 'yes',
+            },
         });
-        expect(readCatalogMenuRecord(project)).toEqual({ pages: [{ path: '/b', hash: 'h' }], links: [], navSwitch: false });
+        expect(readCatalogMenuRecord(project)).toEqual({
+            ...EMPTY,
+            legacyPages: [{ path: '/b', hash: 'h' }],
+            categoryPaths: ['/ok'],
+        });
     });
 });
 
 describe('writeCatalogMenuRecord', () => {
-    it('keeps the record beside the instance metadata already there', () => {
+    it('keeps the record beside the instance metadata already there, in its stored shape', () => {
         const project = withMetadata({ githubRepo: 'steve/kukla-justrite', daLiveOrg: 'skukla' });
 
         writeCatalogMenuRecord(project, RECORD);
@@ -65,14 +90,28 @@ describe('writeCatalogMenuRecord', () => {
         expect(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata).toEqual({
             githubRepo: 'steve/kukla-justrite',
             daLiveOrg: 'skukla',
-            catalogMenu: RECORD,
+            catalogMenu: STORED,
+        });
+    });
+
+    it('drops `pages` from the stored record once the old pages are gone', () => {
+        const project = withMetadata({ githubRepo: 'a/b', catalogMenu: STORED });
+
+        writeCatalogMenuRecord(project, { ...RECORD, legacyPages: [] });
+
+        expect(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata?.catalogMenu).toEqual({
+            links: RECORD.links,
+            navSwitch: true,
+            templateHash: 'def',
+            categoryPaths: RECORD.categoryPaths,
+            authoredSheet: true,
         });
     });
 
     it('deletes the key once nothing is claimed, so an undone project carries no trace', () => {
-        const project = withMetadata({ githubRepo: 'a/b', catalogMenu: RECORD });
+        const project = withMetadata({ githubRepo: 'a/b', catalogMenu: STORED });
 
-        writeCatalogMenuRecord(project, { pages: [], links: [], navSwitch: false });
+        writeCatalogMenuRecord(project, EMPTY);
 
         expect(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata).toEqual({ githubRepo: 'a/b' });
     });

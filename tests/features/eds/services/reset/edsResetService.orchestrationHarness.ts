@@ -116,6 +116,7 @@ export const REPO_RESULT = {
     blockCollectionIds: ['hero', 'cards'],
     libraryContentSources: [{ org: 'lib-org', site: 'lib-site' }],
     canonicalCodePatchResults: [] as CodePatchResult[],
+    buildComplete: true,
 };
 
 function createProject(): Project {

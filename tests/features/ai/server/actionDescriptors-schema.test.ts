@@ -92,7 +92,8 @@ const INPUT_KEYS: Record<string, string[]> = {
     regenerate_ai_files: [],
     start_demo: [],
     add_erp: ['confirm', 'id', 'name', 'owns'],
-    add_integration: ['apis', 'id', 'instanceId', 'name', 'refreshCli', 'source'],
+    // `confirm` gates the ERP integration's add alone, which prepares the store (2026-10-22).
+    add_integration: ['apis', 'confirm', 'id', 'instanceId', 'name', 'refreshCli', 'source'],
     rename_integration: ['id', 'name'],
     // No `secrets`: a secret must never be a tool argument (AB-21).
     set_integration_settings: ['id', 'values'],

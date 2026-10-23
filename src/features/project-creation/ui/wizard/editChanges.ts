@@ -128,6 +128,7 @@ const EDS_FIELDS: Record<keyof EDSConfig, Kind> = {
     repoUrl: 'screen',
     brokenLinks: 'screen',
     installedBlockLibraries: 'screen',
+    storefrontBuildComplete: 'screen',
 };
 
 /**

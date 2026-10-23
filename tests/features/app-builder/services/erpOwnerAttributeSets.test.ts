@@ -9,6 +9,7 @@ import {
     addOwnerToSets,
     groupFor,
     readProductSets,
+    missingSetsNote,
     removeOwnerFromSets,
     setsInWords,
     setsWithoutOwner,
@@ -68,6 +69,24 @@ describe('setsWithoutOwner', () => {
     it('says the sets in words', () => {
         expect(setsInWords([{ id: 4, name: 'Default', products: 12 }, { id: 9, name: 'Gear', products: 1 }])).toBe(
             'Default (12 products) and Gear (1 product)',
+        );
+    });
+
+    // Owner, 2026-10-22: the check's note named all twelve sets and "seems verbose". It counts
+    // them; the names are in the apply's preview and its result.
+    it("counts the sets missing erp_owner and their products in the check's note", () => {
+        const justrite: Array<[string, number]> = [
+            ['Default', 163], ['Phones', 77], ['Watches', 23], ['Server', 15], ['Accessories', 14], ['Audio', 8],
+            ['Cables', 8], ['Coolers', 5], ['Plans', 4], ['Power Supply', 4], ['Home Internet', 3], ['Gift Cards', 1],
+        ];
+        expect(missingSetsNote(justrite.map(([name, products], id) => ({ id, name, products })))).toBe(
+            'erp_owner is missing from 12 attribute sets, which hold 325 products. An ERP tag on those products is dropped. Demo Builder can add it.',
+        );
+    });
+
+    it('says one set and one product in the singular', () => {
+        expect(missingSetsNote([{ id: 4, name: 'Default', products: 1 }])).toBe(
+            'erp_owner is missing from 1 attribute set, which holds 1 product. An ERP tag on that product is dropped. Demo Builder can add it.',
         );
     });
 });

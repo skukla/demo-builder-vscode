@@ -133,6 +133,12 @@ export const OPERATION_STAGES = {
         detail: 'Only the ERPs whose products moved',
     },
     preparingStore: { label: 'Preparing the store', expectation: 'Usually under a minute', detail: 'Each step checked first' },
+    // Its undo read "Preparing the store" under "Undoing the store preparation" (2026-10-22).
+    undoingStorePreparation: {
+        label: 'Undoing the preparation',
+        expectation: 'Usually under a minute',
+        detail: 'Each step put back, newest first',
+    },
     changingAttributeSets: {
         label: 'Changing attribute sets',
         expectation: 'A few seconds per set',

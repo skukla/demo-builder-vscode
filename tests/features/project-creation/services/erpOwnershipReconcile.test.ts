@@ -368,3 +368,45 @@ describe('applyErpOwnership', () => {
         expect(mockFillEvery).not.toHaveBeenCalled();
     });
 });
+
+// Justrite, 2026-10-22: adding Accuform left Justrite ERP on a rule nobody set
+// (erp_owner=justrite), it owned 0, and the add's pass marked its products discontinued. An add
+// never asks to take an existing ERP's whole catalogue away, so the pass refuses that and says so.
+describe('applyErpOwnership — an add never empties an ERP it did not change', () => {
+    const NOBODY_TAGGED: ErpOwnershipOptions = {
+        ...OPTIONS,
+        products: [
+            { sku: 'J1', websiteCodes: ['justrite'], attributes: {} },
+            { sku: 'J2', websiteCodes: ['justrite'], attributes: {} },
+        ],
+    };
+    const HELD = [
+        { sku: 'J1', type: 'simple', salesStatus: 'sellable' },
+        { sku: 'J2', type: 'simple', salesStatus: 'sellable' },
+    ];
+
+    beforeEach(() => {
+        mockRead.mockResolvedValue(NOBODY_TAGGED);
+        mockList.mockImplementation(async (urls: Record<string, string>) =>
+            urls['runtime/demo-erp/products'].startsWith('https://a.') ? HELD : [],
+        );
+    });
+
+    it('marks nothing discontinued in an ERP that would lose every product it holds, and says why', async () => {
+        const result = await applyErpOwnership(project(), 'erp-integration', deps(), 'add');
+
+        expect(mockSetStatus).not.toHaveBeenCalled();
+        if (result.status !== 'applied') throw new Error('not applied');
+        expect(result.erps[0]).toMatchObject({ erp: 'demo-erp', ownsNow: 0, discontinued: 0 });
+        expect(result.notes).toContain(
+            "Justrite ERP's rule now gives it none of the 2 products it holds, so none were marked discontinued: " +
+                'an add does not take an existing ERP\'s products away. Check its rule in the ERP settings.',
+        );
+    });
+
+    it('CONTROL: a rule the SC changed in Settings still marks them', async () => {
+        await applyErpOwnership(project(), 'erp-integration', deps(), 'settings');
+
+        expect(mockSetStatus.mock.calls.map((call) => call[2])).toStrictEqual(['J1', 'J2']);
+    });
+});

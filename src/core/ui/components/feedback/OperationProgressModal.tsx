@@ -39,6 +39,11 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { OperationOffer, OperationProgressPayload } from '@/types/webviewPayloads';
 
+/** A success that says something beyond its title (a warning, a note, what it changed) waits to be read. */
+function holdsResult(progress: OperationProgressPayload | null | undefined): boolean {
+    return Boolean(progress?.warning || progress?.note || progress?.details?.length);
+}
+
 /** The operation a progress modal shows: which one, and what it is called. */
 export interface ProgressModalOperation {
     /** What the operation's progress is keyed by. */
@@ -84,19 +89,25 @@ export interface OperationProgressModalProps {
     offerStep?: (offer: OperationOffer) => ProgressModalNextStep | undefined;
 }
 
+const CANCEL = 'Cancel';
+
 /**
  * The dismiss label. A question cannot be put in the background — nothing would be
  * left to answer it — so dismissing it IS the answer, and it says Cancel. An
  * operation that has ENDED, either way, has nothing left to narrate.
  */
 function closeLabelFor(ended: boolean, asking: boolean): string {
-    if (asking) return 'Cancel';
+    if (asking) return CANCEL;
     return ended ? 'Close' : 'Run in background';
 }
 
-/** The answers, as the guard gave them: the one that continues the work is first. */
+/**
+ * The answers, as the guard gave them: the one that continues the work is first. A
+ * "Cancel" among them is left out: the dismiss button already says Cancel and answers
+ * the same way, as nothing chosen (two Cancels side by side, 2026-10-23).
+ */
 function answerButtons(actions: string[], answer: (chosen: string) => void): ActionButton[] {
-    return actions.map((label, index) => ({
+    return actions.filter((label) => label !== CANCEL).map((label, index) => ({
         label,
         variant: index === 0 ? 'accent' : 'secondary',
         onPress: () => answer(label),
@@ -194,11 +205,13 @@ export function OperationProgressModal({
     const offering = succeeded ? nextStepOf(progress, next, offerStep) : undefined;
     const warning = succeeded ? progress?.warning : undefined;
     const note = succeeded ? progress?.note : undefined;
+    // So does a list of what the run changed (2026-10-22): it is the result, to be read.
+    const held = holdsResult(progress);
     useEffect(() => {
-        if (!succeeded || offering || warning || note) return undefined;
+        if (!succeeded || offering || held) return undefined;
         const timer = setTimeout(onClose, TIMEOUTS.UI.RESULT_GLANCE);
         return () => clearTimeout(timer);
-    }, [succeeded, offering, warning, note, onClose]);
+    }, [succeeded, offering, held, onClose]);
 
     const close = useCallback((): void => {
         if (prompt) {

@@ -36,7 +36,7 @@ import {
     handleOpenDebugLogs,
 } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
-import { handleApplyUpdates } from '@/features/updates/handlers/updatesModalHandlers';
+import { handleApplyUpdates, handleRecheckUpdates } from '@/features/updates/handlers/updatesModalHandlers';
 import { handleTakeUpdatesRequest } from '@/features/updates/handlers/updatesModalRequest';
 import { defineHandlers } from '@/types/handlers';
 
@@ -100,6 +100,8 @@ export const projectsListHandlers = defineHandlers({
     applyUpdates: handleApplyUpdates,
     // A screen opened by Check for Updates asks, once mounted, whether to show it.
     takeUpdatesRequest: handleTakeUpdatesRequest,
+    // "Back to updates" after a run: Check for Updates again, for what is still waiting.
+    recheckUpdates: handleRecheckUpdates,
 
     // The progress modal a reset narrates into (PL-59): where a reopened modal
     // asks how far the run got, and how a closed one hands over to a

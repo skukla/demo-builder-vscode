@@ -97,7 +97,10 @@ describe('takeOutProductPages', () => {
         expect(helix.unpublishPages).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'main', [
             '/products/drum/dc-100',
         ]);
-        expect(sentence).toBe('Removed 1 product page from skukla/kukla-justrite, live and preview.');
+        expect(sentence).toStrictEqual({
+            sentence: 'Removed 1 product page from skukla/kukla-justrite, live and preview.',
+            problem: false,
+        });
     });
 
     it('shows what it is doing and what happened on the progress line', async () => {
@@ -121,7 +124,9 @@ describe('takeOutProductPages', () => {
 
         expect(helix.listPublishedPaths).not.toHaveBeenCalled();
         expect(helix.unpublishPages).not.toHaveBeenCalled();
-        expect(sentence).toContain('the project "justrite-b2b" also publishes to skukla/kukla-justrite');
+        expect(sentence?.sentence).toContain('the project "justrite-b2b" also publishes to skukla/kukla-justrite');
+        // Nothing was removed, so the old pages are still live: the SC is warned.
+        expect(sentence?.problem).toBe(true);
     });
 
     it('removes nothing when DA.live cannot list the authored pages', async () => {
@@ -131,7 +136,8 @@ describe('takeOutProductPages', () => {
         const sentence = await run();
 
         expect(helix.unpublishPages).not.toHaveBeenCalled();
-        expect(sentence).toContain('so none were removed');
+        expect(sentence?.sentence).toContain('so none were removed');
+        expect(sentence?.problem).toBe(true);
     });
 
     it('has nothing to say when Helix lists no product pages', async () => {
@@ -148,10 +154,29 @@ describe('withPageSentences', () => {
         const result = { success: true };
 
         expect(withPageSentences(result, { catalogMenu: undefined, productPages: undefined })).toBe(result);
-        expect(withPageSentences(result, { catalogMenu: 'A.', productPages: 'B.' })).toStrictEqual({
+        expect(
+            withPageSentences(result, {
+                catalogMenu: { sentence: 'A.', problem: false },
+                productPages: { sentence: 'B.', problem: false },
+            }),
+        ).toStrictEqual({
             success: true,
             catalogMenu: 'A.',
             productPages: 'B.',
+        });
+    });
+
+    // "13 category pages couldn't be published" reached only the Debug Logs (2026-10-23):
+    // a step that left something undone is also a warning, which the SC sees.
+    it('lists the sentences that report something undone as warnings too', () => {
+        const done = { sentence: 'Removed 49 product pages.', problem: false };
+        const undone = { sentence: "13 category pages couldn't be published.", problem: true };
+
+        expect(withPageSentences({ success: true }, { catalogMenu: undone, productPages: done })).toStrictEqual({
+            success: true,
+            catalogMenu: undone.sentence,
+            productPages: done.sentence,
+            pageWarnings: [undone.sentence],
         });
     });
 });

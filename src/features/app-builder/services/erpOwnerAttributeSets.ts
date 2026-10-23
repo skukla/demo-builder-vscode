@@ -110,6 +110,18 @@ export function setsInWords(sets: readonly AttributeSetWithoutOwner[]): string {
     return each.length < 2 ? each.join('') : `${each.slice(0, -1).join(', ')} and ${each[each.length - 1]}`;
 }
 
+/**
+ * The setup check's note when sets lack erp_owner, counted rather than listed (owner,
+ * 2026-10-22: twelve names "seems verbose"). The names are in the apply's preview and result.
+ */
+export function missingSetsNote(sets: readonly AttributeSetWithoutOwner[]): string {
+    const products = sets.reduce((sum, set) => sum + set.products, 0);
+    const setWords = sets.length === 1 ? '1 attribute set, which holds' : `${sets.length} attribute sets, which hold`;
+    const productWords = products === 1 ? '1 product' : `${products} products`;
+    const those = products === 1 ? 'that product' : 'those products';
+    return `erp_owner is missing from ${setWords} ${productWords}. An ERP tag on ${those} is dropped. Demo Builder can add it.`;
+}
+
 /** The group a new attribute goes in: Product Details, else General, else the set's first. */
 export async function groupFor(get: CommerceGet, setId: number): Promise<number> {
     const filter =

@@ -12,7 +12,8 @@ import {
     buildStatusPayload,
     deriveMeshStatus,
 } from '@/features/dashboard/services/dashboardStatusService';
-import { createMockProject } from '../../../helpers/projectFake';
+import { STOREFRONT_CHANGES } from '@/features/eds/services/storefront/storefrontChanges';
+import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
 
 describe('dashboardStatusService', () => {
     describe('buildStatusPayload', () => {
@@ -133,6 +134,36 @@ describe('dashboardStatusService', () => {
 
             // Then: Port should be undefined
             expect(result.port).toBeUndefined();
+        });
+
+        // The Reset tile's "Needs reset" and get_project_status read this (storefrontChanges.ts).
+        describe('storefrontNeedsReset', () => {
+            function storefrontProject(created: Date, metadata: Record<string, unknown> = {}): Project {
+                return createMockProject({
+                    created,
+                    componentInstances: { 'eds-storefront': { ...edsStorefrontInstance(), metadata } },
+                });
+            }
+
+            it('is set for a storefront built before a storefront change', () => {
+                const project = storefrontProject(new Date('2026-01-01T00:00:00Z'));
+
+                expect(buildStatusPayload(project, false).storefrontNeedsReset).toBe(true);
+            });
+
+            it('is absent for a storefront stamped as built after every change', () => {
+                const project = storefrontProject(new Date('2026-01-01T00:00:00Z'), {
+                    storefrontBuiltThrough: STOREFRONT_CHANGES[STOREFRONT_CHANGES.length - 1].since,
+                });
+
+                expect(buildStatusPayload(project, false)).not.toHaveProperty('storefrontNeedsReset');
+            });
+
+            it('is absent for a project with no storefront', () => {
+                const project = createMockProject({ created: new Date('2026-01-01T00:00:00Z') });
+
+                expect(buildStatusPayload(project, false)).not.toHaveProperty('storefrontNeedsReset');
+            });
         });
     });
 

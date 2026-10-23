@@ -132,21 +132,26 @@ export interface StepProps {
     shown?: boolean;
 }
 
+/** The quiet link's words for each state: what pressing it will do. */
+const SKIP_OR_REOPEN = {
+    open: 'Skip this step',
+    done: 'Mark as not done',
+    dismissed: 'Undo skip',
+} as const;
+
 /**
- * The quiet way to skip a step, or to reopen one that is finished or skipped. It stays in
- * the step rather than the footer: it is the rare action, and the footer takes only full
- * buttons.
+ * The quiet way to skip a step, or to take back a done or skipped one. It stays in the
+ * step rather than the footer: it is the rare action, and the footer takes only full
+ * buttons. A step Demo Builder checked and found set up has none: the next check would
+ * mark it done again (owner, 2026-10-22: a bare "Reopen" there read as an empty row).
  */
-function SkipOrReopen({ item, busy, onSet }: StepProps): React.ReactElement {
+function SkipOrReopen({ item, busy, onSet }: StepProps): React.ReactElement | null {
+    if (item.state === 'done' && item.lastCheck === 'passed') return null;
     const skip = item.state === 'open';
     return (
         <div>
-            <Link
-                isQuiet
-                UNSAFE_className="setup-guide-skip-link"
-                onPress={() => !busy && onSet(skip ? 'dismissed' : 'open')}
-            >
-                {skip ? 'Skip this step' : 'Reopen'}
+            <Link isQuiet onPress={() => !busy && onSet(skip ? 'dismissed' : 'open')}>
+                {SKIP_OR_REOPEN[item.state]}
             </Link>
         </div>
     );

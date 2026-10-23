@@ -138,8 +138,12 @@ describe('AI_CONTEXT_VERSION', () => {
     // @dropins/mcp became @dropins/ai-tools (AI-13).
     // v40: the ai-defaults tools launch from Demo Builder's Node folder (FNM_DIR in .mcp.json, PR-1a).
     // v41: the sync-changes skill stops calling promote_block_to_library "push back to source library".
-    it('is 41 (promote_block_to_library is described as this site\'s own library)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(42);
+    // v42: the storefront git-sync hook skips while an update's clash is kept (EDS-57).
+    // v43: category pages come from the product page overlay; the two skills drop the
+    // removed category-page tools and the autoAdd setting (EDS-61).
+    // v44: the skills name `republish`, which took `sync_content`'s job (EDS-63).
+    it('is 44 (the skills name republish, not the removed sync_content)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(44);
     });
 });
 

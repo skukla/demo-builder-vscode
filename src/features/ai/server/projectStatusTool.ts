@@ -97,7 +97,7 @@ export function registerProjectStatusTool(server: McpToolServer, stateManager: S
             needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
-                'Is the current demo running, on what port, is its frontend config stale, is the EDS storefront published, and what is the mesh status. Use after start_demo/stop_demo to confirm they took effect.',
+                'Is the current demo running, on what port, is its frontend config stale, is the EDS storefront published, and what is the mesh status. Use after start_demo/stop_demo to confirm they took effect. storefrontNeedsReset: true means the storefront is behind how Demo Builder builds storefronts now; reset_project brings it up to date.',
             inputSchema: {},
         },
         async () => {

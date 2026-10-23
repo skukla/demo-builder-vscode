@@ -20,13 +20,14 @@ jest.mock('@/features/project-creation/ui/components/add-demo/AddDemoModal', () 
     ),
 }));
 
-jest.mock('@/features/dashboard/ui/components/demo-package/DemoPackageModal', () => ({
-    DemoPackageModal: () => <div role="dialog" aria-label="Save as demo package" />,
+jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
+    ShareModal: () => <div role="dialog" aria-label="Share Demo" />,
 }));
 
 const DEMO = { name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
 const PAGES = "The Isle5 by Jen demo's pages can't be reached right now.";
-const GUIDANCE = "If it moved, change the source. If it's gone for good, save this project as your own demo package.";
+const GUIDANCE = "If it moved, change the source. If it's gone for good, keep this project as your own demo.";
+const KEEP = 'Keep as my own demo';
 const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
 
 describe('ProjectDashboardScreen - added demo source', () => {
@@ -57,28 +58,30 @@ describe('ProjectDashboardScreen - added demo source', () => {
         expect(screen.getByRole('button', { name: 'Change source' })).toBeInTheDocument();
     });
 
-    it('offers Save as demo package beside Change source on an Edge Delivery project, and says which fits when', async () => {
+    // Save as demo package's own dialog is gone (owner, 2026-10-22): keeping the
+    // project as your own is the Share dialog's save, card on your Welcome step.
+    it('offers Keep as my own demo beside Change source on an Edge Delivery project, opening the Share dialog', async () => {
         renderDashboard({ demo: DEMO, isEds: true });
         emitWarning();
 
         const banner = await screen.findByTestId('demo-source-banner');
         expect(banner).toHaveTextContent(GUIDANCE);
         expect(screen.getByRole('button', { name: 'Change source' })).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Save as demo package' }));
-        expect(screen.getByRole('dialog', { name: 'Save as demo package' })).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: KEEP }));
+        expect(screen.getByRole('dialog', { name: 'Share Demo' })).toBeInTheDocument();
     });
 
-    it('offers only Change source on a headless project, which cannot be saved as a demo package', async () => {
+    it('offers only Change source on a headless project, which has no storefront of its own to keep', async () => {
         renderDashboard({ demo: { ...DEMO, storefrontKind: 'headless' as const } });
         emitWarning();
 
         const banner = await screen.findByTestId('demo-source-banner');
         expect(banner).not.toHaveTextContent(GUIDANCE);
         expect(screen.getByRole('button', { name: 'Change source' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Save as demo package' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: KEEP })).not.toBeInTheDocument();
     });
 
-    it('names the pages, not the source, when only the pages are out of reach, and offers no Save', async () => {
+    it('names the pages, not the source, when only the pages are out of reach, and offers no Keep', async () => {
         renderDashboard({ demo: DEMO, isEds: true });
         ctx.triggerMessage('checkResult', {
             checkId: 'demo-source',
@@ -91,7 +94,7 @@ describe('ProjectDashboardScreen - added demo source', () => {
         expect(banner).toHaveTextContent("This demo's pages can't be reached");
         expect(banner).not.toHaveTextContent("This demo's source can't be reached");
         expect(banner).toHaveTextContent(PAGES);
-        expect(screen.queryByRole('button', { name: 'Save as demo package' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: KEEP })).not.toBeInTheDocument();
     });
 
     it('clears the notice when the check comes back ok', async () => {

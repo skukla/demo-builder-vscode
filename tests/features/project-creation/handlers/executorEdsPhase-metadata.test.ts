@@ -5,6 +5,7 @@
  */
 
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { STOREFRONT_CHANGES, storefrontNeedsReset } from '@/features/eds/services/storefront/storefrontChanges';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { populateEdsMetadata } from '@/features/project-creation/handlers/executorEdsPhase';
 import type { Project } from '@/types/base';
@@ -109,5 +110,45 @@ describe('populateEdsMetadata — broken links found by storefront setup (2026-1
         expect(target.componentInstances?.['eds-storefront']?.metadata?.brokenLinks).toStrictEqual([
             { link: '/old', pages: [] },
         ]);
+    });
+});
+
+// The "Needs reset" status reads this stamp (storefrontChanges.ts). Setup builds the storefront
+// before the project exists, so it hands creation whether its build step's fixes all landed.
+describe('populateEdsMetadata — the storefront built the way Demo Builder builds them now', () => {
+    beforeEach(() => getFileContent.mockRejectedValue(new Error('not needed here')));
+
+    const NEWEST = STOREFRONT_CHANGES[STOREFRONT_CHANGES.length - 1].since;
+    const built = (storefrontBuildComplete: boolean): ProjectCreationConfig => ({
+        ...CONFIG,
+        edsConfig: { ...CONFIG.edsConfig!, storefrontBuildComplete },
+    });
+    const metadataOf = (target: Project) => target.componentInstances?.['eds-storefront']?.metadata;
+
+    it('stamps a storefront setup built in full, so it shows no "Needs reset"', async () => {
+        const target = project();
+
+        await populateEdsMetadata(context(), target, built(true), true);
+
+        expect(metadataOf(target)?.storefrontBuiltThrough).toBe(NEWEST);
+        expect(metadataOf(target)).not.toHaveProperty('storefrontBuildIncomplete');
+        expect(storefrontNeedsReset(target)).toBe(false);
+    });
+
+    it('marks a build whose fixes did not all land, so it shows "Needs reset"', async () => {
+        const target = project();
+
+        await populateEdsMetadata(context(), target, built(false), true);
+
+        expect(metadataOf(target)?.storefrontBuildIncomplete).toBe(true);
+        expect(storefrontNeedsReset(target)).toBe(true);
+    });
+
+    it('stamps nothing when setup did not run (an edit builds nothing)', async () => {
+        const target = project();
+
+        await populateEdsMetadata(context(), target, CONFIG, true);
+
+        expect(metadataOf(target)).not.toHaveProperty('storefrontBuiltThrough');
     });
 });

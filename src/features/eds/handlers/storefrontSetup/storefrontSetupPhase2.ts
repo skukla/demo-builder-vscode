@@ -24,12 +24,13 @@ import {
 } from '../../services/inspectorHelpers';
 import { toInstalledBlockLibrary } from '../../services/installedBlockLibraryRecord';
 import {
+    placeholderLabelFiles,
     placeholderStubPathsFor,
     placeholderStubTreeEntries,
     removeShadowingPlaceholderFiles,
 } from '../../services/placeholderStubs';
 import { installQuickEdit } from '../../services/quickEditPublisher';
-import { installMissingPageHandling } from '../../services/storefront/notFoundPage';
+import { bringStorefrontUpToDate } from '../../services/storefront/storefrontUpToDate';
 import { type GitHubTreeInput } from '../../services/types';
 import { addPdpCaveat, describeSmart404Skip } from '../edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
@@ -106,11 +107,17 @@ export async function executePhaseHelixConfig(
     // failed commit costs console cosmetics, never the setup.
     try {
         const stubPaths = await placeholderStubPathsFor(edsConfig.contentSource);
+        // The new repository holds the template's tree: a label file the template ships
+        // keeps its labels (the B2B checkout's heading and Edit link read "undefined"
+        // without them). Reset reads the template the same way.
+        const labelFiles = await placeholderLabelFiles(stubPaths, async (path) =>
+            (await githubFileOps.getFileContent(repoInfo.repoOwner, repoInfo.repoName, path, 'main'))?.content,
+        );
         const stubCommit = await githubFileOps.commitTreeToBranch(
             repoInfo.repoOwner,
             repoInfo.repoName,
             'main',
-            placeholderStubTreeEntries(stubPaths),
+            placeholderStubTreeEntries(labelFiles),
             'chore: placeholder stub sheets (console hygiene)',
         );
         logger.info(
@@ -120,8 +127,8 @@ export async function executePhaseHelixConfig(
         // (the B2B template's placeholders/checkout.json did, EDS-53). Reset does the same.
         await removeShadowingPlaceholderFiles(
             githubFileOps,
-            { owner: repoInfo.repoOwner, repo: repoInfo.repoName },
-            stubCommit,
+            { owner: repoInfo.repoOwner, repo: repoInfo.repoName, ref: stubCommit },
+            stubPaths,
             logger,
         );
     } catch (error) {
@@ -147,15 +154,16 @@ export async function executePhaseHelixConfig(
     );
 
     // Install the smart 404 PDP handler into the storefront's
-    // scripts/delayed.js. Same shape as inspector tagging — vendors a
-    // small JS snippet into storefront code. The surrounding pipeline's
-    // bulk Helix code preview picks up the committed change.
+    // scripts/delayed.js, then bring the storefront up to Demo Builder's current
+    // fixes (the 404 page's import map, retired fixes taken out: EDS-62) — the
+    // same step reset and a tested-boilerplate update run. The surrounding
+    // pipeline's bulk Helix code preview picks up the committed change.
     //
     // Still non-fatal — that is deliberate. What changed on 2026-08-10 is that
     // the result is no longer DISCARDED: a skip (no delayed.js, unparseable
     // overlay URL, failed commit) used to reach the debug log and nowhere else
     // while the run reported Complete.
-    const smart404 = await installMissingPageHandling(
+    const { smart404, current } = await bringStorefrontUpToDate(
         githubFileOps,
         repoInfo.repoOwner,
         repoInfo.repoName,
@@ -164,6 +172,9 @@ export async function executePhaseHelixConfig(
         edsConfig.daLiveOrg,
         edsConfig.daLiveSite,
     );
+    // Recorded on the project by creation: a storefront whose fixes did not all land reads
+    // "Needs reset" (`storefrontChanges.ts`).
+    repoInfo.storefrontBuildComplete = current;
     if (!smart404.installed && edsConfig.byomOverlayUrl) {
         // Only when an overlay was configured. Without one the skip is expected,
         // and phase 3 already raises the absent-overlay caveat — two sentences

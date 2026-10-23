@@ -583,7 +583,8 @@ describe('the add answer names what the SC named', () => {
         mockGetAppBuilderComponentEntry.mockReturnValue(integration);
         mockGetAppBuilderComponentCatalog.mockReturnValue(catalog);
 
-        await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Justrite ERP' });
+        // Confirmed: the ERP integration's add prepares the store, so without it nothing deploys (2026-10-22).
+        await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Justrite ERP', confirm: true });
 
         const deployed = mockAddAppBuilderComponent.mock.calls[0][0];
         expect(resolveDeployInputs(deployed, erp).ERP_DISPLAY_NAME).toBe('Justrite ERP');

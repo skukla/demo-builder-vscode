@@ -1,9 +1,10 @@
 /**
  * AiMcpsList
  *
- * Lean MCP server list for the project. One scannable row per server:
- * `<id> · <N> tools` for healthy servers, `<id> · timed out` or
- * `<id> · error: <msg>` for problem states. No health checkmarks — the
+ * Lean MCP server list for the project. One plain line per server:
+ * `<label>: <N> tools your AI can call` for a healthy server, `<label>: timed
+ * out` or `<label>: failed (<msg>)` for a problem (owner, 2026-10-22: no middle
+ * dot, and say what the number means to an SC). No health checkmarks — the
  * dashboard's "AI Ready" badge owns aggregate health; this surface is
  * informational, so the user can see what tools the AI can actually call.
  */
@@ -39,13 +40,12 @@ function labelOf(entry: McpInventoryEntry): string {
     return SERVER_LABELS[entry.id]?.label ?? entry.id;
 }
 
-/** Format the right-hand side of the row based on inspection status. */
+/** Format the part of the row after the label, based on inspection status. */
 function summarize(entry: McpInventoryEntry): string {
     if (entry.status === 'timeout') return 'timed out';
-    if (entry.status === 'error')
-        return entry.error ? `error: ${entry.error}` : 'error: inspector failed';
+    if (entry.status === 'error') return entry.error ? `failed (${entry.error})` : 'failed';
     const count = entry.tools?.length ?? 0;
-    return `${count} ${count === 1 ? 'tool' : 'tools'}`;
+    return `${count} ${count === 1 ? 'tool' : 'tools'} your AI can call`;
 }
 
 export function AiMcpsList({
@@ -97,7 +97,7 @@ export function AiMcpsList({
                     data-testid={`ai-mcp-${entry.id}`}
                     UNSAFE_className="text-gray-800"
                 >
-                    {labelOf(entry)} · {summarize(entry)}
+                    {`${labelOf(entry)}: ${summarize(entry)}`}
                 </Text>
             ))}
         </Flex>

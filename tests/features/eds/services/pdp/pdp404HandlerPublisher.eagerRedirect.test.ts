@@ -112,10 +112,10 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         expect(headContent).toContain('nonce="future-rotated-nonce"');
         expect(headContent).not.toContain('nonce="aem"');
     });
-    // EDS-45: 404.html is written by `updateNotFoundPage`, which puts its import map and
+    // EDS-45: 404.html is written by `bringStorefrontUpToDate`, which puts its import map and
     // this redirect into ONE commit; the redirect's own cases live with it
     // (tests/features/eds/services/storefront/notFoundPage.test.ts).
-    it('leaves 404.html to updateNotFoundPage: it neither reads nor writes it', async () => {
+    it('leaves 404.html to bringStorefrontUpToDate: it neither reads nor writes it', async () => {
         await installSmart404Handler(
             mockGithub,
             repoOwner,

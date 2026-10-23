@@ -31,6 +31,7 @@ import { readBoilerplateBase, writeBoilerplateBase } from '@/features/updates/se
 import type { PendingClash } from '@/features/updates/services/pendingClash';
 import type { FinishDeps } from '@/features/updates/services/pendingClashFinish';
 import type { Project } from '@/types/base';
+import { B2B_TEMPLATE_CHECKOUT_ROWS, OLD_SINGLE_SHEET_STUB_JSON } from '../../../helpers/placeholderLabelFixtures';
 import { gitEnv } from '../../../helpers/realGit';
 
 const FIXED_HEADER = "// nav start\nconst dropDown = 'drop-down line with aria attributes plus the quote icon';\n// nav end\n";
@@ -42,7 +43,8 @@ type TestDeps = FinishDeps & {
     restorePieces: jest.Mock;
 };
 
-async function keptProject(): Promise<{ project: Project; deps: TestDeps }> {
+async function keptProject(before?: () => void): Promise<{ project: Project; deps: TestDeps }> {
+    before?.();
     const project = storefrontProject();
     writeBoilerplateBase(project, {
         template: TEMPLATE,
@@ -117,6 +119,31 @@ describe('finishClash', () => {
 
         await expect(finishClash(project, deps)).resolves.toMatchObject({ kind: 'finished' });
         expect(readBoilerplateBase(project)?.commit).toBe(fx.t2);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    // Storefronts made before 2026-10-22 hold our stub where Adobe's checkout labels belong,
+    // and read "undefined" (JustRite). Finishing is an update's push too, so it repairs them.
+    it("puts Adobe's checkout labels back over our stub in the same commit, and says so", async () => {
+        const { project, deps } = await keptProject(() => {
+            write(fx.local, 'placeholders/checkout.json', OLD_SINGLE_SHEET_STUB_JSON);
+            git(fx.local, 'add', '-A');
+            git(fx.local, 'commit', '-q', '-m', 'Demo Builder label stub');
+            git(fx.local, 'push', '-q', fx.scBare, 'HEAD:main');
+        });
+        const before = pushedHead();
+        write(fx.local, 'blocks/header/header.js', FIXED_HEADER);
+
+        const outcome = await finishClash(project, deps);
+
+        expect(outcome).toMatchObject({
+            kind: 'finished',
+            notes: ["Fixed the checkout page's labels."],
+        });
+        expect(git(fx.scBare, 'rev-list', '--count', `${before}..main`)).toBe('1');
+        const pushedLabels = JSON.parse(git(fx.scBare, 'show', 'main:placeholders/checkout.json')) as {
+            data: { data: unknown };
+        };
+        expect(pushedLabels.data.data).toStrictEqual(B2B_TEMPLATE_CHECKOUT_ROWS);
     }, REAL_GIT_TIMEOUT_MS);
 
     it('still refuses a hook-committed fix that changed a file beyond the clash', async () => {

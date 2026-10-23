@@ -4,52 +4,13 @@
  * Helix serves `404.html` for any missing page, and it carries its OWN import map. On the
  * B2B template that map names 4 dropins while the start-up code also loads the company
  * switcher, so every missing page drew blank (seen on skukla/my-commerce-demo, 2026-10-15).
- * The fixtures below are the template's real import maps, trimmed to the entries that matter.
+ * The fixtures (`notFoundPageFixtures`) are the template's real import maps, trimmed.
  */
 
 import { withEagerRedirect } from '@/features/eds/services/pdp/pdp404HandlerPublisher';
-import { alignNotFoundImportMap, updateNotFoundPage } from '@/features/eds/services/storefront/notFoundPage';
-import { createMockGithub, type GithubFake } from '../../../../helpers/githubFake';
+import { alignNotFoundImportMap } from '@/features/eds/services/storefront/notFoundPage';
 import { createMockLogger } from '../../../../helpers/loggerFake';
-
-const HEAD = `<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<script nonce="aem" type="importmap">
-    {
-        "imports": {
-            "@dropins/storefront-auth/": "/scripts/__dropins__/storefront-auth/",
-            "@dropins/storefront-cart/": "/scripts/__dropins__/storefront-cart/",
-            "@dropins/storefront-company-switcher/": "/scripts/__dropins__/storefront-company-switcher/",
-            "@dropins/tools/": "/scripts/__dropins__/tools/"
-        }
-    }
-</script>
-`;
-
-const NOT_FOUND = `<!DOCTYPE html>
-<html>
-<head>
-  <title>Page not found</title>
-  <script nonce="aem" type="importmap">
-    {
-        "imports": {
-            "@dropins/tools/": "/scripts/__dropins__/tools/",
-            "@dropins/storefront-cart/": "/scripts/__dropins__/storefront-cart/",
-            "@dropins/storefront-auth/": "/scripts/__dropins__/storefront-auth/"
-        }
-    }
-  </script>
-  <script nonce="aem" type="text/javascript">
-    window.isErrorPage = true;
-  </script>
-</head>
-<body><main class="error"><h2 class="error-message">Page Not Found</h2></main></body>
-</html>
-`;
-
-function importsOf(html: string): Record<string, string> {
-    const body = /<script\b[^>]*type="importmap"[^>]*>([\s\S]*?)<\/script>/i.exec(html)?.[1] ?? '{}';
-    return (JSON.parse(body) as { imports: Record<string, string> }).imports;
-}
+import { HEAD, importsOf, NOT_FOUND } from '../../../../helpers/notFoundPageFixtures';
 
 describe('alignNotFoundImportMap', () => {
     it('adds the entries head.html has and 404.html lacks', () => {
@@ -89,69 +50,6 @@ describe('alignNotFoundImportMap', () => {
         expect(alignNotFoundImportMap('<head></head>', NOT_FOUND)).toBeNull();
         expect(alignNotFoundImportMap(HEAD, '<html><head></head></html>')).toBeNull();
         expect(alignNotFoundImportMap(HEAD, NOT_FOUND.replace('"imports": {', '"imports": {,'))).toBeNull();
-    });
-});
-
-describe('updateNotFoundPage', () => {
-    function github(files: Record<string, string | undefined>): GithubFake {
-        return createMockGithub({
-            getFileContent: jest.fn(async (_o: string, _r: string, path: string) =>
-                files[path] === undefined ? null : { content: files[path]!, sha: `${path}-sha` },
-            ),
-        });
-    }
-
-    it('writes the aligned page once, against the sha it read', async () => {
-        const gh = github({ 'head.html': HEAD, '404.html': NOT_FOUND });
-
-        await updateNotFoundPage(gh, 'me', 'store', createMockLogger(), { eagerRedirect: false });
-
-        expect(gh.createOrUpdateFile).toHaveBeenCalledTimes(1);
-        const [owner, repo, path, content, message, sha] = gh.createOrUpdateFile.mock.calls[0] as unknown as [
-            string, string, string, string, string, string,
-        ];
-        expect([owner, repo, path, sha]).toEqual(['me', 'store', '404.html', '404.html-sha']);
-        expect(importsOf(content)).toEqual(importsOf(HEAD));
-        expect(message).toBe('chore(demo-builder): give 404.html the dropins head.html loads');
-    });
-
-    it('puts the eager redirect in the same write when asked', async () => {
-        const gh = github({ 'head.html': HEAD, '404.html': NOT_FOUND });
-
-        await updateNotFoundPage(gh, 'me', 'store', createMockLogger(), { eagerRedirect: true });
-
-        expect(gh.createOrUpdateFile).toHaveBeenCalledTimes(1);
-        const content = (gh.createOrUpdateFile.mock.calls[0] as unknown as string[])[3];
-        expect(content).toContain('Smart 404 PDP eager redirect');
-        expect(importsOf(content)).toEqual(importsOf(HEAD));
-    });
-
-    it('writes nothing when the page is already current', async () => {
-        const aligned = alignNotFoundImportMap(HEAD, NOT_FOUND)!;
-        const gh = github({ 'head.html': HEAD, '404.html': aligned });
-
-        await updateNotFoundPage(gh, 'me', 'store', createMockLogger(), { eagerRedirect: false });
-
-        expect(gh.createOrUpdateFile).not.toHaveBeenCalled();
-    });
-
-    it('does nothing for a storefront with no 404.html', async () => {
-        const gh = github({ 'head.html': HEAD });
-
-        await updateNotFoundPage(gh, 'me', 'store', createMockLogger(), { eagerRedirect: true });
-
-        expect(gh.createOrUpdateFile).not.toHaveBeenCalled();
-    });
-
-    it('never throws when the write is refused', async () => {
-        const gh = github({ 'head.html': HEAD, '404.html': NOT_FOUND });
-        gh.createOrUpdateFile.mockRejectedValue(new Error('409 conflict'));
-        const logger = createMockLogger();
-
-        await expect(
-            updateNotFoundPage(gh, 'me', 'store', logger, { eagerRedirect: false }),
-        ).resolves.toBeUndefined();
-        expect(logger.warn).toHaveBeenCalled();
     });
 });
 

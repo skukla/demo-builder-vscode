@@ -181,6 +181,7 @@ export interface DaLiveOpsDouble {
 export interface HelixDouble {
     previewAndPublishPage: jest.Mock;
     unpublishPage: jest.Mock;
+    deletePreview: jest.Mock;
 }
 
 /** A fetch `Response` shaped as far as these tools read it. */
@@ -235,8 +236,9 @@ export function setupContentAuthoring(): ContentAuthoringDoubles {
     const helix: HelixDouble = {
         previewAndPublishPage: jest.fn(async () => undefined),
         unpublishPage: jest.fn(async () => true),
+        deletePreview: jest.fn(async () => true),
     };
-    // The double is partial by design — these two methods are all these tools
+    // The double is partial by design — these methods are all these tools
     // call. Cast at the boundary, once, per ADR-016.
     HelixServiceMock.mockImplementation(() => helix as unknown as HelixService);
 

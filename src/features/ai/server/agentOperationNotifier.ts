@@ -60,7 +60,7 @@ export function clearSessionGrants(): void {
 
 /**
  * The open project's name, for tools that act on it and take no argument
- * naming it — `republish`, `sync_content`, `reset_project`.
+ * naming it — `republish`, `reset_project`.
  *
  * Best-effort: the dialog must still appear if state is unavailable. A missing
  * name costs the reader context; a thrown error would cost them the gate.
@@ -68,11 +68,17 @@ export function clearSessionGrants(): void {
  * @returns the "Project: x" line, or '' when it cannot be resolved
  */
 async function currentProjectLine(): Promise<string> {
+    const name = await currentProjectName();
+    return name ? `Project: ${name}` : '';
+}
+
+/** The open project's name, or undefined when there is none or state cannot be read. */
+async function currentProjectName(): Promise<string | undefined> {
     try {
         const project = await ServiceLocator.getStateManager()?.getCurrentProject();
-        return project?.name ? `Project: ${project.name}` : '';
+        return project?.name || undefined;
     } catch {
-        return '';
+        return undefined;
     }
 }
 
@@ -80,10 +86,11 @@ async function currentProjectLine(): Promise<string> {
  * The authored phrase for a VS Code frame, or the bare tool name if a tool has
  * somehow shipped without one. The tool NAME is the honest fallback here: it is
  * visibly a fallback rather than prose pretending to be authored, and
- * `toolNarration.test.ts` makes the case unreachable.
+ * `toolNarration.test.ts` makes the case unreachable. The project goes to a named
+ * form that says where it acts ("Adding Accuform ERP to JustRite").
  */
-function label(toolName: string, args?: Record<string, unknown>): string {
-    return narrationForCall(toolName, args) ?? toolName;
+function label(toolName: string, args?: Record<string, unknown>, project?: string): string {
+    return narrationForCall(toolName, args, project) ?? toolName;
 }
 
 /**
@@ -224,7 +231,9 @@ function landOutcome(title: string, toolName: string, outcome: AgentOutcome, log
         return;
     }
     if (outcome.kind === 'needsUser') {
-        void vscode.window.showWarningMessage(`${agentNotice(title)} is waiting on you: ${outcome.text}.`);
+        void vscode.window.showWarningMessage(
+            `${agentNotice(title)} is waiting on you: ${outcome.text}.`,
+        );
         return;
     }
     logger.warn(`[MCP] agent operation ${toolName} answered a failure: ${outcome.text}`);
@@ -263,42 +272,42 @@ export function createAgentOperationNotifier(
     run: (report: (message: string) => void) => Promise<unknown>,
     args?: Record<string, unknown>,
 ) => Promise<unknown> {
-    return (toolName, run, args) =>
-        Promise.resolve(
-            vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    // "Agent" and nothing more — the old "Demo Builder — agent:"
-                    // prefix plus the phase message wrapped every card onto two
-                    // lines (owner feedback, 2026-08-27). The source is already
-                    // on the card ("Source: Adobe Demo Builder"). No colon and no
-                    // ellipsis: VS Code renders `title: message` itself, so either
-                    // one here doubled it (owner, 2026-09-16 and 2026-09-19).
-                    title: agentNotice(label(toolName, args)),
-                    cancellable: false,
-                },
-                async (progress) => {
-                    try {
-                        // Hand our reporter to the caller so the operation's own
-                        // phase strings reach this notification. Previously `run`
-                        // took nothing, so the notification could only ever show
-                        // the tool's title while the phases went nowhere.
-                        const result = await withHandBackSinks([showHandBack], () =>
-                            run((message) => progress.report({ message: phaseLine(message) })),
-                        );
-                        landOutcome(label(toolName, args), toolName, outcomeOf(result), logger);
-                        return result;
-                    } catch (error) {
-                        const message = error instanceof Error ? error.message : String(error);
-                        logger.warn(`[MCP] agent operation ${toolName} failed: ${message}`);
-                        // A toast, not a status-bar flash: a failed live-site
-                        // mutation is the one outcome the user must not miss.
-                        void vscode.window.showWarningMessage(
-                            `${agentNotice(label(toolName, args))} failed: ${message}`,
-                        );
-                        throw error;
-                    }
-                },
-            ),
+    return async (toolName, run, args) => {
+        const title = label(toolName, args, await currentProjectName());
+        return vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                // "Agent" and nothing more — the old "Demo Builder — agent:"
+                // prefix plus the phase message wrapped every card onto two
+                // lines (owner feedback, 2026-08-27). The source is already
+                // on the card ("Source: Adobe Demo Builder"). No colon and no
+                // ellipsis: VS Code renders `title: message` itself, so either
+                // one here doubled it (owner, 2026-09-16 and 2026-09-19).
+                title: agentNotice(title),
+                cancellable: false,
+            },
+            async (progress) => {
+                try {
+                    // Hand our reporter to the caller so the operation's own
+                    // phase strings reach this notification. Previously `run`
+                    // took nothing, so the notification could only ever show
+                    // the tool's title while the phases went nowhere.
+                    const result = await withHandBackSinks([showHandBack], () =>
+                        run((message) => progress.report({ message: phaseLine(message) })),
+                    );
+                    landOutcome(title, toolName, outcomeOf(result), logger);
+                    return result;
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    logger.warn(`[MCP] agent operation ${toolName} failed: ${message}`);
+                    // A toast, not a status-bar flash: a failed live-site
+                    // mutation is the one outcome the user must not miss.
+                    void vscode.window.showWarningMessage(
+                        `${agentNotice(title)} failed: ${message}`,
+                    );
+                    throw error;
+                }
+            },
         );
+    };
 }

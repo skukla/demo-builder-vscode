@@ -14,6 +14,7 @@ import { useUpdatesModal } from '@/features/projects-dashboard/ui/hooks/useUpdat
 import type {
     ApplyUpdatesResponse,
     PendingUpdateRow,
+    RecheckUpdatesResponse,
     ShowUpdatesPayload,
     TakeUpdatesRequestResponse,
     UpdateRowStatus,
@@ -35,9 +36,17 @@ const ROWS = [row('blockLibrary:0'), row('template:0'), row('integration:0', { t
 const NOT_OPENED_FOR_IT: TakeUpdatesRequestResponse = { success: true, data: { rows: null } };
 
 /** What each request answers; the screen asks `takeUpdatesRequest` once, on mount. */
-function answers(take: TakeUpdatesRequestResponse = NOT_OPENED_FOR_IT, apply?: ApplyUpdatesResponse): void {
-    const byType: Record<string, unknown> = { takeUpdatesRequest: take, applyUpdates: apply };
-    mockRequest.mockImplementation(async (type: string) => byType[type]);
+function answers(
+    take: TakeUpdatesRequestResponse = NOT_OPENED_FOR_IT,
+    apply?: ApplyUpdatesResponse,
+    recheck?: RecheckUpdatesResponse | Error,
+): void {
+    const byType: Record<string, unknown> = { takeUpdatesRequest: take, applyUpdates: apply, recheckUpdates: recheck };
+    mockRequest.mockImplementation(async (type: string) => {
+        const answer = byType[type];
+        if (answer instanceof Error) throw answer;
+        return answer;
+    });
 }
 
 function setup() {
@@ -199,5 +208,67 @@ describe('useUpdatesModal', () => {
 
         expect(mockPostMessage).not.toHaveBeenCalled();
         expect(result.current.view).toEqual({ phase: 'closed' });
+    });
+
+    // Owner, 2026-10-22: after applying only some, the SC can go back to the rest.
+    describe('Back to updates', () => {
+        const FRESH = [row('blockLibrary:0', { group: { key: '/p/bodea', title: 'Bodea' } }), row('integration:0', { ticked: false })];
+
+        /** A run of the first row, the other two left, that ended with `remaining` still waiting. */
+        async function ended(recheck?: RecheckUpdatesResponse | Error) {
+            answers(NOT_OPENED_FOR_IT, { success: true, remaining: 1 }, recheck);
+            const hook = setup();
+            await pushRows(ROWS);
+            act(() => hook.result.current.toggle('template:0'));
+            act(() => hook.result.current.apply());
+            await push('operationProgress', { id: UPDATES_OPERATION_ID, state: 'succeeded' });
+            await waitFor(() => expect(hook.onApplied).toHaveBeenCalled());
+            return hook;
+        }
+
+        it('keeps how many updates the SC left that are still waiting, from the run\'s answer', async () => {
+            const { result } = await ended();
+
+            expect(result.current.remaining).toBe(1);
+        });
+
+        it('says nothing is waiting when the answer does not say', async () => {
+            const { result } = await applying();
+            await waitFor(() => expect(mockRequest).toHaveBeenCalledWith('applyUpdates', expect.anything()));
+
+            expect(result.current.remaining).toBe(0);
+        });
+
+        it('goes back to a fresh check, ticked by its own defaults, not the old list', async () => {
+            const { result } = await ended({ success: true, data: { rows: FRESH } });
+
+            act(() => result.current.back());
+            expect(result.current.rechecking).toBe(true);
+
+            await waitFor(() => expect(result.current.view).toEqual({ phase: 'list', rows: FRESH }));
+            expect(mockRequest).toHaveBeenCalledWith('recheckUpdates');
+            expect([...result.current.ticked]).toEqual(['blockLibrary:0']);
+            expect(result.current.rechecking).toBe(false);
+            expect(result.current.remaining).toBe(0);
+        });
+
+        // "Up to date" is the check's own notification (owner, 2026-10-20).
+        it('closes when the fresh check finds nothing waiting', async () => {
+            const { result } = await ended({ success: true, data: { rows: [] } });
+
+            act(() => result.current.back());
+
+            await waitFor(() => expect(result.current.view).toEqual({ phase: 'closed' }));
+        });
+
+        it('stays on the run when the check could not answer, so Back can be pressed again', async () => {
+            const { result } = await ended(new Error('Request timeout: recheckUpdates'));
+
+            act(() => result.current.back());
+
+            await waitFor(() => expect(result.current.rechecking).toBe(false));
+            expect(result.current.view.phase).toBe('applying');
+            expect(result.current.remaining).toBe(1);
+        });
     });
 });

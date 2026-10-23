@@ -229,10 +229,6 @@
 
 /* Skip (or Reopen) is the rare action, so it is a quiet link under the step rather than a
    third footer button. */
-.setup-guide-skip-link {
-    color: var(--spectrum-global-color-gray-600);
-}
-
 /* Assign products (AB-74): one toolbar line, the list filling the rest of the dialog, one line
    of counts under it (owner, 2026-10-18: not a list halfway down). The body is height-bounded
    like Manage APIs, so the list is the one region that scrolls. */

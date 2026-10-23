@@ -6,7 +6,9 @@
  * replaces VS Code's picker and nothing else: checking, and "up to date", stay in the
  * notification (owner, 2026-10-20). Apply keeps it open and shows the run in it, row by
  * row (`UpdatesRunView`, 2026-10-21): it closes by itself on nothing, since a run ends
- * with what each row did, and closing it mid-run hands the run to a notification.
+ * with what each row did, and closing it mid-run hands the run to a notification. A run
+ * that leaves rows the SC unticked still waiting says how many and offers "Back to
+ * updates", the list again on a fresh check (owner, 2026-10-22).
  *
  * Built from the house pieces: `ui/Modal` and `CheckboxRow` (extracted from the API picker
  * for this). Each group is a panel in the projects list's own row style (`.project-row-name`,
@@ -138,13 +140,20 @@ function runChrome(controls: UpdatesModalControls): Chrome {
         return { hideClose: true, actions };
     }
     if (!ended) return { closeLabel: 'Run in background', actions: NO_ACTIONS };
-    if (progress?.state !== 'failed') return { closeLabel: 'Close', actions: NO_ACTIONS };
+    if (progress?.state !== 'failed') return { closeLabel: 'Close', actions: backTo(controls) };
     const logs: ActionButton = {
         label: 'Open Debug Logs',
         variant: 'secondary',
         onPress: () => webviewClient.postMessage('openDebugLogs', {}),
     };
     return { closeLabel: 'Close', actions: [logs] };
+}
+
+/** "Back to updates" beside Close, when rows the SC left unticked are still waiting. */
+function backTo(controls: UpdatesModalControls): ActionButton[] {
+    if (controls.remaining === 0) return NO_ACTIONS;
+    const label = controls.rechecking ? 'Checking for updates' : 'Back to updates';
+    return [{ label, variant: 'secondary', onPress: controls.back, isDisabled: controls.rechecking }];
 }
 
 /** What the modal shows: its title, body, dismiss label and the buttons beside it. */
@@ -157,6 +166,7 @@ function contentFor(controls: UpdatesModalControls): Chrome & { title: string; b
                 statuses={controls.statuses}
                 progress={controls.progress}
                 onTyped={controls.onTyped}
+                remaining={controls.remaining}
             />
         );
         return { title: runTitleOf(controls.progress), body, ...runChrome(controls) };

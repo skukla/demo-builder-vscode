@@ -83,7 +83,8 @@ export class DaLiveSourceOperations {
      * @param site - Site name
      * @param path - Content path
      * @param content - Content to write
-     * @param options - Options {overwrite}
+     * @param options - Options {overwrite, contentType}: `contentType` defaults to
+     *   `text/html`; a sheet goes as `application/json` to its `.json` path
      * @returns Result with success status and path
      */
     async createSource(
@@ -91,14 +92,14 @@ export class DaLiveSourceOperations {
         site: string,
         path: string,
         content: string,
-        options: { overwrite?: boolean } = {},
+        options: { overwrite?: boolean; contentType?: string } = {},
     ): Promise<DaLiveSourceResult> {
         const token = await this.apiClient.getImsToken();
         const normalized = normalizePath(path);
         const url = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${normalized}`;
 
         const formData = new FormData();
-        formData.append('data', new Blob([content], { type: 'text/html' }));
+        formData.append('data', new Blob([content], { type: options.contentType ?? 'text/html' }));
         if (options.overwrite) formData.append('overwrite', 'true');
 
         const response = await this.apiClient.fetchWithRetry(url, {

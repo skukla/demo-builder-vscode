@@ -14,6 +14,7 @@ import { resolveStorefrontForProject } from '@/features/components/services/stor
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
+import { requestStorefrontReport } from '@/features/dashboard/handlers/storefrontReportHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import {
@@ -367,7 +368,12 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
     // Lifecycle Hooks
     // ============================================================================
 
-    public async execute(): Promise<void> {
+    /**
+     * @param options - `showStorefrontReport` opens the storefront report's window on it
+     *   (EDS-64): pushed to a dashboard already open, held for one just created until its
+     *   screen asks (`storefrontReportHandlers.ts`)
+     */
+    public async execute(options?: { showStorefrontReport?: boolean }): Promise<void> {
         // The project this screen is for, kept after the current project moves (AI-15)
         const project = await this.openForCurrentProject();
         if (!project) {
@@ -397,6 +403,10 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
         // arming after it would leave that request guarded.
         armOnOpenChecks(project.path);
 
+        // A dashboard already open is pushed the request; one about to be created takes it on mount.
+        const isExistingPanel = this.communicationManager !== undefined;
+        if (options?.showStorefrontReport && !isExistingPanel) requestStorefrontReport();
+
         // Create or reveal panel and initialize communication
         await this.createOrRevealPanel();
 
@@ -406,6 +416,7 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
         if (!this.communicationManager) {
             await this.initializeCommunication();
         }
+        if (options?.showStorefrontReport && isExistingPanel) await this.sendMessage('showStorefrontReport');
     }
 
     // ============================================================================

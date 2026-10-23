@@ -182,6 +182,13 @@ describe('carriedWebPaths', () => {
         ).toEqual(['/citisignal-fr/phones']);
     });
 
+    // The publish skips `metadata`, `redirects` and the other configuration names. A
+    // source with them as documents made every reset of JustRite report them
+    // "missing" (2026-10-23).
+    it('leaves out pages the publish never publishes by name, at any depth', () => {
+        expect(carriedWebPaths(['/metadata', '/redirects', '/fr/metadata', '/about'], [])).toEqual(['/about']);
+    });
+
     it('reads a path written without its leading slash', () => {
         expect(carriedWebPaths(['enrichment/product-banner'], [])).toEqual(['/enrichment/product-banner']);
     });

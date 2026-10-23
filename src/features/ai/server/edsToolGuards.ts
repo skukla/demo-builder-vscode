@@ -1,5 +1,5 @@
 /**
- * Shared guard steps for the EDS storefront tools (republish, sync_content,
+ * Shared guard steps for the EDS storefront tools (republish,
  * reset_project) — one home for what was the same three blocks written
  * per-tool (2026-08-27 dedup sweep, PL-8 item 2; each block had reached three
  * copies):
