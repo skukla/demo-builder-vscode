@@ -68,3 +68,4 @@ The agent's `apply_updates` keeps working against the same apply service either 
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
 - 2026-10-24  feat(updates): open every group when 3 updates or fewer are waiting (`ad9a50cf2`)
 - 2026-10-24  fix(updates): ask about a clash in plain words, one choice per line (`561a3531e`)
+- 2026-10-24  fix(updates): ask about a clash the way an SC would say it (`3c95f8d02`)
