@@ -24,3 +24,4 @@ category pages couldn't be published").
 - 2026-10-23  Report window built in the extension worktree (uncommitted): StorefrontReportModal over the dashboard, getStorefrontReport and takeStorefrontReportRequest handlers, the command opens the dashboard with it showing; the markdown document and the fix offers are removed. Full jest green except the known tokens test that clears at commit.
 - 2026-10-23  Owner decided a third time: every live patch in the shipped ledgers goes into every storefront it fits, on creation and reset, with no offer and no second list. Built as the known-patches repair (knownPatches.ts, shippedPatchLedger.ts) in the extension worktree, uncommitted. Dry run on JustRite: 4 of 6 would apply.
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
+- 2026-10-24  feat(eds): remove the Storefront Report; name broken links where they are found (`316903008`)
