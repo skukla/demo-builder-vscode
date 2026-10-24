@@ -24,6 +24,7 @@ import {
     vscode,
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
+import { withModalWarning } from '@/features/eds/services/reset/edsResetNotifications';
 import type { EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -304,5 +305,36 @@ describe('reset notifications — the page steps', () => {
         // The confirmation prompt is the only warning shown.
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
         expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+    });
+});
+
+// The modal's last view (EDS-64): broken links are a line of their own, never a warning.
+describe('withModalWarning — broken links', () => {
+    const LINKS = '1 link in the copied content goes to a missing page: /fr (on /store-switcher).';
+
+    it('puts them on their own line, not in the warning', () => {
+        const result: EdsResetResult = { success: true, brokenLinks: LINKS };
+
+        const shown = withModalWarning(result);
+
+        expect(shown.details).toStrictEqual([LINKS]);
+        expect(shown).not.toHaveProperty('warning');
+    });
+});
+
+describe('withModalWarning — each page sentence on its own line', () => {
+    it('lists what the page steps did and the broken links one line each, in that order', () => {
+        const result: EdsResetResult = {
+            success: true,
+            catalogMenu: 'Wrote 12 category pages.',
+            productPages: 'Removed 18 product pages from the old catalog.',
+            brokenLinks: '2 links in the copied content go to missing pages: /a (on /footer), /b (on /x).',
+        };
+
+        expect(withModalWarning(result).details).toStrictEqual([
+            'Wrote 12 category pages.',
+            'Removed 18 product pages from the old catalog.',
+            '2 links in the copied content go to missing pages: /a (on /footer), /b (on /x).',
+        ]);
     });
 });

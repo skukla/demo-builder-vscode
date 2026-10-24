@@ -486,10 +486,36 @@ describe('projectFinalizationService', () => {
             await finalizeProject(context);
 
             expect(mockProgressTracker).toHaveBeenCalledWith(OPERATION_STAGES.finishingProject.label, 95);
+            // No broken links recorded: no line for the success screen.
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Project Created',
                 100,
-                'Project creation complete'
+                'Project creation complete',
+                undefined,
+                undefined,
+            );
+        });
+
+        it('hands the success screen one line when the copy carried broken links (EDS-64)', async () => {
+            const storefront = mockProject.componentInstances?.['eds-storefront'];
+            if (!storefront) throw new Error('fixture lost its storefront');
+            storefront.metadata = { ...storefront.metadata, brokenLinks: [{ link: '/fr', pages: ['/footer'] }] };
+
+            await finalizeProject({
+                setupContext: mockSetupContext,
+                projectPath: '/test/project',
+                componentDefinitions: mockComponentDefinitions,
+                progressTracker: mockProgressTracker,
+                saveProject: mockSaveProject,
+                sendMessage: mockSendMessage,
+            });
+
+            expect(mockProgressTracker).toHaveBeenCalledWith(
+                'Project Created',
+                100,
+                'Project creation complete',
+                undefined,
+                '1 link in the copied content goes to a missing page. Diagnostics lists them.',
             );
         });
 

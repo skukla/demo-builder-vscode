@@ -446,7 +446,7 @@ export interface ProjectCreationConfig {
         // Preflight completion fields (set by StorefrontSetupStep)
         preflightComplete?: boolean;
         repoUrl?: string;
-        /** Links the setup's content copy found to pages the source lacks (Storefront Report). */
+        /** Links the setup's content copy found to pages the source lacks, recorded on the project. */
         brokenLinks?: import('./webviewPayloads').StorefrontBrokenLink[];
         /** The block libraries setup installed: saved onto THIS project, not the open one. */
         installedBlockLibraries?: import('./blockLibraries').InstalledBlockLibrary[];

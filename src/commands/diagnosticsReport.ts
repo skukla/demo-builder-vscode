@@ -167,8 +167,8 @@ export interface DiagnosticsReport {
      */
     storefrontScope?: StorefrontScopeReport;
     /**
-     * Where the storefront comes from, what Demo Builder wrote into it, and each
-     * of its fixes (EDS-13f): the storefront report's own computation. Absent when
+     * Where the storefront comes from and what Demo Builder wrote into it (EDS-13f):
+     * the storefront report's own computation. Absent when
      * no EDS project is open.
      */
     storefrontOrigin?: StorefrontReport;

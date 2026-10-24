@@ -103,7 +103,7 @@ export function useStorefrontSetup(
                     ...edsConfigRef.current,
                     repoUrl: data.githubRepo,
                     preflightComplete: true,
-                    // Recorded on the project at creation, for the Storefront Report.
+                    // Recorded on the project at creation, for Diagnostics and the agent.
                     brokenLinks: data.brokenLinks,
                     // Saved onto the project by creation; setup has no project to write.
                     installedBlockLibraries: data.installedBlockLibraries,

@@ -142,7 +142,7 @@ export function foundRows(read: SharedDemoRead): SummaryRow[] {
         // Where the code lives, first: a site address was read back to it.
         { label: 'Code', value: `github.com/${read.fullName}`, done: true },
         { label: 'Type', value: KIND_LABEL[read.kind], done: true },
-        // One row only (EDS-13f decision 7): the rest of the origin is the storefront report's.
+        // One row only (EDS-13f decision 7): the rest of the origin is in Diagnostics.
         ...(read.boilerplate
             ? [{ label: 'Built on', value: builtOnValue(read.boilerplate), done: true }]
             : []),

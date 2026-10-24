@@ -27,6 +27,7 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
+import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { cn } from '@/core/ui/utils/classNames';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
@@ -188,30 +189,24 @@ function CheckResult({ item }: { item: SetupChecklistItem }): React.ReactElement
 /** Where / Enter / Then / Why: labelled lines that scan as one small table. */
 function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
     return (
-        <dl className="setup-guide-facts">
-            <dt>Where</dt>
-            <dd>
+        <FactList>
+            <Fact label="Where">
                 <WhereLine item={item} />
-            </dd>
+            </Fact>
             {item.enter && (
-                <>
-                    <dt>Enter</dt>
-                    <dd className="setup-guide-pills">
+                <Fact label="Enter">
+                    <div className="setup-guide-pills">
                         {item.enter.map((value) => (
                             <CopyableText key={value}>{value}</CopyableText>
                         ))}
-                    </dd>
-                </>
+                    </div>
+                </Fact>
             )}
-            {item.then && (
-                <>
-                    <dt>Then</dt>
-                    <dd>{item.then}</dd>
-                </>
-            )}
-            <dt>Why</dt>
-            <dd className="setup-guide-why">{item.why}</dd>
-        </dl>
+            {item.then && <Fact label="Then">{item.then}</Fact>}
+            <Fact label="Why">
+                <span className="setup-guide-why">{item.why}</span>
+            </Fact>
+        </FactList>
     );
 }
 

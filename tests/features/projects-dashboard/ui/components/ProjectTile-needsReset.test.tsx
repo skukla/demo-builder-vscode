@@ -15,7 +15,7 @@ import { ProjectRow } from '@/features/projects-dashboard/ui/components/ProjectR
 import type { Project } from '@/types/base';
 import { createProjectsDashboardProject } from '../../testUtils';
 
-const LINE = 'This storefront is behind how Demo Builder builds storefronts now. Reset it to bring it up to date.';
+const LINE = "Demo Builder has fixes this storefront doesn't have yet.";
 
 /** An EDS project built on `builtThrough` (none: falls back to its creation date). */
 function storefront(

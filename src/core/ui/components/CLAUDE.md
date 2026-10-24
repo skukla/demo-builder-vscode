@@ -41,6 +41,8 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Full-screen surface: sticky search band over a 960px body | `layout/FullScreenSurface` | re-inlining `.projects-sticky-header` + `.page-container-padded` |
 | Two-column / grid / sidebar layout | `layout/TwoColumnLayout`, `GridLayout`, `ContentWithSidebar` | raw flex (see the 450px trap) |
 | Search box over a list | `navigation/SearchHeader` / `SearchableList` | a TextField + filter |
+| Opening and closing a part of a modal: its name, a note beside it, the chevron at the end | `ui/DisclosureToggle` (the Updates modal's groups; a host bundle imports `disclosure-toggle.css`) | Spectrum's `Disclosure` (rejected, a look nothing else has) or `<details>` |
+| Labelled lines that scan as one small table (label column, value column) | `ui/FactList` + `Fact` (the setup guide; a host bundle imports `fact-list.css`) | a per-feature `<dl>` grid with its own spacing |
 | One row of a checkbox list: name, quieter detail, the reason a locked row cannot change | `selection/CheckboxRow` (the API picker and the Updates modal use it; a host bundle imports `checkbox-row.css` in its entry) | a Spectrum `Checkbox` with per-feature spans and classes |
 | Copy-to-clipboard value | `ui/CopyableText` | a Button + clipboard call |
 | Numbered how-to steps | `ui/NumberedInstructions` | an `<ol>` |

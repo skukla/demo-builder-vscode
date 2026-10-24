@@ -1,6 +1,7 @@
 /**
- * The one assembly of what the storefront report reads, shared by the command and the
- * agent tool so the two cannot read different things (EDS-13f decision 8).
+ * The one assembly of what the storefront report reads, shared by Diagnostics and the
+ * agent tool so the two cannot read different things (EDS-13f decision 8). The report's
+ * own window and command were removed on 2026-10-23 (EDS-64).
  *
  * It used to carry two actions beside the reads: applying Demo Builder's fixes to an
  * added demo, and merging the template into a fork. Both left the report on 2026-10-23

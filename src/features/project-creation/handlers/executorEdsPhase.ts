@@ -53,7 +53,7 @@ function recordWhatSetupFound(
     project: import('@/types/base').Project,
     edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
 ): void {
-    // Links to pages the source lacks too, for the Storefront Report.
+    // Links to pages the source lacks too, kept on the project.
     if (edsConfig.brokenLinks?.length) writeBrokenLinks(project, edsConfig.brokenLinks);
     // Built the way Demo Builder builds storefronts now: the "Needs reset" status reads it.
     if (typeof edsConfig.storefrontBuildComplete === 'boolean') {
@@ -283,7 +283,7 @@ export async function setupEdsContent(
     typedConfig: ProjectCreationConfig,
     isEdsStack: boolean,
     progressTracker: ProgressTracker,
-    /** Receives the copy's broken links, recorded for the Storefront Report. */
+    /** Receives the copy's broken links, recorded on the project. */
     project?: import('@/types/base').Project,
 ): Promise<void> {
     if (!isEdsStack || !typedConfig.edsConfig?.contentSource || !typedConfig.edsConfig?.repoUrl) {

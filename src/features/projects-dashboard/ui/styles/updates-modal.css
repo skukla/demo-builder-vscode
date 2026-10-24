@@ -62,37 +62,7 @@
         gap: 4px;
     }
 
-    /* The rest of the line opens the group: the name, its note, the chevron at the end. */
-    .updates-group-toggle {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        align-items: center;
-        padding: 8px 0;
-        background: none;
-        border: 0;
-        color: inherit;
-        font: inherit;
-        text-align: left;
-        cursor: pointer;
-    }
-
-    .updates-group-toggle:focus-visible {
-        outline: 2px solid var(--spectrum-global-color-blue-400);
-        outline-offset: 2px;
-    }
-
-    /* "1 waiting for you" beside the name, at body size: small grey type made it read as
-       a footnote when it is the one thing a closed group must not hide. */
-    .updates-group-note {
-        margin-left: 8px;
-        font-size: 14px;
-        color: var(--spectrum-global-color-gray-800);
-    }
-
-    .updates-group-chevron {
-        margin-left: auto;
-    }
+    /* The opening line itself is `ui/DisclosureToggle` (core/ui/styles/disclosure-toggle.css). */
 
     /* Under the name, past the group's checkbox, so a row reads as part of the project. */
     .updates-group-rows {

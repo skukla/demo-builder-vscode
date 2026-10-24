@@ -46,26 +46,28 @@ function successWarnings(result: EdsResetResult): ResetWarning[] {
 
 /**
  * A reset's result for the modal that ran it: its warnings joined onto the modal's
- * last view, where the SC is looking, instead of notifications beside it.
+ * last view, where the SC is looking, instead of notifications beside it. What the
+ * page steps did (and the copy's broken links) go below, one line each, as `details`:
+ * joined into one paragraph they read as a run-on (owner, 2026-10-23).
  *
  * @param result - the reset's result
- * @returns the result, with `warning` when a success has any
+ * @returns the result, with `warning` when a success has any and `details` for its notes
  */
-export function withModalWarning(result: EdsResetResult): EdsResetResult & { note?: string } {
+export function withModalWarning(result: EdsResetResult): EdsResetResult & { details?: string[] } {
     if (!result.success) return result;
     const warning = successWarnings(result).map(({ message }) => message).join(' ');
-    const note = pageNotes(result).join(' ');
-    if (!warning && !note) return result;
-    return { ...result, ...(warning ? { warning } : {}), ...(note ? { note } : {}) };
+    const details = pageNotes(result);
+    if (!warning && details.length === 0) return result;
+    return { ...result, ...(warning ? { warning } : {}), ...(details.length ? { details } : {}) };
 }
 
 /**
- * The page sentences that report nothing wrong ("Removed 49 product pages"): notes for the
+ * The page sentences that report nothing wrong ("Removed 49 product pages"): lines for the
  * modal's last view, where there is room for them. A notification shows only warnings.
  */
 function pageNotes(result: EdsResetResult): string[] {
     const warned = new Set(result.pageWarnings ?? []);
-    return [result.catalogMenu, result.productPages].filter(
+    return [result.catalogMenu, result.productPages, result.brokenLinks].filter(
         (sentence): sentence is string => sentence !== undefined && !warned.has(sentence),
     );
 }

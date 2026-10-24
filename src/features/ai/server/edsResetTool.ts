@@ -173,6 +173,8 @@ export async function runEdsReset(
             // The old catalog's product pages, removed before the new ones are made
             // (EDS-26) — or why they were left, which is never reported as clean.
             ...(result.productPages ? { productPages: result.productPages } : {}),
+            // Links in the freshly copied content to pages that do not exist (EDS-64).
+            ...(result.brokenLinks ? { brokenLinks: result.brokenLinks } : {}),
             // Pages still published from before that the reset did not republish
             // (EDS-33): removed, some left, or that Helix could not say, in words.
             ...(result.leftoverPages ? { leftoverPages: result.leftoverPages } : {}),

@@ -18,7 +18,7 @@ describe('Build zone — the Reset tile says "Needs reset"', () => {
         expect(build.getByText('Needs reset')).toBeInTheDocument();
         expect(
             build.getByText(
-                'This storefront is behind how Demo Builder builds storefronts now. Reset it to bring it up to date.',
+                "Demo Builder has fixes this storefront doesn't have yet.",
             ),
         ).toBeInTheDocument();
     });

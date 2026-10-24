@@ -299,8 +299,9 @@ describe('UpdatesModal', () => {
         const c = controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0']);
         render(<UpdatesModal controls={c} />);
 
-        // The projects list's own row name, as its list view draws it.
-        expect(screen.getByText('JustRite')).toHaveClass('project-row-name');
+        // The projects list's own row name, as its list view draws it: the shared toggle's
+        // name carries the same rules (`.disclosure-toggle-name`, moved from `.project-row-name`).
+        expect(screen.getByText('JustRite')).toHaveClass('disclosure-toggle-name');
         expect(screen.getByText('JustRite')).not.toHaveClass('section-label');
         // Both groups closed: Demo Builder's checkbox, then JustRite's.
         await user().click(screen.getAllByRole('checkbox')[1]);

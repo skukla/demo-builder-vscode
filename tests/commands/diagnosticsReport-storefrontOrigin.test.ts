@@ -40,8 +40,7 @@ describe('the storefront origin section', () => {
 
         expect(lines.slice(0, 3)).toStrictEqual([
             TITLE,
-            '    Needs reset: This storefront is behind how Demo Builder builds storefronts now. ' +
-                'Reset it to bring it up to date.',
+            "    Needs reset: Demo Builder has fixes this storefront doesn't have yet.",
             '  Where this storefront comes from',
         ]);
     });

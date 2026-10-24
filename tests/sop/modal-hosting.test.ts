@@ -44,7 +44,6 @@ const HOSTS = /DialogContainer|DialogTrigger/;
  */
 const HOSTED_BY_PARENT: Record<string, string> = {
     'AiCapabilitiesModal.tsx': 'DashboardDialogs.tsx',
-    'StorefrontReportModal.tsx': 'DashboardDialogs.tsx',
     'PromptEditDialog.tsx': 'AiOverviewScreen.tsx',
 };
 

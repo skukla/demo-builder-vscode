@@ -15,6 +15,7 @@ import {
     resetOrchestrationMocks,
     runReset,
 } from './edsResetService.orchestrationHarness';
+import { brokenLinksSentence } from '@/features/eds/services/storefront/brokenLinksRecord';
 
 const mockPublishAuthoredListStep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/eds/services/catalogMenu/catalogMenuStep', () => ({
@@ -57,20 +58,22 @@ beforeEach(() => {
 });
 
 describe('runContentPipeline - the broken-links record', () => {
-    it('replaces the record with what the fresh copy found', async () => {
+    it('replaces the record with what the fresh copy found, and names them in the result', async () => {
         const project = storefrontProject();
 
-        await runReset({ project, contentSource: CONTENT_SOURCE });
+        const { result } = await runReset({ project, contentSource: CONTENT_SOURCE });
 
         expect(brokenLinks(project)).toStrictEqual(NEW_LINKS);
+        expect(result.brokenLinks).toBe(brokenLinksSentence(NEW_LINKS));
     });
 
-    it('keeps the last record when the SC kept the current content', async () => {
+    it('keeps the last record when the SC kept the current content, and says nothing of it', async () => {
         const project = storefrontProject();
 
-        await runReset({ project, contentSource: CONTENT_SOURCE, keepContent: true });
+        const { result } = await runReset({ project, contentSource: CONTENT_SOURCE, keepContent: true });
 
         expect(brokenLinks(project)).toStrictEqual(OLD_LINKS);
+        expect(result).not.toHaveProperty('brokenLinks');
     });
 
     it('keeps the last record when the storefront has no content source to copy', async () => {

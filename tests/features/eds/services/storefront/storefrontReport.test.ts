@@ -13,7 +13,6 @@ import { SMART_404_MARKER_START } from '@/features/eds/services/pdp/pdp404Snippe
 import {
     readStorefrontReport,
     storefrontReportLines,
-    storefrontReportView,
     type StorefrontReport,
     type StorefrontReportDeps,
 } from '@/features/eds/services/storefront/storefrontReport';
@@ -305,8 +304,7 @@ describe('needs reset — a storefront behind how Demo Builder builds storefront
 
         expect(report.needsReset).toBe(true);
         expect(storefrontReportLines(report)[0]).toBe(
-            'Needs reset: This storefront is behind how Demo Builder builds storefronts now. ' +
-                'Reset it to bring it up to date.',
+            "Needs reset: Demo Builder has fixes this storefront doesn't have yet.",
         );
     });
 
@@ -315,39 +313,5 @@ describe('needs reset — a storefront behind how Demo Builder builds storefront
 
         expect(report).not.toHaveProperty('needsReset');
         expect(storefrontReportLines(report).join('\n')).not.toMatch(/Needs reset/);
-    });
-});
-
-// The dashboard's window (EDS-64): the same sentences as the markdown, shaped for it.
-describe('storefrontReportView — what the dashboard window shows', () => {
-    it('puts the broken links first, each page linked to its DA.live editor', async () => {
-        const view = storefrontReportView(await read(project({}, { brokenLinks: [{ link: '/fr', pages: ['/footer'] }] }), deps()));
-
-        expect(view.brokenLinks).toStrictEqual([
-            { link: '/fr', pages: [{ path: '/footer', editUrl: 'https://da.live/edit#/steve/aistore-copy/footer' }] },
-        ]);
-        expect(view).not.toHaveProperty('needsReset');
-    });
-
-    it('says where the storefront comes from in the same words as the markdown, the files folded away', async () => {
-        const report = await read(COLLEAGUE, deps());
-        const lines = storefrontReportLines(report);
-
-        const view = storefrontReportView(report);
-
-        expect(view.about).toStrictEqual([
-            { label: 'Comes from', text: lines[2] },
-            { label: 'Built on', text: lines[1] },
-        ]);
-        expect(view.details).toContain('Product-page fallback (smart 404): there.');
-        expect(view.brokenLinks).toStrictEqual([]);
-    });
-
-    it('leads with the reset line when the storefront is behind', async () => {
-        const behind = project({}, { storefrontBuiltThrough: '2026-01-01' });
-
-        expect(storefrontReportView(await read(behind, deps())).needsReset).toBe(
-            'This storefront is behind how Demo Builder builds storefronts now. Reset it to bring it up to date.',
-        );
     });
 });

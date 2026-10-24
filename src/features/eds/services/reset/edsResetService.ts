@@ -33,6 +33,7 @@ import { ConfigurationService } from '../configService/configurationService';
 import { lostGrantsMessage } from '../configService/lostGrantsMessage';
 import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
+import { brokenLinksSentence } from '../storefront/brokenLinksRecord';
 import { recordStorefrontBuilt } from '../storefront/storefrontChanges';
 import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
 import { GitHubAppNotInstalledError } from '../types';
@@ -222,7 +223,9 @@ export async function executeEdsReset(
             : withSentences;
         const notOnSite = [codeNotPublished, codeNotServed].filter(Boolean).join(' ');
         const withCode = notOnSite ? { ...warned, codeNotPublished: notOnSite } : warned;
-        return withLeftoverPages(withCode, content.leftoverPages);
+        const linksNote = brokenLinksSentence(content.brokenLinks);
+        const withLinks = linksNote ? { ...withCode, brokenLinks: linksNote } : withCode;
+        return withLeftoverPages(withLinks, content.leftoverPages);
     } catch (error) {
         return handleResetError(error, context.logger);
     }

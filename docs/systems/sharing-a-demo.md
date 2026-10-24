@@ -272,9 +272,10 @@ repository and sending the link.
 
 `get_storefront_report` answers the storefront report for the open project, as data and in
 the SC's words, including `brokenLinks`: links in the copied content to pages the colleague's
-site does not have either, each with the pages it is on. The dashboard's **Storefront Report**
-tile opens the same report in a window over the dashboard, and wears a dot when there are any;
-each page a broken link is on opens in DA.live from there.
+site does not have either, each with the pages it is on. People read the same report in
+Diagnostics; a reset names the broken links on its last view, and `reset_project` answers
+them as `brokenLinks`. The dashboard's Storefront Report tile and window were removed on
+2026-10-23 (EDS-64): what they showed is in those places.
 
 The same doors exist as tools, in [mcp-tools.md](mcp-tools.md): `probe_shared_demo` reads
 a demo from a link, `add_shared_demo` adds it, `create_project` takes an added demo's id or

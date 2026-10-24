@@ -49,6 +49,8 @@ export function useMessageListeners({ setState }: UseMessageListenersProps): voi
                     // The step's "(4 of 9)" and the run's start, for the screen's clock.
                     position: data.position,
                     startedAt: data.startedAt,
+                    // The finishing update's line for the success screen.
+                    note: data.note,
                 },
             }));
         });

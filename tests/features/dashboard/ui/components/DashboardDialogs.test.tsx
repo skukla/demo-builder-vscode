@@ -17,14 +17,12 @@ import {
     type DashboardDialogsProps,
 } from '@/features/dashboard/ui/components/DashboardDialogs';
 import type { HandoverDialogs } from '@/features/dashboard/ui/hooks/useHandoverDialogs';
-import type { StorefrontReportDialog } from '@/features/dashboard/ui/hooks/useStorefrontReport';
 import type { OperationRunnerControls, ScreenOperation } from '@/core/ui/hooks/useOperationRunner';
 
 const mockAddDemoModal = jest.fn();
 const mockShareModal = jest.fn();
 const mockProgressModal = jest.fn();
 const mockCapabilitiesModal = jest.fn();
-const mockReportModal = jest.fn();
 
 jest.mock('@adobe/react-spectrum', () => ({
     DialogContainer: ({ children, onDismiss }: { children: React.ReactNode; onDismiss: () => void }) => (
@@ -49,16 +47,6 @@ jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
     ShareModal: (props: { onClose: () => void }) => {
         mockShareModal(props);
         return <div role="dialog" aria-label="Share Demo" />;
-    },
-}));
-jest.mock('@/features/dashboard/ui/components/StorefrontReportModal', () => ({
-    StorefrontReportModal: (props: { onClose: () => void; onReset: () => void }) => {
-        mockReportModal(props);
-        return (
-            <div role="dialog" aria-label="Storefront report">
-                <button onClick={props.onClose}>Close report</button>
-            </div>
-        );
     },
 }));
 jest.mock('@/core/ui/components/feedback/OperationProgressModal', () => ({
@@ -135,18 +123,11 @@ function ai(overrides: Partial<AiCapabilityState> = {}): AiCapabilityState {
     };
 }
 
-function storefrontReport(isOpen = false): StorefrontReportDialog {
-    return { isOpen, open: jest.fn(), close: jest.fn() };
-}
-
 function props(overrides: Partial<DashboardDialogsProps> = {}): DashboardDialogsProps {
     return {
         isEds: false,
         onCloseChangeSource: jest.fn(),
         handover: handover(),
-        storefrontReport: storefrontReport(),
-        projectName: 'JustRite',
-        onResetProject: jest.fn(),
         operations: operations(),
         capabilitiesOpen: false,
         onCloseCapabilities: jest.fn(),
@@ -223,35 +204,6 @@ describe('DashboardDialogs', () => {
         it('mounts nothing while closed', () => {
             render(<DashboardDialogs {...props({ handover: handover() })} />);
             expect(mockShareModal).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('the storefront report (EDS-64)', () => {
-        it("opens over the dashboard, titled with the project's name, offering the dashboard's own Reset", () => {
-            const given = props({ storefrontReport: storefrontReport(true) });
-            render(<DashboardDialogs {...given} />);
-
-            expect(screen.getByRole('dialog', { name: 'Storefront report' })).toBeInTheDocument();
-            expect(mockReportModal).toHaveBeenCalledWith({
-                projectName: 'JustRite',
-                onClose: given.storefrontReport.close,
-                onReset: given.onResetProject,
-            });
-        });
-
-        it('closes through the screen, on its own close and on dismiss', () => {
-            const given = props({ storefrontReport: storefrontReport(true) });
-            render(<DashboardDialogs {...given} />);
-
-            fireEvent.click(screen.getByText('Close report'));
-            fireEvent.click(screen.getByText('Dismiss'));
-
-            expect(given.storefrontReport.close).toHaveBeenCalledTimes(2);
-        });
-
-        it('mounts nothing while closed', () => {
-            render(<DashboardDialogs {...props()} />);
-            expect(mockReportModal).not.toHaveBeenCalled();
         });
     });
 

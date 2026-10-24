@@ -24,6 +24,7 @@ import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import type { EdsResetParams } from './edsResetParams';
 import { PIPELINE_RESET_STAGE, RESET_STEP } from '@/core/utils/resetStages';
 import type { HandlerContext } from '@/types/handlers';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 /** Map a pipeline progress event to the wizard step number and format the message. */
 function mapPipelineProgress(
@@ -42,6 +43,8 @@ export interface ContentPipelineOutcome {
     leftoverPages?: LeftoverPagesResult;
     /** The pipeline's sentences for the SC (EDS-55). */
     pipelineWarnings: string[];
+    /** The copy's links to pages that do not exist; absent when the content was kept. */
+    brokenLinks?: StorefrontBrokenLink[];
 }
 
 /**
@@ -161,15 +164,15 @@ export async function runContentPipeline(
             // The content was copied afresh, so its broken links replace the last
             // ones; kept content was not, and its record still stands. Saved with
             // the project by finalizeReset.
-            if (!params.keepContent && contentSourceConfig) {
-                writeBrokenLinks(project, patchReport.brokenLinks);
-            }
+            const copiedAfresh = !params.keepContent && Boolean(contentSourceConfig);
+            if (copiedAfresh) writeBrokenLinks(project, patchReport.brokenLinks);
 
             context.logger.info('[EdsReset] Content pipeline completed successfully');
             return {
                 contentCopied: pipelineResult.contentFilesCopied,
                 leftoverPages: pipelineResult.leftoverPages,
                 pipelineWarnings: pipelineResult.warnings,
+                ...(copiedAfresh && patchReport.brokenLinks?.length ? { brokenLinks: patchReport.brokenLinks } : {}),
             };
         },
         {

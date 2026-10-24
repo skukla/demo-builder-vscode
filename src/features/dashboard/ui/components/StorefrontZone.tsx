@@ -1,4 +1,3 @@
-import FileTxt from '@spectrum-icons/workflow/FileTxt';
 import Sync from '@spectrum-icons/workflow/Sync';
 import UploadToCloud from '@spectrum-icons/workflow/UploadToCloud';
 import UserGroup from '@spectrum-icons/workflow/UserGroup';
@@ -15,9 +14,8 @@ import { DashboardZone, RemedyTile } from './DashboardZone';
  * button that does not fix the state it reports. Only storefrontRepublishService
  * clears it.
  *
- * Storefront Report wears a dot when there is something in it to read: links in
- * the content to pages that do not exist (2026-10-07). It is where they are
- * listed, with the page each is on, instead of a pop-up on every create and reset.
+ * There is no Storefront Report tile (removed 2026-10-23, EDS-64): Diagnostics and the
+ * get_storefront_report tool carry what it said, and a reset's last view names broken links.
  */
 export function StorefrontZone({
     needsRepublish,
@@ -25,17 +23,12 @@ export function StorefrontZone({
     handleSyncStorefront,
     handleRefreshBlockLibrary,
     handleOpenSiteAccess,
-    handleOpenStorefrontReport,
-    brokenLinkCount = 0,
 }: {
     needsRepublish: boolean;
     handleRepublishContent?: () => void;
     handleSyncStorefront?: () => void;
     handleRefreshBlockLibrary?: () => void;
     handleOpenSiteAccess?: () => void;
-    handleOpenStorefrontReport?: () => void;
-    /** Above zero, the report tile wears a dot saying so. */
-    brokenLinkCount?: number;
 }): React.ReactElement {
     return (
         <DashboardZone id="storefront" title="Storefront" compact>
@@ -77,34 +70,6 @@ export function StorefrontZone({
                     tooltip="Who administers the storefront and who can read its content"
                 />
             )}
-            {handleOpenStorefrontReport && (
-                <DashboardTile
-                    label="Storefront Report"
-                    icon={<FileTxt size="L" />}
-                    onPress={handleOpenStorefrontReport}
-                    action="storefront-report"
-                    tooltip="What this storefront is built on, and anything in it to look at"
-                    status={
-                        brokenLinkCount > 0
-                            ? {
-                                  variant: 'info',
-                                  tooltip: brokenLinksTooltip(brokenLinkCount),
-                                  // A dot without a word, as the Reset tile's "Needs reset": the
-                                  // word beside this tile's long name wrapped it onto two lines
-                                  // (owner, 2026-10-23). The tooltip says what the dot means.
-                                  testId: 'storefront-report-dot',
-                              }
-                            : undefined
-                    }
-                />
-            )}
         </DashboardZone>
     );
 }
-
-/** "2 links go to pages that don't exist. Open the report to see where." */
-function brokenLinksTooltip(count: number): string {
-    const links = count === 1 ? '1 link goes' : `${count} links go`;
-    return `${links} to pages that don't exist. Open the report to see where.`;
-}
-

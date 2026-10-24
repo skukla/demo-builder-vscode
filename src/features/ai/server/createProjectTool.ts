@@ -524,7 +524,7 @@ async function createEds(
     // (what the content copy could not do, among others). The agent never heard them
     // before; the card was the only reader.
     const caveats = complete.warnings;
-    // Recorded on the project for the Storefront Report, as the wizard does.
+    // Recorded on the project, as the wizard does, and answered here.
     const brokenLinks = complete.brokenLinks;
 
     // Phase 2: create the project, with preflight results threaded in.

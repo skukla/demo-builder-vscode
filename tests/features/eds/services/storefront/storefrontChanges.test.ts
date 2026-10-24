@@ -135,7 +135,7 @@ describe('the words', () => {
     it('are the owner\'s, with no date in them', () => {
         expect(NEEDS_RESET_LABEL).toBe('Needs reset');
         expect(NEEDS_RESET_LINE).toBe(
-            'This storefront is behind how Demo Builder builds storefronts now. Reset it to bring it up to date.',
+            "Demo Builder has fixes this storefront doesn't have yet.",
         );
     });
 });

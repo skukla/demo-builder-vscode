@@ -62,6 +62,7 @@ import '@/core/ui/styles/add-card.css';
 import '@/core/ui/styles/checkbox-row.css';
 // SectionLabel and LeadText (ADR-017 §6).
 import '@/core/ui/styles/modal-text.css';
+import '@/core/ui/styles/disclosure-toggle.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts

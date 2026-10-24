@@ -253,7 +253,7 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
             { progress: 'modal' }
         );
 
-        expect(result).toMatchObject({ warning: undone, note: 'Removed 49 product pages.' });
+        expect(result).toMatchObject({ warning: undone, details: ['Removed 49 product pages.'] });
         expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
     });
 

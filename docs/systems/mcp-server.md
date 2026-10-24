@@ -648,14 +648,14 @@ answer (timeout, network, HTTP error) adds nothing.
 
 ### The storefront report (EDS-13f, 2026-10-03)
 
-`get_storefront_report` (read-only, GitHub sign-in) answers the same report as **Demo
-Builder: Storefront Report** and the Diagnostics section: the storefront's boilerplate
+`get_storefront_report` (read-only, GitHub sign-in) answers the same report as the
+Diagnostics section: the storefront's boilerplate
 against Demo Builder's current one, its lineage, what Demo Builder wrote, the content's links
 to pages that do not exist, and `summary`, the words the SC reads. `needsReset: true` (and
 `storefrontNeedsReset: true` in `get_project_status`) says the storefront is behind how Demo
 Builder builds storefronts now (`storefrontChanges.ts`); `reset_project` is the way up to date.
-The SC reads the same report in a window over the project dashboard (`getStorefrontReport`,
-`StorefrontReportModal.tsx`); the command opens the dashboard with it showing.
+The dashboard's report window and the `Demo Builder: Storefront Report` command were removed
+on 2026-10-23 (EDS-64); `reset_project` answers the fresh copy's broken links as `brokenLinks`.
 
 It no longer lists Demo Builder's fixes, and `reset_project` and `create_project` no longer
 take `applyFixes`: there is nothing to ask. Creation and reset apply every live patch in the

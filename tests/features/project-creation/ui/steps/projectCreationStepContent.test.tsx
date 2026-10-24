@@ -176,6 +176,13 @@ describe('StepContentArea', () => {
             expect(screen.getByText('Click below to view your projects')).toBeInTheDocument();
         });
 
+        it('shows the finishing update\'s one line under the heading (EDS-64)', () => {
+            const note = '2 links in the copied content go to missing pages. Diagnostics lists them.';
+            renderContent({ isCompleted: true, progress: progressOf({ currentOperation: 'Project Created', note }) });
+
+            expect(screen.getByText(note)).toBeInTheDocument();
+        });
+
         it('shows the loading transition while the project is being opened', () => {
             renderContent({ isCompleted: true, isOpeningProject: true });
 

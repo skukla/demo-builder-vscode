@@ -79,7 +79,7 @@ interface EdsContentDeps {
     extensionContext: import('vscode').ExtensionContext;
     /**
      * Receives the copy's broken links (links to pages the source lacks too), so
-     * the caller can record them on the project for the Storefront Report.
+     * the caller can record them on the project.
      */
     onBrokenLinks?: (links: StorefrontBrokenLink[]) => void;
     /**

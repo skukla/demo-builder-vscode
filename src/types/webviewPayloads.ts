@@ -356,11 +356,6 @@ export interface DashboardStatusUpdatePayload {
     mesh?: MeshStatusInfo;
     edsStorefrontStatus?: Project['edsStorefrontStatusSummary'];
     /**
-     * How many links in the storefront's content go to pages that do not exist
-     * (`brokenLinksRecord`). Above zero, the Storefront Report tile wears a dot.
-     */
-    brokenLinkCount?: number;
-    /**
      * The storefront is behind how Demo Builder builds storefronts now (`storefrontChanges.ts`):
      * the Reset tile says "Needs reset". Present only when true.
      */
@@ -824,8 +819,8 @@ export interface StorefrontSetupProgressPayload {
 /**
  * A link in a storefront's copied content to a page the content site it was
  * copied from does not have either: a broken link in the source, carried over.
- * Recorded on the project (`metadata.brokenLinks`) and shown in the Storefront
- * Report, never as a pop-up: nothing was left out of the copy.
+ * Recorded on the project (`metadata.brokenLinks`); a reset's last view says so, and
+ * Diagnostics lists them. Never a pop-up: nothing was left out of the copy.
  */
 export interface StorefrontBrokenLink {
     /** The address the link points at: "/fr". */
@@ -833,37 +828,6 @@ export interface StorefrontBrokenLink {
     /** The copied pages that carry the link: ["/footer"]. */
     pages: string[];
 }
-
-/**
- * The storefront report as the dashboard's report window shows it (EDS-64): what needs the
- * SC's attention first, then where the storefront comes from. Built by
- * `storefrontReportView` from the one report computation the agent and Diagnostics read.
- */
-export interface StorefrontReportView {
-    /** Present when the storefront is behind how Demo Builder builds storefronts now: the line to show. */
-    needsReset?: string;
-    /** Links in the content to pages that do not exist, each with the pages it is on. */
-    brokenLinks: Array<{
-        link: string;
-        /** Each page that carries the link, with its DA.live editor address when the site is known. */
-        pages: Array<{ path: string; editUrl?: string }>;
-    }>;
-    /** About this storefront: one labelled sentence each ("Comes from", "Built on"). */
-    about: Array<{ label: string; text: string }>;
-    /** What someone looking closer needs (the Adobe commit, the files Demo Builder wrote); shown folded. */
-    details: string[];
-}
-
-/** `takeStorefrontReportRequest` — whether the dashboard was opened to show the report. */
-export interface TakeStorefrontReportRequestResponse {
-    success: true;
-    data: { show: boolean };
-}
-
-/** `getStorefrontReport` — the report for the dashboard's project, or why there is none. */
-export type GetStorefrontReportResponse =
-    | { success: true; data: StorefrontReportView }
-    | { success: false; error: string };
 
 /** `storefront-setup-complete` — the pipeline finished. */
 export interface StorefrontSetupCompletePayload {

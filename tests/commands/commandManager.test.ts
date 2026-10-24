@@ -169,7 +169,9 @@ describe('CommandManager', () => {
             // resetAll stays excluded, dev mode only.
             // 37 since EDS-13f added demoBuilder.storefrontReport.
             // 38 since AI-4b added demoBuilder.pickAiChat.
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(38);
+            // 37 since EDS-64 removed demoBuilder.storefrontReport: Diagnostics and the
+            // get_storefront_report tool carry what it said (owner, 2026-10-23).
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(37);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -193,7 +195,6 @@ describe('CommandManager', () => {
                 'demoBuilder.refreshBlockLibrary',
                 'demoBuilder.manageSiteAccess',
                 'demoBuilder.repairSiteConfiguration',
-                'demoBuilder.storefrontReport',
                 'demoBuilder.checkForUpdates',
                 'demoBuilder.openInClaude',
                 'demoBuilder.openAi',

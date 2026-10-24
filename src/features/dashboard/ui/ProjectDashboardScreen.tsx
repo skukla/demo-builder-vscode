@@ -23,7 +23,6 @@ import { useHandoverDialogs } from './hooks/useHandoverDialogs';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
 import { useOrgSwitchFlow } from './hooks/useOrgSwitchFlow';
-import { useStorefrontReportDialog } from './hooks/useStorefrontReport';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayout';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
@@ -96,7 +95,6 @@ export function ProjectDashboardScreen({
     const [changeSourceOpen, setChangeSourceOpen] = useState(false);
     const openChangeSource = demo ? () => setChangeSourceOpen(true) : undefined;
     const handover = useHandoverDialogs(); // the Share dialog
-    const storefrontReport = useStorefrontReportDialog(); // the storefront report's window (EDS-64)
     // Inline title rename commit (null = success; string = inline error).
     const renameInline = useInlineRename();
 
@@ -279,8 +277,6 @@ export function ProjectDashboardScreen({
                                     handleConfigure={handleConfigure}
                                     handleOpenAemAssets={handleOpenAemAssets}
                                     handleOpenSiteAccess={isEdsStable ? handleOpenSiteAccess : undefined}
-                                    handleOpenStorefrontReport={isEdsStable ? storefrontReport.open : undefined}
-                                    brokenLinkCount={projectStatus?.brokenLinkCount ?? 0}
                                     needsReset={projectStatus?.storefrontNeedsReset === true}
                                     handleEditProject={handleEditProject}
                                     handleShareDemo={handover.openShare}
@@ -299,9 +295,6 @@ export function ProjectDashboardScreen({
                 changeSourceDemo={changeSourceOpen ? demo : undefined}
                 onCloseChangeSource={() => setChangeSourceOpen(false)}
                 handover={handover}
-                storefrontReport={storefrontReport}
-                projectName={displayName}
-                onResetProject={handleResetProject}
                 operations={operations}
                 capabilitiesOpen={showCapabilities}
                 onCloseCapabilities={() => setShowCapabilities(false)}

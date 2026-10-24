@@ -133,6 +133,12 @@ export interface EdsResetResult extends HandlerResponse {
      */
     productPages?: string;
     /**
+     * The copied content's links to pages that do not exist, in one sentence for the SC
+     * (`brokenLinksSentence`): a note, since nothing was left out of the copy. Absent when
+     * there are none, or when the content was kept.
+     */
+    brokenLinks?: string;
+    /**
      * The page sentences above that say something did not happen (a page that could not
      * be published, product pages left live). The SC reads them as warnings; the rest of
      * those sentences are notes. Absent when every page step did all it set out to.

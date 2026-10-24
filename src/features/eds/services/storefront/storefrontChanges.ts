@@ -15,8 +15,8 @@
  * stamp existed falls back to its creation date; with neither, it is older than every change.
  *
  * Pure: no GitHub read, no `vscode`. The projects list computes it for every card, the
- * dashboard and `get_project_status` through `buildStatusPayload`, the Storefront Report (and
- * Diagnostics, which prints it) through `readStorefrontReport`.
+ * dashboard and `get_project_status` through `buildStatusPayload`, Diagnostics and the
+ * get_storefront_report tool through `readStorefrontReport`.
  *
  * No date is ever shown to the SC (owner): only {@link NEEDS_RESET_LABEL} and
  * {@link NEEDS_RESET_LINE}.
@@ -43,7 +43,7 @@ export const NEEDS_RESET_LABEL = 'Needs reset';
 
 /** The status's one-line explanation, wherever the status is shown. */
 export const NEEDS_RESET_LINE =
-    'This storefront is behind how Demo Builder builds storefronts now. Reset it to bring it up to date.';
+    "Demo Builder has fixes this storefront doesn't have yet.";
 
 /** Every change, oldest first. */
 export const STOREFRONT_CHANGES: readonly StorefrontChange[] = [
@@ -76,6 +76,14 @@ export const STOREFRONT_CHANGES: readonly StorefrontChange[] = [
         evidence:
             'CHANGELOG Unreleased, Fixed: "Creation and reset now keep the template\'s labels. A storefront ' +
             'made before this is repaired by its next reset" (or a template or Adobe boilerplate update).',
+    },
+    {
+        id: 'known-patches',
+        since: '2026-10-23',
+        what: "Creation and reset put every live patch in the shipped ledgers into any storefront's code it fits.",
+        evidence:
+            'Commit c75b52793 (2026-10-23, EDS-64). Measured on JustRite the same day: 4 of the 6 fit and were ' +
+            'missing, and only the build step (creation, reset) applies them.',
     },
 ];
 

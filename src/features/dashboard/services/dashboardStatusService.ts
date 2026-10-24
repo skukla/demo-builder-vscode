@@ -12,7 +12,6 @@
 
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import { readBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
 import { storefrontNeedsReset } from '@/features/eds/services/storefront/storefrontChanges';
 import { Project } from '@/types/base';
 import {
@@ -55,7 +54,6 @@ export function buildStatusPayload(
         frontendConfigChanged,
         mesh,
         edsStorefrontStatus: project.edsStorefrontStatusSummary,
-        brokenLinkCount: readBrokenLinks(project).length,
         ...(storefrontNeedsReset(project) ? { storefrontNeedsReset: true as const } : {}),
     };
 }

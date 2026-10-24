@@ -57,7 +57,6 @@ import {
     handleExportProjectSettings,
 } from './projectManagementHandlers';
 import { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
-import { handleGetStorefrontReport, handleTakeStorefrontReportRequest } from './storefrontReportHandlers';
 import { executeCommandForWorkingProject } from '@/core/handlers/projectCommandHelper';
 import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -361,9 +360,6 @@ export const dashboardHandlers = defineHandlers({
     setViewModeOverride: handleSetViewModeOverride,
     openDataInstaller: handleOpenDataInstaller,
     openSiteAccess: handleOpenSiteAccess,
-    // The storefront report's window over the dashboard (EDS-64).
-    getStorefrontReport: handleGetStorefrontReport,
-    takeStorefrontReportRequest: handleTakeStorefrontReportRequest,
     showProjectDashboard: handleShowProjectDashboard,
 
     // Mesh handlers

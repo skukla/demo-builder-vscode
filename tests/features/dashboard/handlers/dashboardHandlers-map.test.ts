@@ -133,7 +133,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 96 handlers', () => {
+        it('should have exactly 94 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
@@ -306,7 +306,12 @@ describe('dashboardHandlers', () => {
             // openStorefrontReport → getStorefrontReport + takeStorefrontReportRequest
             // (95 → 96, EDS-64, 2026-10-23): the report is a window over the dashboard,
             // read on open, and opened by the Command Palette through a held request.
-            expect(types).toHaveLength(96);
+            // checkForUpdates (96 → 97, EDS-64, 2026-10-23): the report's Adobe update
+            // notice runs Check for Updates.
+            // getStorefrontReport + takeStorefrontReportRequest + checkForUpdates removed
+            // (97 → 94, EDS-64, 2026-10-23): the report window is gone; Diagnostics and the
+            // get_storefront_report tool carry what it said.
+            expect(types).toHaveLength(94);
         });
 
         it('should have handlers as functions', () => {

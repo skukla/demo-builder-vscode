@@ -78,8 +78,8 @@ export interface PatchReport {
     missingOnSource?: Set<string>;
     /**
      * Links to pages the source lacks too (2026-10-07). Not a gap in the copy,
-     * so never in the toast: the caller records them on the project, and the
-     * Storefront Report lists them.
+     * so never in the toast: the caller records them on the project, a reset's
+     * last view names them, and Diagnostics lists them.
      */
     brokenLinks?: StorefrontBrokenLink[];
 }

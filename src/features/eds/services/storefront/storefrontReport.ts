@@ -5,8 +5,9 @@
  * creation and reset apply every one that fits (EDS-64, `knownPatches.ts`).
  *
  * ONE computation (`readStorefrontReport`) and ONE rendering
- * (`storefrontReportLines`); the command, Diagnostics and the agent tool all
- * read these, so no door can say something another does not (decision 8).
+ * (`storefrontReportLines`); Diagnostics and the agent tool both read these, so
+ * neither can say something the other does not (decision 8). Its dashboard window and
+ * `Demo Builder: Storefront Report` command were removed on 2026-10-23 (EDS-64).
  *
  * Read-only by construction: every leg is a GitHub read or the patches repo's
  * public last-known-good file. A read that failed says "could not read", never
@@ -49,7 +50,7 @@ import {
     type StorefrontLineage,
 } from '@/types/projectFile';
 import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
-import type { StorefrontBrokenLink, StorefrontReportView } from '@/types/webviewPayloads';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 /** Whether a file Demo Builder writes is in the repository. */
 export type Presence = 'present' | 'absent' | 'unreadable';
@@ -262,36 +263,6 @@ export function storefrontReportLines(report: StorefrontReport): string[] {
 }
 
 /**
- * The report as the dashboard's report window shows it (EDS-64): the attention items, then
- * where the storefront comes from, then the detail folded away. The same sentences as
- * {@link storefrontReportLines}, so the window, the markdown and the agent never disagree.
- *
- * @param report - the computed report
- * @returns what the window renders
- */
-export function storefrontReportView(report: StorefrontReport): StorefrontReportView {
-    const site = report.contentSite;
-    return {
-        ...(report.needsReset ? { needsReset: NEEDS_RESET_LINE } : {}),
-        brokenLinks: (report.brokenLinks ?? []).map(({ link, pages }) => ({
-            link,
-            pages: pages.map((path) => (site ? { path, editUrl: daLiveEditUrl(site, path) } : { path })),
-        })),
-        about: [
-            { label: 'Comes from', text: originLines(report.origin).join(' ') },
-            { label: 'Built on', text: boilerplateLine(report) },
-        ],
-        details: [
-            ...adobeLines(report.adobe),
-            `Product-page fallback (smart 404): ${PRESENCE_WORDS[report.written.smart404]}.`,
-            `Content mount (fstab.yaml): ${PRESENCE_WORDS[report.written.fstab]}.`,
-            `Store settings (config.json): ${PRESENCE_WORDS[report.written.config]}.`,
-            `Demo package description: ${PRESENCE_WORDS[report.written.description]}.`,
-        ],
-    };
-}
-
-/**
  * The content's links to pages that do not exist, each with the page it sits
  * on, linked to that page in the DA.live editor so it can be fixed there.
  * Nothing when there are none: the section only appears when it has news.
@@ -313,7 +284,7 @@ function brokenLinkLines(report: StorefrontReport): string[] {
 }
 
 /** A page in the DA.live editor. The path is extensionless (`/footer`), as the editor needs. */
-function daLiveEditUrl(site: { org: string; site: string }, page: string): string {
+export function daLiveEditUrl(site: { org: string; site: string }, page: string): string {
     return `https://da.live/edit#/${site.org}/${site.site}${page.startsWith('/') ? page : `/${page}`}`;
 }
 
@@ -337,7 +308,7 @@ function adobeLines(adobe: StorefrontReport['adobe']): string[] {
     return [`${started} Demo Builder's tested version is ${adobe.tested.slice(0, 7)}; Check for Updates offers it.`];
 }
 
-function originLines(origin: StorefrontOriginKind): string[] {
+export function originLines(origin: StorefrontOriginKind): string[] {
     if (origin.kind === 'shipped') {
         const from = origin.template ? `, made from ${origin.template.owner}/${origin.template.repo}` : '';
         const at = origin.pin ? ` at ${origin.pin.substring(0, 7)}` : '';

@@ -60,6 +60,7 @@ import '@/features/project-creation/ui/styles/add-integration-flow.css';
 import '@/core/ui/styles/checkbox-row.css';
 // SectionLabel and LeadText (ADR-017 §6).
 import '@/core/ui/styles/modal-text.css';
+import '@/core/ui/styles/fact-list.css';
 import '@/features/project-creation/ui/styles/build-summary.css';
 import '@/features/project-creation/ui/styles/choice-cards.css';
 

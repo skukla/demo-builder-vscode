@@ -10,9 +10,9 @@
  * that leaves rows the SC unticked still waiting says how many and offers "Back to
  * updates", the list again on a fresh check (owner, 2026-10-22).
  *
- * Built from the house pieces: `ui/Modal` and `CheckboxRow` (extracted from the API picker
- * for this). Each group is a panel in the projects list's own row style (`.project-row-name`,
- * `.project-row-chevron`, the trailing chevron): Spectrum's Disclosure was tried first and
+ * Built from the house pieces: `ui/Modal`, `CheckboxRow` (extracted from the API picker
+ * for this) and `DisclosureToggle` (extracted from here, 2026-10-23). Each
+ * group is a panel in the projects list's own row style, the trailing chevron: Spectrum's Disclosure was tried first and
  * brought a look nothing else here has (owner, 2026-10-20). A group starts closed and says
  * what it holds: its name in its own casing, and how many rows wait for the SC (one that
  * started unticked: the redeploy, or one locked in another org), so a closed group cannot
@@ -27,13 +27,12 @@
  */
 
 import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import React, { useState } from 'react';
 import { APPLYING_TITLE, type UpdatesModalControls } from '../hooks/useUpdatesModal';
 import { groupsOf, type RowGroup } from './updateGroups';
 import { UpdatesRunView } from './UpdatesRunView';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
+import { DisclosureToggle } from '@/core/ui/components/ui/DisclosureToggle';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
@@ -58,7 +57,6 @@ function RowGroupView({ group, controls }: { group: RowGroup; controls: UpdatesM
     const [isOpen, setOpen] = useState(false);
     const { open, tickedCount, text } = summaryOf(group, controls.ticked);
     const all = open.length > 0 && tickedCount === open.length;
-    const Chevron = isOpen ? ChevronDown : ChevronRight;
     return (
         <div className="updates-group">
             <div className="updates-group-header">
@@ -69,16 +67,9 @@ function RowGroupView({ group, controls }: { group: RowGroup; controls: UpdatesM
                     isDisabled={open.length === 0}
                     onChange={() => controls.toggleGroup(open)}
                 />
-                <button
-                    type="button"
-                    className="updates-group-toggle"
-                    aria-expanded={isOpen}
-                    onClick={() => setOpen(!isOpen)}
-                >
-                    <span className="project-row-name">{group.title}</span>
-                    {text && <span className="updates-group-note">{text}</span>}
-                    <Chevron size="S" UNSAFE_className="project-row-chevron updates-group-chevron" />
-                </button>
+                <DisclosureToggle isOpen={isOpen} onToggle={() => setOpen(!isOpen)} note={text || undefined}>
+                    {group.title}
+                </DisclosureToggle>
             </div>
             <div className="updates-group-rows" hidden={!isOpen}>
                 {group.rows.map((row) => (

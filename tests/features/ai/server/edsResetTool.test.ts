@@ -282,6 +282,23 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(res.productPages).toBe('Removed 18 product pages from the old catalog.');
     });
 
+    it('names the copied content\'s broken links, and leaves the key out when there are none (EDS-64)', async () => {
+        const s = fakeServer();
+        registerResetProjectTool(s, ctxFactory);
+        expect('brokenLinks' in (await s.call({ confirm: true }))).toBe(false);
+
+        const LINKS = '1 link in the copied content goes to a missing page: /fr (on /store-switcher).';
+        executeEdsResetMock.mockResolvedValueOnce({
+            success: true,
+            filesReset: 12,
+            contentCopied: 5,
+            meshRedeployed: false,
+            brokenLinks: LINKS,
+        });
+
+        expect((await s.call({ confirm: true })).brokenLinks).toBe(LINKS);
+    });
+
     it('reports each step live as it runs, numbered the way the button shows it', async () => {
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);

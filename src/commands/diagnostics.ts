@@ -359,9 +359,9 @@ export class DiagnosticsCommand extends BaseCommand {
     }
 
     /**
-     * Where the storefront comes from, what Demo Builder wrote into it, and each
-     * of its fixes (EDS-13f): the storefront report's own computation, so this
-     * section and `Demo Builder: Storefront Report` cannot disagree. Read-only.
+     * Where the storefront comes from and what Demo Builder wrote into it (EDS-13f):
+     * the storefront report's own computation, so this section and the
+     * get_storefront_report tool cannot disagree. Read-only.
      * Undefined without an EDS project, and when the read fails outright (each
      * leg already says "could not read" on its own; a throw is not a finding).
      */

@@ -25,7 +25,7 @@ import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppIn
 import type { CreationProgress, WizardState } from '@/types/webview';
 
 /** Success completion content */
-function SuccessContent({ isOpeningProject, isEdit }: { isOpeningProject: boolean; isEdit: boolean }) {
+function SuccessContent({ isOpeningProject, isEdit, note }: { isOpeningProject: boolean; isEdit: boolean; note?: string }) {
     if (isOpeningProject) {
         return (
             <CenteredFeedbackContainer>
@@ -53,6 +53,8 @@ function SuccessContent({ isOpeningProject, isEdit }: { isOpeningProject: boolea
                         </Text>
                     )}
                 </Flex>
+                {/* One line worth knowing about the finished project (broken links, EDS-64). */}
+                {note ? <Text UNSAFE_className="text-sm text-gray-600 text-center">{note}</Text> : null}
             </Flex>
         </CenteredFeedbackContainer>
     );
@@ -158,7 +160,7 @@ export function StepContentArea(props: {
     }
 
     if (isCompleted && !progress?.error) {
-        return <SuccessContent isOpeningProject={isOpeningProject} isEdit={isEdit} />;
+        return <SuccessContent isOpeningProject={isOpeningProject} isEdit={isEdit} note={progress?.note} />;
     }
 
     if (showGenericError) {
