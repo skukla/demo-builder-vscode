@@ -3,7 +3,7 @@
  *
  * Both rows ask the same question: Fix with AI (the clash is kept in the project's local
  * copy, `pendingClash.ts`), Leave it as it is (nothing changes, the update stays offered),
- * or, on the colleague's row only, Reset to template. No choice involves reading code
+ * or, on the colleague's row only, Use the update. No choice involves reading code
  * (owner, 2026-10-20: no SC is comfortable with code). An agent passes a policy instead:
  * `keep`, `stop` (the default) or `reset`.
  *
@@ -28,7 +28,7 @@ import type { Project } from '@/types/base';
  */
 export type TemplateConflictPolicy = 'stop' | 'keep' | 'reset';
 
-/** A person's answer: Fix with AI, Leave it as it is, or Reset to template. */
+/** A person's answer: Fix with AI, Leave it as it is, or Use the update. */
 export type ClashAnswer = 'fix' | 'leave' | 'reset';
 
 /** A person's answer to a kept clash's fix that is not ready: Fix with AI, Keep it for later, or Drop the fix. */
@@ -38,7 +38,7 @@ export type UnfinishedAnswer = 'fix' | 'later' | 'leave';
 export interface ClashQuestion {
     track: ClashTrack;
     files: string[];
-    /** Whether Reset to template is offered: the colleague's row, off the tested boilerplate. */
+    /** Whether Use the update is offered: the colleague's row, off the tested boilerplate. */
     canReset: boolean;
 }
 

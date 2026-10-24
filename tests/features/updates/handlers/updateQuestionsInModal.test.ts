@@ -40,7 +40,7 @@ function question(title: string, part: string): unknown {
 }
 
 describe('questionsInModal', () => {
-    it('asks about a clash on the colleague\'s row with all three choices, naming the project and the files', async () => {
+    it('asks about a clash on the colleague\'s row with all three choices, naming the project', async () => {
         ask.mockResolvedValue('Fix with AI');
 
         const answer = await questionsInModal.onClash(stopped, {
@@ -54,35 +54,34 @@ describe('questionsInModal', () => {
             {
                 title: 'The update clashes with your edits',
                 message:
-                    "The template update changes 2 files that were also edited in Bodea's storefront: head.html, scripts/a.js.\n" +
-                    'Fix with AI: your AI combines the two versions.\n' +
-                    'Leave it as it is: nothing changes now. You can update later.\n' +
-                    "Reset to template: uses the template's version. The edits are lost.",
+                    "This update changes something that was already edited in Bodea's storefront. " +
+                    'Use AI to keep both changes. Nothing goes live until you approve it.\n' +
+                    'Or use the update and drop those edits.',
             },
             'Fix with AI',
             'Leave it as it is',
-            'Reset to template',
+            'Use the update',
         );
     });
 
-    it("never offers a reset on Adobe's row, and says which update it is", async () => {
+    it("never offers a reset on Adobe's row", async () => {
         ask.mockResolvedValue('Leave it as it is');
 
         const answer = await questionsInModal.onClash(stopped, { track: 'boilerplate', files: ['blocks/header/header.js'], canReset: false });
 
         expect(answer).toBe('leave');
         expect(ask).toHaveBeenCalledWith(
-            question('The update clashes with your edits', "Adobe's update changes a file that was also edited"),
+            question('The update clashes with your edits', "This update changes something that was already edited in Bodea's storefront"),
             'Fix with AI',
             'Leave it as it is',
         );
-        expect(ask.mock.calls[0][0].message).not.toContain('Reset to template');
+        expect(ask.mock.calls[0][0].message).not.toMatch(/use the update/i);
     });
 
     it.each([
-        ['Reset to template', true, 'reset'],
+        ['Use the update', true, 'reset'],
         // A reset the question did not offer is never taken.
-        ['Reset to template', false, 'leave'],
+        ['Use the update', false, 'leave'],
         ['Leave it as it is', true, 'leave'],
         // Dismissed: nothing changes.
         [undefined, true, 'leave'],
@@ -95,17 +94,15 @@ describe('questionsInModal', () => {
     it('asks what to do with a fix that is not ready, with three choices that need no code', async () => {
         ask.mockResolvedValue('Fix with AI');
 
-        const answer = await questionsInModal.onUnfinished(stopped, 'blocks/header/header.js still shows both versions (conflict markers)');
+        const answer = await questionsInModal.onUnfinished(stopped, 'blocks/header/header.js still has conflict markers');
 
         expect(answer).toBe('fix');
         expect(ask).toHaveBeenCalledWith(
             {
                 title: 'The fix is not finished',
                 message:
-                    "The fix for Bodea's storefront isn't finished: blocks/header/header.js still shows both versions (conflict markers).\n" +
-                    'Fix with AI: your AI takes another look.\n' +
-                    'Keep it for later: nothing changes now. The fix waits.\n' +
-                    'Drop the fix: puts the storefront back as it was. The update is offered again.',
+                    "The AI didn't finish fixing Bodea's storefront. You can have it keep going, pick it up " +
+                    'later from Check for Updates, or drop it and skip this update.',
             },
             'Fix with AI',
             'Keep it for later',

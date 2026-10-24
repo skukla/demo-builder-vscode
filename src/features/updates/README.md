@@ -128,7 +128,7 @@ runs the colleague's first, each its own commit.
 ## A clash is fixed with AI (EDS-57)
 
 A template or Adobe boilerplate update that clashes with edits in the storefront asks one
-question: Fix with AI, Leave it as it is, or (the colleague's row only) Reset to template
+question: Fix with AI, Leave it as it is, or (the colleague's row only) Use the update
 (`updateClash.ts`). No choice involves reading code (owner, 2026-10-20).
 
 | | |

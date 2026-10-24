@@ -19,7 +19,7 @@ import type { Project } from '@/types/base';
 
 const FIX_WITH_AI = 'Fix with AI';
 const LEAVE_IT = 'Leave it as it is';
-const RESET_TO_TEMPLATE = 'Reset to template';
+const USE_THE_UPDATE = 'Use the update';
 const KEEP_FOR_LATER = 'Keep it for later';
 const DROP_THE_FIX = 'Drop the fix';
 const REPLACE_BLOCKS = 'Replace blocks';
@@ -29,36 +29,30 @@ const SKIP = 'Skip';
 
 /** The two questions the shared apply asks, asked in the modal. */
 export const questionsInModal: UpdateQuestions = {
-    async onClash(project: Project, { track, files, canReset }: ClashQuestion): Promise<ClashAnswer> {
-        // Plain words, one choice per line (owner, 2026-10-24): it read as a wall to a
-        // non-technical SC. The project is named for the notification it falls back to.
-        const update = track === 'boilerplate' ? "Adobe's update" : 'The template update';
-        const what = files.length === 1 ? 'a file that was' : `${files.length} files that were`;
+    async onClash(project: Project, { canReset }: ClashQuestion): Promise<ClashAnswer> {
+        // The owner's words (2026-10-24): no file names, the AI is handed those. The project
+        // is named for the notification this falls back to.
         const lines = [
-            `${update} changes ${what} also edited in ${getProjectDisplayName(project)}'s storefront: ` +
-                `${files.join(', ')}.`,
-            `${FIX_WITH_AI}: your AI combines the two versions.`,
-            `${LEAVE_IT}: nothing changes now. You can update later.`,
-            ...(canReset ? [`${RESET_TO_TEMPLATE}: uses the template's version. The edits are lost.`] : []),
+            `This update changes something that was already edited in ${getProjectDisplayName(project)}'s ` +
+                'storefront. Use AI to keep both changes. Nothing goes live until you approve it.',
+            ...(canReset ? ['Or use the update and drop those edits.'] : []),
         ];
         const answer = await askDuringOperation(
             { title: 'The update clashes with your edits', message: lines.join('\n') },
             FIX_WITH_AI,
             LEAVE_IT,
-            ...(canReset ? [RESET_TO_TEMPLATE] : []),
+            ...(canReset ? [USE_THE_UPDATE] : []),
         );
         if (answer === FIX_WITH_AI) return 'fix';
-        return answer === RESET_TO_TEMPLATE && canReset ? 'reset' : 'leave';
+        return answer === USE_THE_UPDATE && canReset ? 'reset' : 'leave';
     },
-    async onUnfinished(project: Project, reason: string): Promise<UnfinishedAnswer> {
-        const lines = [
-            `The fix for ${getProjectDisplayName(project)}'s storefront isn't finished: ${reason}.`,
-            `${FIX_WITH_AI}: your AI takes another look.`,
-            `${KEEP_FOR_LATER}: nothing changes now. The fix waits.`,
-            `${DROP_THE_FIX}: puts the storefront back as it was. The update is offered again.`,
-        ];
+    async onUnfinished(project: Project, _reason: string): Promise<UnfinishedAnswer> {
+        // The reason is the AI's to act on, not the SC's (owner, 2026-10-24).
+        const message =
+            `The AI didn't finish fixing ${getProjectDisplayName(project)}'s storefront. You can have it keep ` +
+            'going, pick it up later from Check for Updates, or drop it and skip this update.';
         const answer = await askDuringOperation(
-            { title: 'The fix is not finished', message: lines.join('\n') },
+            { title: 'The fix is not finished', message },
             FIX_WITH_AI,
             KEEP_FOR_LATER,
             DROP_THE_FIX,
