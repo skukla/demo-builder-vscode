@@ -75,12 +75,12 @@ async function notReady(copy: LocalCopy, file: string, ctx: UpdateContext): Prom
     } catch {
         return `${file} is missing`;
     }
-    if (CONFLICT_MARKER_RE.test(text)) return `${file} still has conflict markers`;
+    if (CONFLICT_MARKER_RE.test(text)) return `${file} still shows both versions (conflict markers)`;
     if (file.endsWith('.json')) {
         try {
             JSON.parse(text);
         } catch {
-            return `${file} is not valid JSON`;
+            return `${file} has an error, so it won't load (not valid JSON)`;
         }
     }
     if (/\.(m?js)$/.test(file)) return checkJavaScript(file, text, ctx);
@@ -94,7 +94,7 @@ async function checkJavaScript(file: string, text: string, ctx: UpdateContext): 
         const copy = path.join(dir, 'check.mjs');
         await fsPromises.writeFile(copy, text, 'utf8');
         const checked = await ctx.commandManager.execute(`node --check "${copy}"`, { timeout: TIMEOUTS.QUICK, shell: true });
-        return checked.code === 0 ? undefined : `${file} is not valid JavaScript`;
+        return checked.code === 0 ? undefined : `${file} has an error, so it won't load (not valid JavaScript)`;
     } finally {
         await fsPromises.rm(dir, { recursive: true, force: true });
     }

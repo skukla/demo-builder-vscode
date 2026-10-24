@@ -95,8 +95,10 @@
         border-left: 2px solid var(--spectrum-global-color-yellow-600);
     }
 
+    /* A question may put each choice on its own line. */
     .updates-run-question-text {
         margin: 0;
+        white-space: pre-line;
         font-size: 13px;
         line-height: 18px;
         color: var(--spectrum-global-color-gray-800);

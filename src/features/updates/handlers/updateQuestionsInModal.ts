@@ -30,19 +30,19 @@ const SKIP = 'Skip';
 /** The two questions the shared apply asks, asked in the modal. */
 export const questionsInModal: UpdateQuestions = {
     async onClash(project: Project, { track, files, canReset }: ClashQuestion): Promise<ClashAnswer> {
-        const noun = files.length === 1 ? 'file' : 'files';
-        const update = track === 'boilerplate' ? "Adobe's boilerplate update" : 'The template update';
-        const reset = canReset
-            ? ` "${RESET_TO_TEMPLATE}" replaces them with the template's version and discards those edits.`
-            : '';
+        // Plain words, one choice per line (owner, 2026-10-24): it read as a wall to a
+        // non-technical SC. The project is named for the notification it falls back to.
+        const update = track === 'boilerplate' ? "Adobe's update" : 'The template update';
+        const what = files.length === 1 ? 'a file that was' : `${files.length} files that were`;
+        const lines = [
+            `${update} changes ${what} also edited in ${getProjectDisplayName(project)}'s storefront: ` +
+                `${files.join(', ')}.`,
+            `${FIX_WITH_AI}: your AI combines the two versions.`,
+            `${LEAVE_IT}: nothing changes now. You can update later.`,
+            ...(canReset ? [`${RESET_TO_TEMPLATE}: uses the template's version. The edits are lost.`] : []),
+        ];
         const answer = await askDuringOperation(
-            {
-                title: 'The update clashes with your edits',
-                message:
-                    `${getProjectDisplayName(project)}: ${update} clashes with edits in the storefront in ` +
-                    `${files.length} ${noun} (${files.join(', ')}). "${FIX_WITH_AI}" opens your AI on the clash; ` +
-                    `"${LEAVE_IT}" changes nothing.${reset}`,
-            },
+            { title: 'The update clashes with your edits', message: lines.join('\n') },
             FIX_WITH_AI,
             LEAVE_IT,
             ...(canReset ? [RESET_TO_TEMPLATE] : []),
@@ -51,14 +51,14 @@ export const questionsInModal: UpdateQuestions = {
         return answer === RESET_TO_TEMPLATE && canReset ? 'reset' : 'leave';
     },
     async onUnfinished(project: Project, reason: string): Promise<UnfinishedAnswer> {
+        const lines = [
+            `The fix for ${getProjectDisplayName(project)}'s storefront isn't finished: ${reason}.`,
+            `${FIX_WITH_AI}: your AI takes another look.`,
+            `${KEEP_FOR_LATER}: nothing changes now. The fix waits.`,
+            `${DROP_THE_FIX}: puts the storefront back as it was. The update is offered again.`,
+        ];
         const answer = await askDuringOperation(
-            {
-                title: 'The fix is not finished',
-                message:
-                    `${getProjectDisplayName(project)}: the update kept to fix with AI is not ready to finish, ` +
-                    `because ${reason}. "${FIX_WITH_AI}" opens your AI on it again; "${DROP_THE_FIX}" puts the ` +
-                    'storefront back as it was and offers the update again.',
-            },
+            { title: 'The fix is not finished', message: lines.join('\n') },
             FIX_WITH_AI,
             KEEP_FOR_LATER,
             DROP_THE_FIX,

@@ -164,7 +164,7 @@ describe('finishClash', () => {
 
         await expect(finishClash(project, deps)).resolves.toEqual({
             kind: 'not-fixed',
-            reason: 'blocks/header/header.js still has conflict markers',
+            reason: 'blocks/header/header.js still shows both versions (conflict markers)',
         });
 
         expect(pushedHead()).toBe(before);
@@ -196,7 +196,7 @@ describe('finishClash', () => {
 
         await expect(finishClash(project, deps)).resolves.toEqual({
             kind: 'not-fixed',
-            reason: 'blocks/header/header.js is not valid JavaScript',
+            reason: "blocks/header/header.js has an error, so it won't load (not valid JavaScript)",
         });
     }, REAL_GIT_TIMEOUT_MS);
 

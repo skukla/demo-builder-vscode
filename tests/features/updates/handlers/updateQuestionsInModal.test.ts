@@ -51,7 +51,14 @@ describe('questionsInModal', () => {
 
         expect(answer).toBe('fix');
         expect(ask).toHaveBeenCalledWith(
-            question('The update clashes with your edits', 'Bodea: The template update clashes with edits in the storefront in 2 files (head.html, scripts/a.js)'),
+            {
+                title: 'The update clashes with your edits',
+                message:
+                    "The template update changes 2 files that were also edited in Bodea's storefront: head.html, scripts/a.js.\n" +
+                    'Fix with AI: your AI combines the two versions.\n' +
+                    'Leave it as it is: nothing changes now. You can update later.\n' +
+                    "Reset to template: uses the template's version. The edits are lost.",
+            },
             'Fix with AI',
             'Leave it as it is',
             'Reset to template',
@@ -65,7 +72,7 @@ describe('questionsInModal', () => {
 
         expect(answer).toBe('leave');
         expect(ask).toHaveBeenCalledWith(
-            question('The update clashes with your edits', "Adobe's boilerplate update clashes"),
+            question('The update clashes with your edits', "Adobe's update changes a file that was also edited"),
             'Fix with AI',
             'Leave it as it is',
         );
@@ -88,11 +95,18 @@ describe('questionsInModal', () => {
     it('asks what to do with a fix that is not ready, with three choices that need no code', async () => {
         ask.mockResolvedValue('Fix with AI');
 
-        const answer = await questionsInModal.onUnfinished(stopped, 'blocks/header/header.js still has conflict markers');
+        const answer = await questionsInModal.onUnfinished(stopped, 'blocks/header/header.js still shows both versions (conflict markers)');
 
         expect(answer).toBe('fix');
         expect(ask).toHaveBeenCalledWith(
-            question('The fix is not finished', 'Bodea: the update kept to fix with AI is not ready to finish, because blocks/header/header.js still has conflict markers.'),
+            {
+                title: 'The fix is not finished',
+                message:
+                    "The fix for Bodea's storefront isn't finished: blocks/header/header.js still shows both versions (conflict markers).\n" +
+                    'Fix with AI: your AI takes another look.\n' +
+                    'Keep it for later: nothing changes now. The fix waits.\n' +
+                    'Drop the fix: puts the storefront back as it was. The update is offered again.',
+            },
             'Fix with AI',
             'Keep it for later',
             'Drop the fix',
