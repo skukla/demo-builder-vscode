@@ -80,6 +80,19 @@ const ROWS: PendingUpdateRow[] = [
     },
 ];
 
+/** One more than the list opens every group for, so each starts closed. Its own group, last. */
+const MANY: PendingUpdateRow[] = [
+    ...ROWS,
+    {
+        id: 'blockLibrary:1',
+        kind: 'blockLibrary',
+        group: { key: '/p/bodea', title: 'Bodea' },
+        label: 'Bodea Blocks',
+        detail: 'Newer version',
+        ticked: true,
+    },
+];
+
 function controls(view: UpdatesView, ticked: string[] = []): jest.Mocked<UpdatesModalControls> {
     return {
         view,
@@ -121,7 +134,7 @@ describe('UpdatesModal', () => {
 
         expect(screen.getByText('Demo Builder')).toBeInTheDocument();
         expect(screen.getByText('JustRite')).toBeInTheDocument();
-        // Heading, its row; heading, its two rows (closed, so hidden, but there).
+        // Heading, its row; heading, its two rows.
         const boxes = screen.getAllByRole('checkbox', { hidden: true });
         expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([true, true, true, true, false]);
         expect(boxes.map((b) => (b as HTMLInputElement).disabled)).toEqual([false, false, false, false, true]);
@@ -130,7 +143,7 @@ describe('UpdatesModal', () => {
     });
 
     it('counts the ticked rows on Apply, and ticks one through the controls', async () => {
-        const c = controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0']);
+        const c = controls({ phase: 'list', rows: MANY }, ['extension', 'blockLibrary:0']);
         render(<UpdatesModal controls={c} />);
 
         await user().click(screen.getByRole('button', { name: /JustRite/ }));
@@ -296,14 +309,14 @@ describe('UpdatesModal', () => {
     // label's capitals; and it is a checkbox, so one click skips a whole demo (owner,
     // 2026-10-20).
     it("heads each project with a checkbox in the name's own casing that ticks its open rows", async () => {
-        const c = controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0']);
+        const c = controls({ phase: 'list', rows: MANY }, ['extension', 'blockLibrary:0']);
         render(<UpdatesModal controls={c} />);
 
         // The projects list's own row name, as its list view draws it: the shared toggle's
         // name carries the same rules (`.disclosure-toggle-name`, moved from `.project-row-name`).
         expect(screen.getByText('JustRite')).toHaveClass('disclosure-toggle-name');
         expect(screen.getByText('JustRite')).not.toHaveClass('section-label');
-        // Both groups closed: Demo Builder's checkbox, then JustRite's.
+        // Every group closed: Demo Builder's checkbox, then JustRite's.
         await user().click(screen.getAllByRole('checkbox')[1]);
 
         expect(c.toggleGroup).toHaveBeenCalledWith(['blockLibrary:0']);
@@ -313,14 +326,25 @@ describe('UpdatesModal', () => {
 
     // Closed, a project says what it holds: the count, and what still waits for the SC
     // (owner, 2026-10-20). Its name opens it.
-    it('starts each project closed, and opens it on its name', async () => {
-        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
+    it('starts each project closed when there are more than three updates, and opens it on its name', async () => {
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: MANY }, ['extension', 'blockLibrary:0'])} />);
 
         expect(screen.getByText('Demo Builder Blocks')).not.toBeVisible();
         await user().click(screen.getByRole('button', { name: /JustRite/ }));
 
         expect(screen.getByText('Demo Builder Blocks')).toBeVisible();
         expect(screen.getByText('Demo Builder extension')).not.toBeVisible();
+    });
+
+    // Three fit, so nothing is hidden behind a click (owner, 2026-10-24); the name still closes it.
+    it('starts every project open when there are three updates or fewer', async () => {
+        render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
+
+        expect(screen.getByText('Demo Builder extension')).toBeVisible();
+        expect(screen.getByText('Demo Builder Blocks')).toBeVisible();
+        await user().click(screen.getByRole('button', { name: /JustRite/ }));
+
+        expect(screen.getByText('Demo Builder Blocks')).not.toBeVisible();
     });
 
     // A row that starts unticked is the one a closed project must not hide: the redeploy,

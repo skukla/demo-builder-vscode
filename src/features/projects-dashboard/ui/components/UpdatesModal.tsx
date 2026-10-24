@@ -13,8 +13,9 @@
  * Built from the house pieces: `ui/Modal`, `CheckboxRow` (extracted from the API picker
  * for this) and `DisclosureToggle` (extracted from here, 2026-10-23). Each
  * group is a panel in the projects list's own row style, the trailing chevron: Spectrum's Disclosure was tried first and
- * brought a look nothing else here has (owner, 2026-10-20). A group starts closed and says
- * what it holds: its name in its own casing, and how many rows wait for the SC (one that
+ * brought a look nothing else here has (owner, 2026-10-20). With {@link OPEN_UP_TO} updates or
+ * fewer in all, every group starts open, since they fit and a closed one hid what the SC
+ * was approving (owner, 2026-10-24); with more, a group starts closed and says what it holds: its name in its own casing, and how many rows wait for the SC (one that
  * started unticked: the redeploy, or one locked in another org), so a closed group cannot
  * hide the row that needs a decision. Its checkbox already shows all, some or none ticked. The rest of its line opens it.
  * Its checkbox ticks or unticks the whole group (mixed while some rows are ticked; never a
@@ -40,6 +41,8 @@ import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 const LIST_TITLE = 'Updates available';
 const NO_ACTIONS: ActionButton[] = [];
+/** The most updates the list opens every group for: two lines each, they fit unscrolled. */
+export const OPEN_UP_TO = 3;
 
 /**
  * The rows a group's checkbox ticks, and what a closed group says about itself. It
@@ -53,8 +56,14 @@ function summaryOf(group: RowGroup, ticked: ReadonlySet<string>): { open: string
     return { open, tickedCount, text: waiting > 0 ? `${waiting} waiting for you` : '' };
 }
 
-function RowGroupView({ group, controls }: { group: RowGroup; controls: UpdatesModalControls }) {
-    const [isOpen, setOpen] = useState(false);
+interface RowGroupViewProps {
+    group: RowGroup;
+    controls: UpdatesModalControls;
+    startsOpen: boolean;
+}
+
+function RowGroupView({ group, controls, startsOpen }: RowGroupViewProps) {
+    const [isOpen, setOpen] = useState(startsOpen);
     const { open, tickedCount, text } = summaryOf(group, controls.ticked);
     const all = open.length > 0 && tickedCount === open.length;
     return (
@@ -92,7 +101,12 @@ function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: Up
     return (
         <div className="updates-group-list">
             {groupsOf(rows).map((group) => (
-                <RowGroupView key={group.key} group={group} controls={controls} />
+                <RowGroupView
+                    key={group.key}
+                    group={group}
+                    controls={controls}
+                    startsOpen={rows.length <= OPEN_UP_TO}
+                />
             ))}
         </div>
     );
