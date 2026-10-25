@@ -143,7 +143,7 @@ describe('createAgentOperationNotifier', () => {
 
         expect(result).toEqual({ ok: true });
         // The AUTHORED phrase, not a transform of `sync_storefront`. The old
-        // wording was "Sync storefront", which is ambiguous with sync_content
+        // wording was "Sync storefront", which was ambiguous with the old sync_content
         // (this one pushes code to git; that one publishes to the CDN) — a
         // confusion `agentAlertCopy` already records for the consent dialog.
         expect(mockWithProgress).toHaveBeenCalledWith(
@@ -409,7 +409,7 @@ describe('createAgentConsentGate', () => {
     });
 
     it('names the open project when the tool takes no argument naming it', async () => {
-        // `republish`, `sync_content` and `reset_project` act on whatever is
+        // `republish` and `reset_project` act on whatever is
         // open and declare no target argument. Without this the dialog would ask
         // someone to approve an unnamed thing.
         settingIs(true);
@@ -423,7 +423,7 @@ describe('createAgentConsentGate', () => {
         // behaviour under test as much as the happy path is.
         expect(mockShowWarningMessage).toHaveBeenCalledTimes(1);
         const detail = consentDetail(mockShowWarningMessage.mock.calls[0]);
-        expect(detail).toContain('Pushes the current configuration live');
+        expect(detail).toContain('Pushes the settings, code and every page live');
     });
 
     it('answers a ready refusal envelope when the dialog is dismissed or declined', async () => {

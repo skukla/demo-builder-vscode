@@ -19,7 +19,7 @@ import type { Project } from '@/types/base';
 
 const FIX_WITH_AI = 'Fix with AI';
 const LEAVE_IT = 'Leave it as it is';
-const RESET_TO_TEMPLATE = 'Reset to template';
+const USE_THE_UPDATE = 'Use the update';
 const KEEP_FOR_LATER = 'Keep it for later';
 const DROP_THE_FIX = 'Drop the fix';
 const REPLACE_BLOCKS = 'Replace blocks';
@@ -29,28 +29,30 @@ const SKIP = 'Skip';
 
 /** The two questions the shared apply asks, asked in the modal. */
 export const questionsInModal: UpdateQuestions = {
-    async onClash(project: Project, { track, files, canReset }: ClashQuestion): Promise<ClashAnswer> {
-        const noun = files.length === 1 ? 'file' : 'files';
-        const update = track === 'boilerplate' ? "Adobe's boilerplate update" : 'The template update';
-        const reset = canReset
-            ? ` "${RESET_TO_TEMPLATE}" replaces them with the template's version and discards those edits.`
-            : '';
+    async onClash(project: Project, { canReset }: ClashQuestion): Promise<ClashAnswer> {
+        // The owner's words (2026-10-24): no file names, the AI is handed those. The project
+        // is named for the notification this falls back to.
+        const lines = [
+            `This update changes something that was already edited in ${getProjectDisplayName(project)}'s ` +
+                'storefront. Use AI to keep both changes. Nothing goes live until you approve it.',
+            ...(canReset ? ['Or use the update and drop those edits.'] : []),
+        ];
         const answer = await askDuringOperation(
-            `${getProjectDisplayName(project)}: ${update} clashes with edits in the storefront in ` +
-                `${files.length} ${noun} (${files.join(', ')}). "${FIX_WITH_AI}" opens your AI on the clash; ` +
-                `"${LEAVE_IT}" changes nothing.${reset}`,
+            { title: 'The update clashes with your edits', message: lines.join('\n') },
             FIX_WITH_AI,
             LEAVE_IT,
-            ...(canReset ? [RESET_TO_TEMPLATE] : []),
+            ...(canReset ? [USE_THE_UPDATE] : []),
         );
         if (answer === FIX_WITH_AI) return 'fix';
-        return answer === RESET_TO_TEMPLATE && canReset ? 'reset' : 'leave';
+        return answer === USE_THE_UPDATE && canReset ? 'reset' : 'leave';
     },
-    async onUnfinished(project: Project, reason: string): Promise<UnfinishedAnswer> {
+    async onUnfinished(project: Project, _reason: string): Promise<UnfinishedAnswer> {
+        // The reason is the AI's to act on, not the SC's (owner, 2026-10-24).
+        const message =
+            `The AI didn't finish fixing ${getProjectDisplayName(project)}'s storefront. You can have it keep ` +
+            'going, pick it up later from Check for Updates, or drop it and skip this update.';
         const answer = await askDuringOperation(
-            `${getProjectDisplayName(project)}: the update kept to fix with AI is not ready to finish, because ` +
-                `${reason}. "${FIX_WITH_AI}" opens your AI on it again; "${DROP_THE_FIX}" puts the storefront ` +
-                'back as it was and offers the update again.',
+            { title: 'The fix is not finished', message },
             FIX_WITH_AI,
             KEEP_FOR_LATER,
             DROP_THE_FIX,
@@ -62,8 +64,12 @@ export const questionsInModal: UpdateQuestions = {
         // Asked under the library's own row, beneath its project, so it names neither:
         // it says what each answer does (owner, 2026-10-21).
         const answer = await askDuringOperation(
-            `"${REPLACE_BLOCKS}" puts in the new versions, and any edits you made to these blocks are lost. ` +
-                `"${KEEP_BLOCKS}" leaves them as they are.`,
+            {
+                title: 'Replace the blocks?',
+                message:
+                    `"${REPLACE_BLOCKS}" puts in the new versions, and any edits you made to these blocks are lost. ` +
+                    `"${KEEP_BLOCKS}" leaves them as they are.`,
+            },
             REPLACE_BLOCKS,
             KEEP_BLOCKS,
         );
@@ -95,7 +101,11 @@ export async function stopRunningDemos(
     const leftOut = new Set<string>();
     for (const project of projectsOf(selections).filter((p) => p.status === 'running')) {
         const name = getProjectDisplayName(project);
-        const answer = await askDuringOperation(`${name} is running. Stop it to update it?`, STOP_AND_UPDATE, SKIP);
+        const answer = await askDuringOperation(
+            { title: 'Stop the demo to update it?', message: `${name} is running. Stop it to update it?` },
+            STOP_AND_UPDATE,
+            SKIP,
+        );
         if (answer !== STOP_AND_UPDATE) {
             leftOut.add(project.path);
             skipped.push(`${name}: not updated, because its demo is running.`);

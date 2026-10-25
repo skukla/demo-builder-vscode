@@ -1,7 +1,7 @@
 {
     "_what": "Which surface a long operation opens. Two populations, both enforced by progress-surface.test.ts. 'directProgress' is every vscode.window.withProgress outside the five modules that own the surfaces \u2014 each entry says why it still opens its own notification instead of going through withOperationProgress, and the list may only shrink. 'blockingDialogs' is every modal:true dialog \u2014 each entry names the decision it gates, because a blocking dialog is for a choice made BEFORE work starts and for nothing else.",
     "directProgress": {
-        "src/commands/commandManager.ts:404": "Adobe sign-in, started from the palette, a dashboard button and a wizard step. It is not an operation with stages \u2014 one title, one spinner, nothing to report \u2014 and the router would have nothing to route.",
+        "src/commands/commandManager.ts:397": "Adobe sign-in, started from the palette, a dashboard button and a wizard step. It is not an operation with stages \u2014 one title, one spinner, nothing to report \u2014 and the router would have nothing to route.",
         "src/commands/migrateStorefrontNames.ts:157": "A one-off maintenance command run from the palette. R2 already says one notification, which is what this opens; nothing else narrates it.",
         "src/commands/repairSiteConfiguration.ts:107": "The republish half of the same palette command. Moving it alone would split one command across two surfaces.",
         "src/commands/repairSiteConfiguration.ts:82": "Palette maintenance command, reads the site's configuration. One notification is the right surface; it predates the router.",
@@ -15,7 +15,7 @@
         "src/features/eds/commands/manageGitHubRepos.ts:89": "Palette command, loading the repository list before anything is chosen.",
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts:271": "Verifies credentials the SC has just pasted, inside the prompt that asked for them. The prompt is the surface; this covers the check.",
         "src/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener.ts:102": "Runs when a VS Code setting changes, so there is no screen and no agent \u2014 a notification is the only surface available.",
-        "src/commands/commandManager.ts:463": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
+        "src/commands/commandManager.ts:456": "GitHub sign-in from the palette: one notification while the browser flow completes, the same shape as the Adobe sign-in above it (develop, merged 2026-09-24)."
     },
     "blockingDialogs": {
         "src/features/dashboard/handlers/appBuilderComponentPromote.ts:122": "Gates: create a PUBLIC GitHub repository and push the app to it? Only when no screen modal is asking; from the card the same yes is the modal's Create button.",
@@ -23,28 +23,25 @@
         "src/commands/ResetAllCommand.ts:28": "Gates: delete all Demo Builder data and state? The most destructive thing the extension offers.",
         "src/commands/migrateStorefrontNames.ts:139": "Gates: rename these storefronts? The detail lists exactly which ones, so the SC answers with the list in front of them.",
         "src/core/base/baseCommand.ts:258": "The generic confirm every command asks through. It gates whatever its caller is about to do; the callers are where the decision is named.",
-        "src/core/vscode/operationPrompt.ts:113": "Gates: sign in (or answer another question the work needs) before an agent's call can go on. Modal like the agent's consent dialogs, so a question an agent asks is never a corner notification (owner, 2026-09-21).",
+        "src/core/vscode/operationPrompt.ts:121": "Gates: sign in (or answer another question the work needs) before an agent's call can go on. Modal like the agent's consent dialogs, so a question an agent asks is never a corner notification (owner, 2026-09-21).",
         "src/features/eds/commands/cleanupDaLiveSites.ts:171": "Gates: delete these DA.live sites? Named in the detail: the pages come off the live site and the content does not come back.",
         "src/features/eds/commands/manageGitHubRepos.ts:166": "Gates: delete these GitHub repositories? Named in the detail, and they do not come back.",
         "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts:95": "Gates: cancel setup, knowing the GitHub repo and DA.live content created so far will be deleted? The cost of stopping is not obvious without asking.",
-        "src/features/lifecycle/services/projectResetService.ts:414": "Gates: delete the components and reinstall them from scratch? Configuration and integrations survive, the rest does not.",
-        "src/features/ai/server/agentOperationNotifier.ts:165": "Gates: let the agent run this tool? A cloud write an agent proposes is confirmed by a person before it happens.",
+        "src/features/lifecycle/services/projectResetService.ts:415": "Gates: delete the components and reinstall them from scratch? Configuration and integrations survive, the rest does not.",
+        "src/features/ai/server/agentOperationNotifier.ts:172": "Gates: let the agent run this tool? A cloud write an agent proposes is confirmed by a person before it happens.",
         "src/features/project-creation/handlers/executorEditApply.ts:229": "Gates: an Edit that changes the package resets the storefront to it. Its code and content are replaced; asked before anything in the Edit runs (PL-75).",
         "src/features/project-creation/handlers/executorEditApply.ts:240": "Gates: an Edit that unticks integrations undeploys them. Asked by name, before anything in the Edit runs (PL-75).",
-        "src/features/eds/services/reset/edsResetUI.ts:125": "Gates: reset this storefront to the template and re-copy demo content? Hand edits are lost. Not asked within an Edit, which asks its own version before anything runs.",
+        "src/features/eds/services/reset/edsResetUI.ts:126": "Gates: reset this storefront to the template and re-copy demo content? Hand edits are lost. Not asked within an Edit, which asks its own version before anything runs.",
         "src/features/eds/services/reset/edsResetSampleData.ts:109": "Gates: also remove the datapack this project imported from the Commerce instance, which takes several minutes and is not needed for a storefront reset (or, in an Edit that changes the datapack, before the new pack is imported)? A separate, costlier choice inside the same flow.",
         "src/features/eds/handlers/forgetAddedDemoHandler.ts:174": "Gates: take an added demo's card off the Welcome step \u2014 and, for a demo added from a zip, whether the repository made from it goes too. Modal because the detail names what stays and what goes before the click (develop, merged 2026-09-24).",
         "src/features/eds/handlers/forgetAddedDemoHandler.ts:187": "Gates: delete the repository made from the zip file. Irreversible, so it is asked on its own, after the first choice, and only when that choice included it (develop, merged 2026-09-24).",
-        "src/features/eds/services/reset/edsResetUI.ts:386": "Gates: keep the site's current content when the demo's source pages cannot be reached \u2014 the SC chooses between resetting code only and an empty site. A decision only they can make, asked before the reset starts (develop, merged 2026-09-24).",
-        "src/commands/storefrontReport.ts:84": "Gates: merge the template's newer commits into this storefront's fork. GitHub merges; the SC's own commits stay, and a conflict changes nothing.",
-        "src/commands/storefrontReport.ts:122": "Gates: apply Demo Builder's fixes to this storefront's code, in one commit to its repository.",
+        "src/features/eds/services/reset/edsResetUI.ts:387": "Gates: keep the site's current content when the demo's source pages cannot be reached \u2014 the SC chooses between resetting code only and an empty site. A decision only they can make, asked before the reset starts (develop, merged 2026-09-24).",
         "src/core/build/buildStampUi.ts:72": "Not a decision: shows which build of Demo Builder is running. Modal on purpose, because it is read when someone is unsure which build they have, and a toast that disappears is too easy to miss.",
         "src/features/authentication/handlers/deleteAdobeProjectHandler.ts:128": "Gates: permanently delete an Adobe I/O project and its event registrations and providers. Cannot be undone.",
         "src/features/dashboard/handlers/appBuilderComponentPromote.ts:317": "Gates: delete from GitHub the repository Demo Builder created when an app was saved to one. Cannot be undone. Skipped only for an agent that sends confirm: true after asking the user (delete_app_github_repo).",
         "src/features/dashboard/handlers/destinationHandlers.ts:315": "Gates: move the project to another Adobe project, which removes each integration with a workspace of its own from the old one (uninstalled from Commerce, workspace deleted). An Edit asks this before anything runs.",
         "src/features/projects-dashboard/services/deletionConfirmation.ts:37": "Gates: delete a project's files and configuration from this computer. Cannot be undone.",
         "src/features/project-creation/commands/createProject.ts:426": "Gates: throw away the changes made in this Edit and open project configuration? Asked only when the Edit has changes; leaving for Configure would discard them.",
-        "src/features/dashboard/handlers/statusHandlers.ts:56": "Gates: sign in to Adobe now, which opens the browser? Asked once per expiry when the dashboard finds the sign-in expired; a no opens nothing (owner, 2026-10-17).",
-        "src/features/eds/handlers/newCategoryPagesWatch.ts:50": "Gates: sign in to DA.live now, which opens the browser? Asked once per expiry when the new-category check finds the sign-in expired; a no opens nothing (owner, 2026-10-17)."
+        "src/features/dashboard/handlers/statusHandlers.ts:56": "Gates: sign in to Adobe now, which opens the browser? Asked once per expiry when the dashboard finds the sign-in expired; a no opens nothing (owner, 2026-10-17)."
     }
 }

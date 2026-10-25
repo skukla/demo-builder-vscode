@@ -66,10 +66,10 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     }),
 }));
 // The 404 handling and Quick Edit write through GitHub's API; asserted, not run.
-const mockInstall404 = jest.fn().mockResolvedValue({ installed: true });
+const mockInstall404 = jest.fn().mockResolvedValue({ smart404: { installed: true }, current: true });
 const mockInstallQuickEdit = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/eds/services/storefront/notFoundPage', () => ({
-    installMissingPageHandling: (...args: unknown[]) => mockInstall404(...args),
+jest.mock('@/features/eds/services/storefront/storefrontUpToDate', () => ({
+    bringStorefrontUpToDate: (...args: unknown[]) => mockInstall404(...args),
 }));
 jest.mock('@/features/eds/services/quickEditPublisher', () => ({
     installQuickEdit: (...args: unknown[]) => mockInstallQuickEdit(...args),

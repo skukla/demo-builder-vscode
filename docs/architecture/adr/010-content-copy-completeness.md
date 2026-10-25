@@ -63,6 +63,8 @@ completeness after** the copy.
   link in the source, carried over, not a gap in the copy. It is recorded on the
   project (`metadata.brokenLinks`, with the pages carrying it) and listed in the
   Storefront Report, whose dashboard tile wears a dot, instead of the warning pop-up.
+  Amended 2026-10-23 (EDS-64): the report window and its tile are removed. A reset names
+  the links on its last view, as a note; Diagnostics and `get_storefront_report` list them.
   Only a page the source has and the copy could not take still warns.
 - For **branded forks** whose own content legitimately lacks the B2B account pages
   (e.g. CitiSignal), an **account-chrome overlay** (`overlayAccountChrome`, driven

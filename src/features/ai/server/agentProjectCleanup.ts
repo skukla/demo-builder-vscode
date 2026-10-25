@@ -42,6 +42,12 @@ export interface CloudCleanupChoice {
 
 /** What actually happened out there. */
 export interface CloudCleanupOutcome {
+    /**
+     * Set when the storefront's pages are still live: why, for the SC. The repository
+     * was kept, and the caller keeps the project, so a second try can still take the
+     * pages down (EDS-65).
+     */
+    stopped?: string;
     githubRepo?: { name: string; deleted: boolean; error?: string };
     daLiveSite?: {
         name: string;
@@ -159,6 +165,7 @@ export async function cleanUpProjectCloud(
                 ...(torn.productPages ? { productPages: torn.productPages.summary } : {}),
                 error: torn.error,
             };
+            if (torn.stopped) return { ...outcome, stopped: torn.stopped };
         } catch (error) {
             outcome.daLiveSite = {
                 name,

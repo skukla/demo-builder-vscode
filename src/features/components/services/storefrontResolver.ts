@@ -133,7 +133,8 @@ function stackIdsOfKind(kind: AddedDemo['storefrontKind']): string[] {
 /**
  * The row's repository as a storefront. Template identity is the repository
  * itself, so reset goes back to it; no patches, pinning, overlay or brand
- * assets (D4: a colleague's code is theirs).
+ * assets (D4: a colleague's code is theirs). Our fixes still reach it: the build step
+ * applies every live patch that fits to every storefront (`knownPatches.ts`, EDS-64).
  */
 function storefrontFromAddedDemo(demo: AddedDemo): Storefront {
     const { owner, repo, branch } = demo.source;

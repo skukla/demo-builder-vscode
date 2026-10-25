@@ -51,7 +51,9 @@ export function describeStepFailure(error: unknown): string {
  * The label-sheet files. Label text lives in DA.live, and a file in the repository
  * hides the sheet at its path, so reset and creation remove the template's own and a
  * template update leaves the folder as the storefront has it (EDS-53: the B2B
- * template's placeholders/checkout.json hid CitiSignal's checkout sheet).
+ * template's placeholders/checkout.json hid CitiSignal's checkout sheet). One exception:
+ * where the storefront's file is our own stub over labels the template ships, the update
+ * puts the template's labels back (`labelStubRepair.ts`).
  */
 export const LABEL_SHEET_FILES: readonly string[] = PLACEHOLDER_STUB_PATHS.map((sheet) => `${sheet}.json`);
 

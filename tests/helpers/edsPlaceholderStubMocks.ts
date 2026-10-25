@@ -1,5 +1,5 @@
 /**
- * The six stub walls both EDS placeholder-stub suites install identically.
+ * The stub walls both EDS placeholder-stub suites install identically.
  *
  * `storefrontSetupPhase2.placeholderStubs` (a setup phase) and
  * `edsResetRepoHelper.placeholderStubs` (the reset path) both assert that the
@@ -12,6 +12,9 @@
  * phase, and `configGenerator`, `codePatchPipelineHelpers` and `lkgReader` for
  * reset. They stay put — the imported wall wins over a suite's own, so a shared
  * file must hold only what every consumer agrees on.
+ *
+ * The retired-patch ledger wall (EDS-62) joined them: both paths now run the storefront
+ * repairs, whose ledger read is a network fetch, and every consumer wants it answered empty.
  *
  * IMPORT THIS BEFORE the code under test; `jest.mock` hoists above the imports
  * of the module it appears in, not across modules. Pinned by
@@ -44,6 +47,10 @@ jest.mock('@/features/eds/services/inspectorHelpers', () => ({
 
 jest.mock('@/features/eds/services/pdp/pdp404HandlerPublisher', () => ({
     installSmart404Handler: jest.fn().mockResolvedValue({ installed: false, reason: 'no-overlay' }),
+}));
+
+jest.mock('@/features/eds/services/patches/shippedPatchLedger', () => ({
+    readShippedPatches: jest.fn().mockResolvedValue({ live: [], retired: [], complete: true }),
 }));
 
 jest.mock('@/features/eds/services/quickEditPublisher', () => ({

@@ -294,4 +294,42 @@ describe('executeEdsPipeline - step gating', () => {
             expect((publishLibraryPaths as jest.Mock).mock.calls[0][3]).toEqual(['/.da/library/blocks.json']);
         });
     });
+
+    /**
+     * EDS-61: an authored page at a category address must be on the published
+     * authored-pages sheet BEFORE the bulk publish previews it, or the overlay replaces it.
+     * The caller's hook runs after the copy (so it sees the content now in DA.live) and
+     * before the publish.
+     */
+    describe('the hook before the content publish', () => {
+        const SOURCE = { contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' } };
+
+        it('runs after the content copy and before the bulk publish', async () => {
+            const beforeContentPublish = jest.fn().mockResolvedValue(undefined);
+
+            await executeEdsPipeline({ ...params, ...SOURCE, beforeContentPublish }, services);
+
+            expect(beforeContentPublish).toHaveBeenCalledTimes(1);
+            const hook = beforeContentPublish.mock.invocationCallOrder[0];
+            expect(mockCopyContentFromSource.mock.invocationCallOrder[0]).toBeLessThan(hook);
+            expect(hook).toBeLessThan(mockPublishAllSiteContent.mock.invocationCallOrder[0]);
+        });
+
+        it('does not run when nothing is published', async () => {
+            const beforeContentPublish = jest.fn().mockResolvedValue(undefined);
+
+            await executeEdsPipeline({ ...params, ...SOURCE, skipPublish: true, beforeContentPublish }, services);
+
+            expect(beforeContentPublish).not.toHaveBeenCalled();
+        });
+
+        it('never stops the publish: a hook that throws is logged and the content still goes out', async () => {
+            const beforeContentPublish = jest.fn().mockRejectedValue(new Error('DA.live 503'));
+
+            const result = await executeEdsPipeline({ ...params, ...SOURCE, beforeContentPublish }, services);
+
+            expect(mockPublishAllSiteContent).toHaveBeenCalled();
+            expect(result.success).toBe(true);
+        });
+    });
 });

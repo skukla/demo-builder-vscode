@@ -1,9 +1,10 @@
 /**
- * What a catalog menu run did, in plain words (EDS-24).
+ * What a catalog menu run did, in plain words (EDS-24, EDS-61).
  *
- * One text for every path that writes or removes the pages — storefront setup, reset and
- * republish report it in their progress and logs, and on their results. Written for the
- * SC — no tool names, no field names.
+ * One text for every path that publishes or removes the category pages — storefront
+ * setup, reset and republish report it in their progress and logs, and on their results
+ * (`categoryPages` on `reset_project` and `republish`). Written for the SC — no tool
+ * names, no field names.
  *
  * Pure, and free of Node imports, so it could run on either side.
  *
@@ -11,6 +12,7 @@
  */
 
 import type { ApplyReport, PageFailure, PageSkip, RemoveReport } from './catalogMenuService';
+import { CATEGORY_TEMPLATE_PATH } from './categoryPagePlan';
 
 type BuildFacts = Omit<ApplyReport, 'record'>;
 type RemovalFacts = Omit<RemoveReport, 'record'>;
@@ -34,19 +36,9 @@ function label(skip: PageSkip): string {
 
 function skippedSentences(skipped: PageSkip[]): string[] {
     const edited = skipped.filter((s) => s.reason === 'edited').map(label);
-    const notOurs = skipped.filter((s) => s.reason === 'not-ours').map(label);
-    const it = (n: number): string => (n === 1 ? 'it' : 'them');
-    return [
-        ...(edited.length
-            ? [`Left ${count(edited.length, 'page')} alone because you edited ${it(edited.length)} (${named(edited)}).`]
-            : []),
-        ...(notOurs.length
-            ? [
-                  `Left ${count(notOurs.length, 'page')} alone because Demo Builder didn't write ` +
-                      `${it(notOurs.length)} (${named(notOurs)}).`,
-              ]
-            : []),
-    ];
+    if (!edited.length) return [];
+    const it = edited.length === 1 ? 'it' : 'them';
+    return [`Left ${count(edited.length, 'page')} alone because you edited ${it} (${named(edited)}).`];
 }
 
 /** "Signs uses your page at /safety-signage." — one sentence per category, then a count. */
@@ -59,22 +51,65 @@ function ownPageSentences(skipped: PageSkip[]): string[] {
     ];
 }
 
-function replacedSentence(replaced: string[]): string[] {
-    if (!replaced.length) return [];
+function legacySentence(removed: string[]): string[] {
+    if (!removed.length) return [];
     return [
-        `Removed ${count(replaced.length, 'category page')} Demo Builder wrote earlier, ` +
-            `now that you have your own (${named(replaced)}).`,
+        `Removed ${count(removed.length, 'category page')} Demo Builder wrote in DA.live; ` +
+            'the product page overlay serves those addresses now.',
     ];
+}
+
+function templateSentence(template: BuildFacts['template']): string[] {
+    if (template.status === 'written') {
+        return [
+            `Wrote the category page template at ${CATEGORY_TEMPLATE_PATH}; edit it to change every ` +
+                'category page, then republish.',
+        ];
+    }
+    if (template.status === 'failed') {
+        return [
+            `Couldn't write the category page template (${template.error}); category pages use a plain ` +
+                'layout until it exists.',
+        ];
+    }
+    return [];
+}
+
+function prunedSentence(pruned: BuildFacts['pruned']): string[] {
+    if (!pruned || pruned.status === 'nothing') return [];
+    if (pruned.status === 'removed') {
+        return [`Took down ${count(pruned.liveRemoved, 'category page')} for categories the store no longer has.`];
+    }
+    return [pruned.summary];
+}
+
+function sheetSentences(report: BuildFacts): string[] {
+    if (report.sheet !== 'published') {
+        return [
+            `Couldn't publish the list of pages you wrote at category addresses (${report.sheet.error}), so no ` +
+                `category page was published; ${RETRY_BUILD.toLowerCase()}.`,
+        ];
+    }
+    const n = report.authored.length;
+    if (n === 0) return [];
+    const what = n === 1 ? "1 page you wrote at a category's address" : `${n} pages you wrote at category addresses`;
+    return [`Kept ${what} (${named(report.authored)}): the product page overlay leaves ${n === 1 ? 'it' : 'them'} alone.`];
+}
+
+function publishedSentence(report: BuildFacts): string[] {
+    if (report.sheet !== 'published') return [];
+    if (report.deferred) return ['Category pages are published the first time someone opens one.'];
+    return report.published.length ? [`Published ${count(report.published.length, 'category page')}.`] : [];
 }
 
 /** What the SC does to try again: a build re-runs on Republish, a removal on the next reset. */
 const RETRY_BUILD = 'Republish the storefront to try again';
 const RETRY_REMOVAL = 'Reset the storefront again to retry';
 
-function failedSentence(failed: PageFailure[], verb: string, retry: string): string[] {
+function failedSentence(failed: PageFailure[], verb: string, retry: string, noun = 'page'): string[] {
     if (!failed.length) return [];
     const detail = named(failed.map((f) => `${f.path}: ${f.error}`));
-    return [`${count(failed.length, 'page')} couldn't be ${verb}; ${retry.toLowerCase()} (${detail}).`];
+    return [`${count(failed.length, noun)} couldn't be ${verb}; ${retry.toLowerCase()} (${detail}).`];
 }
 
 function navFailure(navError: string | undefined, retry: string): string {
@@ -83,6 +118,7 @@ function navFailure(navError: string | undefined, retry: string): string {
 
 const BUILD_NAV: Record<Exclude<BuildFacts['nav'], 'failed'>, string> = {
     added: 'Added the catalog menu to your nav.',
+    'line-updated': "Rewrote the catalog menu lines in your nav in the wording your storefront's menu block reads.",
     'links-updated': 'Updated the catalog menu links in your nav.',
     'already-present': 'The catalog menu was already in your nav.',
     'no-menu-list': 'Your nav has no list for the menu line, so the menu was not added.',
@@ -105,13 +141,15 @@ const REMOVAL_NAV: Record<Exclude<RemovalFacts['nav'], 'failed'>, string> = {
 export function describeBuild(report: BuildFacts): string {
     const unsafe = report.unsafe.map((u) => u.name);
     return [
-        ...(report.written.length
-            ? [`Wrote and published ${count(report.written.length, 'category page')}.`]
-            : []),
+        ...publishedSentence(report),
+        ...sheetSentences(report),
+        ...failedSentence(report.failed, 'published', RETRY_BUILD, 'category page'),
+        ...prunedSentence(report.pruned),
+        ...templateSentence(report.template),
         ...ownPageSentences(report.skipped),
-        ...replacedSentence(report.replaced),
+        ...legacySentence(report.legacyRemoved),
+        ...failedSentence(report.legacyFailed, 'removed', RETRY_BUILD),
         ...skippedSentences(report.skipped),
-        ...failedSentence(report.failed, 'written', RETRY_BUILD),
         ...(unsafe.length
             ? [
                   `Skipped ${count(unsafe.length, 'category', 'categories')} whose web address the ` +
@@ -124,7 +162,26 @@ export function describeBuild(report: BuildFacts): string {
 
 function isNothing(report: RemovalFacts): boolean {
     const touched = report.removed.length + report.alreadyGone.length + report.skipped.length;
-    return touched + report.failed.length === 0 && report.nav === 'not-recorded';
+    const overlayPages = report.categoryPages !== undefined && report.categoryPages.status !== 'nothing';
+    const template = report.template !== 'not-recorded';
+    const sheetFailed = typeof report.sheet === 'object';
+    return (
+        touched + report.failed.length === 0 &&
+        report.nav === 'not-recorded' &&
+        !overlayPages &&
+        !template &&
+        !sheetFailed
+    );
+}
+
+const REMOVAL_TEMPLATE: Partial<Record<string, string>> = {
+    removed: 'Removed the category page template.',
+    edited: 'Left the category page template alone because you edited it.',
+};
+
+function removalTemplateSentence(template: RemovalFacts['template']): string[] {
+    const sentence = typeof template === 'string' ? REMOVAL_TEMPLATE[template] : undefined;
+    return sentence ? [sentence] : [];
 }
 
 /**
@@ -139,27 +196,18 @@ export function describeRemoval(report: RemovalFacts): string {
     return [
         ...(report.removed.length ? [`Removed ${count(report.removed.length, 'category page')}.`] : []),
         ...(gone ? [`${count(gone, 'page')} ${gone === 1 ? 'was' : 'were'} already gone.`] : []),
+        ...removalTemplateSentence(report.template),
+        ...(typeof report.sheet === 'object'
+            ? [
+                  `Couldn't take down the list of pages you wrote at category addresses (${report.sheet.error}); ` +
+                      `${RETRY_REMOVAL.toLowerCase()}.`,
+              ]
+            : []),
+        ...(report.categoryPages && report.categoryPages.status !== 'nothing' ? [report.categoryPages.summary] : []),
         ...skippedSentences(report.skipped),
         ...failedSentence(report.failed, 'removed', RETRY_REMOVAL),
         report.nav === 'failed' ? navFailure(report.navError, RETRY_REMOVAL) : REMOVAL_NAV[report.nav],
     ]
         .filter(Boolean)
         .join(' ');
-}
-
-/**
- * What the add-only run did (EDS-27): the categories that got a page, by name.
- *
- * @param added - the categories whose pages were written and published
- * @param failed - the pages that could not be written
- * @returns the summary
- */
-export function describeAdded(added: Array<{ name: string; path: string }>, failed: PageFailure[]): string {
-    if (added.length + failed.length === 0) return 'No category is missing a page.';
-    const names = named(added.map((c) => `${c.name} (${c.path})`));
-    const what = added.length === 1 ? 'a page for 1 new category' : `pages for ${added.length} new categories`;
-    return [
-        ...(added.length ? [`Added ${what}: ${names}.`] : []),
-        ...failedSentence(failed, 'written', RETRY_BUILD),
-    ].join(' ');
 }

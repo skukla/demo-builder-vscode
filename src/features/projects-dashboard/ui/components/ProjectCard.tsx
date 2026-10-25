@@ -143,13 +143,17 @@ export function ProjectCard({
                 </Flex>
             )}
 
-            {/* Deployment Status Row — mesh + storefront + integrations, worst-of */}
+            {/* Deployment Status Row — mesh + storefront + integrations, worst-of; "Needs
+                reset" when the storefront is behind, in place of "Deployed". */}
             {deployment && (
-                <Flex alignItems="center" gap="size-100">
-                    <StatusDot variant={deployment.variant} size={6} />
-                    <Text UNSAFE_className="project-card-spectrum-status">{deployment.text}</Text>
-                </Flex>
+                <span title={deployment.explanation} data-testid="project-deployment-status">
+                    <Flex alignItems="center" gap="size-100">
+                        <StatusDot variant={deployment.variant} size={6} />
+                        <Text UNSAFE_className="project-card-spectrum-status">{deployment.text}</Text>
+                    </Flex>
+                </span>
             )}
+
         </div>
     );
 }

@@ -57,6 +57,20 @@ jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     })),
 }));
 
+/**
+ * The code publish answers "published". Phase 3 FAILS a run whose code did not
+ * reach the CDN (scratch-1022, 2026-10-22), and the real `HelixService` cannot
+ * publish here — it reads a GitHub token from `context.secrets`, which is `{}`.
+ * Until that change the failure was swallowed, so every suite in this family ran
+ * over a failed publish without knowing it. What a failed publish does is pinned in
+ * `storefrontSetupPhase3-confirmCodeSync.test.ts`, not here.
+ */
+jest.mock('@/features/eds/services/helix/helixService', () => ({
+    HelixService: jest.fn().mockImplementation(() => ({
+        previewCode: jest.fn().mockResolvedValue(undefined),
+    })),
+}));
+
 // Below the factories on purpose — they hoist above it, so the subject binds to the
 // mocked modules. `import/first` is not a registered eslint rule here.
 export { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';

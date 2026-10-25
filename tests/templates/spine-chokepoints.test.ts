@@ -428,7 +428,7 @@ describe('spine choke-points', () => {
         // datapack goes through the same phase file, `rewriteCatalogMenuPhase` running
         // reset's removal first), reset (dashboard Reset and
         // reset_project, via executeEdsReset), and republish (dashboard Republish and
-        // sync_content, via republishStorefrontContent).
+        // the agent's republish, via republishStorefrontContent).
         //
         // EDS-44 (2026-10-15) added a fourth: after a store change, the store-change
         // service (`storeScopePages`) swaps the old store's pages for the new store's
@@ -497,18 +497,17 @@ describe('spine choke-points', () => {
         ]);
     });
 
-    it('STORE CHANGE pages: one service, three doors (EDS-44)', () => {
+    it('STORE CHANGE pages: one service, two doors (EDS-44)', () => {
         // Audited 2026-10-15. After a store change the old store's product and category
         // pages are replaced by ONE service, `replaceStoreScopePages`. Its doors:
-        // Configure's Republish (configureStorefrontRepublish), the agent's `republish`
-        // (storefrontTools), and the dashboard's Republish / `sync_content`
-        // (republishStorefrontContent). Each calls it only when the marker is set and its
-        // own config publish reached the CDN. A fourth door, or a door that rebuilds the
-        // pages by itself, fails here.
+        // Configure's Republish (configureStorefrontRepublish), and the dashboard's
+        // Republish (republishStorefrontContent), which the agent's `republish` runs too
+        // since 2026-10-23 (EDS-63; it was a third door of its own before). Each calls it
+        // only when the marker is set and its own config publish reached the CDN. A third
+        // door, or a door that rebuilds the pages by itself, fails here.
         const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
 
         expect(sorted(/\breplaceStoreScopePages\(/)).toStrictEqual([
-            'features/ai/server/storefrontTools.ts',
             'features/dashboard/commands/configureStorefrontRepublish.ts',
             'features/eds/services/storefront/storeScopePages.ts',
             'features/eds/services/storefront/storefrontContentRepublishService.ts',
@@ -537,21 +536,21 @@ describe('spine choke-points', () => {
         ]);
     });
 
-    it('category PAGES for new categories: the add-only write has one step and two doors', () => {
-        // Audited 2026-10-05 (EDS-27). Pages for categories added after setup are
-        // written by the SAME step file as the three flows above, through an add-only
-        // primitive that cannot rewrite or remove a page. Two doors reach it: the
-        // watcher that runs while a project is open (offer, or add when the SC has
-        // opted in) and the agent's add_category_pages. The unattended write lives
-        // behind the watcher alone, which is where the owner's ruling is recorded.
-        expect(filesTouchingPrimitive(/\baddMissingCategoryPages\(/)).toStrictEqual([
-            'features/eds/services/catalogMenu/catalogMenuStep.ts',
-            'features/eds/services/catalogMenu/newCategoryPages.ts',
-        ]);
-        expect(filesTouchingPrimitive(/\baddNewCategoryPagesStep\(/)).toStrictEqual([
-            'features/ai/server/categoryPageTools.ts',
-            'features/eds/services/catalogMenu/catalogMenuStep.ts',
-            'features/eds/services/catalogMenu/newCategoryPagesWatcher.ts',
+    it('category PAGE removal: one implementation, reached only through the catalog menu site', () => {
+        // Audited 2026-10-22 (EDS-61). Category pages are published through the overlay
+        // at each category's own address and have no DA.live document. The primitive is
+        // `removeCategoryPages` — handed the exact paths the step published for categories
+        // that are gone (never an address DA.live holds a document for, never the
+        // template), it refuses on a shared repository and reports a live-only removal as
+        // such. Its one door is the site the catalog menu step runs on
+        // (`catalogMenuSiteDeps`), so reset, a store change and republish all go through
+        // the step.
+        // The watcher and add_category_pages that EDS-27 added were removed with it.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\bremoveCategoryPages\(/)).toStrictEqual([
+            'features/eds/services/catalogMenu/catalogMenuSiteDeps.ts',
+            'features/eds/services/storefront/productPageRemoval.ts',
         ]);
     });
 });

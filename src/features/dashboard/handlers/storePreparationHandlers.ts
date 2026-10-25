@@ -13,9 +13,9 @@
  */
 
 import { guardOrBlock, postComponentsSnapshot, type GuardableResult } from './appBuilderComponentHandlers';
-import { checkedRecords, openChecklist, type OpenedChecklist } from './setupChecklistHandlers';
+import { openChecklist, type OpenedChecklist } from './setupChecklistHandlers';
 import { setAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { OPERATION_STAGES, type OperationStage } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
 import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
@@ -29,6 +29,7 @@ import {
     type PreparationOutcome,
 } from '@/features/app-builder/services/storePreparation/storePreparationEngine';
 import { erpNamesOf, setupCheckReader } from '@/features/dashboard/services/setupCheckReader';
+import { recordsAfterRun } from '@/features/dashboard/services/setupStepRecords';
 import { openCommerce, type CommerceClient } from '@/features/project-creation/services/erpAssignProducts';
 import type { SetupConfigFixItem } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState, SetupStepRecord } from '@/types/base';
@@ -71,17 +72,9 @@ const failed = (verb: string, error: unknown): HandlerResponse => ({
     error: `Could not ${verb}: ${error instanceof Error ? error.message : String(error)}`,
 });
 
-/**
- * The checklist records after a run, so the guide and the card agree with what Prepare just
- * said: every step's FRESH check as the engine found it (no second read), then a new check of
- * the steps the run wrote to or undid, whose answer the write has changed.
- */
-async function recordsAfter(opened: Opened, checks: FreshChecks, reports: PreparationStepReport[]): Promise<Record<string, SetupStepRecord>> {
-    const found = opened.steps.filter((step) => checks[step.id]);
-    const byCheck = new Map(found.map((step) => [step.check, checks[step.id]]));
-    const fresh = await checkedRecords(found, opened.state.setupSteps, async (check) => byCheck.get(check) ?? { note: '' });
-    const touched = new Set(reports.filter((report) => ['applied', 'undone', 'rejected'].includes(report.state)).map((report) => report.id));
-    return checkedRecords(opened.steps.filter((step) => touched.has(step.id)), fresh, opened.deps.runCheck);
+/** The checklist records after a run, as `recordsAfterRun` gives them for this integration. */
+function recordsAfter(opened: Opened, checks: FreshChecks, reports: PreparationStepReport[]): Promise<Record<string, SetupStepRecord>> {
+    return recordsAfterRun(opened.steps, opened.state.setupSteps, checks, reports, opened.deps.runCheck);
 }
 
 /** Save the record (or its absence) and the checked steps on the component. */
@@ -103,7 +96,37 @@ async function savePreviewChecks(context: HandlerContext, opened: Opened, checks
     await postComponentsSnapshot(context);
 }
 
-type RunOutcome = GuardableResult & { reports?: PreparationStepReport[]; record?: StorePreparationRecord; warning?: string };
+type RunOutcome = GuardableResult & {
+    reports?: PreparationStepReport[];
+    record?: StorePreparationRecord;
+    warning?: string;
+    details?: string[];
+};
+
+/** How a run reads in the progress modal: its stage while it runs, and what it says when nothing changed. */
+interface RunWords {
+    title: string;
+    stage: OperationStage;
+    nothing?: string;
+}
+
+const APPLY_WORDS: RunWords = {
+    title: 'Preparing the store',
+    stage: OPERATION_STAGES.preparingStore,
+    nothing: 'Nothing changed: every step was already done in the store.',
+};
+const UNDO_WORDS: RunWords = { title: 'Undoing the store preparation', stage: OPERATION_STAGES.undoingStorePreparation };
+
+/**
+ * What the run changed, for the result screen (live release test, 2026-10-22: it said only
+ * "Store prepared"): each step that changed something by its label, then its lines. What
+ * Commerce refused is the warning (`summarize`), not repeated here.
+ */
+function changedLines(reports: PreparationStepReport[], nothing?: string): string[] {
+    const lines = reports.filter((report) => report.changes.length > 0).flatMap((report) => [`${report.label}:`, ...report.changes]);
+    const refused = reports.some((report) => report.rejected.length > 0);
+    return lines.length === 0 && !refused && nothing ? [nothing] : lines;
+}
 
 /** The result's counts, and what Commerce refused, for the modal's success view. */
 function summarize(reports: PreparationStepReport[]): { counts: Record<string, number>; warning?: string } {
@@ -119,21 +142,23 @@ async function runInProgress(
     context: HandlerContext,
     opened: Opened,
     payload: { progress?: 'modal' } | undefined,
-    title: string,
+    words: RunWords,
     work: (deps: PreparationDeps) => Promise<PreparationOutcome>,
 ): Promise<RunOutcome> {
+    const { title, stage } = words;
     const outcome = await withOperationProgress(
         { id: opened.id, title, inModal: progressSurfaceOf(payload) === 'modal', cardLabel: title },
         async (report: ReportStage): Promise<RunOutcome> => {
             const refused = await guardOrBlock(context, opened.project, (message) => report(message), progressSurfaceOf(payload));
             if (refused) return refused;
-            report(OPERATION_STAGES.preparingStore.label);
-            const deps: PreparationDeps = { ...opened.deps, onProgress: (step, what) => report(OPERATION_STAGES.preparingStore.label, `${step.label ?? step.title}: ${what}`) };
+            report(stage.label);
+            const deps: PreparationDeps = { ...opened.deps, onProgress: (step, what) => report(stage.label, `${step.label ?? step.title}: ${what}`) };
             try {
                 const result = await work(deps);
                 await saveOutcome(context, opened, result);
                 const { warning } = summarize(result.reports);
-                return { success: true, reports: result.reports, record: result.record, ...(warning ? { warning } : {}) };
+                const details = changedLines(result.reports, words.nothing);
+                return { success: true, reports: result.reports, record: result.record, details, ...(warning ? { warning } : {}) };
             } catch (error) {
                 return failed('prepare the store', error);
             }
@@ -170,7 +195,7 @@ export const handlePrepareCommerceStore: MessageHandler<PrepareStoreRequestPaylo
                 return failed('read what the store needs', error);
             }
         }
-        const outcome = await runInProgress(context, opened, payload, 'Preparing the store', (deps) => applyPreparation(opened.steps, opened.state, deps, stepIds));
+        const outcome = await runInProgress(context, opened, payload, APPLY_WORDS, (deps) => applyPreparation(opened.steps, opened.state, deps, stepIds));
         return answerOf(outcome);
     },
     (payload) => payload?.id ?? '',
@@ -196,7 +221,7 @@ export const handleUndoCommerceStorePreparation: MessageHandler<UndoStorePrepara
                 .map(([id, entry]) => ({ id, recorded: entry }));
             return { success: true, data: { confirmed: false, at: record.at, steps } };
         }
-        const outcome = await runInProgress(context, opened, payload, 'Undoing the store preparation', (deps) => undoPreparation(opened.steps, record, deps, stepId));
+        const outcome = await runInProgress(context, opened, payload, UNDO_WORDS, (deps) => undoPreparation(opened.steps, record, deps, stepId));
         return answerOf(outcome, { undone: true });
     },
     (payload) => payload?.id ?? '',

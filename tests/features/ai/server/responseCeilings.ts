@@ -155,14 +155,6 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     publish_page: { bytes: 1_000, why: 'publish outcome' },
     delete_page: { bytes: 1_000, why: 'delete outcome, or the confirm refusal' },
     list_content: { bytes: 12_000, why: 'one row per entry; 1,664 live at a site root' },
-    check_category_pages: {
-        bytes: 6_000,
-        why: 'one name-and-address row per category added since setup (a handful; a whole new branch of the tree is tens), the setting and one hint',
-    },
-    add_category_pages: {
-        bytes: 6_000,
-        why: 'the same rows as added, one sentence naming at most five; or the refusal naming the pages it would write',
-    },
 
     // ── cloud resources ─────────────────────────────────────────────────────
     list_github_repos: { bytes: 6_000, why: 'paged at 30; 2,835 live across 173 repos' },
@@ -230,7 +222,6 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
 
     // ── storefront ──────────────────────────────────────────────────────────
     republish: { bytes: 1_000, why: 'per-step publish outcome' },
-    sync_content: { bytes: 1_000, why: 'per-step publish outcome' },
     get_storefront_report: {
         bytes: 6_000,
         why: 'seven fixes with their targets plus the ~12 lines the SC reads; measured 2026-10-03 on a full fixture, not live',

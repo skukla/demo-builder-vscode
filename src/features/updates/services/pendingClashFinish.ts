@@ -35,6 +35,7 @@ import {
     type KeptClashRecord,
 } from '@/features/eds/services/storefront/keptClashMark';
 import { readBoilerplateBase, writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
+import { checkoutLabelAccess, labelsPutBack, repairStubbedLabelFiles } from '@/features/updates/services/labelStubRepair';
 import { openLocalCopy, type LocalCopy } from '@/features/updates/services/localStorefrontRefresh';
 import {
     readPendingClash,
@@ -99,13 +100,23 @@ async function checkJavaScript(file: string, text: string, ctx: UpdateContext): 
     }
 }
 
+/**
+ * The same file content: equal ids, or one a shortened form of the other. Records kept
+ * before ids were read in full hold git's short form, whose length git picks per repo
+ * and per day (JustRite's held 9 characters and git said 8 at finishing, 2026-10-24).
+ */
+function sameObject(a: string | null | undefined, b: string | null | undefined): boolean {
+    if (!a || !b) return a === b;
+    return a.startsWith(b) || b.startsWith(a);
+}
+
 /** The first path the copy changed beyond the update and the clash, if any. */
 function strayChange(now: Record<string, string | null>, applied: Record<string, string | null>, files: string[]): string | undefined {
     const clash = new Set(files);
     const paths = new Set([...Object.keys(now), ...Object.keys(applied)]);
     for (const file of paths) {
         if (clash.has(file)) continue;
-        if (now[file] !== applied[file]) return file;
+        if (!sameObject(now[file], applied[file])) return file;
     }
     return undefined;
 }
@@ -152,8 +163,10 @@ async function readiness(copy: LocalCopy, clash: PendingClash, ctx: UpdateContex
 
 /** Commit and push the fixed update from the local copy; the new commit's id. */
 async function commitAndPush(copy: LocalCopy, clash: PendingClash, project: Project, ctx: UpdateContext): Promise<{ commit: string; notes: string[] } | string> {
+    // Our stub over the template's labels goes in the same commit, as on the clean path.
+    const labels = await repairStubbedLabelFiles(checkoutLabelAccess(copy.storefrontPath, copy.git, clash.target));
     const patched = clash.fixes ? await reapplyPatchesInCheckout(copy.storefrontPath, project, ctx.logger) : [];
-    if (clash.fixes) await copy.git('git add -A', TIMEOUTS.NORMAL);
+    if (clash.fixes || labels.length > 0) await copy.git('git add -A', TIMEOUTS.NORMAL);
     const message = clash.track === 'boilerplate' ? BOILERPLATE_COMMIT : TEMPLATE_COMMIT;
     // Nothing left to commit when the whole fixed update was committed already.
     const staged = (await copy.git('git diff --cached --quiet', TIMEOUTS.QUICK)).code !== 0;
@@ -165,7 +178,7 @@ async function commitAndPush(copy: LocalCopy, clash: PendingClash, project: Proj
         return 'GitHub refused the push';
     }
     const commit = (await copy.git('git rev-parse HEAD', TIMEOUTS.QUICK)).stdout.trim();
-    return { commit, notes: patchesNotPutBack(patched) };
+    return { commit, notes: [...labelsPutBack(labels), ...patchesNotPutBack(patched)] };
 }
 
 /** Record the version the storefront is on now, as the clean path does. */

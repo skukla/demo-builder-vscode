@@ -60,6 +60,12 @@ export interface ShowUpdatesPayload {
 /** `applyUpdates` — the ids of the rows the SC left ticked. */
 export interface ApplyUpdatesRequest {
     ids: string[];
+    /**
+     * The ticked rows as the screen shows them. The extension applies the ids against the
+     * check it holds; when it no longer holds one (a restart), it checks again and finds
+     * these rows in the fresh check instead.
+     */
+    rows?: PendingUpdateRow[];
     /** Always the modal: the run is told in the projects list's progress modal. */
     progress?: 'modal';
 }
@@ -94,6 +100,17 @@ export interface ApplyUpdatesResponse {
     error?: string;
     /** Set when some updates did not apply; the run still ended, and their rows say why. */
     warning?: string;
+    /**
+     * How many rows the SC left unticked a fresh check still lists, when any: the window
+     * then offers "Back to updates". A ticked row that did not apply is not counted.
+     */
+    remaining?: number;
+}
+
+/** `recheckUpdates` — the rows of a fresh Check for Updates; empty when nothing waits. */
+export interface RecheckUpdatesResponse {
+    success: true;
+    data: { rows: PendingUpdateRow[] };
 }
 
 /** `takeUpdatesRequest` — the rows to show when the screen was opened for them, else null. */

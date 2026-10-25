@@ -66,16 +66,8 @@ describe('create_project — an added demo by id', () => {
         expect(executeProjectCreation).toHaveBeenCalled();
     });
 
-    it("passes the user's yes to Demo Builder's fixes into storefront setup, and never on its own (EDS-13f)", async () => {
-        await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo' });
-        await toolServer().call({ ...EDS, package: 'added:jen/isle5-demo', applyFixes: true });
-
-        expect(storefrontSetup.mock.calls[0][1]).not.toHaveProperty('applyDemoFixes');
-        expect(storefrontSetup.mock.calls[1][1]).toMatchObject({ applyDemoFixes: true });
-    });
-
-    it("says what the storefront setup said about the demo: the caveats and the offer (EDS-13f)", async () => {
-        const offer = "1 of Demo Builder's fixes fits this storefront's code: empty product pages.";
+    it('says what the storefront setup said about the demo (EDS-13f)', async () => {
+        const offer = '2 pages the source has are missing from this storefront: /cart, /checkout';
         storefrontSetup.mockImplementationOnce(async (ctx: { sendMessage: (t: string, d?: unknown) => Promise<void> }) => {
             await ctx.sendMessage('storefront-setup-complete', {
                 message: 'Done',

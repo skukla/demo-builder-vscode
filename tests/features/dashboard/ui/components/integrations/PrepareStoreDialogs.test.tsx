@@ -21,6 +21,7 @@ import {
     usePrepareStoreDialogs,
     type PrepareStoreControls,
 } from '@/features/dashboard/ui/components/integrations/PrepareStoreDialogs';
+import { STEP_PREVIEW_COPY } from '@/features/dashboard/ui/components/integrations/PrepareStepPreview';
 import type { ComponentOperationControls } from '@/features/dashboard/ui/hooks/useComponentOperation';
 import type { PreparationStepReport } from '@/types/storePreparation';
 
@@ -122,9 +123,9 @@ describe('the confirms', () => {
         expect(started(ops)).toEqual([['undoCommerceStorePreparation', { confirm: true }]]);
     });
 
-    it("confirms a step's Apply and Undo from the guide, each for that step alone", () => {
+    it("confirms a step's Apply and Undo from the guide, each for that step alone", async () => {
         const ops = renderDialogs();
-        act(() => controls.prepareStep({ ...TARGET, mode: 'apply', stepId: 'price-scope-website', label: 'Price scope' }));
+        await act(async () => controls.prepareStep({ ...TARGET, mode: 'apply', stepId: 'price-scope-website', label: 'Price scope' }));
         expect(screen.getByText(PREPARE_STORE_COPY.stepApplyTitle('Price scope'))).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: PREPARE_STORE_COPY.stepApplyAction }));
         act(() => controls.prepareStep({ ...TARGET, mode: 'undo', stepId: 'price-scope-website', label: 'Price scope' }));
@@ -133,5 +134,59 @@ describe('the confirms', () => {
             ['prepareCommerceStore', { confirm: true, stepIds: ['price-scope-website'] }],
             ['undoCommerceStorePreparation', { confirm: true, stepId: 'price-scope-website' }],
         ]);
+    });
+});
+
+// Live release test, 2026-10-22: "Apply: Product attributes" said only that Demo Builder checks
+// first. It now reads that one step's preview as it opens and says what the apply would change.
+describe("a step's Apply confirm says what it would change", () => {
+    const ATTRIBUTES: PreparationStepReport = {
+        id: 'erp-attributes',
+        label: 'Product attributes',
+        title: 't',
+        state: 'applicable',
+        changes: ['Add erp_owner to the attribute set Default (163 products)', 'Add erp_owner to the attribute set Phones (77 products)'],
+        rejected: [],
+    };
+    const openStep = async () =>
+        act(async () => controls.prepareStep({ ...TARGET, mode: 'apply', stepId: 'erp-attributes', label: 'Product attributes' }));
+
+    it('reads the preview of that step alone and lists its changes', async () => {
+        mockRequest.mockResolvedValue({ success: true, data: { steps: [ATTRIBUTES] } });
+        renderDialogs();
+        await openStep();
+        expect(mockRequest).toHaveBeenCalledWith('prepareCommerceStore', { id: 'erp-integration', stepIds: ['erp-attributes'] });
+        const list = await screen.findByTestId('prepare-step-changes');
+        expect(Array.from(list.querySelectorAll('li')).map((li) => li.textContent)).toStrictEqual(ATTRIBUTES.changes);
+        expect(screen.getByText(PREPARE_STORE_COPY.stepApplyBody)).toBeInTheDocument();
+    });
+
+    it('says a step already done in the store has nothing to change', async () => {
+        mockRequest.mockResolvedValue({ success: true, data: { steps: [{ ...ATTRIBUTES, state: 'done', changes: [] }] } });
+        renderDialogs();
+        await openStep();
+        expect(await screen.findByText(STEP_PREVIEW_COPY.nothing)).toBeInTheDocument();
+        expect(screen.queryByTestId('prepare-step-changes')).not.toBeInTheDocument();
+    });
+
+    it("shows what the step leaves by hand", async () => {
+        mockRequest.mockResolvedValue({ success: true, data: { steps: [{ ...ATTRIBUTES, changes: [], manual: 'Connect PayPal by hand.' }] } });
+        renderDialogs();
+        await openStep();
+        expect(await screen.findByText('Connect PayPal by hand.')).toBeInTheDocument();
+    });
+
+    it('says why when the preview is refused', async () => {
+        mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required to prepare the store.' });
+        renderDialogs();
+        await openStep();
+        expect(await screen.findByTestId('prepare-store-notice')).toHaveTextContent('Adobe sign-in required to prepare the store.');
+    });
+
+    it('reads no preview for an Undo', async () => {
+        renderDialogs();
+        await act(async () => controls.prepareStep({ ...TARGET, mode: 'undo', stepId: 'erp-attributes', label: 'Product attributes' }));
+        expect(mockRequest).not.toHaveBeenCalled();
+        expect(screen.getByText(PREPARE_STORE_COPY.stepUndoBody)).toBeInTheDocument();
     });
 });

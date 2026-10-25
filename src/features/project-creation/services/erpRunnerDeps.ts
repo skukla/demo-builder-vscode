@@ -18,6 +18,7 @@ import type { AppManagementAuth } from '@/features/app-builder/services/appManag
 import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
 import { detachErpWrites } from '@/features/app-builder/services/erpDetach';
 import { erpEventsEnvResolver } from '@/features/app-builder/services/erpEventsDelivery';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
 import { wipeSystemRecords } from '@/features/app-builder/services/systemRecordsWipe';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
@@ -25,6 +26,7 @@ import {
     summarizeFills,
 } from '@/features/project-creation/services/erpFillForProject';
 import { syncErpList, unlistErp } from '@/features/project-creation/services/erpListSync';
+import { prepareStoreOnAdd } from '@/features/project-creation/services/erpStorePreparation';
 import type { Project } from '@/types/base';
 
 /** What the ERP deps need from the host: a subset of `RunnerDepsContext`, by structure. */
@@ -34,6 +36,8 @@ export type ErpRunnerContext = Parameters<typeof erpEventsEnvResolver>[0] & {
     secrets: CredentialStore;
     getCachedOrganization: () => Parameters<typeof erpCredentialReader>[2];
     commandManager: Parameters<typeof erpCredentialReader>[0];
+    /** Saves the project the preparation recorded on (`RunnerDepsContext.saveProject`). */
+    saveProject: (project: Project) => Promise<void>;
 };
 
 /** The signed-in identity every per-app call carries, built per project. */
@@ -42,6 +46,7 @@ export type AuthFor = (project: Project) => () => Promise<AppManagementAuth | un
 type ErpDeps = Pick<
     AppBuilderComponentRunnerDeps,
     | 'fillSystem'
+    | 'prepareStore'
     | 'unlistSystem'
     | 'listSystems'
     | 'detachFromCommerce'
@@ -72,6 +77,11 @@ export function erpRunnerDeps(
                     onProgress: onStep,
                 }),
             ),
+        // The store prepared before that fill (owner, 2026-10-22), recorded as Prepare records it.
+        prepareStore: async (project, entry, onStep) =>
+            preparesStoreOnAdd(entry)
+                ? prepareStoreOnAdd(project, entry, { authManager: ctx.authManager, credentials: ctx.secrets, saveProject: ctx.saveProject }, onStep)
+                : { status: 'prepared' },
         unlistSystem: async (project, integrationId, erpId) =>
             unlistErp(project, integrationId, erpId, await authFor(project)()),
         // After an integration or one of its ERPs deploys, the integration is sent the list

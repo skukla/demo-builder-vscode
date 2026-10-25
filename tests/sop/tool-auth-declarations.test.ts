@@ -84,7 +84,9 @@ const EXPECTED: Record<string, number> = {
     // setup, reset and republish write the category pages now (EDS-24 redesign).
     // 25 -> 27 on 2026-10-05: check_category_pages and add_category_pages read, write and
     // publish DA.live pages for categories added after setup (EDS-27).
-    dalive: 27,
+    // 27 -> 25 on 2026-10-22: check_category_pages and add_category_pages removed (EDS-61:
+    // category pages come from the product page overlay, published by setup and first visits).
+    dalive: 24,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
     // same day for probe_shared_demo and add_shared_demo (step 07).
@@ -101,7 +103,8 @@ const EXPECTED: Record<string, number> = {
     // 23 -> 25 on 2026-10-18: save_app_to_github and delete_app_github_repo create and
     // delete a repository on the SC's own account (AB-1c, the agent door).
     // 25 -> 26 on 2026-10-21: finish_storefront_update pushes the fixed update (EDS-57).
-    github: 26,
+    // 26 -> 24 on 2026-10-22: check_category_pages and add_category_pages removed (EDS-61).
+    github: 23,
     commerce: 2,
     // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
     // and needs no sign-in.
@@ -117,8 +120,9 @@ const EXPECTED: Record<string, number> = {
 
 /**
  * 137 tools, and the counts above sum to 141 provider slots — a difference of FOUR,
- * which is exactly the four tools the original commit says need two sign-ins each
- * (check_github_app, create_project, republish, sync_content). That arithmetic is the
+ * which is exactly the four tools the original commit said needed two sign-ins each
+ * (check_github_app, create_project, republish, and sync_content, removed 2026-10-23
+ * when republish took its job, EDS-63). That arithmetic is the
  * cross-check: the derivation below reproduces both numbers from the source without
  * being told either.
  *
@@ -126,7 +130,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 168; // 167 -> 168 on 2026-10-21: finish_storefront_update (EDS-57). 165 -> 167 on 2026-10-18: save_app_to_github and delete_app_github_repo (AB-1c). 162 -> 165 on 2026-10-10: the three AB-77 store-preparation tools. 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 165; // 166 -> 165 on 2026-10-23: sync_content removed, its job now republish's (EDS-63). 168 -> 166 on 2026-10-22: check_category_pages and add_category_pages removed (EDS-61). 167 -> 168 on 2026-10-21: finish_storefront_update (EDS-57). 165 -> 167 on 2026-10-18: save_app_to_github and delete_app_github_repo (AB-1c). 162 -> 165 on 2026-10-10: the three AB-77 store-preparation tools. 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).

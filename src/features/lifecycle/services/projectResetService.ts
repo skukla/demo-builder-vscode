@@ -20,6 +20,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { numberedSteps } from '@/core/utils/numberedSteps';
 import { resetOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import {
     withOperationProgress,
     type ReportStage,
@@ -431,7 +432,7 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
             return await withOperationProgress(
                 {
                     id: options.operationId ?? resetOperationId(project.name),
-                    title: `Resetting ${project.name}`,
+                    title: `Resetting ${getProjectDisplayName(project)}`,
                     inModal: options.progress === 'modal',
                 },
                 async (report) => asHandlerResponse(await runResetSteps(options, report)),

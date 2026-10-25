@@ -17,6 +17,7 @@ import {
     SYNC_OPERATION_ID,
 } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { republishSteps } from '@/features/eds/services/storefront/republishSteps';
@@ -157,13 +158,13 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
     // withProgressRegister, not vscode.window.withProgress directly: the register
     // is the ONE place a phase fans out to both destinations (the notification and
     // an agent's chat). Calling withProgress here meant every step below reached
-    // only the VS Code window — so `republish` and `sync_content`, the long
+    // only the VS Code window — so republishing and syncing content, the long
     // operations an EDS project actually runs, narrated nothing to the chat while
     // mesh deploy did.
     return withOperationProgress(
         {
             id: payload?.id ?? REPUBLISH_OPERATION_ID,
-            title: `Republishing ${project.name}`,
+            title: `Republishing ${getProjectDisplayName(project)}`,
             inModal: progressSurfaceOf(payload) === 'modal',
         },
         async (report) => {

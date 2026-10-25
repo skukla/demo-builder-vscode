@@ -172,7 +172,7 @@ describe('ExtensionUpdater', () => {
             await updater.updateExtension(downloadUrl, newVersion);
 
             expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-                `Demo Builder updated to v${newVersion}. Reload window to apply changes?`,
+                `Demo Builder updated to v${newVersion}. Reload the window to start using it?`,
                 'Reload Now',
                 'Later',
             );

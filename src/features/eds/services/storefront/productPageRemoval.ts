@@ -1,33 +1,39 @@
 /**
- * Removing a storefront's generated product pages from Helix (EDS-26).
+ * Removing a storefront's overlay-made pages from Helix: product pages (EDS-26) and
+ * category pages (EDS-61).
  *
- * Product pages (`/products/{urlKey}/{sku}`) are published through the BYOM overlay, by
- * pre-warming and by a shopper's first visit. They never exist in DA.live, so reset and
- * delete — which unpublish the pages DA.live lists — left every one of them live
- * (CLAUDE.md property 1: a thing that cannot be undone is a finding). This is the undo.
+ * Product pages (`/products/{urlKey}/{sku}`) and category pages (each category's own url
+ * path, `/signs`) are published through the BYOM overlay, by setup and by a shopper's first visit. They
+ * never exist in DA.live, so reset and delete — which unpublish the pages DA.live lists —
+ * left every one of them live (CLAUDE.md property 1: a thing that cannot be undone is a
+ * finding). This is the undo.
  *
  * ## The rules (owner, 2026-10-05)
  *
  * - **True deletion.** The live copy goes, then the preview copy
  *   (`HelixService.unpublishPages`, page by page with the DA.live Bearer —
- *   `eds-publish-and-config` rule 4). A product page has no source document, so those
+ *   `eds-publish-and-config` rule 4). An overlay page has no source document, so those
  *   two copies are all there is.
  * - **Live-only is said, never hidden.** If Helix refuses the preview removal (the
- *   overlay still answers for every product path), the result is `live-only` and the
- *   sentence says the preview copies remain. Never a clean zero.
- * - **The list comes from Helix** (`listPublishedPaths`), not from pre-warm's list: a
- *   page published by a shopper's first visit is recorded nowhere else. A listing that
+ *   overlay still answers for the path), the result is `live-only` and the sentence says
+ *   the preview copies remain. Never a clean zero.
+ * - **The list comes from Helix** (`listPublishedPaths`), not from what setup published:
+ *   a page published by a shopper's first visit is recorded nowhere else. A listing that
  *   fails removes nothing and says the pages may still be live.
- * - **Only generated product pages, only on the SC's own site.** A path is handed to
- *   the remover only when it is `/products/<one segment>/<one segment>` AND DA.live has
- *   no document for it. Authored pages under `/products` — the product template
- *   `/products/default` above all — are DA.live content and are never touched here.
+ * - **Only overlay pages, only on the SC's own site.** A path is handed to the remover
+ *   only when it has the overlay's shape AND DA.live has no document for it. The
+ *   templates — `/products/default`, `/categories/default` — are DA.live content and are
+ *   never touched here.
  * - **Refuse, don't guess, on a shared repository.** The Helix site is keyed by the
  *   GitHub owner/repo; when another local project publishes to the same one, removal
- *   would take its product pages down too, so nothing is removed and the sentence names
- *   the project. Not being able to tell is a refusal too.
+ *   would take its pages down too, so nothing is removed and the sentence names the
+ *   project. Not being able to tell is a refusal too.
  *
- * Never throws: reset and delete carry on, and report the sentence.
+ * Category pages have no folder of their own to list, so their removal is handed the
+ * exact paths: the ones the catalog menu step published for categories the store no
+ * longer has, with every authored page already left out (`catalogMenuService`).
+ *
+ * Never throws: reset, republish and delete carry on, and report the sentence.
  *
  * Every dependency is handed in (ADR-015).
  *
@@ -54,14 +60,20 @@ export interface ProductPageHelix {
     ): Promise<{ total: number; liveFailed: number; previewFailed: number }>;
 }
 
-export interface ProductPageRemovalDeps {
+/** What both removals need besides the authored-page listing. */
+interface OverlayPageRemovalDeps {
     helix: ProductPageHelix;
-    /** Web paths of the DA.live documents under `/products`. Throws when it cannot list. */
-    listAuthoredProductPages(): Promise<string[]>;
     /** Display names of OTHER local projects publishing to the same repository. */
     otherProjectsOnRepo(): Promise<string[]>;
     logger: Logger;
 }
+
+export interface ProductPageRemovalDeps extends OverlayPageRemovalDeps {
+    /** Web paths of the DA.live documents under `/products`. Throws when it cannot list. */
+    listAuthoredProductPages(): Promise<string[]>;
+}
+
+export type CategoryPageRemovalDeps = OverlayPageRemovalDeps;
 
 export interface ProductPageRemovalResult {
     /**
@@ -78,12 +90,35 @@ export interface ProductPageRemovalResult {
     summary: string;
 }
 
+/** The same result, for category pages. */
+export type CategoryPageRemovalResult = ProductPageRemovalResult;
+
+/** One kind of overlay page: its template, and its words. */
+interface OverlayPageKind {
+    template: string;
+    /** "product", "category": the word before "page". */
+    noun: string;
+    /** The Debug Logs tag. */
+    tag: string;
+}
+
 const BRANCH = 'main';
-const PRODUCT_PAGES = '/products/*';
-/** `/products/{urlKey}/{sku}` — the only shape the overlay publishes. */
-const GENERATED_PRODUCT_PAGE = /^\/products\/[^/]+\/[^/]+$/;
-/** The authored template every product page is rendered from. Never removed here. */
-const PRODUCT_TEMPLATE = '/products/default';
+
+const PRODUCT_PATTERN = '/products/*';
+/** `/products/{urlKey}/{sku}` — the only product shape the overlay publishes. */
+const PRODUCT_SHAPE = /^\/products\/[^/]+\/[^/]+$/;
+
+const PRODUCT_PAGES: OverlayPageKind = {
+    template: '/products/default',
+    noun: 'product',
+    tag: '[Product Pages]',
+};
+
+const CATEGORY_PAGES: OverlayPageKind = {
+    template: '/categories/default',
+    noun: 'category',
+    tag: '[Category Pages]',
+};
 
 /** The error's own words, for the Debug Logs. */
 const rawOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
@@ -104,9 +139,12 @@ function messageOf(error: unknown): string {
     return rawOf(error);
 }
 
-const pages = (n: number): string => `${n} product ${n === 1 ? 'page' : 'pages'}`;
+const pagesOf = (kind: OverlayPageKind) => (n: number): string =>
+    `${n} ${kind.noun} ${n === 1 ? 'page' : 'pages'}`;
 
-function refusal(site: string, others: string[]): string {
+const capitalised = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
+
+function refusal(kind: OverlayPageKind, site: string, others: string[]): string {
     const quoted = others.map((name) => `"${name}"`);
     const who =
         quoted.length === 1
@@ -114,8 +152,8 @@ function refusal(site: string, others: string[]): string {
             : `the projects ${quoted.slice(0, -1).join(', ')} and ${quoted[quoted.length - 1]} also publish`;
     const whose = quoted.length === 1 ? 'its' : 'their';
     return (
-        `Product pages were left published: ${who} to ${site}, ` +
-        `and removing them would take ${whose} product pages down too.`
+        `${capitalised(kind.noun)} pages were left published: ${who} to ${site}, ` +
+        `and removing them would take ${whose} ${kind.noun} pages down too.`
     );
 }
 
@@ -131,7 +169,14 @@ const none = (status: ProductPageRemovalResult['status'], summary: string): Prod
     summary,
 });
 
-function describe(site: string, found: number, liveFailed: number, previewFailed: number): ProductPageRemovalResult {
+function describe(
+    kind: OverlayPageKind,
+    site: string,
+    found: number,
+    failed: { liveFailed: number; previewFailed: number },
+): ProductPageRemovalResult {
+    const pages = pagesOf(kind);
+    const { liveFailed, previewFailed } = failed;
     const liveRemoved = found - liveFailed;
     const previewRemoved = found - previewFailed;
     const counts = { found, liveRemoved, previewRemoved };
@@ -151,6 +196,7 @@ function describe(site: string, found: number, liveFailed: number, previewFailed
     return { status: liveFailed === 0 ? 'live-only' : 'incomplete', ...counts, summary: `${live}${preview}` };
 }
 
+
 /**
  * Whether a published path is a product page the overlay made: the
  * `/products/{urlKey}/{sku}` shape, not the template, and no DA.live document behind it.
@@ -161,14 +207,58 @@ function describe(site: string, found: number, liveFailed: number, previewFailed
  * @param authoredLower - the DA.live documents' web paths, lowercased
  */
 export function isGeneratedProductPage(path: string, authoredLower: ReadonlySet<string>): boolean {
-    return GENERATED_PRODUCT_PAGE.test(path) && path !== PRODUCT_TEMPLATE && !authoredLower.has(path.toLowerCase());
+    return PRODUCT_SHAPE.test(path) && path !== PRODUCT_PAGES.template && !authoredLower.has(path.toLowerCase());
 }
 
 /** The generated product pages Helix lists, minus anything DA.live holds a document for. */
-async function generatedPagesOn(site: ProductPageSite, deps: ProductPageRemovalDeps): Promise<string[]> {
+async function productPagesOn(site: ProductPageSite, deps: ProductPageRemovalDeps): Promise<string[]> {
     const authored = new Set((await deps.listAuthoredProductPages()).map((path) => path.toLowerCase()));
-    const published = await deps.helix.listPublishedPaths(site.repoOwner, site.repoName, BRANCH, PRODUCT_PAGES);
+    const published = await deps.helix.listPublishedPaths(site.repoOwner, site.repoName, BRANCH, PRODUCT_PATTERN);
     return published.filter((path) => isGeneratedProductPage(path, authored));
+}
+
+/**
+ * The shared removal: refusal on a shared repository, the paths, the unpublish, the words.
+ * `findPaths` says which paths go; it may throw, and then nothing is removed.
+ */
+async function removeOverlayPages(
+    kind: OverlayPageKind,
+    site: ProductPageSite,
+    deps: OverlayPageRemovalDeps,
+    findPaths: () => Promise<string[]>,
+): Promise<ProductPageRemovalResult> {
+    const name = `${site.repoOwner}/${site.repoName}`;
+    const pages = pagesOf(kind);
+    let others: string[];
+    try {
+        others = await deps.otherProjectsOnRepo();
+    } catch (error) {
+        deps.logger.warn(`${kind.tag} Shared-repository check failed for ${name}: ${rawOf(error)}`);
+        return none('failed', notRemoved(name, `check whether another project publishes ${kind.noun} pages`, error));
+    }
+    if (others.length > 0) return none('refused', refusal(kind, name, others));
+
+    let paths: string[];
+    try {
+        paths = (await findPaths()).filter((path) => path !== kind.template);
+    } catch (error) {
+        deps.logger.warn(`${kind.tag} Listing failed for ${name}: ${rawOf(error)}`);
+        return none('failed', notRemoved(name, `list the ${kind.noun} pages published`, error));
+    }
+    if (paths.length === 0) return none('nothing', `Helix lists no ${kind.noun} pages published on ${name}.`);
+
+    try {
+        const removed = await deps.helix.unpublishPages(site.repoOwner, site.repoName, BRANCH, paths);
+        const result = describe(kind, name, paths.length, removed);
+        deps.logger.info(`${kind.tag} ${result.summary}`);
+        return result;
+    } catch (error) {
+        deps.logger.warn(`${kind.tag} Removal failed for ${name}: ${rawOf(error)}`);
+        return {
+            ...none('failed', `Removing ${pages(paths.length)} from ${name} failed (${messageOf(error)}). They may still be live.`),
+            found: paths.length,
+        };
+    }
 }
 
 /**
@@ -182,35 +272,22 @@ export async function removeProductPages(
     site: ProductPageSite,
     deps: ProductPageRemovalDeps,
 ): Promise<ProductPageRemovalResult> {
-    const name = `${site.repoOwner}/${site.repoName}`;
-    let others: string[];
-    try {
-        others = await deps.otherProjectsOnRepo();
-    } catch (error) {
-        deps.logger.warn(`[Product Pages] Shared-repository check failed for ${name}: ${rawOf(error)}`);
-        return none('failed', notRemoved(name, 'check whether another project publishes product pages', error));
-    }
-    if (others.length > 0) return none('refused', refusal(name, others));
+    return removeOverlayPages(PRODUCT_PAGES, site, deps, () => productPagesOn(site, deps));
+}
 
-    let paths: string[];
-    try {
-        paths = await generatedPagesOn(site, deps);
-    } catch (error) {
-        deps.logger.warn(`[Product Pages] Listing failed for ${name}: ${rawOf(error)}`);
-        return none('failed', notRemoved(name, 'list the product pages published', error));
-    }
-    if (paths.length === 0) return none('nothing', `Helix lists no product pages published on ${name}.`);
-
-    try {
-        const removed = await deps.helix.unpublishPages(site.repoOwner, site.repoName, BRANCH, paths);
-        const result = describe(name, paths.length, removed.liveFailed, removed.previewFailed);
-        deps.logger.info(`[Product Pages] ${result.summary}`);
-        return result;
-    } catch (error) {
-        deps.logger.warn(`[Product Pages] Removal failed for ${name}: ${rawOf(error)}`);
-        return {
-            ...none('failed', `Removing ${pages(paths.length)} from ${name} failed (${messageOf(error)}). They may still be live.`),
-            found: paths.length,
-        };
-    }
+/**
+ * Remove these category pages the overlay made: live, then preview. The caller has left
+ * out every page DA.live holds a document for; the template is never removed.
+ *
+ * @param site - the Helix site, by GitHub owner and repository
+ * @param deps - Helix, the shared-repository check, a logger
+ * @param paths - the web paths to take down
+ * @returns what happened, in counts and in a sentence. Never throws.
+ */
+export async function removeCategoryPages(
+    site: ProductPageSite,
+    deps: CategoryPageRemovalDeps,
+    paths: string[],
+): Promise<CategoryPageRemovalResult> {
+    return removeOverlayPages(CATEGORY_PAGES, site, deps, async () => paths);
 }

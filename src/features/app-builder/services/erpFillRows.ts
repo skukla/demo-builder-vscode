@@ -327,6 +327,30 @@ export function partnersFrom(
 }
 
 /**
+ * The websites the ERP's structure names (Justrite, 2026-10-22). The ERP reads the first
+ * website on its default sales organisation as that organisation's home, so on a shared
+ * Commerce, where the first is another demo's (`base`), it named the wrong website and called
+ * every other one "unmapped". With the project's website known and in Commerce: it, first,
+ * then only the websites given a sales organisation of their own. Otherwise every website.
+ *
+ * @param websites - Commerce's websites
+ * @param settingsByWebsite - the integration's settings for each, by website id
+ * @param home - the project's website code, when it names one
+ */
+export function structureWebsites(
+    websites: CommerceWebsite[],
+    settingsByWebsite: Map<number, ErpSettings>,
+    home: string | undefined,
+): CommerceWebsite[] {
+    const homeSite = websites.find((site) => site.code === home);
+    if (!homeSite) return websites;
+    const ownOrg = websites.filter(
+        (site) => site !== homeSite && salesOrgOf(settingsByWebsite.get(site.id)).salesOrg !== DEFAULT_SALES_ORG,
+    );
+    return [homeSite, ...ownOrg];
+}
+
+/**
  * The structure block: each website, the sales organisation its settings name, and what
  * the store configuration says. Store Information (address, VAT) is not readable over
  * REST, so those stay null.

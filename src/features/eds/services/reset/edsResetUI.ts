@@ -41,6 +41,7 @@ import {
 import { executeEdsReset } from './edsResetService';
 import { resetOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { resetStageLabel } from '@/core/utils/resetStages';
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
 import type { Project } from '@/types/base';
@@ -217,7 +218,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     const withinEdit = options.withinEdit;
     const canRemoveSampleData = withinEdit ? undefined : beginSampleDataCredentialCheck(project, context);
 
-    if (!withinEdit && !(await confirmReset(vscode, project.name))) {
+    if (!withinEdit && !(await confirmReset(vscode, getProjectDisplayName(project)))) {
         context.logger.info(`${logPrefix} resetEds: User cancelled reset`);
         return { success: false, cancelled: true };
     }
@@ -358,7 +359,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
         return await withOperationProgress(
             {
                 id: options.operationId ?? resetOperationId(project.name),
-                title: `Resetting ${project.name}`,
+                title: `Resetting ${getProjectDisplayName(project)}`,
                 inModal: options.progress === 'modal',
             },
             run,

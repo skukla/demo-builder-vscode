@@ -42,7 +42,7 @@ import {
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { WizardState } from '@/types/webview';
-import type { DestinationRef } from '@/types/webviewRequests';
+import type { AddAppBuilderComponentRequestPayload, DestinationRef } from '@/types/webviewRequests';
 
 export interface AddIntegrationFlowAdapterProps {
     isOpen: boolean;
@@ -77,6 +77,11 @@ export interface AddIntegrationFlowAdapterProps {
      */
     onAddStarted?: (id: string, name: string, payload?: Record<string, unknown>) => void;
     /**
+     * An add that prepares the store (the ERP integration) waits for its confirm, which
+     * sends it (owner, 2026-10-22). Without this it is sent at once.
+     */
+    onConfirmAdd?: (target: { id: string; name: string; payload: AddAppBuilderComponentRequestPayload }) => void;
+    /**
      * A destination was chosen (mode `destination`). The move itself belongs to
      * the SCREEN, which hosts the progress modal it narrates into — this only
      * says which project and workspace were picked (PL-59 slice 5).
@@ -99,11 +104,14 @@ export function AddIntegrationFlowAdapter({
     adobeOrgId,
     mode = 'add',
     onAddStarted,
+    onConfirmAdd,
     onDestinationChosen,
 }: AddIntegrationFlowAdapterProps): React.ReactElement {
     // Read through a ref: the builder callbacks below are memoised once.
     const onAddStartedRef = useRef(onAddStarted);
     onAddStartedRef.current = onAddStarted;
+    const onConfirmAddRef = useRef(onConfirmAdd);
+    onConfirmAddRef.current = onConfirmAdd;
     const onDestinationChosenRef = useRef(onDestinationChosen);
     onDestinationChosenRef.current = onDestinationChosen;
     const catalogRef = useRef(catalog);
@@ -250,6 +258,7 @@ export function AddIntegrationFlowAdapter({
                 destination: destinationRef,
                 hadDestination: hadDestinationRef,
                 onAddStarted: onAddStartedRef,
+                onConfirmAdd: onConfirmAddRef,
             }),
         [],
     );

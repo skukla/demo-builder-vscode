@@ -1,16 +1,14 @@
 /**
  * The storefront report (EDS-13f steps 04 and 07): one computation of where a
- * project's storefront comes from, what Demo Builder wrote into it, and each of
- * Demo Builder's fixes, read-only; and its rendering in SC words.
+ * project's storefront comes from and what Demo Builder wrote into it, read-only;
+ * and its rendering in SC words. Demo Builder's fixes left it on 2026-10-23 (EDS-64).
  *
- * GitHub (files, the repository record), the last-known-good read and the
- * ledger fetch are the boundaries. The rule under test throughout: a read that
- * FAILED says "could not read", never "not there".
+ * GitHub (files, the repository record) and the last-known-good read are the
+ * boundaries. The rule under test throughout: a read that FAILED says "could not
+ * read", never "not there".
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
-import type { CodePatch } from '@/features/eds/services/patches/codePatchRegistry';
-import { fetchExternalPatches } from '@/features/eds/services/patches/externalPatchFetcher';
 import { SMART_404_MARKER_START } from '@/features/eds/services/pdp/pdp404Snippet';
 import {
     readStorefrontReport,
@@ -21,10 +19,8 @@ import {
 import type { Project } from '@/types/base';
 import { makeAddedDemo, makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackageFixtures';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { STOREFRONT_CHANGES } from '@/features/eds/services/storefront/storefrontChanges';
 import { createMockProject } from '../../../../helpers/projectFake';
-
-jest.mock('@/features/eds/services/patches/externalPatchFetcher', () => ({ fetchExternalPatches: jest.fn() }));
-const mockLedger = fetchExternalPatches as jest.Mock;
 
 const B2B = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
 const LEDGER_SOURCE = { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b', lkgFile: 'b2b/last-known-good' };
@@ -49,23 +45,9 @@ const CATALOG = [
     }),
 ];
 
-function patch(id: string, target: string, token: string): CodePatch {
-    return { id, target, description: id, precondition: token, replacement: `${token.toLowerCase()}-fixed` };
-}
-const LEDGER: CodePatch[] = [
-    patch('product-teaser-sku-encoding', 'blocks/product-teaser/product-teaser.js', 'T1'),
-    patch('pdp-empty-data-redirect', 'blocks/product-details/product-details.js', 'P1'),
-    patch('aem-assets-sku-sanitization', 'scripts/initializers/assets.js', 'S1'),
-    patch('header-nav-tools-defensive', 'blocks/header/header.js', 'H1'),
-];
-
-/** The SC's copy of Jen's storefront: two link fixes and the PDP fix fit, the asset file drifted, the two universal ones already there. */
+/** The SC's copy of Jen's storefront. */
 const OWN_FILES: Record<string, string | Error> = {
     'package.json': '{"name":"@adobe/aem-boilerplate-commerce","version":"4.0.1"}',
-    'blocks/product-teaser/product-teaser.js': 'T1',
-    'blocks/product-details/product-details.js': 'P1',
-    'scripts/initializers/assets.js': 'rewritten by Jen',
-    'blocks/header/header.js': 'h1-fixed',
     'scripts/delayed.js': `${SMART_404_MARKER_START}\n// snippet`,
     'fstab.yaml': 'mountpoints: {}',
     'config.json': '{}',
@@ -110,6 +92,8 @@ function deps(own: Record<string, string | Error> = OWN_FILES, overrides: Partia
     };
 }
 
+const NEWEST_CHANGE = STOREFRONT_CHANGES[STOREFRONT_CHANGES.length - 1].since;
+
 function project(overrides: Partial<Project> = {}, metadata: Record<string, unknown> = {}): Project {
     return createMockProject({
         name: 'aistore-copy',
@@ -120,7 +104,9 @@ function project(overrides: Partial<Project> = {}, metadata: Record<string, unkn
                 name: 'EDS Storefront',
                 type: 'frontend',
                 status: 'ready',
-                metadata: { githubRepo: 'steve/aistore-copy', daLiveOrg: 'steve', ...metadata },
+                // Built after every storefront change unless a test says otherwise: "Needs reset"
+                // has its own tests at the end.
+                metadata: { githubRepo: 'steve/aistore-copy', daLiveOrg: 'steve', storefrontBuiltThrough: NEWEST_CHANGE, ...metadata },
             },
         },
         ...overrides,
@@ -138,11 +124,10 @@ async function read(target: Project, d: StorefrontReportDeps): Promise<Storefron
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockLedger.mockResolvedValue(LEDGER);
 });
 
 describe('readStorefrontReport — a colleague’s storefront', () => {
-    it('reads the boilerplate, the current one at the last-known-good, the lineage, what was written and each fix', async () => {
+    it('reads the boilerplate, the current one at the last-known-good, the lineage and what was written', async () => {
         const report = await read(COLLEAGUE, deps());
 
         expect(report).toEqual({
@@ -151,13 +136,6 @@ describe('readStorefrontReport — a colleague’s storefront', () => {
             current: { status: 'read', value: { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' } },
             origin: { kind: 'added', lineage: { status: 'read', value: { templateRepository: B2B } }, match: { by: 'template', template: B2B } },
             written: { smart404: 'present', fstab: 'present', config: 'present', description: 'absent' },
-            fixes: [
-                { patchId: 'product-teaser-sku-encoding', target: 'blocks/product-teaser/product-teaser.js', state: 'fits' },
-                { patchId: 'pdp-empty-data-redirect', target: 'blocks/product-details/product-details.js', state: 'fits' },
-                expect.objectContaining({ patchId: 'aem-assets-sku-sanitization', state: 'missing' }),
-                { patchId: 'header-nav-tools-defensive', target: 'blocks/header/header.js', state: 'applied' },
-            ],
-            offer: ['product-teaser-sku-encoding', 'pdp-empty-data-redirect'],
             contentSite: { org: 'steve', site: 'aistore-copy' },
             adobe: { reason: 'GitHub could not be read for sayurihanki/aistore' },
         });
@@ -183,15 +161,21 @@ describe('readStorefrontReport — a colleague’s storefront', () => {
         const report = await read(COLLEAGUE, d);
 
         expect(report.boilerplate).toEqual({ status: 'unreadable', reason: '502' });
-        expect(report.current).toEqual({ status: 'unreadable', reason: 'The last-known-good commit could not be read' });
         expect(report.origin).toEqual({ kind: 'added', lineage: { status: 'unreadable', reason: 'rate limited' } });
         expect(report.written.smart404).toBe('unreadable');
-        expect(report).not.toHaveProperty('offer');
+        // Not knowing which template it came from, there is nothing of ours to compare it with.
+        expect(report).not.toHaveProperty('current');
+    });
+
+    it("says it could not read Demo Builder's current boilerplate when the tested commit cannot be read", async () => {
+        const report = await read(COLLEAGUE, deps(OWN_FILES, { readLkg: jest.fn(async () => undefined) }));
+
+        expect(report.current).toEqual({ status: 'unreadable', reason: 'The last-known-good commit could not be read' });
     });
 });
 
 describe('readStorefrontReport — a shipped brand', () => {
-    it('is our own template; its fixes come from its own ledger and are never offered (reset keeps a shipped brand current)', async () => {
+    it('is our own template, pinned at the commit it was built from', async () => {
         const shipped = project(
             { selectedPackage: 'bodea' },
             { lastSyncedCommit: LKG, lkgSource: { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' } },
@@ -200,19 +184,18 @@ describe('readStorefrontReport — a shipped brand', () => {
         const report = await read(shipped, deps());
 
         expect(report.origin).toEqual({ kind: 'shipped', package: 'bodea', template: B2B, pin: LKG });
-        expect(report.fixes).toHaveLength(4);
-        expect(report).not.toHaveProperty('offer');
+        expect(report.current).toEqual({ status: 'read', value: { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' } });
     });
 });
 
 describe('storefrontReportLines — the SC-facing rendering', () => {
-    it('says where it comes from, what Demo Builder wrote and the fixes by consequence, never by patch id', async () => {
+    it('says where it comes from and what Demo Builder wrote, and lists no fixes', async () => {
         const lines = storefrontReportLines(await read(COLLEAGUE, deps()));
 
         expect(lines).toEqual([
             '## Where this storefront comes from',
             "Built on Adobe's Commerce boilerplate 4.0.1. Demo Builder's current one is 6.0.0. " +
-                'Built on an older boilerplate (4.x); some fixes may not fit.',
+                'Built on an older boilerplate (4.x) than Demo Builder tests on.',
             "GitHub records it as made from adobe-commerce/boilerplate-b2b-template, one of Demo Builder's templates.",
             'Adobe boilerplate updates: not offered, because GitHub could not be read for sayurihanki/aistore.',
             '## What Demo Builder wrote',
@@ -220,12 +203,7 @@ describe('storefrontReportLines — the SC-facing rendering', () => {
             'Content mount (fstab.yaml): there.',
             'Store settings (config.json): there.',
             'Demo package description: not there.',
-            "## Demo Builder's fixes",
-            'Already on the code: header robustness.',
-            'Fit, not applied: product links; empty product pages.',
-            "Don't fit this code: AEM Assets images.",
         ]);
-        expect(lines.join(' ')).not.toMatch(/sku-encoding|nav-tools|sidebar-selector/);
     });
 
     // EDS-56: an added demo whose Adobe starting point is known follows our tested version too.
@@ -257,7 +235,7 @@ describe('storefrontReportLines — the SC-facing rendering', () => {
         const lines = storefrontReportLines(await read(COLLEAGUE, deps(OWN_FILES, { readLkg: jest.fn(async () => undefined) })));
 
         expect(lines[1]).toBe(
-            "Built on Adobe's Commerce boilerplate 4.0.1. Built on an older boilerplate (4.x); some fixes may not fit.",
+            "Built on Adobe's Commerce boilerplate 4.0.1. Built on an older boilerplate (4.x) than Demo Builder tests on.",
         );
     });
 
@@ -313,5 +291,27 @@ describe('broken links — links in the content to pages that do not exist (2026
         const lines = storefrontReportLines(await read(COLLEAGUE, deps()));
 
         expect(lines.join('\n')).not.toMatch(/Links to pages/);
+    });
+});
+
+// The "Needs reset" status (storefrontChanges.ts): read from the project's record, no GitHub read.
+describe('needs reset — a storefront behind how Demo Builder builds storefronts now', () => {
+    const OLD = project({}, { storefrontBuiltThrough: '2026-01-01' });
+    const CURRENT = project({ created: new Date('2026-01-01T00:00:00Z') }, { storefrontBuiltThrough: NEWEST_CHANGE });
+
+    it('says so first, in the status words, with no date', async () => {
+        const report = await read(OLD, deps());
+
+        expect(report.needsReset).toBe(true);
+        expect(storefrontReportLines(report)[0]).toBe(
+            "Needs reset: Demo Builder has fixes this storefront doesn't have yet.",
+        );
+    });
+
+    it('says nothing about it for a storefront built after every change', async () => {
+        const report = await read(CURRENT, deps());
+
+        expect(report).not.toHaveProperty('needsReset');
+        expect(storefrontReportLines(report).join('\n')).not.toMatch(/Needs reset/);
     });
 });

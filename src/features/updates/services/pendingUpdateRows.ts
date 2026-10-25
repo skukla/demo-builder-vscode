@@ -5,7 +5,8 @@
  * A row's id is its kind and its place in that kind's list in the check
  * (`blockLibrary:2`), so it leads back to exactly the entry it was made from, and only
  * within that check: the extension keeps the check the screen was shown and applies the
- * ids against it.
+ * ids against it. When it no longer has that check, `matchFresh` finds the rows in a new
+ * one by what they say.
  *
  * Everything that can be applied from here starts ticked, except an integration pair:
  * applying one redeploys it to the live Adobe workspace and nothing asks first, so the
@@ -222,4 +223,81 @@ export function rowIdsOf(selections: UpdateSelections): Map<object, string> {
         (selections[kind] as object[]).forEach((entry, i) => ids.set(entry, `${kind}:${i}`));
     }
     return ids;
+}
+
+/**
+ * What a row is across two checks. Its id is only its place in one check, so a fresh
+ * check is matched by where the row sits, what it updates and what it is called.
+ */
+function sameUpdate(row: PendingUpdateRow): string {
+    return JSON.stringify([row.group.key, row.kind, row.label]);
+}
+
+/** A row the SC ticked that a fresh check no longer lists as the SC saw it. */
+export interface GoneRow {
+    row: PendingUpdateRow;
+    /** `newer`: listed with other words, a newer version; `applied`: not listed at all. */
+    why: 'newer' | 'applied';
+}
+
+/**
+ * The SC's ticked rows in a fresh check, for when the check they were shown is gone. A
+ * fresh row with the same words is the update the SC ticked, so the SC agreed to exactly
+ * it. One listed with other words (a new version number) is not, and one not listed at
+ * all has been applied since.
+ *
+ * @param ticked - the rows the SC ticked, as the screen showed them
+ * @param fresh - the rows of a check made now
+ * @returns each matched fresh row's id with the id the screen knows it by, and the rest
+ */
+export function matchFresh(
+    ticked: PendingUpdateRow[],
+    fresh: PendingUpdateRow[],
+): { shownIdOf: Map<string, string>; gone: GoneRow[] } {
+    const exact = (row: PendingUpdateRow) => JSON.stringify([sameUpdate(row), row.detail]);
+    const unclaimed = fresh.filter((row) => !row.lockedReason);
+    const shownIdOf = new Map<string, string>();
+    const gone: GoneRow[] = [];
+    for (const row of ticked) {
+        const at = unclaimed.findIndex((candidate) => exact(candidate) === exact(row));
+        if (at >= 0) {
+            shownIdOf.set(unclaimed[at].id, row.id);
+            unclaimed.splice(at, 1);
+            continue;
+        }
+        const newer = fresh.some((candidate) => sameUpdate(candidate) === sameUpdate(row));
+        gone.push({ row, why: newer ? 'newer' : 'applied' });
+    }
+    return { shownIdOf, gone };
+}
+
+/**
+ * The rows the SC left unticked, never a locked one, that a fresh check still lists
+ * (owner, 2026-10-22). A ticked row that did not apply is not counted: its own row
+ * already says why.
+ *
+ * @param listed - the rows the SC was shown
+ * @param appliedIds - the ids the SC left ticked
+ * @param fresh - the rows of a check made after the run
+ * @returns how many of the unticked rows are still waiting
+ */
+export function stillWaitingCount(
+    listed: PendingUpdateRow[],
+    appliedIds: string[],
+    fresh: PendingUpdateRow[],
+): number {
+    const waiting = new Set(fresh.map(sameUpdate));
+    return untickedRows(listed, appliedIds).filter((row) => waiting.has(sameUpdate(row))).length;
+}
+
+/**
+ * The rows the SC could have ticked and did not.
+ *
+ * @param listed - the rows the SC was shown
+ * @param appliedIds - the ids the SC left ticked
+ * @returns the unticked rows that are not locked
+ */
+export function untickedRows(listed: PendingUpdateRow[], appliedIds: string[]): PendingUpdateRow[] {
+    const applied = new Set(appliedIds);
+    return listed.filter((row) => !row.lockedReason && !applied.has(row.id));
 }

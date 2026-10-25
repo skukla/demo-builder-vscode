@@ -94,7 +94,7 @@ export function ProjectDashboardScreen({
     // change mode (rendered by DashboardDialogs).
     const [changeSourceOpen, setChangeSourceOpen] = useState(false);
     const openChangeSource = demo ? () => setChangeSourceOpen(true) : undefined;
-    const handover = useHandoverDialogs(isEdsStable); // Export, Save as demo package
+    const handover = useHandoverDialogs(); // the Share dialog
     // Inline title rename commit (null = success; string = inline error).
     const renameInline = useInlineRename();
 
@@ -132,7 +132,6 @@ export function ProjectDashboardScreen({
         handleEditProject,
         handleOpenAemAssets,
         handleOpenSiteAccess,
-        handleOpenStorefrontReport,
         handleRestartDemo,
         handleNavigateBack,
         handleReAuthenticate,
@@ -241,7 +240,7 @@ export function ProjectDashboardScreen({
                             <DemoSourceNotice
                                 issue={demoSourceIssue}
                                 onChangeSource={openChangeSource}
-                                onSaveDemoPackage={handover.openDemoPackage}
+                                onKeepAsOwn={isEdsStable ? handover.openShare : undefined}
                             />
                         </>
                     }
@@ -278,13 +277,9 @@ export function ProjectDashboardScreen({
                                     handleConfigure={handleConfigure}
                                     handleOpenAemAssets={handleOpenAemAssets}
                                     handleOpenSiteAccess={isEdsStable ? handleOpenSiteAccess : undefined}
-                                    handleOpenStorefrontReport={
-                                        isEdsStable ? handleOpenStorefrontReport : undefined
-                                    }
-                                    brokenLinkCount={projectStatus?.brokenLinkCount ?? 0}
+                                    needsReset={projectStatus?.storefrontNeedsReset === true}
                                     handleEditProject={handleEditProject}
-                                    handleExportProject={handover.openExport}
-                                    handleSaveDemoPackage={handover.openDemoPackage}
+                                    handleShareDemo={handover.openShare}
                                     handleChangeDemoSource={openChangeSource}
                                     handleResetProject={handleResetProject}
                                     handleDeleteProject={handleDeleteProject}

@@ -30,14 +30,14 @@ export interface StorefrontSetupResult {
     repoName?: string;
     /** See {@link RepoInfo.pdpCaveats} — spread in from the threaded repoInfo. */
     pdpCaveats?: string[];
-    /** See {@link RepoInfo.demoCaveats} — spread in from the threaded repoInfo. */
-    demoCaveats?: string[];
     /** Links the content copy found to pages the source lacks; the project records them. */
     brokenLinks?: StorefrontBrokenLink[];
     /** See {@link RepoInfo.pipelineWarnings} — spread in from the threaded repoInfo. */
     pipelineWarnings?: string[];
     /** See {@link RepoInfo.installedBlockLibraries} — spread in from the threaded repoInfo. */
     installedBlockLibraries?: InstalledBlockLibrary[];
+    /** See {@link RepoInfo.storefrontBuildComplete} — spread in from the threaded repoInfo. */
+    storefrontBuildComplete?: boolean;
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 
@@ -95,12 +95,6 @@ export interface RepoInfo {
      */
     pdpCaveats?: string[];
     /**
-     * What the dry check of the load-bearing patches found on an added demo's
-     * code (D23), in SC words. Separate from {@link pdpCaveats}: those say PDPs
-     * will not load at all; these say what may not work on this demo.
-     */
-    demoCaveats?: string[];
-    /**
      * The content pipeline's sentences for the SC (EDS-55): pages the source has that
      * the storefront does not serve, old pages that may still be live, an empty block
      * palette. Shown last among the caveats. Absent when it had nothing to say.
@@ -114,4 +108,10 @@ export interface RepoInfo {
      * was open before — which is where they went until 2026-10-09.
      */
     installedBlockLibraries?: InstalledBlockLibrary[];
+    /**
+     * Whether phase 2's build step (`bringStorefrontUpToDate`) left the storefront with all of
+     * Demo Builder's fixes. Creation records it with the storefront's "built" stamp
+     * (`storefrontChanges.ts`); for the same reason as the libraries, setup does not.
+     */
+    storefrontBuildComplete?: boolean;
 }

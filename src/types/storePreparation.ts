@@ -120,3 +120,24 @@ export interface PreparationStepReport {
     /** What the step's check found in the store just now, in its words: shown beside the state. */
     note?: string;
 }
+
+/**
+ * What adding the ERP integration will change in the store, read when its confirm opens
+ * (owner, 2026-10-22): every step as "Prepare this store" previews it, and the labels of the
+ * steps that will change something every website on the Commerce instance shares.
+ */
+export interface AddPreparationRead {
+    steps: PreparationStepReport[];
+    everyWebsite: string[];
+}
+
+/** The add's preview: what it read, or why the store could not be read now. */
+export type AddPreparationPreview = AddPreparationRead | { unread: string };
+
+/** The answer `addAppBuilderComponent` gives without `confirm` for an entry that prepares the store. */
+export interface AddPreparationAnswer {
+    confirmed: false;
+    adding: { id: string; name: string };
+    preparation: AddPreparationPreview;
+    next: string;
+}

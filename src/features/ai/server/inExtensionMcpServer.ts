@@ -55,7 +55,7 @@ const SERVER_VERSION = '1.0.0';
  * mutating and routed through the injected long-running notifier.
  *
  * An allowlist, deliberately (same reasoning as mcp-live-probe's --force
- * gate, which started as a denylist and let `sync_content` and `republish`
+ * gate, which started as a denylist and let two whole-site publishes
  * straight through): a false positive costs one unnecessary notification,
  * a false negative is a live-CDN mutation running invisibly. A new tool
  * with a novel name fails CLOSED into "mutating".
@@ -112,7 +112,7 @@ export type ConsentVerdict = { allowed: true } | { allowed: false; refusal: unkn
  *
  * The generated guidance tells agents that destructive tools take `confirm:true`
  * (and a `confirmName` echo on the most destructive), and several write tools
- * legitimately declare NO arguments — `republish`, `sync_content`. Strictifying
+ * legitimately declare NO arguments — `republish`, for one. Strictifying
  * those naively would reject the very call the guidance asks for, turning a
  * safety affordance into a hard failure. Declared shapes still win: a tool that
  * describes its own `confirm` keeps its description.

@@ -238,7 +238,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         // Then: Should return partial success (reset completed, mesh failed)
         expect(result.success).toBe(true);
         expect(result.meshRedeployed).toBe(false);
-        expect(result.error).toContain('authentication');
+        expect(result.error).toContain('Adobe sign-in required');
         expect(result.errorType).toBe('MESH_REDEPLOY_FAILED');
     });
 

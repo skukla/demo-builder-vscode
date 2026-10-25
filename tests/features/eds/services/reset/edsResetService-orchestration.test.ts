@@ -140,12 +140,44 @@ describe('executeEdsReset - repo, code sync and permissions', () => {
         });
     });
 
-    it('carries on past a failed code sync, reporting it as pending', async () => {
+    it('publishes the code again AFTER the site config step when the first publish failed', async () => {
+        // Owner decision 2026-10-22: a site whose config is missing refuses the
+        // first publish ("config for site not found"); step 7 writes it.
+        const order: string[] = [];
+        mockPreviewCode
+            .mockImplementationOnce(async () => {
+                order.push('publish');
+                throw new Error('config for site not found');
+            })
+            .mockImplementation(async () => {
+                order.push('publish');
+            });
+        mockPublishConfig.mockImplementationOnce(async () => {
+            order.push('register');
+            return { configWritten: true };
+        });
+
+        const { result } = await runReset();
+
+        expect(order).toEqual(['publish', 'register', 'publish']);
+        expect(result.success).toBe(true);
+        expect(result).not.toHaveProperty('codeNotPublished');
+    });
+
+    it('publishes once when the first publish landed', async () => {
+        await runReset();
+
+        expect(mockPreviewCode).toHaveBeenCalledTimes(1);
+    });
+
+    it('carries on past a failed code sync, and says so on the result when it never lands', async () => {
         mockPreviewCode.mockRejectedValue(new Error('helix down'));
 
         const { result, progress } = await runReset();
 
         expect(result.success).toBe(true);
+        expect(result.codeNotPublished).toMatch(/helix down/);
+        expect(mockPreviewCode).toHaveBeenCalledTimes(2);
         expect(progress).toContainEqual({
             step: RESET_STEP.publishingCodeAndSettings,
             totalSteps: 11,
@@ -240,6 +272,8 @@ describe('executeEdsReset - content pipeline', () => {
             clearExistingContent: true,
             skipContent: false,
             contentSource: { org: 'content-org', site: 'content-site' },
+            // The authored-pages sheet refresh before the bulk publish (EDS-61).
+            beforeContentPublish: expect.any(Function),
             accountContentSource: { org: 'acct-org', site: 'acct-site' },
             contentPatches: ['cp'],
             contentPatchSource,
@@ -348,25 +382,6 @@ describe('executeEdsReset - what it counts and hands on', () => {
         expect(progress.length).toBeGreaterThan(0);
         expect(new Set(progress.map((p) => p.totalSteps))).toStrictEqual(new Set([12]));
     });
-
-    it("hands the last step the repo reset's caveats and fixes for an added demo", async () => {
-        mockResetRepoToTemplate.mockResolvedValue({
-            ...REPO_RESULT,
-            demoCaveats: ['Product links may not work.'],
-            demoFixes: { applied: ['pdp-empty-data-redirect'], offered: undefined },
-        });
-
-        const { result } = await runReset();
-
-        expect(result).toStrictEqual({
-            success: true,
-            filesReset: 5,
-            contentCopied: 3,
-            meshRedeployed: false,
-            demoCaveats: ['Product links may not work.'],
-            demoFixes: { applied: ['pdp-empty-data-redirect'], offered: undefined },
-        });
-    });
 });
 
 describe('executeEdsReset - a step that throws', () => {
@@ -418,17 +433,18 @@ describe('executeEdsReset - the product pages the overlay published (EDS-26)', (
     });
 
     it('carries the sentence on the result, beside the category pages one', async () => {
-        mockTakeOutProductPages.mockResolvedValue(
-            'Removed 40 product pages from o/r, live and preview.'
-        );
-        mockPutBackCatalogMenu.mockResolvedValue('Wrote and published 3 category pages.');
+        mockTakeOutProductPages.mockResolvedValue({
+            sentence: 'Removed 40 product pages from o/r, live and preview.',
+            problem: false,
+        });
+        mockPutBackCatalogMenu.mockResolvedValue({ sentence: 'Published 3 category pages.', problem: false });
 
         const { result } = await runReset();
 
         expect(result).toMatchObject({
             success: true,
             productPages: 'Removed 40 product pages from o/r, live and preview.',
-            catalogMenu: 'Wrote and published 3 category pages.',
+            catalogMenu: 'Published 3 category pages.',
         });
     });
 
@@ -519,7 +535,7 @@ describe('executeEdsReset - category pages and the catalog menu (EDS-24)', () =>
 
         expect(mockTakeOutCatalogMenu).toHaveBeenCalledWith(
             params,
-            context.logger,
+            context,
             expect.objectContaining({
                 daLiveContentOps: expect.any(DaLiveContentOperations),
                 tokenProvider: mockTokenProvider,
@@ -535,9 +551,10 @@ describe('executeEdsReset - category pages and the catalog menu (EDS-24)', () =>
     });
 
     it("carries the step's sentence on the result, so the agent and the SC see the clash report", async () => {
-        mockPutBackCatalogMenu.mockResolvedValue(
-            "Left 1 page alone because Demo Builder didn't write it."
-        );
+        mockPutBackCatalogMenu.mockResolvedValue({
+            sentence: "Left 1 page alone because Demo Builder didn't write it.",
+            problem: false,
+        });
 
         const { result } = await runReset();
 
@@ -545,6 +562,17 @@ describe('executeEdsReset - category pages and the catalog menu (EDS-24)', () =>
             success: true,
             catalogMenu: "Left 1 page alone because Demo Builder didn't write it.",
         });
+        expect(result).not.toHaveProperty('pageWarnings');
+    });
+
+    // "13 category pages couldn't be published" reached only the Debug Logs (2026-10-23).
+    it('carries a step that left pages undone as a warning too', async () => {
+        const undone = "13 category pages couldn't be published; republish the storefront to try again.";
+        mockPutBackCatalogMenu.mockResolvedValue({ sentence: undone, problem: true });
+
+        const { result } = await runReset();
+
+        expect(result).toMatchObject({ success: true, catalogMenu: undone, pageWarnings: [undone] });
     });
 
     it('adds nothing to the result when the storefront has no catalog menu', async () => {

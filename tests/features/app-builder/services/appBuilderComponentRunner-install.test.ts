@@ -376,4 +376,71 @@ describe('the ERP filled after the install (AB-26y)', () => {
         expect(project.appBuilderComponents?.[ERP_ENTRY.id]?.installation).toMatchObject({ status: 'installed' });
         expect(onProgress).toHaveBeenCalledWith('Loading demo data', 'Demo data did not load: Commerce answered 401 for products');
     });
+
+    // Owner, 2026-10-22: adding the ERP integration prepares the store first, because the fill
+    // relies on erp_owner being in the attribute sets and on the ERP's warehouse existing.
+    it('add: an INSTALLED entry that fills its system prepares the store first, then fills (args pinned)', async () => {
+        const prepareStore = jest.fn().mockResolvedValue({ status: 'prepared' });
+        const { deps, fillSystem } = erpDeps({ prepareStore });
+        const project = createProject();
+
+        await addAppBuilderComponent(project, ERP_ENTRY, deps);
+
+        expect(prepareStore).toHaveBeenCalledWith(project, ERP_ENTRY, expect.any(Function));
+        expect(prepareStore.mock.invocationCallOrder[0]).toBeLessThan(fillSystem.mock.invocationCallOrder[0]);
+    });
+
+    it("add: the preparation's steps show under the preparing stage", async () => {
+        const onProgress = jest.fn();
+        const prepareStore = jest.fn(async (_project: unknown, _entry: unknown, onStep: (step: string) => void) => {
+            onStep('ERP attributes: Applying');
+            return { status: 'prepared' };
+        });
+        const { deps } = erpDeps({ onProgress, prepareStore });
+
+        await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+        expect(onProgress).toHaveBeenCalledWith('Preparing the store', 'ERP attributes: Applying');
+    });
+
+    it('add: a preparation that stops keeps the add green, still fills, and says why', async () => {
+        const onProgress = jest.fn();
+        const prepareStore = jest.fn().mockResolvedValue({ status: 'failed', detail: 'Commerce answered 403' });
+        const { deps, fillSystem } = erpDeps({ onProgress, prepareStore });
+
+        const result = await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+        expect(result.success).toBe(true);
+        expect(fillSystem).toHaveBeenCalled();
+        expect(onProgress).toHaveBeenCalledWith(
+            'Preparing the store',
+            'The store was not prepared: Commerce answered 403. Use Prepare this store on the card.',
+        );
+    });
+
+    it('add: an install that FAILED or was skipped prepares nothing', async () => {
+        for (const status of ['failed', 'skipped'] as const) {
+            const prepareStore = jest.fn().mockResolvedValue({ status: 'prepared' });
+            const { deps } = erpDeps({
+                prepareStore,
+                installAppManagement: jest.fn().mockResolvedValue({ status, detail: 'reason' }),
+            });
+
+            await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+            expect(prepareStore).not.toHaveBeenCalled();
+        }
+    });
+
+    it('add: what Commerce refused during the preparation is said, and the fill still runs', async () => {
+        const onProgress = jest.fn();
+        const warning = 'Prices per website: Commerce refused catalog/price/scope.';
+        const prepareStore = jest.fn().mockResolvedValue({ status: 'prepared', warning });
+        const { deps, fillSystem } = erpDeps({ onProgress, prepareStore });
+
+        await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+        expect(onProgress).toHaveBeenCalledWith('Preparing the store', warning);
+        expect(fillSystem).toHaveBeenCalled();
+    });
 });

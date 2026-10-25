@@ -243,6 +243,27 @@ says nothing about them. When Helix cannot be read, nothing is removed and the r
 says old pages may still be live (`leftoverPages` on its result, and a warning to the
 SC). `storefront/leftoverPages.ts`.
 
+### Category pages ride the same overlay (EDS-61)
+
+Since EDS-61 the overlay serves a second kind of page: each category's own url path
+(`/signs`, `/signs/danger-signs`; owner decision 2026-10-22), for every category the store
+view lists (one Catalog Service `categories(ids: [])` query per site, cached five minutes),
+filled from the site's authored `/categories/default` (the first `<h1>`, the
+`product-list-page` block's `urlPath` row, the title tags), or a built-in shell. Category
+pages **fail closed**, unlike products: a category the list does not hold, or a lookup
+that cannot answer, is a 404.
+
+Helix asks the overlay first on every preview — **measured 2026-10-22 on scratch-1022-b**:
+an authored DA.live page at a product path, previewed and published, was not served; the
+overlay's was. At category addresses that would replace authored pages, so the overlay
+steps aside for the paths a public sheet, `/authored-category-pages.json`, lists, and it
+renders category pages only on a site where that sheet exists. The extension writes the
+sheet, then publishes the category pages, at setup, reset and republish (generated ones
+through the authenticated Helix path, on ACCS); the smart-404 snippet asks for any other
+missing lowercase path, and the action refuses all but a listed category's; the
+generated-page removal takes them down (`removeCategoryPages`, shared with product pages).
+Full write-up: `docs/systems/category-pages.md`.
+
 ### Out of scope (later workstreams or deliberate non-goals)
 
 - **~~SC template customizations on real product URLs.~~** Resolved — Phase 2 shipped 2026-06-09. The overlay now fetches the storefront's authored `/products/default` and serves it on `/products/{urlKey}/{sku}`. SC customizations inherit automatically.

@@ -356,10 +356,10 @@ export interface DashboardStatusUpdatePayload {
     mesh?: MeshStatusInfo;
     edsStorefrontStatus?: Project['edsStorefrontStatusSummary'];
     /**
-     * How many links in the storefront's content go to pages that do not exist
-     * (`brokenLinksRecord`). Above zero, the Storefront Report tile wears a dot.
+     * The storefront is behind how Demo Builder builds storefronts now (`storefrontChanges.ts`):
+     * the Reset tile says "Needs reset". Present only when true.
      */
-    brokenLinkCount?: number;
+    storefrontNeedsReset?: true;
 }
 
 /** `meshStatusUpdate` — mesh-only status push (deploy flows). */
@@ -426,6 +426,11 @@ export interface OperationProgressPayload {
     warning?: string;
     /** What a run that succeeded leaves the SC to know; shown as a plain success, not a warning. */
     note?: string;
+    /**
+     * What a run that succeeded changed, one line each, listed under its result ("Store
+     * prepared": the attribute sets erp_owner went into). A run that carries them waits to be read.
+     */
+    details?: string[];
     /** Set while the work is paused on a question only the SC can answer. */
     prompt?: OperationPrompt;
     /** A next step a run that succeeded offers on its success view (AB-74). */
@@ -462,6 +467,13 @@ export interface OperationOffer {
  * in place of the spinner and hands back the action the SC chose.
  */
 export interface OperationPrompt {
+    /**
+     * The heading: what the SC is asked to do ("Sign in to Adobe"). Every question
+     * with buttons has its own; one generic heading over all of them, "Waiting for
+     * you", said nothing the sentence under it did not (owner, 2026-10-23). A
+     * question with fields sits under the modal's title and needs none.
+     */
+    title?: string;
     message: string;
     /** The answers, the first being the one that continues the work. */
     actions: string[];
@@ -807,8 +819,8 @@ export interface StorefrontSetupProgressPayload {
 /**
  * A link in a storefront's copied content to a page the content site it was
  * copied from does not have either: a broken link in the source, carried over.
- * Recorded on the project (`metadata.brokenLinks`) and shown in the Storefront
- * Report, never as a pop-up: nothing was left out of the copy.
+ * Recorded on the project (`metadata.brokenLinks`); a reset's last view says so, and
+ * Diagnostics lists them. Never a pop-up: nothing was left out of the copy.
  */
 export interface StorefrontBrokenLink {
     /** The address the link points at: "/fr". */
@@ -835,6 +847,8 @@ export interface StorefrontSetupCompletePayload {
      * the wizard it runs before the project exists.
      */
     installedBlockLibraries?: InstalledBlockLibrary[];
+    /** Whether the build step's fixes all landed; creation stamps the project with it. */
+    storefrontBuildComplete?: boolean;
 }
 
 /** `storefront-setup-error` — the pipeline failed; the wizard offers Retry. */

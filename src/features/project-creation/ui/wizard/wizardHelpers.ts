@@ -567,6 +567,9 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
         ...(eds.installedBlockLibraries?.length
             ? { installedBlockLibraries: eds.installedBlockLibraries }
             : {}),
+        ...(eds.storefrontBuildComplete !== undefined
+            ? { storefrontBuildComplete: eds.storefrontBuildComplete }
+            : {}),
     };
 }
 

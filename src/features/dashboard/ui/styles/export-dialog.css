@@ -1,5 +1,6 @@
-/* The Export dialog and its parts. Stage chrome and the section label are the
-   Add Integration flow's (`.intflow-*`); only the parts' own layout lives here. */
+/* The Share dialog and its parts (Export and Save as demo package until
+   2026-10-22, hence the class names). Stage chrome and the section label are
+   the Add Integration flow's (`.intflow-*`); only the parts' own layout lives here. */
 
 @layer theme {
     .export-body {
@@ -90,11 +91,22 @@
         line-height: 1.5;
     }
 
-    .demo-package-body {
+    /* The name and description, opened from the quiet link. Full width, unlike
+       the rest of the link column, which hugs its content. */
+    .share-details {
         display: flex;
         flex-direction: column;
         align-self: stretch;
-        gap: 16px;
+        gap: 12px;
+    }
+
+    /* The two quiet links (Change name or description, Remove the details) sit
+       flush with the text above them; the shared class pads all four sides.
+       Two classes, because inline-controls.css is in the same layer and this
+       bundle imports it later, so a one-class rule here would lose the tie. */
+    .inline-action-link.share-details-toggle,
+    .inline-action-link.share-remove {
+        padding-left: 0;
     }
 
     .demo-package-checks-title {

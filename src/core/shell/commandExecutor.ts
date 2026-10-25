@@ -18,6 +18,23 @@ import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
 
+/** Process groups are a POSIX idea; on Windows `detached` opens a console instead. */
+const OWN_PROCESS_GROUP = process.platform !== 'win32';
+
+/**
+ * Stop every process in a command's group. Its first process may already be gone
+ * (a timeout kills it first), and the group outlives it while anything it started
+ * still runs.
+ */
+function killProcessGroup(pid: number | undefined): void {
+    if (!OWN_PROCESS_GROUP || pid === undefined) return;
+    try {
+        process.kill(-pid, 'SIGTERM');
+    } catch {
+        // Nothing left in the group.
+    }
+}
+
 /** The machinery a CommandExecutor runs on; assembled by createCommandExecutorDeps. */
 export interface CommandExecutorDeps {
     environmentSetup: EnvironmentSetup;
@@ -347,12 +364,18 @@ export class CommandExecutor {
             env: options.env as NodeJS.ProcessEnv | undefined,
             timeout: options.timeout,
             reject: false,
+            // Its own process group, so a timeout or a cancel can stop everything it
+            // started. A command runs as shell → `fnm exec` → the tool, and killing the
+            // shell alone left the tool running: a timed-out `aio auth login` kept its
+            // sign-in listener open for good (2026-10-23).
+            detached: OWN_PROCESS_GROUP,
         });
 
         // Manual AbortController support
         if (signal) {
             const abortHandler = () => {
                 subprocess.kill();
+                killProcessGroup(subprocess.pid);
             };
             signal.addEventListener('abort', abortHandler);
             subprocess.finally(() => {
@@ -387,6 +410,7 @@ export class CommandExecutor {
 
             // With reject: false, timeout doesn't throw - check explicitly
             if (result.timedOut) {
+                killProcessGroup(subprocess.pid);
                 this.logger.warn(`[Command Executor] Command timed out after ${options.timeout}ms`);
                 throw new Error(`Command timed out after ${options.timeout}ms`);
             }
@@ -402,17 +426,18 @@ export class CommandExecutor {
                 duration,
             };
         } catch (error) {
-            this.handleStreamingError(error, options.timeout);
+            this.handleStreamingError(error, options.timeout, subprocess.pid);
         }
     }
 
     /**
      * Handle errors from streaming execution
      */
-    private handleStreamingError(error: unknown, timeout?: number): never {
+    private handleStreamingError(error: unknown, timeout?: number, pid?: number): never {
         const execaError = error as ExecaError;
 
         if (execaError.timedOut) {
+            killProcessGroup(pid);
             this.logger.warn(`[Command Executor] Command timed out after ${timeout}ms`);
             throw new Error(`Command timed out after ${timeout}ms`);
         }

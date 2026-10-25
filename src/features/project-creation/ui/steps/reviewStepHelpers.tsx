@@ -11,9 +11,14 @@ import React from 'react';
 import type { ComponentData, ComponentsData } from './ReviewStep';
 import { meshComponentForStack } from './tileStatus';
 import { hasMeshInDependencies, isMeshComponentId } from '@/core/constants';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { cn } from '@/core/ui/utils/classNames';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
+import {
+    storePreparationOnReview,
+    type ReviewStorePreparation,
+} from '@/features/project-creation/ui/steps/reviewStorePreparation';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
@@ -214,4 +219,27 @@ export function resolveReviewIntegrationNames(
     return resolveIntegrationRows(state, meshComponentForStack(state, packages, stacks), catalog)
         .filter((row) => row.kind !== 'mesh')
         .flatMap((row) => (row.companion ? [row.name, row.companion] : [row.name]));
+}
+
+/**
+ * What adding the ERP integration will do to the store, for Review (owner, 2026-10-22): the
+ * selected integration that prepares the store, read against the stack's catalog.
+ */
+export function reviewStorePreparation(state: WizardState, stack: Stack | undefined): ReviewStorePreparation | undefined {
+    return storePreparationOnReview(state, getAvailableAppBuilderComponents(stack?.backend ?? '', stack?.frontend ?? ''));
+}
+
+/** Review's line about the store preparation the ERP integration's add brings. */
+export function StorePreparationNotice({ preparation }: { preparation: ReviewStorePreparation }): React.ReactElement {
+    const { name, steps, everyWebsite } = preparation;
+    const shared = everyWebsite.length
+        ? ` ${everyWebsite.join(', ')} ${everyWebsite.length === 1 ? 'changes a setting' : 'change settings'} every website on this Commerce shares, other demos' websites included.`
+        : '';
+    return (
+        <InlineNotice tone="info" title="Demo Builder will prepare the Commerce store" testId="review-store-preparation">
+            {`Adding ${name} also prepares this Commerce store before its ERP is filled: ${steps.join(', ')}. ` +
+                `Each step is checked first; one already done is left as it is.${shared} ` +
+                'What it changes is recorded, so Undo preparation on the card, or removing the integration, puts it back.'}
+        </InlineNotice>
+    );
 }

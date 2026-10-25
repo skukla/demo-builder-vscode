@@ -7,15 +7,18 @@
  * category id), not the page's own address. So the finder reads the storefront's pages
  * and matches rows, not addresses.
  *
- * The page HTML below is the DA.live source shape the extension writes itself
- * (`categoryPages.ts`); the `<p>`-wrapped cells are how DA.live stores a typed table.
+ * A page AT a category's own address (`/apparel`) is that category's page already: the
+ * menu links there, and the authored-pages sheet keeps the overlay off it (EDS-61).
+ *
+ * The page HTML below is the DA.live source shape; the `<p>`-wrapped cells are how
+ * DA.live stores a typed table.
  */
 
 import {
     categoryKeysOf,
     findOwnCategoryPages,
 } from '@/features/eds/services/catalogMenu/existingCategoryPages';
-import type { CatalogCategory } from '@/features/eds/services/catalogMenu/categoryPages';
+import type { CatalogCategory } from '@/features/eds/services/catalogMenu/categoryPagePlan';
 import { fakeStorefront } from './catalogMenuService.testUtils';
 
 const CATEGORIES: CatalogCategory[] = [
@@ -74,7 +77,7 @@ describe('findOwnCategoryPages', () => {
         expect([...found]).toEqual([['apparel', '/clothing']]);
     });
 
-    it('does not count the page at the category path itself: that case is decided by address', async () => {
+    it("does not count the page at the category's own address: that page is decided by address", async () => {
         const site = fakeStorefront({ '/signs': plp(row('urlPath', 'signs')) });
 
         expect((await findOwnCategoryPages(site.port, CATEGORIES, nobodyOurs)).size).toBe(0);
@@ -126,6 +129,14 @@ describe('findOwnCategoryPages', () => {
         expect((await findOwnCategoryPages(site.port, CATEGORIES, nobodyOurs)).size).toBe(0);
     });
 
+    it('lets a page elsewhere count when the one at the address is still the one Demo Builder wrote', async () => {
+        const ours = plp(row('urlPath', 'signs'));
+        const site = fakeStorefront({ '/signs': ours, '/safety-signage': plp(row('urlPath', 'signs')) });
+        const isOurs = (path: string, html: string): boolean => path === '/signs' && html === ours;
+
+        expect((await findOwnCategoryPages(site.port, CATEGORIES, isOurs)).get('signs')).toBe('/safety-signage');
+    });
+
     it('picks the shallowest page when several name a category: a language copy is deeper', async () => {
         const site = fakeStorefront({
             '/citisignal-fr/clothing': plp(row('urlPath', 'apparel')),
@@ -135,7 +146,7 @@ describe('findOwnCategoryPages', () => {
         expect((await findOwnCategoryPages(site.port, CATEGORIES, nobodyOurs)).get('apparel')).toBe('/clothing');
     });
 
-    it('ignores a page for a category that is not in the menu', async () => {
+    it('ignores a page for a category the store does not have', async () => {
         const site = fakeStorefront({ '/clearance': plp(row('urlPath', 'clearance')) });
 
         expect((await findOwnCategoryPages(site.port, CATEGORIES, nobodyOurs)).size).toBe(0);

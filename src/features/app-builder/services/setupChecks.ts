@@ -8,7 +8,7 @@
  * @module features/app-builder/services/setupChecks
  */
 
-import { readProductSets, setsInWords, setsWithoutOwner } from './erpOwnerAttributeSets';
+import { missingSetsNote, readProductSets, setsWithoutOwner } from './erpOwnerAttributeSets';
 import {
     cardPaymentsEnabled,
     erpConfirmedStatus,
@@ -268,7 +268,7 @@ function parsedGet(read: CommerceRead) {
 /**
  * The third half of the step (AB-74): `erp_owner` is in every attribute set the store's
  * products use, because Commerce drops a value for an attribute outside the product's set and
- * still answers 200. The sets missing it are named, with how many products each holds.
+ * still answers 200. The sets missing it are counted, with the products they hold.
  */
 async function ownerInEverySet(read: CommerceRead): Promise<SetupCheckResult> {
     try {
@@ -277,12 +277,7 @@ async function ownerInEverySet(read: CommerceRead): Promise<SetupCheckResult> {
         if (missing.length === 0) {
             return { done: true, note: 'erp_owner (Text Field) and brand both exist, and erp_owner is in every attribute set your products use.' };
         }
-        return {
-            done: false,
-            note:
-                `erp_owner is not in the attribute set${missing.length > 1 ? 's' : ''} ${setsInWords(missing)}, ` +
-                'so an ERP tag written to those products is dropped. Demo Builder can add it.',
-        };
+        return { done: false, note: missingSetsNote(missing) };
     } catch (error) {
         return { note: `Could not check the attribute sets: ${error instanceof Error ? error.message : String(error)}` };
     }

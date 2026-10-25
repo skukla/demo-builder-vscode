@@ -9,6 +9,11 @@
 import { getIdentifiedMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type { StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
 import { getStorefrontStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
+import {
+    NEEDS_RESET_LABEL,
+    NEEDS_RESET_LINE,
+    storefrontNeedsReset,
+} from '@/features/eds/services/storefront/storefrontChanges';
 import type { AppBuilderComponentState, Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues, isEdsProject } from '@/types/typeGuards';
 
@@ -127,19 +132,31 @@ export function getStorefrontStatusVariant(project: Project): StatusDotVariant {
 // ============================================================================
 
 /**
+ * Whether the project's storefront is behind how Demo Builder builds storefronts now
+ * (`storefrontChanges.ts`). Never while the project is still being created.
+ */
+export function showsNeedsReset(project: Project): boolean {
+    return project.status !== 'creating' && storefrontNeedsReset(project);
+}
+
+/**
  * How urgently a deployable needs the user, worst first.
  *
  * Three vocabularies feed this — the mesh's, the storefront's and the
  * integrations' — and none of them share a value set. This is the common
  * denominator they collapse onto.
  */
-type DeploymentConcern = 'attention' | 'deploying' | 'not-deployed' | 'current';
+type DeploymentConcern = 'attention' | 'deploying' | 'needs-reset' | 'not-deployed' | 'current';
 
 const CONCERN_ORDER: readonly DeploymentConcern[] = [
     // Attention beats deploying deliberately: an in-flight deploy is transient,
     // a failed or drifted one is not.
     'attention',
     'deploying',
+    // The storefront is behind how Demo Builder builds storefronts now. It takes the
+    // place of "Deployed", which says nothing once a reset is due (owner, 2026-10-23),
+    // and of "Not deployed": the reset is the next thing to do either way.
+    'needs-reset',
     'not-deployed',
     'current',
 ];
@@ -153,11 +170,14 @@ const CONCERN_ORDER: readonly DeploymentConcern[] = [
 export interface DeploymentSummary {
     text: string;
     variant: StatusDotVariant;
+    /** One sentence saying why, shown on hover; only where the words need one. */
+    explanation?: string;
 }
 
 const CONCERN_DISPLAY: Record<DeploymentConcern, DeploymentSummary> = {
     attention: { text: 'Attention needed', variant: 'warning' },
     deploying: { text: 'Deploying', variant: 'info' },
+    'needs-reset': { text: NEEDS_RESET_LABEL, variant: 'warning', explanation: NEEDS_RESET_LINE },
     'not-deployed': { text: 'Not deployed', variant: 'neutral' },
     current: { text: 'Deployed', variant: 'success' },
 };
@@ -202,6 +222,7 @@ export function getDeploymentSummary(project: Project): DeploymentSummary | null
     const concerns = [
         concernFromComponentStatus(getMeshStatusKey(project)),
         concernFromStorefront(project.edsStorefrontStatusSummary),
+        showsNeedsReset(project) ? 'needs-reset' : null,
         ...getIntegrationStatuses(project).map(concernFromComponentStatus),
     ].filter((concern): concern is DeploymentConcern => concern !== null);
 
@@ -295,17 +316,29 @@ export function getProjectStatusDisplay(project: Project): {
     port: number | undefined;
     statusText: string;
     statusVariant: StatusDotVariant;
+    /** Why, on hover: set only when the status is "Needs reset". */
+    statusExplanation?: string;
 } {
     const isEds = isEdsProject(project);
     const port = getFrontendPort(project);
+    const variant = isEds ? getStorefrontStatusVariant(project) : getStatusVariant(project.status, false);
+    // A reset due outranks a status that says all is well, as on the card; anything
+    // worse keeps its own words.
+    if (variant === 'success' && showsNeedsReset(project)) {
+        return {
+            isEds,
+            port,
+            statusText: NEEDS_RESET_LABEL,
+            statusVariant: 'warning',
+            statusExplanation: NEEDS_RESET_LINE,
+        };
+    }
     return {
         isEds,
         port,
         statusText: isEds
             ? getStorefrontStatusText(project)
             : getStatusText(project.status, port, false),
-        statusVariant: isEds
-            ? getStorefrontStatusVariant(project)
-            : getStatusVariant(project.status, false),
+        statusVariant: variant,
     };
 }

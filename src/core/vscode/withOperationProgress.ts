@@ -39,6 +39,8 @@ export interface OperationOutcome {
     warning?: string;
     /** What a run that succeeded leaves the SC to know, nothing to act on; said as a plain success. */
     note?: string;
+    /** What a run that succeeded changed, one line each; the modal's success view lists them. */
+    details?: string[];
     /** A next step its success view offers (AB-74). */
     offer?: OperationOffer;
 }
@@ -78,7 +80,7 @@ export async function withOperationProgress<T extends OperationOutcome>(
     return runInModal(options.id, run);
 }
 
-/** The modal's last word: the reason on failure, a success's warning and note when it has them. */
+/** The modal's last word: the reason on failure, a success's warning, note and changes when it has them. */
 function endOf(id: string, result: OperationOutcome): OperationProgressPayload {
     if (!result.success) {
         return { id, state: 'failed', error: result.error ?? 'The operation did not finish.' };
@@ -88,6 +90,7 @@ function endOf(id: string, result: OperationOutcome): OperationProgressPayload {
         state: 'succeeded',
         ...(result.warning ? { warning: result.warning } : {}),
         ...(result.note ? { note: result.note } : {}),
+        ...(result.details?.length ? { details: result.details } : {}),
         ...(result.offer ? { offer: result.offer } : {}),
     };
 }

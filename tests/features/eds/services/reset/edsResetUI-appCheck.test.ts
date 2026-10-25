@@ -386,7 +386,7 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
             // Through askDuringOperation now, so it reaches the progress modal when
             // one is narrating the reset; with none up it is this notification.
             expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-                expect.stringContaining('click Continue'),
+                expect.stringContaining('choose Continue'),
                 'Continue',
                 'Cancel',
             );

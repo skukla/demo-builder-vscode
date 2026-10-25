@@ -15,6 +15,7 @@ import type { KeepClashRequest } from '@/features/updates/services/pendingClash'
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { B2B_TEMPLATE_CHECKOUT_JSON } from '../../../helpers/placeholderLabelFixtures';
 import { createMockProject } from '../../../helpers/projectFake';
 import { realGitExecutor, runGit } from '../../../helpers/realGit';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
@@ -70,6 +71,8 @@ function buildTemplate(): { t1: string; t2: string } {
     git(work, 'init', '-q', '-b', 'main');
     write(work, 'blocks/header/header.js', HEADER_BASE);
     write(work, 'scripts/scripts.js', 'scripts 1\n');
+    // Adobe's checkout labels, unchanged between T1 and T2, so they are in no update's change.
+    write(work, 'placeholders/checkout.json', B2B_TEMPLATE_CHECKOUT_JSON);
     git(work, 'add', '-A');
     git(work, 'commit', '-q', '-m', 'T1');
     const t1 = git(work, 'rev-parse', 'HEAD');

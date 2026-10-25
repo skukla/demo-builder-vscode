@@ -216,7 +216,9 @@ async function planErpAdd(
  * The new ERP's rule (the SC's, or the default) and, for a website rule only, the narrowing
  * the precedence needs on an existing ERP on everything, read from the store here (AB-72);
  * a refusal when that read did not go through. An attribute rule reads nothing: the catch-all
- * keeps what the attribute does not claim.
+ * keeps what the attribute does not claim. That holds because the list sync before this step
+ * pinned the first ERP's rule on its own entry when the list grew from it (`syncErpList`);
+ * without the pin the integration reads it as `erp_owner=<its id>` (Justrite, 2026-10-22).
  */
 async function ownershipToSave(
     plan: ErpAddPlan,

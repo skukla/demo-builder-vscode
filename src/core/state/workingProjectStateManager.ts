@@ -62,6 +62,29 @@ export function createWorkingProjectStateManager(
     });
 }
 
+/**
+ * A StateManager view for work that walks MANY projects: Check for Updates and its apply.
+ * Its `saveProject` never moves the open project: a project the person has open gets the
+ * ordinary save (so its screens see the change), any other is written to disk only. Without
+ * it the check and the apply made every project they saved the open one, and the person was
+ * left on whichever came last (2026-10-23). Not for a rename: it decides by the saved
+ * project's path, and a renamed project is saved at a folder that is not current yet.
+ *
+ * @param real - the real manager
+ * @returns the view; everything but `saveProject` is the real manager's
+ */
+export function createNonSwitchingStateManager(real: StateManager): StateManager {
+    const saveProject = async (project: Project): Promise<void> =>
+        (await isCurrent(real, project.path)) ? real.saveProject(project) : real.saveProjectConfigOnly(project);
+    return new Proxy(real, {
+        get(target, prop, receiver) {
+            if (prop === 'saveProject') return saveProject;
+            const value: unknown = Reflect.get(target, prop, receiver);
+            return typeof value === 'function' ? value.bind(target) : value;
+        },
+    });
+}
+
 /** Is this the project the person has open now? */
 async function isCurrent(real: StateManager, path: string): Promise<boolean> {
     const current = await real.getCurrentProject();

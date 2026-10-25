@@ -54,6 +54,13 @@ const addIntegrationSchema = {
         .array(z.string())
         .optional()
         .describe('Adobe sdk codes to subscribe for THIS integration (from list_console_apis)'),
+    confirm: z
+        .boolean()
+        .optional()
+        .describe(
+            'For the ERP integration only: true runs the add. Without it the answer is what preparing ' +
+                'the store will change (data.preparation) and nothing is added.',
+        ),
 };
 
 export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
@@ -88,14 +95,23 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'ERP integration also adds its first ERP; `name` names that ERP ("Justrite" → Justrite ' +
             'ERP), which cannot be changed once added, so ask the user. The integration keeps ' +
             '"ERP Integration" (rename_integration can change it later). ' +
-            'Takes about a minute. Returns the id to use with deploy_integration / ' +
+            'Adding the ERP integration also prepares the store before its ERP is filled: the ' +
+            'setup steps Demo Builder can apply (the ones prepare_commerce_store applies), recorded ' +
+            'so undo_commerce_store_preparation and remove_integration put them back. Some change ' +
+            'settings every website on the Commerce instance shares (data.preparation.everyWebsite). ' +
+            'So the ERP integration needs confirm:true: WITHOUT it the answer previews what the ' +
+            'preparation will change (data.preparation.steps, or data.preparation.unread when the ' +
+            'store could not be read) and nothing is added; show the user, then call again with ' +
+            'confirm:true. Takes about a minute. Returns the id to use with deploy_integration / ' +
             'remove_integration. Confirm the choice with the user first.',
         map: dashboardHandlers,
         type: 'addAppBuilderComponent',
         inputSchema: addIntegrationSchema,
-        // Not confirm-gated, matching deploy_integration: an add is additive and
+        // Not confirm-gated as a row, matching deploy_integration: an add is additive and
         // re-runnable (a failed add keeps its folder so the user can retry), and
-        // remove_integration — which undeploys remotely — carries the gate instead.
+        // remove_integration — which undeploys remotely — carries the gate instead. The ERP
+        // integration is the one add the HANDLER gates on `confirm`, because it prepares the
+        // store, some of it instance-wide (owner, 2026-10-22).
     },
     {
         tool: 'save_app_to_github',

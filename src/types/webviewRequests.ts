@@ -254,11 +254,11 @@ export interface ChangeDemoSourceRequest {
 }
 
 /**
- * "Save as demo package" (step 09). `getDemoPackagePreview` answers what the
- * card would carry and what a project built from it will need; `saveDemoPackage`
- * writes the description file, puts the card on the SC's own Welcome step
- * and answers the link; `removeDemoPackage` undoes exactly what saveDemoPackage
- * did.
+ * The Share dialog's link form (step 09, merged with Export 2026-10-22).
+ * `getDemoPackagePreview` answers what the card would carry and what a project
+ * built from it will need; `saveDemoPackage` writes the description file, puts
+ * the card on the SC's own Welcome step unless asked not to, and answers the
+ * link; `removeDemoPackage` undoes exactly what saveDemoPackage did.
  */
 export interface DemoPackageCheck {
     id: 'repository' | 'index' | 'datapack' | 'custom-app';
@@ -269,7 +269,10 @@ export interface DemoPackageCheck {
 }
 
 export interface DemoPackagePreview {
-    /** Prefilled from the brand or demo the project was built on; the SC edits before writing. */
+    /**
+     * What the description file says when the file is ours; otherwise prefilled
+     * from the brand or demo the project was built on. The SC edits before writing.
+     */
     draft: { name: string; description: string };
     checks: DemoPackageCheck[];
     /** The link a colleague pastes into "Add a demo package". */
@@ -283,6 +286,11 @@ export interface DemoPackagePreview {
 export interface SaveDemoPackageRequest {
     name: string;
     description: string;
+    /**
+     * Put the card on the SC's own Welcome step (default true). False writes the
+     * file only, and takes an existing card off the list.
+     */
+    addToWelcome?: boolean;
 }
 
 export interface SaveDemoPackageResult {
@@ -291,8 +299,8 @@ export interface SaveDemoPackageResult {
     file: 'written' | 'unchanged' | 'skipped';
     /** Why the file was skipped, when it was. */
     fileReason?: string;
-    /** The card is on the SC's own Welcome step now (always, after a save). */
-    onList: true;
+    /** Whether the card is on the SC's own Welcome step after this save. */
+    onList: boolean;
     checks: DemoPackageCheck[];
 }
 
@@ -438,10 +446,12 @@ export interface ProjectCreationConfig {
         // Preflight completion fields (set by StorefrontSetupStep)
         preflightComplete?: boolean;
         repoUrl?: string;
-        /** Links the setup's content copy found to pages the source lacks (Storefront Report). */
+        /** Links the setup's content copy found to pages the source lacks, recorded on the project. */
         brokenLinks?: import('./webviewPayloads').StorefrontBrokenLink[];
         /** The block libraries setup installed: saved onto THIS project, not the open one. */
         installedBlockLibraries?: import('./blockLibraries').InstalledBlockLibrary[];
+        /** Present when setup built the storefront: whether its fixes all landed (storefrontChanges.ts). */
+        storefrontBuildComplete?: boolean;
         // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
         // Patch IDs to apply during reset (from demo-packages.json)
         patches?: string[];
@@ -582,10 +592,8 @@ export interface StorefrontSetupStartPayload {
     selectedPackage?: string;
     /** Selected stack ID (e.g. 'eds-accs') — needed to resolve package-derived settings */
     selectedStack?: string;
-    /** The storefront row when the project is built on an added demo: the phases read it for the repo branch, the pages and the dry check. */
+    /** The storefront row when the project is built on an added demo: the phases read it for the repo branch and the pages. */
     demo?: AddedDemo;
-    /** Apply the fixes that fit an added demo that shows our lineage (EDS-13f); the agent's `applyFixes`. */
-    applyDemoFixes?: boolean;
     edsConfig: {
         repoName: string;
         repoMode?: 'new' | 'existing';
@@ -626,12 +634,6 @@ export interface StorefrontSetupStartPayload {
          * the phases read one config. Absent for a shipped brand.
          */
         demo?: AddedDemo;
-        /**
-         * The SC accepted Demo Builder's fixes for an added demo that shows our
-         * lineage (EDS-13f step 03), copied from the payload like `demo`. Never
-         * defaulted on: without it the fixes that fit are offered, not written.
-         */
-        applyDemoFixes?: boolean;
         // Selected existing repository — the wizard's own repo-list item type
         // (ONE declaration; this used to be an inline four-field twin).
         selectedRepo?: GitHubRepoItem;
@@ -881,6 +883,11 @@ export interface AddAppBuilderComponentRequestPayload {
      * cached from earlier (Justrite's, 2026-10-15).
      */
     destination?: { project: DestinationRef; workspace: DestinationRef };
+    /**
+     * For an entry whose add prepares the store (the ERP integration): `true` runs the add;
+     * without it the answer is what the preparation will change, and nothing is added.
+     */
+    confirm?: boolean;
 }
 
 /** `rename-adobe-project` — change an Adobe I/O project's title (never its name or id). */

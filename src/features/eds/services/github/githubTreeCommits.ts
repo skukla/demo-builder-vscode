@@ -323,4 +323,42 @@ export class GitHubTreeCommits extends GitHubAuthenticatedOperations {
             throw error;
         }
     }
+
+    /**
+     * The files a branch added or changed after `base`, removals left out: what a
+     * code publish after `base` has to have put on the CDN (`codeServed.ts`).
+     *
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @param base - the commit to compare from
+     * @param branch - the branch to compare to (default: 'main')
+     * @returns the changed files' paths
+     */
+    async filesChangedSince(owner: string, repo: string, base: string, branch = 'main'): Promise<string[]> {
+        const octokit = await this.ensureAuthenticated();
+        const response = await octokit.request('GET /repos/{owner}/{repo}/compare/{basehead}', {
+            owner,
+            repo,
+            basehead: `${base}...${branch}`,
+        });
+        return (response.data.files ?? []).filter((file) => file.status !== 'removed').map((file) => file.filename);
+    }
+
+    /**
+     * The oldest of a branch's latest 100 commits. A storefront just created from a
+     * template has a handful, so this is the commit the template made: what a check of
+     * "everything committed since" starts from (`codeServed.ts`).
+     *
+     * @returns the commit's sha, or null when the branch has none
+     */
+    async earliestRecentCommitSha(owner: string, repo: string, branch = 'main'): Promise<string | null> {
+        const octokit = await this.ensureAuthenticated();
+        const response = await octokit.request('GET /repos/{owner}/{repo}/commits', {
+            owner,
+            repo,
+            sha: branch,
+            per_page: 100,
+        });
+        return response.data[response.data.length - 1]?.sha ?? null;
+    }
 }

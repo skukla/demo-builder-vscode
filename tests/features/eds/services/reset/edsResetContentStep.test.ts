@@ -15,6 +15,13 @@ import {
     resetOrchestrationMocks,
     runReset,
 } from './edsResetService.orchestrationHarness';
+import { brokenLinksSentence } from '@/features/eds/services/storefront/brokenLinksRecord';
+
+const mockPublishAuthoredListStep = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/eds/services/catalogMenu/catalogMenuStep', () => ({
+    ...jest.requireActual('@/features/eds/services/catalogMenu/catalogMenuStep'),
+    publishAuthoredListStep: (...a: unknown[]) => mockPublishAuthoredListStep(...a),
+}));
 
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
 import type { Project } from '@/types/base';
@@ -51,20 +58,22 @@ beforeEach(() => {
 });
 
 describe('runContentPipeline - the broken-links record', () => {
-    it('replaces the record with what the fresh copy found', async () => {
+    it('replaces the record with what the fresh copy found, and names them in the result', async () => {
         const project = storefrontProject();
 
-        await runReset({ project, contentSource: CONTENT_SOURCE });
+        const { result } = await runReset({ project, contentSource: CONTENT_SOURCE });
 
         expect(brokenLinks(project)).toStrictEqual(NEW_LINKS);
+        expect(result.brokenLinks).toBe(brokenLinksSentence(NEW_LINKS));
     });
 
-    it('keeps the last record when the SC kept the current content', async () => {
+    it('keeps the last record when the SC kept the current content, and says nothing of it', async () => {
         const project = storefrontProject();
 
-        await runReset({ project, contentSource: CONTENT_SOURCE, keepContent: true });
+        const { result } = await runReset({ project, contentSource: CONTENT_SOURCE, keepContent: true });
 
         expect(brokenLinks(project)).toStrictEqual(OLD_LINKS);
+        expect(result).not.toHaveProperty('brokenLinks');
     });
 
     it('keeps the last record when the storefront has no content source to copy', async () => {
@@ -75,3 +84,25 @@ describe('runContentPipeline - the broken-links record', () => {
         expect(brokenLinks(project)).toStrictEqual(OLD_LINKS);
     });
 });
+
+/**
+ * EDS-61: reset takes the authored-pages sheet out before it re-publishes the content. When
+ * that take-out failed, the old sheet is still live during the bulk publish, so the pipeline's
+ * hook refreshes it first — only where the record says it is live (the failed take-out kept
+ * that flag). The take-out's own sentence already reports the failure.
+ */
+describe('runContentPipeline - the authored-pages sheet before the bulk publish', () => {
+    it('hands the pipeline a hook that refreshes a sheet still live, on this storefront', async () => {
+        const project = storefrontProject();
+
+        await runReset({ project, contentSource: CONTENT_SOURCE });
+        await mockExecuteEdsPipeline.mock.calls[0][0].beforeContentPublish?.();
+
+        expect(mockPublishAuthoredListStep).toHaveBeenCalledTimes(1);
+        const [passed, site, options] = mockPublishAuthoredListStep.mock.calls[0];
+        expect(passed).toBe(project);
+        expect(typeof site.categoryPages.publishAuthoredSheet).toBe('function');
+        expect(options).toEqual({ onlyWhenPublished: true });
+    });
+});
+

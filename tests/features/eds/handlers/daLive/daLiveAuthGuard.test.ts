@@ -378,7 +378,7 @@ describe('ensureDaLiveAuth — server probe', () => {
         await ensureDaLiveAuth(mockContext, '[Test]', 'acme');
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'Your DA.live session has expired. Please sign in to continue.',
+            'Your DA.live session has expired. Sign in to keep going.',
             'Sign In'
         );
     });

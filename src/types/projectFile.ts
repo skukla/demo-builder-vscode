@@ -79,7 +79,7 @@ export interface SharedDemoDescription
     blockLibraries?: string[];
     contentSource?: DaLiveContentSource;
     /**
-     * What the storefront was built from, written by "Save as demo package"
+     * What the storefront was built from, written by Share Demo's link save
      * (EDS-13f decision 2). Present means a Demo Builder storefront: starting a
      * project from it applies the ledger's fixes where they fit. Absent (a
      * colleague who did not build with Demo Builder, or a version-1 file)

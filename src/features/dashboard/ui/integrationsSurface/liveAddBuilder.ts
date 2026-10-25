@@ -14,6 +14,7 @@
 
 import type { MutableRefObject } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
 import { copyForAdd } from '@/features/components/services/appBuilderComponentLinks';
 import type { UseProjectBuilderReturn } from '@/features/project-creation/ui/steps/useProjectBuilder';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -39,6 +40,13 @@ interface LiveAddRefs {
     onAddStarted: MutableRefObject<
         ((id: string, name: string, payload?: Record<string, unknown>) => void) | undefined
     >;
+    /**
+     * Hand an add that prepares the store (the ERP integration) to the screen's confirm
+     * instead of sending it (owner, 2026-10-22). Absent, it is sent at once.
+     */
+    onConfirmAdd?: MutableRefObject<
+        ((target: { id: string; name: string; payload: AddAppBuilderComponentRequestPayload }) => void) | undefined
+    >;
 }
 
 /**
@@ -54,8 +62,8 @@ function chosenDestination(
     return !hadDestination && project?.id && workspace?.id ? { destination: { project, workspace } } : {};
 }
 
-/** Post an add whose steps narrate to the progress modal. */
-function postAdd(payload: AddAppBuilderComponentRequestPayload): void {
+/** Post an add whose steps narrate to the progress modal. Shared with the ERP integration's confirm. */
+export function postAdd(payload: AddAppBuilderComponentRequestPayload): void {
     webviewClient.postMessage('addAppBuilderComponent', { ...payload, progress: 'modal' });
 }
 
@@ -93,15 +101,20 @@ export function liveAddBuilder(
                     name: displayName,
                     ...chosenDestination(refs.destination.current, refs.hadDestination.current),
                 };
+                const addedId = copy?.id ?? id;
+                const addedName = displayName ?? copy?.name ?? entry?.name ?? id;
+                // The ERP integration's add prepares the store: the SC confirms what it
+                // changes first, and the confirm sends it.
+                const confirmAdd = refs.onConfirmAdd?.current;
+                if (entry && confirmAdd && preparesStoreOnAdd(entry)) {
+                    confirmAdd({ id: addedId, name: addedName, payload });
+                    return;
+                }
                 postAdd(payload);
                 // The payload rides along so the modal's Retry re-sends this
                 // exact add rather than a deploy of something that may never
                 // have been persisted.
-                refs.onAddStarted.current?.(
-                    copy?.id ?? id,
-                    displayName ?? copy?.name ?? entry?.name ?? id,
-                    payload,
-                );
+                refs.onAddStarted.current?.(addedId, addedName, payload);
             }
         },
         onAddCustomAppBuilderComponent: (

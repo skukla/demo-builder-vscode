@@ -26,6 +26,10 @@ import {
 } from '@/features/eds/services/placeholderStubs';
 
 import { installSiteFetch, restoreFetch } from '../../../../helpers/siteFetchFake';
+import {
+    B2B_TEMPLATE_CHECKOUT_JSON,
+    B2B_TEMPLATE_CHECKOUT_ROWS,
+} from '../../../../helpers/placeholderLabelFixtures';
 
 beforeEach(installDefaults);
 afterEach(restoreFetch);
@@ -60,6 +64,35 @@ describe('resetRepoToTemplate — placeholder stubs ride the bulk override commi
         );
         expect(site.asked()).toContain(`${base}/placeholders/cart.json`);
     });
+
+    // Measured 2026-10-22 on a live storefront made from the B2B template: the stub replaced
+    // the template's checkout.json and the checkout's item-list heading and Edit link read
+    // "undefined". The reset writes the template's tree, so it reads the template's file, at
+    // the commit it resets onto, and keeps its rows.
+    it("keeps the template's checkout labels, read from the template at the commit reset onto", async () => {
+        mockGetLatestCommitSha.mockResolvedValue('feedface1234');
+        const getFileContent = jest.fn(async (owner: string, _r: string, path: string) =>
+            owner === 'tpl-owner' && path === 'placeholders/checkout.json'
+                ? { content: B2B_TEMPLATE_CHECKOUT_JSON, sha: 's', path, encoding: 'base64' }
+                : null,
+        );
+        const resetMock = jest.fn().mockResolvedValue(RESET_RESULT);
+        const githubFileOps = {
+            resetRepoToTemplate: resetMock,
+            getFileContent,
+            commitTreeToBranch: jest.fn(),
+            getLatestCommitSha: mockGetLatestCommitSha,
+        } as unknown as GitHubFileOperations;
+
+        await resetRepoToTemplate(buildParams(), createMockHandlerContext({ logger: createMockLogger() }), githubFileOps, jest.fn());
+
+        expect(getFileContent).toHaveBeenCalledWith('tpl-owner', 'tpl-repo', 'placeholders/checkout.json', 'feedface1234');
+        const overrides = resetMock.mock.calls[0]?.[4] as Map<string, string>;
+        const written = JSON.parse(overrides.get('placeholders/checkout.json') ?? 'null') as { data: { data: unknown } };
+        expect(written.data.data).toStrictEqual(B2B_TEMPLATE_CHECKOUT_ROWS);
+        // Control: an area the template has no file for keeps the plain stub.
+        expect(overrides.get('placeholders/cart.json')).toBe(buildPlaceholderStubJson());
+    });
 });
 
 /**
@@ -69,6 +102,7 @@ describe('resetRepoToTemplate — placeholder stubs ride the bulk override commi
  */
 describe('resetRepoToTemplate — template label files that hide a copied sheet', () => {
     it('removes them in a commit after the reset, reading the reset commit', async () => {
+        installSiteFetch(['https://main--their-demo--colleague.aem.live/placeholders/checkout.json']);
         const getFileContent = jest.fn(async (_o: string, _r: string, path: string) =>
             path === 'placeholders/checkout.json'
                 ? { content: '{"data":[{"Key":"Checkout.Summary.Edit","Value":"Edit"}]}', sha: 's', path, encoding: 'base64' }
@@ -83,7 +117,7 @@ describe('resetRepoToTemplate — template label files that hide a copied sheet'
         } as unknown as GitHubFileOperations;
 
         await resetRepoToTemplate(
-            buildParams(),
+            buildParams({ contentSource: { org: 'colleague', site: 'their-demo', indexPath: '/full-index.json' } }),
             createMockHandlerContext({ logger: createMockLogger() }),
             githubFileOps,
             jest.fn(),

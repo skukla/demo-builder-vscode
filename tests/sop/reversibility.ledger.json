@@ -38,7 +38,8 @@
         },
         {
             "tool": "create_project",
-            "reverses": "delete_project"
+            "reverses": "delete_project",
+            "note": "Category pages (EDS-61) are published through the product page overlay at /categories/{url path}, by setup and by a shopper's first visit, and have no DA.live document. delete_project's whole-site unpublish takes them down with every other path Helix lists; reset_project and republish take down every one (reset) or those of categories the store no longer has (republish), through removeCategoryPages and its shared-repository refusal. add_category_pages was removed 2026-10-22 with the per-category DA.live pages it wrote."
         },
         {
             "tool": "create_project_from_file",
@@ -113,11 +114,6 @@
             "tool": "delete_event_provider",
             "reverses": "reinstall_integration",
             "note": "Added 2026-10-03 with the tool (AB-6), at the owner's ask - not create-shaped, so the enforcer would not have asked. The providers it can delete are the open workspace's own 3rd-party custom providers, which in practice an App Management app (the Commerce starter kit) created at install; reinstall_integration uninstalls and installs the app again, and the install finds-or-creates every provider the app declares (.rptc/research/event-provider-lifecycle/research.md section 1.4 - read from the kit's source, not yet seen live). A provider made any other way (a hand-run aio onboarding, a custom app) has no reversal in this extension: the create tools were removed with the rest of the pulled surface in 4a3889049 and did not come back. Consent-gated for that reason."
-        },
-        {
-            "tool": "add_category_pages",
-            "reverses": "reset_project",
-            "note": "Added 2026-10-05 with the tool (EDS-27). Every page it writes goes on the catalog menu's record with its hash, and reset removes exactly the recorded pages nobody has edited since (catalogMenuStep.removeCatalogMenuStep). There is no narrower undo - no tool removes only the pages added after setup; a single one can be taken out with delete_page."
         },
         {
             "tool": "prepare_commerce_store",

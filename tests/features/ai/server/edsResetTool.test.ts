@@ -179,20 +179,27 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(res).toMatchObject({ reset: true, project: 'eds-proj' });
     });
 
-    it("carries the dry check's caveats for an added demo, and no key otherwise", async () => {
+    // A success that carries an error (the site configuration not written, the mesh not
+    // redeployed) and a page step that left pages undone used to reach the agent nowhere
+    // (2026-10-23).
+    it('tells the agent what the reset finished around, and no key when it finished everything', async () => {
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
         expect('caveats' in (await s.call({ confirm: true }))).toBe(false);
 
+        const configNotWritten = 'The site configuration could not be written.';
+        const undone = "13 category pages couldn't be published.";
         executeEdsResetMock.mockResolvedValueOnce({
             success: true,
             filesReset: 12,
             contentCopied: 5,
             meshRedeployed: false,
-            demoCaveats: ['Product links may not work.'],
+            errorType: 'CONFIG_WRITE_FAILED',
+            error: configNotWritten,
+            pageWarnings: [undone],
         });
         const res = await s.call({ confirm: true });
-        expect(res).toMatchObject({ reset: true, caveats: ['Product links may not work.'] });
+        expect(res).toMatchObject({ reset: true, caveats: [configNotWritten, undone] });
     });
 
     it('adds what the content pipeline could not do to the caveats (EDS-40, EDS-55)', async () => {
@@ -211,17 +218,23 @@ describe('reset_project on an Edge Delivery project', () => {
             reset: true,
             caveats: [missingPages],
         });
+    });
+
+    it('tells the agent first when the reset could not publish the code (2026-10-22)', async () => {
+        const notPublished = 'The storefront code could not be published.';
+        const s = fakeServer();
+        registerResetProjectTool(s, ctxFactory);
 
         executeEdsResetMock.mockResolvedValueOnce({
             success: true,
             filesReset: 12,
             contentCopied: 5,
-            demoCaveats: ['Product links may not work.'],
-            pipelineWarnings: [missingPages],
+            codeNotPublished: notPublished,
+            pipelineWarnings: ['2 pages are missing.'],
         });
         expect(await s.call({ confirm: true })).toMatchObject({
             reset: true,
-            caveats: ['Product links may not work.', missingPages],
+            caveats: [notPublished, '2 pages are missing.'],
         });
     });
 
@@ -269,6 +282,23 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(res.productPages).toBe('Removed 18 product pages from the old catalog.');
     });
 
+    it('names the copied content\'s broken links, and leaves the key out when there are none (EDS-64)', async () => {
+        const s = fakeServer();
+        registerResetProjectTool(s, ctxFactory);
+        expect('brokenLinks' in (await s.call({ confirm: true }))).toBe(false);
+
+        const LINKS = '1 link in the copied content goes to a missing page: /fr (on /store-switcher).';
+        executeEdsResetMock.mockResolvedValueOnce({
+            success: true,
+            filesReset: 12,
+            contentCopied: 5,
+            meshRedeployed: false,
+            brokenLinks: LINKS,
+        });
+
+        expect((await s.call({ confirm: true })).brokenLinks).toBe(LINKS);
+    });
+
     it('reports each step live as it runs, numbered the way the button shows it', async () => {
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
@@ -283,23 +313,6 @@ describe('reset_project on an Edge Delivery project', () => {
             `${RESET_STAGES.resettingCode.label} (1 of 2)`,
             `${RESET_STAGES.publishingCodeAndSettings.label} (2 of 2)`,
         ]);
-    });
-
-    it("passes the SC's yes to Demo Builder's fixes, and says what was applied and what was offered (EDS-13f)", async () => {
-        const s = fakeServer();
-        registerResetProjectTool(s, ctxFactory);
-        executeEdsResetMock.mockResolvedValueOnce({
-            success: true,
-            filesReset: 12,
-            contentCopied: 5,
-            meshRedeployed: false,
-            demoFixes: { applied: ['pdp-empty-data-redirect'] },
-        });
-
-        const res = await s.call({ confirm: true, applyFixes: true });
-
-        expect(executeEdsResetMock.mock.calls[0][0]).toMatchObject({ applyDemoFixes: true });
-        expect(res).toMatchObject({ reset: true, fixes: { applied: ['pdp-empty-data-redirect'] } });
     });
 
     it('sends a headless project to the component reset, never the storefront one', async () => {
@@ -381,7 +394,6 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(Object.keys(def.inputSchema!)).toEqual([
             'includeBlockLibrary',
             'verifyCdn',
-            'applyFixes',
             'confirm',
         ]);
     });
@@ -426,7 +438,7 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
 
-    it('defaults every optional flag OFF when the caller omits them, applying fixes included', async () => {
+    it('defaults every optional flag OFF when the caller omits them', async () => {
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
 
@@ -436,7 +448,6 @@ describe('reset_project on an Edge Delivery project', () => {
             expect.objectContaining({
                 includeBlockLibrary: false,
                 verifyCdn: false,
-                applyDemoFixes: false,
             }),
             expect.anything(),
             expect.anything(),

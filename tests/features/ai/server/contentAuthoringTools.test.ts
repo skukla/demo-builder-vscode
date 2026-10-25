@@ -451,12 +451,13 @@ describe('delete_page', () => {
         expect(helix.unpublishPage).not.toHaveBeenCalled();
     });
 
-    it('unpublishes the web path and deletes the source path', async () => {
+    it('unpublishes the web path, removes its preview, and deletes the source path', async () => {
         const res = await register().call('delete_page', { path: '/about', confirm: true });
 
         expect(helix.unpublishPage).toHaveBeenCalledWith('skukla', 'bodea', '/about');
+        expect(helix.deletePreview).toHaveBeenCalledWith('skukla', 'bodea', '/about');
         expect(daOps.deleteSource).toHaveBeenCalledWith('skukla', 'bodea', 'about.html');
-        expect(res).toMatchObject({ deleted: true, unpublished: true, path: '/about' });
+        expect(res).toMatchObject({ deleted: true, unpublished: true, previewRemoved: true, path: '/about' });
     });
 
     // Deleting the source first makes the unpublish fail with the documented

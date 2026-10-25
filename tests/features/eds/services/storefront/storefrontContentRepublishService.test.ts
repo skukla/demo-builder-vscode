@@ -35,8 +35,10 @@ jest.mock('@/features/eds/services/catalogPrewarmService', () => ({
 // The catalog menu step has its own suite (catalogMenuStep.test.ts); here it is walled
 // and asserted by what republish hands it and does with its answer (EDS-24).
 const mockApplyCatalogMenuStep = jest.fn();
+const mockPublishAuthoredListStep = jest.fn();
 jest.mock('@/features/eds/services/catalogMenu/catalogMenuStep', () => ({
     applyCatalogMenuStep: (...a: unknown[]) => mockApplyCatalogMenuStep(...a),
+    publishAuthoredListStep: (...a: unknown[]) => mockPublishAuthoredListStep(...a),
 }));
 
 import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontContentRepublishService';
@@ -109,7 +111,7 @@ describe('republishStorefrontContent', () => {
     // EDS-23 recommendation 2: the raw x-error is honest but not actionable. When
     // the code endpoint says the App is not on the repository, the answer says
     // that in plain words and links the install page — on the dashboard button
-    // and the `sync_content` tool alike, which share this pipeline.
+    // and the agent's `republish` tool alike, which share this pipeline.
     it('says "add the repository to the App" when the code endpoint says the App is not on it', async () => {
         mockPreviewCode.mockRejectedValueOnce(new Error(PREVIEW_CODE_APP_NOT_ON_REPO_ERROR));
         const res = await republishStorefrontContent(params());
@@ -176,8 +178,31 @@ describe('republishStorefrontContent', () => {
             expect(mockApplyCatalogMenuStep.mock.invocationCallOrder[0]).toBeGreaterThan(publishOrder);
         });
 
+        it('publishes the authored-pages sheet BEFORE the bulk page publish, on the site the step then uses', async () => {
+            // An authored page at a category address is previewed by the bulk publish; unless
+            // the published sheet already lists it, the overlay replaces it (EDS-61).
+            const p = params();
+            await republishStorefrontContent(p);
+
+            const [project, site] = mockPublishAuthoredListStep.mock.calls[0];
+            expect(project).toBe(p.project);
+            expect(mockPublishAuthoredListStep.mock.invocationCallOrder[0]).toBeLessThan(
+                mockPublishAllSiteContent.mock.invocationCallOrder[0],
+            );
+            expect(mockApplyCatalogMenuStep.mock.calls[0][1]).toBe(site);
+        });
+
+        it('carries on with the publish when the early sheet could not go out: the step retries it', async () => {
+            mockPublishAuthoredListStep.mockResolvedValueOnce("Couldn't publish the list (HTTP 401); …");
+            const res = await republishStorefrontContent(params());
+
+            expect(res.success).toBe(true);
+            expect(mockPublishAllSiteContent).toHaveBeenCalled();
+            expect(mockApplyCatalogMenuStep).toHaveBeenCalled();
+        });
+
         it('carries the sentence on the result, shows it under its step, and keeps the record on the project', async () => {
-            mockApplyCatalogMenuStep.mockResolvedValue('Wrote and published 1 category page.');
+            mockApplyCatalogMenuStep.mockResolvedValue({ summary: 'Published 1 category page.', ok: true });
             const onStage = jest.fn();
             const p = params({ onStage });
 
@@ -186,11 +211,11 @@ describe('republishStorefrontContent', () => {
             expect(res).toEqual({
                 success: true,
                 cdnVerified: true,
-                catalogMenu: 'Wrote and published 1 category page.',
+                catalogMenu: 'Published 1 category page.',
             });
             expect(onStage).toHaveBeenCalledWith(
                 OPERATION_STAGES.updatingCatalogMenu.label,
-                'Wrote and published 1 category page.',
+                'Published 1 category page.',
             );
             expect(p.persist).toHaveBeenCalledWith(p.project);
         });

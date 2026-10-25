@@ -27,6 +27,7 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
+import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { cn } from '@/core/ui/utils/classNames';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
@@ -132,21 +133,26 @@ export interface StepProps {
     shown?: boolean;
 }
 
+/** The quiet link's words for each state: what pressing it will do. */
+const SKIP_OR_REOPEN = {
+    open: 'Skip this step',
+    done: 'Mark as not done',
+    dismissed: 'Undo skip',
+} as const;
+
 /**
- * The quiet way to skip a step, or to reopen one that is finished or skipped. It stays in
- * the step rather than the footer: it is the rare action, and the footer takes only full
- * buttons.
+ * The quiet way to skip a step, or to take back a done or skipped one. It stays in the
+ * step rather than the footer: it is the rare action, and the footer takes only full
+ * buttons. A step Demo Builder checked and found set up has none: the next check would
+ * mark it done again (owner, 2026-10-22: a bare "Reopen" there read as an empty row).
  */
-function SkipOrReopen({ item, busy, onSet }: StepProps): React.ReactElement {
+function SkipOrReopen({ item, busy, onSet }: StepProps): React.ReactElement | null {
+    if (item.state === 'done' && item.lastCheck === 'passed') return null;
     const skip = item.state === 'open';
     return (
         <div>
-            <Link
-                isQuiet
-                UNSAFE_className="setup-guide-skip-link"
-                onPress={() => !busy && onSet(skip ? 'dismissed' : 'open')}
-            >
-                {skip ? 'Skip this step' : 'Reopen'}
+            <Link isQuiet onPress={() => !busy && onSet(skip ? 'dismissed' : 'open')}>
+                {SKIP_OR_REOPEN[item.state]}
             </Link>
         </div>
     );
@@ -183,30 +189,24 @@ function CheckResult({ item }: { item: SetupChecklistItem }): React.ReactElement
 /** Where / Enter / Then / Why: labelled lines that scan as one small table. */
 function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
     return (
-        <dl className="setup-guide-facts">
-            <dt>Where</dt>
-            <dd>
+        <FactList>
+            <Fact label="Where">
                 <WhereLine item={item} />
-            </dd>
+            </Fact>
             {item.enter && (
-                <>
-                    <dt>Enter</dt>
-                    <dd className="setup-guide-pills">
+                <Fact label="Enter">
+                    <div className="setup-guide-pills">
                         {item.enter.map((value) => (
                             <CopyableText key={value}>{value}</CopyableText>
                         ))}
-                    </dd>
-                </>
+                    </div>
+                </Fact>
             )}
-            {item.then && (
-                <>
-                    <dt>Then</dt>
-                    <dd>{item.then}</dd>
-                </>
-            )}
-            <dt>Why</dt>
-            <dd className="setup-guide-why">{item.why}</dd>
-        </dl>
+            {item.then && <Fact label="Then">{item.then}</Fact>}
+            <Fact label="Why">
+                <span className="setup-guide-why">{item.why}</span>
+            </Fact>
+        </FactList>
     );
 }
 

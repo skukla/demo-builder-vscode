@@ -27,6 +27,7 @@ import {
     extractCspNonce,
     replaceMarkedBlock,
 } from '@/features/eds/services/pdp/pdp404Snippet';
+import { TRIGGER_URL, visitSmart404 } from './pdp404Snippet.testUtils';
 
 describe('derivePrepublishUrl', () => {
     it('rewrites /render-pdp to /prepublish-pdp at the end of the path', () => {
@@ -120,8 +121,7 @@ describe('deriveRegisterKeyUrl', () => {
 });
 
 describe('buildSmart404Snippet', () => {
-    const triggerUrl =
-        'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp';
+    const triggerUrl = TRIGGER_URL;
 
     it('substitutes the trigger URL, org, and site into the template', () => {
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
@@ -199,8 +199,9 @@ describe('buildSmart404Snippet', () => {
         // Spot-check the obvious construction points. A future
         // contributor reaching for `'a' + b + 'c'` will trip this and
         // get redirected to template literals.
-        expect(snippet).toContain('`/products/${urlKey.toLowerCase()}/${sku.toLowerCase()}`');
-        expect(snippet).toContain('encodeURIComponent(lc)');
+        // (The lowercased path is `pathname.toLowerCase()` since category pages joined
+        // it, EDS-61: there is no longer a path to build.)
+        expect(snippet).toContain('&path=${encodeURIComponent(lc)}`');
         expect(snippet).toContain('${target}?${RETRY_FLAG}=1');
     });
 
@@ -456,31 +457,8 @@ describe('SMART_404_HEAD_SNIPPET_TEMPLATE', () => {
  * these pin that the snippet follows the action's answer, and only a PDP answer.
  */
 describe('buildSmart404Snippet — cold-publish redirect (executed)', () => {
-    const triggerUrl = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp';
-
     async function runSnippet(pathname: string, actionBody: unknown, ok = true): Promise<string[]> {
-        const replaced: string[] = [];
-        const fakeWindow = {
-            isErrorPage: true,
-            location: {
-                pathname,
-                search: '',
-                replace: (to: string) => {
-                    replaced.push(to);
-                },
-            },
-        };
-        const fakeDocument = { getElementById: () => null, querySelector: () => null };
-        const fakeFetch = jest.fn(async () => ({
-            ok,
-            status: ok ? 200 : 404,
-            json: async () => actionBody,
-        }));
-        const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'kukla-justrite');
-        new Function('window', 'document', 'fetch', snippet)(fakeWindow, fakeDocument, fakeFetch);
-        await new Promise((resolve) => setImmediate(resolve));
-        await new Promise((resolve) => setImmediate(resolve));
-        return replaced;
+        return (await visitSmart404(pathname, { ok, body: actionBody })).redirects;
     }
 
     it('sends the shopper to the path the action says it published', async () => {

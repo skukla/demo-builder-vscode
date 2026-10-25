@@ -56,7 +56,11 @@ Demo Builder's one-row stub file for each. With the stub deleted from the reposi
 the sheet published once more, the site served the source's rows (cart: 160). So a
 label-sheet stub is written only for an area the content source serves no sheet for:
 `placeholderStubPathsFor` in `services/placeholderStubs.ts` asks the source, and creation
-and reset both take their list from it.
+and reset both take their list from it. Where the template ships labels for such an area
+(the B2B template's `placeholders/checkout.json`), they are kept instead of stubbed, and a
+template or Adobe boilerplate update replaces an older stub there with them
+(`features/updates/services/labelStubRepair.ts`); a label file that is not our stub is
+never touched.
 
 Earlier attempts, recorded before the native document was understood. The table said
 "JSON directly: 404" without recording which JSON shape was sent or whether the path

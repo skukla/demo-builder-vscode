@@ -73,11 +73,6 @@
                 "category": "Demo Builder"
             },
             {
-                "command": "demoBuilder.storefrontReport",
-                "title": "Storefront Report",
-                "category": "Demo Builder"
-            },
-            {
                 "command": "demoBuilder.registerGlobalMcp",
                 "title": "Register Global MCP",
                 "category": "Demo Builder"
@@ -327,16 +322,6 @@
                         ],
                         "default": "ask",
                         "description": "How to handle two-way block library sync: applying upstream library updates to your storefront and promoting your local block changes back to the library repo."
-                    }
-                }
-            },
-            {
-                "title": "Category Pages",
-                "properties": {
-                    "demoBuilder.categoryPages.autoAdd": {
-                        "type": "boolean",
-                        "default": false,
-                        "description": "Add and publish a page for each new Commerce category on the open project's Edge Delivery storefront without asking. Off: Demo Builder offers first. Add-only: it never edits or removes a page, and it runs only while VS Code is open with the project. A project can override this from the notice it shows."
                     }
                 }
             },

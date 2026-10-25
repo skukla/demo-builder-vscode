@@ -12,6 +12,7 @@
 import type { UnpublishPagesResult } from '@/features/eds/services/helix/helixPageDeletion';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import {
+    STOPPED_STILL_LIVE,
     tearDownStorefront,
     teardownSteps,
     type TeardownHelix,
@@ -145,9 +146,10 @@ describe('with a repo to unpublish against', () => {
         );
     });
 
-    // A storefront half-torn-down is worse than one fully torn down, so a failed
-    // unpublish must not stop the source deletion.
-    it('still deletes the source when the unpublish fails, and says it is still live', async () => {
+    // EDS-65: Helix refused every unpublish of scratch-1022 and DA.live accepted the
+    // same token, so the content went and the pages stayed with nothing behind them.
+    // Pages still live stop the teardown before anything a second try needs is gone.
+    it('stops before deleting anything else when pages are still live, and says why', async () => {
         const helix = helixFake({
             unpublishPages: jest.fn().mockResolvedValue({
                 success: false,
@@ -161,9 +163,31 @@ describe('with a repo to unpublish against', () => {
 
         const result = await tearDownStorefront(SITE, deps);
 
+        expect(content.deleteAllSiteContent).not.toHaveBeenCalled();
+        expect(helix.deleteAdminApiKey).not.toHaveBeenCalled();
+        expect(removeSitePermissions).not.toHaveBeenCalled();
+        expect(deleteSiteConfig).not.toHaveBeenCalled();
+        expect(result).toMatchObject({
+            stillPublished: true,
+            publishState: 'still-live',
+            contentDeleted: false,
+            stopped: STOPPED_STILL_LIVE,
+            error: STOPPED_STILL_LIVE,
+        });
+    });
+
+    // Could not tell is not "still live": it is also the answer for a site whose content
+    // is already gone, and stopping there would leave the delete impossible to finish.
+    it('carries on when it could not tell whether the site is down', async () => {
+        const { deps, content } = depsWith();
+        // Nothing answered the check at all: no 200, and no 404 either.
+        deps.checkLive = liveCheck({}, 0);
+
+        const result = await tearDownStorefront(SITE, deps);
+
+        expect(result.publishState).toBe('unknown');
+        expect(result.stopped).toBeUndefined();
         expect(content.deleteAllSiteContent).toHaveBeenCalled();
-        expect(result.stillPublished).toBe(true);
-        expect(result.contentDeleted).toBe(true);
     });
 
     // Each a step from the stage table, so the progress modal shows it with its

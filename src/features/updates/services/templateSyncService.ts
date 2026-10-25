@@ -33,6 +33,7 @@ import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import type { BoilerplateBase } from '@/features/updates/services/boilerplateBase';
+import { checkoutLabelAccess, labelsPutBack, repairStubbedLabelFiles } from '@/features/updates/services/labelStubRepair';
 import { removeFilesNotBackedUp, restorePreservedFiles } from '@/features/updates/services/preservedFiles';
 import { commitAndPush, withCheckout, type SyncDeps } from '@/features/updates/services/templateCheckout';
 import {
@@ -261,24 +262,46 @@ export class TemplateSyncService {
                 return { ...failure('merge', describeTemplateConflicts(conflicts)), conflicts, clash };
             }
             case 'unchanged':
-                this.logger.info(`[TemplateSync] No template change to apply`);
-                return { success: true, strategy: 'merge', syncedCommit: outcome.templateHead };
+                return this.repairLabelsOnly(checkout, git, outcome.templateHead, versions.message);
         }
 
         await restorePreservedFiles(repoDir, checkout.backups, this.logger);
+        // Our stub over the template's labels goes, in the update's own commit.
+        const labels = await repairStubbedLabelFiles(checkoutLabelAccess(repoDir, git, outcome.templateHead));
         // A thin-layer storefront's fixes ride in the same commit as the update.
         const patched = fixes ? await reapplyPatchesInCheckout(repoDir, project, this.logger) : [];
         const message = versions.message ?? TEMPLATE_COMMIT;
         await commitAndPush(this.deps, repoDir, message, `git push origin ${checkout.branch}`);
 
         this.logger.info(`[TemplateSync] Merge completed successfully`);
-        const notes = patchesNotPutBack(patched);
+        const notes = [...labelsPutBack(labels), ...patchesNotPutBack(patched)];
         return {
             success: true,
             strategy: 'merge',
             syncedCommit: outcome.templateHead,
             ...(notes.length ? { notes } : {}),
         };
+    }
+
+    /**
+     * The template has nothing to apply, but a label file may still be our stub over the
+     * template's labels (storefronts made before 2026-10-22): put those back and push them.
+     * Nothing to repair pushes nothing.
+     */
+    private async repairLabelsOnly(
+        checkout: Checkout,
+        git: GitStep,
+        templateHead: string,
+        message = TEMPLATE_COMMIT,
+    ): Promise<TemplateSyncResult> {
+        const labels = await repairStubbedLabelFiles(checkoutLabelAccess(checkout.repoDir, git, templateHead));
+        if (labels.length === 0) {
+            this.logger.info(`[TemplateSync] No template change to apply`);
+            return { success: true, strategy: 'merge', syncedCommit: templateHead };
+        }
+        await commitAndPush(this.deps, checkout.repoDir, message, `git push origin ${checkout.branch}`);
+        this.logger.info(`[TemplateSync] No template change to apply; label files put back: ${labels.join(', ')}`);
+        return { success: true, strategy: 'merge', syncedCommit: templateHead, notes: labelsPutBack(labels) };
     }
 
     /** Reset the checkout to the template's content, keeping the preserved files; force-push. */

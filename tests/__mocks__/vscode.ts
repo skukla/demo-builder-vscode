@@ -100,7 +100,11 @@ export const window = {
         kind: 1, // ColorThemeKind.Dark
     },
     withProgress: jest.fn().mockImplementation(async (_options: any, task: any) => {
-        return await task({ report: jest.fn() });
+        // VS Code always hands a task its cancellation token, cancellable or not.
+        return await task(
+            { report: jest.fn() },
+            { isCancellationRequested: false, onCancellationRequested: jest.fn() },
+        );
     }),
     setStatusBarMessage: jest.fn(),
     createTerminal: jest.fn(() => ({

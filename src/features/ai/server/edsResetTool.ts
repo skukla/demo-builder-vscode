@@ -35,11 +35,22 @@ import { getMeshComponentInstance } from '@/types/typeGuards';
 
 /** Silent Adobe IMS auth pre-flight. */
 /**
- * The reset's caveats for the agent: what may not work on an added demo, then what the
- * content pipeline could not do (EDS-55). No key when there are none.
+ * The reset's caveats for the agent, in the order the SC reads them: first that the code
+ * could not be published (the site serves nothing until it is), then a step the reset
+ * finished around (the site configuration not written, the mesh not redeployed: a success
+ * that carries an `error`), then a page step that left something undone, then what the
+ * content pipeline could not do (EDS-55). No key when there are none. The second and
+ * third were dropped on a success until 2026-10-23.
  */
-function caveatsOf(result: Pick<EdsResetResult, 'demoCaveats' | 'pipelineWarnings'>): { caveats?: string[] } {
-    const caveats = [...(result.demoCaveats ?? []), ...(result.pipelineWarnings ?? [])];
+function caveatsOf(
+    result: Pick<EdsResetResult, 'codeNotPublished' | 'error' | 'pageWarnings' | 'pipelineWarnings'>,
+): { caveats?: string[] } {
+    const caveats = [
+        ...(result.codeNotPublished ? [result.codeNotPublished] : []),
+        ...(result.error ? [result.error] : []),
+        ...(result.pageWarnings ?? []),
+        ...(result.pipelineWarnings ?? []),
+    ];
     return caveats.length > 0 ? { caveats } : {};
 }
 
@@ -56,8 +67,6 @@ export async function adobeAuthed(): Promise<boolean> {
 interface EdsResetArgs {
     includeBlockLibrary?: boolean;
     verifyCdn?: boolean;
-    /** The SC accepted Demo Builder's fixes for an added demo (EDS-13f). */
-    applyFixes?: boolean;
 }
 
 /**
@@ -114,7 +123,6 @@ export async function runEdsReset(
                     ),
                     includeBlockLibrary: args?.includeBlockLibrary ?? false,
                     verifyCdn: args?.verifyCdn ?? false,
-                    applyDemoFixes: args?.applyFixes === true,
                     redeployMesh: hasMesh,
                 },
                 ctx,
@@ -157,18 +165,16 @@ export async function runEdsReset(
             reset: true,
             project: project.name,
             kind: 'storefront',
-            // What may not work on an added demo (D23), then what the content pipeline
-            // could not do (EDS-55), in the words the SC sees.
+            // What the reset finished around or could not do, in the words the SC sees.
             ...caveatsOf(result),
-            // Applied by this reset, and fitting but left for the user to accept
-            // (call again with applyFixes:true once they agree) (EDS-13f).
-            ...(result.demoFixes ? { fixes: result.demoFixes } : {}),
             // Category pages and the catalog menu, re-written by the reset (EDS-24) —
             // including pages someone else made, left alone by name.
             ...(result.catalogMenu ? { categoryPages: result.catalogMenu } : {}),
             // The old catalog's product pages, removed before the new ones are made
             // (EDS-26) — or why they were left, which is never reported as clean.
             ...(result.productPages ? { productPages: result.productPages } : {}),
+            // Links in the freshly copied content to pages that do not exist (EDS-64).
+            ...(result.brokenLinks ? { brokenLinks: result.brokenLinks } : {}),
             // Pages still published from before that the reset did not republish
             // (EDS-33): removed, some left, or that Helix could not say, in words.
             ...(result.leftoverPages ? { leftoverPages: result.leftoverPages } : {}),

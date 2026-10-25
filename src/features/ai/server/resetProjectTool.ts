@@ -162,13 +162,6 @@ export function registerResetProjectTool(
                     .boolean()
                     .optional()
                     .describe('Edge Delivery only: verify config.json on the CDN after reset'),
-                applyFixes: z
-                    .boolean()
-                    .optional()
-                    .describe(
-                        "Added demos only: apply the Demo Builder fixes that fit the demo's code (one commit). " +
-                            'Only when the user said yes to them; the default offers them and writes none',
-                    ),
                 confirm: z
                     .boolean()
                     .optional()

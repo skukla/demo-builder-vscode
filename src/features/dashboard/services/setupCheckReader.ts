@@ -8,7 +8,14 @@
  */
 
 import { buildCommerceEndpoints } from '@/features/ai/server/commerceEndpointsTool';
-import { explainStatus, requestRest, resolveRestTarget } from '@/features/ai/server/commerceRestClient';
+import {
+    explainStatus,
+    requestRest,
+    resolveRestTarget,
+    resolveRestTargetFor,
+    type RestTarget,
+} from '@/features/ai/server/commerceRestClient';
+import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import type { CommerceRead, SetupCheckScope } from '@/features/app-builder/services/setupChecks';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
@@ -42,7 +49,28 @@ export async function setupCheckReader(
     project: Project,
     fetchImpl: typeof fetch = fetch,
 ): Promise<{ read: CommerceRead; scope: SetupCheckScope }> {
-    const target = await resolveRestTarget(context, undefined, fetchImpl);
+    return readerOver(await resolveRestTarget(context, undefined, fetchImpl), project, fetchImpl);
+}
+
+/**
+ * The same reader for a project in hand, outside a handler: the ERP integration's add
+ * prepares the store inside the runner, where the project is the one being added to.
+ */
+export async function setupCheckReaderFor(
+    project: Project,
+    authManager: HandlerContext['authManager'],
+    credentials: CredentialStore | undefined,
+    fetchImpl: typeof fetch = fetch,
+): Promise<{ read: CommerceRead; scope: SetupCheckScope }> {
+    return readerOver(await resolveRestTargetFor(project, authManager, undefined, fetchImpl, credentials), project, fetchImpl);
+}
+
+/** The read over a resolved target (its refusal answered as the read's text), and the project's scope. */
+function readerOver(
+    target: RestTarget | { refusal: string },
+    project: Project,
+    fetchImpl: typeof fetch,
+): { read: CommerceRead; scope: SetupCheckScope } {
     const read = async (path: string): Promise<string> => {
         if ('refusal' in target) return target.refusal;
         const answer = await requestRest('GET', target, path, undefined, fetchImpl);

@@ -81,8 +81,8 @@ export interface McpToolSchema {
      * compiler checks it. That is the arc the feature-barrel ledger took, and the
      * type-erasing-cast ceiling is on the same path.
      *
-     * AN ARRAY, BECAUSE FOUR TOOLS NEED TWO. `check_github_app`, `create_project`,
-     * `republish` and `sync_content` each need GitHub AND DA.live. A single value
+     * AN ARRAY, BECAUSE THREE TOOLS NEED TWO. `check_github_app`, `create_project`
+     * and `republish` each need GitHub AND DA.live. A single value
      * would have forced a choice between two true answers, and the one dropped is
      * exactly the sign-in an agent would then fail to offer.
      */

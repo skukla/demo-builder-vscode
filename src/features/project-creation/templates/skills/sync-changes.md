@@ -1,6 +1,6 @@
 ---
 name: sync-changes
-description: Chooses the correct sync operation after editing a Demo Builder project. Use when files have changed and you need to pick between `sync_content` (DA.live pages), `sync_storefront` (block code), `deploy_mesh` (mesh config), `configure_project` (config values), or `promote_block_to_library` (a block into this site's Insert Block list).
+description: Chooses the correct sync operation after editing a Demo Builder project. Use when files have changed and you need to pick between `republish` (the whole site: settings, code and pages), `sync_storefront` (block code), `deploy_mesh` (mesh config), `configure_project` (config values), or `promote_block_to_library` (a block into this site's Insert Block list).
 ---
 
 # Sync Changes
@@ -11,7 +11,7 @@ Use this skill to decide which sync operation to run after making changes.
 
 | What changed? | Use this MCP tool |
 |---|---|
-| A DA.live page (pages are HTML documents in DA.live) | `write_page` to change it, `publish_page` to put it live — both ask the user first and need `confirm: true`. `sync_content` publishes the whole site, and asks first too |
+| A DA.live page (pages are HTML documents in DA.live) | `write_page` to change it, `publish_page` to put it live — both ask the user first and need `confirm: true`. `republish` publishes the whole site, and asks first too |
 | Block JS or CSS in `blocks/` | `sync_storefront` — git commit + push, then Helix preview+publish of the home page when credentials are available |
 | `mesh.json` or API Mesh config | `deploy_mesh` — redeploys via `aio` CLI |
 | A component setting | `configure_project`, then restart demo |
@@ -36,7 +36,7 @@ It then runs `git add -A && git commit -m "AI: sync files" && git push` in that 
 
 - publish. It only runs git. A pushed change is not yet a visible change: `sync_storefront`
   pushes and publishes the home page only, `publish_page` publishes one page, and
-  `sync_content` publishes the whole site (both of those ask the user first).
+  `republish` publishes the whole site (both of those ask the user first).
 - cover files edited outside the Write/Edit tools — a shell `sed`, a script, or the user
   editing by hand. Call `sync_storefront` explicitly for those.
 - cover anything outside the storefront directory.
@@ -46,12 +46,12 @@ If you are unsure whether the hook fired, call `sync_storefront` anyway: it is i
 
 ## Headless (Next.js) projects
 
-Headless projects do not use `sync_content` or `sync_storefront`. Changes to Next.js files
+Headless projects do not use `republish` or `sync_storefront`. Changes to Next.js files
 take effect after restarting the dev server or redeploying.
 
 ## Notes
 
-- `sync_content` calls Helix preview first, then publish. Both steps are required.
+- `republish` calls Helix preview first, then publish. Both steps are required.
 - `sync_storefront` runs `git add -A && git commit && git push` in the storefront directory,
   then Helix preview+publish of the home page (`/`) when both Helix tokens and the GitHub
   repo are known. The commit

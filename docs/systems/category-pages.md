@@ -1,206 +1,253 @@
 # Category pages and the catalog menu
 
 How an Edge Delivery storefront's nav reaches the Commerce catalog without anyone typing
-the category structure into it (EDS-24). Plan: `.rptc/plans/dynamic-commerce-pages/`.
+the category structure into it (EDS-24), and how each category gets its page from the
+product page overlay (EDS-61). Design: `.rptc/plans/category-pages-overlay/overview.md`.
 
 ## What the SC gets
 
 When the storefront has the **Demo Builder Blocks** library (a checkbox in the Storefront
-area, off by default), storefront setup:
+area, off by default) and the product page overlay is on, storefront setup:
 
-1. writes one page per Commerce category marked **Include in Menu**, at the category's
-   own address (`/signs`, `/signs/danger-signs`). Each page is the boilerplate's recipe:
-   the category name as a heading and a `product-list-page` block with that `urlPath`.
-   They are ordinary DA.live pages; an author can edit them.
-2. adds a "Shop the catalog" line and a `catalog-menu` block to `/nav`. In the browser the
-   block reads the category tree from Catalog Service, as the shopper, and turns the line
-   into one menu entry per top-level category. Hand-typed nav items stay where they are.
+1. publishes a page for every Commerce category with a url path, **at the category's own
+   address** (`/signs`, `/signs/danger-signs`; owner decision 2026-10-22). Where nobody
+   wrote a page at that address, the shared action that makes product pages (`render-pdp`)
+   makes it from one template page. Where somebody did — Justrite's hand-built `/apparel`,
+   say — that page is kept and served.
+2. writes that template, **`/categories/default`**, when the site has none: a heading and
+   a `product-list-page` block with a `urlPath` row. It is an ordinary DA.live page. To
+   change how every generated category page looks, the SC edits it (keeping the heading
+   and the `urlPath` row) and republishes.
+3. adds a "Commerce: All" line and a `catalog-menu` block to `/nav` (an author types
+   "Commerce: <category name>" to place one category). The line was "Shop the catalog"
+   until 2026-10-25; a storefront's own copy of the block decides which spelling it reads,
+   so the nav is written in that one and an old line is rewritten once the block is updated. In the browser the
+   block reads the category tree from Catalog Service, as the shopper, turns the line into
+   one menu entry per top-level category, and links each to its own address. Hand-typed
+   nav items stay where they are.
 
-There is no button. The pages and the switch are written by storefront setup and kept in
-step by reset and republish.
+There is no button. The pages, the template, the switch and the sheet below are made by
+storefront setup and kept in step by reset and republish.
+
+## Why authored pages need a list
+
+The overlay is asked only when a path is **previewed**; a shopper's visit never calls it,
+so a page is live only once something publishes it.
+
+On a preview, Helix asks the overlay **first**. **Measured 2026-10-22 on scratch-1022-b:**
+an authored DA.live page at a product path, previewed and published, was not served — the
+overlay's product page was. So at a category's address the overlay would replace any
+authored page there the next time anything previewed it (the SC pressing Publish in
+DA.live, or a reset or republish).
+
+The overlay therefore steps aside for every path listed in a public published sheet,
+**`/authored-category-pages.json`**, served as `{data: [{path: "/apparel"}, ...]}`; Helix
+then falls through to DA.live. And it renders category pages **only on a site where that
+sheet exists**: no sheet, no category pages, which is how every site behaved before. An
+empty sheet means "opted in, nothing authored".
+
+Demo Builder keeps the sheet (`catalogMenu/authoredCategoryPages.ts`):
+
+- **What it lists:** every category address (each segment cleaned as Helix cleans a
+  published path) where DA.live holds a document that is not one of Demo Builder's own
+  unedited generated pages. Found by reading DA.live at each address with the SC's own
+  DA.live sign-in, the same reads the content copy makes.
+- **When:** setup, reset, republish and a store change, every time, written to DA.live as
+  a JSON sheet and then previewed and published at its `.json` path — **before** any
+  category path is published. If it cannot be published, no category path is published
+  that run, and the sentence says so.
+- **Republish publishes it twice.** Republish previews every DA.live page in its bulk
+  publish, before the catalog menu step runs; an authored page at a category address that
+  the published sheet does not list yet would be replaced right then. So the sheet goes out
+  before the bulk publish too (`publishAuthoredListStep`, the same computation), and the
+  step writes it again afterwards. Reset has no such window: it takes the sheet out before
+  re-publishing the content, so the overlay leaves the site alone until the sheet is back.
+- **Storefront setup does the same, only where a sheet is already live.** An Edit that
+  rebuilds onto an existing storefront refreshes the sheet after the content copy and right
+  before the bulk publish (the pipeline's `beforeContentPublish` hook), but only when the
+  record says Demo Builder published one: writing an empty sheet on a brand-new site would
+  opt it in before the category step at the end of creation does.
+- **Every bulk content publish is covered.** Republish and setup as above. Reset takes the
+  sheet out first, and when that take-out fails (its sentence says so) the same hook
+  refreshes the still-live sheet before reset's bulk publish. The import path runs the same
+  hook before its publish, so a site whose published sheet is still live gets it current. A
+  store change runs inside republish; the block-library refresh publishes no content. All
+  three hooks are one helper, `catalogMenu/authoredSheetRefresh.ts`. Agent tools reach these
+  same doors (`republish`, `reset_project`).
+- **Then:** each listed address is published again, so DA.live's page is what goes out
+  even if an earlier preview let the overlay replace it.
+- **Never edited by hand.** Demo Builder rewrites it on each run.
+
+## The page path, and what the overlay fills in
+
+The overlay serves a category at one path only: each url path segment cleaned the way
+Helix cleans published paths (lowercase, every run of other characters becomes one `-`).
+`safety_cabinets` lives at `/safety-cabinets`. The extension builds the same path
+(`categoryPagePlan.ts`), and so does the menu block. A category whose path cleans to
+nothing gets no page, and the step's sentence names it. `/categories/default` is never a
+category's page.
+
+From `/categories/default` (`accs-discovery-service/actions/lib/category-page.js`): the
+first `<h1>` becomes the category name, the `product-list-page` block's `urlPath` row its
+url path (the block reads its category only from that row), and the title tags the name.
+Everything else the SC put in the template is served as written. With no template, or one
+without that block and row, the overlay serves a plain built-in page. The overlay serves,
+and the publish action publishes, a category path only when the store's category list holds
+it: a made-up path stays a 404.
 
 ## When it runs
 
 | Flow | What it does | Where |
 |---|---|---|
 | Project creation | After the datapack is installed (the categories arrive with it) | `project-creation/services/catalogMenuPhase.ts` |
-| Reset (dashboard, `reset_project`) | Takes out what Demo Builder wrote, with the stored record, before re-copying the content; writes it again after publishing | `eds/services/reset/edsResetCatalogMenu.ts` |
-| Republish (dashboard, `sync_content`) | Writes pages for categories added since; refreshes ours if unedited | `eds/services/storefront/storefrontContentRepublishService.ts` |
-| Republish after a store change (EDS-44: Configure, dashboard, `sync_content`, `republish`) | Takes ours out with the stored record, then writes the new store's; an edited page is kept and named | `eds/services/storefront/storeScopePages.ts` (`replaceCatalogMenuStep`) |
-| While the project is open (EDS-27) | Offers pages for categories added since, or adds them when the SC opted in. Add-only | `eds/services/catalogMenu/newCategoryPagesWatcher.ts` |
+| Reset (dashboard, `reset_project`) | Takes the sheet out, and the template and switch while unedited, before re-copying the content; then the sheet, the category pages and the switch again | `eds/services/reset/edsResetCatalogMenu.ts` |
+| Republish (dashboard, `republish`) | The sheet before the bulk content publish; after it, the sheet again, then every category page; pages of categories the store no longer has come down | `eds/services/storefront/storefrontContentRepublishService.ts` |
+| Republish after a store change (EDS-44: Configure, dashboard, `republish`) | The same, for the new store: the old store's category pages come down | `eds/services/storefront/storeScopePages.ts` (`replaceCatalogMenuStep`) |
+| A shopper opens a page nobody published | The smart-404 script asks `prepublish-pdp` to publish it, then reloads; when the action refuses, the storefront's own 404 stays as it was | `eds/services/pdp/pdp404Snippet.ts` |
 
-All of them call one step file, `eds/services/catalogMenu/catalogMenuStep.ts`, on a site built by
-`catalogMenuSiteDeps.ts`. The step never fails the flow around it: every outcome comes
-back as one sentence for the progress line and the log (and as `categoryPages` on the
-`reset_project` and `sync_content` results).
+All of the first four call one step file, `eds/services/catalogMenu/catalogMenuStep.ts`,
+on a site built by `catalogMenuSiteDeps.ts`, and one run goes in this order:
 
-An existing project picks this up at its next reset or republish. Nothing is written to a
-live site on extension start, with one exception the SC opts into: pages for categories
-added after setup (below).
+1. **Read** the categories, the nav, the storefront's pages, and which category addresses
+   DA.live holds a document for. A read that fails stops the run before any change.
+2. **Remove** the pages the old model wrote (below) that nobody edited — first, so they are
+   not mistaken for authored ones.
+3. Write the **template** where there is none.
+4. Publish the **sheet**, then the **category pages**, then take down the pages of
+   **categories that are gone** (`categoryPagePublish.ts`).
+5. Switch the **menu** on in `/nav`.
+
+The step never fails the flow around it: every outcome comes back as one sentence for the
+progress line and the log (and as `categoryPages` on the `reset_project` and
+`republish` results), including how many authored pages the sheet keeps ("Kept 3 pages
+you wrote at category addresses (/apparel, /hazard-communication, /workplace-safety): the
+product page overlay leaves them alone.").
+
+Category pages are published through the extension's own authenticated Helix path, five
+at a time, on ACCS — the backend product pages are published for at setup
+(`catalogPrewarmService.ts`). On PaaS the overlay lookup should work but is not measured,
+so setup publishes no generated page (the sheet still goes, and authored pages are
+published again). On ACO the overlay's category lookup does not apply, so there are no
+generated category pages; the menu block has the same gap.
+
+An existing project picks all of this up at its next reset or republish. Nothing is
+written to a live site on extension start.
+
+## No block, or no overlay
+
+Without the block, or with `demoBuilder.byom.enabled` off or `demoBuilder.byom.overlayUrl`
+empty, the step publishes nothing and writes no sheet, so the overlay leaves every
+category address alone. With the overlay off it says why in one sentence (owner decision
+D5): "Category pages come from the product page overlay, which is off for this storefront,
+so no category pages were published and the catalog menu was not added." Whatever it made
+earlier comes out — the generated category pages, the template, the switch, and the sheet.
 
 ## A category that already has a page
 
 **A hand-built page for a category is always honored** (owner's rule, 2026-10-05).
 
-Adobe lets a category page live at any address. What ties a page to a category is the
-`urlPath` row of its `product-list-page` block (older storefronts: a `category` row
-holding the category id), not the page's own path. So before writing anything, setup reads
-the storefront's pages and looks for one that already shows each category
-(`existingCategoryPages.ts`). Matching ignores case and stray slashes, and covers block
-variants whose class starts with `product-list-page`.
-
-When Signs already has a page at `/safety-signage`:
-
-- No `/signs` page is written.
-- The menu links Signs to `/safety-signage`. The link is a row in the `catalog-menu` table
-  in `/nav` — the category's url path, then the page:
+- **At the category's own address** (`/apparel`): it is the category's page. The sheet
+  keeps the overlay off it, the menu links there, no row is needed.
+- **Anywhere else** (`/safety-signage` whose `product-list-page` block names `signs`): the
+  menu links Signs to it with a row in the `catalog-menu` table in `/nav` — the category's
+  url path, then the page — and the summary says so ("Signs and Labels uses your page at
+  /safety-signage."). `/signs` is still published, so a link straight to it works too.
 
   | catalog-menu | |
   |---|---|
   | signs | /safety-signage |
 
-- The summary says so by name: "Signs uses your page at /safety-signage."
-- If Demo Builder wrote `/signs` on an earlier run, it removes it — only when nobody has
-  edited it. An edited one stays and is reported.
+What ties a page to a category elsewhere is the `urlPath` row of its `product-list-page`
+block (older storefronts: a `category` row holding the category id). Setup reads the
+storefront's pages to find them (`existingCategoryPages.ts`); matching ignores case and
+stray slashes and covers block variants whose class starts with `product-list-page`. A
+page at the category's own address wins over a page elsewhere naming the same category;
+among pages elsewhere the shallowest wins (a language copy such as
+`/citisignal-fr/accessories` sits deeper), then the first in alphabetical order.
 
-The rows are authored content. The SC can see them, change them, and type their own to
-point any category at any page; a category with a typed row gets no page from Demo
-Builder either. **Ours are told from theirs by the record**: a row is ours only while it
-still says exactly what the record holds. A typed row, or one of ours the SC changed, is
-theirs from then on — never rewritten, never removed, and it wins over a row Demo Builder
+The rows are authored content. **Ours are told from theirs by the record**: a row is ours
+only while it says exactly what the record holds. A typed row, or one of ours the SC
+changed, is theirs — never rewritten, never removed, and it wins over a row Demo Builder
 would add for the same category.
-
-Details that decide edge cases:
-
-- A hand-built page AT the category's own address is the older case ("a page someone else
-  made", below) and needs no row.
-- When two pages name the same category, the first address in alphabetical order is used.
-  Type a row to choose the other.
-- A category whose own address the storefront cannot serve still gets its link when a
-  hand-built page exists for it.
-- The page is found in DA.live, published or not. A page that was never published will
-  404 from the menu until it is.
 
 ### How the pages are found, and what it costs
 
 One DA.live list call per folder (with the SC's sign-in), then one read per page, six at
-a time. Never opened: `/products`, any `fragments` or `drafts` folder, and dot-folders
-(`.da`). Left out: nav and footer documents, sheets, media. On a site with 300 pages in 20
-folders that is about 320 requests on each setup, reset and republish — the same order of
-work those flows already do per page. The published content index is not used: it lists
-only published pages and carries page metadata, not blocks (the boilerplate's columns,
-read 2026-10-05: path, title, description, image, lastModified, robots, template).
-
-If the pages cannot be listed or read, nothing is written and the sentence says why.
-Writing blind is how a second Signs page gets made.
+a time, plus one read per category address for the sheet. Never opened: `/products`,
+`/categories`, any `fragments` or `drafts` folder, and dot-folders (`.da`). If the pages
+cannot be listed or read, nothing is changed and the sentence says why.
 
 ## What is never touched
 
-- **A page someone else made.** If a category's address already holds a page Demo
-  Builder did not write — a colleague's hand-made `/apparel`, say — it is left alone and
-  named in the sentence: "Left 1 page alone because Demo Builder didn't write it
-  (Apparel (/apparel))."
-- **A page edited since.** Each page's hash is recorded after it is written. A page whose
-  content no longer matches is the SC's now: it is not refreshed, not removed, and drops
-  out of the record.
+- **A template Demo Builder did not write.** An existing `/categories/default` is never
+  overwritten.
+- **A page or template edited since.** Each is recorded with the hash of what DA.live
+  stored after the write; content that no longer matches is the SC's now.
+- **Any authored page.** Demo Builder writes no DA.live page per category, and never takes
+  down an address DA.live holds a document for.
 
 The record lives on the project, `componentInstances['eds-storefront'].metadata.catalogMenu`
-(`catalogMenuRecord.ts`): the pages written, with hashes, the category → page rows written
-in the nav table, and whether the nav switch was added.
-A record kept before the rows existed reads as having written none. Edit mode carries it over when the storefront stays the same.
+(`catalogMenuRecord.ts`): the template's hash, the rows written in the nav table, whether
+the switch was added, the generated category pages published (for taking down later),
+whether the sheet was written, and — only while one is waiting to be removed — pages the
+old model wrote. Edit mode carries it over when the storefront stays the same.
+
+## Projects from before this change
+
+Before EDS-61, Demo Builder wrote one DA.live page per category at the category's own
+address (`/signs`) — the same address the overlay now serves. Those exist only on sites
+built from unreleased branches. At the next reset or republish (owner decision D8; never
+on extension start, because removing pages is a cloud write), FIRST in the run:
+
+| Page | What happens |
+|---|---|
+| On the record, content still matches | Unpublished and deleted; the overlay's page replaces it |
+| On the record, content changed | Kept. It is authored now: it goes on the sheet and stays served |
+| On the record, removal failed | Still Demo Builder's: not on the sheet, tried again next run |
+| Not on the record | An authored page: on the sheet, never touched |
 
 ## Undo
 
-Reset removes exactly what the record proves Demo Builder wrote — its pages and its rows —
-and takes the switch out of `/nav` byte-for-byte, then setup writes them again. Hand-built
-pages are not touched. A `catalog-menu` table that still holds a row the SC typed stays in
-the nav with that row; the sentence says the typed links were kept. A storefront whose repository no
-longer has the block gets its menu taken out the same way, so the nav never names a block
-the site does not have. Project delete removes the whole site.
+- **Reset** takes the sheet out before the content is published again, so the overlay
+  leaves every category address alone meanwhile, then writes it again first.
+- **No block, or the overlay off:** the generated category pages, the template, the switch
+  and the sheet all come out — the site is back to the overlay leaving it alone.
+- **Republish** takes down only the pages of categories the store no longer has.
+- **Project delete** unpublishes and deletes the whole site, the sheet included.
 
-## A category added after setup
+Category pages are taken down by `removeCategoryPages` (`storefront/productPageRemoval.ts`,
+shared with product pages): live, then preview, refused and named when another local
+project publishes to the same repository.
 
-It appears in the menu at once (the block reads Commerce live). Until it has a page the
-block links it to the search page filtered to that category,
-`/search?filter=categoryPath:<url path>`, which lists its products. The block finds out
-which pages are missing with one `HEAD` request per shown category. A category with a row
-in the table is taken to have a page: no request, no fallback.
+**Known limit (owner, 2026-10-22).** A category page first published by a shopper's visit
+(the smart-404 script) is not on the record. If that category is later deleted from
+Commerce, its page stays live until a reset.
 
-### Demo Builder gives it a page while the project is open (EDS-27)
+## Stale pages
 
-Demo Builder looks at the OPEN project's storefront for menu categories with no page:
-when the project opens, every 15 minutes while VS Code stays open
-(`TIMEOUTS.NEW_CATEGORY_PAGES_CHECK_INTERVAL`), after a DA.live sign-in, and when the
-setting below changes. Never every project on the machine.
+A published page is a snapshot. A renamed category keeps its old heading, a template edit
+does not show, and a deleted category's page stays live with an empty list — until the
+next republish or reset. Products and prices are always current: the block loads them in
+the browser. The template cache in the overlay adds up to five minutes. A page an author
+writes at a category address after the last run is replaced by the overlay at its next
+preview until the next republish lists it.
 
-| Setting `demoBuilder.categoryPages.autoAdd` | What the SC sees |
-|---|---|
-| **off** (the default) | An offer: `2 new categories on "Justrite" have no page yet (Tools, Gloves). Add their pages?` with **Add pages** and **Always add for this project**. Nothing is written until one is pressed. The same offer is not shown twice; a different set of categories is a new offer. |
-| **on** | The pages are added and published without asking, then a notice names them: `Justrite: Added pages for 2 new categories: Tools (/tools), Gloves (/gloves).` with **Stop for this project**. |
+SEO: a generated page holds the heading and the block settings; products load in the
+browser. Whether the query index and sitemap list the category pages is not checked.
 
-The setting is for all of an SC's projects. A project's own choice beats it, both ways:
-**Always add for this project** turns it on for that project, **Stop for this project**
-turns it off. The choice is kept on the storefront instance, beside the record
-(`metadata.autoAddCategoryPages`, `categoryPageAutoAdd.ts`), the same place the
-authoring experience keeps its per-project choice. There is no control for it in the
-Configure screen.
+## Agents
 
-What it does and does not do:
-
-- **Add-only.** It writes pages for categories that have none. It never rewrites a page,
-  never removes one, and never touches the nav. A page for a category deleted from
-  Commerce stays until Republish or reset. A hand-built page found at another address is
-  honored (no page is written), but its link row in the nav table is only written by
-  Republish or reset.
-- **A hand-built page is always honored**, by the checks above: a page at the category's
-  address (ours, ours but edited, or someone else's), a row in the nav table, or a page
-  for it at any address.
-- **Only on a storefront already set up.** It needs the catalog-menu block in the
-  repository AND a record that setup, reset or republish has run the step. A storefront
-  that has never had its category pages written gets them from Republish, which also
-  puts the menu in the nav.
-- **A failed read is a failure.** If the categories, the nav or the page list cannot be
-  read, nothing is offered and nothing is written. A storefront that answers "no nav"
-  counts as a failed read. It is logged (`[Category Pages]` in the Debug Logs).
-- **Expired DA.live sign-in:** one notice saying so, then it waits and looks again at the
-  next tick or sign-in. It never opens a browser. It does not ask the stored sign-in
-  status first, because that can say yes after the sign-in has expired (EDS-30).
-- **Undo:** turning the setting off stops it. The pages it added are on the record, so
-  reset removes them like any other page Demo Builder wrote.
-
-**The limit:** it only works while VS Code is open with the project. A category added
-overnight gets its page when the project is next open; until then the menu's search
-fallback covers it.
-
-**The rule this bends.** Cloud writes are confirmed before they run and never run
-unattended (CLAUDE.md property 5). Owner's ruling, 2026-10-05: an opt-in setting is the
-SC confirming once, in advance, and that is acceptable for add-only category pages. It
-does not extend to edits, removals, or any other cloud write. The ruling is recorded at
-the one call that makes the unattended write, in `newCategoryPagesWatcher.ts`.
-
-One cost per look, on a storefront that is up to date: one GitHub read (the block), one
-Catalog Service query, the nav, and one DA.live read per menu category. The whole site
-is walked for hand-built pages only when some category still looks unpaged.
-
-Agents: `check_category_pages` (a read) and `add_category_pages` (confirm-gated) run the
-same step. `get_settings` reads the setting. An agent cannot turn automatic adding on;
-`set_setting` hands that to the SC.
-
-Code: `catalogMenuStep.ts` (`findNewCategoryPagesStep`, `addNewCategoryPagesStep`),
-`newCategoryPages.ts` (the add-only read and write), `newCategoryPagesWatcher.ts` (offer
-or add), `eds/handlers/newCategoryPagesWatch.ts` (when it looks).
-
-Verified 2026-10-05 on the Justrite store: Catalog Service answers `categoryPath` with
-`in` (what the search page sends) the same as `eq` (what a category page sends) —
-45 and 45 for `signs`, 7 and 7 for `signs/danger-signs`, 0 and 0 for a path that does
-not exist.
+There is no category page tool. `republish` and `reset_project` run the step and return
+its sentence as `categoryPages`. See `docs/systems/mcp-server.md`.
 
 ## Caveats
 
-- A category page shows nothing until Catalog Service has indexed the store view, and
-  on a B2B website until a shared catalog grants the category. Pages are written right
-  after the datapack import at creation; if the catalog is not readable yet, the step
-  says so and Republish writes them later.
-- The block also checks, as the current shopper, that each category has products to
-  show, so a buyer group never sees menu entries whose pages would be empty.
+- A category page shows nothing until Catalog Service has indexed the store view, and on
+  a B2B website until a shared catalog grants the category.
+- The block also checks, as the current shopper, that each category has products to show.
 - The library is off by default until the first watched live run.
+- **The smart-404 script asks the action for any lowercase missing path** (a category's
+  address cannot be told by its shape): one action call per such 404, refused by the
+  action for anything that is not a category on an opted-in site.
+- **Order of release.** The service that reads the sheet must be deployed first: an
+  extension publishing category paths before the overlay answers them publishes 404s.

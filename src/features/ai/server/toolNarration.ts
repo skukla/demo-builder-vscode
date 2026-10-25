@@ -33,7 +33,8 @@
  *   write code. "CDN" is fine — it is the right word and widely known. "Rebase"
  *   is not.
  * - **No identifiers.** These phrases take no arguments by design. The target
- *   belongs in the consent dialog, which asks about one specific thing.
+ *   belongs in the consent dialog, which asks about one specific thing. A call
+ *   handed a readable name gets a named form instead (`NAMED_NARRATION`, below).
  *
  * ## Reads get phrases too
  *
@@ -66,6 +67,8 @@
  *
  * @module features/ai/server/toolNarration
  */
+
+import { withSystemWord } from '@/features/app-builder/services/pairNames';
 
 /** Every tool, and what it says while it runs. Keyed by MCP tool name. */
 export const TOOL_NARRATION: Record<string, string> = {
@@ -218,13 +221,10 @@ export const TOOL_NARRATION: Record<string, string> = {
 
     // ── Storefront and content ──────────────────────────────────────────
     republish: 'Republishing the storefront',
-    sync_content: 'Publishing the content',
     get_storefront_report: 'Reading the storefront report',
     sync_storefront: 'Pushing the storefront to GitHub',
     write_page: 'Writing the page',
     publish_page: 'Publishing the page',
-    check_category_pages: 'Checking for new categories',
-    add_category_pages: 'Adding pages for new categories',
     delete_page: 'Deleting the page',
     promote_block_to_library: 'Adding a block to the library',
     remove_block_from_library: 'Removing a library block',
@@ -293,16 +293,28 @@ function arg(args: Record<string, unknown> | undefined, key: string): string | u
     return trimmed || undefined;
 }
 
+/** A named form: the call's arguments, and the open project's name when one is known. */
+type NamedForm = (args: Record<string, unknown> | undefined, project?: string) => string | undefined;
+
 /** Build a phrase from named arguments, or nothing when any is missing. */
-function naming(
-    keys: string[],
-    phrase: (...values: string[]) => string,
-): (args: Record<string, unknown> | undefined) => string | undefined {
+function naming(keys: string[], phrase: (...values: string[]) => string): NamedForm {
     return (args) => {
         const values = keys.map((key) => arg(args, key));
         return values.every(Boolean) ? phrase(...(values as string[])) : undefined;
     };
 }
+
+/**
+ * "Adding Accuform ERP to JustRite": the ERP as the add will name it, and the project it goes
+ * into when one is open. "Agent · Adding another ERP" ran for fifteen minutes beside an action
+ * the SC started, and nothing said which was which (live release test, 2026-10-22).
+ */
+const addingErp: NamedForm = (args, project) => {
+    const name = arg(args, 'name');
+    if (!name) return undefined;
+    const erp = withSystemWord(name, 'ERP');
+    return project ? `Adding ${erp} to ${project}` : `Adding ${erp}`;
+};
 
 /**
  * The phrase for a call that names what it acts on, when the name is readable.
@@ -312,9 +324,7 @@ function naming(
  * already names it; the notification now does too. Only tools handed a name a
  * person reads — an internal id is not worth showing, so those keep their phrase.
  */
-const NAMED_NARRATION: Readonly<
-    Record<string, (args: Record<string, unknown> | undefined) => string | undefined>
-> = {
+const NAMED_NARRATION: Readonly<Record<string, NamedForm>> = {
     delete_adobe_workspace: naming(['workspaceName'], (name) => `Deleting the ${name} workspace`),
     delete_adobe_project: naming(['projectName'], (name) => `Deleting the ${name} project`),
     rename_adobe_project: naming(['projectName'], (name) => `Renaming ${name}`),
@@ -327,6 +337,7 @@ const NAMED_NARRATION: Readonly<
     start_datapack_export: naming(['datapackName'], (name) => `Exporting ${name}`),
     remove_block_from_library: naming(['blockId'], (block) => `Removing the ${block} block`),
     set_site_admin: naming(['email'], (email) => `Changing ${email}'s access`),
+    add_erp: addingErp,
 };
 
 /**
@@ -335,13 +346,15 @@ const NAMED_NARRATION: Readonly<
  *
  * @param toolName - MCP tool name
  * @param args - the call's arguments
+ * @param project - the open project's name, for a named form that says where it acts
  * @returns the phrase, or undefined when the tool has none
  */
 export function narrationForCall(
     toolName: string,
     args: Record<string, unknown> | undefined,
+    project?: string,
 ): string | undefined {
-    return NAMED_NARRATION[toolName]?.(args) ?? narrationFor(toolName);
+    return NAMED_NARRATION[toolName]?.(args, project) ?? narrationFor(toolName);
 }
 
 /** The tools whose calls are named for their target (for the tests). */

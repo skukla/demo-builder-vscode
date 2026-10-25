@@ -84,6 +84,14 @@ describe('get_storefront_report', () => {
         expect(res).toEqual({ ...REPORT, summary: ['## Where this storefront comes from', 'Built on X.'] });
     });
 
+    it('carries the report\'s "Needs reset" as the agent reads it', async () => {
+        (readStorefrontReport as jest.Mock).mockResolvedValue({ ...REPORT, needsReset: true });
+        const s = server();
+        registerStorefrontTools(s, ctxFactory);
+
+        expect((await s.call()).needsReset).toBe(true);
+    });
+
     it('stays within its recorded size on a full report: every fix and every line', async () => {
         const actual = jest.requireActual('@/features/eds/services/storefront/storefrontReport');
         const ids = ['product-teaser-sku-encoding', 'pdp-empty-data-redirect', 'aem-assets-sku-sanitization', 'header-nav-tools-defensive'];

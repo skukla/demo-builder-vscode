@@ -144,6 +144,53 @@ Two triggers should cause us to revisit smart-404:
 
 ---
 
+## Category pages ride the same overlay (EDS-61, 2026-10-22)
+
+**Decision (owner, 2026-10-22).** The overlay also serves each Commerce category's page, at
+the category's own url path — `/signs`, `/signs/danger-signs`, every segment cleaned the way
+Helix cleans a published path (`safety_cabinets` → `/safety-cabinets`) — filled from the
+site's authored `/categories/default`. Demo Builder publishes them; the catalog menu links
+each category to its own address.
+
+**The fact that shaped it — measured 2026-10-22 on scratch-1022-b.** An authored DA.live
+page at a product path, previewed and published, was not served: the overlay's template was.
+On preview the overlay is asked first and its answer beats authored content (the BYOM spec
+says so; this is the measurement). At a category's address that means an authored page —
+Justrite's hand-built `/apparel`, `/hazard-communication`, `/workplace-safety` — would be
+replaced the next time anything previewed it.
+
+**So the overlay steps aside, and only on sites that opt in.** A public published sheet,
+`/authored-category-pages.json` (`{data: [{path: "/apparel"}, ...]}`), lists every category
+address with a DA.live document that is not one of Demo Builder's own unedited generated
+pages. The overlay never answers a listed path (Helix falls through to DA.live), and it
+renders category pages only on a site where the sheet exists: no sheet, no category pages,
+which is every site before this decision. An empty sheet means opted in, nothing authored.
+Demo Builder writes it with the SC's own DA.live access and publishes it BEFORE any category
+path — and, in republish, before the bulk content publish, so no authored page is previewed
+while unlisted.
+
+**Undo.**
+
+| Flow | Category pages Demo Builder published | The sheet |
+|---|---|---|
+| Republish | Republished; those of categories now gone are taken down | Rewritten before the bulk publish and again before the category pages |
+| Reset | Kept on the record; the rebuild keeps or takes them down | Taken out before the content is re-published, written again first in the rebuild |
+| Library removed, or overlay off | Taken down (never an authored address) | Taken out: the site is back to the overlay leaving it alone |
+| Project delete | Gone with the site | Gone with the site |
+
+A page a shopper's first visit published (the smart-404 script) for a category Demo Builder
+never published is not on the record; if that category is later deleted, the page stays live
+until a reset. Accepted as a known limit (owner, 2026-10-22).
+
+**Rejected: a `/categories/{url_path}` prefix.** It was the design's recommendation: under a
+prefix no authored page could share a category's address, so the overlay could never replace
+one, with no list to keep. Its stated cost was that the URLs are not Adobe's canonical shape
+(Adobe's `aem-commerce-prerender` serves categories at their root paths). The owner chose the
+root shape on 2026-10-22; the opt-in sheet is what makes it safe. Design and history:
+`.rptc/plans/category-pages-overlay/overview.md`; behaviour: `docs/systems/category-pages.md`.
+
+---
+
 ## Cross-References
 
 - **Architecture explanation**: [eds-byom-pdp-routing.md](../eds-byom-pdp-routing.md)

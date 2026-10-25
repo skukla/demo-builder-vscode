@@ -239,9 +239,8 @@ describe('applyUpdatesHeadless', () => {
         const res = await applyUpdatesHeadless(sel, ctx);
 
         expect(res.template.successCount).toBe(1);
-        expect(res.template.applied).toEqual([
-            `${project.name}: A Demo Builder fix could not be put back: fix-gone (gone).`,
-        ]);
+        // Read under the project's own heading, so no name in front (owner, 2026-10-22).
+        expect(res.template.applied).toEqual(['A Demo Builder fix could not be put back: fix-gone (gone).']);
     });
 
     it('updates the inspector SDK via the rollback-guarded helper', async () => {

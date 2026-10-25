@@ -40,7 +40,7 @@ describe('an agent asks, with no modal up', () => {
         showWarning.mockResolvedValue('Sign In');
 
         const answer = await runWithCallTag(7, () =>
-            askDuringOperation('Sign in to Adobe to continue.', 'Sign In', 'Cancel'),
+            askDuringOperation({ title: 'Sign in', message: 'Sign in to Adobe to continue.' }, 'Sign In', 'Cancel'),
         );
 
         expect(showWarning).toHaveBeenCalledWith(
@@ -55,7 +55,7 @@ describe('an agent asks, with no modal up', () => {
         showWarning.mockResolvedValue(undefined);
 
         await expect(
-            runWithCallTag(8, () => askDuringOperation('Sign in to Adobe to continue.', 'Sign In', 'Cancel')),
+            runWithCallTag(8, () => askDuringOperation({ title: 'Sign in', message: 'Sign in to Adobe to continue.' }, 'Sign In', 'Cancel')),
         ).resolves.toBeUndefined();
     });
 });
@@ -64,7 +64,7 @@ describe('no modal is hosting the operation', () => {
     it('asks in a notification, exactly as before', async () => {
         showWarning.mockResolvedValue('Sign In');
 
-        const answer = await askDuringOperation('Your DA.live session has expired.', 'Sign In');
+        const answer = await askDuringOperation({ title: 'Sign in', message: 'Your DA.live session has expired.' }, 'Sign In');
 
         expect(showWarning).toHaveBeenCalledWith('Your DA.live session has expired.', 'Sign In');
         expect(answer).toBe('Sign In');
@@ -77,7 +77,7 @@ describe('no modal is hosting the operation', () => {
         const said: string[] = [];
 
         await withPhaseSinks([(line) => said.push(line)], () =>
-            askDuringOperation('Your DA.live session has expired.', 'Sign In'),
+            askDuringOperation({ title: 'Sign in', message: 'Your DA.live session has expired.' }, 'Sign In'),
         );
 
         expect(said).toEqual(['Your DA.live session has expired.']);
@@ -91,7 +91,7 @@ describe('a modal is hosting the operation', () => {
         startModalRun('op-1', send);
 
         const asking = withModalAsking('op-1', () =>
-            askDuringOperation('Your DA.live session has expired.', 'Sign In'),
+            askDuringOperation({ title: 'Sign in', message: 'Your DA.live session has expired.' }, 'Sign In'),
         );
         await settle();
 
@@ -100,7 +100,7 @@ describe('a modal is hosting the operation', () => {
             'operationProgress',
             expect.objectContaining({
                 id: 'op-1',
-                prompt: { message: 'Your DA.live session has expired.', actions: ['Sign In'] },
+                prompt: { title: 'Sign in', message: 'Your DA.live session has expired.', actions: ['Sign In'] },
             }),
         );
 
@@ -114,7 +114,7 @@ describe('a modal is hosting the operation', () => {
 
         const run = withModalAsking('op-2', async () => {
             steps.push('checking');
-            const chosen = await askDuringOperation('Sign in to continue.', 'Sign In', 'Cancel');
+            const chosen = await askDuringOperation({ title: 'Sign in', message: 'Sign in to continue.' }, 'Sign In', 'Cancel');
             steps.push(`answered:${chosen}`);
             return chosen;
         });
@@ -129,7 +129,7 @@ describe('a modal is hosting the operation', () => {
     it('reads a dismissal as no answer', async () => {
         startModalRun('op-3', jest.fn());
 
-        const asking = withModalAsking('op-3', () => askDuringOperation('Sign in?', 'Sign In'));
+        const asking = withModalAsking('op-3', () => askDuringOperation({ title: 'Sign in', message: 'Sign in?' }, 'Sign In'));
         await settle();
         answerOperationPrompt('op-3', undefined);
 
@@ -145,7 +145,7 @@ describe('a modal is hosting the operation', () => {
             step: 'Your DA.live sign-in',
         });
 
-        const asking = withModalAsking('op-4', () => askDuringOperation('Sign in?', 'Sign In'));
+        const asking = withModalAsking('op-4', () => askDuringOperation({ title: 'Sign in', message: 'Sign in?' }, 'Sign In'));
         await settle();
         expect(heldProgress('op-4')?.prompt).toBeDefined();
 
@@ -170,7 +170,7 @@ describe('a modal is hosting the operation', () => {
         startModalRun('op-5', jest.fn());
 
         await withModalAsking('op-5', async () => {
-            void askDuringOperation('Sign in?', 'Sign In');
+            void askDuringOperation({ title: 'Sign in', message: 'Sign in?' }, 'Sign In');
             await settle();
             expect(isAwaitingAnswer('op-5')).toBe(true);
         });
@@ -182,7 +182,7 @@ describe('a modal is hosting the operation', () => {
 describe('the handler behind the modal button', () => {
     it('answers the operation it names', async () => {
         startModalRun('op-6', jest.fn());
-        const asking = withModalAsking('op-6', () => askDuringOperation('Sign in?', 'Sign In'));
+        const asking = withModalAsking('op-6', () => askDuringOperation({ title: 'Sign in', message: 'Sign in?' }, 'Sign In'));
         await settle();
 
         const result = await handleAnswerOperationPrompt(createMockHandlerContext(), {

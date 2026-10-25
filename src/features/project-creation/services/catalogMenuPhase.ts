@@ -1,5 +1,6 @@
 /**
- * Category pages and the catalog menu, written at the END of project creation (EDS-24).
+ * Category pages and the catalog menu, published at the END of project creation (EDS-24,
+ * EDS-61: through the product page overlay).
  *
  * Storefront setup in the wizard runs before the project exists and before its datapack
  * lands, so — like catalog pre-warming (`catalogPrewarmPhase.ts`) — this runs here,
@@ -29,10 +30,6 @@ import {
     removeCatalogMenuStep,
     type CatalogMenuSite,
 } from '@/features/eds/services/catalogMenu/catalogMenuStep';
-import {
-    readAutoAddOverride,
-    writeAutoAddOverride,
-} from '@/features/eds/services/catalogMenu/categoryPageAutoAdd';
 import type { ProgressReporter } from '@/features/project-creation/services/catalogPrewarmPhase';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -50,8 +47,6 @@ function carryRecord(project: Project, existing: Project | undefined, target: Ca
     if (before?.repoOwner !== target.repoOwner || before.repoName !== target.repoName) return;
     const carried = readCatalogMenuRecord(existing);
     if (isEmptyRecord(readCatalogMenuRecord(project))) writeCatalogMenuRecord(project, carried);
-    // The SC's own choice about pages for new categories (EDS-27) travels the same way.
-    if (readAutoAddOverride(project) === undefined) writeAutoAddOverride(project, readAutoAddOverride(existing));
 }
 
 /**
@@ -95,8 +90,8 @@ export async function rewriteCatalogMenuPhase(
     // A swap: Republish's step for the same job after a store change.
     const say = sayer(context, progressTracker, OPERATION_STAGES.updatingCatalogMenu.label);
     await runCatalogMenu(context, project, say, makeSite, undefined, async (site) => {
-        const removed = await removeCatalogMenuStep(project, site.pages);
-        if (removed !== undefined) say(removed);
+        const removed = await removeCatalogMenuStep(project, site);
+        if (removed !== undefined) say(removed.summary);
     });
 }
 
@@ -128,7 +123,7 @@ async function runCatalogMenu(
         const site = makeSite ? makeSite(target) : catalogMenuSiteFor(context, project);
         if (!site) return;
         await beforeWrite?.(site);
-        const summary = await applyCatalogMenuStep(project, site);
+        const summary = (await applyCatalogMenuStep(project, site))?.summary;
         if (summary !== undefined) say(summary);
     } catch (error) {
         // Belt and braces: the step already swallows its own failures.

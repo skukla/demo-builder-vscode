@@ -24,6 +24,7 @@ import {
 } from './edsResetService.orchestrationHarness';
 
 import { PAAS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
+import { STOREFRONT_CHANGES } from '@/features/eds/services/storefront/storefrontChanges';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import type { Project } from '@/types/base';
 import { createResetContext, meshDeps } from './edsResetService.testUtils';
@@ -129,6 +130,28 @@ describe('executeEdsReset - mesh redeploy', () => {
         expect(result).toBe(partial);
         expect(context.stateManager.saveProject).not.toHaveBeenCalled();
     });
+
+    // The early return used to drop a config write that also failed: the reset said only
+    // that the mesh was not redeployed (2026-10-23).
+    it('keeps a failed config write on a failed mesh redeploy, after the mesh sentence', async () => {
+        mockPublishConfig.mockResolvedValue({ configWritten: false });
+        mockRedeployApiMesh.mockResolvedValue({
+            success: true,
+            filesReset: 5,
+            contentCopied: 3,
+            meshRedeployed: false,
+            error: 'Reset completed but mesh redeployment failed: boom',
+            errorType: 'MESH_REDEPLOY_FAILED',
+        });
+
+        const { result } = await runReset({ redeployMesh: true });
+
+        expect(result.error).toBe(
+            'Reset completed but mesh redeployment failed: boom ' +
+                'The site configuration could not be written, so product detail pages ' +
+                'will not load. Run "Demo Builder: Repair Site Configuration" to finish it.',
+        );
+    });
 });
 
 describe('executeEdsReset - state persistence and the result', () => {
@@ -215,36 +238,7 @@ describe('executeEdsReset - error mapping', () => {
     });
 });
 
-describe('executeEdsReset - an added demo', () => {
-    it("carries the repo reset's caveats into the result", async () => {
-        mockResetRepoToTemplate.mockResolvedValue({
-            ...REPO_RESULT,
-            demoCaveats: ['Product links may not work.'],
-        });
-
-        const { result } = await runReset();
-
-        expect(result.success).toBe(true);
-        expect(result.demoCaveats).toEqual(['Product links may not work.']);
-    });
-
-    it("carries the fix pass's applied and offered fixes into the result (EDS-13f)", async () => {
-        mockResetRepoToTemplate.mockResolvedValue({
-            ...REPO_RESULT,
-            demoFixes: { offered: ['pdp-empty-data-redirect'] },
-        });
-
-        const { result } = await runReset();
-
-        expect(result.demoFixes).toEqual({ offered: ['pdp-empty-data-redirect'] });
-    });
-
-    it('carries no caveats key when the repo reset had none', async () => {
-        const { result } = await runReset();
-
-        expect('demoCaveats' in result).toBe(false);
-    });
-
+describe('executeEdsReset - keeping or replacing the content', () => {
     it('keeps the current content when asked: the pipeline neither clears nor copies pages', async () => {
         await runReset({ keepContent: true, contentSource: { org: 'jen', site: 'isle5-content' } });
 
@@ -276,6 +270,8 @@ describe('executeEdsReset - the synced commit record', () => {
         templateRepo: 'template-repo',
         lastSyncedCommit: RECORDED_SHA,
     };
+    /** The stamp a finished reset writes: the newest storefront change this version knows. */
+    const BUILT = { storefrontBuiltThrough: STOREFRONT_CHANGES[STOREFRONT_CHANGES.length - 1].since };
 
     function storefrontProject(): Project {
         return createMockProject({
@@ -308,7 +304,7 @@ describe('executeEdsReset - the synced commit record', () => {
         const { result } = await runReset({ project: storefrontProject() }, context);
 
         expect(result.success).toBe(true);
-        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA }]);
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, ...BUILT }]);
     });
 
     it('records what the repository is built on now, read back after the reset (EDS-13f)', async () => {
@@ -318,7 +314,7 @@ describe('executeEdsReset - the synced commit record', () => {
 
         await runReset({ project: storefrontProject() }, context);
 
-        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, boilerplate }]);
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, boilerplate, ...BUILT }]);
     });
 
     // EDS-56: reset returns the code to its source's, so the Adobe base is the source's
@@ -331,7 +327,7 @@ describe('executeEdsReset - the synced commit record', () => {
 
         await runReset({ project }, context);
 
-        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA }]);
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, ...BUILT }]);
     });
 
     it('leaves the recorded commit alone when the reset fails after the repository step', async () => {
@@ -352,7 +348,30 @@ describe('executeEdsReset - the synced commit record', () => {
         const { result } = await runReset({ project: storefrontProject() }, context);
 
         expect(result.success).toBe(true);
-        expect(saved).toStrictEqual([STOREFRONT_METADATA]);
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, ...BUILT }]);
+    });
+
+    // The "Needs reset" status reads this stamp (storefrontChanges.ts): a reset is what clears it.
+    it('stamps the storefront as built the way Demo Builder builds storefronts now', async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+        const project = storefrontProject();
+        (storefrontMetadata(project) as Record<string, unknown>).storefrontBuildIncomplete = true;
+        const { context, saved } = contextCapturingSaves();
+
+        await runReset({ project }, context);
+
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, ...BUILT }]);
+    });
+
+    it("marks the build incomplete when the build step's own fixes did not all land", async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA, buildComplete: false });
+        const { context, saved } = contextCapturingSaves();
+
+        await runReset({ project: storefrontProject() }, context);
+
+        expect(saved).toStrictEqual([
+            { ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, ...BUILT, storefrontBuildIncomplete: true },
+        ]);
     });
 
     it('does not invent a storefront record for a project that has none', async () => {

@@ -33,8 +33,14 @@ function selections(): UpdateSelections {
 
 beforeEach(() => ask.mockReset());
 
+
+/** A question with this heading, whose sentence contains `part`. */
+function question(title: string, part: string): unknown {
+    return { title, message: expect.stringContaining(part) };
+}
+
 describe('questionsInModal', () => {
-    it('asks about a clash on the colleague\'s row with all three choices, naming the project and the files', async () => {
+    it('asks about a clash on the colleague\'s row with all three choices, naming the project', async () => {
         ask.mockResolvedValue('Fix with AI');
 
         const answer = await questionsInModal.onClash(stopped, {
@@ -45,31 +51,37 @@ describe('questionsInModal', () => {
 
         expect(answer).toBe('fix');
         expect(ask).toHaveBeenCalledWith(
-            expect.stringContaining('Bodea: The template update clashes with edits in the storefront in 2 files (head.html, scripts/a.js)'),
+            {
+                title: 'The update clashes with your edits',
+                message:
+                    "This update changes something that was already edited in Bodea's storefront. " +
+                    'Use AI to keep both changes. Nothing goes live until you approve it.\n' +
+                    'Or use the update and drop those edits.',
+            },
             'Fix with AI',
             'Leave it as it is',
-            'Reset to template',
+            'Use the update',
         );
     });
 
-    it("never offers a reset on Adobe's row, and says which update it is", async () => {
+    it("never offers a reset on Adobe's row", async () => {
         ask.mockResolvedValue('Leave it as it is');
 
         const answer = await questionsInModal.onClash(stopped, { track: 'boilerplate', files: ['blocks/header/header.js'], canReset: false });
 
         expect(answer).toBe('leave');
         expect(ask).toHaveBeenCalledWith(
-            expect.stringContaining("Adobe's boilerplate update clashes"),
+            question('The update clashes with your edits', "This update changes something that was already edited in Bodea's storefront"),
             'Fix with AI',
             'Leave it as it is',
         );
-        expect(ask.mock.calls[0][0]).not.toContain('Reset to template');
+        expect(ask.mock.calls[0][0].message).not.toMatch(/use the update/i);
     });
 
     it.each([
-        ['Reset to template', true, 'reset'],
+        ['Use the update', true, 'reset'],
         // A reset the question did not offer is never taken.
-        ['Reset to template', false, 'leave'],
+        ['Use the update', false, 'leave'],
         ['Leave it as it is', true, 'leave'],
         // Dismissed: nothing changes.
         [undefined, true, 'leave'],
@@ -86,7 +98,12 @@ describe('questionsInModal', () => {
 
         expect(answer).toBe('fix');
         expect(ask).toHaveBeenCalledWith(
-            expect.stringContaining('Bodea: the update kept to fix with AI is not ready to finish, because blocks/header/header.js still has conflict markers.'),
+            {
+                title: 'The fix is not finished',
+                message:
+                    "The AI didn't finish fixing Bodea's storefront. You can have it keep going, pick it up " +
+                    'later from Check for Updates, or drop it and skip this update.',
+            },
             'Fix with AI',
             'Keep it for later',
             'Drop the fix',
@@ -110,7 +127,11 @@ describe('questionsInModal', () => {
         expect(await questionsInModal.replaceLibraryBlocks('Demo Builder Blocks', stopped)).toBe(true);
         expect(await questionsInModal.replaceLibraryBlocks('Demo Builder Blocks', stopped)).toBe(false);
         expect(ask).toHaveBeenCalledWith(
-            '"Replace blocks" puts in the new versions, and any edits you made to these blocks are lost. "Keep my blocks" leaves them as they are.',
+            {
+                title: 'Replace the blocks?',
+                message:
+                    '"Replace blocks" puts in the new versions, and any edits you made to these blocks are lost. "Keep my blocks" leaves them as they are.',
+            },
             'Replace blocks',
             'Keep my blocks',
         );
@@ -125,7 +146,11 @@ describe('stopRunningDemos', () => {
         const out = await stopRunningDemos(selections(), '/p/justrite', stopDemo);
 
         expect(ask).toHaveBeenCalledTimes(1);
-        expect(ask).toHaveBeenCalledWith('JustRite is running. Stop it to update it?', 'Stop and update', 'Skip');
+        expect(ask).toHaveBeenCalledWith(
+            { title: 'Stop the demo to update it?', message: 'JustRite is running. Stop it to update it?' },
+            'Stop and update',
+            'Skip',
+        );
         expect(stopDemo).toHaveBeenCalledTimes(1);
         expect(out).toEqual({ selections: selections(), skipped: [] });
     });

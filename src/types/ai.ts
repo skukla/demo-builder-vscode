@@ -210,8 +210,9 @@ export interface AiInventory {
      * ADR-013: bundle files the user has edited — project-relative posix paths
      * whose current disk sha-256 differs from the hash recorded at the last
      * generate (`project.aiFileHashes`). Derived fresh on every verify, so it
-     * stays current without persisting a skip log; the modal renders it as
-     * "Edited — kept your version". Absent/empty when no hashes are recorded
+     * stays current without persisting a skip log; the modal renders it as one
+     * sentence by its Regenerate button ("Regenerate keeps your edits to
+     * AGENTS.md."). Absent/empty when no hashes are recorded
      * (pre-ADR projects must show zero false "edited" flags).
      */
     editedFiles?: string[];

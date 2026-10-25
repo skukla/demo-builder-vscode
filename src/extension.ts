@@ -37,7 +37,6 @@ import { createAgentTraceFileSink } from '@/features/ai/server/agentTraceSink';
 import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
-import { registerCategoryPageTools } from '@/features/ai/server/categoryPageTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
@@ -92,10 +91,6 @@ import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/pro
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import {
-    readAutoAddCategoryPagesSetting,
-    registerNewCategoryPagesWatch,
-} from '@/features/eds/handlers/newCategoryPagesWatch';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
@@ -516,18 +511,6 @@ export async function activate(context: vscode.ExtensionContext) {
             ),
         );
 
-        // New Commerce categories get their pages while a project is open (EDS-27):
-        // offered by default, added without asking only when the SC has turned
-        // `demoBuilder.categoryPages.autoAdd` on. The open project only.
-        context.subscriptions.push(
-            registerNewCategoryPagesWatch({
-                stateManager,
-                ctxFactory: () => createHeadlessHandlerContext(context, stateManager, logger),
-                onDidSignIn: (listener) => getDaLiveAuthService(context).onDidSignIn(listener),
-                logger,
-            }),
-        );
-
         // While VS Code stays open, check for updates every four hours, quietly: the check
         // notifies only when something is waiting (PL-80). The first check runs when the
         // sidebar opens. Until PL-80 a second updater did this with its own popup.
@@ -829,7 +812,6 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                         .get(key.slice(lastDot + 1));
                 });
                 registerContentAuthoringTools(mcpServer, connCtxFactory);
-                registerCategoryPageTools(mcpServer, connCtxFactory, readAutoAddCategoryPagesSetting);
                 registerResetProjectTool(mcpServer, connCtxFactory);
                 registerAddedDemoTools(mcpServer, connCtxFactory);
                 registerDemoPackageTools(mcpServer, connCtxFactory);

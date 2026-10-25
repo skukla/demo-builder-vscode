@@ -10,17 +10,9 @@
 
 import type { EdsResetResult } from './edsResetParams';
 
-/** The reset result's button to the storefront report, where the fixes that fit are offered. */
-const SEE_REPORT = 'See the storefront report';
-
-/** The storefront report's command title, as the Command Palette shows it. */
-const REPORT_TITLE = 'Storefront Report';
-
 /** One warning a successful reset ends with. */
 interface ResetWarning {
     message: string;
-    /** The demo's fixes are on offer in the storefront report. */
-    offersReport?: boolean;
 }
 
 /**
@@ -31,6 +23,8 @@ interface ResetWarning {
  */
 function successWarnings(result: EdsResetResult): ResetWarning[] {
     const warnings: ResetWarning[] = [];
+    // First: a site with no code serves nothing, whatever else went right.
+    if (result.codeNotPublished) warnings.push({ message: result.codeNotPublished });
     // Not a progress line: `report()` writes to a line the steps after it
     // overwrite within seconds, so the remedy was gone before it could be read.
     if (result.errorType === 'CONFIG_WRITE_FAILED') {
@@ -41,15 +35,9 @@ function successWarnings(result: EdsResetResult): ResetWarning[] {
             message: `${result.error} Commerce features may not work until mesh is manually redeployed.`,
         });
     }
-    // The fix pass's lines for an added demo (D23, EDS-13f): the same sentences the
-    // wizard's completion card shows. When fixes fit, the one door to accept them is
-    // the storefront report.
-    if (result.demoCaveats?.length) {
-        warnings.push({
-            message: `A few things to know about this demo: ${result.demoCaveats.join(' ')}`,
-            offersReport: !!result.demoFixes?.offered?.length,
-        });
-    }
+    // A page step that left something undone: a category page not published, product
+    // pages left live. They reached only the Debug Logs until 2026-10-23.
+    for (const message of result.pageWarnings ?? []) warnings.push({ message });
     // What the content pipeline could not do (EDS-55): old pages that may still be live,
     // pages the source has that the storefront does not serve, an empty block palette.
     for (const message of result.pipelineWarnings ?? []) warnings.push({ message });
@@ -58,17 +46,30 @@ function successWarnings(result: EdsResetResult): ResetWarning[] {
 
 /**
  * A reset's result for the modal that ran it: its warnings joined onto the modal's
- * last view, where the SC is looking, instead of notifications beside it.
+ * last view, where the SC is looking, instead of notifications beside it. What the
+ * page steps did (and the copy's broken links) go below, one line each, as `details`:
+ * joined into one paragraph they read as a run-on (owner, 2026-10-23).
  *
  * @param result - the reset's result
- * @returns the result, with `warning` when a success has any
+ * @returns the result, with `warning` when a success has any and `details` for its notes
  */
-export function withModalWarning(result: EdsResetResult): EdsResetResult {
+export function withModalWarning(result: EdsResetResult): EdsResetResult & { details?: string[] } {
     if (!result.success) return result;
-    const sentences = successWarnings(result).map(({ message, offersReport }) =>
-        offersReport ? `${message} ${REPORT_TITLE} offers fixes for this.` : message,
+    const warning = successWarnings(result).map(({ message }) => message).join(' ');
+    const details = pageNotes(result);
+    if (!warning && details.length === 0) return result;
+    return { ...result, ...(warning ? { warning } : {}), ...(details.length ? { details } : {}) };
+}
+
+/**
+ * The page sentences that report nothing wrong ("Removed 49 product pages"): lines for the
+ * modal's last view, where there is room for them. A notification shows only warnings.
+ */
+function pageNotes(result: EdsResetResult): string[] {
+    const warned = new Set(result.pageWarnings ?? []);
+    return [result.catalogMenu, result.productPages, result.brokenLinks].filter(
+        (sentence): sentence is string => sentence !== undefined && !warned.has(sentence),
     );
-    return sentences.length > 0 ? { ...result, warning: sentences.join(' ') } : result;
 }
 
 /** Show result notifications after reset completes; in a modal, only what it cannot show. */
@@ -84,15 +85,7 @@ export async function showResetResultNotifications(
         // it may have handed over to ends with "— done" (PL-59 R6). In a modal the
         // warnings are on its last view (`withModalWarning`).
         if (inModal) return;
-        for (const { message, offersReport } of successWarnings(result)) {
-            if (!offersReport) {
-                vscode.window.showWarningMessage(message);
-                continue;
-            }
-            void vscode.window.showWarningMessage(message, SEE_REPORT).then((choice) => {
-                if (choice === SEE_REPORT) void vscode.commands.executeCommand('demoBuilder.storefrontReport');
-            });
-        }
+        for (const { message } of successWarnings(result)) vscode.window.showWarningMessage(message);
     } else if (result.errorType === 'GITHUB_APP_NOT_INSTALLED') {
         const selection = await vscode.window.showErrorMessage(
             `Cannot reset EDS project: The AEM Code Sync GitHub App is not installed on ${result.errorDetails?.owner}/${result.errorDetails?.repo}. ` +

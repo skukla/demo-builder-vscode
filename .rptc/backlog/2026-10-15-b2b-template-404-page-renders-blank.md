@@ -33,3 +33,4 @@ or unpublished link. Check first whether the non-B2B boilerplate has the same ga
 ## Shipped so far
 
 - 2026-10-15  fix(eds): a missing page on a B2B storefront shows the site's 404, not a blank page (`e9e76c948`)
+- 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)

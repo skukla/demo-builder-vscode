@@ -78,12 +78,14 @@ describe('a step with a fix offers Apply, and Undo once applied', () => {
         expect(onFix).toHaveBeenCalledWith(expect.objectContaining({ mode: 'undo', stepId: 'erp-attributes' }));
     });
 
-    it('still offers Apply on a step SAVED done: the apply decides from a fresh check, not the saved state', async () => {
-        const onFix = jest.fn();
-        await renderGuide({ ...PRICE, state: 'done', lastCheck: 'passed' }, onFix);
+    // Owner, 2026-10-22 ("Hide it, yes"): a step whose check passed is done, so Apply has
+    // nothing to do there. The guide now checks every never-checked step as it opens, so a
+    // saved done is fresh enough; a stale one is corrected by Check all steps, which opens the
+    // step again and brings Apply back.
+    it('offers neither Apply nor Undo on a step saved done that Demo Builder did not apply', async () => {
+        await renderGuide({ ...PRICE, state: 'done', lastCheck: 'passed' }, jest.fn());
+        expect(screen.queryByRole('button', { name: FIX_COPY.fix })).toBeNull();
         expect(screen.queryByRole('button', { name: FIX_COPY.undo })).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: FIX_COPY.fix }));
-        expect(onFix).toHaveBeenCalledWith(expect.objectContaining({ mode: 'apply', stepId: 'price-scope-website' }));
     });
 
     it('offers both once Demo Builder applied a step the store has since lost', async () => {

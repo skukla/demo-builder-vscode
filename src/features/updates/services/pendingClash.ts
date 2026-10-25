@@ -128,15 +128,16 @@ async function applyInCopy(copy: LocalCopy, request: KeepClashRequest, token: st
 }
 
 /**
- * Each staged path and its git object id (null for a deletion): what the update changed
- * outside the clash, as `git diff --cached --raw` reports it in one call.
+ * Each staged path and its full git object id (null for a deletion): what the update
+ * changed outside the clash, as `git diff --cached --raw` reports it in one call. Full,
+ * because git shortens ids to whatever length it needs that day (see `sameObject`).
  *
  * @param since - the commit to measure from: the copy's latest by default, or the one
  *   the clash was kept on, so what was committed since still counts
  */
 export async function stagedChange(copy: LocalCopy, since = 'HEAD'): Promise<Record<string, string | null> | undefined> {
     if (since !== 'HEAD' && !COMMIT_SHA.test(since)) return undefined;
-    const raw = await copy.git(`git diff --cached --raw -z --no-renames --diff-filter=ADM ${since}`, TIMEOUTS.NORMAL);
+    const raw = await copy.git(`git diff --cached --raw -z --no-abbrev --no-renames --diff-filter=ADM ${since}`, TIMEOUTS.NORMAL);
     if (raw.code !== 0) return undefined;
     return parseRawDiff(raw.stdout);
 }

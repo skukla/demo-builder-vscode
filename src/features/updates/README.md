@@ -23,6 +23,15 @@ edits, replace a library's blocks under the `ask` sync setting
 (`handlers/updateQuestionsInModal.ts`). The extension's own update runs last, because it
 ends by offering a reload.
 
+A run that leaves rows the SC unticked runs the same check once more before it ends, and
+its answer says how many of those rows are still waiting (`remaining`; a locked row, and a
+ticked row that failed or was skipped, are never counted). The finished window then says
+"N updates still waiting" and offers Back to updates (`recheckUpdates`), which runs Check
+for Updates again: the run changed storefronts, so the old list is stale. That check
+presents a fresh list, ticked by the same rules, or says "up to date" in its notification
+and the window closes (owner, 2026-10-22). The agent's `apply_updates` answers `remaining`
+too: what the same check still finds for the project after it applies.
+
 The background check (the sidebar opening, then every four hours) runs the same check
 quietly and only notifies, "N Demo Builder updates available", with Review opening the
 modal on that check. Nothing opens by itself. Until 2026-10-20 the notification led to VS
@@ -113,13 +122,13 @@ runs the colleague's first, each its own commit.
 | The base | `boilerplateBase` in the storefront's metadata, its own field: never `lastSyncedCommit` (the colleague's track) or `lkgSource` (which would make the project thin-layer) |
 | Found by | `boilerplateBase.ts`: a saved package's `builtWith.lkg`; else GitHub says the colleague's repository was made from one of our templates and its first commit has the same files as one of that template's commits (`.github` aside). JustRite: 71a67e0, the 39th commit back |
 | Recorded | by the check (`boilerplateCheck.ts`), the one path, so new and existing projects get it alike |
-| Kept true | reset forgets it; after the colleague's update, their `demo.demo-builder.json` moves it forward when it is ahead (`boilerplateBaseRefresh.ts`); "Save as demo package" writes it as `builtWith.lkg`; changing the demo source keeps it (the code did not change) |
+| Kept true | reset forgets it; after the colleague's update, their `demo.demo-builder.json` moves it forward when it is ahead (`boilerplateBaseRefresh.ts`); Share Demo's link save writes it as `builtWith.lkg`; changing the demo source keeps it (the code did not change) |
 | Never | a reset on a conflict, Demo Builder's fixes re-applied (D6), or a move backwards |
 
 ## A clash is fixed with AI (EDS-57)
 
 A template or Adobe boilerplate update that clashes with edits in the storefront asks one
-question: Fix with AI, Leave it as it is, or (the colleague's row only) Reset to template
+question: Fix with AI, Leave it as it is, or (the colleague's row only) Use the update
 (`updateClash.ts`). No choice involves reading code (owner, 2026-10-20).
 
 | | |
@@ -134,6 +143,24 @@ question: Fix with AI, Leave it as it is, or (the colleague's row only) Reset to
 Every update that writes a storefront also brings the local copy up to GitHub afterwards,
 losing nothing: a local change GitHub already has is dropped, anything else leaves the copy
 as it is.
+
+## An older storefront is told to reset
+
+A fix Demo Builder makes to the storefronts it builds reaches new storefronts, and a reset's.
+Nothing here repairs an older storefront in place: an update merges code, and the Adobe
+boilerplate track re-applies none of our fixes (EDS-56 D6). Instead every storefront change an
+existing storefront does not pick up by itself is listed in `STOREFRONT_CHANGES`
+(`features/eds/services/storefront/storefrontChanges.ts`), and a storefront built before any of
+them shows **Needs reset** on its project card, its dashboard (the Reset tile), its Storefront
+Report, Diagnostics, and `get_project_status`.
+
+| | |
+|---|---|
+| The stamp | `storefrontBuiltThrough` on the storefront's metadata: the newest change the building version knew, written at creation and reset. A storefront whose build step could not finish (`bringStorefrontUpToDate` not current) also gets `storefrontBuildIncomplete` |
+| No stamp | the project's creation date; neither means older than every change |
+| The build step | `bringStorefrontUpToDate` (`storefrontUpToDate.ts`): creation, reset and a tested-boilerplate update run the storefront repairs (`storefrontRepairs.ts`: the 404 import map, the retired patches) after the smart 404 handler, so every path ends the same |
+| Labels inside an update | every template and Adobe boilerplate update, and finishing a kept clash, puts the template's checkout labels back over Demo Builder's stub in its own commit (`labelStubRepair.ts`) |
+| Never | a file that is not Demo Builder's text (the SC's, a colleague's) |
 
 ## A selected block library is installed here, not only at creation
 

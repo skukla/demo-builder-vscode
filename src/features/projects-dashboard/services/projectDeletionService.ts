@@ -82,6 +82,7 @@ export async function deleteProject(
 
     // Collect cleanup results for EDS projects
     const cleanupResults: CleanupResultItem[] = [];
+    let stoppedBecause: string | undefined;
 
     // Where this narrates is the shared routing: the screen's progress modal when
     // a kebab started it, else one notification (PL-59 R1/R2). Titled for the
@@ -102,7 +103,7 @@ export async function deleteProject(
 
             // EDS cleanup: Perform external resource cleanup first
             if (edsMetadata && cleanupOptions) {
-                await performEdsCleanup(
+                const stopped = await performEdsCleanup(
                     context,
                     edsMetadata,
                     { ...cleanupOptions, projectPath: project.path },
@@ -110,6 +111,11 @@ export async function deleteProject(
                     step,
                     services,
                 );
+                // Pages still live: the project is how a second try finds them (EDS-65).
+                if (stopped) {
+                    stoppedBecause = stopped;
+                    return { success: false, error: stopped };
+                }
             }
 
             step(OPERATION_STAGES.removingProjectFiles.label);
@@ -122,6 +128,13 @@ export async function deleteProject(
             return { success: true };
         },
     );
+
+    if (stoppedBecause) {
+        return {
+            success: true,
+            data: { success: false, projectName: project.name, error: stoppedBecause, cleanupResults },
+        };
+    }
 
     // Show cleanup summary for EDS projects
     if (cleanupResults.length > 0) {

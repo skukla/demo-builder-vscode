@@ -91,6 +91,23 @@ describe('started from a button on a screen (R1)', () => {
         });
     });
 
+    // What a run changed reaches the result screen (live release test, 2026-10-22: "Store
+    // prepared" named nothing it did). An empty list is not carried.
+    it('ends the modal with the lines of what a run that succeeded changed', async () => {
+        await withOperationProgress({ id: ID, title: 'Preparing the store', inModal: true }, async () => ({
+            success: true,
+            details: ['Product attributes:', 'Added erp_owner to the attribute set Default'],
+        }));
+        expect(modalPayloads().at(-1)).toEqual({
+            id: ID,
+            state: 'succeeded',
+            details: ['Product attributes:', 'Added erp_owner to the attribute set Default'],
+        });
+
+        await withOperationProgress({ id: ID, title: 'Preparing the store', inModal: true }, async () => ({ success: true, details: [] }));
+        expect(modalPayloads().at(-1)).toEqual({ id: ID, state: 'succeeded' });
+    });
+
     // When the step IS the job, the line under it is the job's count, never its name
     // a second time (progress vocabulary, owner 2026-10-16).
     it("drops the step's own name from the line under it", async () => {

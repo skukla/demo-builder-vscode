@@ -48,6 +48,11 @@ export function recordBoilerplate(project: Project, boilerplate: StorefrontBoile
     if (boilerplate && metadata) metadata.boilerplate = boilerplate;
 }
 
+/** What the SC reads when step 7 could not write the site configuration. */
+const CONFIG_NOT_WRITTEN =
+    'The site configuration could not be written, so product detail pages ' +
+    'will not load. Run "Demo Builder: Repair Site Configuration" to finish it.';
+
 /**
  * Final steps: optional CDN verification, optional mesh redeploy, and state persistence.
  */
@@ -60,10 +65,7 @@ export async function finalizeReset(
     deps: MeshRedeployDeps,
     /** False when step 7 could not write the site config — see below. */
     configWritten: boolean,
-    /** What the fix pass said about an added demo, from the repo reset (D23, EDS-13f). */
-    demo: Pick<EdsResetResult, 'demoCaveats' | 'demoFixes'> = {},
 ): Promise<EdsResetResult> {
-    const { demoCaveats, demoFixes } = demo;
     const { repoOwner, repoName, project, verifyCdn = false, redeployMesh = false } = params;
 
     if (verifyCdn) {
@@ -91,7 +93,11 @@ export async function finalizeReset(
             contentCopied,
             deps,
         );
-        if (meshResult) return meshResult; // Partial success
+        // Partial success. A config write that also failed rides on its error: it used to
+        // be dropped here, and the reset said only that the mesh was not redeployed.
+        if (meshResult) {
+            return configWritten ? meshResult : { ...meshResult, error: [meshResult.error, CONFIG_NOT_WRITTEN].filter(Boolean).join(' ') };
+        }
     }
 
     // NOTE: passes the project's CURRENT configs, not a snapshot from when
@@ -112,15 +118,11 @@ export async function finalizeReset(
         filesReset,
         contentCopied,
         meshRedeployed: redeployMesh,
-        ...(demoCaveats?.length ? { demoCaveats } : {}),
-        ...(demoFixes ? { demoFixes } : {}),
         ...(configWritten
             ? {}
             : {
                   errorType: 'CONFIG_WRITE_FAILED',
-                  error:
-                      'The site configuration could not be written, so product detail pages ' +
-                      'will not load. Run "Demo Builder: Repair Site Configuration" to finish it.',
+                  error: CONFIG_NOT_WRITTEN,
               }),
     };
 }

@@ -11,7 +11,8 @@
  * Two modes in one tool:
  *  - WITHOUT confirm: read-only — reports what's available (acts as the check).
  *  - WITH confirm:true: applies everything available, returning per-category
- *    counts + a phase timeline.
+ *    counts + a phase timeline, and `remaining`: what the same check still finds
+ *    afterwards, as the Updates window says what is still waiting (2026-10-22).
  *
  * It refuses to apply while the demo is running (the apply does not stop it; the
  * Updates modal asks the SC instead). Block libraries on the 'ask' sync behavior
@@ -36,6 +37,7 @@ import {
     type UpdateSelections,
 } from '@/features/updates/services/updateSelections';
 import type { HandlerContext } from '@/types/handlers';
+import { toError } from '@/types/typeGuards';
 
 /** Compact, human-readable summary of pending updates. */
 function summarize(selections: UpdateSelections): Record<string, unknown> {
@@ -58,6 +60,21 @@ function summarize(selections: UpdateSelections): Record<string, unknown> {
 }
 
 /**
+ * What the same check finds for the current project once the apply has run, read
+ * afresh since the apply saved it; undefined when the check could not run.
+ */
+async function stillAvailable(ctx: HandlerContext): Promise<number | undefined> {
+    try {
+        const project = await ctx.stateManager.getCurrentProject();
+        if (!project) return undefined;
+        return countSelections(await computeProjectUpdateSelections(project, ctx, integrationUpdateProbe(ctx)));
+    } catch (error) {
+        ctx.logger.warn(`[apply_updates] Could not check what is still available: ${toError(error).message}`);
+        return undefined;
+    }
+}
+
+/**
  * Register the apply_updates tool on `server`.
  *
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
@@ -73,7 +90,7 @@ export function registerApplyUpdatesTool(
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK, and deployed integrations and their ERPs (the same pair update as update_integration, ERPs first) — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. An integration pair whose project uses a different Adobe organization is listed, not deployed: categories.integration.deferred says to open that project. A template update brings a storefront built on Demo Builder\'s tested boilerplate (most are) to that tested version, never Adobe\'s latest, and puts its fixes back; categories.template.applied names any it could not. A template update that clashes with the user\'s edits stops and names the files (categories.template.clashes); onClash:keep leaves the clash in the project\'s local storefront copy for you to fix, and onClash:reset applies over the files, never on a tested-boilerplate storefront, whose way through a clash is reset_project. On a storefront built from a colleague\'s demo, template follows the colleague\'s repository, and categories.boilerplate brings its Adobe half to the same tested version when the Adobe commit it started from is known; it never resets, so a clash stops (or, with onClash:keep, is kept) and names the files. A block library update never puts back what the user removed by hand from the storefront: a block folder it copied, an entry it added to the component-definition, component-filters or component-models file, or an HTML example it filled in; categories.addon.leftOut names any it left out.',
+                'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK, and deployed integrations and their ERPs (the same pair update as update_integration, ERPs first) — and install any block library the project has selected (configure_project blockLibraries) whose blocks are not in its storefront repository yet. Without confirm, reports what is available. An integration pair whose project uses a different Adobe organization is listed, not deployed: categories.integration.deferred says to open that project. A template update brings a storefront built on Demo Builder\'s tested boilerplate (most are) to that tested version, never Adobe\'s latest, and puts its fixes back; categories.template.applied names any it could not. A template update that clashes with the user\'s edits stops and names the files (categories.template.clashes); onClash:keep leaves the clash in the project\'s local storefront copy for you to fix, and onClash:reset applies over the files, never on a tested-boilerplate storefront, whose way through a clash is reset_project. On a storefront built from a colleague\'s demo, template follows the colleague\'s repository, and categories.boilerplate brings its Adobe half to the same tested version when the Adobe commit it started from is known; it never resets, so a clash stops (or, with onClash:keep, is kept) and names the files. A block library update never puts back what the user removed by hand from the storefront: a block folder it copied, an entry it added to the component-definition, component-filters or component-models file, or an HTML example it filled in; categories.addon.leftOut names any it left out. After applying, remaining is how many updates the same check still finds for the project (one that failed, a pair in another organization, a clash that stopped): 0 means nothing is left.',
             inputSchema: {
                 confirm: z
                     .boolean()
@@ -159,9 +176,11 @@ export function registerApplyUpdatesTool(
                 { templateConflicts: args.onClash ?? 'stop' },
             );
 
+            const remaining = await stillAvailable(ctx);
             return asText({
                 applied: result.totalApplied,
                 failed: result.totalFailed,
+                ...(remaining === undefined ? {} : { remaining }),
                 categories: {
                     forkSync: result.forkSync,
                     template: result.template,

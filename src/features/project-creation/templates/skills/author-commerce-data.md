@@ -82,26 +82,22 @@ Whenever you create or move categories: assign them to every shared catalog that
 
 ## Give new categories their storefront pages
 
-On an Edge Delivery storefront with the Demo Builder Blocks library, Demo Builder writes one page
-per category marked Include in Menu when the storefront is set up, and the nav's catalog menu
-reads the category tree live. A category you create now appears in that menu at once and links to
-the search page filtered to it until it has a page. To give it its own page, call
-`check_category_pages` (a read: it names the categories with no page) and then
-`add_category_pages` (it asks first). That adds the missing pages and changes nothing else: no
-existing page is rewritten or removed and the nav is left alone. `sync_content` does the same and
-more: it also refreshes the pages Demo Builder wrote that nobody has edited. Never write category
-pages one by one with `write_page`: Demo Builder keeps no record of those, so a reset cannot take
-them back out.
-
-While the project is open in VS Code, Demo Builder also looks for new categories by itself (when
-the project opens, then every 15 minutes). It offers to add their pages, or adds them without
-asking when the SC has turned on the `demoBuilder.categoryPages.autoAdd` setting
-(`check_category_pages` says which). Do not turn that setting on for the SC: it approves page
-writes in advance, and that is theirs to decide. `set_setting` hands the change to them.
+On an Edge Delivery storefront with the Demo Builder Blocks library, every category has a page at
+its own url path (for example `/signs/danger-signs`). Where nobody wrote a page there, the product
+page overlay makes it from one template page, `/categories/default`. The nav's catalog menu reads
+the category tree live and links each category to its page. A category you create now appears in
+that menu at once; `republish` publishes its page, and every other one again: run it after
+creating or renaming a category or changing the template, because a published page keeps what it
+showed when it was published. To change how every generated category page looks, edit
+`/categories/default` (keep its heading and its `product-list-page` block's `urlPath` row: those
+are what each category fills in), then `republish`. A page you write in DA.live at a category's
+address replaces the generated one, but only once `republish` has run: the site's
+`/authored-category-pages.json` lists the authored addresses, and until a path is listed the
+overlay's page wins. Never edit that sheet by hand; Demo Builder rewrites it each time.
 
 A category that already has a hand-built page keeps it, wherever that page lives: a page whose
 `product-list-page` block names the category in its `urlPath` row counts, at any address. Demo
-Builder writes no second page for that category, links the menu to the existing one, and says so
+Builder links the menu to the existing one instead of the category's own page, and says so
 in the result ("Signs uses your page at /safety-signage."). The link is a row in the `catalog-menu`
 table in `/nav`: the category's url path, then the page. To point a category at a different page,
 edit or add that row; rows Demo Builder did not write are never changed.

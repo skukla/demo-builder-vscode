@@ -7,15 +7,16 @@
  * store-change marker cleared. It ends with ONE sentence for the SC.
  *
  * Real: the product-page removal (`removeProductPages`) and the category step
- * (`replaceCatalogMenuStep`). Faked at the boundary: Helix, the DA.live pages (in
- * memory), the category read, the shared-repository check, and the product-page publish
+ * (`replaceCatalogMenuStep`). Faked at the boundary: Helix (for category pages, the
+ * in-memory one the catalog menu suites share), the DA.live pages (in memory), the
+ * category read, the shared-repository check, and the product-page publish
  * (`prewarmCatalog`, wired by the deps factory and asserted there).
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { applyCatalogMenuStep, type CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalogMenuStep';
-import type { CatalogCategory } from '@/features/eds/services/catalogMenu/categoryPages';
+import type { CatalogCategory } from '@/features/eds/services/catalogMenu/categoryPagePlan';
 import type { PrewarmResult } from '@/features/eds/services/catalogPrewarmService';
 import {
     replaceStoreScopePages,
@@ -24,7 +25,12 @@ import {
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
-import { fakeStorefront, type FakeStorefront } from '../catalogMenu/catalogMenuService.testUtils';
+import { hashOf } from '@/features/eds/services/catalogMenu/ownedPages';
+import {
+    fakeCategoryHelix,
+    fakeStorefront,
+    type FakeStorefront,
+} from '../catalogMenu/catalogMenuService.testUtils';
 
 const NAV = '<body><header></header><main><div><p>Brand</p></div><div><ul><li>Deals</li></ul></div></main></body>';
 const categories = (prefix: string, n: number): CatalogCategory[] =>
@@ -75,10 +81,22 @@ function project(overrides: Partial<Project> = {}): Project {
 const published = (n: number): PrewarmResult => ({ attempted: n, succeeded: n, failed: 0, skipped: false });
 
 /** A storefront set up on the old store, with its pages and the calls made on it. */
-async function setUp(p: Project, over: Partial<StoreScopePagesDeps> = {}) {
+async function setUp(
+    p: Project,
+    over: Partial<StoreScopePagesDeps> = {},
+    pagesBefore: Record<string, string> = {},
+) {
     const order: string[] = [];
-    const s: FakeStorefront = fakeStorefront({ '/nav': NAV });
-    const catalogMenu: CatalogMenuSite = { pages: s.port, hasBlock: async () => true, readCategories: async () => OLD_STORE };
+    const s: FakeStorefront = fakeStorefront({ '/nav': NAV, ...pagesBefore });
+    const helix = fakeCategoryHelix();
+    const catalogMenu: CatalogMenuSite = {
+        pages: s.port,
+        hasBlock: async () => true,
+        readCategories: async () => OLD_STORE,
+        menuLine: async () => 'commerce' as const,
+        overlay: true,
+        categoryPages: helix.host,
+    };
     await applyCatalogMenuStep(p, catalogMenu);
     s.written.length = 0;
     const unpublishPages = jest.fn(async (_o: string, _r: string, _b: string, paths: string[]) => {
@@ -95,15 +113,18 @@ async function setUp(p: Project, over: Partial<StoreScopePagesDeps> = {}) {
             logger,
         },
         catalogMenu: {
-            pages: {
-                ...s.port,
-                write: async (path, html) => {
-                    order.push('category pages');
-                    await s.port.write(path, html);
-                },
-            },
+            pages: s.port,
             hasBlock: async () => true,
             readCategories: async () => NEW_STORE,
+            menuLine: async () => 'commerce' as const,
+            overlay: true,
+            categoryPages: {
+                ...helix.host,
+                publish: async (path) => {
+                    order.push('category pages');
+                    await helix.host.publish(path);
+                },
+            },
         },
         publishProductPages: jest.fn(async (onProgress) => {
             order.push('publish product pages');
@@ -116,7 +137,7 @@ async function setUp(p: Project, over: Partial<StoreScopePagesDeps> = {}) {
         logger,
         ...over,
     };
-    return { deps, order, s, unpublishPages };
+    return { deps, order, s, helix, unpublishPages };
 }
 
 describe('replaceStoreScopePages', () => {
@@ -149,10 +170,23 @@ describe('replaceStoreScopePages', () => {
         expect(unpublishPages).toHaveBeenCalledWith('me', 'shop', 'main', OLD_PRODUCT_PAGES);
     });
 
-    it('keeps a category page the SC edited, and says so', async () => {
+    it("takes the old store's category pages down", async () => {
         const p = project();
-        const { deps, s } = await setUp(p);
-        s.pages.set('/old-0', '<body><main><div><h1>Edited by hand</h1></div></main></body>');
+        const { deps, helix } = await setUp(p);
+
+        await replaceStoreScopePages(p, deps);
+
+        expect([...helix.live].filter((path) => path.startsWith('/old-'))).toStrictEqual([]);
+        expect(helix.live.size).toBe(11);
+    });
+
+    it('keeps a category page the SC edited, and says so', async () => {
+        const old = '<body><main><div><h1>Old 0</h1></div></main></body>';
+        const p = project();
+        const { deps, s } = await setUp(p, {}, { '/old-0': '<body><main><div><h1>Edited by hand</h1></div></main></body>' });
+        // A page the old model wrote (one DA.live page per category), edited since.
+        const metadata = p.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!;
+        metadata.catalogMenu = { ...(metadata.catalogMenu as object), pages: [{ path: '/old-0', hash: hashOf(old) }] };
 
         const result = await replaceStoreScopePages(p, deps);
 
@@ -218,7 +252,7 @@ describe('replaceStoreScopePages', () => {
         const result = await replaceStoreScopePages(p, deps);
 
         expect(result.sentence).toContain('30 old product pages removed.');
-        expect(result.sentence).toContain('Category pages were not written: Catalog Service returned HTTP 503.');
+        expect(result.sentence).toContain('Category pages were not published: Catalog Service returned HTTP 503.');
         expect(result.sentence).toContain('Product pages were not published (Catalog Service timed out).');
     });
 

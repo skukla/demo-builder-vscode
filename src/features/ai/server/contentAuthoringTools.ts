@@ -24,7 +24,7 @@
  * ## Two DA.live-capable tokens, only one of which is right
  *
  * `DaLiveAuthService` (its own sign-in and storage) backs the production content
- * path — `republishStorefrontContent`, `sync_content`. The extension's Adobe IMS
+ * path — `republishStorefrontContent`, the `republish` tool. The extension's Adobe IMS
  * token backs org-level reads like `list_dalive_sites`. Both are IMS tokens, so
  * picking wrong fails as a 401 at runtime rather than a type error. Content
  * operations use the DA.live one, and once a site carries any `access.admin`
@@ -32,7 +32,7 @@
  * nothing else.
  *
  * Preview/publish additionally sends `x-auth-token: <github>`, so the publishing
- * paths pre-flight BOTH credentials, exactly as `sync_content` does.
+ * paths pre-flight BOTH credentials, exactly as `republish` does.
  */
 
 import { z } from 'zod';
@@ -533,7 +533,7 @@ export function registerContentAuthoringTools(
             needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Unpublish and delete a page from the current project\'s DA.live storefront (irreversible). Requires confirm:true.',
+                'Unpublish and delete a page from the current project\'s DA.live storefront: live, preview and source (irreversible). Requires confirm:true.',
             inputSchema: {
                 path: pathField,
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
@@ -589,6 +589,14 @@ export function registerContentAuthoringTools(
                 });
             }
 
+            // The preview copy goes too: without it the page stayed on the site's
+            // preview address after the source was gone (measured 2026-10-22 on
+            // JustRite's /apparel). Best-effort and reported, never a reason to
+            // stop: the live page, the one visitors see, is already down.
+            const previewRemoved = await runWithAdobeTarget(() =>
+                helixFactory(r.ctx).deletePreview(daLiveOrg, daLiveSite, webPath),
+            ).catch(() => false);
+
             // `unpublishError` is deliberately NOT carried past this point: it is
             // only ever set in the catch above, which leaves `unpublished` false
             // and returns at the guard. Everything below runs with the unpublish
@@ -600,6 +608,7 @@ export function registerContentAuthoringTools(
                 return asText({
                     deleted: result.success,
                     unpublished,
+                    previewRemoved,
                     path: webPath,
                     ...(result.error ? { error: result.error } : {}),
                 });
@@ -607,6 +616,7 @@ export function registerContentAuthoringTools(
                 return asText({
                     deleted: false,
                     unpublished,
+                    previewRemoved,
                     path: webPath,
                     error: message(err),
                 });

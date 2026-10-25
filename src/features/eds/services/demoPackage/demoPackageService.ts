@@ -1,5 +1,6 @@
 /**
- * "Save as demo package": what the extension already knows about a project,
+ * Share Demo's link save (once "Save as demo package"): what the extension
+ * already knows about a project,
  * written as the description file a colleague's "Add a demo package" reads, and the
  * checks that say whether their add will work.
  *

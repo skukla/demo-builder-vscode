@@ -5,7 +5,7 @@
  * When the colleague moved their storefront to a newer Adobe boilerplate and the SC takes
  * "Changes from …", the SC's Adobe code moves without the record. The colleague's saved
  * description file (`demo.demo-builder.json`, at the root of their repository) says what
- * their code is built on as of their last "Save as demo package". After a colleague-track
+ * their code is built on as of their last Share Demo save. After a colleague-track
  * update this reads it, and takes its base when it names the same template and that commit
  * is AHEAD of the recorded one. Anything else leaves the record (B): a stale or unreadable
  * file, another template, or a commit that is not ahead. Adobe's change then goes through the

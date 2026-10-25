@@ -64,10 +64,8 @@ export interface UpdateContext {
 }
 
 /**
- * The fields of a block-library update selection the core needs — structurally
- * identical to the same-named fields of `BlockLibraryUpdateItem`
- * (commands/updateTypes.ts), declared here so the service layer never imports
- * from commands.
+ * The fields of a block-library update the core needs: the same fields as an entry of
+ * `UpdateSelections['blockLibrary']` (updateSelections.ts).
  */
 export interface BlockLibraryUpdateTarget {
     project: Project;

@@ -31,6 +31,7 @@ import { readBoilerplateBase, writeBoilerplateBase } from '@/features/updates/se
 import type { PendingClash } from '@/features/updates/services/pendingClash';
 import type { FinishDeps } from '@/features/updates/services/pendingClashFinish';
 import type { Project } from '@/types/base';
+import { B2B_TEMPLATE_CHECKOUT_ROWS, OLD_SINGLE_SHEET_STUB_JSON } from '../../../helpers/placeholderLabelFixtures';
 import { gitEnv } from '../../../helpers/realGit';
 
 const FIXED_HEADER = "// nav start\nconst dropDown = 'drop-down line with aria attributes plus the quote icon';\n// nav end\n";
@@ -42,7 +43,8 @@ type TestDeps = FinishDeps & {
     restorePieces: jest.Mock;
 };
 
-async function keptProject(): Promise<{ project: Project; deps: TestDeps }> {
+async function keptProject(before?: () => void): Promise<{ project: Project; deps: TestDeps }> {
+    before?.();
     const project = storefrontProject();
     writeBoilerplateBase(project, {
         template: TEMPLATE,
@@ -117,6 +119,54 @@ describe('finishClash', () => {
 
         await expect(finishClash(project, deps)).resolves.toMatchObject({ kind: 'finished' });
         expect(readBoilerplateBase(project)?.commit).toBe(fx.t2);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    // Git shortens a file's id to as many characters as it needs that day: JustRite's record
+    // held 9, and git said 8 at finishing, so an untouched .gitattributes read as changed
+    // (2026-10-24). A record written with short ids still matches the same files.
+    it('finishes when the record holds file ids shortened to a different length than git uses now', async () => {
+        const { project, deps } = await keptProject();
+        const record = await readKeptClash(fx.local);
+        const shortened = Object.fromEntries(
+            Object.entries(record?.applied ?? {}).map(([file, id]) => [file, id && git(fx.local, 'rev-parse', id).slice(0, 9)]),
+        );
+        await markKeptClash(fx.local, { note: record?.note ?? '', applied: shortened, ...(record?.head ? { head: record.head } : {}) });
+        write(fx.local, 'blocks/header/header.js', FIXED_HEADER);
+
+        await expect(finishClash(project, deps)).resolves.toMatchObject({ kind: 'finished' });
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('records full file ids when it keeps a clash, so the length git picks cannot matter', async () => {
+        await keptProject();
+        const ids = Object.values((await readKeptClash(fx.local))?.applied ?? {}).filter(Boolean);
+
+        expect(ids.length).toBeGreaterThan(0);
+        expect(ids.every((id) => /^[0-9a-f]{40}$/.test(id as string))).toBe(true);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    // Storefronts made before 2026-10-22 hold our stub where Adobe's checkout labels belong,
+    // and read "undefined" (JustRite). Finishing is an update's push too, so it repairs them.
+    it("puts Adobe's checkout labels back over our stub in the same commit, and says so", async () => {
+        const { project, deps } = await keptProject(() => {
+            write(fx.local, 'placeholders/checkout.json', OLD_SINGLE_SHEET_STUB_JSON);
+            git(fx.local, 'add', '-A');
+            git(fx.local, 'commit', '-q', '-m', 'Demo Builder label stub');
+            git(fx.local, 'push', '-q', fx.scBare, 'HEAD:main');
+        });
+        const before = pushedHead();
+        write(fx.local, 'blocks/header/header.js', FIXED_HEADER);
+
+        const outcome = await finishClash(project, deps);
+
+        expect(outcome).toMatchObject({
+            kind: 'finished',
+            notes: ["Fixed the checkout page's labels."],
+        });
+        expect(git(fx.scBare, 'rev-list', '--count', `${before}..main`)).toBe('1');
+        const pushedLabels = JSON.parse(git(fx.scBare, 'show', 'main:placeholders/checkout.json')) as {
+            data: { data: unknown };
+        };
+        expect(pushedLabels.data.data).toStrictEqual(B2B_TEMPLATE_CHECKOUT_ROWS);
     }, REAL_GIT_TIMEOUT_MS);
 
     it('still refuses a hook-committed fix that changed a file beyond the clash', async () => {

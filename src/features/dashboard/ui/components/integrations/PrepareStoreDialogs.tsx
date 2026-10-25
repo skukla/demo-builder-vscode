@@ -12,21 +12,20 @@
  * @module features/dashboard/ui/components/integrations/PrepareStoreDialogs
  */
 
-import { DialogContainer, Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { DialogContainer, Text } from '@adobe/react-spectrum';
+import React, { useCallback, useMemo, useState } from 'react';
 import type { ComponentOperationControls } from '../../hooks/useComponentOperation';
 import { ConfirmActionDialog } from '../ConfirmActionDialog';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
+import { PrepareStepPreview, PreviewWait } from './PrepareStepPreview';
+import { usePreparationPreview } from './usePreparationPreview';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal } from '@/core/ui/components/ui/Modal';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PreparationStepReport, PreparationStepState } from '@/types/storePreparation';
 
 /** Every string the dialogs show, in one place. */
 export const PREPARE_STORE_COPY = {
     title: (name: string) => `Prepare this store for ${name}`,
     prepare: 'Prepare',
-    loading: 'Reading what the store needs',
     nothing: 'Nothing to apply: every step Demo Builder can do is done, or left by hand.',
     undoTitle: 'Undo preparation',
     undoAction: 'Undo',
@@ -34,8 +33,7 @@ export const PREPARE_STORE_COPY = {
         `Puts back what Prepare this store changed for ${name}, newest step first: settings to their previous values; an attribute, stock or shared catalog it created deleted; a warehouse it created disabled (Commerce cannot delete a source).`,
     stepApplyTitle: (label: string) => `Apply: ${label}`,
     stepApplyAction: 'Apply',
-    stepApplyBody:
-        'Demo Builder checks the step first and writes it only if it is not done. What it changes is recorded, so it can be undone.',
+    stepApplyBody: 'What it changes is recorded, so it can be undone.',
     stepUndoTitle: (label: string) => `Undo: ${label}`,
     stepUndoAction: 'Undo',
     stepUndoBody: 'Puts back what Demo Builder recorded for this step.',
@@ -161,10 +159,35 @@ export interface PrepareStoreDialogsProps {
     closeStep: () => void;
 }
 
-interface PreviewAnswer {
-    success?: boolean;
-    error?: string;
-    data?: { steps?: PreparationStepReport[] };
+/** A step's lines as a list, or nothing when it has none. */
+function Lines({ lines }: { lines: string[] }): React.ReactElement | null {
+    if (lines.length === 0) return null;
+    return (
+        <ul>
+            {lines.map((line) => (
+                <li key={line}>{line}</li>
+            ))}
+        </ul>
+    );
+}
+
+/**
+ * One step of a preparation preview: its label and state, then what it changes, what Commerce
+ * refused, what its check found, and what it leaves by hand. The preview modal and the confirm
+ * in front of adding the ERP integration both list steps with it.
+ */
+export function PreparationStepRow({ step }: { step: PreparationStepReport }): React.ReactElement {
+    return (
+        <li data-state={step.state}>
+            <Text>
+                <strong>{step.label}</strong> — {STATE_WORDS[step.state]}
+            </Text>
+            <Lines lines={step.changes} />
+            <Lines lines={step.rejected} />
+            {step.note && <Text>{step.note}</Text>}
+            {step.manual && <Text>{step.manual}</Text>}
+        </li>
+    );
 }
 
 /** The preview: read when the modal opens, listed step by step. */
@@ -177,23 +200,7 @@ function PreviewList({
     onPrepare: (target: Target) => void;
     onClose: () => void;
 }): React.ReactElement {
-    const [steps, setSteps] = useState<PreparationStepReport[] | null>(null);
-    const [error, setError] = useState<string>();
-    useEffect(() => {
-        let live = true;
-        // Typed on the envelope: a refusal RETURNS { success: false } rather than throwing.
-        webviewClient
-            .request<PreviewAnswer>('prepareCommerceStore', { id: target.id })
-            .then((answer) => {
-                if (!live) return;
-                if (answer?.success === false) setError(answer.error ?? 'The preview failed.');
-                else setSteps(answer?.data?.steps ?? []);
-            })
-            .catch(() => live && setError("Demo Builder didn't get an answer in time. Try again."));
-        return () => {
-            live = false;
-        };
-    }, [target.id]);
+    const { steps, error } = usePreparationPreview(target.id);
     const applicable = (steps ?? []).filter((step) => step.state === 'applicable');
     return (
         <Modal
@@ -211,46 +218,12 @@ function PreviewList({
         >
             {/* The body goes from a spinner to nine rows: the floor keeps the dialog from jumping. */}
             <SteadyHeight>
-                {error && (
-                    <InlineNotice title="Couldn't read the store" testId="prepare-store-notice">
-                        {error}
-                    </InlineNotice>
-                )}
-                {!steps && !error && (
-                    <Flex alignItems="center" gap="size-100" data-testid="prepare-store-loading">
-                        <ProgressCircle
-                            size="S"
-                            isIndeterminate
-                            aria-label={PREPARE_STORE_COPY.loading}
-                        />
-                        <Text>{PREPARE_STORE_COPY.loading}</Text>
-                    </Flex>
-                )}
+                {(error || !steps) && <PreviewWait error={error} />}
                 {steps && applicable.length === 0 && <Text>{PREPARE_STORE_COPY.nothing}</Text>}
                 {steps && (
                     <ul data-testid="prepare-store-steps">
                         {steps.map((step) => (
-                            <li key={step.id} data-state={step.state}>
-                                <Text>
-                                    <strong>{step.label}</strong> — {STATE_WORDS[step.state]}
-                                </Text>
-                                {step.changes.length > 0 && (
-                                    <ul>
-                                        {step.changes.map((change) => (
-                                            <li key={change}>{change}</li>
-                                        ))}
-                                    </ul>
-                                )}
-                                {step.rejected.length > 0 && (
-                                    <ul>
-                                        {step.rejected.map((line) => (
-                                            <li key={line}>{line}</li>
-                                        ))}
-                                    </ul>
-                                )}
-                                {step.note && <Text>{step.note}</Text>}
-                            {step.manual && <Text>{step.manual}</Text>}
-                            </li>
+                            <PreparationStepRow key={step.id} step={step} />
                         ))}
                     </ul>
                 )}
@@ -299,6 +272,9 @@ export function PrepareStoreDialogs(props: PrepareStoreDialogsProps): React.Reac
                     onConfirm={props.onRunStep}
                     onClose={props.closeStep}
                 >
+                    {props.step.mode === 'apply' && (
+                        <PrepareStepPreview id={props.step.id} stepId={props.step.stepId} />
+                    )}
                     <Text>
                         {props.step.mode === 'apply' ? copy.stepApplyBody : copy.stepUndoBody}
                     </Text>

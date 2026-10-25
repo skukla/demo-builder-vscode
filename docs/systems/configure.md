@@ -84,7 +84,7 @@ accepts it, the project records `edsStorefrontState.catalogPagesPending`, naming
 previous store (`storeScopeChange.ts`, set in `republishStorefrontConfig`, so the mesh
 deploy's own republish sets it too). The storefront stays amber until the pages are
 replaced. Later, a window restart and the mesh path all keep it. Configure's Republish,
-the dashboard's Republish (and `sync_content`) and the agent's `republish` each run the
+the dashboard's Republish and the agent's `republish` (the same function) each run the
 one service, `storeScopePages.ts`, when it is set: Reset's catalog half, in Reset's
 order. Undo is the same path: change the store back and republish.
 

@@ -1,12 +1,10 @@
 /**
- * storefront tools — republish adapter over republishStorefrontConfig. The EDS
- * service layer + EDS predicate are mocked; covers current-project / EDS guards,
- * the GitHub auth handoff, and success/failure passthrough.
+ * storefront tools — `republish`, the agent's dashboard Republish, an adapter over
+ * republishStorefrontContent. The EDS service layer + EDS predicate are mocked; covers
+ * current-project / EDS guards, the GitHub and DA.live auth handoffs, and success/failure
+ * passthrough.
  */
 
-jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
-    republishStorefrontConfig: jest.fn(),
-}));
 jest.mock('@/features/eds/services/storefront/storefrontContentRepublishService', () => ({
     republishStorefrontContent: jest.fn(),
 }));
@@ -27,7 +25,6 @@ import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { COMPONENT_IDS } from '@/core/constants';
 import { republishStorefrontContent } from '@/features/eds/services/storefront/storefrontContentRepublishService';
-import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject } from '@/types/typeGuards';
 import { AdobeOrgMismatchError } from '@/features/authentication/services/authenticationErrors';
@@ -38,7 +35,6 @@ import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-const republishMock = republishStorefrontConfig as jest.Mock;
 const republishContentMock = republishStorefrontContent as jest.Mock;
 const getGitHubServicesMock = getGitHubServices as jest.Mock;
 const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
@@ -83,7 +79,6 @@ const ctxFactory = () =>
         logger: createMockLogger(),
     });
 
-const EDS_PROJECT = { name: 'eds-proj', path: '/p/eds-proj' };
 
 const EDS_PROJECT_WITH_REPO = {
     name: 'eds-proj',
@@ -95,183 +90,9 @@ const EDS_PROJECT_WITH_REPO = {
     },
 };
 
+// EDS-63 (2026-10-23): `republish` runs what the dashboard's Republish button runs. Until
+// then it published config.json alone, and this job was the agent's only as `sync_content`.
 describe('republish', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        getCurrentProject.mockResolvedValue(EDS_PROJECT);
-        isEdsProjectMock.mockReturnValue(true);
-        getGitHubServicesMock.mockReturnValue({
-            tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
-        });
-        getDaLiveAuthServiceMock.mockReturnValue({ isAuthenticated: jest.fn(async () => true) });
-        republishMock.mockResolvedValue({
-            success: true,
-            githubPushed: true,
-            cdnPublished: true,
-            cdnVerified: true,
-        });
-    });
-
-    // Every storefront the extension sets up carries a site admin role, so the CDN
-    // publish needs the DA.live session. On 2026-09-24 a republish with none ran
-    // anyway, pushed to GitHub, and the CDN kept the previous config.json. An agent
-    // gets the refusal it can act on — never a dialog.
-    it('refuses without a DA.live session, before publishing anything', async () => {
-        getDaLiveAuthServiceMock.mockReturnValueOnce({
-            isAuthenticated: jest.fn(async () => false),
-        });
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish', { confirm: true })).toMatchObject({ needsAuth: 'dalive' });
-        expect(republishMock).not.toHaveBeenCalled();
-    });
-
-    it('errors when no current project is open', async () => {
-        getCurrentProject.mockResolvedValueOnce(undefined);
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish', { confirm: true })).toMatchObject({
-            error: expect.stringMatching(/No current project/),
-        });
-        expect(republishMock).not.toHaveBeenCalled();
-    });
-
-    it('errors for a non-EDS project', async () => {
-        isEdsProjectMock.mockReturnValueOnce(false);
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish', { confirm: true })).toMatchObject({
-            error: expect.stringMatching(/only to EDS/),
-        });
-        expect(republishMock).not.toHaveBeenCalled();
-    });
-
-    it('hands off to GitHub auth when not signed in', async () => {
-        getGitHubServicesMock.mockReturnValueOnce({
-            tokenService: { validateToken: jest.fn(async () => ({ valid: false })) },
-        });
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish', { confirm: true })).toMatchObject({ needsAuth: 'github' });
-        expect(republishMock).not.toHaveBeenCalled();
-    });
-
-    // The refusals are what the agent reads back to the user, so each one says which
-    // tool refused and what the sign-in is FOR — not a bare "sign in".
-    it('names itself in the not-EDS refusal', async () => {
-        isEdsProjectMock.mockReturnValueOnce(false);
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish', { confirm: true })).toStrictEqual({
-            error: 'republish applies only to EDS storefront projects',
-        });
-    });
-
-    it('says the GitHub sign-in is for pushing config.json', async () => {
-        getGitHubServicesMock.mockReturnValueOnce({
-            tokenService: { validateToken: jest.fn(async () => ({ valid: false })) },
-        });
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('republish', { confirm: true });
-        expect(res.message).toContain('GitHub sign-in required to push config.json.');
-    });
-
-    it('says the DA.live sign-in is for publishing config.json to the CDN', async () => {
-        getDaLiveAuthServiceMock.mockReturnValueOnce({
-            isAuthenticated: jest.fn(async () => false),
-        });
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('republish', { confirm: true });
-        expect(res.message).toContain(
-            'DA.live sign-in required to publish config.json to the CDN.',
-        );
-    });
-
-    it('treats a token-validation throw as unauthenticated', async () => {
-        getGitHubServicesMock.mockReturnValueOnce({
-            tokenService: {
-                validateToken: jest.fn(async () => {
-                    throw new Error('net');
-                }),
-            },
-        });
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish', { confirm: true })).toMatchObject({ needsAuth: 'github' });
-        expect(republishMock).not.toHaveBeenCalled();
-    });
-
-    it('republishes and passes through the per-step result on success', async () => {
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('republish', { confirm: true });
-        expect(res).toEqual({
-            success: true,
-            githubPushed: true,
-            cdnPublished: true,
-            cdnVerified: true,
-            cdnStatus: expect.stringContaining('Confirmed live'),
-        });
-        expect(republishMock).toHaveBeenCalledWith(
-            expect.objectContaining({
-                project: EDS_PROJECT,
-                secrets: expect.anything(),
-                logger: expect.anything(),
-            })
-        );
-    });
-
-    it('runs the republish under the stored session org context', async () => {
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        await s.call('republish', { confirm: true });
-        expect(runWithAdobeTarget).toHaveBeenCalled();
-    });
-
-    it('passes through a failure result with its error', async () => {
-        republishMock.mockResolvedValueOnce({
-            success: false,
-            githubPushed: false,
-            error: 'CDN verify failed',
-        });
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('republish', { confirm: true });
-        expect(res).toMatchObject({ success: false, error: 'CDN verify failed' });
-    });
-
-    it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
-        republishMock.mockRejectedValueOnce(new AdobeOrgMismatchError());
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('republish', { confirm: true });
-        expect(res).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
-    });
-
-    it('lets any other failure out, rather than reporting it as the wrong org', async () => {
-        republishMock.mockRejectedValueOnce(new Error('CDN unreachable'));
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        await expect(s.call('republish', { confirm: true })).rejects.toThrow('CDN unreachable');
-    });
-
-    it('saves an updated project through the state manager it was handed', async () => {
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        await s.call('republish', { confirm: true });
-
-        // The service reports progress by handing the project back; the tool's job is
-        // to route that to THIS invocation's state manager, not to drop it.
-        const updated = { ...EDS_PROJECT, name: 'eds-proj-renamed' };
-        await republishMock.mock.calls[0][0].persist(updated);
-
-        expect(saveProject).toHaveBeenCalledWith(updated);
-    });
-});
-
-describe('sync_content', () => {
     const PROJECT = EDS_PROJECT_WITH_REPO;
 
     beforeEach(() => {
@@ -285,11 +106,43 @@ describe('sync_content', () => {
         republishContentMock.mockResolvedValue({ success: true, cdnVerified: true });
     });
 
+    it('runs the service the dashboard button runs, with its result', async () => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+
+        expect(await s.call('republish', { confirm: true })).toMatchObject({ success: true, cdnVerified: true });
+        expect(republishContentMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('errors when no current project is open', async () => {
+        getCurrentProject.mockResolvedValueOnce(undefined);
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('republish', { confirm: true })).toMatchObject({
+            error: expect.stringMatching(/No current project/),
+        });
+        expect(republishContentMock).not.toHaveBeenCalled();
+    });
+
+    it('treats a token-validation throw as unauthenticated', async () => {
+        getGitHubServicesMock.mockReturnValueOnce({
+            tokenService: {
+                validateToken: jest.fn(async () => {
+                    throw new Error('net');
+                }),
+            },
+        });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('republish', { confirm: true })).toMatchObject({ needsAuth: 'github' });
+        expect(republishContentMock).not.toHaveBeenCalled();
+    });
+
     it('errors for a non-EDS project', async () => {
         isEdsProjectMock.mockReturnValueOnce(false);
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
+        expect(await s.call('republish', { confirm: true })).toMatchObject({
             error: expect.stringMatching(/only to EDS/),
         });
         expect(republishContentMock).not.toHaveBeenCalled();
@@ -299,7 +152,7 @@ describe('sync_content', () => {
         getCurrentProject.mockResolvedValueOnce({ name: 'p', path: '/p', componentInstances: {} });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
+        expect(await s.call('republish', { confirm: true })).toMatchObject({
             error: expect.stringMatching(/missing GitHub repo/),
         });
         expect(republishContentMock).not.toHaveBeenCalled();
@@ -311,7 +164,7 @@ describe('sync_content', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
+        expect(await s.call('republish', { confirm: true })).toMatchObject({
             needsAuth: 'github',
         });
         expect(republishContentMock).not.toHaveBeenCalled();
@@ -323,7 +176,7 @@ describe('sync_content', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
+        expect(await s.call('republish', { confirm: true })).toMatchObject({
             needsAuth: 'dalive',
         });
         expect(republishContentMock).not.toHaveBeenCalled();
@@ -336,7 +189,7 @@ describe('sync_content', () => {
 
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('sync_content', { confirm: true });
+        const res = await s.call('republish', { confirm: true });
 
         expect(res.cdnStatus).toMatch(/not\s+lost work/i);
         expect(res.cdnStatus).toMatch(/git log/i);
@@ -345,7 +198,7 @@ describe('sync_content', () => {
     it('publishes content with the resolved targets on success', async () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('sync_content', { confirm: true });
+        const res = await s.call('republish', { confirm: true });
         expect(res).toEqual({
             success: true,
             cdnVerified: true,
@@ -365,19 +218,19 @@ describe('sync_content', () => {
         isEdsProjectMock.mockReturnValueOnce(false);
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content', { confirm: true })).toStrictEqual({
-            error: 'sync_content applies only to EDS storefront projects',
+        expect(await s.call('republish', { confirm: true })).toStrictEqual({
+            error: 'republish applies only to EDS storefront projects',
         });
     });
 
-    it('says the DA.live sign-in is for publishing content', async () => {
+    it('says the DA.live sign-in is for publishing the storefront', async () => {
         getDaLiveAuthServiceMock.mockReturnValueOnce({
             isAuthenticated: jest.fn(async () => false),
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('sync_content', { confirm: true });
-        expect(res.message).toContain('DA.live sign-in required to publish content.');
+        const res = await s.call('republish', { confirm: true });
+        expect(res.message).toContain('DA.live sign-in required to publish the storefront.');
     });
 
     // EDS-24: the publish also writes or refreshes category pages, and says which
@@ -392,7 +245,7 @@ describe('sync_content', () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
 
-        const res = await s.call('sync_content', { confirm: true });
+        const res = await s.call('republish', { confirm: true });
 
         expect(res.categoryPages).toBe(menu);
     });
@@ -401,7 +254,7 @@ describe('sync_content', () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
 
-        const res = await s.call('sync_content', { confirm: true });
+        const res = await s.call('republish', { confirm: true });
 
         expect(Object.keys(res)).not.toContain('categoryPages');
     });
@@ -409,7 +262,7 @@ describe('sync_content', () => {
     it('runs the content publish under the stored session org context', async () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        await s.call('sync_content', { confirm: true });
+        await s.call('republish', { confirm: true });
         expect(runWithAdobeTarget).toHaveBeenCalled();
     });
 
@@ -417,7 +270,7 @@ describe('sync_content', () => {
         republishContentMock.mockResolvedValueOnce({ success: false, error: 'publish failed' });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
+        expect(await s.call('republish', { confirm: true })).toMatchObject({
             success: false,
             error: 'publish failed',
         });
@@ -429,7 +282,7 @@ describe('sync_content', () => {
         );
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
+        expect(await s.call('republish', { confirm: true })).toMatchObject({
             error_type: 'ORG_MISMATCH',
             non_retryable: true,
         });
@@ -439,7 +292,7 @@ describe('sync_content', () => {
         republishContentMock.mockRejectedValueOnce(new Error('DA.live timed out'));
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        await expect(s.call('sync_content', { confirm: true })).rejects.toThrow(
+        await expect(s.call('republish', { confirm: true })).rejects.toThrow(
             'DA.live timed out'
         );
     });
@@ -453,7 +306,7 @@ describe('sync_content', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
+        expect(await s.call('republish', { confirm: true })).toMatchObject({
             error: expect.stringMatching(/missing GitHub repo/),
         });
         expect(republishContentMock).not.toHaveBeenCalled();
@@ -468,7 +321,7 @@ describe('sync_content', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        await s.call('sync_content', { confirm: true });
+        await s.call('republish', { confirm: true });
         expect(republishContentMock).toHaveBeenCalledWith(
             expect.objectContaining({ daLiveOrg: 'me', daLiveSite: 'shop' })
         );
@@ -477,7 +330,7 @@ describe('sync_content', () => {
     it('saves an updated project through the state manager it was handed', async () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        await s.call('sync_content', { confirm: true });
+        await s.call('republish', { confirm: true });
 
         const updated = { ...PROJECT, name: 'eds-proj-renamed' };
         await republishContentMock.mock.calls[0][0].persist(updated);
@@ -488,20 +341,16 @@ describe('sync_content', () => {
 
 // ─── response-size ceilings (phase 2 audit) ──────────────────────────────────
 describe('response-size ceilings', () => {
-    it.each(['republish', 'sync_content'])(
-        '%s returns a per-step outcome, not a payload',
-        async (tool) => {
-            const s = fakeServer();
-            registerStorefrontTools(s, ctxFactory);
-            expectWithinCeiling(tool, JSON.stringify(await s.call(tool)));
-        }
-    );
+    it('republish returns a per-step outcome, not a payload', async () => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expectWithinCeiling('republish', JSON.stringify(await s.call('republish')));
+    });
 });
 
 /**
- * THE CONFIRM GATE. Both tools replace what visitors are currently served — republish
- * the storefront's config, sync_content every page — so neither runs on an unconfirmed
- * call. Added 2026-09-02 after a reinvestigation found them ungated while every other
+ * THE CONFIRM GATE. `republish` replaces what visitors are currently served — the
+ * settings, the code and every page — so it does not run on an unconfirmed call. Added 2026-09-02 after a reinvestigation found them ungated while every other
  * tool that writes to a live Adobe, GitHub or DA.live resource was gated.
  *
  * The gate is not a human-presence check: `confirm` is a parameter the AGENT supplies,
@@ -509,7 +358,7 @@ describe('response-size ceilings', () => {
  * WOULD happen, and that the call carries the marker the extension's consent layer keys
  * on when the user has asked to be asked.
  */
-describe('the confirm gate on the two publishing tools', () => {
+describe('the confirm gate on republish', () => {
     it('republish refuses without confirm, naming the storefront it would overwrite', async () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
@@ -518,18 +367,8 @@ describe('the confirm gate on the two publishing tools', () => {
 
         expect(String(res.error)).toMatch(/confirm:true/);
         // A prompt that says only "Republish" tells nobody what is about to change.
-        expect(String(res.error)).toMatch(/config\.json/);
-        expect(String(res.error)).toMatch(/live on the CDN/i);
-    });
-
-    it('sync_content refuses without confirm, naming the site it would republish', async () => {
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-
-        const res = await s.call('sync_content');
-
-        expect(String(res.error)).toMatch(/confirm:true/);
-        expect(String(res.error)).toMatch(/every page/i);
+        expect(String(res.error)).toMatch(/settings, code and every page/);
+        expect(String(res.error)).toMatch(/currently live/i);
     });
 
     it('refuses BEFORE asking for credentials, so the refusal explains itself', async () => {
@@ -552,8 +391,8 @@ describe('the confirm gate on the two publishing tools', () => {
  * call against before the handler ever sees it. A stub that discards the definition
  * leaves all three asserted by nothing.
  */
-describe('what the two publishing tools declare', () => {
-    const TOOLS = ['republish', 'sync_content'];
+describe('what republish declares', () => {
+    const TOOLS = ['republish'];
 
     it.each(TOOLS)('%s declares both sign-ins it needs, not just one', (tool) => {
         const s = fakeServer();
@@ -584,7 +423,7 @@ describe('a call that carries no arguments at all', () => {
         isEdsProjectMock.mockReturnValue(true);
     });
 
-    it.each(['republish', 'sync_content'])('%s refuses, rather than throwing', async (tool) => {
+    it.each(['republish'])('%s refuses, rather than throwing', async (tool) => {
         // An agent calling a tool it believes takes no arguments sends none, so the
         // handler is invoked with `undefined` — not with an empty object.
         const s = fakeServer();

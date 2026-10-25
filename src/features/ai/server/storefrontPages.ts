@@ -83,7 +83,7 @@ export function helixFor(ctx: HandlerContext): HelixService {
 
 /**
  * The project's storefront as the catalog menu step sees it, on this context's sign-ins
- * — for project creation, the new-category watcher and the category page tools.
+ * — for project creation.
  *
  * @param ctx - the handler context
  * @param project - the project
@@ -98,5 +98,7 @@ export function catalogMenuSiteFor(ctx: HandlerContext, project: Project): Catal
         daLive: daLiveOps(ctx).sourceOps,
         helix: helixFor(ctx),
         github: getGitHubServices(ctx.context.secrets).fileOperations,
+        stateManager: ctx.stateManager,
+        logger: ctx.logger,
     });
 }

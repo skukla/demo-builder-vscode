@@ -9,6 +9,15 @@
  * entry. A credential that cannot be read is a warning, not a failure: the list still goes,
  * without it. The secret is held in memory for the PUT only: never logged, never returned.
  *
+ * When the list grows from ONE ERP to several, the first ERP's rule is pinned on its own entry
+ * in the same PUT (`pinLoneErpRule`). A lone ERP owns by the integration's shared rule (unset:
+ * everything); once there are several, an entry with no rule of its own is read as
+ * `erp_owner=<its id>` (commerce-erp-integration `router/ownership.js` `ownershipOf`). Without
+ * the pin, adding a second ERP silently moved the first to a rule nobody set: on Justrite
+ * (2026-10-22) it then owned 0 of 321 products and the add's pass marked them discontinued.
+ * Every path that grows the list (the card's add, the agent's add_erp, a deploy's relist) sends
+ * it here, so the pin holds for all of them.
+ *
  * A composition file: it wires the integration's client, the signed-in identity and the
  * credential reader into the pure list.
  *
@@ -18,7 +27,8 @@
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
 import type { ErpCredentialRead } from '@/features/app-builder/services/erpCredential';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
-import { erpListFor, erpsWithOwnCredential, type ErpAuth } from '@/features/app-builder/services/erpList';
+import { erpListFor, erpsWithOwnCredential, type ErpAuth, type ErpListEntry } from '@/features/app-builder/services/erpList';
+import { ownsRuleOf, ownsSettingsOf } from '@/features/app-builder/services/erpOwnership';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types/base';
 import { toError } from '@/types/typeGuards';
@@ -62,6 +72,32 @@ async function readCredentials(
     return { auths, warnings };
 }
 
+/** An entry's own settings, as an object; none is an empty one. */
+function ownSettingsOf(entry: ErpListEntry): Record<string, unknown> {
+    const { settings } = entry;
+    return settings && typeof settings === 'object' ? (settings as Record<string, unknown>) : {};
+}
+
+/**
+ * The list to send, with the lone ERP's rule pinned on its entry when the list is growing
+ * from it to several and it never saved a rule of its own. Its rule is read as the
+ * integration resolves it while it is still alone; a read that fails throws, so a list that
+ * would change the first ERP's rule is never sent.
+ */
+async function pinLoneErpRule(
+    client: ErpIntegrationClient,
+    current: readonly ErpListEntry[],
+    entries: ErpListEntry[],
+): Promise<ErpListEntry[]> {
+    if (current.length !== 1 || entries.length < 2) return entries;
+    const lone = current[0];
+    const index = entries.findIndex((entry) => entry.id === lone.id);
+    if (index < 0 || ownSettingsOf(entries[index]).structure_owns) return entries;
+    const inForce = ownsRuleOf((await client.resolvedSettings([], lone.id)).default);
+    const pinned = { ...entries[index], settings: { ...ownSettingsOf(entries[index]), ...ownsSettingsOf(inForce) } };
+    return entries.map((entry, at) => (at === index ? pinned : entry));
+}
+
 /**
  * Replace the integration's ERP list with the ERPs the project links to it. Never throws.
  *
@@ -88,7 +124,9 @@ export async function syncErpList(
     try {
         const { auths, warnings } = await readCredentials(project, integrationId, options);
         const catalog = getAppBuilderComponentCatalog();
-        const entries = erpListFor(project, integrationId, catalog, await client.listErps(), options.leaving, auths);
+        const current = await client.listErps();
+        const listed = erpListFor(project, integrationId, catalog, current, options.leaving, auths);
+        const entries = await pinLoneErpRule(client, current, listed);
         await client.replaceErps(entries);
         return { status: 'registered', ids: entries.map((entry) => entry.id), warnings };
     } catch (error) {

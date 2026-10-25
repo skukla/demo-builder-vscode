@@ -242,6 +242,20 @@ describe('applyCodePatches — happy path', () => {
         expect(results[0]).toEqual({ patchId: 'p', target: 'scripts/a.js', applied: true });
         expect(files.get('scripts/a.js')).toBe('NEW then NEW');
     });
+
+    // A guard added AROUND the original lines keeps them: once applied, the precondition is
+    // still there, and the order above would wrap it again (2026-10-23).
+    it('does not apply again a patch whose replacement wraps its precondition', async () => {
+        mockExternalLedger([
+            { id: 'p', target: 'scripts/a.js', description: 'D', precondition: 'load();', replacement: 'load();\nguard();' },
+        ]);
+        const files = new Map<string, string>([['scripts/a.js', 'load();\nguard();']]);
+
+        const results = await applyCodePatches(files, ['p'], SOURCE, mockLogger);
+
+        expect(results[0]).toEqual({ patchId: 'p', target: 'scripts/a.js', applied: true, alreadyApplied: true });
+        expect(files.get('scripts/a.js')).toBe('load();\nguard();');
+    });
 });
 
 // ==========================================================================

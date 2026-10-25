@@ -89,7 +89,7 @@ describe('foundRows', () => {
 
         expect(rows[2]).toEqual({
             label: 'Built on',
-            value: "Adobe's Commerce boilerplate 4.0.1. Built on an older boilerplate (4.x); some fixes may not fit.",
+            value: "Adobe's Commerce boilerplate 4.0.1. Built on an older boilerplate (4.x) than Demo Builder tests on.",
             done: true,
         });
         expect(isBuildable({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' } })).toBe(true);

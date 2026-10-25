@@ -33,10 +33,12 @@ import { ConfigurationService } from '../configService/configurationService';
 import { lostGrantsMessage } from '../configService/lostGrantsMessage';
 import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
+import { brokenLinksSentence } from '../storefront/brokenLinksRecord';
+import { recordStorefrontBuilt } from '../storefront/storefrontChanges';
 import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
 import { GitHubAppNotInstalledError } from '../types';
 import { putBackCatalogMenu, takeOutCatalogMenu } from './edsResetCatalogMenu';
-import { syncCodeAndPermissions } from './edsResetCodeSyncStep';
+import { confirmResetCodeServed, republishCodeIfMissed, syncCodeAndPermissions } from './edsResetCodeSyncStep';
 import {
     publishConfigAndRegisterSite,
     type ConfigStepServices,
@@ -143,7 +145,13 @@ export async function executeEdsReset(
         filesReset = repoResetResult.filesReset;
 
         // Steps 4-5: Sync code to CDN + configure permissions
-        await syncCodeAndPermissions(params, context, githubTokenService, tokenProvider, report);
+        const { codeError } = await syncCodeAndPermissions(
+            params,
+            context,
+            githubTokenService,
+            tokenProvider,
+            report,
+        );
 
         const { configWritten } = await publishConfigAndRegisterSite(
             params,
@@ -153,10 +161,17 @@ export async function executeEdsReset(
             report,
             services,
         );
+        // The first publish failed; the site is registered now (owner, 2026-10-22).
+        const codeNotPublished = await republishCodeIfMissed(
+            params,
+            codeError,
+            { githubTokenService, tokenProvider, logger: context.logger },
+            report,
+        );
 
         // Out before the content is re-copied: category pages (EDS-24), product pages (EDS-26).
         const clients = { daLiveContentOps, githubFileOps, githubTokenService, tokenProvider };
-        const catalogMenuSite = await takeOutCatalogMenu(params, context.logger, clients, report);
+        const catalogMenuSite = await takeOutCatalogMenu(params, context, clients, report);
         const productPages = await takeOutProductPages(
             params,
             context,
@@ -177,8 +192,18 @@ export async function executeEdsReset(
         );
         contentCopied = content.contentCopied;
         const catalogMenu = await putBackCatalogMenu(params, catalogMenuSite, context.logger, report);
+        // After the content copy, so AEM has had minutes to catch up with the last commits.
+        const codeNotServed = await confirmResetCodeServed(
+            params,
+            repoResetResult.resetCommitSha,
+            { githubFileOps, githubTokenService, tokenProvider, logger: context.logger },
+            report,
+        );
         recordSyncedCommit(params.project, repoResetResult.templateCommitSha, context.logger);
         recordBoilerplate(params.project, repoResetResult.boilerplate);
+        // Built the way Demo Builder builds storefronts now: no "Needs reset" (saved below).
+        // Code the site does not serve is not built, whatever the repository says.
+        recordStorefrontBuilt(params.project, repoResetResult.buildComplete && !codeNotServed);
 
         // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
         const result = await finalizeReset(
@@ -189,7 +214,6 @@ export async function executeEdsReset(
             contentCopied,
             deps,
             configWritten,
-            { demoCaveats: repoResetResult.demoCaveats, demoFixes: repoResetResult.demoFixes },
         );
         const sentences = { catalogMenu, productPages };
         const withSentences = withPageSentences(result, sentences);
@@ -197,7 +221,11 @@ export async function executeEdsReset(
         const warned = content.pipelineWarnings.length > 0
             ? { ...withSentences, pipelineWarnings: content.pipelineWarnings }
             : withSentences;
-        return withLeftoverPages(warned, content.leftoverPages);
+        const notOnSite = [codeNotPublished, codeNotServed].filter(Boolean).join(' ');
+        const withCode = notOnSite ? { ...warned, codeNotPublished: notOnSite } : warned;
+        const linksNote = brokenLinksSentence(content.brokenLinks);
+        const withLinks = linksNote ? { ...withCode, brokenLinks: linksNote } : withCode;
+        return withLeftoverPages(withLinks, content.leftoverPages);
     } catch (error) {
         return handleResetError(error, context.logger);
     }

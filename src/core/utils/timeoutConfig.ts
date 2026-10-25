@@ -124,6 +124,13 @@ export const TIMEOUTS = {
         /** Browser-based authentication flow (1 minute) */
         BROWSER: 60000,
 
+        /**
+         * A person signing in to Adobe in their browser (5 minutes). One minute was
+         * the limit until 2026-10-23, and it ran out while the SC was still looking
+         * for a browser window that had never opened.
+         */
+        SIGN_IN: 300000,
+
         /** Full OAuth flow with callback (2 minutes) */
         OAUTH: 120000,
     },
@@ -217,6 +224,12 @@ export const TIMEOUTS = {
     /** Demo stop wait time (2 seconds) */
     DEMO_STOP_WAIT: 2000,
 
+    /**
+     * Between a code file published again and the next look at the CDN (10 seconds):
+     * how long AEM's copy of a repository takes to catch up with a push.
+     */
+    CODE_SERVED_RECHECK: 10000,
+
     /** Demo status update delay (1 second) */
     DEMO_STATUS_UPDATE_DELAY: 1000,
 
@@ -249,14 +262,6 @@ export const TIMEOUTS = {
 
     /** Auto-update check interval (4 hours) */
     AUTO_UPDATE_CHECK_INTERVAL: 4 * 60 * 60 * 1000,
-
-    /**
-     * How often the open project's storefront is checked for Commerce categories that
-     * have no page yet (EDS-27): 15 minutes. A look costs one GitHub read, one Catalog
-     * Service query and one DA.live read per menu category, so it is cheap enough to
-     * repeat; the menu's search fallback covers a new category in between.
-     */
-    NEW_CATEGORY_PAGES_CHECK_INTERVAL: 15 * 60 * 1000,
 
     /**
      * How long a Helix status job (the listing of a site's published paths, EDS-26) may

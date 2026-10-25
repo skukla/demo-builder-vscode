@@ -90,34 +90,22 @@ describe('ActionGrid — the Share row', () => {
         jest.clearAllMocks();
     });
 
-    it('offers Export for every project type', async () => {
+    // One Share tile since 2026-10-22: Export and Save as Package were two
+    // tiles for one job, and Save as Package is gone rather than hidden.
+    it('offers Share Demo for every project type, and no Export or Save as Package tile', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        const { container } = render(<ActionGrid {...defaultProps} />);
-
-        const exportTile = tile(container, 'export');
-        expect(getZone(container, 'share').contains(exportTile)).toBe(true);
-        await user.click(exportTile!);
-        expect(defaultProps.handleExportProject).toHaveBeenCalled();
-    });
-
-    it('offers Save as Package, after Export, to an EDS project only', async () => {
-        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        const handleSaveDemoPackage = jest.fn();
-        const headless = render(
-            <ActionGrid {...defaultProps} handleSaveDemoPackage={handleSaveDemoPackage} />
-        );
-        expect(tile(headless.container, 'save-demo-package')).not.toBeInTheDocument();
+        const headless = render(<ActionGrid {...defaultProps} />);
+        expect(tile(headless.container, 'share-demo')).toBeInTheDocument();
         headless.unmount();
 
-        const { container } = render(
-            <ActionGrid {...edsProps} handleSaveDemoPackage={handleSaveDemoPackage} />
-        );
-        const save = tile(container, 'save-demo-package')!;
-        expect(tile(container, 'export')!.compareDocumentPosition(save)).toBe(
-            Node.DOCUMENT_POSITION_FOLLOWING
-        );
-        await user.click(save);
-        expect(handleSaveDemoPackage).toHaveBeenCalled();
+        const { container } = render(<ActionGrid {...edsProps} />);
+        const share = tile(container, 'share-demo');
+        expect(getZone(container, 'share').contains(share)).toBe(true);
+        expect(share).toHaveTextContent('Share Demo');
+        expect(tile(container, 'export')).not.toBeInTheDocument();
+        expect(tile(container, 'save-demo-package')).not.toBeInTheDocument();
+        await user.click(share!);
+        expect(edsProps.handleShareDemo).toHaveBeenCalled();
     });
 
     it('offers Change Source only for a project built on an added demo', async () => {

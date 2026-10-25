@@ -10,12 +10,14 @@
  */
 
 import * as vscode from 'vscode';
+import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/updates/services/updateManager');
@@ -79,6 +81,22 @@ describe('CheckUpdatesCommand', () => {
                 expect.any(Function),
             );
             expect(mockFindAllUpdates).toHaveBeenCalledWith({ marker: 'headless' }, { marker: 'probe' });
+        });
+
+        // The check records what it learns on each project; none may become the open one.
+        it('checks with a state view that never makes a checked project the open one', async () => {
+            const stateManager = createMockStateManager();
+            (stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ name: 'justrite', path: '/p/justrite' }));
+            const running = new CheckUpdatesCommand(createMockExtensionContext(), stateManager, createMockLogger()).execute();
+            await jest.runAllTimersAsync();
+            await running;
+            const [, view] = (createHeadlessHandlerContext as jest.Mock).mock.calls[0];
+
+            const checked = createMockProject({ name: 'bodea', path: '/p/bodea' });
+            await view.saveProject(checked);
+
+            expect(stateManager.saveProjectConfigOnly).toHaveBeenCalledWith(checked);
+            expect(stateManager.saveProject).not.toHaveBeenCalled();
         });
 
         it('says so when nothing is waiting, and opens nothing', async () => {

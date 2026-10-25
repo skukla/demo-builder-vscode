@@ -83,8 +83,9 @@ or that has no reason is printed under STALE TRIAGE ROWS and the scan exits 1.
 `python3 coverage.py --self-test` proves each of those refusals fires.
 
 Two readings the earlier hand triage got wrong, kept as the reason to read the code:
-`republishContent` is `sync_content` (both call `republishStorefrontContent`), not
-`republish`, which publishes `config.json` only; and `importFromFile` is half covered —
+`republishContent` was `sync_content` (both call `republishStorefrontContent`), not
+`republish`, which then published `config.json` only (since 2026-10-23, EDS-63, it is
+`republish`, and `sync_content` is gone); and `importFromFile` is half covered —
 a zip bundle through `add_shared_demo`, a settings file through nothing.
 
 What the count structurally cannot see is cost. A feature reachable through a tool can

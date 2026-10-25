@@ -157,6 +157,30 @@ describe('fillErp', () => {
         expect(sites.find((s) => s.code === 'base')?.salesOrg).toBe('1000');
     });
 
+    // Justrite, 2026-10-22: on a shared Commerce the ERP took the FIRST website (base, "Main
+    // Website") as its sales organisation 1000's, though the project sells on justrite; the
+    // mapping then named base, and the ERP called the other five websites unmapped. The
+    // structure now names the project's website as home, plus only websites given a sales
+    // organisation of their own.
+    it("names the project's website first and leaves out other websites still on the default sales organisation", async () => {
+        const d = {
+            ...deps({ default: {}, websites: { bodea: { structure_sales_org: 'US01' }, base: { structure_sales_org_name: 'Main Website' } } }),
+            homeWebsite: 'citisignal',
+        };
+        await fillErp(d, 'bodea');
+        const sites = d.sent[0].structure?.websites ?? [];
+        expect(sites.map((s) => [s.code, s.salesOrg])).toStrictEqual([
+            ['citisignal', '1000'],
+            ['bodea', 'US01'],
+        ]);
+    });
+
+    it("names every website, as before, when the project's website is not one Commerce has", async () => {
+        const d = { ...deps(), homeWebsite: 'gone' };
+        await fillErp(d, 'bodea');
+        expect((d.sent[0].structure?.websites ?? []).map((s) => s.code)).toStrictEqual(['base', 'citisignal', 'bodea', 'evo']);
+    });
+
     it('leaves out the products another ERP owns under the ownership setting, and says what this one owns', async () => {
         // Neither captured product carries erp_owner, so an attribute rule owns none of them.
         const d = deps({ default: { structure_owns: 'attribute', structure_owns_attribute: 'erp_owner=east' }, websites: {} });

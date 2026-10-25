@@ -20,8 +20,7 @@ import type { HandoverDialogs } from '@/features/dashboard/ui/hooks/useHandoverD
 import type { OperationRunnerControls, ScreenOperation } from '@/core/ui/hooks/useOperationRunner';
 
 const mockAddDemoModal = jest.fn();
-const mockExportModal = jest.fn();
-const mockDemoPackageModal = jest.fn();
+const mockShareModal = jest.fn();
 const mockProgressModal = jest.fn();
 const mockCapabilitiesModal = jest.fn();
 
@@ -44,16 +43,10 @@ jest.mock('@/features/project-creation/ui/components/add-demo/AddDemoModal', () 
         );
     },
 }));
-jest.mock('@/features/dashboard/ui/components/export/ExportModal', () => ({
-    ExportModal: (props: { onClose: () => void }) => {
-        mockExportModal(props);
-        return <div role="dialog" aria-label="Export" />;
-    },
-}));
-jest.mock('@/features/dashboard/ui/components/demo-package/DemoPackageModal', () => ({
-    DemoPackageModal: (props: { onClose: () => void }) => {
-        mockDemoPackageModal(props);
-        return <div role="dialog" aria-label="Save as demo package" />;
+jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
+    ShareModal: (props: { onClose: () => void }) => {
+        mockShareModal(props);
+        return <div role="dialog" aria-label="Share Demo" />;
     },
 }));
 jest.mock('@/core/ui/components/feedback/OperationProgressModal', () => ({
@@ -94,11 +87,9 @@ const RESET_OPERATION: ScreenOperation = {
 
 function handover(overrides: Partial<HandoverDialogs> = {}): HandoverDialogs {
     return {
-        exportOpen: false,
-        demoPackageOpen: false,
-        openExport: jest.fn(),
-        closeExport: jest.fn(),
-        closeDemoPackage: jest.fn(),
+        shareOpen: false,
+        openShare: jest.fn(),
+        closeShare: jest.fn(),
         ...overrides,
     };
 }
@@ -197,29 +188,22 @@ describe('DashboardDialogs', () => {
         });
     });
 
-    describe('hand-over dialogs', () => {
-        it('opens Export with the project kind and its own close', () => {
-            const given = props({ isEds: true, handover: handover({ exportOpen: true }) });
+    describe('the Share dialog', () => {
+        it('opens Share Demo with the project kind and its own close', () => {
+            const given = props({ isEds: true, handover: handover({ shareOpen: true }) });
             render(<DashboardDialogs {...given} />);
 
-            expect(screen.getByRole('dialog', { name: 'Export' })).toBeInTheDocument();
-            expect(mockExportModal).toHaveBeenCalledWith({
+            expect(screen.getByRole('dialog', { name: 'Share Demo' })).toBeInTheDocument();
+            expect(mockShareModal).toHaveBeenCalledWith({
                 isOpen: true,
                 isEds: true,
-                onClose: given.handover.closeExport,
+                onClose: given.handover.closeShare,
             });
-            expect(screen.queryByRole('dialog', { name: 'Save as demo package' })).not.toBeInTheDocument();
         });
 
-        it('opens Save as demo package with its own close', () => {
-            const given = props({ handover: handover({ demoPackageOpen: true }) });
-            render(<DashboardDialogs {...given} />);
-
-            expect(mockDemoPackageModal).toHaveBeenCalledWith({
-                isOpen: true,
-                onClose: given.handover.closeDemoPackage,
-            });
-            expect(screen.queryByRole('dialog', { name: 'Export' })).not.toBeInTheDocument();
+        it('mounts nothing while closed', () => {
+            render(<DashboardDialogs {...props({ handover: handover() })} />);
+            expect(mockShareModal).not.toHaveBeenCalled();
         });
     });
 

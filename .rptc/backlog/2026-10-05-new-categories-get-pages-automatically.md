@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: [EDS-24]
 value: med
-status: built
+status: dropped
 ---
 
 # New categories get their pages without a Republish
@@ -64,3 +64,4 @@ added are removed by reset like any other page Demo Builder wrote.
 - 2026-10-15  fix(eds): the category check says it checked again after a sign-in (`1bbabceef`)
 - 2026-10-15  fix(eds): Add pages shows progress while the pages publish (`a5920f7a3`)
 - 2026-10-15  test(eds): the no-project case hands the watcher its progress seam too (`0d7b9ad92`)
+- 2026-10-22  2026-10-22 dropped by EDS-61 (owner decision D4, uncommitted): a category's page now exists on first visit through the overlay and sync_content re-publishes every one, so the watcher, its 15-minute timer, the per-project override, the auto-add setting and check_category_pages / add_category_pages were deleted.

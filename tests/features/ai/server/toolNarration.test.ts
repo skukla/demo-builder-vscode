@@ -198,6 +198,8 @@ describe('every named form says what it acts on, from the argument that names it
         ['start_datapack_export', { datapackName: 'Bodea B2B' }, 'Exporting Bodea B2B'],
         ['remove_block_from_library', { blockId: 'hero-banner' }, 'Removing the hero-banner block'],
         ['set_site_admin', { email: 'fake-user@example.com' }, "Changing fake-user@example.com's access"],
+        // Named as the ERP will be: the add makes the name end in "ERP" (pairNames).
+        ['add_erp', { name: 'Accuform' }, 'Adding Accuform ERP'],
     ];
 
     it('covers every tool that has a named form', () => {
@@ -225,5 +227,27 @@ describe('every named form says what it acts on, from the argument that names it
         const idsOnly = { workspaceId: '4566', projectId: '77', confirm: true };
         expect(narrationForCall(tool, idsOnly)).toBe(narrationFor(tool));
         expect(narrationForCall(tool, { ...idsOnly, ...args })).toBe(expected);
+    });
+});
+
+// Live release test, 2026-10-22: "Agent · Adding another ERP: Loading demo data" showed for
+// fifteen minutes beside an action the SC ran, and nothing said which was which.
+describe('a call that acts in the open project can name it', () => {
+    it('names the ERP being added and the project it goes into', () => {
+        expect(narrationForCall('add_erp', { id: 'erp-integration', name: 'Accuform ERP' }, 'JustRite')).toBe(
+            'Adding Accuform ERP to JustRite'
+        );
+    });
+
+    it('names the ERP alone when no project is open', () => {
+        expect(narrationForCall('add_erp', { name: 'Accuform' }, undefined)).toBe('Adding Accuform ERP');
+    });
+
+    it('keeps the tool phrase when the ERP has no name, whatever the project', () => {
+        expect(narrationForCall('add_erp', { id: 'erp-integration' }, 'JustRite')).toBe(narrationFor('add_erp'));
+    });
+
+    it('does not add the project to a tool whose named form does not use it', () => {
+        expect(narrationForCall('delete_page', { path: '/x' }, 'JustRite')).toBe('Deleting /x');
     });
 });

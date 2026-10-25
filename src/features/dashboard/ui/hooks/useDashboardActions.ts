@@ -59,7 +59,6 @@ export interface UseDashboardActionsReturn {
     handleOpenAemAssets: () => void;
     /** Opens the Site access webview (EDS storefronts). */
     handleOpenSiteAccess: () => void;
-    handleOpenStorefrontReport: () => void;
     /** Delete the project */
     /** Republish DA.live content to CDN (EDS projects only) */
     /** Navigate back to projects list */
@@ -147,10 +146,6 @@ export function useDashboardActions({
         webviewClient.postMessage('openSiteAccess');
     }, []);
 
-    const handleOpenStorefrontReport = useCallback(() => {
-        webviewClient.postMessage('openStorefrontReport');
-    }, []);
-
     const handleNavigateBack = useCallback(() => {
         webviewClient.postMessage('navigateBack');
     }, []);
@@ -185,7 +180,6 @@ export function useDashboardActions({
         handleEditProject,
         handleOpenAemAssets,
         handleOpenSiteAccess,
-        handleOpenStorefrontReport,
         handleNavigateBack,
         handleReAuthenticate,
         handleVerifyOrg,

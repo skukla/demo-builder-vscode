@@ -14,9 +14,11 @@ import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { isValidTokenResponse } from './authPredicates';
 import { withTiming } from './performanceTracker';
+import { beginSignIn, signInLinkIn } from '@/core/auth/signInSession';
 import type { DebugLogger } from '@/core/logging/debugLogger';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { CommandResult } from '@/core/shell/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -48,6 +50,32 @@ export function forgetPreviousSignIn(
     deps.cacheManager.clearOrgListCache();
 }
 
+/**
+ * Run `aio auth login` for as long as a person needs, handing on the link it prints
+ * for when no browser opens, and stopping when the SC cancels (`signInSession`).
+ * Streamed, so the link arrives while the command is still waiting; that also skips
+ * the retry a plain call gets, and a sign-in is not something to repeat unasked.
+ */
+async function runLoginCommand(deps: AdobeSignInDeps, loginCommand: string): Promise<CommandResult> {
+    const session = beginSignIn();
+    let printed = '';
+    try {
+        return await deps.commandManager.execute(loginCommand, {
+            encoding: 'utf8',
+            timeout: TIMEOUTS.AUTH.SIGN_IN,
+            streaming: true,
+            signal: session.signal,
+            onOutput: (text) => {
+                printed += text;
+                const link = signInLinkIn(printed);
+                if (link) session.announceLink(link);
+            },
+        });
+    } finally {
+        session.end();
+    }
+}
+
 /** One sign-in: open the browser and wait for it. Callers go through `login`. */
 export async function runAdobeLogin(deps: AdobeSignInDeps, force: boolean): Promise<boolean> {
     const { cacheManager, sdkClient, debugLogger } = deps;
@@ -71,13 +99,12 @@ export async function runAdobeLogin(deps: AdobeSignInDeps, force: boolean): Prom
             stepLogger.logTemplate('adobe-auth', 'statuses.browser-opened', {});
             stepLogger.logTemplate('adobe-auth', 'operations.waiting-authentication', {});
 
-            const result = await deps.commandManager
-                .execute(loginCommand, { encoding: 'utf8', timeout: TIMEOUTS.AUTH.BROWSER })
+            const result = await runLoginCommand(deps, loginCommand)
                 .catch((error) => {
                     debugLogger.error('[Auth] Login command failed', error);
                     const formatted = AuthenticationErrorFormatter.formatError(error, {
                         operation: 'browser-auth',
-                        timeout: TIMEOUTS.AUTH.BROWSER,
+                        timeout: TIMEOUTS.AUTH.SIGN_IN,
                     });
                     deps.logger.error(`[Auth] ${formatted.message}`);
                     debugLogger.debug(formatted.technical);

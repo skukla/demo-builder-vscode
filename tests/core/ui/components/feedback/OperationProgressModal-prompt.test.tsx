@@ -133,6 +133,21 @@ it('offers each answer, the one that continues the work first', () => {
     );
 });
 
+// The Adobe sign-in guard asks "Sign In" / "Cancel", and the modal's own dismiss
+// already says Cancel: the reset showed both, side by side (2026-10-23).
+it('shows one Cancel when the question offers its own', () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { message: 'Your Adobe sign-in has expired.', actions: ['Sign In', 'Cancel'] },
+    };
+
+    renderModal();
+
+    expect(screen.getAllByRole('button', { name: 'Cancel' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument();
+});
+
 it('hands the chosen answer back to the work waiting on it', async () => {
     progress = {
         id: OPERATION.id,

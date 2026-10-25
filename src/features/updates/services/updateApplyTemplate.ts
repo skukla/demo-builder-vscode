@@ -123,8 +123,9 @@ export async function applyTemplate(
                 succeededPaths.add(project.path);
                 result.successCount++;
                 ctx.logger.info(`[Updates] Template synced for ${project.name} (${r.strategy})`);
-                // A fix or piece the update could not put back (EDS-51), in plain words.
-                for (const note of r.notes ?? []) (result.applied ??= []).push(`${project.name}: ${note}`);
+                // A fix or piece the update could not put back (EDS-51), in plain words. Each is
+                // read under its project's own heading, so no name in front (owner, 2026-10-22).
+                if (r.notes?.length) (result.applied ??= []).push(...r.notes);
             } else {
                 throw new Error(r.error || 'Unknown error');
             }
@@ -171,6 +172,9 @@ export async function applyBoilerplate(
             await ctx.stateManager.saveProject(project);
             result.successCount++;
             ctx.logger.info(`[Updates] Adobe boilerplate updated for ${project.name}`);
+            // What the update put back (the template's page labels), in plain words, under the
+            // project's own heading.
+            if (r.notes?.length) (result.applied ??= []).push(...r.notes);
         } catch (error) {
             result.failCount++;
             result.errors.push(`${project.name} (Adobe boilerplate): ${sanitizeErrorForLogging(error as Error)}`);

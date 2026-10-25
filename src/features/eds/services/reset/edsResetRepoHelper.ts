@@ -14,11 +14,10 @@ import type { GitHubFileOperations } from '../github/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../inspectorHelpers';
 import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
 import type { CodePatchResult } from '../patches/codePatchRegistry';
-import { demoFixLines, runDemoFixPass, type DemoFixReport } from '../patches/demoFixPass';
 import { removeShadowingPlaceholderFiles } from '../placeholderStubs';
 import { installQuickEdit } from '../quickEditPublisher';
-import { installMissingPageHandling } from '../storefront/notFoundPage';
 import { readRepoBoilerplate } from '../storefront/storefrontOrigin';
+import { bringStorefrontUpToDate } from '../storefront/storefrontUpToDate';
 import { resolveTemplateCommitSha } from '../templateCommitResolver';
 import type { GitHubTreeInput } from '../types';
 import { buildResetFileOverrides } from './edsResetFileOverrides';
@@ -238,14 +237,14 @@ export async function resetRepoToTemplate(
     blockCollectionIds?: string[];
     libraryContentSources: Array<{ org: string; site: string }>;
     canonicalCodePatchResults?: CodePatchResult[];
-    /** What the fix pass says about an added demo (D23, EDS-13f); absent for a shipped brand. */
-    demoCaveats?: string[];
-    /** The fix pass's applied and offered fixes for an added demo (EDS-13f). */
-    demoFixes?: Pick<DemoFixReport, 'applied' | 'offered'>;
     /** The template commit the repository now matches; absent when it could not be resolved. */
     templateCommitSha?: string;
     /** What the repository is built on now, read back after the reset (EDS-13f); absent when unread. */
     boilerplate?: StorefrontBoilerplate;
+    /** Whether the build step's own fixes all landed (`bringStorefrontUpToDate`). */
+    buildComplete: boolean;
+    /** The commit the reset made; everything committed after it is checked on the site (`codeServed.ts`). */
+    resetCommitSha: string;
 }> {
     const {
         repoOwner,
@@ -261,8 +260,6 @@ export async function resetRepoToTemplate(
 
     report(RESET_STEP.resettingCode, 'Resetting the repository');
     context.logger.info(`[EdsReset] Resetting repo using bulk tree operations`);
-
-    const fileOverrides = await buildResetFileOverrides(params, githubFileOps, context.logger);
 
     // Determine the template revision to reset onto — the same commit project
     // creation records: the verified LKG for thin-layer storefronts, otherwise the
@@ -290,6 +287,14 @@ export async function resetRepoToTemplate(
             `[EdsReset] Template commit unresolved — resetting from ${templateBranch}; synced commit not updated`,
         );
     }
+
+    // Built once the template's revision is known: the label files read the template there.
+    const { fileOverrides, stubPaths } = await buildResetFileOverrides(
+        params,
+        githubFileOps,
+        { owner: templateOwner, repo: templateRepo, ref: templateRef },
+        context.logger,
+    );
 
     // Canonical-phase code patches: apply BEFORE the bulk reset so patched
     // canonical files (`head.html`, `scripts/*.js`, etc.) land in the same
@@ -327,29 +332,14 @@ export async function resetRepoToTemplate(
     report(RESET_STEP.resettingCode, `Reset ${resetResult.fileCount} files`);
 
     // The template's own label files hide the sheets the content copy writes at the
-    // same paths (the B2B template's placeholders/checkout.json did, EDS-53). The
-    // stubs above already replaced the ones the source has no sheet for.
+    // same paths (the B2B template's placeholders/checkout.json did, EDS-53). Only the
+    // areas the source serves a sheet for: the label files above own the rest.
     await removeShadowingPlaceholderFiles(
         githubFileOps,
-        { owner: repoOwner, repo: repoName },
-        resetResult.commitSha,
+        { owner: repoOwner, repo: repoName, ref: resetResult.commitSha },
+        stubPaths,
         context.logger,
     );
-
-    // An added demo's fix pass re-runs on every reset (D23, EDS-13f): a saved package
-    // gets its fixes back where they fit, a colleague's storefront with our lineage
-    // is offered them again, anything else gets the dry check. Writes, when there
-    // are any, go to the SC's own repository on the branch reset just wrote.
-    const demoFixes = project.demo
-        ? await runDemoFixPass(
-              project.demo,
-              { owner: repoOwner, repo: repoName, branch: 'main' },
-              { owner: templateOwner, repo: templateRepo },
-              { fileOps: githubFileOps, logger: context.logger },
-              { applyOffered: params.applyDemoFixes === true },
-          )
-        : undefined;
-    const demoCaveats = demoFixes ? demoFixLines(demoFixes) : undefined;
 
     const { blockCollectionIds, libraryContentSources } = await reinstallBlockLibraries(
         project,
@@ -361,16 +351,17 @@ export async function resetRepoToTemplate(
     );
 
     // Install the smart 404 PDP handler into the storefront's
-    // scripts/delayed.js. Same shape as inspector tagging — vendors a
-    // small JS snippet into storefront code. The pipeline's subsequent
-    // bulk Helix code preview picks up the committed change.
+    // scripts/delayed.js, then bring the storefront up to Demo Builder's current
+    // fixes (EDS-62) — the same step creation and a tested-boilerplate update run.
+    // The code publish after it can miss these last commits (AEM's copy of the
+    // repository lags a push), so the reset checks the site afterwards (`codeServed.ts`).
     //
     // Still non-fatal, but no longer silent. Reset is the path a user takes to
     // REPAIR a broken storefront, so a skip here mattered more than on create
     // and was the one reported least — the result was discarded entirely.
     // `report()` is the context-appropriate surface (UI progress or MCP output),
     // matching how the overlay-registration failure is surfaced on this path.
-    const smart404 = await installMissingPageHandling(
+    const { smart404, current: buildComplete } = await bringStorefrontUpToDate(
         githubFileOps,
         repoOwner,
         repoName,
@@ -398,15 +389,13 @@ export async function resetRepoToTemplate(
     const boilerplate = await readRepoBoilerplate(githubFileOps, { owner: repoOwner, repo: repoName }, context.logger);
 
     return {
-        ...(demoCaveats ? { demoCaveats } : {}),
         ...(boilerplate.status === 'read' ? { boilerplate: boilerplate.value } : {}),
-        ...(demoFixes?.applied || demoFixes?.offered
-            ? { demoFixes: { applied: demoFixes.applied, offered: demoFixes.offered } }
-            : {}),
         filesReset: resetResult.fileCount,
         blockCollectionIds,
         libraryContentSources,
         canonicalCodePatchResults,
         templateCommitSha,
+        buildComplete,
+        resetCommitSha: resetResult.commitSha,
     };
 }

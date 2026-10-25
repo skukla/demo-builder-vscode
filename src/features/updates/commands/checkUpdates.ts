@@ -25,6 +25,7 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
+import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { integrationUpdateProbe } from '@/features/dashboard/handlers/integrationUpdateHandlers';
@@ -108,7 +109,12 @@ export class CheckUpdatesCommand extends BaseCommand {
     }
 
     private findUpdates(): Promise<FoundUpdates> {
-        const handlerCtx = createHeadlessHandlerContext(this.context, this.stateManager, this.logger);
+        // The check records what it learns on each project it walks; none may become the open one.
+        const handlerCtx = createHeadlessHandlerContext(
+            this.context,
+            createNonSwitchingStateManager(this.stateManager),
+            this.logger,
+        );
         return findAllUpdates(handlerCtx, integrationUpdateProbe(handlerCtx));
     }
 

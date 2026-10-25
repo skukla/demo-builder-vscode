@@ -32,7 +32,7 @@ function renderList(props: Partial<React.ComponentProps<typeof AiSkillsList>> = 
 
 describe('AiSkillsList', () => {
     describe('Default state — groups visible, individually collapsed', () => {
-        it('shows a "Skills · N" summary line counted like the MCP section', () => {
+        it('shows a "Skills (N)" summary line', () => {
             renderList({
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
@@ -42,7 +42,7 @@ describe('AiSkillsList', () => {
             });
 
             const summary = screen.getByTestId('ai-skills-summary');
-            expect(summary).toHaveTextContent('Skills · 3');
+            expect(summary).toHaveTextContent(/^Skills \(3\)$/);
         });
 
         it('renders group rows with their counts by default (no outer toggle)', () => {
@@ -92,7 +92,7 @@ describe('AiSkillsList', () => {
             });
 
             const row = screen.getByTestId('ai-skills-group-adobe-appbuilder');
-            expect(row).toHaveTextContent('Adobe Commerce Integration Starter Kit skills · 2');
+            expect(row).toHaveTextContent('Adobe Commerce Integration Starter Kit skills (2)');
             expect(screen.queryByText(/Adobe Commerce Storefront skills/)).not.toBeInTheDocument();
         });
 
@@ -105,10 +105,10 @@ describe('AiSkillsList', () => {
             });
 
             expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(
-                'Adobe Commerce Storefront skills · 1'
+                'Adobe Commerce Storefront skills (1)'
             );
             expect(screen.getByTestId('ai-skills-group-adobe-appbuilder')).toHaveTextContent(
-                'Adobe Commerce Integration Starter Kit skills · 1'
+                'Adobe Commerce Integration Starter Kit skills (1)'
             );
         });
 
@@ -117,7 +117,7 @@ describe('AiSkillsList', () => {
             renderList({ skills: [makeSkill('x', 'adobe', 'sometool')] });
 
             const row = screen.getByTestId('ai-skills-group-adobe-sometool');
-            expect(row).toHaveTextContent('Adobe skills · 1');
+            expect(row).toHaveTextContent('Adobe skills (1)');
         });
 
         it('omits groups with no skills', () => {
@@ -136,14 +136,24 @@ describe('AiSkillsList', () => {
                 ],
             });
             const rows = screen.getAllByTestId('ai-skill-row').map((r) => r.textContent);
-            expect(rows).toEqual(['Add component · add-component', 'Tester · aem-tester']);
+            expect(rows).toEqual(['Add component', 'Tester']);
+        });
+
+        // Owner, 2026-10-22: the grey slug beside every name was noise to an SC.
+        // It stays on the row as its tooltip, for the debugging reader.
+        it('keeps the on-disk name off the row and on its tooltip', () => {
+            renderList({ skills: [makeSkill('aem-tester', 'adobe', 'aem')] });
+
+            const row = screen.getByTestId('ai-skill-row');
+            expect(row).toHaveTextContent(/^Tester$/);
+            expect(row).toHaveAttribute('title', 'aem-tester');
         });
 
         // The titles a user can match against Adobe's docs. The on-disk names
         // are prefixed (`aem-`/`appbuilder-`) so two bundles that both ship a
         // `tester` stay distinct on disk; that prefix appears nowhere in the
         // documentation, so it must not be the thing a person reads first.
-        it('titles Adobe skills as the docs title them, keeping the literal name beside it', () => {
+        it('titles Adobe skills as the docs title them', () => {
             renderList({
                 skills: [
                     makeSkill('aem-block-developer', 'adobe', 'aem'),
@@ -155,11 +165,7 @@ describe('AiSkillsList', () => {
             const rows = screen.getAllByTestId('ai-skill-row').map((r) => r.textContent);
             // Groups sort by label: "Adobe Commerce Integration Starter Kit
             // skills" precedes "Adobe Commerce Storefront skills".
-            expect(rows).toEqual([
-                'DevOps engineer · appbuilder-devops-engineer',
-                'Block developer · aem-block-developer',
-                'Drop-in developer · aem-dropin-developer',
-            ]);
+            expect(rows).toEqual(['DevOps engineer', 'Block developer', 'Drop-in developer']);
         });
     });
 
@@ -174,7 +180,7 @@ describe('AiSkillsList', () => {
             });
 
             const rows = screen.getAllByTestId('ai-skill-row').map((r) => r.textContent);
-            expect(rows).toEqual(['Alpha · alpha', 'Beta · beta', 'Zeta · zeta']);
+            expect(rows).toEqual(['Alpha', 'Beta', 'Zeta']);
         });
 
         it('renders each group header with its label and count', () => {
@@ -187,10 +193,10 @@ describe('AiSkillsList', () => {
             });
 
             expect(screen.getByTestId('ai-skills-group-demo-builder')).toHaveTextContent(
-                'Demo Builder skills · 2'
+                'Demo Builder skills (2)'
             );
             expect(screen.getByTestId('ai-skills-group-adobe-aem')).toHaveTextContent(
-                'Adobe Commerce Storefront skills · 1'
+                'Adobe Commerce Storefront skills (1)'
             );
         });
 
@@ -211,41 +217,65 @@ describe('AiSkillsList', () => {
         });
     });
 
-    // ADR-013: files the user edited are kept (not overwritten) on regenerate;
-    // the list flags them so "my customization survived" is visible, not silent.
-    describe('edited flags — "kept your version" (ADR-013)', () => {
-        it('flags a skill whose bundle file appears in editedFiles', () => {
+    // ADR-013's "kept your version" fact moved off the rows (owner, 2026-10-22):
+    // it matters only for Regenerate, so the modal says it once, beside that
+    // button. The list has no edited prop at all now.
+    describe('inside an integration section (flat)', () => {
+        it('heads its one set "Skills (N)", since the section already names whose they are', () => {
             renderList({
                 skills: [
                     makeSkill('add-component', 'demo-builder'),
                     makeSkill('sync-changes', 'demo-builder'),
                 ],
-                editedFiles: ['.claude/skills/add-component.md'],
+                flat: true,
             });
 
-            const flags = screen.getAllByTestId('ai-skill-edited-flag');
-            expect(flags).toHaveLength(1);
-            const rows = screen.getAllByTestId('ai-skill-row');
-            const flagged = rows.find((r) => r.textContent?.includes('add-component'));
-            expect(flagged?.textContent).toMatch(/edited/i);
+            expect(screen.getByTestId('ai-skills-group-demo-builder')).toHaveTextContent(
+                /^Skills \(2\)$/
+            );
+            expect(screen.queryByTestId('ai-skills-summary')).not.toBeInTheDocument();
         });
 
-        it('renders no flags when editedFiles is absent (pre-ADR project)', () => {
+        it('keeps each set\'s own name when a section holds more than one', () => {
+            // The "Other" section can hold a custom set beside an unrecognised
+            // Adobe bundle; "Skills" twice would not say which is which.
             renderList({
-                skills: [makeSkill('add-component', 'demo-builder')],
+                skills: [makeSkill('mine', 'unknown'), makeSkill('x', 'adobe', 'sometool')],
+                flat: true,
             });
 
-            expect(screen.queryByTestId('ai-skill-edited-flag')).not.toBeInTheDocument();
+            expect(screen.getByTestId('ai-skills-group-unknown')).toHaveTextContent(
+                'Custom skills (1)'
+            );
+            expect(screen.getByTestId('ai-skills-group-adobe-sometool')).toHaveTextContent(
+                'Adobe skills (1)'
+            );
         });
 
-        it("ignores edited entries that match no skill (non-skill files are the modal note's job)", () => {
-            renderList({
-                skills: [makeSkill('add-component', 'demo-builder')],
-                editedFiles: ['AGENTS.md'],
-            });
+        it('lays the names out in the two-column names grid', () => {
+            renderList({ skills: [makeSkill('add-component', 'demo-builder')], flat: true });
 
-            expect(screen.queryByTestId('ai-skill-edited-flag')).not.toBeInTheDocument();
+            expect(screen.getByTestId('ai-skill-row').parentElement).toHaveClass('ai-skill-names');
         });
+
+        it('leaves the names in one column outside a section, where the GROUPS run in two', () => {
+            renderList({ skills: [makeSkill('add-component', 'demo-builder')] });
+
+            expect(screen.getByTestId('ai-skill-row').parentElement).not.toHaveClass(
+                'ai-skill-names'
+            );
+        });
+    });
+
+    it('prints no middle dot anywhere, installed or gated', () => {
+        const { container } = renderList({
+            skills: [makeSkill('add-component', 'demo-builder'), makeSkill('aem-tester', 'adobe', 'aem')],
+            gatedSkills: [{ file: 'playwright.md', toolId: 'playwright', reason: 'tool-missing' }],
+        });
+
+        // Positive control: the list rendered something to search.
+        expect(screen.getAllByTestId('ai-skill-row')).toHaveLength(2);
+        expect(container.textContent).not.toContain('·');
     });
 
     describe('Empty / error states', () => {
@@ -319,10 +349,10 @@ describe('loading vs empty (2026-08-06)', () => {
             renderList({ skills: [], gatedSkills: GATED, flat: true });
 
             expect(screen.getByTestId('ai-skills-group-gated')).toHaveTextContent(
-                'Not available · 1'
+                /^Not available \(1\)$/
             );
             expect(screen.getByTestId('ai-skill-gated-row')).toHaveTextContent(
-                'querying-commerce.md'
+                /^querying-commerce\.md: requires Playwright/
             );
         });
 
@@ -382,7 +412,7 @@ describe('grouping keys off the SOURCE, and only Adobe splits per bundle', () =>
         renderList({ skills: [makeSkill('local-helper', 'unknown', 'sometool')] });
 
         expect(screen.getByTestId('ai-skills-group-unknown')).toHaveTextContent(
-            'Custom skills · 1'
+            'Custom skills (1)'
         );
         expect(screen.queryByTestId('ai-skills-group-unknown-sometool')).not.toBeInTheDocument();
     });
@@ -390,7 +420,7 @@ describe('grouping keys off the SOURCE, and only Adobe splits per bundle', () =>
     it('keeps an Adobe skill with no bundle under a plain Adobe group', () => {
         renderList({ skills: [makeSkill('loose-skill', 'adobe')] });
 
-        expect(screen.getByTestId('ai-skills-group-adobe')).toHaveTextContent('Adobe skills · 1');
+        expect(screen.getByTestId('ai-skills-group-adobe')).toHaveTextContent('Adobe skills (1)');
     });
 });
 
@@ -400,9 +430,7 @@ describe('titles strip the bundle prefix only when the name actually carries it'
         // off the front of the title and leave the row reading nonsense.
         renderList({ skills: [makeSkill('standalone-thing', 'adobe', 'aem')] });
 
-        expect(screen.getByTestId('ai-skill-row')).toHaveTextContent(
-            'Standalone thing · standalone-thing'
-        );
+        expect(screen.getByTestId('ai-skill-row')).toHaveTextContent(/^Standalone thing$/);
     });
 });
 
@@ -413,7 +441,7 @@ describe('it re-groups when the skills change', () => {
                 <AiSkillsList skills={[makeSkill('alpha', 'demo-builder')]} />
             </Provider>
         );
-        expect(screen.getByTestId('ai-skill-row')).toHaveTextContent('Alpha · alpha');
+        expect(screen.getByTestId('ai-skill-row')).toHaveTextContent(/^Alpha$/);
 
         rerender(
             <Provider theme={defaultTheme}>
@@ -422,6 +450,6 @@ describe('it re-groups when the skills change', () => {
         );
 
         const rows = screen.getAllByTestId('ai-skill-row').map((r) => r.textContent);
-        expect(rows).toEqual(['Tester · aem-tester']);
+        expect(rows).toEqual(['Tester']);
     });
 });

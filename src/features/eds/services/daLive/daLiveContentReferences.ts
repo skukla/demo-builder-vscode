@@ -124,7 +124,7 @@ export function extractReferencedPaths(html: string, sourceBaseUrl: string): str
  * - The source has no such page either (it answered 404): a broken link in
  *   the source, carried over. Nothing was left out, so it is not a warning:
  *   it goes to `patchReport.brokenLinks`, which the caller records on the
- *   project for the Storefront Report.
+ *   project; a reset's last view names them.
  * - Anything else (the source has it and the copy failed, or discovery
  *   stopped before reaching it): a real gap, surfaced via the proceed-and-warn
  *   report. The demo still proceeds; this never fails the copy.

@@ -14,13 +14,14 @@
  *    Integrations moved up from Build on 2026-10-06 (owner): it is a
  *    destination of the same weight as the other three.
  *  - Storefront (EDS only): keeping the site itself in shape. Republish (the
- *    remedy carrying the drift dot), Sync Storefront, Refresh Blocks, Site Access,
- *    Storefront Report (a dot when its content has broken links).
+ *    remedy carrying the drift dot), Sync Storefront, Refresh Blocks, Site Access.
  *  - Build: what the demo contains. Edit (what it HAS), Configure (their
  *    values), Datapacks and AEM Assets (the products, then their images), then
- *    — set apart — Reset and Delete.
- *  - Share: moving a demo between people. Export, Save as Package (EDS),
- *    Change Source (only for a project built on an added demo).
+ *    — set apart — Reset (a "Needs reset" dot when the storefront is behind how
+ *    Demo Builder builds storefronts now) and Delete.
+ *  - Share: moving a demo between people. Share Demo (one dialog, a link or a
+ *    file, since 2026-10-22), Change Source (only for a project built on an
+ *    added demo).
  *
  * AEM Assets and Dev Console sat beside the Open cards until Integrations made
  * a fourth card and they ran past the content band (owner, 2026-10-06). They
@@ -162,10 +163,8 @@ export interface ActionGridProps {
     handleSyncStorefront?: () => void;
     /** Handler for the Site Access tile (EDS projects only) */
     handleOpenSiteAccess?: () => void;
-    /** Handler for the Storefront Report tile (EDS projects only) */
-    handleOpenStorefrontReport?: () => void;
-    /** Links in the content to pages that do not exist; above zero, the report tile wears a dot. */
-    brokenLinkCount?: number;
+    /** The storefront is behind how Demo Builder builds storefronts now: the Reset tile says so. */
+    needsReset?: boolean;
     /** Handler for the Refresh Block Library tile (EDS projects only) */
     handleRefreshBlockLibrary?: () => void;
     /** Handler for the Republish tile (EDS projects only) */
@@ -184,19 +183,14 @@ export interface ActionGridProps {
      * (EDS always; non-EDS only while stopped).
      */
     handleEditProject?: () => void;
-    /** Handler for the Export tile */
-    handleExportProject: () => void;
+    /** Handler for the Share Demo tile: the one dialog for a link or a file */
+    handleShareDemo: () => void;
     /**
      * Handler for the Change Demo Source tile. Present only for a
      * project built on an added demo: it points the project at another copy
      * of that demo (the notice offers the same door when the source is gone).
      */
     handleChangeDemoSource?: () => void;
-    /**
-     * "Save as demo package" (EDS only): turn this storefront into a card on the
-     * SC's own Welcome step. About the SC; Export is about handing over.
-     */
-    handleSaveDemoPackage?: () => void;
     /** Handler for Reset (always shown, at the foot of Build, before Delete) */
     handleResetProject: () => void;
     /** Handler for Delete button */
@@ -250,12 +244,10 @@ export function ActionGrid({
     handleConfigure,
     handleOpenAemAssets,
     handleOpenSiteAccess,
-    handleOpenStorefrontReport,
-    brokenLinkCount = 0,
+    needsReset = false,
     handleEditProject,
-    handleExportProject,
+    handleShareDemo,
     handleChangeDemoSource,
-    handleSaveDemoPackage,
     handleResetProject,
     handleDeleteProject,
 }: ActionGridProps): React.ReactElement {
@@ -311,8 +303,6 @@ export function ActionGrid({
                     handleSyncStorefront={handleSyncStorefront}
                     handleRefreshBlockLibrary={handleRefreshBlockLibrary}
                     handleOpenSiteAccess={handleOpenSiteAccess}
-                    handleOpenStorefrontReport={handleOpenStorefrontReport}
-                    brokenLinkCount={brokenLinkCount}
                 />
             )}
             <BuildZone
@@ -324,13 +314,9 @@ export function ActionGrid({
                 handleOpenAemAssets={handleOpenAemAssets}
                 handleResetProject={handleResetProject}
                 handleDeleteProject={handleDeleteProject}
+                needsReset={needsReset}
             />
-            <ShareZone
-                isEds={isEds}
-                handleExportProject={handleExportProject}
-                handleSaveDemoPackage={handleSaveDemoPackage}
-                handleChangeDemoSource={handleChangeDemoSource}
-            />
+            <ShareZone handleShareDemo={handleShareDemo} handleChangeDemoSource={handleChangeDemoSource} />
             </div>
         </div>
     );

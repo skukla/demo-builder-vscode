@@ -25,7 +25,7 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
 import { SetupGuideStep, StepList } from './SetupGuideStep';
 import { type CheckFailure, type CheckProgress, useSetupChecklist } from './useSetupChecklist';
@@ -48,6 +48,9 @@ export interface SetupGuideModalProps {
      */
     onFix?: (target: { id: string; name: string; mode: 'apply' | 'undo'; stepId: string; label: string }) => void;
 }
+
+/** No steps: one array, so a hook reading the steps sees the same one each render. */
+const NO_STEPS: SetupChecklistItem[] = [];
 
 /** The fix buttons' words, in one place. */
 export const FIX_COPY = {
@@ -74,18 +77,17 @@ interface FooterInput {
 }
 
 /**
- * The step's Apply when Demo Builder can do it, and the Undo of one it applied and recorded
- * (AB-77). Apply is offered on a step SAVED done too: the apply checks the store fresh and
- * writes only if the step is not done there, so the saved state must not hide it. Once
- * applied, Apply returns only when a check found the store has lost it. Nothing for a step
+ * Apply on an open step Demo Builder can do; Undo on one it applied and recorded (AB-77). A step
+ * saved done shows no Apply (owner, 2026-10-22): the guide checks never-checked steps as it
+ * opens, so done is fresh enough, and Check all steps reopens a stale one. Nothing for a step
  * with no fix, a skipped step, or when the screen offers none.
  */
 function fixButtons(item: SetupChecklistItem, fix: FooterInput['fix'], busy: boolean): ActionButton[] {
     if (!item.fix || !fix || item.state === 'dismissed') return [];
     const apply: ActionButton = { label: FIX_COPY.fix, variant: 'secondary', onPress: () => fix('apply'), isDisabled: busy };
     const undo: ActionButton = { label: FIX_COPY.undo, variant: 'secondary', onPress: () => fix('undo'), isDisabled: busy };
-    if (!item.fixApplied) return [apply];
-    return item.state === 'open' ? [apply, undo] : [undo];
+    if (item.state === 'done') return item.fixApplied ? [undo] : [];
+    return item.fixApplied ? [apply, undo] : [apply];
 }
 
 /**
@@ -173,7 +175,7 @@ function Guide({
     onOpenAdmin,
     onFix,
 }: SetupGuideModalProps & { model: IntegrationCardModel }): React.ReactElement {
-    const items = model.setupChecklist ?? [];
+    const items = model.setupChecklist ?? NO_STEPS;
     const actions = useSetupChecklist(model.id);
     const [index, setIndex] = useState(() => firstOpen(items));
     // A step list that shrinks under the modal (a redeploy of an older version) must not
@@ -191,13 +193,28 @@ function Guide({
     // Set by the first check run, so only marks a run changes animate in, not the ones the
     // guide opened with.
     const [hasChecked, setHasChecked] = useState(false);
-    const checkAll = async (): Promise<void> => {
-        setHasChecked(true);
-        const checked = await actions.checkAll(checkableIds(items));
-        // Land on what is left to do, with the check's reason in view.
-        const next = checked?.findIndex(isLeftToDo) ?? -1;
-        if (next !== -1) setIndex(next);
-    };
+    const { checkAll: checkSteps, busy } = actions;
+    const runChecks = useCallback(
+        async (stepIds: string[]): Promise<void> => {
+            setHasChecked(true);
+            const checked = await checkSteps(stepIds);
+            // Land on what is left to do, with the check's reason in view.
+            const next = checked?.findIndex(isLeftToDo) ?? -1;
+            if (next !== -1) setIndex(next);
+        },
+        [checkSteps],
+    );
+    const checkAll = (): Promise<void> => runChecks(checkableIds(items));
+
+    // Check every never-checked step as the guide opens (2026-10-22), once per open: the ref
+    // holds through StrictMode and every redraw. A saved check stands until Check all steps.
+    const checkedOnOpen = useRef(false);
+    useEffect(() => {
+        if (checkedOnOpen.current || busy) return;
+        checkedOnOpen.current = true;
+        const unchecked = checkableIds(items.filter((step) => step.checkState === 'unchecked'));
+        if (unchecked.length > 0) void runChecks(unchecked);
+    }, [items, busy, runChecks]);
 
     const item = items[Math.min(index, items.length - 1)];
     const buttons = footerButtons({

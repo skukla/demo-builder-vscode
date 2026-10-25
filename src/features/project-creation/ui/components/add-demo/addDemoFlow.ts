@@ -53,7 +53,7 @@ export interface AddDemoDraft {
 
 export const COPY = {
     title: 'Add a demo package',
-    /** The two ways in, as choice cards: the same shape as Export's "How will you hand it over?". */
+    /** The two ways in, as choice cards. */
     wayQuestion: 'Where is the demo?',
     wayLink: 'From a link',
     wayLinkWhy: "A GitHub link or the demo's site address. Keeps its history and later changes.",
@@ -142,7 +142,7 @@ export function foundRows(read: SharedDemoRead): SummaryRow[] {
         // Where the code lives, first: a site address was read back to it.
         { label: 'Code', value: `github.com/${read.fullName}`, done: true },
         { label: 'Type', value: KIND_LABEL[read.kind], done: true },
-        // One row only (EDS-13f decision 7): the rest of the origin is the storefront report's.
+        // One row only (EDS-13f decision 7): the rest of the origin is in Diagnostics.
         ...(read.boilerplate
             ? [{ label: 'Built on', value: builtOnValue(read.boilerplate), done: true }]
             : []),

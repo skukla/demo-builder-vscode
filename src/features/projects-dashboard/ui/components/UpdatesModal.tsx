@@ -6,13 +6,16 @@
  * replaces VS Code's picker and nothing else: checking, and "up to date", stay in the
  * notification (owner, 2026-10-20). Apply keeps it open and shows the run in it, row by
  * row (`UpdatesRunView`, 2026-10-21): it closes by itself on nothing, since a run ends
- * with what each row did, and closing it mid-run hands the run to a notification.
+ * with what each row did, and closing it mid-run hands the run to a notification. A run
+ * that leaves rows the SC unticked still waiting says how many and offers "Back to
+ * updates", the list again on a fresh check (owner, 2026-10-22).
  *
- * Built from the house pieces: `ui/Modal` and `CheckboxRow` (extracted from the API picker
- * for this). Each group is a panel in the projects list's own row style (`.project-row-name`,
- * `.project-row-chevron`, the trailing chevron): Spectrum's Disclosure was tried first and
- * brought a look nothing else here has (owner, 2026-10-20). A group starts closed and says
- * what it holds: its name in its own casing, and how many rows wait for the SC (one that
+ * Built from the house pieces: `ui/Modal`, `CheckboxRow` (extracted from the API picker
+ * for this) and `DisclosureToggle` (extracted from here, 2026-10-23). Each
+ * group is a panel in the projects list's own row style, the trailing chevron: Spectrum's Disclosure was tried first and
+ * brought a look nothing else here has (owner, 2026-10-20). With {@link OPEN_UP_TO} updates or
+ * fewer in all, every group starts open, since they fit and a closed one hid what the SC
+ * was approving (owner, 2026-10-24); with more, a group starts closed and says what it holds: its name in its own casing, and how many rows wait for the SC (one that
  * started unticked: the redeploy, or one locked in another org), so a closed group cannot
  * hide the row that needs a decision. Its checkbox already shows all, some or none ticked. The rest of its line opens it.
  * Its checkbox ticks or unticks the whole group (mixed while some rows are ticked; never a
@@ -25,13 +28,12 @@
  */
 
 import { Checkbox, DialogContainer } from '@adobe/react-spectrum';
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import React, { useState } from 'react';
 import { APPLYING_TITLE, type UpdatesModalControls } from '../hooks/useUpdatesModal';
 import { groupsOf, type RowGroup } from './updateGroups';
 import { UpdatesRunView } from './UpdatesRunView';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
+import { DisclosureToggle } from '@/core/ui/components/ui/DisclosureToggle';
 import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
@@ -39,6 +41,8 @@ import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
 const LIST_TITLE = 'Updates available';
 const NO_ACTIONS: ActionButton[] = [];
+/** The most updates the list opens every group for: two lines each, they fit unscrolled. */
+export const OPEN_UP_TO = 3;
 
 /**
  * The rows a group's checkbox ticks, and what a closed group says about itself. It
@@ -52,11 +56,16 @@ function summaryOf(group: RowGroup, ticked: ReadonlySet<string>): { open: string
     return { open, tickedCount, text: waiting > 0 ? `${waiting} waiting for you` : '' };
 }
 
-function RowGroupView({ group, controls }: { group: RowGroup; controls: UpdatesModalControls }) {
-    const [isOpen, setOpen] = useState(false);
+interface RowGroupViewProps {
+    group: RowGroup;
+    controls: UpdatesModalControls;
+    startsOpen: boolean;
+}
+
+function RowGroupView({ group, controls, startsOpen }: RowGroupViewProps) {
+    const [isOpen, setOpen] = useState(startsOpen);
     const { open, tickedCount, text } = summaryOf(group, controls.ticked);
     const all = open.length > 0 && tickedCount === open.length;
-    const Chevron = isOpen ? ChevronDown : ChevronRight;
     return (
         <div className="updates-group">
             <div className="updates-group-header">
@@ -67,16 +76,9 @@ function RowGroupView({ group, controls }: { group: RowGroup; controls: UpdatesM
                     isDisabled={open.length === 0}
                     onChange={() => controls.toggleGroup(open)}
                 />
-                <button
-                    type="button"
-                    className="updates-group-toggle"
-                    aria-expanded={isOpen}
-                    onClick={() => setOpen(!isOpen)}
-                >
-                    <span className="project-row-name">{group.title}</span>
-                    {text && <span className="updates-group-note">{text}</span>}
-                    <Chevron size="S" UNSAFE_className="project-row-chevron updates-group-chevron" />
-                </button>
+                <DisclosureToggle isOpen={isOpen} onToggle={() => setOpen(!isOpen)} note={text || undefined}>
+                    {group.title}
+                </DisclosureToggle>
             </div>
             <div className="updates-group-rows" hidden={!isOpen}>
                 {group.rows.map((row) => (
@@ -99,7 +101,12 @@ function UpdateList({ rows, controls }: { rows: PendingUpdateRow[]; controls: Up
     return (
         <div className="updates-group-list">
             {groupsOf(rows).map((group) => (
-                <RowGroupView key={group.key} group={group} controls={controls} />
+                <RowGroupView
+                    key={group.key}
+                    group={group}
+                    controls={controls}
+                    startsOpen={rows.length <= OPEN_UP_TO}
+                />
             ))}
         </div>
     );
@@ -138,13 +145,20 @@ function runChrome(controls: UpdatesModalControls): Chrome {
         return { hideClose: true, actions };
     }
     if (!ended) return { closeLabel: 'Run in background', actions: NO_ACTIONS };
-    if (progress?.state !== 'failed') return { closeLabel: 'Close', actions: NO_ACTIONS };
+    if (progress?.state !== 'failed') return { closeLabel: 'Close', actions: backTo(controls) };
     const logs: ActionButton = {
         label: 'Open Debug Logs',
         variant: 'secondary',
         onPress: () => webviewClient.postMessage('openDebugLogs', {}),
     };
     return { closeLabel: 'Close', actions: [logs] };
+}
+
+/** "Back to updates" beside Close, when rows the SC left unticked are still waiting. */
+function backTo(controls: UpdatesModalControls): ActionButton[] {
+    if (controls.remaining === 0) return NO_ACTIONS;
+    const label = controls.rechecking ? 'Checking for updates' : 'Back to updates';
+    return [{ label, variant: 'secondary', onPress: controls.back, isDisabled: controls.rechecking }];
 }
 
 /** What the modal shows: its title, body, dismiss label and the buttons beside it. */
@@ -157,6 +171,7 @@ function contentFor(controls: UpdatesModalControls): Chrome & { title: string; b
                 statuses={controls.statuses}
                 progress={controls.progress}
                 onTyped={controls.onTyped}
+                remaining={controls.remaining}
             />
         );
         return { title: runTitleOf(controls.progress), body, ...runChrome(controls) };

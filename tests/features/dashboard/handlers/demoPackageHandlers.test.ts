@@ -121,6 +121,30 @@ describe('handleGetDemoPackagePreview', () => {
         expect(mockAccess).not.toHaveBeenCalled();
     });
 
+    // The Share dialog opens "Change name or description" on this draft. Once
+    // the file is ours, the draft is what the file says, not the brand again:
+    // a renamed demo reopened showing the brand's name would invite an Update
+    // that silently undoes the rename.
+    it('prefills from the description file when the file is the one we wrote', async () => {
+        fileOperations.getFileContent.mockResolvedValue({
+            content: JSON.stringify({ kind: 'demo', version: 2, name: 'Bodea by Steve', description: 'Data center gear' }),
+            sha: 'blob-0',
+        });
+        const { context } = contextFor(edsProject({ demoPackage: { fileSha: 'blob-0', savedAt: 'x' } }));
+        const preview = (await handleGetDemoPackagePreview(context)).data as DemoPackagePreview;
+        expect(preview.draft).toEqual({ name: 'Bodea by Steve', description: 'Data center gear' });
+    });
+
+    it('keeps the brand draft when the file in the repository is not ours (control)', async () => {
+        fileOperations.getFileContent.mockResolvedValue({
+            content: JSON.stringify({ kind: 'demo', version: 2, name: 'Hand-written' }),
+            sha: 'theirs',
+        });
+        const { context } = contextFor(edsProject({ demoPackage: { fileSha: 'blob-0', savedAt: 'x' } }));
+        const preview = (await handleGetDemoPackagePreview(context)).data as DemoPackagePreview;
+        expect(preview.draft.name).toBe('Bodea');
+    });
+
     it('confirms the datapack when the service can be asked, without a panel', async () => {
         mockAccess.mockResolvedValue({
             ok: true,
@@ -180,6 +204,39 @@ describe('handleSaveDemoPackage', () => {
         expect(mockRemember).toHaveBeenCalledTimes(1);
         expect((saveProject.mock.calls[0][0] as Project).demoPackage).toMatchObject({ fileSha: '' });
         expect(context.logger.warn).toHaveBeenCalledTimes(1);
+    });
+});
+
+// The Share dialog's "Also show it on my Welcome step" box. Ticked is today's
+// behaviour and stays the default; unticked writes the file and leaves (or
+// takes) the card off the SC's own list, so the box always says what is true.
+describe('handleSaveDemoPackage — the Welcome card is optional', () => {
+    it('puts the card on the list when addToWelcome is absent (the default)', async () => {
+        const { context } = contextFor(edsProject());
+        const data = (await handleSaveDemoPackage(context, { name: 'Bodea', description: '' })).data as SaveDemoPackageResult;
+        expect(mockRemember).toHaveBeenCalledTimes(1);
+        expect(data.onList).toBe(true);
+    });
+
+    it('writes the file but adds no card when addToWelcome is false', async () => {
+        const { context, saveProject } = contextFor(edsProject());
+        const data = (await handleSaveDemoPackage(context, { name: 'Bodea', description: '', addToWelcome: false }))
+            .data as SaveDemoPackageResult;
+        expect(fileOperations.createOrUpdateFile).toHaveBeenCalledTimes(1);
+        expect(mockRemember).not.toHaveBeenCalled();
+        expect(mockForget).not.toHaveBeenCalled();
+        expect(data.onList).toBe(false);
+        expect((saveProject.mock.calls[0][0] as Project).demoPackage).toMatchObject({ fileSha: 'blob-1' });
+    });
+
+    it('takes an existing card off the list when addToWelcome is false', async () => {
+        mockList.mockReturnValue([OWN_CARD]);
+        const { context } = contextFor(edsProject());
+        const data = (await handleSaveDemoPackage(context, { name: 'Bodea', description: '', addToWelcome: false }))
+            .data as SaveDemoPackageResult;
+        expect(mockForget).toHaveBeenCalledWith(expect.objectContaining({ owner: 'steve', repo: 'kukla-bodea' }));
+        expect(mockRemember).not.toHaveBeenCalled();
+        expect(data.onList).toBe(false);
     });
 });
 

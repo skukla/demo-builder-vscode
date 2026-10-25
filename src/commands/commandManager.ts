@@ -12,7 +12,6 @@ import { RepairSiteConfigurationCommand } from './repairSiteConfiguration';
 import { ResetAiOnboardingCommand } from './ResetAiOnboardingCommand';
 import { ResetAllCommand } from './ResetAllCommand';
 import { ShowPromptsPickerCommand } from './showPromptsPicker';
-import { StorefrontReportCommand } from './storefrontReport';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { openUrl } from '@/core/utils/browserUtils';
@@ -249,12 +248,6 @@ export class CommandManager {
             repairSiteConfiguration.execute(projectPath),
         );
 
-        // Storefront Report — where the storefront comes from, what Demo Builder
-        // wrote, each of its fixes; and, for an added demo tied to our templates,
-        // the opt-in offer of the fixes that fit (EDS-13f).
-        const storefrontReport = new StorefrontReportCommand(this.context, this.stateManager, this.logger);
-        this.registerCommand('demoBuilder.storefrontReport', () => storefrontReport.execute());
-
         // Check Updates
         const checkUpdates = new CheckUpdatesCommand(this.context, this.stateManager, this.logger);
         // `background`: the startup and four-hourly checks, which notify instead of opening it.
@@ -484,11 +477,10 @@ export class CommandManager {
                     path.join(this.context.extensionPath, 'dist'),
                 );
                 this.logger.info(`[MCP] global registration written to ${written.join(', ')}`);
+                // Just the files, by the paths an SC recognises: the longer sentence this
+                // replaced was cut off in the toast before the second path (2026-10-22).
                 const files = written.map((file) => file.replace(os.homedir(), '~')).join(' and ');
-                void vscode.window.showInformationMessage(
-                    `Demo Builder MCP registered globally in ${files}. ` +
-                        'Your agent can now reach a running Demo Builder window from any directory.',
-                );
+                void vscode.window.showInformationMessage(`Registered in ${files}.`);
             } catch (error) {
                 this.logger.error('[MCP] global registration failed', error as Error);
                 void vscode.window.showErrorMessage(

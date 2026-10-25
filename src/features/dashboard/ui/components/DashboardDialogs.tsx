@@ -1,6 +1,6 @@
 /**
  * DashboardDialogs — everything the project dashboard can open ON TOP of
- * itself: Change source, Export, Save as demo package, the long-operation
+ * itself: Change source, Share Demo, the long-operation
  * progress modal, and the AI capability catalog.
  *
  * Split out of `ProjectDashboardScreen` (EDS-8, 2026-10-09): the screen decides
@@ -14,11 +14,10 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import { AiCapabilitiesModal } from './AiCapabilitiesModal';
-import { DemoPackageModal } from './demo-package/DemoPackageModal';
-import { ExportModal } from './export/ExportModal';
 import type { UseDashboardStatusReturn } from '../hooks/dashboardStatusTypes';
 import type { HandoverDialogs } from '../hooks/useHandoverDialogs';
+import { AiCapabilitiesModal } from './AiCapabilitiesModal';
+import { ShareModal } from './share/ShareModal';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import type { OperationRunnerControls } from '@/core/ui/hooks/useOperationRunner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -49,12 +48,12 @@ export type AiCapabilityState = Pick<
 >;
 
 export interface DashboardDialogsProps {
-    /** Whether the project has a storefront of its own (Export offers more for one). */
+    /** Whether the project has a storefront of its own (Share offers a link for one). */
     isEds: boolean;
     /** The added demo whose source is being changed: present only while that dialog is open. */
     changeSourceDemo?: NonNullable<DashboardInitialData['demo']>;
     onCloseChangeSource: () => void;
-    /** Export and Save as demo package open state. */
+    /** The Share dialog's open state. */
     handover: HandoverDialogs;
     /** The long-operation runner whose modal narrates reset, delete, sync and republish. */
     operations: OperationRunnerControls;
@@ -99,11 +98,8 @@ export function DashboardDialogs({
                 />
             ) : null}
 
-            {handover.exportOpen ? (
-                <ExportModal isOpen isEds={isEds} onClose={handover.closeExport} />
-            ) : null}
-            {handover.demoPackageOpen ? (
-                <DemoPackageModal isOpen onClose={handover.closeDemoPackage} />
+            {handover.shareOpen ? (
+                <ShareModal isOpen isEds={isEds} onClose={handover.closeShare} />
             ) : null}
 
             <OperationProgressModal

@@ -81,7 +81,7 @@ export async function ensureProjectOrgContext(options: {
     logger.warn(`${logPrefix} Project org not reachable by the current token`);
 
     const selection = await askDuringOperation(
-        buildPrompt(project.name, initial.currentOrg),
+        { title: 'Switch Adobe organization', message: buildPrompt(project.name, initial.currentOrg) },
         'Switch IMS Org',
         'Cancel',
     );

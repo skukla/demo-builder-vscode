@@ -79,7 +79,7 @@ interface EdsContentDeps {
     extensionContext: import('vscode').ExtensionContext;
     /**
      * Receives the copy's broken links (links to pages the source lacks too), so
-     * the caller can record them on the project for the Storefront Report.
+     * the caller can record them on the project.
      */
     onBrokenLinks?: (links: StorefrontBrokenLink[]) => void;
     /**
@@ -101,6 +101,11 @@ interface EdsContentDeps {
      * Defaults to downloading the SC's repository, as the shared pipeline does.
      */
     readCodePaths?: (repo: { owner: string; repo: string }) => Promise<string[] | undefined>;
+    /**
+     * Runs after the content copy and right before the bulk publish: the project's
+     * authored-pages sheet refresh (EDS-61, `authoredSheetRefresh.ts`). Non-fatal.
+     */
+    beforeContentPublish?: () => Promise<void>;
 }
 
 /** The pipeline's own read of the storefront's code, through a GitHub client built here. */
@@ -329,8 +334,11 @@ export async function ensureEdsContent(
         helixService.purgeCacheAll(repoInfo.owner, repoInfo.repo, 'main'),
     );
 
-    // Publish content to CDN (preview + live)
+    // Publish content to CDN (preview + live) — after a live authored-pages sheet is
+    // current, so the overlay replaces no authored page at a category address (EDS-61).
     onProgress?.(S.publishingPages.label);
+    const { beforeContentPublish } = deps;
+    if (beforeContentPublish) await nonFatal('Authored-pages sheet', logger, beforeContentPublish);
 
     await helixService.publishAllSiteContent(
         `${repoInfo.owner}/${repoInfo.repo}`,

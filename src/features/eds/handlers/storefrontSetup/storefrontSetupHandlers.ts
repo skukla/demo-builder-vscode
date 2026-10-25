@@ -176,12 +176,9 @@ function completionMessage(pdpBlocked: boolean, hasCaveats: boolean): string {
     return 'Storefront setup completed successfully!';
 }
 
-/**
- * The caveats after the PDP ones: what may not work on an added demo, then what the
- * content pipeline could not do (EDS-55).
- */
-function otherCaveats(result: { demoCaveats?: string[]; pipelineWarnings?: string[] }): string[] {
-    return [...(result.demoCaveats ?? []), ...(result.pipelineWarnings ?? [])];
+/** The caveats after the PDP ones: what the content pipeline could not do (EDS-55). */
+function otherCaveats(result: { pipelineWarnings?: string[] }): string[] {
+    return [...(result.pipelineWarnings ?? [])];
 }
 
 export async function handleStartStorefrontSetup(
@@ -280,7 +277,6 @@ export async function handleStartStorefrontSetup(
         ...(resolvedOverlayUrl ? {} : { byomAbsentReason: explainAbsentOverlay() }),
         // The added demo's row rides the one config the phases read (D2).
         ...(payload.demo ? { demo: payload.demo } : {}),
-        ...(payload.applyDemoFixes === true ? { applyDemoFixes: true } : {}),
     };
 
     try {
@@ -325,6 +321,7 @@ export async function handleStartStorefrontSetup(
                 ...(result.brokenLinks?.length ? { brokenLinks: result.brokenLinks } : {}),
                 // Recorded by creation on the project it makes, as brokenLinks are.
                 installedBlockLibraries: result.installedBlockLibraries,
+                storefrontBuildComplete: result.storefrontBuildComplete,
                 // Note: previewUrl/liveUrl not sent - derived from githubRepo by typeGuards
             } satisfies StorefrontSetupCompletePayload);
             return { success: true, data: result };

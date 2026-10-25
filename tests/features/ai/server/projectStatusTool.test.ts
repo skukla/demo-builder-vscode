@@ -87,6 +87,16 @@ describe('get_project_status', () => {
         expect(out.port).toBe(3000);
     });
 
+    // The "Needs reset" status (storefrontChanges.ts), as the dashboard's Reset tile shows it.
+    it('says when the storefront needs a reset, and nothing when it does not', async () => {
+        getCurrentProject.mockResolvedValue({ ...RUNNING, created: '2026-01-01T00:00:00.000Z' });
+        expect((await serve().call()).storefrontNeedsReset).toBe(true);
+
+        const built = { ...FRONTEND, metadata: { storefrontBuiltThrough: '2999-01-01' } };
+        getCurrentProject.mockResolvedValue({ ...RUNNING, componentInstances: { 'eds-storefront': built } });
+        expect(await serve().call()).not.toHaveProperty('storefrontNeedsReset');
+    });
+
     it('says so plainly when there is no current project', async () => {
         getCurrentProject.mockResolvedValue(null);
         expect(await serve().raw()).toMatch(/^Error: no current project/);

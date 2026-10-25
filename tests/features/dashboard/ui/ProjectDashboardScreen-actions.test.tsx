@@ -7,12 +7,12 @@ import userEvent from '@testing-library/user-event';
 
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
 
-jest.mock('@/features/dashboard/ui/components/export/ExportModal', () => ({
+jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
     // The real dialog renders the core Modal, whose Spectrum pieces this suite's
     // partial Spectrum mock does not carry (same reason the Add a demo package dialog is
     // stubbed in the demo-source suite). Its own suite renders it real.
-    ExportModal: ({ onClose }: any) => (
-        <div role="dialog" aria-label="Export">
+    ShareModal: ({ onClose }: any) => (
+        <div role="dialog" aria-label="Share Demo">
             <button onClick={onClose}>Close</button>
         </div>
     ),
@@ -176,12 +176,12 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('editProject');
         });
 
-        it('opens the Export dialog when Export clicked, and posts nothing by itself', async () => {
+        it('opens the Share dialog when Share Demo clicked, and posts nothing by itself', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
-            await user.click(screen.getByText('Export'));
-            expect(screen.getByRole('dialog', { name: 'Export' })).toBeInTheDocument();
+            await user.click(screen.getByText('Share Demo'));
+            expect(screen.getByRole('dialog', { name: 'Share Demo' })).toBeInTheDocument();
             expect(ctx.mockPostMessage).not.toHaveBeenCalledWith('exportProject');
         });
 

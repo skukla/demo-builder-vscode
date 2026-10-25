@@ -156,6 +156,7 @@ describe('listPages', () => {
                 file('/placeholders', 'json'),
                 file('/hero', 'png'),
                 folder('/products'),
+                folder('/categories'),
                 folder('/fragments'),
                 folder('/drafts'),
                 folder('/.da'),
@@ -163,6 +164,7 @@ describe('listPages', () => {
             ],
             '/customer': [file('/customer/nav'), file('/customer/account')],
             '/products': [file('/products/sku-1')],
+            '/categories': [file('/categories/default')],
         });
 
         expect(await t.pages.listPages()).toEqual(['/customer/account']);

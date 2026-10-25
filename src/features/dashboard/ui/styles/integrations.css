@@ -172,25 +172,7 @@
     min-width: 0;
 }
 
-/* Where / Enter / Then: a label column and a value column, the labels muted so the three
-   lines scan as one table. */
-.setup-guide-facts {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
-    column-gap: 32px;
-    row-gap: 20px;
-    margin: 0;
-    line-height: 1.6;
-}
-
-.setup-guide-facts dt {
-    color: var(--spectrum-global-color-gray-600);
-}
-
-.setup-guide-facts dd {
-    margin: 0;
-    min-width: 0;
-}
+/* Where / Enter / Then / Why is `ui/FactList` (core/ui/styles/fact-list.css). */
 
 .setup-guide-path {
     display: inline-flex;
@@ -229,10 +211,6 @@
 
 /* Skip (or Reopen) is the rare action, so it is a quiet link under the step rather than a
    third footer button. */
-.setup-guide-skip-link {
-    color: var(--spectrum-global-color-gray-600);
-}
-
 /* Assign products (AB-74): one toolbar line, the list filling the rest of the dialog, one line
    of counts under it (owner, 2026-10-18: not a list halfway down). The body is height-bounded
    like Manage APIs, so the list is the one region that scrolls. */

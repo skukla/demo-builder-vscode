@@ -61,7 +61,15 @@ export function createStoreScopePagesDeps(clients: StoreScopePagesClients): Stor
             stateManager: clients.stateManager,
             logger,
         }),
-        catalogMenu: createCatalogMenuSite({ project, target, daLive, helix, github: clients.githubFiles }),
+        catalogMenu: createCatalogMenuSite({
+            project,
+            target,
+            daLive,
+            helix,
+            github: clients.githubFiles,
+            stateManager: clients.stateManager,
+            logger,
+        }),
         publishProductPages: (onProgress) =>
             prewarmCatalog(
                 project,

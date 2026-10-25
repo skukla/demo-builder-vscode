@@ -18,11 +18,12 @@ import { postComponentsSnapshot, resolveComponentTarget } from './appBuilderComp
 import { getAppBuilderComponent, setAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { resolveRestTarget } from '@/features/ai/server/commerceRestClient';
 import { setupChecklistOf, withAdobeNames } from '@/features/app-builder/services/setupChecklist';
-import { runSetupCheck, type SetupCheckResult } from '@/features/app-builder/services/setupChecks';
+import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { erpNamesOf, setupCheckReader } from '@/features/dashboard/services/setupCheckReader';
-import type { SetupCheck, SetupChecklistItem, SetupStep } from '@/types/appBuilderComponents';
-import type { AppBuilderComponentState, Project, SetupCheckOutcome, SetupStepRecord } from '@/types/base';
+import { checkedRecords } from '@/features/dashboard/services/setupStepRecords';
+import type { SetupChecklistItem, SetupStep } from '@/types/appBuilderComponents';
+import type { AppBuilderComponentState, Project, SetupStepRecord } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 
@@ -88,18 +89,6 @@ export const handleGetSetupChecklist: MessageHandler<{ id?: string }> = async (c
 
 const STATES = new Set(['done', 'dismissed', 'open']);
 
-/** What a check concluded: set up, not set up, or it could not tell. */
-export function outcomeOf(done: boolean | undefined): SetupCheckOutcome {
-    if (done === undefined) return 'unknown';
-    return done ? 'passed' : 'failed';
-}
-
-/** A passing check marks the step done, a failing one opens it, one that could not tell leaves it. */
-export function stateAfterCheck(previous: SetupStepRecord['state'], done: boolean | undefined): SetupStepRecord['state'] {
-    if (done === undefined) return previous;
-    return done ? 'done' : undefined;
-}
-
 /** Handle 'setSetupStep' — mark one step done or dismissed, or open it again. */
 export const handleSetSetupStep: MessageHandler<{ id?: string; stepId?: string; state?: string }> = async (
     context,
@@ -154,34 +143,6 @@ export const handleCheckSetupSteps: MessageHandler<{ id?: string; stepId?: strin
     const records = await checkedRecords(steps, opened.state.setupSteps, (check) => runSetupCheck(check, read, scope));
     return saveSteps(context, opened, records);
 };
-
-/**
- * The step records after the given steps are checked: a passing check marks its step done,
- * a failing one opens it, one that cannot tell leaves the state. Shared with "Prepare this
- * store", which rechecks the steps it applied or undid.
- */
-export async function checkedRecords(
-    steps: readonly SetupStep[],
-    saved: Record<string, SetupStepRecord> | undefined,
-    runCheck: (check: SetupCheck) => Promise<SetupCheckResult>,
-): Promise<Record<string, SetupStepRecord>> {
-    const records: Record<string, SetupStepRecord> = { ...saved };
-    const checkedAt = new Date().toISOString();
-    for (const step of steps) {
-        if (!step.check) continue;
-        const result = await runCheck(step.check);
-        const { state: previous, ...kept } = records[step.id] ?? {};
-        const state = stateAfterCheck(previous, result.done);
-        records[step.id] = {
-            ...kept,
-            ...(state ? { state } : {}),
-            note: result.note,
-            lastCheck: outcomeOf(result.done),
-            checkedAt,
-        };
-    }
-    return records;
-}
 
 /**
  * Handle 'prepareSetupChecks' — sign in to Commerce ahead of a check, so the slow part (the

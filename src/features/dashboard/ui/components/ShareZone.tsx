@@ -1,44 +1,31 @@
-import ExportIcon from '@spectrum-icons/workflow/Export';
-import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy';
+import ShareIcon from '@spectrum-icons/workflow/Share';
 import Switch from '@spectrum-icons/workflow/Switch';
 import React from 'react';
 import { DashboardTile } from './DashboardTile';
 import { DashboardZone } from './DashboardZone';
 
 /**
- * The Share zone — moving a demo between people. Export hands it to someone
- * else; Save as Demo Package makes it a card on your own Welcome step; Change
- * Demo Source points a project built on someone else's demo at another copy.
+ * The Share zone — moving a demo between people. Share Demo opens the one
+ * dialog for a link or a file (owner, 2026-10-22: Export and Save as Package
+ * were two tiles for one job); Change Source points a project built on
+ * someone else's demo at another copy.
  */
 export function ShareZone({
-    isEds,
-    handleExportProject,
-    handleSaveDemoPackage,
+    handleShareDemo,
     handleChangeDemoSource,
 }: {
-    isEds: boolean;
-    handleExportProject: () => void;
-    handleSaveDemoPackage?: () => void;
+    handleShareDemo: () => void;
     handleChangeDemoSource?: () => void;
 }): React.ReactElement {
     return (
         <DashboardZone id="share" title="Share" compact>
             <DashboardTile
-                label="Export"
-                icon={<ExportIcon size="L" />}
-                onPress={handleExportProject}
-                action="export"
+                label="Share Demo"
+                icon={<ShareIcon size="L" />}
+                onPress={handleShareDemo}
+                action="share-demo"
                 tooltip="Hand this demo to a colleague, as a link or a file"
             />
-            {isEds && handleSaveDemoPackage && (
-                <DashboardTile
-                    label="Save as Package"
-                    icon={<SaveFloppy size="L" />}
-                    onPress={handleSaveDemoPackage}
-                    action="save-demo-package"
-                    tooltip="Save as a demo package: this storefront becomes a card on your Welcome step"
-                />
-            )}
             {handleChangeDemoSource && (
                 <DashboardTile
                     label="Change Source"
@@ -51,4 +38,3 @@ export function ShareZone({
         </DashboardZone>
     );
 }
-

@@ -26,6 +26,7 @@ import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operatio
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import { resolveDeployInputs, resolveDisplayName } from '@/features/app-builder/services/deployInputs';
 import { pairNameInputs } from '@/features/app-builder/services/pairNames';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
 import {
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,
@@ -45,10 +46,12 @@ import {
     buildRunnerDepsContext,
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
+import { previewStoreForAdd } from '@/features/project-creation/services/erpStorePreparation';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { AddPreparationAnswer } from '@/types/storePreparation';
 import type { OperationPosition } from '@/types/webviewPayloads';
 import type { AddAppBuilderComponentRequestPayload } from '@/types/webviewRequests';
 
@@ -411,6 +414,9 @@ export const handleAddAppBuilderComponent: MessageHandler<
     const entry = copyWhenTaken(project, resolved, payload ?? {});
     const refusal = refuseAdd(project, entry);
     if (refusal) return refusal;
+    // The ERP integration's add prepares the store, some of it for every website on the
+    // instance: without confirm it says what, and nothing is recorded or made.
+    if (preparesStoreOnAdd(entry) && payload?.confirm !== true) return previewPreparingAdd(context, project, entry);
     await recordChosenDestination(context, project, payload?.destination);
 
     await recordPairNames(context, project, entry, payload?.name);
@@ -418,6 +424,29 @@ export const handleAddAppBuilderComponent: MessageHandler<
     const result = await runAdd(context, project, entry, payload ?? {});
     return reportAddOutcome(context, entry, result, label, progressSurfaceOf(payload));
 }, addedIdOf);
+
+/**
+ * The confirm in front of the ERP integration's add (owner, 2026-10-22): what "Prepare this
+ * store" will change once it is installed, read from the store now, and which steps change
+ * something every website on the instance shares. A store that cannot be read now is said,
+ * and the add stays possible: the run reads again, and says what it could not do.
+ */
+async function previewPreparingAdd(
+    context: HandlerContext,
+    project: Project,
+    entry: AppBuilderComponentCatalogEntry,
+): Promise<HandlerResponse> {
+    const read = context.authManager
+        ? await previewStoreForAdd(project, entry, { authManager: context.authManager, credentials: context.context?.secrets })
+        : { refusal: 'Adobe sign-in required to read the store.' };
+    const data: AddPreparationAnswer = {
+        confirmed: false,
+        adding: { id: entry.id, name: entry.name ?? entry.id },
+        preparation: 'refusal' in read ? { unread: read.refusal } : read,
+        next: 'Show the user what the store preparation changes, then call again with confirm: true.',
+    };
+    return { success: true, data };
+}
 
 /**
  * Record the destination the add's own steps chose, before anything is made. Only for a

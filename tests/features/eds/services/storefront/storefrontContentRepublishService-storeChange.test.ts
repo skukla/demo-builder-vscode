@@ -1,5 +1,5 @@
 /**
- * The dashboard's Republish (and `sync_content`) after a store change (EDS-44).
+ * The dashboard's Republish (and the agent's `republish`) after a store change (EDS-44).
  *
  * When the store-change marker is set and this run's config publish reached the CDN,
  * the pipeline's catalog half is the store-change service — the old store's product
@@ -33,8 +33,10 @@ jest.mock('@/features/eds/services/catalogPrewarmService', () => ({
     prewarmCatalog: jest.fn(async () => ({ attempted: 2, succeeded: 2, failed: 0, skipped: false })),
 }));
 const mockApplyCatalogMenuStep = jest.fn();
+const mockPublishAuthoredListStep = jest.fn();
 jest.mock('@/features/eds/services/catalogMenu/catalogMenuStep', () => ({
     applyCatalogMenuStep: (...a: unknown[]) => mockApplyCatalogMenuStep(...a),
+    publishAuthoredListStep: (...a: unknown[]) => mockPublishAuthoredListStep(...a),
 }));
 const mockRepublishConfig = jest.fn();
 jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({

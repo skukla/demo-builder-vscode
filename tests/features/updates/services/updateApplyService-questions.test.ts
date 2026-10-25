@@ -204,7 +204,7 @@ describe("Adobe's boilerplate update that clashes", () => {
 
         expect(onItem).toHaveBeenLastCalledWith('boilerplate', item, {
             state: 'skipped',
-            message: 'Not updated — your edits in blocks/hero/hero.js were left as they are.',
+            message: 'Not updated. The earlier edits were left as they are.',
         });
         expect(res.boilerplate.failCount).toBe(1);
     });
@@ -226,7 +226,7 @@ describe("a template update's row, when its clash was answered", () => {
 
         expect(await tell('fix')).toEqual({
             state: 'skipped',
-            message: 'Not updated yet — kept in your local copy for your AI to fix. Nothing was pushed.',
+            message: 'Not updated yet. Your AI is working on it, and nothing goes live until you approve it.',
         });
     });
 

@@ -142,7 +142,10 @@ async function ensureDaLiveAuth(
 }
 
 /**
- * Delete DA.live site content and clean up config
+ * Delete DA.live site content and clean up config.
+ *
+ * @returns why the delete must stop here, when the storefront's pages are still live
+ *   (EDS-65); undefined to carry on
  */
 async function performDaLiveCleanup(
     context: HandlerContext,
@@ -151,16 +154,16 @@ async function performDaLiveCleanup(
     results: CleanupResultItem[],
     report: CleanupStepReport,
     services?: DeletionServices,
-): Promise<void> {
+): Promise<string | undefined> {
     const site = daLiveTarget(edsMetadata, options);
-    if (!site) return;
+    if (!site) return undefined;
 
     report(OPERATION_STAGES.checkingRequirements.label, 'Your DA.live sign-in');
     const resourceName = `${site.daLiveOrg}/${site.daLiveSite}`;
 
     try {
         const daLiveAuthService = await ensureDaLiveAuth(context, resourceName, results);
-        if (!daLiveAuthService) return;
+        if (!daLiveAuthService) return undefined;
 
         const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
 
@@ -211,6 +214,7 @@ async function performDaLiveCleanup(
             success: torn.contentDeleted,
             error: torn.error,
         });
+        return torn.stopped;
     } catch (error) {
         context.logger.error('[Delete Project] DA.live cleanup failed', error as Error);
         results.push({
@@ -220,6 +224,7 @@ async function performDaLiveCleanup(
             error: (error as Error).message,
         });
     }
+    return undefined;
 }
 
 /**
@@ -287,7 +292,7 @@ async function promptGitHubAuth(
     results: CleanupResultItem[],
 ): Promise<boolean> {
     const selection = await askDuringOperation(
-        'GitHub authentication required to delete the repository.',
+        { title: 'Sign in to GitHub', message: 'Sign in to GitHub to delete the repository.' },
         'Sign In',
     );
 
@@ -311,6 +316,9 @@ async function promptGitHubAuth(
 /**
  * Perform EDS external resource cleanup, reporting each step in the order
  * {@link edsCleanupSteps} lists them.
+ *
+ * @returns why the delete must stop, when the storefront's pages are still live: the
+ *   repository is then kept, and the caller keeps the project (EDS-65)
  */
 export async function performEdsCleanup(
     context: HandlerContext,
@@ -319,13 +327,15 @@ export async function performEdsCleanup(
     results: CleanupResultItem[],
     report: CleanupStepReport,
     services?: DeletionServices,
-): Promise<void> {
+): Promise<string | undefined> {
     // 1. Delete DA.live site
-    await performDaLiveCleanup(context, edsMetadata, options, results, report, services);
+    const stopped = await performDaLiveCleanup(context, edsMetadata, options, results, report, services);
+    if (stopped) return stopped;
 
     // 2. Delete GitHub repository
     const repo = repoToDelete(edsMetadata, options);
     if (repo) {
         await performGitHubCleanup(context, repo, results, report);
     }
+    return undefined;
 }

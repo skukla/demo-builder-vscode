@@ -102,8 +102,14 @@ export function extractCspNonce(headHtmlContent: string): string | undefined {
 }
 
 /**
- * Smart 404 JS template. Three substitutions handled by
- * `buildSmart404Snippet`:
+ * Smart 404 JS template — product pages, and category pages (EDS-61), which
+ * the overlay serves at each category's own address (`/signs`) and the same
+ * action publishes (only for a category the store lists, on a site that has
+ * opted in with its authored-pages sheet, at its cleaned path). A missing page
+ * cannot be told from a category by its shape, so for any other lowercase path
+ * the snippet asks quietly: no loading state, and on a refusal the storefront's
+ * own 404 stays as it was. The eager `head.html` redirect stays product-only.
+ * Three substitutions handled by `buildSmart404Snippet`:
  *   __TRIGGER_URL__ — sibling `prepublish-pdp` endpoint URL
  *   __ORG__         — storefront's DA.live org (also the action's `org` param)
  *   __SITE__        — storefront's DA.live site (also the action's `site` param)
@@ -115,19 +121,26 @@ export function extractCspNonce(headHtmlContent: string): string | undefined {
  */
 const SMART_404_SNIPPET_TEMPLATE = `
 ${SMART_404_MARKER_START}
-// Auto-publishes the per-product page when a visitor hits a cold PDP
-// URL. Matches /products/{urlKey}/{sku}; otherwise no-op. Replaces the
-// storefront's default "Page Not Found" body with a "Loading product…"
-// state the moment the gate passes so the user gets immediate feedback
-// during the ~1-2 second cold-publish window.
+// Auto-publishes the page when a visitor hits a cold product URL
+// (/products/{urlKey}/{sku}) or what may be a category's page (any other
+// lowercase path; never /404 or the /categories/default template). For a
+// product it replaces the storefront's default "Page Not Found" body with a
+// loading state during the ~1-2 second cold-publish window; for a maybe-
+// category it shows nothing until the page exists.
 (function smart404PdpRebuild() {
   if (!window.isErrorPage) return;
   const RETRY_FLAG = 'pdpRetry';
-  const m = window.location.pathname.match(/^\\/products\\/([^/]+)\\/([^/]+)$/);
-  if (!m) return;
+  const { pathname } = window.location;
+  const PRODUCT = /^\\/products\\/([^/]+)\\/([^/]+)$/;
+  const CATEGORY = /^(?:\\/[a-z0-9_-]+)+$/;
+  const isProduct = PRODUCT.test(pathname);
+  const isCategory = !isProduct && CATEGORY.test(pathname)
+    && pathname !== '/404' && pathname !== '/categories/default';
+  if (!isProduct && !isCategory) return;
   if (new URLSearchParams(window.location.search).has(RETRY_FLAG)) return;
-  const [, urlKey, sku] = m;
-  const lc = \`/products/\${urlKey.toLowerCase()}/\${sku.toLowerCase()}\`;
+  const lc = pathname.toLowerCase();
+  // Where the action may send us: a page of the same kind.
+  const PAGE_PATH = isProduct ? /^\\/products\\/[^/?#]+\\/[^/?#]+$/ : CATEGORY;
   // Reveal the body now that we're ready to show our own loading state.
   // The eager script in 404.html injected a "visibility: hidden" style
   // to suppress the default 404 chrome during the cold-path window;
@@ -144,20 +157,24 @@ ${SMART_404_MARKER_START}
   // main's class so the default 404 chrome (e.g. main.error's own
   // flex layout) does not compete with our flex centering and push
   // the message off-center.
-  const mainEl = document.querySelector('main');
-  // Loading state: a centered spinner with "Loading product…" caption.
-  // Uses storefront design tokens for color/typography with hardcoded
-  // fallbacks. Spinner is a CSS-only rotating ring (no images, no
-  // assets to load) so it renders instantly the moment we paint.
-  const WRAP = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;padding:var(--spacing-large,40px) var(--spacing-medium,20px);gap:var(--spacing-medium,20px);';
-  const SPIN = 'width:48px;height:48px;border:4px solid var(--color-neutral-200,#f0f0f0);border-top-color:var(--color-brand-500,#454545);border-radius:50%;animation:smart404Spin 0.8s linear infinite;';
-  const TEXT = 'font:var(--type-body-1-default-font,1.25rem/1.5 sans-serif);color:var(--color-brand-500,#454545);';
-  const ANIM = '<style>@keyframes smart404Spin{to{transform:rotate(360deg)}}</style>';
-  const LOADING_HTML = \`<div style="\${WRAP}"><div style="\${SPIN}"></div><div style="\${TEXT}">Loading product…</div></div>\${ANIM}\`;
-  if (mainEl) {
-    mainEl.className = '';
-    mainEl.innerHTML = LOADING_HTML;
+  function showLoading() {
+    const mainEl = document.querySelector('main');
+    // Loading state: a centered spinner with a "Loading product…" caption.
+    // Uses storefront design tokens for color/typography with hardcoded
+    // fallbacks. Spinner is a CSS-only rotating ring (no images, no
+    // assets to load) so it renders instantly the moment we paint.
+    const WRAP = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;padding:var(--spacing-large,40px) var(--spacing-medium,20px);gap:var(--spacing-medium,20px);';
+    const SPIN = 'width:48px;height:48px;border:4px solid var(--color-neutral-200,#f0f0f0);border-top-color:var(--color-brand-500,#454545);border-radius:50%;animation:smart404Spin 0.8s linear infinite;';
+    const TEXT = 'font:var(--type-body-1-default-font,1.25rem/1.5 sans-serif);color:var(--color-brand-500,#454545);';
+    const ANIM = '<style>@keyframes smart404Spin{to{transform:rotate(360deg)}}</style>';
+    const LOADING_HTML = \`<div style="\${WRAP}"><div style="\${SPIN}"></div><div style="\${TEXT}">Loading product…</div></div>\${ANIM}\`;
+    if (mainEl) {
+      mainEl.className = '';
+      mainEl.innerHTML = LOADING_HTML;
+    }
   }
+  // A maybe-category shows nothing of ours: most missing pages are no category.
+  if (isProduct) showLoading();
   (async () => {
     if (lc !== window.location.pathname) {
       try {
@@ -185,24 +202,27 @@ ${SMART_404_MARKER_START}
       r = await tryTrigger();
     }
     if (r && r.ok) {
-      // The action publishes the product at its one canonical path and says
+      // The action publishes the page at its one canonical path and says
       // where; an older link form (or any path Helix would clean) lands there.
       let target = lc;
       try {
         const body = await r.json();
-        if (body && typeof body.path === 'string' && /^\\/products\\/[^/?#]+\\/[^/?#]+$/.test(body.path)) {
+        if (body && typeof body.path === 'string' && PAGE_PATH.test(body.path)) {
           target = body.path;
         }
       } catch (_) { /* keep the requested path */ }
       window.location.replace(\`\${target}?\${RETRY_FLAG}=1\`);
       return;
     }
+    // A maybe-category the action refused is no category: the storefront's
+    // own 404 is already showing, untouched.
+    if (!isProduct) return;
     // Action failed after retry — the SKU has no publishable PDP
-    // (deleted, renamed, or never existed in Commerce). The honest UX
-    // is the storefront's native /404, not a custom in-place message
-    // that implies the product page exists. A full redirect makes the
-    // URL bar, history, and bookmarks all reflect reality. /404 does not
-    // match the PDP pattern, so this never loops.
+    // (deleted, renamed, or never existed in Commerce). The honest UX is
+    // the storefront's native /404, not a custom in-place message that
+    // implies the product page exists. A full redirect makes the URL bar,
+    // history, and bookmarks all reflect reality. /404 is excluded from
+    // both patterns, so this never loops.
     window.location.replace('/404');
   })();
 }());

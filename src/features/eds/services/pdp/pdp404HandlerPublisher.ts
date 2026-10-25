@@ -204,9 +204,9 @@ export async function installSmart404Handler(
     // the whole handler.
     await installSmart404HeadRedirect(githubFileOps, repoOwner, repoName, logger);
 
-    // 404.html is NOT written here: `updateNotFoundPage` owns every write to it, so its
-    // import map and this redirect land in one commit (EDS-45). Callers ask it for the
-    // redirect when this returns installed.
+    // 404.html is NOT written here: `bringStorefrontUpToDate` owns every write to it, so its
+    // import map and this redirect land in one write (EDS-45). It adds the redirect when
+    // this returns installed.
 
     return { installed: true };
 }
@@ -224,9 +224,10 @@ export async function installSmart404Handler(
  * has to be here too. Inserted before `</head>` so it runs during head parsing, before
  * body paint; appended when there is no `</head>`.
  *
- * Pure: `updateNotFoundPage` reads and writes the file. Answers null when there is
- * nothing to do or nothing safe to do: the snippet is already there, or the page has no
- * nonced script tag to take the CSP nonce from (the snippet would be blocked).
+ * Pure: `planStorefrontRepairs` reads the file and `bringStorefrontUpToDate` writes it.
+ * Answers null when there is nothing to do or nothing safe to do: the snippet is already
+ * there, or the page has no nonced script tag to take the CSP nonce from (the snippet
+ * would be blocked).
  *
  * @param html - the 404.html as read
  * @param logger - says why it skipped

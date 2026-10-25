@@ -5,6 +5,8 @@ import {
     buildComponentInfoList,
     resolveReviewIntegrationNames,
     resolveServiceNames,
+    reviewStorePreparation,
+    StorePreparationNotice,
 } from './reviewStepHelpers';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import { ContentColumn } from '@/core/ui/components/layout/ContentColumn';
@@ -309,6 +311,10 @@ export function ReviewStep({
     // the config's `components.appBuilder` is a hardcoded-empty legacy field,
     // and reading it here is what made hand-picked integrations invisible on
     // Review for months.
+    // Create (or an Edit's Finish) that adds the ERP integration prepares the store: said here,
+    // before the SC confirms (owner, 2026-10-22).
+    const storePreparation = useMemo(() => reviewStorePreparation(state, stack), [state, stack]);
+
     const integrationNames = useMemo(
         () => resolveReviewIntegrationNames(state, packages ?? [], stacks ?? []),
         [state, packages, stacks],
@@ -404,6 +410,7 @@ export function ReviewStep({
                     <View />
                 )}
             </div>
+            {storePreparation && <StorePreparationNotice preparation={storePreparation} />}
         </ContentColumn>
     );
 }
