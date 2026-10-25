@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # A storefront delete goes on deleting while its pages are still live
@@ -54,3 +54,7 @@ content is already gone and whose home page no longer answers, and stopping ther
 would leave an SC unable to finish a delete.
 
 Row 7.4 of the release test plan walks the button version of this.
+
+## Shipped so far
+
+- 2026-10-25  fix(eds): a storefront delete stops while its pages are still live (`d3ebc9945`)
