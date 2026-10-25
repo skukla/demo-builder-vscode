@@ -18,7 +18,10 @@ area, off by default) and the product page overlay is on, storefront setup:
    a `product-list-page` block with a `urlPath` row. It is an ordinary DA.live page. To
    change how every generated category page looks, the SC edits it (keeping the heading
    and the `urlPath` row) and republishes.
-3. adds a "Shop the catalog" line and a `catalog-menu` block to `/nav`. In the browser the
+3. adds a "Commerce: All" line and a `catalog-menu` block to `/nav` (an author types
+   "Commerce: <category name>" to place one category). The line was "Shop the catalog"
+   until 2026-10-25; a storefront's own copy of the block decides which spelling it reads,
+   so the nav is written in that one and an old line is rewritten once the block is updated. In the browser the
    block reads the category tree from Catalog Service, as the shopper, turns the line into
    one menu entry per top-level category, and links each to its own address. Hand-typed
    nav items stay where they are.

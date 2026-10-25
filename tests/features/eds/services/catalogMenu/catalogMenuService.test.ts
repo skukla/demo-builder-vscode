@@ -40,7 +40,7 @@ const TEMPLATE = '/categories/default';
 const AUTHORED = '<body><main><div><h1>Our cabinets</h1></div></main></body>';
 
 function deps(site: FakeStorefront, helix: FakeCategoryHelix, categories = CATEGORIES): CatalogMenuDeps {
-    return { pages: site.port, readCategories: async () => categories, categoryPages: helix.host };
+    return { pages: site.port, readCategories: async () => categories, menuLine: async () => 'commerce' as const, categoryPages: helix.host };
 }
 
 describe('applyCatalogMenu', () => {
@@ -292,7 +292,7 @@ describe('applyCatalogMenu — the pages the old model wrote', () => {
         const entry = { path: '/safety-signs', hash: hashOf(OLD_SIGNS) };
 
         const report = await applyCatalogMenu(
-            { pages: failing, readCategories: async () => CATEGORIES, categoryPages: helix.host },
+            { pages: failing, readCategories: async () => CATEGORIES, menuLine: async () => 'commerce' as const, categoryPages: helix.host },
             record([entry]),
         );
 

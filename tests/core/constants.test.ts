@@ -142,8 +142,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // v43: category pages come from the product page overlay; the two skills drop the
     // removed category-page tools and the autoAdd setting (EDS-61).
     // v44: the skills name `republish`, which took `sync_content`'s job (EDS-63).
-    it('is 44 (the skills name republish, not the removed sync_content)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(44);
+    // v45: header-nav-footer names the "Commerce: All" catalog line, not "Shop the catalog".
+    it('is 45 (header-nav-footer names the Commerce catalog line)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(45);
     });
 });
 

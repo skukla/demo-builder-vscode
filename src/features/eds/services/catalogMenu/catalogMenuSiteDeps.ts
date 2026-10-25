@@ -27,6 +27,7 @@ import { AUTHORED_SHEET_PATH, authoredSheetSource } from './authoredCategoryPage
 import type { CategoryPageHost } from './catalogMenuService';
 import type { CatalogMenuSite } from './catalogMenuStep';
 import { readStoreCategories, type CatalogQuery } from './categoryReader';
+import type { MenuLine } from './navSwitch';
 import { createStorefrontPages, type PageTransport } from './storefrontPageAdapter';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { buildCommerceEndpoints } from '@/features/ai/server/commerceEndpointsTool';
@@ -42,6 +43,13 @@ import type { StateManager } from '@/types/state';
 
 /** The file whose presence proves the storefront has the block. */
 export const CATALOG_MENU_BLOCK_FILE = 'blocks/catalog-menu/catalog-menu.js';
+/** The block's line rule lives here: "Commerce:" since 2026-10-25, "Shop the catalog" before. */
+export const CATALOG_MENU_CORE_FILE = 'blocks/catalog-menu/catalog-menu-core.js';
+
+/** Which line a copy of the block's code reads. Anything not the new rule is the old block. */
+export function menuLineOf(coreSource: string | null): MenuLine {
+    return coreSource && /\^commerce\b/.test(coreSource) ? 'commerce' : 'shop';
+}
 
 /** Where the storefront's pages and code live. */
 export interface CatalogMenuTarget {
@@ -137,6 +145,8 @@ export function createCatalogMenuSite(input: CatalogMenuSiteInput): CatalogMenuS
         hasBlock: async () =>
             (await github.getFileContent(target.repoOwner, target.repoName, CATALOG_MENU_BLOCK_FILE)) !== null,
         readCategories: () => readStoreCategories(query),
+        menuLine: async () =>
+            menuLineOf((await github.getFileContent(target.repoOwner, target.repoName, CATALOG_MENU_CORE_FILE))?.content ?? null),
         overlay: input.overlay ?? resolveByomOverlayConfig(undefined, target.daLiveOrg, target.daLiveSite) !== undefined,
         categoryPages: categoryPagesOf(input),
     };

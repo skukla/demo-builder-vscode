@@ -93,6 +93,7 @@ async function setUp(
         pages: s.port,
         hasBlock: async () => true,
         readCategories: async () => OLD_STORE,
+        menuLine: async () => 'commerce' as const,
         overlay: true,
         categoryPages: helix.host,
     };
@@ -115,6 +116,7 @@ async function setUp(
             pages: s.port,
             hasBlock: async () => true,
             readCategories: async () => NEW_STORE,
+            menuLine: async () => 'commerce' as const,
             overlay: true,
             categoryPages: {
                 ...helix.host,

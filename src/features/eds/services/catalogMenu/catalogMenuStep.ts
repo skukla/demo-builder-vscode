@@ -36,6 +36,7 @@ import { isEmptyRecord, readCatalogMenuRecord, writeCatalogMenuRecord } from './
 import { applyCatalogMenu, removeCatalogMenu, type CategoryPageHost } from './catalogMenuService';
 import { describeBuild, describeRemoval } from './catalogMenuSummary';
 import { planCategoryPages, type CatalogCategory } from './categoryPagePlan';
+import type { MenuLine } from './navSwitch';
 import { messageOf, type StorefrontPages } from './ownedPages';
 import type { Project } from '@/types/base';
 
@@ -46,6 +47,8 @@ export interface CatalogMenuSite {
     hasBlock(): Promise<boolean>;
     /** Every category of the project's store view. */
     readCategories(): Promise<CatalogCategory[]>;
+    /** Which line the storefront's copy of the block reads (`navSwitch.ts`). */
+    menuLine(): Promise<MenuLine>;
     /** Whether the product page overlay is registered for this storefront. */
     overlay: boolean;
     /** The overlay's category pages on Helix. */

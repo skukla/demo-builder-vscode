@@ -118,6 +118,7 @@ function navFailure(navError: string | undefined, retry: string): string {
 
 const BUILD_NAV: Record<Exclude<BuildFacts['nav'], 'failed'>, string> = {
     added: 'Added the catalog menu to your nav.',
+    'line-updated': "Rewrote the catalog menu lines in your nav in the wording your storefront's menu block reads.",
     'links-updated': 'Updated the catalog menu links in your nav.',
     'already-present': 'The catalog menu was already in your nav.',
     'no-menu-list': 'Your nav has no list for the menu line, so the menu was not added.',

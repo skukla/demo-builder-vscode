@@ -48,6 +48,7 @@ function siteOver(port: StorefrontPages, helix: FakeCategoryHelix = fakeCategory
         pages: port,
         hasBlock: async () => true,
         readCategories: async () => [{ id: '1', name: 'Signs and Labels', urlPath: 'signs' }],
+        menuLine: async () => 'commerce' as const,
         overlay: true,
         categoryPages: helix.host,
     };

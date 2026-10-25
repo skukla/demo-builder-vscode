@@ -33,7 +33,7 @@ const handBuilt = (urlPath: string): string =>
 const linkRow = (urlPath: string, path: string): string => `<div><div>${urlPath}</div><div>${path}</div></div>`;
 
 function deps(site: FakeStorefront, categories = CATEGORIES): CatalogMenuDeps {
-    return { pages: site.port, readCategories: async () => categories, categoryPages: fakeCategoryHelix().host };
+    return { pages: site.port, readCategories: async () => categories, menuLine: async () => 'commerce' as const, categoryPages: fakeCategoryHelix().host };
 }
 
 describe('applyCatalogMenu — a category that already has a page of its own', () => {
@@ -108,6 +108,7 @@ describe('applyCatalogMenu — a category that already has a page of its own', (
         const helix = fakeCategoryHelix();
         const failing: CatalogMenuDeps = {
             readCategories: async () => CATEGORIES,
+            menuLine: async () => 'commerce' as const,
             categoryPages: helix.host,
             pages: {
                 ...site.port,
@@ -149,6 +150,6 @@ describe('removeCatalogMenu — with category → page rows', () => {
         expect(report.nav).toBe('removed-kept-links');
         expect(site.pages.get('/nav')).toContain(linkRow('apparel', '/clothing'));
         expect(site.pages.get('/nav')).not.toContain('safety-signage');
-        expect(site.pages.get('/nav')).not.toContain('Shop the catalog');
+        expect(site.pages.get('/nav')).not.toContain('Commerce: All');
     });
 });

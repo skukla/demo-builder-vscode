@@ -13,6 +13,7 @@
 import { COMPONENT_IDS } from '@/core/constants';
 import {
     CATALOG_MENU_BLOCK_FILE,
+    CATALOG_MENU_CORE_FILE,
     createCatalogMenuSite,
 } from '@/features/eds/services/catalogMenu/catalogMenuSiteDeps';
 import { CATEGORIES_QUERY } from '@/features/eds/services/catalogMenu/categoryReader';
@@ -112,6 +113,27 @@ describe('createCatalogMenuSite', () => {
         expect(await site.hasBlock()).toBe(false);
         expect(getFileContent).toHaveBeenCalledWith('skukla', 'kukla-justrite', CATALOG_MENU_BLOCK_FILE);
         expect(CATALOG_MENU_BLOCK_FILE).toBe('blocks/catalog-menu/catalog-menu.js');
+    });
+
+    // The line rule, copied from demo-builder-block-library's catalog-menu-core.js: the
+    // block as it is since 2026-10-25, and as it was before (commit b160c2f).
+    const NEW_RULE = 'const LINE_PATTERN = /^commerce\\s*:\\s*(.+)$/i;';
+    const OLD_RULE = 'const LINE_PATTERN = /^shop the catalog\\s*(?::\\s*(.*))?$/i;';
+
+    it("reads which line the storefront's own copy of the block understands", async () => {
+        const getFileContent = jest
+            .fn()
+            .mockResolvedValueOnce({ content: NEW_RULE })
+            .mockResolvedValueOnce({ content: OLD_RULE })
+            .mockResolvedValueOnce(null);
+        const { site } = build(answers(), getFileContent);
+
+        expect(await site.menuLine()).toBe('commerce');
+        expect(await site.menuLine()).toBe('shop');
+        // A block too old to have the core file reads the old line too.
+        expect(await site.menuLine()).toBe('shop');
+        expect(getFileContent).toHaveBeenCalledWith('skukla', 'kukla-justrite', CATALOG_MENU_CORE_FILE);
+        expect(CATALOG_MENU_CORE_FILE).toBe('blocks/catalog-menu/catalog-menu-core.js');
     });
 
     it("reads and writes pages on the storefront's DA.live site", async () => {

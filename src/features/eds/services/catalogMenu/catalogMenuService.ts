@@ -58,6 +58,7 @@ import {
     readCategoryLinks,
     removeCatalogMenuSwitch,
     type AddSwitchStatus,
+    type MenuLine,
     type CategoryLink,
     type RemoveSwitchStatus,
 } from './navSwitch';
@@ -70,6 +71,8 @@ export interface CatalogMenuDeps {
     pages: StorefrontPages;
     /** Every category of the project's store view. */
     readCategories(): Promise<CatalogCategory[]>;
+    /** Which line the storefront's copy of the block reads, so the nav is written in it. */
+    menuLine(): Promise<MenuLine>;
     categoryPages: CategoryPageHost;
 }
 
@@ -136,7 +139,7 @@ const NO_MENU_CATEGORIES =
     'Catalog Service returned no categories marked "Include in Menu" for this store view';
 
 /** The nav outcomes that leave the switch in the nav. */
-const IN_NAV: Array<ApplyReport['nav']> = ['added', 'links-updated', 'already-present'];
+const IN_NAV: Array<ApplyReport['nav']> = ['added', 'line-updated', 'links-updated', 'already-present'];
 
 const EMPTY_RECORD: CatalogMenuRecord = { legacyPages: [], links: [], navSwitch: false };
 
@@ -179,11 +182,12 @@ async function switchNavOn(
     nav: NavRead,
     links: CategoryLink[],
     previous: CatalogMenuRecord,
+    menuLine: MenuLine,
 ): Promise<Pick<ApplyReport, 'nav' | 'navError'> & { links: CategoryLink[] }> {
     if ('error' in nav) return { nav: 'failed', navError: nav.error, links: previous.links };
     if (nav.html === null) return { nav: 'missing', links: [] };
     try {
-        const result = addCatalogMenuSwitch(nav.html, links, previous.links);
+        const result = addCatalogMenuSwitch(nav.html, links, previous.links, menuLine);
         if (result.html !== nav.html) await pages.write(NAV_PATH, result.html);
         return { nav: result.status, links: result.links };
     } catch (error) {
@@ -241,6 +245,7 @@ export async function applyCatalogMenu(
     const plan = planCategoryPages(categories);
     const planned = plan.pages.map((p) => p.path);
     const nav = await readNav(deps.pages);
+    const menuLine = await deps.menuLine();
     const { typed, found } = await ownPages(deps.pages, categories, previous, nav);
     // Read before any change; an old page of ours, as written, is never authored.
     const authored = await authoredAddresses(deps.pages, planned, previous.legacyPages);
@@ -262,7 +267,7 @@ export async function applyCatalogMenu(
     const links = [...found]
         .filter(([urlPath]) => !typed.has(normaliseUrlPath(urlPath)))
         .map(([urlPath, path]) => ({ urlPath, path }));
-    const switched = await switchNavOn(deps.pages, nav, links, previous);
+    const switched = await switchNavOn(deps.pages, nav, links, previous, menuLine);
     return {
         ...published,
         deferred: !deps.categoryPages.publishAtSetup,

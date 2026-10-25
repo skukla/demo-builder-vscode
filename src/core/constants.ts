@@ -308,7 +308,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // does (settings, code and every page), and `sync_content`, which did that job under
 // another name, is removed. sync-changes, diagnose-demo, header-nav-footer and
 // author-commerce-data name `republish`; existing projects would keep naming a removed tool.
-export const AI_CONTEXT_VERSION = 44;
+// v45 (2026-10-25): the nav's catalog line is "Commerce: All" / "Commerce: <category>",
+// not "Shop the catalog". header-nav-footer says so; existing projects would keep telling
+// the agent to type the old line.
+export const AI_CONTEXT_VERSION = 45;
 
 /**
  * Component IDs for standardized component instance access

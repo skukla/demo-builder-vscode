@@ -62,6 +62,7 @@ function site(
         pages: s.port,
         hasBlock: async () => true,
         readCategories: async () => categories,
+        menuLine: async () => 'commerce' as const,
         overlay: true,
         categoryPages: helix.host,
         ...over,

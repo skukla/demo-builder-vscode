@@ -1,7 +1,7 @@
 /**
  * The nav switch — the content that turns the catalog menu on (EDS-24).
  *
- * Two parts, both content in the nav document: a "Shop the catalog" line in the menu
+ * Two parts, both content in the nav document: a "Commerce: All" line in the menu
  * list, and a one-cell `catalog-menu` block table. The block (in the Demo Builder block
  * library) rewrites the line when the header loads the nav. Adding them is a merge into
  * whatever the SC authored; removing them is the undo.
@@ -36,14 +36,14 @@ describe('addCatalogMenuSwitch', () => {
         expect(result.status).toBe('added');
         expect(result.html).toBe(
             nav(
-                `<ul><li>${CATALOG_MENU_LINE}</li><li>Custom Signs</li><li>Resources</li></ul>`,
+                `<ul><li>${CATALOG_MENU_LINE.commerce}</li><li>Custom Signs</li><li>Resources</li></ul>`,
                 BLOCK_SECTION,
             ),
         );
     });
 
     it('keeps a line the SC already typed (named or bare) and only adds the block', () => {
-        const list = '<ul><li>Custom Signs</li><li>Shop the catalog: Safety Signs</li></ul>';
+        const list = '<ul><li>Custom Signs</li><li>Commerce: Safety Signs</li></ul>';
         const result = addCatalogMenuSwitch(nav(list));
 
         expect(result.status).toBe('added');
@@ -73,6 +73,49 @@ describe('addCatalogMenuSwitch', () => {
     });
 });
 
+/**
+ * The line was "Shop the catalog" until 2026-10-25 and is "Commerce: All" now (owner).
+ * Each storefront has its own copy of the block, and an older copy reads only the old
+ * line, so the nav is written in the spelling the storefront's block reads.
+ */
+describe('the line, in the spelling the storefront\'s block reads', () => {
+    const SWITCHED = (list: string): string => nav(list, BLOCK_SECTION);
+
+    it('rewrites old lines, bare and named, once the block reads the new one, keeping each name', () => {
+        const html = SWITCHED('<ul><li><p>Shop the catalog</p></li><li>shop the catalog:  Safety &amp; Exit </li><li>Resources</li></ul>');
+
+        const result = addCatalogMenuSwitch(html, [], [], 'commerce');
+
+        expect(result.status).toBe('line-updated');
+        expect(result.html).toBe(
+            SWITCHED('<ul><li><p>Commerce: All</p></li><li>Commerce: Safety &amp; Exit</li><li>Resources</li></ul>'),
+        );
+    });
+
+    it('leaves the old line alone, and adds the old one, while the storefront\'s block is old', () => {
+        const old = SWITCHED('<ul><li>Shop the catalog: Safety Signs</li></ul>');
+        expect(addCatalogMenuSwitch(old, [], [], 'shop')).toMatchObject({ status: 'already-present', html: old });
+
+        const fresh = addCatalogMenuSwitch(nav('<ul><li>Resources</li></ul>'), [], [], 'shop');
+        expect(fresh.html).toBe(SWITCHED('<ul><li>Shop the catalog</li><li>Resources</li></ul>'));
+    });
+
+    it('writes a new line back in the old spelling for an old block, "All" as the bare line', () => {
+        const html = SWITCHED('<ul><li>Commerce: ALL</li><li>Commerce: Safety Signs</li></ul>');
+
+        expect(addCatalogMenuSwitch(html, [], [], 'shop').html).toBe(
+            SWITCHED('<ul><li>Shop the catalog</li><li>Shop the catalog: Safety Signs</li></ul>'),
+        );
+    });
+
+    it('never treats a menu item that is just "Commerce" as a catalog line', () => {
+        const result = addCatalogMenuSwitch(nav('<ul><li>Commerce</li></ul>'));
+
+        expect(result.html).toBe(SWITCHED(`<ul><li>${CATALOG_MENU_LINE.commerce}</li><li>Commerce</li></ul>`));
+        expect(removeCatalogMenuSwitch(result.html).html).toBe(nav('<ul><li>Commerce</li></ul>'));
+    });
+});
+
 describe('removeCatalogMenuSwitch', () => {
     it('is the exact undo of add', () => {
         const original = nav('<ul><li>Custom Signs</li><li>Resources</li></ul>');
@@ -84,10 +127,11 @@ describe('removeCatalogMenuSwitch', () => {
         expect(result.html).toBe(original);
     });
 
-    it('removes every catalog line, named ones too, and leaves hand-typed items alone', () => {
+    it('removes every catalog line, named ones too, in both spellings, and leaves hand-typed items alone', () => {
         const html = nav(
-            '<ul><li>Custom Signs</li><li><p>Shop the catalog</p></li>' +
-                '<li>shop the catalog: Safety Signs</li><li>Resources<ul><li><a href="/g">Guides</a></li></ul></li></ul>',
+            '<ul><li>Custom Signs</li><li><p>Commerce: All</p></li><li>commerce: Safety Signs</li>' +
+                '<li><p>Shop the catalog</p></li><li>shop the catalog: Exit Signs</li>' +
+                '<li>Resources<ul><li><a href="/g">Guides</a></li></ul></li></ul>',
             BLOCK_SECTION,
         );
 
@@ -134,7 +178,7 @@ describe('category → page rows', () => {
 
         expect(result.status).toBe('added');
         expect(result.html).toBe(
-            nav(`<ul><li>${CATALOG_MENU_LINE}</li><li>Resources</li></ul>`, table(row('signs', '/safety-signage'))),
+            nav(`<ul><li>${CATALOG_MENU_LINE.commerce}</li><li>Resources</li></ul>`, table(row('signs', '/safety-signage'))),
         );
         expect(result.links).toEqual([SIGNS]);
     });
@@ -164,7 +208,7 @@ describe('category → page rows', () => {
     });
 
     it("keeps a row the SC typed, and does not add a second row for that category", () => {
-        const typed = nav('<ul><li>Shop the catalog</li></ul>', table(row('Signs', '/our-signs')));
+        const typed = nav('<ul><li>Commerce: All</li></ul>', table(row('Signs', '/our-signs')));
 
         const result = addCatalogMenuSwitch(typed, [SIGNS, APPAREL]);
 

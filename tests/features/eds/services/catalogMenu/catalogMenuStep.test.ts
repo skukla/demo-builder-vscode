@@ -59,6 +59,7 @@ function site(
         pages: s.port,
         hasBlock: async () => true,
         readCategories: jest.fn(async () => CATEGORIES),
+        menuLine: async () => 'commerce' as const,
         overlay: true,
         categoryPages: helix.host,
         ...overrides,
