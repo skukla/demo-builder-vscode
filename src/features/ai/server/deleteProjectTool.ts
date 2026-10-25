@@ -39,7 +39,7 @@ export function registerDeleteProjectTool(
             needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Permanently delete a project: its local files, and optionally its GitHub repo and DA.live site (which also unpublishes the storefront and removes its product pages; productPages in the result says what happened to them; daLiveSite.publishSummary says whether the pages are gone, checked on the live host, or that it could not tell). Irreversible. Requires confirm:true and confirmName="<project name>".',
+                'Permanently delete a project: its local files, and optionally its GitHub repo and DA.live site (which also unpublishes the storefront and removes its product pages; productPages in the result says what happened to them; daLiveSite.publishSummary says whether the pages are gone, checked on the live host, or that it could not tell). When the pages are still live it stops: nothing else is deleted, the project is kept, and stopped says why. Irreversible. Requires confirm:true and confirmName="<project name>".',
             inputSchema: {
                 name: z.string().describe('Name of the project to delete'),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
@@ -95,6 +95,10 @@ export function registerDeleteProjectTool(
                 deleteDaLiveSite: tickOf(args?.deleteDaLiveSite),
             });
             const cloud = await cleanUpProjectCloud(ctx, project, choice);
+            // Pages still live: the project is how a second try finds them (EDS-65).
+            if (cloud.stopped) {
+                return asText({ deleted: false, name, ...cloud, error: cloud.stopped });
+            }
 
             try {
                 // The button's own words for the step it runs (PL-59 slice 7).

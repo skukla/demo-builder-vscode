@@ -182,3 +182,25 @@ describe('the sign-in an agent delete hands the storefront teardown', () => {
         expect(outcome.daLiveSite?.error).toContain('DA.live');
     });
 });
+
+// EDS-65: on 2026-10-25 the DA.live sign-in had expired, the Adobe fallback was refused
+// by Helix, and the repository was deleted anyway. A teardown that stopped keeps it.
+describe('when the teardown stops because the pages are still live', () => {
+    const STOPPED = 'The pages could not be taken off the live site, so nothing else was deleted.';
+
+    it('keeps the repository and says why', async () => {
+        mockDaLiveSessionToken.mockResolvedValue(null);
+        mockTearDown.mockResolvedValue({ contentDeleted: false, stillPublished: true, stopped: STOPPED, error: STOPPED });
+        const { getGitHubServices } = jest.requireMock('@/features/eds/handlers/edsHelpers') as { getGitHubServices: jest.Mock };
+
+        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
+            deleteDaLiveSite: true,
+            deleteGithubRepo: true,
+        });
+
+        expect(getGitHubServices).not.toHaveBeenCalled();
+        expect(outcome.githubRepo).toBeUndefined();
+        expect(outcome.stopped).toBe(STOPPED);
+        expect(outcome.daLiveSite).toMatchObject({ contentDeleted: false, stillPublished: true, error: STOPPED });
+    });
+});

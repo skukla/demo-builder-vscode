@@ -381,6 +381,24 @@ describe('the two cloud choices', () => {
         });
     });
 
+    // EDS-65: the project is how a second try finds the pages that are still live.
+    it('keeps the project, and says why, when the cloud step stopped with pages still live', async () => {
+        const stopped = 'The pages could not be taken off the live site, so nothing else was deleted.';
+        const daLiveSite = { name: 'jen/alpha', contentDeleted: false, stillPublished: true, publishSummary: '', error: stopped };
+        cleanUpProjectCloudMock.mockResolvedValue({ stopped, daLiveSite });
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        expect(await s.call({ ...CONFIRMED, deleteDaLiveSite: true, deleteGithubRepo: true })).toEqual({
+            deleted: false,
+            name: 'alpha',
+            stopped,
+            daLiveSite,
+            error: stopped,
+        });
+        expect(deleteProjectFilesMock).not.toHaveBeenCalled();
+    });
+
     it('says the setting refused when "localOnly" overrode a tick', async () => {
         cleanupBehavior('localOnly');
         const s = fakeServer();

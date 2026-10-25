@@ -535,7 +535,11 @@ what Helix lists as published, not only what DA.live still holds, then checks th
 host. `stillPublished` is false only when that check found the pages gone;
 `publishState` (`down`, `still-live`, `unknown`) and `publishSummary` say which, in words,
 including "could not tell" (EDS-33). `delete_project` carries `publishSummary` under
-`daLiveSite`.
+`daLiveSite`. When the check finds pages still live (`still-live`), the teardown stops
+there: the DA.live content, the site settings and, for `delete_project`, the repository
+and the project are kept, `stopped` says why, and `delete_project` answers
+`deleted: false` (EDS-65). Deleting them would leave a live site with nothing to take it
+down by.
 
 `delete_page` deliberately uses the plain `confirm: true` gate instead — it removes
 one page from the current project's own storefront, not a whole repository or site.

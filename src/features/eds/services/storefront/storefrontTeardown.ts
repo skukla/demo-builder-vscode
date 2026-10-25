@@ -26,6 +26,17 @@
  * route. An SC cannot return to zero through an agent that way, which is the
  * first property this extension holds (AI-9, answered 2026-09-19).
  *
+ * **It stops while the pages are still live (EDS-65).** When the live check finds
+ * pages still answering, nothing else is deleted: not the Admin API key, the DA.live
+ * content or the site config, and `stopped` tells the caller to keep the repository
+ * and the project too. Deleting them would leave a live site with nothing behind it
+ * to take it down by: on 2026-10-25 Helix refused every unpublish of scratch-1022
+ * ("[admin] not authenticated", an expired DA.live sign-in with the Adobe token as
+ * the fallback), DA.live accepted the same token, and the delete went on to remove
+ * the content, the repository and the project. `unknown` does not stop it: that is
+ * also the answer for a site whose content is already gone and whose home page no
+ * longer answers, and stopping there would leave the delete impossible to finish.
+ *
  * Without a repo there is nothing to unpublish against: the teardown says so in
  * `stillPublished` rather than reporting a clean finish, because "the source is
  * gone" and "the site is down" are different claims. `stillPublished` is false
@@ -141,12 +152,23 @@ export interface StorefrontTeardownResult {
      * reports the teardown without it can hide pages that are still live.
      */
     productPages?: ProductPageRemovalResult;
+    /**
+     * Set when the teardown stopped because pages are still live: why, and what to do,
+     * for the SC. Nothing after the unpublish ran, and the caller must keep the
+     * repository and the project too, so a second try can still take the pages down.
+     */
+    stopped?: string;
     /** Whether the DA.live source documents went. */
     contentDeleted: boolean;
     /** How many source documents were deleted. */
     deletedCount?: number;
     error?: string;
 }
+
+/** What a stopped teardown says (EDS-65). */
+export const STOPPED_STILL_LIVE =
+    'The pages could not be taken off the live site, so nothing else was deleted. ' +
+    'Sign in to DA.live again, then try again.';
 
 /** Whether there is a repository to take the pages off the CDN by. */
 function repoOf(target: StorefrontTeardownTarget): { owner: string; repo: string } | undefined {
@@ -170,7 +192,9 @@ export function teardownSteps(target: StorefrontTeardownTarget): string[] {
  * Take the storefront down: CDN first, then the source, then its config.
  *
  * Never throws: each step reports and the next still runs, because a half-torn
- * storefront is worse than a fully torn one. The result says what happened.
+ * storefront is worse than a fully torn one, with one exception: pages found still
+ * live stop it (`stopped`), since deleting the rest would strand them. The result
+ * says what happened.
  */
 export async function tearDownStorefront(
     target: StorefrontTeardownTarget,
@@ -220,6 +244,11 @@ export async function tearDownStorefront(
                     logger,
                 },
             );
+
+            if (unpublished.publishState === 'still-live') {
+                logger.warn(`[Teardown] ${daLiveOrg}/${daLiveSite} is still live; stopping before anything else is deleted`);
+                return { ...result, stopped: STOPPED_STILL_LIVE, error: STOPPED_STILL_LIVE };
+            }
 
             const keyDeleted = await helix.deleteAdminApiKey(daLiveOrg, daLiveSite);
             if (!keyDeleted.success) {

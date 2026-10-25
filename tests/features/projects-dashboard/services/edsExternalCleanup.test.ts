@@ -127,8 +127,10 @@ describe('the CDN unpublish step', () => {
     });
 
     // EDS-33: a site whose pages may still be live is shown as such, never left out.
-    it('records a failed helix result, with the sentence, when the unpublish failed', async () => {
-        armQuickPick('accept', ['daLive']);
+    // EDS-65: and the delete stops there. The repository and the project are how a
+    // second try takes the pages down, so neither goes while the pages are live.
+    it('records a failed helix result, with the sentence, and keeps everything else when pages are still live', async () => {
+        armQuickPick('accept', ['daLive', 'github']);
         mockUnpublishPages.mockResolvedValue({
             success: false, count: 0, total: 2, liveFailed: 2, previewFailed: 0,
         });
@@ -143,9 +145,14 @@ describe('the CDN unpublish step', () => {
                 error: '2 of 2 pages could not be taken off main--demo-storefront--skukla.aem.live and may still be live.',
             },
         ]);
-        // ...and it must not stop the rest of the deletion.
-        expect(mockDeleteDaLiveSite).toHaveBeenCalled();
-        expect(mockRm).toHaveBeenCalled();
+        expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
+        expect(mockDeleteRepository).not.toHaveBeenCalled();
+        expect(mockRm).not.toHaveBeenCalled();
+        expect(result.data).toMatchObject({
+            success: false,
+            error: 'The pages could not be taken off the live site, so nothing else was deleted. ' +
+                'Sign in to DA.live again, then try again.',
+        });
     });
 
     it('records the repo as cleaned when pages were unpublished', async () => {
