@@ -98,7 +98,7 @@ describe('applyFinish', () => {
         const result = await finish(questions);
 
         expect(questions.onUnfinished).toHaveBeenCalledWith(justrite, 'blocks/header/header.js still has conflict markers');
-        expect(result.errors).toEqual(['JustRite: not finished yet, because blocks/header/header.js still has conflict markers.']);
+        expect(result.errors).toEqual(['JustRite: the AI is having another go. Nothing goes live until you approve it.']);
         // keptIn is what makes the boundary open the SC's AI on it again.
         expect(result.clashes).toEqual([
             { project: 'JustRite', projectName: 'justrite', track: 'boilerplate', files: CLASH.files, keptIn: STOREFRONT },
@@ -111,6 +111,7 @@ describe('applyFinish', () => {
 
         const result = await finish(asking('later'));
 
+        expect(result.errors).toEqual(['JustRite: the fix waits in Check for Updates.']);
         expect(result.clashes?.[0]).not.toHaveProperty('keptIn');
         expect(leaveMock).not.toHaveBeenCalled();
     });
@@ -122,7 +123,7 @@ describe('applyFinish', () => {
         const result = await finish(asking('leave'), c);
 
         expect(leaveMock).toHaveBeenCalledWith(justrite, c);
-        expect(result.errors).toEqual(['JustRite: the fix was dropped; the Adobe boilerplate update is offered again.']);
+        expect(result.errors).toEqual(['JustRite: the fix was dropped. The update will be offered again.']);
         expect(result.clashes).toBeUndefined();
     });
 

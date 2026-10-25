@@ -21,6 +21,12 @@ import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
 
+/** What happens next to a fix that is not finished, by the SC's answer. */
+const NEXT: Record<'fix' | 'later', string> = {
+    fix: 'the AI is having another go. Nothing goes live until you approve it',
+    later: 'the fix waits in Check for Updates',
+};
+
 const WHICH: Record<'template' | 'boilerplate', string> = {
     template: 'update',
     boilerplate: 'Adobe boilerplate update',
@@ -39,10 +45,12 @@ async function settleUnfinished(
     result.failCount++;
     if (answer === 'leave') {
         await leaveClash(project, ctx);
-        result.errors.push(`${name}: the fix was dropped; the ${WHICH[entry.clash.track]} is offered again.`);
+        result.errors.push(`${name}: the fix was dropped. The update will be offered again.`);
         return;
     }
-    result.errors.push(`${name}: not finished yet, because ${reason}.`);
+    // An agent gets the reason to act on; a person gets what happens next (owner, 2026-10-24).
+    const next = questions ? NEXT[answer] : `not finished yet, because ${reason}`;
+    result.errors.push(`${name}: ${next}.`);
     const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
     // A clash still kept, so the SC's AI can be opened on it again (the boundary does that).
     (result.clashes ??= []).push({

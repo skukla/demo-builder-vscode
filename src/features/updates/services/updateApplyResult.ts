@@ -120,8 +120,8 @@ export function answeredClashOutcome(result: CategoryResult): ItemOutcome {
 
 /** What a clash the SC answered says under its row, which already names the update. */
 function answeredClashLine(clash: ClashReport): string {
-    if (clash.keptIn) return 'Not updated yet — kept in your local copy for your AI to fix. Nothing was pushed.';
-    return `Not updated — your edits in ${clash.files.join(', ')} were left as they are.`;
+    if (clash.keptIn) return 'Not updated yet. Your AI is working on it, and nothing goes live until you approve it.';
+    return 'Not updated. The earlier edits were left as they are.';
 }
 
 const LINE_LISTS = ['deferred', 'applied', 'installed', 'leftOut'] as const;
