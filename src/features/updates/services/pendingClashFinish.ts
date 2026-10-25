@@ -100,13 +100,23 @@ async function checkJavaScript(file: string, text: string, ctx: UpdateContext): 
     }
 }
 
+/**
+ * The same file content: equal ids, or one a shortened form of the other. Records kept
+ * before ids were read in full hold git's short form, whose length git picks per repo
+ * and per day (JustRite's held 9 characters and git said 8 at finishing, 2026-10-24).
+ */
+function sameObject(a: string | null | undefined, b: string | null | undefined): boolean {
+    if (!a || !b) return a === b;
+    return a.startsWith(b) || b.startsWith(a);
+}
+
 /** The first path the copy changed beyond the update and the clash, if any. */
 function strayChange(now: Record<string, string | null>, applied: Record<string, string | null>, files: string[]): string | undefined {
     const clash = new Set(files);
     const paths = new Set([...Object.keys(now), ...Object.keys(applied)]);
     for (const file of paths) {
         if (clash.has(file)) continue;
-        if (now[file] !== applied[file]) return file;
+        if (!sameObject(now[file], applied[file])) return file;
     }
     return undefined;
 }
