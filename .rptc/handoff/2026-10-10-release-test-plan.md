@@ -375,12 +375,17 @@ It reads this file and says what is ready, what failed and what is still uncheck
 
 # Part 2. Still open from the 2026-10-04 plan
 
-**65 rows, carried over word for word. 11 already have a result. 17 are starred.** Not
+**64 rows, carried over word for word. 16 are starred.** Not
 part of the two hours above. The old plan put itself at about 3 hours in full, and most of it
 is here. The rows are here because this file is now the newest plan, and `readiness` reads only
 the newest.
 The 14 rows of the old plan that a row in Part 1 now covers were left behind. "Today" in a row
 means 2026-10-04.
+
+**Decided 2026-10-25 (owner): this release is cut on Part 1's starred rows.** Part 2's starred
+rows that this release did not change say so in their result and wait for the next sitting; the
+one whose feature this release did change, a new category reaching the menu, is walked with
+Part 1. The Storefront Report row was deleted with the report itself.
 
 **Opening Demo Builder and the AI tools**
 
@@ -402,7 +407,7 @@ means 2026-10-04.
 |---|---|---|---|
 | ★ | Look at Your Projects in grid view and list view | No header "New" button. A dashed **New project** card is last; it opens New / Copy from existing / Import from file. It hides while you filter [PL-62] | Pass 2026-10-06: dashed card last, menu offers all three, hidden while filtering |
 | ★ | **Export** Justrite | The file is named `justrite.project.demo-builder.json`. Open it: no passwords, keys or tokens anywhere [PL-56c] | Pass 2026-10-06: right name; only endpoints, store codes and Adobe ids — no secrets. Notice now names the path with Open File / Reveal in Finder |
-| ★ | **Import from file** using that export (into a new name) | It asks you to sign in to GitHub and DA.live like a new project does. It gets its own repository. Integrations, datapack, store setup and settings all come back [PL-56d] |  |
+| ★ | **Import from file** using that export (into a new name) | It asks you to sign in to GitHub and DA.live like a new project does. It gets its own repository. Integrations, datapack, store setup and settings all come back [PL-56d] | not walked for this release (owner, 2026-10-25): this release did not change it |
 | | **Copy from existing** on Justrite. **Stop before Finish** (added 2026-10-14): the copy carries the ERP integration, and finishing would install it on Justrite's Commerce a second time | The wizard opens with Justrite's choices, datapack and store structure, no credentials, and a new repository [PL-56e] |  |
 | | ~~**Edit** a project~~ Replaced 2026-10-14 by Part 1 rows 3.15 to 3.18: Edit now locks the name, Commerce settings and libraries, and no longer pre-selects the demo's datapack | See those rows | replaced |
 | | Delete the scratch copy | It's gone, and its stored secrets go with it [PL-64] |  |
@@ -414,14 +419,13 @@ means 2026-10-04.
 | | Create a new repository in the Storefront area | The new repository becomes the selected one; the Code Sync notice sits centred [EDS-18, EDS-19] |  |
 | | Pick an **empty repository an organization made for you** | Setup writes a first commit, applies the template and finishes [EDS-17 — *built, not yet tried live*] |  |
 | | Trigger a GitHub organization refusal (single sign-on not authorized, or an org that hasn't approved the app) | A plain message saying what to do, not "Access denied" [EDS-17] |  |
-| ★ | **Add a demo** by link to a colleague's storefront (e.g. `sayurihanki/aistore`) | It shows "Built on Adobe's Commerce boilerplate …", warns if older than 6.0.0, and says whether you can read their DA.live site, and who must grant access if not [EDS-13, EDS-22] |  |
+| ★ | **Add a demo** by link to a colleague's storefront (e.g. `sayurihanki/aistore`) | It shows "Built on Adobe's Commerce boilerplate …", warns if older than 6.0.0, and says whether you can read their DA.live site, and who must grant access if not [EDS-13, EDS-22] | not walked for this release (owner, 2026-10-25): this release did not change it |
 | | Zip or share a storefront that has a `.env` file in it | The `.env` file is never in the zip, the shared bundle or the sync [security fix] |  |
 
 **The project dashboard**
 
 | | Do this | Expect | Result |
 |---|---|---|---|
-| ★ | Run the **Storefront Report** on a storefront forked from our template | It says what it's built on and which fixes fit. If the template has newer code, it offers to bring it in, and the default is No [EDS-13f] |  |
 
 **Category and product pages (Edge Delivery storefronts)**
 
@@ -440,7 +444,7 @@ means 2026-10-04.
 
 | | Do this | Expect | Result |
 |---|---|---|---|
-| ★ | Add the blank starter app, name it, then use **Save to GitHub** on its card | It asks first (public repository, file count). One commit lands on GitHub, with no `.env`, `node_modules` or `dist`. Then **Delete its GitHub repository** undoes it, and the app is a starter again [AB-1c — *first real run*] |  |
+| ★ | Add the blank starter app, name it, then use **Save to GitHub** on its card | It asks first (public repository, file count). One commit lands on GitHub, with no `.env`, `node_modules` or `dist`. Then **Delete its GitHub repository** undoes it, and the app is a starter again [AB-1c — *first real run*] | not walked for this release (owner, 2026-10-25): this release did not change it |
 | | Add any integration | It gets its own Adobe workspace, and no Stage workspace is created [AB-23, AB-24]. *Also covered by Part 1 rows 2.11 and 4.20* |  |
 | | Open an integration's **Settings** from its tile | Settings are edited there, not on Configure Project; saving redeploys [AB-21] |  |
 | | Read the integration's detail panel, then **Remove** it | The panel explains the optional App Management listing. Remove warns the listing stays until unassociated in Commerce Admin, and reports anything left behind [AB-11, AB-12, AB-33] |  |
@@ -459,13 +463,13 @@ means 2026-10-04.
 
 | | Do this | Expect | Result |
 |---|---|---|---|
-| ★ | In each ERP, confirm, ship and invoice its part | Commerce shows the shipments and invoices. Each ERP's on-hand stock drops by what it shipped [AB-26g, AB-63] |  |
+| ★ | In each ERP, confirm, ship and invoice its part | Commerce shows the shipments and invoices. Each ERP's on-hand stock drops by what it shipped [AB-26g, AB-63] | covered by Part 1 row 5.3, pass 2026-10-22: the same confirm, ship, invoice and pay on both ERPs |
 | | Ship or invoice from **Commerce Admin** instead | The change reaches the right ERP [AB-26g] |  |
 | | Order with a cart price rule | Each ERP line shows its discount, carried through the invoice, return and credit memo [AB-16l] |  |
-| ★ | Create a return in Commerce Admin for both lines | Each ERP gets a return for its line; receiving it and posting a credit memo gives Commerce a credit memo for just those lines, and the return closes [AB-16e, AB-26r] |  |
+| ★ | Create a return in Commerce Admin for both lines | Each ERP gets a return for its line; receiving it and posting a credit memo gives Commerce a credit memo for just those lines, and the return closes [AB-16e, AB-26r] | not walked for this release (owner, 2026-10-25): this release did not change it |
 | | **Repeat order** in the ERP | A new order with the same lines [AB-26r] |  |
 | | Rename a product in the ERP twice within 20 seconds | The second edit sticks [AB-62] |  |
-| ★ | At **1280 pixels wide**, go through Pricing, Sales Orders, an order with open lines, Customers and Settings | No button is cut off. Remove, Edit and Close are first in their rows. Settings is one column [today's fix] |  |
+| ★ | At **1280 pixels wide**, go through Pricing, Sales Orders, an order with open lines, Customers and Settings | No button is cut off. Remove, Edit and Close are first in their rows. Settings is one column [today's fix] | not walked for this release (owner, 2026-10-25): this release did not change it |
 | | Drag a few column edges in any ERP grid | Text and number columns resize [grid audit] |  |
 | | Follow the order's progress strip on an order with a return | All stages fit at 1280 with no sideways scroll [today's fix] |  |
 
@@ -473,7 +477,7 @@ means 2026-10-04.
 
 | | Ask the agent | Expect | Result |
 |---|---|---|---|
-| ★ | "Edit the home page headline and publish it" | It asks before writing, and again before publishing [write_page] |  |
+| ★ | "Edit the home page headline and publish it" | It asks before writing, and again before publishing [write_page] | not walked for this release (owner, 2026-10-25): this release did not change it |
 | | "Copy the Justrite project as justrite-copy" | A new project with no credentials [PL-56f] | skip unless the copy can leave the ERP integration out: it would install on Justrite's Commerce a second time (added 2026-10-14) |
 | | "Create a project for the Justrite website and store view" | The store scope is set, so the right products show [AI-11] |  |
 | ★ | "Add the ERP integration; call the ERP Brand B ERP" (scratch project) | The first ERP is named Brand B ERP. The agent asks you for the name first, because it can't change later [AB-67] | skip: one Commerce (2026-10-12) |
