@@ -5,7 +5,8 @@
  * A row's id is its kind and its place in that kind's list in the check
  * (`blockLibrary:2`), so it leads back to exactly the entry it was made from, and only
  * within that check: the extension keeps the check the screen was shown and applies the
- * ids against it.
+ * ids against it. When it no longer has that check, `matchFresh` finds the rows in a new
+ * one by what they say.
  *
  * Everything that can be applied from here starts ticked, except an integration pair:
  * applying one redeploys it to the live Adobe workspace and nothing asks first, so the
@@ -230,6 +231,44 @@ export function rowIdsOf(selections: UpdateSelections): Map<object, string> {
  */
 function sameUpdate(row: PendingUpdateRow): string {
     return JSON.stringify([row.group.key, row.kind, row.label]);
+}
+
+/** A row the SC ticked that a fresh check no longer lists as the SC saw it. */
+export interface GoneRow {
+    row: PendingUpdateRow;
+    /** `newer`: listed with other words, a newer version; `applied`: not listed at all. */
+    why: 'newer' | 'applied';
+}
+
+/**
+ * The SC's ticked rows in a fresh check, for when the check they were shown is gone. A
+ * fresh row with the same words is the update the SC ticked, so the SC agreed to exactly
+ * it. One listed with other words (a new version number) is not, and one not listed at
+ * all has been applied since.
+ *
+ * @param ticked - the rows the SC ticked, as the screen showed them
+ * @param fresh - the rows of a check made now
+ * @returns each matched fresh row's id with the id the screen knows it by, and the rest
+ */
+export function matchFresh(
+    ticked: PendingUpdateRow[],
+    fresh: PendingUpdateRow[],
+): { shownIdOf: Map<string, string>; gone: GoneRow[] } {
+    const exact = (row: PendingUpdateRow) => JSON.stringify([sameUpdate(row), row.detail]);
+    const unclaimed = fresh.filter((row) => !row.lockedReason);
+    const shownIdOf = new Map<string, string>();
+    const gone: GoneRow[] = [];
+    for (const row of ticked) {
+        const at = unclaimed.findIndex((candidate) => exact(candidate) === exact(row));
+        if (at >= 0) {
+            shownIdOf.set(unclaimed[at].id, row.id);
+            unclaimed.splice(at, 1);
+            continue;
+        }
+        const newer = fresh.some((candidate) => sameUpdate(candidate) === sameUpdate(row));
+        gone.push({ row, why: newer ? 'newer' : 'applied' });
+    }
+    return { shownIdOf, gone };
 }
 
 /**

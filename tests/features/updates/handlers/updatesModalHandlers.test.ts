@@ -8,122 +8,33 @@
  * and the extension's installer are faked.
  */
 
+// FIRST: this module owns the jest.mock calls the handler must see.
+import {
+    apply,
+    applied,
+    bodea,
+    found,
+    handlers,
+    justrite,
+    mockApplyUpdatesHeadless,
+    mockExecuteCommand,
+    mockFindAllUpdates,
+    mockOpenFixWithAi,
+    mockUpdateExtension,
+    modal,
+    resetModalMocks,
+    selections,
+    statusesSent,
+} from './updatesModalHandlers.testUtils';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
-import type { FoundUpdates } from '@/features/updates/services/allUpdates';
-import { emptyResult, type ApplyUpdatesResult } from '@/features/updates/services/updateApplyResult';
+import { emptyResult } from '@/features/updates/services/updateApplyResult';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
-import type { MessageHandler } from '@/types/handlers';
-import type { ApplyUpdatesRequest, PendingUpdateRow } from '@/types/pendingUpdates';
+import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 
-const mockApplyUpdatesHeadless = jest.fn();
-const mockUpdateExtension = jest.fn();
-jest.mock('@/features/updates/services/updateApplyService', () => ({
-    applyUpdatesHeadless: (...args: unknown[]) => mockApplyUpdatesHeadless(...args),
-}));
-jest.mock('@/features/updates/services/extensionUpdater', () => ({
-    ExtensionUpdater: jest.fn().mockImplementation(() => ({ updateExtension: mockUpdateExtension })),
-}));
-jest.mock('@/features/dashboard/handlers/integrationUpdateHandlers', () => ({
-    updateIntegrationPairFor: jest.fn(),
-    integrationUpdateProbe: jest.fn(() => jest.fn()),
-}));
-// The check run once the apply ends, to say what the SC left unticked that still waits.
-const mockFindAllUpdates = jest.fn();
-jest.mock('@/features/updates/services/allUpdates', () => ({
-    findAllUpdates: (...args: unknown[]) => mockFindAllUpdates(...args),
-}));
-jest.mock('@/core/di/serviceLocator', () => ({ ServiceLocator: { getCommandExecutor: jest.fn(() => ({})) } }));
-// The handler loads in its own module sandbox (handlers() below), with its own vscode; the
-// Chat command it runs is recorded here, outside the sandbox.
-const mockExecuteCommand = jest.fn();
-jest.mock('vscode', () => {
-    const actual = jest.requireActual('vscode');
-    return { ...actual, commands: { ...actual.commands, executeCommand: (...args: unknown[]) => mockExecuteCommand(...args) } };
-});
-// Opening the AI reads the local copies; that is fixWithAi.test's (real git).
-const mockOpenFixWithAi = jest.fn();
-jest.mock('@/features/updates/services/fixWithAi', () => ({
-    openFixWithAi: (...args: unknown[]) => mockOpenFixWithAi(...args),
-}));
-
-const bodea = createMockProject({ name: 'bodea', title: 'Bodea', path: '/p/bodea', status: 'stopped' });
-const justrite = createMockProject({ name: 'justrite', title: 'JustRite', path: '/p/justrite', status: 'stopped' });
-
-function selections(): UpdateSelections {
-    return {
-        forkSync: [],
-        template: [{ project: bodea }],
-        boilerplate: [],
-        finish: [],
-        component: [],
-        adobeMcp: [],
-        blockLibrary: [justrite, bodea].map((project) => ({
-            project,
-            library: {
-                name: 'Demo Builder Blocks',
-                source: { owner: 'skukla', repo: 'demo-builder-block-library', branch: 'main' },
-                commitSha: 'a',
-                blockIds: [],
-                installedAt: '',
-            },
-            latestCommit: 'b',
-        })),
-        blockLibraryInstall: [],
-        inspector: [],
-        integration: [],
-    };
-}
-
-function found(overrides: Partial<FoundUpdates> = {}): FoundUpdates {
-    return { selections: selections(), currentProjectPath: '/p/justrite', count: 3, ...overrides };
-}
-
-function applied(overrides: Partial<ApplyUpdatesResult> = {}): ApplyUpdatesResult {
-    return {
-        forkSync: emptyResult(),
-        template: emptyResult(),
-        boilerplate: emptyResult(),
-        finish: emptyResult(),
-        component: emptyResult(),
-        adobeMcp: emptyResult(),
-        addon: emptyResult(),
-        blockLibraryInstall: emptyResult(),
-        integration: emptyResult(),
-        totalApplied: 1,
-        totalFailed: 0,
-        ...overrides,
-    };
-}
-
-type Handlers = typeof import('@/features/updates/handlers/updatesModalHandlers');
-
-/** A fresh module per test: the presented check is module state. */
-function handlers(): Handlers {
-    let loaded!: Handlers;
-    jest.isolateModules(() => {
-        loaded = jest.requireActual('@/features/updates/handlers/updatesModalHandlers');
-    });
-    return loaded;
-}
-
-const modal = (ids: string[]): ApplyUpdatesRequest => ({ ids, progress: 'modal' });
-
-/** The row statuses the screen was told, in order. */
-function statusesSent(ctx: ReturnType<typeof createMockHandlerContext>): unknown[] {
-    return ctx.sendMessage.mock.calls.filter(([type]) => type === 'updateRowStatus').map(([, status]) => status);
-}
-const apply = (h: Handlers): MessageHandler<ApplyUpdatesRequest> => h.handleApplyUpdates;
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    mockApplyUpdatesHeadless.mockResolvedValue(applied());
-    mockFindAllUpdates.mockReset();
-    mockExecuteCommand.mockReset();
-    mockFindAllUpdates.mockResolvedValue(found({ selections: { ...selections(), template: [], blockLibrary: [] }, count: 0 }));
-});
+beforeEach(resetModalMocks);
 
 describe('presentUpdates', () => {
     it('answers the rows for the check, the open project first, and keeps them', () => {

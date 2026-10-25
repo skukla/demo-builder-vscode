@@ -159,7 +159,7 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
         setRun((previous) => previous + 1);
         setView({ phase: 'applying', rows });
         webviewClient
-            .request<ApplyUpdatesResponse | undefined>('applyUpdates', { ids, id: UPDATES_OPERATION_ID, progress: 'modal' })
+            .request<ApplyUpdatesResponse | undefined>('applyUpdates', { ids, rows, id: UPDATES_OPERATION_ID, progress: 'modal' })
             .then((answer) => {
                 setRemaining(answer?.remaining ?? 0);
                 onApplied();

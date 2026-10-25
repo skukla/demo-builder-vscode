@@ -143,6 +143,7 @@ describe('useUpdatesModal', () => {
         expect(result.current.ticked.size).toBe(0);
     });
 
+    // The rows go too: an extension that restarted no longer holds the check the ids index.
     it('applies the ticked rows, never a locked one, and stays open on them, each waiting', async () => {
         answers(NOT_OPENED_FOR_IT, { success: true });
         const { result, onApplied } = setup();
@@ -156,6 +157,7 @@ describe('useUpdatesModal', () => {
         expect(result.current.statuses).toEqual({ 'blockLibrary:0': { id: 'blockLibrary:0', state: 'waiting' } });
         expect(mockRequest).toHaveBeenCalledWith('applyUpdates', {
             ids: ['blockLibrary:0'],
+            rows: [ROWS[0]],
             id: UPDATES_OPERATION_ID,
             progress: 'modal',
         });

@@ -30,8 +30,10 @@ import { findAllUpdates, type FoundUpdates } from '@/features/updates/services/a
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import { openFixWithAi } from '@/features/updates/services/fixWithAi';
 import {
+    matchFresh,
     rowIdsOf,
     selectionsForIds,
+    type GoneRow,
     stillWaitingCount,
     toPendingUpdateRows,
     untickedRows,
@@ -53,10 +55,22 @@ import {
 } from '@/types/pendingUpdates';
 import { toError } from '@/types/typeGuards';
 
+/** A check and the rows made from it. */
+interface Presented {
+    found: FoundUpdates;
+    rows: PendingUpdateRow[];
+}
+
 /** The check the screen is showing; the ticked ids are applied against it, once. */
-let shown: { found: FoundUpdates; rows: PendingUpdateRow[] } | undefined;
+let shown: Presented | undefined;
+/** Whether a run is going: a second Apply would otherwise check again and run it twice. */
+let applying = false;
 
 const OUT_OF_DATE = 'This list of updates is out of date. Check for updates again.';
+const ALREADY_APPLYING = 'Updates are already being applied.';
+const CHECKING = 'Checking for updates';
+/** Rows whose update lands in the storefront repository. */
+const STOREFRONT_KINDS = new Set(['forkSync', 'template', 'boilerplate', 'finish', 'blockLibrary', 'blockLibraryInstall']);
 const DEMO_RUNNING = 'Not updated — its demo is running.';
 const EXTENSION_FAILED = 'Not updated — details are in Debug Logs.';
 
@@ -75,12 +89,13 @@ async function tellScreen(context: HandlerContext, status: UpdateRowStatus): Pro
     }
 }
 
-function rowTellerFor(context: HandlerContext): RowTeller {
+/** @param shownId - the id the screen knows a row of the applied check by */
+function rowTellerFor(context: HandlerContext, shownId: (id: string) => string = (id) => id): RowTeller {
     let notApplied = 0;
     return {
         tell: (id, state, message) => {
             if (state === 'failed' || state === 'skipped') notApplied++;
-            void tellScreen(context, { id, state, ...(message ? { message } : {}) });
+            void tellScreen(context, { id: shownId(id), state, ...(message ? { message } : {}) });
         },
         notApplied: () => notApplied,
     };
@@ -121,30 +136,83 @@ export const handleRecheckUpdates: MessageHandler<unknown, RecheckUpdatesRespons
     return { success: true, data: { rows: presentedRows() } };
 };
 
-/** `applyUpdates`: apply the ticked rows, in the progress modal. */
+/**
+ * `applyUpdates`: apply the ticked rows, in the progress modal.
+ *
+ * When the extension no longer holds the check the screen shows (it restarted while the
+ * window stayed open, 2026-10-24), it checks again and applies the ticked rows the fresh
+ * check lists as the SC saw them, rather than send the SC to check again themselves.
+ */
 export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOutcomeToModal(
     async (context, payload) => {
+        if (applying) return { success: false, error: ALREADY_APPLYING };
         const presented = shown;
-        if (!presented) return { success: false, error: OUT_OF_DATE };
+        const tickedRows = payload?.rows ?? [];
+        if (!presented && tickedRows.length === 0) return { success: false, error: OUT_OF_DATE };
         shown = undefined;
+        applying = true;
         // The run saves every project it updates; none of them may become the open one.
         const runContext = { ...context, stateManager: createNonSwitchingStateManager(context.stateManager) };
-        return withOperationProgress({ id: UPDATES_OPERATION_ID, title: 'Applying updates', inModal: true }, (report) =>
-            applyTicked(runContext, presented, payload?.ids ?? [], report),
-        );
+        try {
+            return await withOperationProgress({ id: UPDATES_OPERATION_ID, title: 'Applying updates', inModal: true }, (report) =>
+                presented
+                    ? applyTicked(runContext, { ...presented, ids: payload?.ids ?? [] }, report)
+                    : applyOnFreshCheck(runContext, tickedRows, report),
+            );
+        } finally {
+            applying = false;
+        }
     },
     () => UPDATES_OPERATION_ID,
 );
 
+/** The check the screen showed is gone: check again, say which rows dropped out, apply the rest. */
+async function applyOnFreshCheck(
+    context: HandlerContext,
+    tickedRows: PendingUpdateRow[],
+    report: ReportStage,
+): Promise<HandlerResponse & OperationOutcome> {
+    report(CHECKING);
+    const found = await findAllUpdates(context, integrationUpdateProbe(context));
+    const rows = rowsOf(found);
+    const { shownIdOf, gone } = matchFresh(tickedRows, rows);
+    let newer = 0;
+    for (const { row, why } of gone) {
+        if (why === 'newer') newer++;
+        // Already applied is not a problem, so it is told as done.
+        void tellScreen(context, { id: row.id, state: why === 'newer' ? 'skipped' : 'done', message: goneLine({ row, why }) });
+    }
+    const ids = [...shownIdOf.keys()];
+    return applyTicked(context, { found, rows, ids, shownId: (id) => shownIdOf.get(id) ?? id, dropped: newer }, report);
+}
+
+/** What a ticked row that dropped out of the fresh check says. */
+function goneLine({ row, why }: GoneRow): string {
+    if (why === 'newer') {
+        const who = row.kind === 'adobeMcp' ? 'Adobe' : 'Demo Builder';
+        return `${who} released a newer version. You'll see it next time you check.`;
+    }
+    if (STOREFRONT_KINDS.has(row.kind)) return 'Demo Builder skipped this because the storefront already has it.';
+    if (row.kind === 'extension') return 'Demo Builder skipped this because it is already on this version.';
+    return 'Demo Builder skipped this because the project already has it.';
+}
+
+/** One run: the check, the ids to apply from it, and how the screen knows its rows. */
+interface Run extends Presented {
+    ids: string[];
+    shownId?: (id: string) => string;
+    /** Ticked rows already told as not applied, before the run. */
+    dropped?: number;
+}
+
 async function applyTicked(
     context: HandlerContext,
-    { found, rows: shownRows }: { found: FoundUpdates; rows: PendingUpdateRow[] },
-    ids: string[],
+    { found, rows: shownRows, ids, shownId, dropped = 0 }: Run,
     report: ReportStage,
 ): Promise<HandlerResponse & OperationOutcome> {
     const picked = selectionsForIds(found.selections, ids);
     const rowOf = rowIdsOf(found.selections);
-    const rows = rowTellerFor(context);
+    const rows = rowTellerFor(context, shownId);
     const { selections } = await stopRunningDemos(picked.selections, found.currentProjectPath, () =>
         vscode.commands.executeCommand('demoBuilder.stopDemo'),
     );
@@ -190,7 +258,7 @@ async function applyTicked(
     }
     const remaining = await stillWaiting(context, shownRows, ids);
     const left = remaining > 0 ? { remaining } : {};
-    const notApplied = rows.notApplied();
+    const notApplied = rows.notApplied() + dropped;
     if (notApplied === 0) return { success: true, ...left };
     // A success with a warning, not a failure: the run ended, and a failure's Retry
     // could not re-run a list that has been applied. Each row says why.

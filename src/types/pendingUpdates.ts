@@ -60,6 +60,12 @@ export interface ShowUpdatesPayload {
 /** `applyUpdates` — the ids of the rows the SC left ticked. */
 export interface ApplyUpdatesRequest {
     ids: string[];
+    /**
+     * The ticked rows as the screen shows them. The extension applies the ids against the
+     * check it holds; when it no longer holds one (a restart), it checks again and finds
+     * these rows in the fresh check instead.
+     */
+    rows?: PendingUpdateRow[];
     /** Always the modal: the run is told in the projects list's progress modal. */
     progress?: 'modal';
 }
