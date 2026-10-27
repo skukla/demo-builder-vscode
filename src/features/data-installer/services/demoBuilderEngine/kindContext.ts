@@ -36,6 +36,8 @@ export interface CatalogSession {
      * stocks cannot be installed.
      */
     websiteCode?: string;
+    /** The same website, by id: a pack's products are put on it, whatever website they named. */
+    websiteId?: number;
 }
 
 /** What a kind's install is handed. */

@@ -67,8 +67,8 @@ function groupCode(name: string): string {
     return name.toLowerCase().replace(/[^a-z0-9]+/gu, '_');
 }
 
-/** Read every set the store has into the session, once per install. */
-async function loadStoreSets(ctx: KindContext): Promise<void> {
+/** Read every set the store has into the session, once per install. Products use it too. */
+export async function loadStoreSets(ctx: KindContext): Promise<void> {
     if (ctx.session.setIds.size > 0) return;
     const sets = await readAllPages<NonNullable<CommerceAttributeSetList['items']>[number]>(
         ctx.get,
