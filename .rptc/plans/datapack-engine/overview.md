@@ -80,6 +80,96 @@ B2B kinds 4, stocks and sources 4, gift cards 2. Bodea `main` (ACCS) holds 14 ki
    unknown one.
 6. **Later, when a pack needs it:** cart rules, coupons, gift cards, ACO.
 
+## Where packs live: the library is home, the service is read (owner, 2026-10-27)
+
+- **The library is where the team's packs live.** It answers the same routes as the service's
+  database (datapack-store step 02b), so one writer (`writePackToStore`) puts a pack into
+  either store, and one reader (`readPackFromStore`) reads from either.
+- **The service is a source we read from, not something we depend on.** Reading works; its
+  install, removal and export do not. Our engine installs a service pack by reading its rows
+  from the service, with no copy first. A pack we depend on should also be in the library,
+  since the service's reads have failed before (its old address went dark).
+- **"Copy to the Data Installer" stays**, with its agent tool, and it is the way back to the
+  service: the service engine installs only packs in the service's own database, so if the
+  service is fixed, or we are allowed to upload into it, a library-only pack is copied there
+  first. It still cannot be undone from the extension and has not run live.
+- **Export is the gap.** Export, reading a store an SC set up into a new pack, is the only way
+  new packs are made, and the service's has failed to save what it reads since August. Ours
+  is written per data kind, beside its install and removal, and writes into the library.
+- **Next, in order:**
+  1. **Audit the service's 42 packs** (read-only): owner, dates, kinds, size, for the owner to
+     mark keep or drop. Some are old.
+  2. **Bring the kept packs into the library** with the existing copy from the service.
+  3. **Keep in step, one way, service to library:** a pack is its name plus version; bring
+     over any pair the library lacks and never overwrite one it has. On demand first.
+  4. **Research:** whether a Stage workspace has limits or clean-up rules a production one
+     does not, before the library is relied on.
+
+### The packs the library starts with (owner, 2026-10-27)
+
+Audited read-only on the service's Stage catalog the same day: 42 packs, 23 shared. Versions
+were compared item by item, by content hash.
+
+- **Eleven brands, one version each:** `bodea`, `carvello`, `citisignal_new`, `frescopa`,
+  `grocery`, `healthbeauty`, `wecafe` and `wknd` at `main`; `citisignal_original`, `luma` and
+  `venia` at `eds-compatible`. Bodea's `tierpricingfix` and the `v1.0` of Grocery and We.Cafe
+  are identical to `main`; each `hold` is an older copy.
+- **The eight ACO packs** (`aco_<brand>` at `main`), held in the library although our engine
+  does not install ACO kinds yet.
+- **Left behind:** the `legacySkus-20260522` versions (older product SKUs than `main`), the
+  archive copies, the test and personal packs, and `dsc-enablement-sample0`.
+- Nothing in Demo Builder names a pack version, and no project on the owner's machine records
+  one, so the choice strands nothing here.
+
+### Items too big to read (measured 2026-10-27)
+
+The `product_export` items of `luma` and `venia` (both versions each) cannot be read through
+the service: with their rows, `batch-get-data-items` and `get-data-item` answer 400 "Response is
+not valid 'message/http'"; without them, they are found. The service stores each data kind as
+one document and has no way to return part of one (`actions/database/getDataItem.js`). The
+largest item that did read was 357 KB. Most likely the runtime's limit on how big an answer can
+be; the documented figure is not yet checked. Venia also ships its products as `products`, which
+reads; Luma ships products only as `product_export`.
+
+- **Our library will hit the same limit**, being on the same platform: it stores a large kind in
+  several pieces, and the copy reads and writes it piece by piece.
+- **The four items: read from the service's database directly** (owner's choice), with the
+  connection settings the owner's Stage developer access can read. Read-only. Not yet done: the
+  agent was refused access to another service's credentials, so the owner runs or authorises it.
+  Tabled 2026-10-27 (owner away from the machine); Luma's products and Venia's `product_export`
+  wait on it, and the other packs do not.
+
+## Wiping a store completely (owner's ask, 2026-10-27; not designed yet)
+
+Removing a pack takes away what that pack installed. The SC also needs to take a whole store
+back to empty, whatever put the data there: a pack, an earlier demo, or hand edits.
+
+- **The service has nothing for this.** It knows two operations, `import` and `delete`
+  (`OPERATION_MODES`, `actions/constants.js`), and its delete removes one pack's named items.
+  Its "purge by commerce_instance" (`getInstalledDatapacks.js`) deletes its own install
+  RECORDS for an instance, not anything in Commerce.
+- **The ERP work already knows some things Commerce will not delete over REST**, and what it
+  does instead:
+  - an inventory source cannot be deleted, so it is switched off (`warehouseFix.ts`);
+  - notes the ERP wrote on orders cannot be deleted; its `erp/detach` reverts what it can
+    (credit limits, blocks, ERP order numbers) (`erpDetach.ts`).
+  Those are the start of the list, not the whole of it.
+- **What a wipe has to settle before it is built:**
+  1. **The full list of kinds a demo store holds**, and for each one whether Commerce deletes
+     it over REST, only switches it off, or keeps it whatever we do. Orders, invoices and
+     the store's own default website and root category are the likely "keeps" to check;
+     none of this is verified yet.
+  2. **The order to delete in**, the reverse of the install order (spec §0), so nothing is
+     refused for still being in use.
+  3. **What is never touched:** the default website, store and root category, the admin
+     users, and the integration's own credential.
+  4. **What the SC is told afterwards:** exactly what could not be removed, by kind and count.
+- **It cannot be undone, and it says so.** A wipe removes things no install record lists, so
+  there is nothing to restore from (rule 1: what cannot be undone is stated plainly). It is
+  confirmed before it runs, names the store it will empty, and is never run by an agent
+  without that confirmation (rule 5). A dry run lists what it would delete and writes nothing.
+- **Afterwards every install record for that store is cleared**, since what they list is gone.
+
 ## Open questions
 
 - Their service ran installs in background workers because of App Builder time limits; ours
