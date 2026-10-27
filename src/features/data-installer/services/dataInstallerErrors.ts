@@ -46,10 +46,11 @@ export class DataInstallerInputError extends Error {
 }
 
 /**
- * Whether a failure means "sign in again" rather than "try again".
+ * Whether the service turned the caller's sign-in away (401 or 403).
  *
- * Drives the UI's choice between a Sign In action and a Retry — a Retry cannot
- * fix an expired token.
+ * The handler guard signs the SC in before any request is sent, so this is the
+ * SERVICE refusing a sign-in, not a missing one: the UI must not offer Sign In
+ * for it, because signing in again hands the service the same sign-in.
  */
 export function isDataInstallerAuthError(error: unknown): boolean {
     return error instanceof DataInstallerApiError && (error.status === 401 || error.status === 403);

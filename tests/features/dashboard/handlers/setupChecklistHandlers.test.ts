@@ -254,6 +254,37 @@ describe('checkSetupSteps', () => {
         expect(Object.keys(steps)).toStrictEqual(['company-catalogs']);
     });
 
+    // The flyout said "All done" on Justrite with Test ERP just added and no warehouse of its
+    // own (2026-10-26): the check was told no ERPs, so any sold warehouse passed.
+    it("checks the warehouse step for each of the integration's ERPs", async () => {
+        mockSendRest.mockImplementation(async (_method: string, _target: unknown, path: string) => {
+            if (path.startsWith('inventory/sources')) {
+                return JSON.stringify({ items: [{ source_code: 'justrite', name: 'Justrite Warehouse', enabled: true }] });
+            }
+            if (path.startsWith('inventory/stock-source-links')) {
+                return JSON.stringify({ items: [{ stock_id: 3, source_code: 'justrite' }] });
+            }
+            if (path.startsWith('inventory/stocks')) {
+                return JSON.stringify({
+                    items: [{ stock_id: 3, name: 'Justrite Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'acme' }] } }],
+                });
+            }
+            return JSON.stringify([]);
+        });
+        mockScope.mockReturnValue({ websiteCode: 'acme' });
+        const { context, saved, project } = setup({ 'second-source': { state: 'done' } });
+        project.appBuilderComponents = {
+            ...project.appBuilderComponents,
+            'erp-integration': { ...project.appBuilderComponents!['erp-integration'], systems: ['justrite-erp', 'test-erp'] },
+            'justrite-erp': { kind: 'system', status: 'deployed', name: 'Justrite ERP', source: { owner: 'o', repo: 'r' } },
+            'test-erp': { kind: 'system', status: 'deployed', name: 'Test ERP', source: { owner: 'o', repo: 'r' } },
+        };
+        await handleCheckSetupSteps(context, { id: 'erp-integration', stepId: 'second-source' });
+        const step = saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['second-source'];
+        expect(step?.state).toBeUndefined();
+        expect(step?.note).toBe('Test ERP has no warehouse yet.');
+    });
+
     it('refuses a step that does not exist or has no check, reading nothing', async () => {
         const { context } = setup();
         const result = await handleCheckSetupSteps(context, { id: 'erp-integration', stepId: 'no-such-step' });

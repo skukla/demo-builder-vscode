@@ -56,7 +56,7 @@ import {
     strandedSystemMessage,
     systemsUsedBy,
 } from '@/features/components/services/appBuilderComponentLinks';
-import type { AppBuilderComponentCatalogEntry, SetupChecklistItem } from '@/types/appBuilderComponents';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 
@@ -474,15 +474,10 @@ export function deriveIntegrationCard(
         menuActions: inUseOrder(
             withPromotionActions(
                 entry,
-                withPreparationActions(
+                withErpActions(
                     entry,
                     face.status,
-                    checklist.setupChecklist,
-                    withErpActions(
-                        entry,
-                        face.status,
-                        buildMenuActions(face.status, installation, Boolean(entry.updateAvailable), !facet.prebuilt),
-                    ),
+                    buildMenuActions(face.status, installation, Boolean(entry.updateAvailable), !facet.prebuilt),
                 ),
             ),
             installation,
@@ -505,15 +500,10 @@ const USE_ORDER: readonly CardAction[] = [
     'retry',
     'install',
     'sign-in',
-    // Shown only while a setup step is open, so when it is there it is what the card needs
-    // (owner, 2026-10-19).
-    'prepare-store',
     'open-admin',
     'add-erp',
     'load-demo-data',
     'reset-records',
-    // Back to the start, beside the reset: Prepare is gone by the time setup is done.
-    'undo-store-preparation',
     'settings',
     'manage-apis',
     'save-to-github',
@@ -567,27 +557,6 @@ function withErpActions(
 function aboveRemove(actions: CardAction[], own: CardAction[]): CardAction[] {
     const at = actions.indexOf('remove');
     return [...actions.slice(0, at), ...own, ...actions.slice(at)];
-}
-
-/**
- * "Prepare this store" on a deployed integration while a setup step Demo Builder can fix is
- * still open (AB-77), and "Undo preparation" whenever a run is recorded on it. Just above
- * Remove, after the ERP verbs. Prepare is not offered once every fixable step is done: it
- * would find nothing to apply (owner, 2026-10-18).
- */
-function withPreparationActions(
-    entry: IdentifiedAppBuilderComponent,
-    status: IntegrationStatus,
-    checklist: SetupChecklistItem[] | undefined,
-    actions: CardAction[],
-): CardAction[] {
-    if (status !== 'deployed') return actions;
-    const fixable = (checklist ?? []).some((item) => item.applicable && item.state === 'open');
-    const own: CardAction[] = [
-        ...(fixable ? (['prepare-store'] as CardAction[]) : []),
-        ...(entry.storePreparation ? (['undo-store-preparation'] as CardAction[]) : []),
-    ];
-    return own.length > 0 ? aboveRemove(actions, own) : actions;
 }
 
 /** The repository verb an integration offers: the undo once saved, the save while blank. */

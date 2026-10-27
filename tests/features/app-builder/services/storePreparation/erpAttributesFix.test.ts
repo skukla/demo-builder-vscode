@@ -88,7 +88,7 @@ describe('undo', () => {
             ['DELETE', 'products/attribute-sets/4/attributes/erp_owner', undefined],
             ['DELETE', 'products/attributes/brand', undefined],
         ]);
-        expect(undone.changes).toEqual(['Took erp_owner out of the attribute set Default', 'Deleted the brand product attribute (this run created it)']);
+        expect(undone.changes).toEqual(['Took erp_owner out of the attribute set Default', 'Deleted the brand product attribute (Demo Builder created it)']);
     });
 
     it('refuses while a product in those sets carries an erp_owner value', async () => {

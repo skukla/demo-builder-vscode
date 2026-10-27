@@ -8,6 +8,7 @@
 import Ajv from 'ajv';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { SetupConfigFix, SetupFix } from '@/types/appBuilderComponents';
 
 const CONFIG_DIR = path.join(__dirname, '../../../../src/features/components/config');
 const schema = JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'app-builder-components.schema.json'), 'utf-8'));
@@ -45,18 +46,41 @@ describe('setup step fixes in the bundled catalog', () => {
         expect(byId).toEqual({
             'confirmed-status': undefined,
             'company-catalogs': { kind: 'handler', handler: 'company-shared-catalogs' },
-            'price-scope-website': { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
+            'price-scope-website': {
+                kind: 'config',
+                items: [{ path: 'catalog/price/scope', value: '1', scope: 'default', field: 'Catalog Price Scope', values: { '0': 'Global', '1': 'Website' } }],
+            },
             'second-source': { kind: 'handler', handler: 'erp-warehouse-in-website-stock' },
             'erp-attributes': { kind: 'handler', handler: 'create-erp-attributes' },
             'partially-held-status': undefined,
-            'payment-on-account': { kind: 'config', items: [{ path: 'payment/companycredit/active', value: '1', scope: 'website' }] },
-            'storefront-returns': { kind: 'config', items: [{ path: 'sales/magento_rma/enabled', value: '1', scope: 'website' }] },
+            'payment-on-account': {
+                kind: 'config',
+                items: [{ path: 'payment/companycredit/active', value: '1', scope: 'website', field: 'Payment on Account', values: { '0': 'No', '1': 'Yes' } }],
+            },
+            'storefront-returns': {
+                kind: 'config',
+                items: [{ path: 'sales/magento_rma/enabled', value: '1', scope: 'website', field: 'Enable RMA on Storefront', values: { '0': 'No', '1': 'Yes' } }],
+            },
             'card-payments': {
                 kind: 'config',
-                items: [{ path: 'payment/payment_services/active', value: '1', scope: 'website' }],
-                manual: expect.stringContaining('PayPal sandbox'),
+                items: [{ path: 'payment/payment_services/active', value: '1', scope: 'website', field: 'Payment Services', values: { '0': 'No', '1': 'Yes' } }],
+                manual: 'Connect PayPal in Sales > Payment Services before cards work.',
             },
+            'app-management-listing': undefined,
         });
+    });
+
+    // Release test row 4.19, 2026-10-26: a result read "payment/payment_services/active at
+    // the website scope: 0 → 1". Every setting a step writes says what the Admin calls it
+    // and its value, so the SC reads "Payment Services for the website: No → Yes".
+    it('every setting a step writes names its Admin field and the value it writes', () => {
+        const items = stepsWithFix.flatMap(([where, fix]) =>
+            (fix as SetupFix).kind === 'config' ? (fix as SetupConfigFix).items.map((item) => [where, item] as const) : [],
+        );
+        expect(items.length).toBeGreaterThan(0);
+        for (const [where, item] of items) {
+            expect({ where, field: Boolean(item.field), value: item.values?.[item.value] !== undefined }).toEqual({ where, field: true, value: true });
+        }
     });
 
     it('CONTROL: a malformed fix is refused', () => {

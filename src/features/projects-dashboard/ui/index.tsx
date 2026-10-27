@@ -60,6 +60,8 @@ import '@/core/ui/styles/inline-controls.css';
 import '@/core/ui/styles/add-card.css';
 // CheckboxRow, the Updates modal's rows (PL-80, ADR-017 §6).
 import '@/core/ui/styles/checkbox-row.css';
+// WorkRow, the Updates modal's run (ADR-017 §6).
+import '@/core/ui/styles/work-row.css';
 // SectionLabel and LeadText (ADR-017 §6).
 import '@/core/ui/styles/modal-text.css';
 import '@/core/ui/styles/disclosure-toggle.css';

@@ -20,16 +20,12 @@
  */
 
 import { Flex, Text } from '@adobe/react-spectrum';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ErpAssignDialogs, useErpAssignDialogs } from '../components/integrations/ErpAssignDialogs';
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
 import { PrepareOnAddDialog, usePrepareOnAdd } from '../components/integrations/PrepareOnAddDialog';
-import { PrepareStoreDialogs, usePrepareStoreDialogs } from '../components/integrations/PrepareStoreDialogs';
-import {
-    SetupGuideModal,
-    setupNextStep,
-    useSetupGuide,
-} from '../components/integrations/SetupGuideModal';
+import { SetupGuideModal } from '../components/integrations/SetupGuideModal';
+import { setupNextStep, useSetupGuide } from '../components/integrations/useSetupGuide';
 import { useComponentOperation } from '../hooks/useComponentOperation';
 import { useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
@@ -45,6 +41,7 @@ import { OperationProgressModal } from '@/core/ui/components/feedback/OperationP
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
+import type { StartableOperation } from '@/core/ui/hooks/useOperationRunner';
 import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
@@ -104,14 +101,29 @@ export function IntegrationsScreen({
     const { addOpen, destOpen, openAdd, closeAdd, closeDestination } = actions;
     // The demo setup guide (AB-26x) lives here, not in the grid: the progress modal below
     // opens it too, when an operation finishes with setup still to do.
-    const { open: openGuide, modal: guideModal } = useSetupGuide(cards);
+    const { open: openGuide, modal: guideModal, away: guideAway } = useSetupGuide(cards);
     // "Assign products" and the attribute-set fix (AB-74): opened from a card, the setup
     // guide, and the success view of "Add another ERP".
     const erpAssign = useErpAssignDialogs(operations);
-    // "Prepare this store" and its undo (AB-77): from a card's menu and the setup guide's steps.
-    const storePrep = usePrepareStoreDialogs(operations);
     // Adding the ERP integration prepares the store: confirmed first (owner, 2026-10-22).
     const prepareOnAdd = usePrepareOnAdd(operations.started);
+    // The guide applies its steps in place (AB-82). A run that stops on a question goes to the
+    // progress modal, which asks it; closing that comes back to the guide on the same step,
+    // with no "Open demo setup" offered for the guide the SC just left (owner, 2026-10-26).
+    // Stable: the progress modal's close feeds a timer.
+    const { close: closeOperation, show: showOperation } = operations;
+    const { comeBack, leave } = guideAway;
+    const closeProgress = useCallback(() => {
+        closeOperation();
+        comeBack();
+    }, [closeOperation, comeBack]);
+    const askFromGuide = useCallback(
+        (operation: StartableOperation, stepId: string) => {
+            leave(operation.id, stepId);
+            showOperation(operation, true);
+        },
+        [leave, showOperation],
+    );
 
     // Status has not resolved yet — the mesh card would otherwise pop in a beat
     // after the integration cards. Same LoadingDisplay as ProjectsDashboard's gate.
@@ -178,7 +190,6 @@ export function IntegrationsScreen({
                         operations={operations}
                         onOpenGuide={openGuide}
                         erpAssign={erpAssign}
-                        storePrep={storePrep}
                         // The add card steps aside while a filter is on: it is
                         // not a result, and alone it would read as "add one"
                         // rather than "nothing matched".
@@ -228,13 +239,12 @@ export function IntegrationsScreen({
                 <OperationProgressModal
                     operation={operations.open}
                     onRetry={operations.retry}
-                    onClose={operations.close}
-                    next={setupNextStep(cards, operations.open?.id, openGuide)}
+                    onClose={closeProgress}
+                    next={guideAway.pending ? undefined : setupNextStep(cards, operations.open?.id, openGuide)}
                     offerStep={erpAssign.offerStep}
                 />
-                <SetupGuideModal {...guideModal} onFix={storePrep.prepareStep} />
+                <SetupGuideModal {...guideModal} onAsk={askFromGuide} />
                 <ErpAssignDialogs {...erpAssign.dialogs} />
-                <PrepareStoreDialogs {...storePrep.dialogs} />
                 <PrepareOnAddDialog {...prepareOnAdd.dialog} />
             </FullScreenSurface>
         </PageLayout>

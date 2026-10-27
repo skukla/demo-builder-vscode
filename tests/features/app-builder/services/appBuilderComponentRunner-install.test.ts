@@ -400,7 +400,7 @@ describe('the ERP filled after the install (AB-26y)', () => {
 
         await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
 
-        expect(onProgress).toHaveBeenCalledWith('Preparing the store', 'ERP attributes: Applying');
+        expect(onProgress).toHaveBeenCalledWith('Applying the demo setup', 'ERP attributes: Applying');
     });
 
     it('add: a preparation that stops keeps the add green, still fills, and says why', async () => {
@@ -413,8 +413,8 @@ describe('the ERP filled after the install (AB-26y)', () => {
         expect(result.success).toBe(true);
         expect(fillSystem).toHaveBeenCalled();
         expect(onProgress).toHaveBeenCalledWith(
-            'Preparing the store',
-            'The store was not prepared: Commerce answered 403. Use Prepare this store on the card.',
+            'Applying the demo setup',
+            'The demo setup was not applied: Commerce answered 403. Use Apply all in the demo setup.',
         );
     });
 
@@ -440,7 +440,7 @@ describe('the ERP filled after the install (AB-26y)', () => {
 
         await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
 
-        expect(onProgress).toHaveBeenCalledWith('Preparing the store', warning);
+        expect(onProgress).toHaveBeenCalledWith('Applying the demo setup', warning);
         expect(fillSystem).toHaveBeenCalled();
     });
 });

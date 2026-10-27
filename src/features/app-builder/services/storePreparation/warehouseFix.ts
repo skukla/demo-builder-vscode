@@ -9,8 +9,8 @@
  * a per-product decision (how much of what each ERP holds) that `POST inventory/source-items`
  * could write in bulk, but nothing here knows the quantities, so it is not offered.
  *
- * The undo unlinks, deletes a stock this run created, and DISABLES a source this run created:
- * Commerce cannot delete a source, and the result says so.
+ * The undo unlinks, deletes a stock this run created, and DISABLES a source this run created
+ * or switched back on: Commerce cannot delete a source, and the result says so.
  *
  * @module features/app-builder/services/storePreparation/warehouseFix
  */
@@ -65,6 +65,12 @@ interface Plan {
     sourceCodes: string[];
     stock: { existing: CommerceInventoryStock } | { create: string };
     linksToAdd: string[];
+    /**
+     * ERP warehouses that exist but are switched off, by code: what an undo leaves, since
+     * Commerce cannot delete a source. The check counts a switched-off warehouse as not
+     * done, so applying again must switch it back on (AB-82, Justrite 2026-10-26).
+     */
+    toEnable: string[];
 }
 
 /** What the fix would do, against the inventory as it stands. */
@@ -73,34 +79,76 @@ function planFor(inventory: Inventory, deps: FixDeps): Plan {
     if (!websiteCode) throw new Error('The project names no Commerce website, so no stock can sell to it.');
     const wanted = deps.erpNames.map(warehouseFor);
     const newSources = wanted.filter((w) => !inventory.sources.some((s) => s.source_code === w.code || s.name === w.name));
-    const sourceCodes = wanted.map((w) => inventory.sources.find((s) => s.name === w.name)?.source_code ?? w.code);
+    const found = (w: { code: string; name: string }) => inventory.sources.find((s) => s.source_code === w.code || s.name === w.name);
+    const sourceCodes = wanted.map((w) => found(w)?.source_code ?? w.code);
+    const toEnable = wanted.flatMap((w) => {
+        const source = found(w);
+        return source?.enabled === false ? [source.source_code] : [];
+    });
     const existing = inventory.stocks.find((stock) => stock.stock_id !== DEFAULT_STOCK_ID && sellsTo(stock, websiteCode));
     const stock = existing ? { existing } : { create: `${websiteCode} Stock` };
     const linked = new Set(
         existing ? inventory.links.filter((link) => link.stock_id === existing.stock_id).map((link) => link.source_code) : [],
     );
-    return { newSources, sourceCodes, stock, linksToAdd: sourceCodes.filter((code) => !linked.has(code)) };
+    return { newSources, sourceCodes, stock, linksToAdd: sourceCodes.filter((code) => !linked.has(code)), toEnable };
 }
 
-function lines(plan: Plan): string[] {
-    const stockName = 'existing' in plan.stock ? plan.stock.existing.name : plan.stock.create;
+/** The stock the plan links to, by name. */
+const stockNameOf = (plan: Plan): string => ('existing' in plan.stock ? plan.stock.existing.name : plan.stock.create);
+
+/**
+ * A source by the name the Admin shows, from the plan or the store; its code only when
+ * neither has it. Codes read as code (owner, release test row 4.19, 2026-10-26).
+ */
+function sourceNamer(sources: CommerceInventorySource[], made: Array<{ code: string; name: string }> = []): (code: string) => string {
+    return (code) => made.find((s) => s.code === code)?.name ?? sources.find((s) => s.source_code === code)?.name ?? code;
+}
+
+function lines(plan: Plan, inventory: Inventory): string[] {
+    const nameOf = sourceNamer(inventory.sources, plan.newSources);
     return [
-        ...plan.newSources.map((s) => `Create the source ${s.name} (${s.code})`),
-        ...('create' in plan.stock ? [`Create the stock ${plan.stock.create}, selling to the website`] : []),
-        ...plan.linksToAdd.map((code) => `Assign the source ${code} to the stock ${stockName}`),
+        ...plan.newSources.map((s) => `Create ${s.name}`),
+        ...plan.toEnable.map((code) => `Switch ${nameOf(code)} back on`),
+        ...('create' in plan.stock ? [`Create ${plan.stock.create}, a stock the website sells from`] : []),
+        ...plan.linksToAdd.map((code) => `Add ${nameOf(code)} to ${stockNameOf(plan)}`),
     ];
+}
+
+/** "A", "A and B", "A, B and C". */
+const andList = (names: string[]): string =>
+    names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+
+/**
+ * The plan in one sentence: "Add Test Warehouse to Justrite Stock", "Switch Test Warehouse
+ * back on", or both. The step's title says "each ERP", which reads as all of them when one
+ * is missing (Justrite, 2026-10-26).
+ */
+function summaryOf(plan: Plan, inventory: Inventory): string | undefined {
+    const nameOf = sourceNamer(inventory.sources, plan.newSources);
+    const stock = 'existing' in plan.stock ? plan.stock.existing.name : `a new stock, ${plan.stock.create}`;
+    const parts = [
+        ...(plan.linksToAdd.length > 0 ? [`Add ${andList(plan.linksToAdd.map(nameOf))} to ${stock}`] : []),
+        ...(plan.toEnable.length > 0 ? [`switch ${andList(plan.toEnable.map(nameOf))} back on`] : []),
+    ];
+    if (parts.length === 0) return undefined;
+    const sentence = parts.join(', and ');
+    return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
 
 export const warehouseFix: StepFix = {
     async preview(deps): Promise<FixPreview> {
         if (deps.erpNames.length === 0) return { changes: [], manual: 'The integration has no ERP yet, so there is no warehouse to make.' };
-        const plan = planFor(await readInventory(deps.commerce.get), deps);
-        return { changes: lines(plan), manual: MOVE_STOCK_MANUAL };
+        const inventory = await readInventory(deps.commerce.get);
+        const plan = planFor(inventory, deps);
+        const summary = summaryOf(plan, inventory);
+        return { changes: lines(plan, inventory), ...(summary ? { summary } : {}), manual: MOVE_STOCK_MANUAL };
     },
     async apply(deps): Promise<FixApplied> {
         if (deps.erpNames.length === 0) return { changes: [], rejected: [], manual: 'The integration has no ERP yet, so there is no warehouse to make.' };
         const { get, send } = deps.commerce;
-        const plan = planFor(await readInventory(get), deps);
+        const inventory = await readInventory(get);
+        const plan = planFor(inventory, deps);
+        const nameOf = sourceNamer(inventory.sources, plan.newSources);
         const changes: string[] = [];
         const rejected: string[] = [];
         const record: WarehouseStepRecord = { kind: 'warehouse', createdSources: [], links: [] };
@@ -108,25 +156,17 @@ export const warehouseFix: StepFix = {
             try {
                 await send('POST', 'inventory/sources', { source: { source_code: source.code, name: source.name, enabled: true, ...SOURCE_ADDRESS } });
                 record.createdSources.push(source.code);
-                changes.push(`Created the source ${source.name} (${source.code})`);
+                changes.push(`Created ${source.name}`);
             } catch (error) {
-                rejected.push(`Create the source ${source.name}: ${errorText(error)}`);
+                rejected.push(`Create ${source.name}: ${errorText(error)}`);
             }
         }
+        const outcome = { changes, rejected, nameOf };
+        await enableSources(deps, plan, record, outcome);
         const stockId = await ensureStock(deps, plan, record, changes, rejected);
-        if (stockId !== undefined) {
-            const made = new Set([...record.createdSources, ...plan.sourceCodes.filter((code) => !plan.newSources.some((s) => s.code === code))]);
-            for (const [i, code] of plan.linksToAdd.filter((code) => made.has(code)).entries()) {
-                try {
-                    await send('POST', 'inventory/stock-source-links', { links: [{ stock_id: stockId, source_code: code, priority: i + 1 }] });
-                    record.links.push({ stockId, sourceCode: code });
-                    changes.push(`Assigned the source ${code} to the stock`);
-                } catch (error) {
-                    rejected.push(`Assign the source ${code} to the stock: ${errorText(error)}`);
-                }
-            }
-        }
-        const wrote = record.createdSources.length > 0 || record.createdStock || record.links.length > 0;
+        if (stockId !== undefined) await linkSources(deps, { plan, inventory, stockId }, record, outcome);
+        const wrote =
+            record.createdSources.length > 0 || record.createdStock || record.links.length > 0 || (record.enabledSources?.length ?? 0) > 0;
         return { changes, rejected, ...(wrote ? { record } : {}), manual: MOVE_STOCK_MANUAL };
     },
     async undo(deps, record: StorePreparationStepRecord): Promise<FixUndone> {
@@ -134,34 +174,98 @@ export const warehouseFix: StepFix = {
         const { get, send } = deps.commerce;
         const changes: string[] = [];
         const rejected: string[] = [];
+        const { sourceName, stockName } = await undoNamers(get, record);
         if (record.links.length > 0) {
             try {
                 await send('POST', 'inventory/stock-source-links-delete', { links: record.links.map((l) => ({ stock_id: l.stockId, source_code: l.sourceCode })) });
-                changes.push(...record.links.map((l) => `Unassigned the source ${l.sourceCode} from the stock`));
+                changes.push(...record.links.map((l) => `Took ${sourceName(l.sourceCode)} out of ${stockName(l.stockId)}`));
             } catch (error) {
-                rejected.push(`Unassign the sources: ${errorText(error)}`);
+                rejected.push(`Take the warehouses out of the stock: ${errorText(error)}`);
             }
         }
         if (record.createdStock) {
             try {
                 await send('DELETE', `inventory/stocks/${record.createdStock.id}`, undefined);
-                changes.push(`Deleted the stock ${record.createdStock.name}`);
+                changes.push(`Deleted ${record.createdStock.name}`);
             } catch (error) {
-                rejected.push(`Delete the stock ${record.createdStock.name}: ${errorText(error)}`);
+                rejected.push(`Delete ${record.createdStock.name}: ${errorText(error)}`);
             }
         }
-        for (const code of record.createdSources) {
+        for (const code of [...record.createdSources, ...(record.enabledSources ?? [])]) {
             try {
                 const row = (await get(`inventory/sources/${code}`)) as CommerceInventorySource | null;
                 await send('PUT', `inventory/sources/${code}`, { source: { ...(row ?? { source_code: code, name: code, ...SOURCE_ADDRESS }), enabled: false } });
-                changes.push(`Disabled the source ${code} (Commerce cannot delete a source; it is disabled, not gone)`);
+                changes.push(`Switched off ${row?.name ?? sourceName(code)} (Commerce can't delete a warehouse)`);
             } catch (error) {
-                rejected.push(`Disable the source ${code}: ${errorText(error)}`);
+                rejected.push(`Switch off ${sourceName(code)}: ${errorText(error)}`);
             }
         }
         return { changes, rejected };
     },
 };
+
+/** Where an apply's lines go, and how it names a source in them. */
+interface Outcome {
+    changes: string[];
+    rejected: string[];
+    nameOf: (code: string) => string;
+}
+
+/** Switch back on the ERP warehouses an undo switched off, and record them so the undo can again. */
+async function enableSources(deps: FixDeps, plan: Plan, record: WarehouseStepRecord, outcome: Outcome): Promise<void> {
+    for (const code of plan.toEnable) {
+        try {
+            const row = (await deps.commerce.get(`inventory/sources/${code}`)) as CommerceInventorySource | null;
+            await deps.commerce.send('PUT', `inventory/sources/${code}`, {
+                source: { ...(row ?? { source_code: code, name: code, ...SOURCE_ADDRESS }), enabled: true },
+            });
+            record.enabledSources = [...(record.enabledSources ?? []), code];
+            outcome.changes.push(`Switched ${outcome.nameOf(code)} back on`);
+        } catch (error) {
+            outcome.rejected.push(`Switch ${outcome.nameOf(code)} back on: ${errorText(error)}`);
+        }
+    }
+}
+
+/**
+ * Add the ERP warehouses to the stock, after the ones already there: each new link takes the
+ * next priority past the stock's highest, never 1 beside a warehouse that already has it
+ * (Justrite, 2026-10-26: test_warehouse went in at 1 next to justrite at 1).
+ */
+async function linkSources(
+    deps: FixDeps,
+    target: { plan: Plan; inventory: Inventory; stockId: number },
+    record: WarehouseStepRecord,
+    outcome: Outcome,
+): Promise<void> {
+    const { plan, inventory, stockId } = target;
+    const made = new Set([...record.createdSources, ...plan.sourceCodes.filter((code) => !plan.newSources.some((s) => s.code === code))]);
+    const highest = Math.max(0, ...inventory.links.filter((link) => link.stock_id === stockId).map((link) => link.priority ?? 0));
+    for (const [i, code] of plan.linksToAdd.filter((code) => made.has(code)).entries()) {
+        const line = `${outcome.nameOf(code)} to ${stockNameOf(plan)}`;
+        try {
+            await deps.commerce.send('POST', 'inventory/stock-source-links', { links: [{ stock_id: stockId, source_code: code, priority: highest + i + 1 }] });
+            record.links.push({ stockId, sourceCode: code });
+            outcome.changes.push(`Added ${line}`);
+        } catch (error) {
+            outcome.rejected.push(`Add ${line}: ${errorText(error)}`);
+        }
+    }
+}
+
+/**
+ * Names for the undo's lines. The record keeps codes and ids; the store has the names. A
+ * read that fails leaves the codes, since the undo itself must not wait on it.
+ */
+async function undoNamers(
+    get: CommerceGet,
+    record: WarehouseStepRecord,
+): Promise<{ sourceName: (code: string) => string; stockName: (id: number) => string }> {
+    const inventory = await readInventory(get).catch((): Inventory => ({ sources: [], stocks: [], links: [] }));
+    const stockName = (id: number): string =>
+        inventory.stocks.find((stock) => stock.stock_id === id)?.name ?? (record.createdStock?.id === id ? record.createdStock.name : `stock ${id}`);
+    return { sourceName: sourceNamer(inventory.sources), stockName };
+}
 
 /** The stock the links go to: the existing one, or the one created here. Undefined when creation failed. */
 async function ensureStock(deps: FixDeps, plan: Plan, record: WarehouseStepRecord, changes: string[], rejected: string[]): Promise<number | undefined> {
@@ -173,10 +277,10 @@ async function ensureStock(deps: FixDeps, plan: Plan, record: WarehouseStepRecor
         const id = Number(await deps.commerce.send('POST', 'inventory/stocks', body));
         if (!Number.isInteger(id)) throw new Error('Commerce did not answer the new stock id.');
         record.createdStock = { id, name: plan.stock.create };
-        changes.push(`Created the stock ${plan.stock.create}, selling to the website`);
+        changes.push(`Created ${plan.stock.create}, a stock the website sells from`);
         return id;
     } catch (error) {
-        rejected.push(`Create the stock ${plan.stock.create}: ${errorText(error)}`);
+        rejected.push(`Create ${plan.stock.create}: ${errorText(error)}`);
         return undefined;
     }
 }

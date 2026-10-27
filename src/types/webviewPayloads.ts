@@ -404,6 +404,14 @@ export interface OperationPosition {
     name?: string;
 }
 
+/** One part of a run that changed something, as a row on the success view (`WorkRow`). */
+export interface OperationChange {
+    /** The part, as the SC knows it: "ERP warehouse". */
+    label: string;
+    /** What it changed, then what it leaves by hand, one line each. */
+    lines: string[];
+}
+
 /**
  * `operationProgress` — one operation's progress, for the modal
  * the SC opened by starting it (PL-59). `stage` is what is happening, `step` the detail
@@ -427,10 +435,16 @@ export interface OperationProgressPayload {
     /** What a run that succeeded leaves the SC to know; shown as a plain success, not a warning. */
     note?: string;
     /**
-     * What a run that succeeded changed, one line each, listed under its result ("Store
-     * prepared": the attribute sets erp_owner went into). A run that carries them waits to be read.
+     * What a run that succeeded left to know, one line each, listed under its result (an
+     * EDS reset's page notes). A run that carries them waits to be read.
      */
     details?: string[];
+    /**
+     * The parts of a run that succeeded that changed something, one row each under its
+     * result: the step, what it changed, what it leaves by hand. A run that carries them
+     * waits to be read.
+     */
+    changes?: OperationChange[];
     /** Set while the work is paused on a question only the SC can answer. */
     prompt?: OperationPrompt;
     /** A next step a run that succeeded offers on its success view (AB-74). */

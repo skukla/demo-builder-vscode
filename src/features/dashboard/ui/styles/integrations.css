@@ -83,14 +83,24 @@
 
 /* The list is wide enough to read its labels whole, and a label may wrap: a list of cut-off
    titles was "pointless as it is". */
+/* The list and, under it, Apply all (AB-82), with the rule beside both. */
+.setup-guide-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding-right: 24px;
+    border-right: 1px solid var(--spectrum-global-color-gray-300);
+}
+
 .setup-guide-rail {
     list-style: none;
     margin: 0;
-    padding: 0 24px 0 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    border-right: 1px solid var(--spectrum-global-color-gray-300);
+    width: 100%;
 }
 
 /* A step in the list: a real button, so it is keyboard-reachable. The shown one is bold with
@@ -170,6 +180,30 @@
     flex-direction: column;
     gap: 28px;
     min-width: 0;
+}
+
+/* The step's title with its Optional badge beside it, centred on the title's line. */
+.setup-guide-step-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.setup-guide-step-title > h3 {
+    margin: 0;
+}
+
+/* A step's header (`StepHeader`, AB-82): the title, then the house banner for where the step
+   stands, closer to the title than the step's other parts. */
+.setup-guide-step-head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.setup-guide-step-head > .inline-notice {
+    margin: 0;
 }
 
 /* Where / Enter / Then / Why is `ui/FactList` (core/ui/styles/fact-list.css). */

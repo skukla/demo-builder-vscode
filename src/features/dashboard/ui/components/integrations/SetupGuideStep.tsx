@@ -22,10 +22,14 @@
  * @module features/dashboard/ui/components/integrations/SetupGuideStep
  */
 
-import { Badge, Heading, Link, ProgressCircle } from '@adobe/react-spectrum';
+import { Link, ProgressCircle } from '@adobe/react-spectrum';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import Pending from '@spectrum-icons/workflow/Pending';
 import React from 'react';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
+import { StepHeader } from './StepHeader';
+import type { GuideRun } from './useGuideRun';
+import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { cn } from '@/core/ui/utils/classNames';
@@ -55,19 +59,39 @@ function RailMark({ item, checking }: { item: SetupChecklistItem; checking: bool
             </span>
         );
     }
-    // Keyed by state, so a mark that changes is a new element and its fade-in plays. A done
-    // step carries the extension's own done mark, Spectrum's CheckmarkCircle in green, as
-    // the project summary and the prerequisites list draw it; not a text check of its own.
+    // Keyed by what it shows, so a mark that changes is a new element and its fade-in plays.
+    const kind = markOf(item);
     return (
-        <span key={item.state} className="setup-guide-rail-mark" aria-hidden="true">
-            {item.state === 'done' ? (
-                <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" />
-            ) : (
-                MARK[item.state]
-            )}
+        <span key={kind} className="setup-guide-rail-mark" data-mark={kind} aria-hidden="true">
+            {MARK_ICON[kind] ?? MARK[item.state as keyof typeof MARK]}
         </span>
     );
 }
+
+type MarkKind = 'done' | 'ready' | 'unknown' | 'open' | 'dismissed';
+
+/**
+ * What a step's mark says (AB-82, the list is the at-a-glance summary Prepare's list was):
+ * done; Demo Builder can apply it (the steps Apply all counts); its check could not tell;
+ * else nothing for a step left to the SC, and a dash for one skipped.
+ */
+function markOf(item: SetupChecklistItem): MarkKind {
+    if (item.state === 'done') return 'done';
+    if (item.state === 'dismissed') return 'dismissed';
+    if (item.checkState === 'unknown') return 'unknown';
+    return isLeftToDo(item) && item.applicable ? 'ready' : 'open';
+}
+
+/**
+ * The extension's own marks, Spectrum's workflow icons at the list's size: done is the
+ * green CheckmarkCircle the project summary and the prerequisites list draw; Pending is
+ * what the progress lists draw for work waiting to run (`StepStatusIcon`).
+ */
+const MARK_ICON: Partial<Record<MarkKind, React.ReactElement>> = {
+    done: <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" />,
+    ready: <Pending size="XS" UNSAFE_className="text-gray-600" />,
+    unknown: <AlertCircle size="XS" UNSAFE_className="text-yellow-600" />,
+};
 
 /** Every step down the left by its short label, done ones checked; the shown one highlighted. */
 export function StepList({ items, index, onSelect, checkingId, animateMarks }: StepListProps): React.ReactElement {
@@ -131,6 +155,10 @@ export interface StepProps {
      * tech, and `visibility: hidden` takes them out of the tab order.
      */
     shown?: boolean;
+    /** The integration, for the shown step's read of what Apply will do. */
+    integrationId: string;
+    /** The guide's run, on the shown step only (AB-82, `StepHeader`). */
+    run?: GuideRun;
 }
 
 /** The quiet link's words for each state: what pressing it will do. */
@@ -155,34 +183,6 @@ function SkipOrReopen({ item, busy, onSet }: StepProps): React.ReactElement | nu
                 {SKIP_OR_REOPEN[item.state]}
             </Link>
         </div>
-    );
-}
-
-/** What a check's outcome is called, as the notice's title. */
-const RESULT_TITLE = {
-    passed: 'Checked: set up correctly',
-    failed: 'Not set up yet',
-    unknown: "Couldn't check this step",
-} as const;
-
-/**
- * What the last check found, first thing under the title, in the house notice: blue when
- * it is set up, amber when it is not or could not be told. Drawn as plain text under the
- * instructions it read as more instructions (owner, 2026-10-01). Nothing before a check
- * has run, or on a skipped step.
- */
-function CheckResult({ item }: { item: SetupChecklistItem }): React.ReactElement | null {
-    if (!item.note || !item.lastCheck || item.state === 'dismissed') return null;
-    // The check's own "Could not check:" lead repeats the title, so it goes.
-    const finding = item.note.replace(/^Could not check: /u, '');
-    return (
-        <InlineNotice
-            tone={item.lastCheck === 'passed' ? 'info' : 'warning'}
-            title={RESULT_TITLE[item.lastCheck]}
-            testId="setup-guide-check-result"
-        >
-            {finding}
-        </InlineNotice>
     );
 }
 
@@ -211,8 +211,8 @@ function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
 }
 
 /**
- * One step: its title, where, what to enter, what then, why, the evidence, and the quiet
- * skip. The buttons that act on it sit in the dialog's footer (SetupGuideModal), where
+ * One step: its header (title, where it stands, one line), where, what to enter, what then,
+ * why, and the quiet skip. The buttons that act on it sit in the dialog's footer (SetupGuideModal), where
  * every other modal keeps its actions.
  */
 export function SetupGuideStep(props: StepProps): React.ReactElement {
@@ -223,11 +223,7 @@ export function SetupGuideStep(props: StepProps): React.ReactElement {
             data-testid={shown ? 'setup-guide-step' : undefined}
             aria-hidden={shown ? undefined : true}
         >
-            <Heading level={3}>{item.title}</Heading>
-            {/* Spectrum's neutral Badge, as the integration card shows its type: only some
-                demos need this step, so it is not counted as left to do (`isLeftToDo`). */}
-            {item.optional && <Badge variant="neutral">Optional</Badge>}
-            <CheckResult item={item} />
+            <StepHeader item={item} integrationId={props.integrationId} run={props.run} />
             <StepFacts item={item} />
             <SkipOrReopen {...props} />
         </div>

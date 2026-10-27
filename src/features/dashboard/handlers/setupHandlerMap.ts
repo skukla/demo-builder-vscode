@@ -1,6 +1,6 @@
 /**
  * The demo setup handlers, as one group of the dashboard's map: the checklist (AB-26x:
- * the saved steps, marking one, the checks Demo Builder runs itself), "Prepare this store"
+ * the saved steps, marking one, the checks Demo Builder runs itself), the demo setup's Apply
  * and its undo (AB-77), and the one settings write outside a catalog step. Spread into
  * `dashboardHandlers`, which is at its size limit; the group is one job.
  *

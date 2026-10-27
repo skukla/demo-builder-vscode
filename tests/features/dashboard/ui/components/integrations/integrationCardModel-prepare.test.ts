@@ -1,49 +1,23 @@
 /**
- * integrationCardModel — "Prepare this store" and "Undo preparation" on an integration's card
- * (AB-77). Offered on a deployed integration while a step it can fix is still open (the ERP
- * integration's steps declare fixes); the undo whenever a preparation is recorded on it.
+ * integrationCardModel — the demo setup has no verbs on an integration's card (AB-82). "Prepare
+ * this store" and "Undo preparation" were a second door into the same steps the setup guide
+ * lists; they were removed on 2026-10-26, and Apply all and each step's Undo live in the guide.
  */
 
 import { deriveIntegrationCard, integration } from './integrationCardModel.testUtils';
 
-// The test catalog's one fixable step (integrationCardModel.testUtils).
-const allFixableDone = { 'price-scope-website': { state: 'done' as const, lastCheck: 'passed' as const } };
 const recordedRun = { at: '2026-10-10T10:00:00Z', steps: { 'price-scope-website': { kind: 'config' as const, previous: [] } } };
 
 const erpIntegration = (over = {}) => integration({ id: 'erp-integration', source: { owner: 'skukla', repo: 'commerce-erp-integration' }, ...over });
 
-describe('Prepare this store on an integration card', () => {
-    // Shown only while a step is open, so when it is there it is what the card needs (owner,
-    // 2026-10-19).
-    it('leads the menu of a deployed integration with applicable setup steps', () => {
-        const actions = deriveIntegrationCard(erpIntegration()).menuActions;
-        expect(actions[0]).toBe('prepare-store');
-        expect(actions).not.toContain('undo-store-preparation');
-    });
-
-    // Beside the reset: both go back to the start.
-    it('adds the undo once a preparation is recorded, under Reset ERPs', () => {
-        const recorded = erpIntegration({ storePreparation: { at: '2026-10-10T10:00:00Z', steps: { 'price-scope-website': { kind: 'config', previous: [] } } } });
-        const actions = deriveIntegrationCard(recorded).menuActions;
-        expect(actions.indexOf('undo-store-preparation')).toBe(actions.indexOf('reset-records') + 1);
-    });
-
-    it('is not offered while the integration is not deployed, nor on an entry with no applicable step', () => {
-        expect(deriveIntegrationCard(erpIntegration({ status: 'error' })).menuActions).not.toContain('prepare-store');
-        expect(deriveIntegrationCard(integration({ id: 'app-builder-shell' })).menuActions).not.toContain('prepare-store');
-    });
-
-    // An "All done" Demo setup must not offer a button that would find nothing to apply
-    // (owner, 2026-10-18). The undo stays: what was applied can still be put back.
-    it('is not offered once every step it can fix is done, while the undo stays', () => {
-        const done = deriveIntegrationCard(erpIntegration({ setupSteps: allFixableDone, storePreparation: recordedRun })).menuActions;
-        expect(done).not.toContain('prepare-store');
-        expect(done.indexOf('undo-store-preparation')).toBe(done.indexOf('reset-records') + 1);
-    });
-
-    // A step marked done whose check could not tell is still open (setupChecklist's rule).
-    it('CONTROL: a fixable step marked done but unconfirmed still offers it', () => {
-        const unconfirmed = { 'price-scope-website': { state: 'done' as const, lastCheck: 'unknown' as const, note: 'Could not read the setting.' } };
-        expect(deriveIntegrationCard(erpIntegration({ setupSteps: unconfirmed })).menuActions).toContain('prepare-store');
+describe('the demo setup on an integration card', () => {
+    it('offers no preparation verb on a deployed integration with steps it can apply, recorded or not', () => {
+        for (const card of [erpIntegration(), erpIntegration({ storePreparation: recordedRun })]) {
+            const actions = deriveIntegrationCard(card).menuActions as string[];
+            expect(actions).not.toContain('prepare-store');
+            expect(actions).not.toContain('undo-store-preparation');
+            // CONTROL: the same card's menu is there, with the ERP verbs that sat beside them.
+            expect(actions).toContain('reset-records');
+        }
     });
 });

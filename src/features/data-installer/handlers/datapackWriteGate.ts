@@ -30,6 +30,8 @@ export type DatapackWrite = 'import' | 'export';
 export interface DatapackWriteAccess {
     baseUrl: string;
     getToken: () => Promise<string>;
+    /** The SC's IMS org code, for the gateway (`dataInstallerSignIn`). */
+    orgCode?: string;
     project: Project;
     credentials: CommerceCredentials;
 }
@@ -122,6 +124,7 @@ export async function resolveDatapackWriteAccess(
     return {
         baseUrl: access.baseUrl,
         getToken: access.getToken,
+        orgCode: access.orgCode,
         project,
         credentials: credentials.credentials,
     };

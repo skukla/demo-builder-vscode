@@ -85,35 +85,14 @@ export function handleIntegrationErpAction(
 }
 
 /**
- * Route an integration card's "Prepare this store" or "Undo preparation" to the screen's
- * dialogs (AB-77), beside the other card routers.
- *
- * @returns whether the action was handled here
- */
-export function handlePreparationAction(
-    model: IntegrationCardModel,
-    action: CardAction,
-    controls: { openPrepare: (target: { id: string; name: string }) => void; confirmUndo: (target: { id: string; name: string }) => void } | undefined,
-): boolean {
-    if (action !== 'prepare-store' && action !== 'undo-store-preparation') return false;
-    const open = action === 'prepare-store' ? controls?.openPrepare : controls?.confirmUndo;
-    const id = model.componentId ?? model.id;
-    open?.({ id, name: model.name });
-    return true;
-}
-
-/** The grid's handlers for every verb that routes here, with the preparation dialogs' two. */
-export type OwnDialogHandlers = SystemCardHandlers & { preparation?: Parameters<typeof handlePreparationAction>[2] };
-
-/**
  * Route a card verb whose job is one of the extension's own dialogs or messages: a system's
- * verbs, the integration's ERP verbs, the repository verbs, the store preparation (AB-77).
+ * verbs, the integration's ERP verbs, the repository verbs.
  *
  * @returns whether the action was handled here
  */
-export function routeOwnDialogs(model: IntegrationCardModel, action: CardAction, handlers: OwnDialogHandlers): boolean {
+export function routeOwnDialogs(model: IntegrationCardModel, action: CardAction, handlers: SystemCardHandlers): boolean {
     const routed = model.isSystem ? handleSystemAction(model, action, handlers) : handleIntegrationErpAction(model, action, handlers);
-    return routed || handleRepositoryAction(model, action) || handlePreparationAction(model, action, handlers.preparation);
+    return routed || handleRepositoryAction(model, action);
 }
 
 /**

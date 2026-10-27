@@ -713,7 +713,7 @@
         },
         "storePreparation": {
           "$ref": "#/definitions/StorePreparationRecord",
-          "description": "What \"Prepare this store\" changed in Commerce for this component's setup steps (AB-77), by step id, so each can be undone. A step's entry goes with its undo; the record goes with the component."
+          "description": "What the demo setup's Apply changed in Commerce for this component's setup steps (AB-77), by step id, so each can be undone. A step's entry goes with its undo; the record goes with the component."
         },
         "catalogId": {
           "type": "string",
@@ -1051,7 +1051,7 @@
         "at",
         "steps"
       ],
-      "description": "The record \"Prepare this store\" leaves on the component: one entry per step applied, by step id. A step's entry is removed by its undo; the whole record goes with the last one, or with the component."
+      "description": "The record the demo setup's Apply leaves on the component: one entry per step applied, by step id. A step's entry is removed by its undo; the whole record goes with the last one, or with the component."
     },
     "StorePreparationStepRecord": {
       "anyOf": [
@@ -1215,6 +1215,13 @@
             ]
           },
           "description": "The stock-source links this run added."
+        },
+        "enabledSources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Sources this run found switched off and switched back on, by code: an earlier undo switched off the source it had made, and applying again finds it there. The undo switches them off again. Absent on records written before 2026-10-26."
         }
       },
       "required": [

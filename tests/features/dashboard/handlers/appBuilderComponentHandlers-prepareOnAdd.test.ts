@@ -53,7 +53,7 @@ describe('adding the ERP integration', () => {
                 confirmed: false,
                 adding: { id: 'erp-integration', name: 'ERP Integration' },
                 preparation: PREVIEW,
-                next: 'Show the user what the store preparation changes, then call again with confirm: true.',
+                next: 'Show the user what the demo setup changes, then call again with confirm: true.',
             },
         });
     });

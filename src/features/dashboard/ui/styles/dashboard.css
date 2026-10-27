@@ -327,7 +327,11 @@
     display: inline;
     font-size: 11px;
     white-space: nowrap;
-    color: var(--spectrum-global-color-gray-700);
+    /* The house status treatment, as the project and integration cards draw it
+       (owner, 2026-10-26: the dashboard's sentence case read as another font). */
+    color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 /* ...and on a card, the dot and its word as the second line, in place of the
@@ -341,7 +345,9 @@
 .dashboard-tile-status--inline .dashboard-tile-status-text {
     display: inline;
     white-space: nowrap;
-    color: var(--spectrum-global-color-gray-700);
+    color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .dashboard-tile-status-text[data-variant='error'] {

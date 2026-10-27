@@ -138,15 +138,25 @@ describe('confirmStorefrontCodeServed', () => {
         };
         return {
             getLatestCommitSha: jest.fn().mockResolvedValue('head'),
-            getFileContent: jest.fn().mockResolvedValue({ content: 'new', sha: 's', path: 'scripts/commerce.js' }),
+            getFileContent: jest
+                .fn()
+                .mockImplementation(async (_o: string, _r: string, path: string) => ({ content: 'new', sha: 's', path })),
             treeCommits: { ...treeCommits, ...overrides },
             ...(overrides.getLatestCommitSha ? { getLatestCommitSha: overrides.getLatestCommitSha } : {}),
         };
     }
 
-    function serve(body: string): void {
-        global.fetch = jest.fn().mockResolvedValue({ ok: true, text: async () => body }) as unknown as typeof fetch;
+    /** The site: one body for every file, or a body per file (absent = 404). */
+    function serve(body: string | Record<string, string>): void {
+        global.fetch = jest.fn(async (url: string) => {
+            const path = new URL(url).pathname.slice(1);
+            const text = typeof body === 'string' ? body : body[path];
+            return { ok: text !== undefined, text: async () => text };
+        }) as unknown as typeof fetch;
     }
+
+    /** The template's two probe files, served as committed. */
+    const TEMPLATE_SERVED = { 'scripts/aem.js': 'new', 'styles/styles.css': 'new' };
 
     afterEach(() => {
         global.fetch = originalFetch;
@@ -174,13 +184,54 @@ describe('confirmStorefrontCodeServed', () => {
     });
 
     it('publishes the stale file on its own and says so when the site never catches up', async () => {
-        serve('old');
+        serve({ ...TEMPLATE_SERVED, 'scripts/commerce.js': 'old' });
         const previewCode = jest.fn().mockResolvedValue(undefined);
 
         const said = await confirmStorefrontCodeServed(github(), { previewCode }, SITE, 'reset', createMockLogger());
 
         expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/scripts/commerce.js');
         expect(said).toContain('1 code file did not reach the live site (scripts/commerce.js)');
+    });
+
+    /**
+     * mrajkovich/bodea, 2026-10-27 (EDS-66): AEM accepted the publish of `/*` and never
+     * brought the template's own files, so the site served no styles and no scripts. Those
+     * files are in no later commit, so the changed-file check never looked at them.
+     */
+    it("publishes all the code again when the site does not serve the template's files", async () => {
+        const site: Record<string, string> = { 'scripts/commerce.js': 'new' };
+        serve(site);
+        const previewCode = jest.fn(async (_o: string, _r: string, path: string) => {
+            if (path === '/*') Object.assign(site, TEMPLATE_SERVED);
+        });
+
+        const said = await confirmStorefrontCodeServed(github(), { previewCode }, SITE, undefined, createMockLogger());
+
+        expect(previewCode).toHaveBeenCalledTimes(1);
+        expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/*');
+        expect(said).toBeUndefined();
+    });
+
+    it("says the pages show without styles or scripts when the template's code never arrives", async () => {
+        serve({ 'scripts/commerce.js': 'new' });
+        const previewCode = jest.fn().mockResolvedValue(undefined);
+
+        const said = await confirmStorefrontCodeServed(github(), { previewCode }, SITE, undefined, createMockLogger());
+
+        expect(previewCode.mock.calls.map((call) => call[2])).toEqual(['/*', '/*', '/*']);
+        expect(said).toBe(
+            "The storefront's code did not reach the live site (scripts/aem.js, styles/styles.css), so its pages " +
+                'show without styles or scripts. Select Republish on the project dashboard to publish the code again.',
+        );
+    });
+
+    it('CONTROL: publishes nothing more when the site serves the template and every change', async () => {
+        serve({ ...TEMPLATE_SERVED, 'scripts/commerce.js': 'new' });
+        const previewCode = jest.fn();
+
+        await confirmStorefrontCodeServed(github(), { previewCode }, SITE, undefined, createMockLogger());
+
+        expect(previewCode).not.toHaveBeenCalled();
     });
 
     it('has nothing to check when nothing was committed after the starting commit', async () => {

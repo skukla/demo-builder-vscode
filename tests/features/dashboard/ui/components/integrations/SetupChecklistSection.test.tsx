@@ -41,7 +41,7 @@ describe('SetupChecklistSection', () => {
     it('opens the setup guide', () => {
         const onOpenGuide = jest.fn();
         render(<SetupChecklistSection model={model([step({})])} onOpenGuide={onOpenGuide} />);
-        fireEvent.click(screen.getByRole('link', { name: 'Open setup guide' }));
+        fireEvent.click(screen.getByRole('link', { name: 'Open demo setup' }));
         expect(onOpenGuide).toHaveBeenCalledTimes(1);
     });
 

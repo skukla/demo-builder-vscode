@@ -145,7 +145,7 @@
           "check": "price-scope-website",
           "label": "Price scope",
           "title": "Set the catalog price scope to Website",
-          "why": "The ERP publishes a company's prices per website; at the default scope, Global, every site would show the same prices. Prepare this store sets it through PUT /V1/system/config.",
+          "why": "The ERP publishes a company's prices per website; at the default scope, Global, every site would show the same prices.",
           "where": "Stores > Configuration > Catalog > Catalog > Price > Catalog Price Scope: set to Website, Save Config. Catalog > Shared Catalogs > Set Pricing and Structure then shows a Website chooser above the prices.",
           "path": [
             "Stores",
@@ -165,7 +165,9 @@
               {
                 "path": "catalog/price/scope",
                 "value": "1",
-                "scope": "default"
+                "scope": "default",
+                "field": "Catalog Price Scope",
+                "values": { "0": "Global", "1": "Website" }
               }
             ]
           }
@@ -257,7 +259,9 @@
               {
                 "path": "payment/companycredit/active",
                 "value": "1",
-                "scope": "website"
+                "scope": "website",
+                "field": "Payment on Account",
+                "values": { "0": "No", "1": "Yes" }
               }
             ]
           }
@@ -286,7 +290,9 @@
               {
                 "path": "sales/magento_rma/enabled",
                 "value": "1",
-                "scope": "website"
+                "scope": "website",
+                "field": "Enable RMA on Storefront",
+                "values": { "0": "No", "1": "Yes" }
               }
             ]
           }
@@ -314,10 +320,12 @@
               {
                 "path": "payment/payment_services/active",
                 "value": "1",
-                "scope": "website"
+                "scope": "website",
+                "field": "Payment Services",
+                "values": { "0": "No", "1": "Yes" }
               }
             ],
-            "manual": "The PayPal sandbox connection stays by hand: Sales > Payment Services > Sandbox onboarding, with a PayPal sandbox business account, before the switch takes effect."
+            "manual": "Connect PayPal in Sales > Payment Services before cards work."
           }
         },
         {

@@ -24,16 +24,18 @@
  * @module features/dashboard/ui/components/integrations/SetupGuideModal
  */
 
-import { DialogContainer } from '@adobe/react-spectrum';
+import { Button, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
+import { FIX_COPY, checkableIds, footerButtons, readyToApply } from './setupGuideFooter';
 import { SetupGuideStep, StepList } from './SetupGuideStep';
-import { type CheckFailure, type CheckProgress, useSetupChecklist } from './useSetupChecklist';
+import { useGuideRun } from './useGuideRun';
+import { type CheckFailure, useSetupChecklist } from './useSetupChecklist';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
-import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { Modal } from '@/core/ui/components/ui/Modal';
+import type { StartableOperation } from '@/core/ui/hooks/useOperationRunner';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 export interface SetupGuideModalProps {
@@ -43,93 +45,26 @@ export interface SetupGuideModalProps {
     /** Opens Commerce Admin (the grid's 'openAdminPanel' request). */
     onOpenAdmin: () => void;
     /**
-     * A step's fix, or its undo (AB-74, AB-77): the screen confirms it and runs it through
-     * "Prepare this store". Absent, the guide offers no fix.
+     * A run that stops on a question (sign in, another org) goes to the progress window, which
+     * asks it, with the step the SC was on (AB-82). Absent, the guide offers no Apply or Undo.
      */
-    onFix?: (target: { id: string; name: string; mode: 'apply' | 'undo'; stepId: string; label: string }) => void;
+    onAsk?: (operation: StartableOperation, stepId: string) => void;
+    /** The step to open on, by id: the one the SC left the guide from. Else the first open one. */
+    startAt?: string;
 }
 
 /** No steps: one array, so a hook reading the steps sees the same one each render. */
 const NO_STEPS: SetupChecklistItem[] = [];
 
-/** The fix buttons' words, in one place. */
-export const FIX_COPY = {
-    fix: 'Apply this step',
-    undo: 'Undo this step',
-};
-
-/** Where the guide opens: the first step still to do (not an optional one), else the first. */
-function firstOpen(items: SetupChecklistItem[]): number {
+/**
+ * Where the guide opens: the step it was left from, else the first step still to do (not an
+ * optional one), else the first.
+ */
+function firstOpen(items: SetupChecklistItem[], startAt?: string): number {
+    const at = startAt === undefined ? -1 : items.findIndex((item) => item.id === startAt);
+    if (at !== -1) return at;
     const index = items.findIndex(isLeftToDo);
     return index === -1 ? 0 : index;
-}
-
-interface FooterInput {
-    item: SetupChecklistItem | undefined;
-    busy: boolean;
-    progress: CheckProgress | undefined;
-    connecting: boolean;
-    setDone: () => void;
-    checkAll: () => void;
-    openAdmin: () => void;
-    /** The step's fix or its undo, when the guide offers one. */
-    fix?: (mode: 'apply' | 'undo') => void;
-}
-
-/**
- * Apply on an open step Demo Builder can do; Undo on one it applied and recorded (AB-77). A step
- * saved done shows no Apply (owner, 2026-10-22): the guide checks never-checked steps as it
- * opens, so done is fresh enough, and Check all steps reopens a stale one. Nothing for a step
- * with no fix, a skipped step, or when the screen offers none.
- */
-function fixButtons(item: SetupChecklistItem, fix: FooterInput['fix'], busy: boolean): ActionButton[] {
-    if (!item.fix || !fix || item.state === 'dismissed') return [];
-    const apply: ActionButton = { label: FIX_COPY.fix, variant: 'secondary', onPress: () => fix('apply'), isDisabled: busy };
-    const undo: ActionButton = { label: FIX_COPY.undo, variant: 'secondary', onPress: () => fix('undo'), isDisabled: busy };
-    if (item.state === 'done') return item.fixApplied ? [undo] : [];
-    return item.fixApplied ? [apply, undo] : [apply];
-}
-
-/**
- * The check button's words: idle, connecting (a run waiting on the Commerce sign-in the
- * guide started as it opened), or how far a run is.
- */
-function checkLabel(progress: CheckProgress | undefined, connecting: boolean): string {
-    if (!progress) return 'Check all steps';
-    return connecting ? 'Connecting to Commerce' : `Checking ${progress.position} of ${progress.total}`;
-}
-
-/** The steps a check run covers, in list order: every checkable one not skipped. */
-function checkableIds(items: SetupChecklistItem[]): string[] {
-    return items.filter((item) => item.checkable && item.state !== 'dismissed').map((item) => item.id);
-}
-
-/**
- * The footer's buttons for the shown step, after Close: the one that settles it, then Open
- * Commerce Admin as the main action. Demo Builder checks a step when it can — and checks them
- * all, which the button says, since the list beside it shows each one land; otherwise the SC
- * says it is done. A skipped or finished step the SC cannot check has nothing to settle.
- */
-function footerButtons({
-    item,
-    busy,
-    progress,
-    connecting,
-    setDone,
-    checkAll,
-    openAdmin,
-    fix,
-}: FooterInput): ActionButton[] {
-    const open: ActionButton = { label: 'Open Commerce Admin', variant: 'accent', onPress: openAdmin };
-    if (!item) return [open];
-    if (item.checkable && item.state !== 'dismissed') {
-        const label = checkLabel(progress, connecting);
-        return [...fixButtons(item, fix, busy), { label, variant: 'secondary', onPress: checkAll, isDisabled: busy }, open];
-    }
-    if (item.state === 'open') {
-        return [{ label: 'Mark as done', variant: 'secondary', onPress: setDone, isDisabled: busy }, open];
-    }
-    return [open];
 }
 
 /**
@@ -173,11 +108,12 @@ function Guide({
     model,
     onClose,
     onOpenAdmin,
-    onFix,
+    onAsk,
+    startAt,
 }: SetupGuideModalProps & { model: IntegrationCardModel }): React.ReactElement {
     const items = model.setupChecklist ?? NO_STEPS;
     const actions = useSetupChecklist(model.id);
-    const [index, setIndex] = useState(() => firstOpen(items));
+    const [index, setIndex] = useState(() => firstOpen(items, startAt));
     // A step list that shrinks under the modal (a redeploy of an older version) must not
     // leave the index past its end.
     useEffect(() => {
@@ -217,23 +153,31 @@ function Guide({
     }, [items, busy, runChecks]);
 
     const item = items[Math.min(index, items.length - 1)];
+    // Apply, Undo and Apply all run here, in the guide (AB-82): no confirm, no progress window.
+    // A run that stops on a question is the exception: the guide closes and the progress
+    // window asks it, then the SC comes back to this step.
+    const handOff = useCallback(
+        (operation: StartableOperation) => {
+            onClose();
+            onAsk?.(operation, item?.id ?? '');
+        },
+        [onClose, onAsk, item?.id],
+    );
+    const run = useGuideRun(model, items, onAsk ? handOff : undefined);
+    const busyNow = actions.busy || run.running;
     const buttons = footerButtons({
         item,
-        busy: actions.busy,
+        busy: busyNow,
         progress: actions.progress,
         connecting: actions.connecting,
         setDone: () => item && actions.setStep(item.id, 'done'),
         checkAll: () => void checkAll(),
         openAdmin: onOpenAdmin,
-        // The confirm opens over the screen, not over the guide: the guide closes first.
-        fix:
-            onFix && item
-                ? (mode) => {
-                      onClose();
-                      onFix({ id: model.id, name: model.name, mode, stepId: item.id, label: item.label ?? item.title });
-                  }
-                : undefined,
+        fix: onAsk && item ? (mode) => run.start(mode, [item.id]) : undefined,
     });
+    // Apply all (AB-82): what "Prepare this store" did, from the one place the steps live.
+    const ready = readyToApply(items);
+    const applyAll = onAsk && ready.length > 0 ? () => run.start('apply', ready.map((step) => step.id)) : undefined;
     return (
         <Modal
             title={`Demo setup: ${model.name}`}
@@ -244,13 +188,21 @@ function Guide({
         >
             <GuideNotice items={items} failures={actions.failures} error={actions.error} />
             <div className="setup-guide-layout">
-                <StepList
-                    items={items}
-                    index={index}
-                    onSelect={setIndex}
-                    checkingId={actions.progress?.stepId}
-                    animateMarks={hasChecked}
-                />
+                {/* The list, and under it what acts on the list as a whole (AB-82). */}
+                <div className="setup-guide-side">
+                    <StepList
+                        items={items}
+                        index={index}
+                        onSelect={setIndex}
+                        checkingId={actions.progress?.stepId ?? run.workingId}
+                        animateMarks={hasChecked}
+                    />
+                    {applyAll && (
+                        <Button variant="secondary" onPress={applyAll} isDisabled={busyNow}>
+                            {FIX_COPY.all(ready.length)}
+                        </Button>
+                    )}
+                </div>
                 {/* Steps differ in length. Every step is laid in the same cell and only the
                     shown one is visible, so the pane is as tall as the TALLEST step from the
                     moment it opens. SteadyHeight alone grew only on a step's first visit, so
@@ -263,8 +215,10 @@ function Guide({
                                 key={step.id}
                                 item={step}
                                 shown={step.id === item?.id}
-                                busy={actions.busy}
+                                busy={busyNow}
                                 onSet={(state) => actions.setStep(step.id, state)}
+                                integrationId={model.id}
+                                {...(step.id === item?.id ? { run } : {})}
                             />
                         ))}
                     </div>
@@ -284,7 +238,8 @@ export function SetupGuideModal({
     model,
     onClose,
     onOpenAdmin,
-    onFix,
+    onAsk,
+    startAt,
 }: SetupGuideModalProps): React.ReactElement {
     // Nothing mounted while closed, not an empty DialogContainer: the screen hosts this
     // beside its own dialogs, and a container with no child still occupies the dialog
@@ -292,58 +247,14 @@ export function SetupGuideModal({
     if (!model || (model.setupChecklist?.length ?? 0) === 0) return <></>;
     return (
         <DialogContainer onDismiss={onClose}>
-            <Guide key={model.id} model={model} onClose={onClose} onOpenAdmin={onOpenAdmin} onFix={onFix} />
+            <Guide
+                key={model.id}
+                model={model}
+                onClose={onClose}
+                onOpenAdmin={onOpenAdmin}
+                onAsk={onAsk}
+                startAt={startAt}
+            />
         </DialogContainer>
     );
-}
-
-/** Which card's guide is open, for the grid: a way to open one, and the modal's props. */
-export interface SetupGuideControls {
-    open: (cardId: string) => void;
-    modal: SetupGuideModalProps;
-}
-
-/**
- * The grid's hold on the guide. The card is looked up from `cards` on every render, so the
- * open guide redraws when the extension pushes the saved steps back.
- *
- * @param cards - the grid's current cards
- * @returns the opener and the modal's props
- */
-export function useSetupGuide(cards: IntegrationCardModel[]): SetupGuideControls {
-    const [cardId, setCardId] = useState<string | null>(null);
-    const close = useCallback(() => setCardId(null), []);
-    const openAdmin = useCallback(() => webviewClient.postMessage('openAdminPanel', {}), []);
-    return {
-        open: setCardId,
-        modal: {
-            model: cards.find((card) => card.id === cardId) ?? null,
-            onClose: close,
-            onOpenAdmin: openAdmin,
-        },
-    };
-}
-
-/**
- * What the progress modal offers when an operation on a card with setup still open succeeds:
- * the steps left, and a way straight into the guide (AB-26x). Undefined otherwise.
- *
- * @param cards - the screen's cards
- * @param operationId - the operation the progress modal shows (a component id), if any
- * @param openGuide - opens a card's guide
- */
-export function setupNextStep(
-    cards: IntegrationCardModel[],
-    operationId: string | undefined,
-    openGuide: (cardId: string) => void,
-): { message: string; action: string; onPress: () => void } | undefined {
-    if (!operationId) return undefined;
-    const card = cards.find((candidate) => (candidate.componentId ?? candidate.id) === operationId);
-    const open = (card?.setupChecklist ?? []).filter(isLeftToDo).length;
-    if (!card || open === 0) return undefined;
-    return {
-        message: `Next: ${open} setup step${open > 1 ? 's' : ''} in Commerce for the demo.`,
-        action: 'Start setup guide',
-        onPress: () => openGuide(card.id),
-    };
 }

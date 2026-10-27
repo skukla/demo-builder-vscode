@@ -828,7 +828,7 @@ export interface PrepareStoreRequestPayload {
 }
 
 /**
- * `undoCommerceStorePreparation` (AB-77): put back what "Prepare this store" recorded, every
+ * `undoCommerceStorePreparation` (AB-77): put back what the demo setup's Apply recorded, every
  * step newest first, or the one `stepId` names. Without `confirm: true` it says what it would put back.
  */
 export interface UndoStorePreparationRequestPayload {

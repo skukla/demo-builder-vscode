@@ -80,6 +80,10 @@ const checkCalls = () => mockRequest.mock.calls.filter(([type]) => type === 'che
 
 /** The detail pane: the one shown step. */
 const shown = () => screen.getByTestId('setup-guide-step');
+/** The step's status banner, in the house `InlineNotice`: its title, then one short sentence at most. */
+const status = () => within(shown()).getByTestId('setup-guide-step-status');
+// The icon mock renders its name as text; the banner's words follow it.
+const says = () => status().textContent?.replace(/^DefaultIcon/u, '');
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -183,7 +187,9 @@ describe('SetupGuideModal', () => {
         expect(within(pane).queryByText(STRUCTURED.where)).not.toBeInTheDocument();
     });
 
-    it('shows a passed check as a blue notice under the title, with what it found', async () => {
+    // A done step is a green Done badge and nothing else: its check's sentence was noise
+    // (owner, 2026-10-26: "reads horridly").
+    it('shows a passed check as a blue Done banner under the title, with no sentence', async () => {
         await renderGuide([
             step({
                 id: 'c',
@@ -194,35 +200,30 @@ describe('SetupGuideModal', () => {
                 lastCheck: 'passed',
             }),
         ]);
-        const result = within(shown()).getByTestId('setup-guide-check-result');
-        expect(result).toHaveClass('inline-notice--info');
-        expect(result).toHaveTextContent('Checked: set up correctly');
-        expect(result).toHaveTextContent('2 companies, each with its own catalog.');
+        expect(says()).toBe('Done');
+        expect(status()).toHaveClass('inline-notice--info');
     });
 
-    it('shows a failed check, and one that could not tell, as amber notices', async () => {
+    it('shows a failed check, and one that could not tell, as an amber banner with what it found', async () => {
         await renderGuide([
             step({ id: 'p', title: 'Step P', checkable: true, note: 'Payment on Account is off for the acme website.', lastCheck: 'failed' }),
             step({ id: 'q', title: 'Step Q', checkable: true, note: 'Could not check: Commerce REST answered HTTP 503.', lastCheck: 'unknown' }),
         ]);
-        const failed = within(shown()).getByTestId('setup-guide-check-result');
-        expect(failed).not.toHaveClass('inline-notice--info');
-        expect(failed).toHaveTextContent('Not set up yetPayment on Account is off for the acme website.');
+        expect(says()).toBe('Not set upPayment on Account is off for the acme website.');
+        expect(status()).not.toHaveClass('inline-notice--info');
         fireEvent.click(screen.getByRole('tab', { name: 'Step Q' }));
-        // The check's own "Could not check:" lead is not repeated under the same title.
-        expect(within(shown()).getByTestId('setup-guide-check-result')).toHaveTextContent(
-            "Couldn't check this stepCommerce REST answered HTTP 503.",
-        );
+        // The check's own "Could not check:" lead is not repeated beside the badge that says it.
+        expect(says()).toBe("Couldn't checkCommerce REST answered HTTP 503.");
     });
 
-    it('shows no result before a check has run, or on a skipped step', async () => {
+    it('says only Not set up before a check has run, and Skipped on a skipped step', async () => {
         await renderGuide([
             step({ id: 'a', title: 'Step A', checkable: true }),
             step({ id: 'b', title: 'Step B', checkable: true, state: 'dismissed', note: 'x', lastCheck: 'failed' }),
         ]);
-        expect(within(shown()).queryByTestId('setup-guide-check-result')).not.toBeInTheDocument();
+        expect(says()).toBe('Not set up');
         fireEvent.click(screen.getByRole('tab', { name: 'Step B' }));
-        expect(within(shown()).queryByTestId('setup-guide-check-result')).not.toBeInTheDocument();
+        expect(says()).toBe('Skipped');
     });
 
     it('signs in to Commerce as it opens, ahead of any check', async () => {
@@ -343,8 +344,8 @@ describe('SetupGuideModal', () => {
         await renderGuide([
             step({ id: 'a', title: 'Step A', checkable: true, state: 'done', note: 'Set.', lastCheck: 'passed' }),
         ]);
-        // Positive control: the step and its result rendered.
-        expect(within(shown()).getByTestId('setup-guide-check-result')).toBeInTheDocument();
+        // Positive control: the step and its badge rendered.
+        expect(says()).toBe('Done');
         expect(within(shown()).queryByRole('link')).not.toBeInTheDocument();
     });
 
@@ -471,12 +472,12 @@ describe('setupNextStep', () => {
         { id: 'mesh', componentId: 'eds-accs-mesh' },
     ] as IntegrationCardModel[];
 
-    it('offers the guide of the card the operation was for, counting the steps left', async () => {
+    // The button alone: a "Next: 2 setup steps …" sentence said the same (owner, 2026-10-26).
+    it('offers the guide of the card the operation was for, as its button alone', async () => {
         const openGuide = jest.fn();
         const next = setupNextStep(cards, 'erp-integration', openGuide);
 
-        expect(next?.message).toBe('Next: 2 setup steps in Commerce for the demo.');
-        expect(next?.action).toBe('Start setup guide');
+        expect(next).toStrictEqual({ action: 'Open demo setup', onPress: expect.any(Function) });
         next?.onPress();
         expect(openGuide).toHaveBeenCalledWith('erp-integration');
     });
@@ -488,9 +489,7 @@ describe('setupNextStep', () => {
                 setupChecklist: [...THREE, step({ id: 'o', title: 'Step O', optional: true })],
             },
         ];
-        expect(setupNextStep(withOptional, 'erp-integration', jest.fn())?.message).toBe(
-            'Next: 2 setup steps in Commerce for the demo.',
-        );
+        expect(setupNextStep(withOptional, 'erp-integration', jest.fn())?.action).toBe('Open demo setup');
         const onlyOptional = [{ ...cards[0], setupChecklist: [step({ id: 'o', optional: true })] }];
         expect(setupNextStep(onlyOptional, 'erp-integration', jest.fn())).toBeUndefined();
     });

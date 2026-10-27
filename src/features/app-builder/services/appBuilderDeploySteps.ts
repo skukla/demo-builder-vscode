@@ -364,7 +364,7 @@ async function prepareBeforeFill(
     }
     deps.logger.warn(`[AppBuilderComponent Runner] ${entry.id} installed but the store was not prepared: ${outcome.detail}`);
     const reason = outcome.detail.replace(/[.\s]*$/u, '');
-    deps.onProgress?.(stage, `The store was not prepared: ${reason}. Use Prepare this store on the card.`);
+    deps.onProgress?.(stage, `The demo setup was not applied: ${reason}. Use Apply all in the demo setup.`);
 }
 
 /**

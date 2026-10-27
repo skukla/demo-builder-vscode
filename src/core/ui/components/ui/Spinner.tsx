@@ -8,8 +8,6 @@ export interface SpinnerProps {
     isIndeterminate?: boolean;
     /** Optional aria-label for accessibility */
     'aria-label'?: string;
-    /** Optional className */
-    className?: string;
 }
 
 /**
@@ -27,14 +25,12 @@ export function Spinner({
     size = 'M',
     isIndeterminate = true,
     'aria-label': ariaLabel = 'Loading',
-    className,
 }: SpinnerProps) {
     return (
         <ProgressCircle
             size={size}
             isIndeterminate={isIndeterminate}
             aria-label={ariaLabel}
-            UNSAFE_className={className}
         />
     );
 }

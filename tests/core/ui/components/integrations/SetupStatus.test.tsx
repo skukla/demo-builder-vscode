@@ -31,10 +31,11 @@ describe('setupSummary', () => {
         expect(setupSummary([step('a', 'done'), step('b', 'open'), step('c', 'dismissed')])).toBe('1 of 2 done');
     });
 
-    it('leaves an open optional step out of the count, and counts it once done', () => {
+    // Counting it once done grew the total: "7 of 8" became "8 of 9" (owner, 2026-10-26).
+    it('leaves an optional step out of the count, open or done', () => {
         const optional = (state: SetupChecklistItem['state']) => ({ ...step('o', state), optional: true });
         expect(setupSummary([step('a', 'done'), step('b', 'open'), optional('open')])).toBe('1 of 2 done');
-        expect(setupSummary([step('a', 'done'), step('b', 'open'), optional('done')])).toBe('2 of 3 done');
+        expect(setupSummary([step('a', 'done'), step('b', 'open'), optional('done')])).toBe('1 of 2 done');
         expect(setupSummary([step('a', 'done'), optional('open')])).toBe('All done');
     });
 

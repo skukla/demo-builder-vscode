@@ -337,16 +337,16 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         sessionGrant: false,
     },
     prepare_commerce_store: {
-        action: 'Prepare the Commerce store for the demo',
+        action: 'Apply the demo setup to the Commerce store',
         consequence:
-            "Writes the integration's setup steps into the live Commerce store: settings at the default and the website scope, the erp_owner and brand attributes, a warehouse and stock, and a shared catalog per company without one. Each step is checked first and skipped when already done; what was changed is recorded so Undo preparation can put it back.",
+            "Writes the integration's setup steps into the live Commerce store: settings at the default and the website scope, the erp_owner and brand attributes, a warehouse and stock, and a shared catalog per company without one. Each step is checked first and skipped when already done; what was changed is recorded so each step can be undone.",
         target: ['id'],
         sessionGrant: false,
     },
     undo_commerce_store_preparation: {
-        action: 'Undo the Commerce store preparation',
+        action: "Undo the demo setup's changes in Commerce",
         consequence:
-            'Puts back what Prepare this store recorded in the live Commerce store: settings to their previous values, and the attributes, stock and shared catalogs it created deleted (a source it created is disabled, since Commerce cannot delete one).',
+            'Puts back what the demo setup recorded in the live Commerce store: settings to their previous values, and the attributes, stock and shared catalogs it created deleted (a source it created is disabled, since Commerce cannot delete one).',
         target: ['id', 'stepId'],
         sessionGrant: false,
     },

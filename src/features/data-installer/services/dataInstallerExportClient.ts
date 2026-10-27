@@ -16,6 +16,7 @@
 import type { DatapackId } from '../types';
 import { actionUrl } from './dataInstallerConfig';
 import { DataInstallerApiError } from './dataInstallerErrors';
+import { signInHeaders } from './dataInstallerSignIn';
 import {
     type CommerceCredentials,
     type DataInstallerWriteClientDeps,
@@ -124,7 +125,7 @@ export class DataInstallerExportClient {
         const response = await this.fetchImpl(url, {
             method: 'GET',
             headers: {
-                Authorization: `Bearer ${await this.deps.getToken()}`,
+                ...(await signInHeaders(this.deps)),
                 // The FULL REST URL — this action cannot resolve a tenant id.
                 'x-commerce-instance': request.restBaseUrl,
                 ...exportAuthHeaders(request.credentials),
@@ -157,7 +158,7 @@ export class DataInstallerExportClient {
         const response = await this.fetchImpl(url, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${await this.deps.getToken()}`,
+                ...(await signInHeaders(this.deps)),
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(buildExportBody(request)),

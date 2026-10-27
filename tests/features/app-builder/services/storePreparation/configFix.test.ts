@@ -12,8 +12,8 @@ import type { CommerceSystemConfigPutAnswer } from '@/types/commerceWire';
 const FIX: SetupConfigFix = {
     kind: 'config',
     items: [
-        { path: 'catalog/price/scope', value: '1', scope: 'default' },
-        { path: 'payment/companycredit/active', value: '1', scope: 'website' },
+        { path: 'catalog/price/scope', value: '1', scope: 'default', field: 'Catalog Price Scope', values: { '0': 'Global', '1': 'Website' } },
+        { path: 'payment/companycredit/active', value: '1', scope: 'website', field: 'Payment on Account', values: { '0': 'No', '1': 'Yes' } },
     ],
     manual: 'Connect PayPal by hand.',
 };
@@ -43,7 +43,7 @@ describe('preview', () => {
         const commerce = store([['catalog/price/scope', '0']]);
         const preview = await configFix(FIX).preview({ commerce, websiteCode: 'justrite', erpNames: [] });
         expect(preview).toEqual({
-            changes: ['catalog/price/scope at the default scope: 0 → 1', 'payment/companycredit/active at the website scope: 0 → 1'],
+            changes: ['Catalog Price Scope: Global → Website', 'Payment on Account for the website: No → Yes'],
             manual: 'Connect PayPal by hand.',
         });
         expect(commerce.send).not.toHaveBeenCalled();
@@ -69,7 +69,7 @@ describe('apply', () => {
             ['PUT', 'system/config', { items: [{ path: 'payment/companycredit/active', value: '1', scope: 'website', scope_code: 'justrite' }] }],
         ]);
         expect(applied).toEqual({
-            changes: ['payment/companycredit/active at the website scope: 0 → 1'],
+            changes: ['Payment on Account for the website: No → Yes'],
             rejected: [],
             record: { kind: 'config', previous: [{ path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0' }] },
             manual: 'Connect PayPal by hand.',
@@ -89,8 +89,8 @@ describe('apply', () => {
             () => configRefused([{ path: 'catalog/price/scope', value: '1', scope: 'default' }], 'payment/companycredit/active', 'website', 'The path is not allowed'),
         );
         const applied = await configFix(FIX).apply({ commerce, websiteCode: 'justrite', erpNames: [] });
-        expect(applied.changes).toEqual(['catalog/price/scope at the default scope: 0 → 1']);
-        expect(applied.rejected).toEqual(['payment/companycredit/active at the website scope: 0 → 1: The path is not allowed']);
+        expect(applied.changes).toEqual(['Catalog Price Scope: Global → Website']);
+        expect(applied.rejected).toEqual(['Payment on Account for the website: No → Yes: The path is not allowed']);
         expect(applied.record).toEqual({ kind: 'config', previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0' }] });
     });
 
@@ -107,8 +107,19 @@ describe('apply', () => {
     });
 });
 
+// A setting the step does not name (the agent's set_commerce_config hands bare paths) says
+// its path and stored values.
+describe('a setting with no Admin name', () => {
+    it('says its path and stored values', async () => {
+        const commerce = store([['catalog/price/scope', '0']]);
+        const bare: SetupConfigFix = { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] };
+        const preview = await configFix(bare).preview({ commerce, websiteCode: 'justrite', erpNames: [] });
+        expect(preview.changes).toEqual(['catalog/price/scope: 0 → 1']);
+    });
+});
+
 describe('undo', () => {
-    it('writes each recorded row back to the value in force before, saying when it was inherited', async () => {
+    it('writes each recorded row back to the value in force before, in the Admin\'s words', async () => {
         const commerce = store([['catalog/price/scope', '1']], [['payment/companycredit/active', '1']]);
         const undone = await configFix(FIX).undo(
             { commerce, websiteCode: 'justrite', erpNames: [] },
@@ -134,8 +145,8 @@ describe('undo', () => {
         ]);
         expect(undone).toEqual({
             changes: [
-                'catalog/price/scope at the default scope: 1 → 0 (restored)',
-                'payment/companycredit/active at the website scope: 1 → 0 (restored; it was inherited before and is set at the website scope now)',
+                'Catalog Price Scope: Website → Global',
+                'Payment on Account for the website: Yes → No',
             ],
             rejected: [],
         });

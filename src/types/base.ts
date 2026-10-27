@@ -361,7 +361,7 @@ export interface AppBuilderComponentState {
      */
     erpOwnerSets?: ErpOwnerSetsRecord;
     /**
-     * What "Prepare this store" changed in Commerce for this component's setup steps (AB-77),
+     * What the demo setup's Apply changed in Commerce for this component's setup steps (AB-77),
      * by step id, so each can be undone. A step's entry goes with its undo; the record goes
      * with the component.
      */

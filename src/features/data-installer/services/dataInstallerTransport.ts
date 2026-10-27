@@ -11,7 +11,7 @@
  * unit-testable with an injected `fetchImpl` and zero VS Code mocks.
  *
  * Two rules this file keeps:
- *   - the token is written in exactly one place and never reaches a message,
+ *   - the sign-in is built in one place (`signInHeaders`) and never reaches a message,
  *   - `auth: false` is how `health-check` sends no Authorization header, because
  *     it must answer when the token is dead.
  *
@@ -24,6 +24,7 @@ import {
     classifyTransportError,
     describeApiFailure,
 } from './dataInstallerErrors';
+import { signInHeaders, type DataInstallerSignIn } from './dataInstallerSignIn';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
@@ -44,11 +45,9 @@ const EXPECTED_KEYS: Record<string, readonly string[]> = {
 };
 
 /** Dependencies the transport needs; none of them touch VS Code. */
-export interface DataInstallerTransportDeps {
+export interface DataInstallerTransportDeps extends DataInstallerSignIn {
     /** Validated base URL, no trailing slash. */
     baseUrl: string;
-    /** Resolves a fresh IMS bearer. Called per request — tokens expire. */
-    getToken: () => Promise<string>;
     /** Injectable for tests. */
     fetchImpl?: typeof fetch;
     /**
@@ -113,11 +112,8 @@ export class DataInstallerTransport {
     /** Issue one request, map failures, and check the response shape. */
     async request(action: string, opts: TransportRequestOptions = {}): Promise<unknown> {
         const url = actionUrl(this.deps.baseUrl, action, opts.query, opts.pathParam);
-        const headers: Record<string, string> = {};
+        const headers: Record<string, string> = opts.auth === false ? {} : await signInHeaders(this.deps);
 
-        if (opts.auth !== false) {
-            headers.Authorization = `Bearer ${await this.deps.getToken()}`;
-        }
         if (opts.body !== undefined) {
             headers['Content-Type'] = 'application/json';
         }

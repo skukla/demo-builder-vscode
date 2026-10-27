@@ -93,7 +93,7 @@ describe('undoErpSetup', () => {
         // In that order: a set takes its values with the attribute, and waits for no tag.
         expect(mockWrite.mock.invocationCallOrder[0]).toBeLessThan(mockRemoveSets.mock.invocationCallOrder[0]);
         expect(out).toStrictEqual({
-            done: ['Cleared the erp_owner tag on 2 products.', 'Took erp_owner out of 1 attribute set.', 'Undid 1 store preparation step.'],
+            done: ['Cleared the erp_owner tag on 2 products.', 'Took erp_owner out of 1 attribute set.', 'Undid 1 demo setup step.'],
             failed: [],
         });
     });
@@ -120,7 +120,7 @@ describe('undoErpSetup', () => {
         const out = await undoErpSetup(createMockHandlerContext(), project(), 'erp-integration', report);
         expect(out?.failed).toStrictEqual([
             '1 product keeps its erp_owner tag.',
-            'Some of the store preparation was not undone (Price scope: Commerce said no.).',
+            'Some of the demo setup was not undone (Price scope: Commerce said no.).',
         ]);
     });
 });

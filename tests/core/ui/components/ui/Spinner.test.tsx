@@ -9,11 +9,6 @@ describe('Spinner', () => {
             // ProgressCircle from Spectrum renders with progressbar role
             expect(screen.getByRole('progressbar')).toBeInTheDocument();
         });
-
-        it('renders with custom className', () => {
-            const { container } = renderWithProviders(<Spinner className="custom-spinner" />);
-            expect(container.querySelector('.custom-spinner')).toBeInTheDocument();
-        });
     });
 
     describe('Size', () => {
@@ -74,7 +69,6 @@ describe('Spinner', () => {
                     size="L"
                     isIndeterminate={true}
                     aria-label="Processing request"
-                    className="my-spinner"
                 />
             );
             expect(screen.getByLabelText('Processing request')).toBeInTheDocument();

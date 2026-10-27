@@ -1,0 +1,68 @@
+/**
+ * .work-row — one item in a list of work (`feedback/WorkRow`): a status icon, the name
+ * and a quieter detail beside it, and what to read under it.
+ *
+ * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `projectsList` (the Updates modal's
+ * run), `integrations` (the demo setup's confirms), and every bundle that draws the progress
+ * modal, for its rows of what a run changed: those two, `dashboard` and `configure`. A
+ * new host bundle imports it in its entry, or the rows render unstyled with no error. The
+ * name and detail are `.checkbox-row-label` and `-detail`, so the host imports
+ * `checkbox-row.css` too.
+ *
+ * Moved unchanged on 2026-10-26 from the projects list's updates-modal.css
+ * (.updates-run-icon/-row/-text/-why/-note), in the same layer.
+ */
+
+@layer theme {
+    .work-row-icon {
+        flex-shrink: 0;
+        width: 28px;
+        display: flex;
+        align-items: center;
+    }
+
+    .work-row {
+        display: flex;
+        align-items: flex-start;
+        padding: 3px 0;
+    }
+
+    .work-row .work-row-icon {
+        min-height: 20px;
+    }
+
+    .work-row-text {
+        min-width: 0;
+        line-height: 20px;
+    }
+
+    /* Something to read under the name: why it did not apply, or what to know. */
+    .work-row-why,
+    .work-row-note {
+        font-size: 12px;
+        line-height: 16px;
+        margin: 2px 0 0;
+    }
+
+    .work-row-why {
+        color: var(--spectrum-global-color-red-600);
+    }
+
+    .work-row-note {
+        color: var(--spectrum-global-color-gray-700);
+    }
+
+    /* A list of rows, without the browser's bullets and indent. */
+    .work-row-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* What a run changed, under the progress modal's centred result (OperationProgressBody):
+       as wide as the result, its rows left-aligned. */
+    .work-row-result {
+        align-self: stretch;
+        text-align: left;
+    }
+}

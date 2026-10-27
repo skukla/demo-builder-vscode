@@ -60,4 +60,10 @@ describe('tookLine', () => {
     it('says how long the whole run took', () => {
         expect(tookLine(192_000)).toBe('Took 3 minutes, 12 seconds');
     });
+
+    // A run under a minute was over before anyone wondered (owner, 2026-10-26).
+    it('says nothing for a run under a minute, and from a minute on', () => {
+        expect(tookLine(59_999)).toBeUndefined();
+        expect(tookLine(60_000)).toBe('Took 1 minute');
+    });
 });

@@ -186,6 +186,7 @@ async function prepareExport(
         writeClient: new DataInstallerExportClient({
             baseUrl: gate.baseUrl,
             getToken: gate.getToken,
+            orgCode: gate.orgCode,
             log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
         }),
         request: {

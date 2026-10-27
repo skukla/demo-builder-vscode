@@ -1,12 +1,12 @@
 /**
  * SetupGuideModal — a step's Apply and Undo (AB-74, generalized by AB-77): "Apply this step"
  * on an open step Demo Builder can do itself, "Undo this step" once it applied and recorded
- * it. Pressing either closes the guide and hands the integration, the step and the mode to
- * the screen, which confirms it and runs it through "Prepare this store". Split from
+ * it. Pressing either runs it in the guide, which stays open (AB-82: no confirm, no progress
+ * window; the step's pane says what Apply will do first). Split from
  * SetupGuideModal.test.tsx (its size); the stubs are the family's, in SetupGuideModal.testUtils.tsx.
  */
 
-import { mockRequest } from '../../../../../helpers/webviewClientMock';
+import { mockPostMessage, mockRequest } from '../../../../../helpers/webviewClientMock';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import '@testing-library/jest-dom';
@@ -40,42 +40,50 @@ const PRICE: SetupChecklistItem = {
 const model = (item: SetupChecklistItem): IntegrationCardModel =>
     ({ id: 'erp-integration', name: 'ERP Integration', setupChecklist: [item] }) as IntegrationCardModel;
 
-type OnFix = NonNullable<React.ComponentProps<typeof SetupGuideModal>['onFix']>;
+type OnAsk = NonNullable<React.ComponentProps<typeof SetupGuideModal>['onAsk']>;
 
-async function renderGuide(item: SetupChecklistItem, onFix?: OnFix) {
+async function renderGuide(item: SetupChecklistItem, onAsk?: OnAsk) {
     const onClose = jest.fn();
-    render(<SetupGuideModal model={model(item)} onClose={onClose} onOpenAdmin={jest.fn()} onFix={onFix} />);
+    render(<SetupGuideModal model={model(item)} onClose={onClose} onOpenAdmin={jest.fn()} onAsk={onAsk} />);
     await act(async () => {});
     return { onClose };
 }
 
 beforeEach(() => {
+    mockPostMessage.mockReset();
     mockRequest.mockReset();
     mockRequest.mockResolvedValue({ success: true, data: { ready: true } });
 });
 
 describe('a step with a fix offers Apply, and Undo once applied', () => {
-    it('offers Apply on an open step before any check, and hands the step to the screen', async () => {
-        const onFix = jest.fn();
-        const { onClose } = await renderGuide(PRICE, onFix);
+    it('offers Apply on an open step before any check, and runs it in the guide, which stays open', async () => {
+        const { onClose } = await renderGuide(PRICE, jest.fn());
         fireEvent.click(screen.getByRole('button', { name: FIX_COPY.fix }));
-        expect(onClose).toHaveBeenCalled();
-        expect(onFix).toHaveBeenCalledWith({ id: 'erp-integration', name: 'ERP Integration', mode: 'apply', stepId: 'price-scope-website', label: 'Price scope' });
+        expect(onClose).not.toHaveBeenCalled();
+        expect(mockPostMessage).toHaveBeenCalledWith('prepareCommerceStore', {
+            id: 'erp-integration',
+            confirm: true,
+            stepIds: ['price-scope-website'],
+            progress: 'modal',
+        });
     });
 
     it('offers Apply on a handler step once a check found it undone', async () => {
-        const onFix = jest.fn();
-        await renderGuide({ ...ATTRIBUTES, lastCheck: 'failed', note: 'Commerce has no erp_owner product attribute.' }, onFix);
+        await renderGuide({ ...ATTRIBUTES, lastCheck: 'failed', note: 'Commerce has no erp_owner product attribute.' }, jest.fn());
         fireEvent.click(screen.getByRole('button', { name: FIX_COPY.fix }));
-        expect(onFix).toHaveBeenCalledWith(expect.objectContaining({ mode: 'apply', stepId: 'erp-attributes', label: 'Create the erp_owner and brand product attributes' }));
+        expect(mockPostMessage).toHaveBeenCalledWith('prepareCommerceStore', expect.objectContaining({ stepIds: ['erp-attributes'] }));
     });
 
     it('offers the undo, not Apply, once Demo Builder applied and recorded the step', async () => {
-        const onFix = jest.fn();
-        await renderGuide({ ...ATTRIBUTES, state: 'done', lastCheck: 'passed', fixApplied: true }, onFix);
+        await renderGuide({ ...ATTRIBUTES, state: 'done', lastCheck: 'passed', fixApplied: true }, jest.fn());
         expect(screen.queryByRole('button', { name: FIX_COPY.fix })).toBeNull();
         fireEvent.click(screen.getByRole('button', { name: FIX_COPY.undo }));
-        expect(onFix).toHaveBeenCalledWith(expect.objectContaining({ mode: 'undo', stepId: 'erp-attributes' }));
+        expect(mockPostMessage).toHaveBeenCalledWith('undoCommerceStorePreparation', {
+            id: 'erp-integration',
+            confirm: true,
+            stepId: 'erp-attributes',
+            progress: 'modal',
+        });
     });
 
     // Owner, 2026-10-22 ("Hide it, yes"): a step whose check passed is done, so Apply has

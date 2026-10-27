@@ -1,5 +1,5 @@
 /**
- * IntegrationsGrid — the flyout's "Open setup guide" opens that card's demo setup guide
+ * IntegrationsGrid — the flyout's "Open demo setup" opens that card's demo setup guide
  * (AB-26x), the way its "Edit settings" opens the Settings modal.
  */
 
@@ -52,7 +52,7 @@ describe('IntegrationsGrid setup guide', () => {
         ).toBeInTheDocument();
         const panel = await openPanel(user, 'other-app', LABEL);
         expect(within(panel).getByText('0 of 1 done')).toBeInTheDocument();
-        await user.click(within(panel).getByRole('link', { name: 'Open setup guide' }));
+        await user.click(within(panel).getByRole('link', { name: 'Open demo setup' }));
 
         const guide = screen.getByRole('dialog', { name: /^Demo setup:/ });
         // The title appears twice by design — in the step list and as the shown step's heading.

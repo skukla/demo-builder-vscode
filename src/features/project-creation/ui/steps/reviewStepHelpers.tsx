@@ -229,17 +229,17 @@ export function reviewStorePreparation(state: WizardState, stack: Stack | undefi
     return storePreparationOnReview(state, getAvailableAppBuilderComponents(stack?.backend ?? '', stack?.frontend ?? ''));
 }
 
-/** Review's line about the store preparation the ERP integration's add brings. */
+/** Review's line about the demo setup the ERP integration's add applies. */
 export function StorePreparationNotice({ preparation }: { preparation: ReviewStorePreparation }): React.ReactElement {
     const { name, steps, everyWebsite } = preparation;
     const shared = everyWebsite.length
         ? ` ${everyWebsite.join(', ')} ${everyWebsite.length === 1 ? 'changes a setting' : 'change settings'} every website on this Commerce shares, other demos' websites included.`
         : '';
     return (
-        <InlineNotice tone="info" title="Demo Builder will prepare the Commerce store" testId="review-store-preparation">
-            {`Adding ${name} also prepares this Commerce store before its ERP is filled: ${steps.join(', ')}. ` +
+        <InlineNotice tone="info" title="Demo Builder will apply the demo setup" testId="review-store-preparation">
+            {`Adding ${name} also applies its demo setup to this Commerce store before its ERP is filled: ${steps.join(', ')}. ` +
                 `Each step is checked first; one already done is left as it is.${shared} ` +
-                'What it changes is recorded, so Undo preparation on the card, or removing the integration, puts it back.'}
+                'What it changes is recorded, so Undo this step in the demo setup, or removing the integration, puts it back.'}
         </InlineNotice>
     );
 }

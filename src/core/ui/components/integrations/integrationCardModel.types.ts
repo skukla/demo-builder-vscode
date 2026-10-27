@@ -55,10 +55,6 @@ export type CardAction =
     | 'undo-assignment'
     // The ERP integration's: add another ERP beside the ones it serves (AB-16).
     | 'add-erp'
-    // An integration with setup steps Demo Builder can apply: preview and apply them in
-    // Commerce, and put them back (AB-77). The undo only once a run is recorded.
-    | 'prepare-store'
-    | 'undo-store-preparation'
     // After a removal stopped on a clean-up that did not finish: go ahead.
     | 'remove-anyway'
     // A blank-starter app: save it to its own GitHub repository (AB-1c), and the undo,

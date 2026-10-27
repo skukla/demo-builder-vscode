@@ -373,7 +373,7 @@ checklist asks for Commerce's Catalog Price Scope to be Website (Stores > Config
 Catalog > Catalog > Price). The ERP publishes a company's prices into its shared catalog per
 website — each tier price carries a website — and at the default scope, Global, Commerce
 ignores that website and every site shows the same prices. Demo Builder checks it by reading the setting through `GET /V1/system/config`, and
-"Prepare this store" sets it (below).
+the demo setup's Apply sets it (below).
 
 **For a demo where the buyer pays by card**, the checklist has an optional step: switch on
 Payment Services, Commerce's own card payments (powered by PayPal), for the project's website.
@@ -383,20 +383,45 @@ PayPal sandbox business account) before it can be switched on. An optional step 
 checked and marked like any other, but while it is open it is not counted as left to do: the
 card's "Demo setup" line, the flyout's Next step and the guide's opening step all pass over it.
 
-## Preparing the store (AB-77)
+## Applying the demo setup (AB-77, AB-82)
 
 Adobe Commerce as a Cloud Service gained `GET` and `PUT /V1/system/config` on 2026-09-08
 (measured live on Justrite 2026-10-10: `sales/totals_sort/tax` 40 → 41 → 40; a refused path
 comes back in the answer's `errors` list under HTTP 200, so every write reads that list).
-Since then the extension APPLIES the setup steps it can, not only checks them. **Prepare this
-store** on the integration's card, the setup guide's per-step **Apply this step**, and the
-agent's `prepare_commerce_store` all run one engine
+Since then the extension APPLIES the setup steps it can, not only checks them. The setup
+guide's **Apply all** and per-step **Apply this step**, and the agent's
+`prepare_commerce_store`, all run one engine
 (`src/features/app-builder/services/storePreparation/`): it lists each step's state (done,
 applicable, by hand, applied), PREVIEWS what each applicable step would change after reading
 the current values, APPLIES in the guide's order, and RECORDS what each step changed on the
-integration (`appBuilderComponents[id].storePreparation`, by step id) so **Undo preparation**
-(the card, the guide's **Undo this step**, `undo_commerce_store_preparation`) puts it back,
-newest step first.
+integration (`appBuilderComponents[id].storePreparation`, by step id) so the guide's **Undo
+this step**, `undo_commerce_store_preparation` and Remove put it back, newest step first.
+
+**One place, one name (AB-82, 2026-10-26).** The setup guide is the only window that lists the
+steps; the card's "Demo setup" line and the flyout's Demo setup section are its two doors.
+"Prepare this store", its preview window and "Undo preparation" were removed: they listed the
+same steps under a second name behind a second door. Apply all applies every step still to do
+that Demo Builder can apply (not an optional one: card payments needs a PayPal sandbox first).
+There is no Undo all in the UI: a step's Undo, or Remove, which undoes everything recorded.
+The agent keeps `undo_commerce_store_preparation`, which still undoes all of it.
+
+**All of it happens in the guide, in one window** (owner, 2026-10-26). Under each step's
+title the house banner says where it stands, a word or two (Done, Not set up, Applying,
+Undoing, Couldn't apply, Couldn't check, Skipped) and one short sentence at most
+(`StepHeader.tsx`): amber when the step needs the SC, blue otherwise. An open step Demo
+Builder can apply says "Apply will …" in it, read from the store as it is shown;
+pressing Apply is the go-ahead, with no confirm window. The run is the same request the
+progress window starts, and the guide follows its `operationProgress` pushes itself
+(`useGuideRun.ts`): the banner says Applying and the step's mark spins, then the banner flips
+to Done, or says Couldn't apply with why. Nothing reports the run beyond that. A run that stops on a question (sign in, another org) is
+handed to the progress window, which asks it, and closing that comes back to the step.
+
+**Applying the warehouse again after its undo.** The undo DISABLES a source the run created
+(Commerce cannot delete one), and the check counts a disabled warehouse as not done. So an
+apply that finds an ERP's warehouse switched off switches it back on (`PUT
+inventory/sources/{code}`), records it (`enabledSources`) so its undo switches it off again,
+and says so in the preview ("switch Test Warehouse back on"). A warehouse it adds to a stock
+takes the next priority after the stock's highest, never 1 beside one that already has it.
 
 The checks and the engine read Commerce through an UNCUT signed GET (`setupCheckReader`),
 not the agent tool's `sendRest`, which cuts an answer at 30,000 characters: a set's attribute
@@ -454,7 +479,7 @@ fixes in JSON alone.
 INTEGRATION (not of another ERP) runs the same engine once its first install stands and
 BEFORE its ERP is filled, because the fill relies on `erp_owner` being in the attribute sets
 and on the ERP's warehouse (`erpStorePreparation.ts`, the runner's `prepareStore` dep in
-`erpRunnerDeps.ts`). It saves the record and the checked steps exactly as Prepare this store
+`erpRunnerDeps.ts`). It saves the record and the checked steps exactly as the guide's Apply
 does (`recordsAfterRun`), so Undo per step and the removal's teardown work unchanged; a step
 without a fix stays in the setup guide. Every way of adding it reaches this: the
 Integrations screen, `add_integration`, project creation and an Edit that adds it all run the
@@ -465,7 +490,8 @@ the Integrations screen's add opens a confirm that reads the store
 (`PrepareOnAddDialog.tsx`), `add_integration` for the ERP integration answers that preview
 without `confirm: true` and adds nothing, and the wizard's Review names the steps from the
 catalog (no store can be read before the project exists). A preparation that stops never
-stops the add or the fill; the progress says why and that Prepare this store runs it again.
+stops the add or the fill; the progress says why and that Apply all in the demo setup runs it
+again.
 
 `set_commerce_config` is the one settings write outside a catalog step: the same read-first,
 write-only-what-differs, read-`errors` path, recording the previous values on the project

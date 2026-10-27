@@ -42,11 +42,18 @@ export function useRunClock(startedAt: number | undefined): string | undefined {
 }
 
 /**
- * The line a run's last view carries: "Took 3 minutes, 12 seconds".
+ * How long a run must take before its last view says so. A shorter one was over before
+ * anyone wondered, and the line only made the result busier (owner, 2026-10-26).
+ */
+export const TOOK_WORTH_SAYING_MS = 60_000;
+
+/**
+ * The line a run's last view carries: "Took 3 minutes, 12 seconds". Nothing for a run
+ * under {@link TOOK_WORTH_SAYING_MS}.
  *
  * @param tookMs - how long the run took, as the extension measured it
- * @returns the line
+ * @returns the line, or undefined when the run was short
  */
-export function tookLine(tookMs: number): string {
-    return `Took ${formatElapsed(tookMs)}`;
+export function tookLine(tookMs: number): string | undefined {
+    return tookMs < TOOK_WORTH_SAYING_MS ? undefined : `Took ${formatElapsed(tookMs)}`;
 }

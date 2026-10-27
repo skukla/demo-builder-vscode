@@ -1,5 +1,5 @@
 /**
- * The contract every setup-step fix implements (AB-77), so "Prepare this store" drives a fix
+ * The contract every setup-step fix implements (AB-77), so the demo setup's Apply drives a fix
  * that is settings (`configFix`) and a fix that is code (`erpAttributesFix`,
  * `warehouseFix`, `sharedCatalogsFix`) the same way: PREVIEW reads Commerce and says what
  * would change, APPLY writes and answers what it changed and what Commerce refused, with the
@@ -26,6 +26,8 @@ export interface FixDeps {
 /** What a fix would change: one line per change, in an SC's words. */
 export interface FixPreview {
     changes: string[];
+    /** One plain sentence naming what `changes` lists, when the step's title is too general. */
+    summary?: string;
     /** What stays by hand, whatever the fix writes. */
     manual?: string;
 }

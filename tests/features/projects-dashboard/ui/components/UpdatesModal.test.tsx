@@ -173,7 +173,7 @@ describe('UpdatesModal', () => {
         expect(screen.queryByRole('checkbox')).toBeNull();
         expect(screen.getByText('Demo Builder Blocks in JustRite')).toBeInTheDocument();
         expect(screen.getByText('1.0.0 → 1.1.0')).toBeInTheDocument();
-        expect(Array.from(container.querySelectorAll('.updates-run-row')).map((r) => r.getAttribute('data-state'))).toEqual([
+        expect(Array.from(container.querySelectorAll('.work-row')).map((r) => r.getAttribute('data-state'))).toEqual([
             'done',
             'running',
         ]);
@@ -190,7 +190,7 @@ describe('UpdatesModal', () => {
         );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByText('Demo Builder Blocks: rate limited')).toHaveClass('updates-run-why');
+        expect(screen.getByText('Demo Builder Blocks: rate limited')).toHaveClass('work-row-why');
         expect(screen.getByRole('dialog', { name: "Some updates didn't apply" })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
@@ -202,7 +202,7 @@ describe('UpdatesModal', () => {
         );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByText('Not updated — your blocks were kept.')).toHaveClass('updates-run-note');
+        expect(screen.getByText('Not updated — your blocks were kept.')).toHaveClass('work-row-note');
     });
 
     it('titles a run where everything applied "Updates applied", a note under its row', () => {
@@ -216,7 +216,7 @@ describe('UpdatesModal', () => {
         render(<UpdatesModal controls={c} />);
 
         expect(screen.getByRole('dialog', { name: 'Updates applied' })).toBeInTheDocument();
-        expect(screen.getByText('One block left out.')).toHaveClass('updates-run-note');
+        expect(screen.getByText('One block left out.')).toHaveClass('work-row-note');
     });
 
     it('says why a run failed outright, and offers the logs', () => {
@@ -235,7 +235,7 @@ describe('UpdatesModal', () => {
         const c = running({ 'blockLibrary:0': { id: 'blockLibrary:0', state: 'running' } }, { prompt, step: 'Lib A' });
         const { container } = render(<UpdatesModal controls={c} />);
 
-        const row = container.querySelector('.updates-run-row[data-state="running"]') as HTMLElement;
+        const row = container.querySelector('.work-row[data-state="running"]') as HTMLElement;
         expect(row).toHaveTextContent('Demo Builder Blocks');
         expect(row.querySelector('.updates-run-question')).toHaveTextContent('"Replace blocks" puts in the new versions.');
         expect(screen.getByText('Demo Builder extension')).toBeInTheDocument();
@@ -269,7 +269,7 @@ describe('UpdatesModal', () => {
         const justrite = Array.from(container.querySelectorAll('.updates-group')).find((p) =>
             p.textContent?.includes('JustRite'),
         ) as HTMLElement;
-        const step = Array.from(justrite.querySelectorAll('.updates-run-row')).at(-1) as HTMLElement;
+        const step = Array.from(justrite.querySelectorAll('.work-row')).at(-1) as HTMLElement;
         expect(step).toHaveTextContent('Your local copy');
         expect(step).toHaveTextContent('Bringing it up to GitHub');
         expect(justrite.querySelector('.updates-run-header [role="progressbar"]')).not.toBeNull();
@@ -290,7 +290,7 @@ describe('UpdatesModal', () => {
         render(<UpdatesModal controls={c} />);
 
         expect(screen.getByText('Your local copy')).toBeInTheDocument();
-        expect(screen.getByText('Left as it is — it has commits GitHub does not have.')).toHaveClass('updates-run-note');
+        expect(screen.getByText('Left as it is — it has commits GitHub does not have.')).toHaveClass('work-row-note');
     });
 
     // No sentence under the title: the ticks and the Apply count say it, and what cannot
@@ -400,7 +400,7 @@ describe('UpdatesModal', () => {
         it('says one in the singular', () => {
             render(<UpdatesModal controls={ended(1)} />);
 
-            expect(screen.getByText('1 update still waiting')).toHaveClass('updates-run-note');
+            expect(screen.getByText('1 update still waiting')).toHaveClass('work-row-note');
             expect(screen.getByRole('dialog', { name: 'Updates applied' })).toBeInTheDocument();
         });
 

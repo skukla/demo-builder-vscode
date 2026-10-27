@@ -140,7 +140,8 @@ export const handleCheckSetupSteps: MessageHandler<{ id?: string; stepId?: strin
     const steps = stepsToCheck(opened, payload?.stepId);
     if (!Array.isArray(steps)) return steps;
     const { read, scope } = await setupCheckReader(context, opened.project);
-    const records = await checkedRecords(steps, opened.state.setupSteps, (check) => runSetupCheck(check, read, scope));
+    const erpScope = { ...scope, erpNames: erpNamesOf(opened.project, opened.id) };
+    const records = await checkedRecords(steps, opened.state.setupSteps, (check) => runSetupCheck(check, read, erpScope));
     return saveSteps(context, opened, records);
 };
 

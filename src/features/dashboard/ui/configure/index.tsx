@@ -29,6 +29,10 @@ import '@/core/ui/styles/utilities.css';
 import '@/core/ui/styles/inline-controls.css';
 // .modal-* — the storefront Republish is told in the shared progress modal.
 import '@/core/ui/styles/modal.css';
+// WorkRow, that modal's rows of what a run changed, named by CheckboxRow's label and detail
+// classes (ADR-017 §6).
+import '@/core/ui/styles/work-row.css';
+import '@/core/ui/styles/checkbox-row.css';
 // The block library cards on the Block Libraries tab are the wizard's picker (EDS-39),
 // and a sheet reaches only the bundles whose entry imports it. `.choice-*` is the
 // cards. wizard-misc.css is here for ONE rule, `.settings-link`, the picker's
