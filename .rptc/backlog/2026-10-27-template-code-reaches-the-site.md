@@ -46,3 +46,7 @@ Also look at two files every storefront's pages load (`scripts/aem.js`,
 is missing as a whole, so publish all the code again (`/*`, as Republish does), not file by
 file, a bounded number of times. What is still missing goes into the same sentence the SC
 already sees, which says to press Republish. Creation and reset both run it.
+
+## Shipped so far
+
+- 2026-10-27  fix(eds): a new storefront's template code reaches the site, or setup says it did not (`06ecf09bb`)
