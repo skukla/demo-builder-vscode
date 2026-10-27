@@ -20,5 +20,16 @@ Status: **in progress**. Run order and removal built (`runPack.ts`); the rest to
 7. **First live run**, on a throwaway ACCS store (never Justrite or a colleague's), on the owner's
    go: dry run, install, remove, back to zero.
 
+## Reuse
+
+| Need | Reuse | Where it is |
+|---|---|---|
+| Install and removal progress on screen | The import window and its watch, unchanged: the job runner answers the same reads the service's job did | `ImportDatapackModal`, `useImportProgress`, `watchImportJob` |
+| Commerce access for the target project | The ERP work's signed client | `commerceClientForProject` (`erpFillForProject.ts`) |
+| The dry run's answer | The import window's existing validation view, with a list of what would be made and what is already there | `ImportDatapackModalBody` (`ModalView`); `FactList` for the counts |
+| "Demo Builder does not install customers yet" | A notice above the form, not a full-pane error | `InlineNotice` |
+| Reading a pack from the library or a file | One reader for every store | `readPackFromStore` (`datapackTransfer.ts`), `readDatapackZip` |
+| The engine setting | The Data Installer's settings section in `package.json`, read where its others are read | `dataInstallerConfig.ts` |
+
 Then step 03b: our engine becomes the default, with a release test-plan row for each of dry run,
 install and remove.

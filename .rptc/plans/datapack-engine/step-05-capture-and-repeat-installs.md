@@ -81,6 +81,20 @@ The confirmation when a removed pack holds the SC's changes:
   names; the removal tool reports the changes and needs a keep-or-drop answer, so an agent tells
   the user rather than guessing.
 
+## Reuse
+
+| Need | Reuse | Where it is |
+|---|---|---|
+| The removal confirmation with changes | The import window's existing removal view gains the list and the box, in place | `ImportDatapackModalBody`, view `confirm-reset` |
+| The list of what changed | Labelled lines | `FactList` (a host bundle imports `fact-list.css`) |
+| "Save my changes to the Acme Demo pack first", "Always do this, and stop asking" | The house checkbox row | `CheckboxRow` (`checkbox-row.css`) |
+| "Always do this" as a setting | The same shape as the setting that answers a project delete for the SC | `demoBuilder.cleanupBehavior` (`deletionConfirmation.ts`) |
+| The one line saying what was kept | The import window's result lines | `importResult.ts` |
+| "Save store changes to this pack" | A button in the pack's flyout, beside the ones there | `DatapackDetailPanel`, as `SaveDatapackFileButton` and `RemoveFromLibraryButton` are |
+| Its progress | The house progress window | `OperationProgressModal` |
+| Writing the new version | One writer for every store | `writePackToStore` (`datapackTransfer.ts`) |
+| The agent tools | Descriptor rows with confirmation gates | `mcp-tool-authoring` |
+
 ## Left out, and later
 
 Left out on purpose: incremental export (each capture is a full version; packs are small, and a

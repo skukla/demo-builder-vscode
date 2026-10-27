@@ -92,6 +92,30 @@ Ours is written from scratch, tested, and checked live.
 Every step is test-first, reuses before it writes (the house component, hook, client or rule that
 already does the job), and runs the `gate` skill before it is committed.
 
+## Looking and working like the rest of the extension (owner, 2026-10-27)
+
+Nothing in this feature gets its own look. Every screen it touches already exists, and every
+piece of UI it needs is already in the house vocabulary (`src/core/ui/components/CLAUDE.md`):
+
+- **Before any file under a `ui/` directory is created**, the `reuse-first` skill runs, and the
+  step's reuse table (03, 05, 07) is checked against what is actually there.
+- **Extend, don't add.** The new parts are new views and rows inside surfaces that exist: the
+  Data Installer screen and its import window, the pack flyout, the project dashboard's Data
+  Installer tile, the wizard's Datapacks step, and the project delete confirmation.
+- **A component that almost fits gets a prop**, not a sibling. A behaviour two features need moves
+  to `core/ui` and its row goes in the components table.
+- **No new CSS classes unless no house class fits**, and then in the feature's own stylesheet. A
+  feature stylesheet only reaches the bundles whose entry imports it (ADR-017), so every class is
+  checked on each surface that renders it, and any CSS change is fingerprinted before and after
+  with `webview-visual-baseline`.
+- **Words match the screens they sit on.** Existing labels and button names are reused
+  ("Remove", "Delete", "Cancel"), and nothing on screen says capture, baseline or version.
+- **Behind the screens, the same rule:** Commerce access, progress windows, job watching, agent
+  tool descriptors and confirmation gates are the ones the extension already uses
+  (`commerceClientForProject`, `OperationProgressModal`, `watchImportJob`, `mcp-tool-authoring`).
+  After each step lands, `component-extraction-scan` and `code-duplication-scan` check nothing was
+  rebuilt.
+
 ## Open questions
 
 - Their service ran installs in background workers because of App Builder time limits; ours

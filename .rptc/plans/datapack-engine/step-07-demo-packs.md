@@ -40,3 +40,17 @@ format more.
 - **Exporting marks the pack as shared in a file**, and deleting such a pack warns: "You shared
   this pack in a project file on 27 October. Anyone who hasn't created that project yet will get
   Bodea instead."
+
+## Reuse
+
+| Need | Reuse | Where it is |
+|---|---|---|
+| Rename a pack | Rename in place | `InlineRenameField` |
+| Rename, Delete, Make shared | The flyout's existing actions, and the kebab where the card has one | `DatapackDetailPanel`, `RemoveFromLibraryButton`, `CardActionsMenu` + `renderMenuIcon` |
+| Yours and Library tags | As the catalog tags them now | `DatapackCard` |
+| "This demo's pack: Acme Demo" on the dashboard | The dashboard's existing Data Installer tile gains the line | `DataInstallerTile` (`BuildZone`) |
+| The line on the Datapacks step | The step's own lead sentence | `SampleDataStep`, `LeadText` |
+| "The Acme Demo pack … has been deleted; continue with Bodea" | A warning above the step, with its one action | `InlineNotice` (`tone`, `action`) |
+| "Also delete its pack" on project delete | A third choice beside the GitHub repository and DA.live site the delete already offers, answered by the same setting | `deletionConfirmation.ts` (`CleanupOptions`, `demoBuilder.cleanupBehavior`) |
+| Copying a pack into the colleague's library | The existing copy between stores | `readPackFromStore` + `writePackToStore` |
+| The project file's reference | The portable-demos contract, one type | `DatapackReference` (`src/types/demoPackages.ts`) |
