@@ -27,6 +27,8 @@ import type { ImportRequest, ImportTarget } from '../services/dataInstallerWrite
 import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { ImportJobRecord } from '../types';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
+import { datapackLibraryHandlers } from './datapackLibraryHandlers';
+import { datapackZipHandlers } from './datapackZipHandlers';
 import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
@@ -66,6 +68,10 @@ export const importHandlers = defineHandlers({
     ...exportHandlers,
     ...importTargetHandlers,
     ...provisionAccsHandlers,
+    // Datapack files (save a pack to a zip, load one back), same reason.
+    ...datapackZipHandlers,
+    // Library pack actions: remove your own, copy one into the Data Installer.
+    ...datapackLibraryHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,

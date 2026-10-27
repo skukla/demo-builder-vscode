@@ -19,6 +19,12 @@ export interface DatapackId {
     version: string;
 }
 
+/**
+ * Which datapack catalog: the Data Installer service, or the team's own datapack
+ * library, which answers the same routes at its own address.
+ */
+export type DatapackStoreName = 'installer' | 'library';
+
 /** Cover and thumbnail art, either of which may be absent. */
 export interface DatapackArt {
     cover?: string;
@@ -36,6 +42,13 @@ export interface DatapackSummary {
     art: DatapackArt;
     createdAt?: string;
     updatedAt?: string;
+    /**
+     * Which catalog the row came from. Absent means the Data Installer, which is
+     * every row from before the datapack library existed.
+     */
+    store?: DatapackStoreName;
+    /** True when the signed-in SC owns it. Only the library says; absent otherwise. */
+    mine?: boolean;
 }
 
 /** A single datapack's full metadata. Same shape plus timing. */
@@ -108,6 +121,12 @@ export interface ActivityEntry {
 }
 
 /** A page of results from a paginated endpoint. */
+/**
+ * The catalog the panel shows: the Data Installer's packs, plus the library's when
+ * asked. `libraryError` says why the library's are missing, when they are.
+ */
+export type CatalogPage = Page<DatapackSummary> & { libraryError?: string };
+
 export interface Page<T> {
     items: T[];
     count: number;

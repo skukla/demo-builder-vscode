@@ -71,7 +71,7 @@ describe('DataInstallerScreen', () => {
         await waitFor(() => expect(mockRequest).toHaveBeenCalled());
         const [type, payload] = mockRequest.mock.calls[0];
         expect(type).toBe('find-datapacks');
-        expect(payload).toEqual({ includeCommunity: false });
+        expect(payload).toEqual({ includeCommunity: false, includeLibrary: true });
     });
 
     it('no longer spends a round trip on the connectivity check', async () => {

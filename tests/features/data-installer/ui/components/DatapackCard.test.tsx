@@ -43,9 +43,12 @@ function makeVersion(overrides: Partial<DatapackSummary> = {}): DatapackSummary 
 
 function makeGroup(overrides: Partial<DatapackGroup> = {}): DatapackGroup {
     return {
+        key: 'installer:bodea',
         name: 'bodea',
         displayName: 'Bodea',
+        store: 'installer',
         shared: true,
+        mine: false,
         versions: [makeVersion()],
         ...overrides,
     };
@@ -306,7 +309,7 @@ describe('DatapackCard', () => {
 
             activate(card);
 
-            expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
+            expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'main' }, 'installer');
         });
 
         // The press handler closes over the selected version, so a stale dependency
@@ -326,7 +329,7 @@ describe('DatapackCard', () => {
 
             fireEvent.click(screen.getByTestId('datapack-card'));
 
-            expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'tierpricingfix' });
+            expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'tierpricingfix' }, 'installer');
         });
 
         it('opens the VERSION the user picked, not the default', () => {
@@ -340,7 +343,7 @@ describe('DatapackCard', () => {
 
             fireEvent.click(card);
 
-            expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'tierpricingfix' });
+            expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'tierpricingfix' }, 'installer');
         });
 
         // Containment pin. Without it the picker's press bubbles to the card and
@@ -475,3 +478,32 @@ describe('DatapackCard — as a choice', () => {
         expect(onOpen).toHaveBeenCalled();
     });
 });
+
+describe('DatapackCard — where the pack lives', () => {
+    it('tags a library pack Library, and Yours when the SC owns it', () => {
+        const onOpen = jest.fn();
+        const { unmount } = render(
+            <DatapackCard
+                group={makeGroup({ key: 'library:bodea', store: 'library', shared: false })}
+                selectedVersion="main"
+                onVersionChange={jest.fn()}
+                onOpen={onOpen}
+            />,
+        );
+        expect(screen.getByText('Library')).toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('datapack-card'));
+        expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'main' }, 'library');
+        unmount();
+
+        render(
+            <DatapackCard
+                group={makeGroup({ key: 'library:bodea', store: 'library', mine: true })}
+                selectedVersion="main"
+                onVersionChange={jest.fn()}
+                onOpen={jest.fn()}
+            />,
+        );
+        expect(screen.getByText('Yours')).toBeInTheDocument();
+    });
+});
+

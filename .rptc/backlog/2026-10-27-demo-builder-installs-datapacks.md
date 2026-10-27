@@ -32,3 +32,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-27  refactor(types): CommerceGet and CommerceSend live in the shared Commerce wire types (`4fc5dabee`)
 - 2026-10-27  docs(plan): store settings as a datapack kind, restored on removal (DI-5) (`d22807057`)
 - 2026-10-27  feat(data-installer): the install record our engine writes as it creates (DI-5) (`5cbb59f26`)
+- 2026-10-27  feat(data-installer): our engine installs and removes attributes and attribute sets (DI-5) (`d2575438b`)

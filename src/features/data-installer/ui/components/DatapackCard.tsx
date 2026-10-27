@@ -28,7 +28,7 @@
 import { Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
 import type { DatapackGroup } from '../../services/datapackCatalog';
-import type { DatapackArt, DatapackId, DatapackSummary } from '../../types';
+import type { DatapackArt, DatapackId, DatapackStoreName, DatapackSummary } from '../../types';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
@@ -40,8 +40,8 @@ export interface DatapackCardProps {
     selectedVersion: string;
     /** Fires with the picked version. */
     onVersionChange: (version: string) => void;
-    /** Card press → open the detail flyout for the SELECTED version. */
-    onOpen: (id: DatapackId) => void;
+    /** Card press → open the detail flyout for the SELECTED version, in its store. */
+    onOpen: (id: DatapackId, store: DatapackStoreName) => void;
     /**
      * Present when this card is one of a set the user CHOOSES between; absent
      * when it merely opens (the catalog panel's use).
@@ -94,8 +94,8 @@ export function DatapackCard({
     const typeCount = version?.dataTypes.length ?? 0;
 
     const handleOpen = useCallback(
-        (): void => onOpen({ name: group.name, version: selectedVersion }),
-        [onOpen, group.name, selectedVersion],
+        (): void => onOpen({ name: group.name, version: selectedVersion }, group.store),
+        [onOpen, group.name, selectedVersion, group.store],
     );
     const handleKeyDown = useActivateOnKey(handleOpen);
 
@@ -145,8 +145,8 @@ export function DatapackCard({
                         title. */}
                     {isInstalled ? (
                         <SelectionCheck testId="datapack-card-project-check" />
-                    ) : group.shared ? null : (
-                        <span className="datapack-card-tag">Community</span>
+                    ) : (
+                        renderTag(cardTag(group))
                     )}
                 </div>
                 {/* Containment: the picker's press must not bubble to the card,
@@ -237,6 +237,22 @@ function initial(displayName: string): string {
 }
 
 /** Keep a nested control's events inside the control. */
+/**
+ * The one word beside the title, if any: where the pack lives and whose it is. A
+ * library pack always says so, because only the Data Installer's can be installed
+ * from the flyout; a Data Installer pack says only when it is not curated.
+ */
+function cardTag(group: DatapackGroup): string | undefined {
+    if (group.store === 'library') {
+        return group.mine ? 'Yours' : 'Library';
+    }
+    return group.shared ? undefined : 'Community';
+}
+
+function renderTag(tag: string | undefined): React.JSX.Element | null {
+    return tag ? <span className="datapack-card-tag">{tag}</span> : null;
+}
+
 function stopPropagation(event: React.SyntheticEvent): void {
     event.stopPropagation();
 }

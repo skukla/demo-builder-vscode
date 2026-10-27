@@ -191,3 +191,11 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 - 2026-10-01  2026-10-01: export through Jeff's service is one line away (see DI-3). The service is NOT locked: PRs merged in July and September by other maintainers. The owner holds developer access to its Stage workspace. Decision for the owner: (a) fix the service and route Share/export through it, dropping the datapack store built in step 02 (one registry); or (b) keep our store for a reason the service cannot serve. Recommended (a).
 - 2026-10-01  2026-10-01, owner: 'I can't deploy his code or fix his code. I do not own it.' The export fix goes to the service's maintainers as a patch + note (handed over). The datapack-store build continues as the half we control; step 05's push into their registry keeps one library. Next: 02b (adopt their field names), then 03 (port their export processors).
 - 2026-10-01  2026-10-01: step 02b DONE — the datapack store answers the Data Installer's database API (eleven routes mirrored from his code: create/add/update/get/find/batch/update-metadata/delete/delete-item/promote), deployed to the scratch workspace, live round trip green, 210 service tests. The extension's own dataInstallerParsers read the store's captured answers (tests/features/data-installer/datapack-store-contract.test.ts), so the existing client reads our store with only the base URL changed. Owner-only writes and shared-or-mine reads on top of his contract. Next: step 03, porting his export processors behind the one store seam.
+- 2026-10-01  feat(data-installer): save a datapack as a zip file, and load one into a store (`08ec30412`)
+- 2026-10-01  test(data-installer): the datapack store's live answers parse with the Data Installer parsers (`1599c8ac6`)
+- 2026-10-01  feat(data-installer): undo a library load by deleting your own library pack (`b64d25bc7`)
+- 2026-10-01  docs(backlog): DI-1 records the datapack file commits (`d1e3805ff`)
+- 2026-10-01  feat(data-installer): the datapack library's packs in the catalog (`7acd9b4d0`)
+- 2026-10-01  docs(backlog): DI-1 records the library undo commit (`c1db9c659`)
+- 2026-10-01  feat(data-installer): copy a library pack into the Data Installer so it can be installed (`bf36b8350`)
+- 2026-10-01  docs(backlog): DI-1 records the library catalog commit (`7b48174cf`)

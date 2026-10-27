@@ -206,9 +206,12 @@ describe('datapackCatalog', () => {
             // did), but the picker is exported and a caller holding filtered state
             // can hand it an emptied group — it must answer, not throw.
             const empty: DatapackGroup = {
+                key: 'installer:x',
                 name: 'x',
                 displayName: 'X',
+                store: 'installer',
                 shared: false,
+                mine: false,
                 versions: [],
             };
             expect(pickDefaultVersion(empty)).toBeUndefined();
@@ -226,3 +229,38 @@ describe('datapackCatalog', () => {
         });
     });
 });
+
+describe('groupDatapacks across two stores', () => {
+    const row = (name: string, version: string, extra: Partial<DatapackSummary> = {}): DatapackSummary => ({
+        id: { name, version },
+        displayName: name,
+        shared: true,
+        dataTypes: [],
+        art: {},
+        ...extra,
+    });
+
+    it('keeps a library pack and a Data Installer pack of the same name on separate cards', () => {
+        const groups = groupDatapacks([
+            row('bodea', 'main'),
+            row('bodea', 'v1', { store: 'library', shared: false, mine: true }),
+        ]);
+
+        expect(groups.map((g) => [g.key, g.store, g.mine, g.versions.length])).toEqual([
+            ['installer:bodea', 'installer', false, 1],
+            ['library:bodea', 'library', true, 1],
+        ]);
+    });
+
+    it('marks a library group yours when any version is, and reads an untagged row as the Data Installer', () => {
+        const groups = groupDatapacks([
+            row('justrite', 'v1', { store: 'library' }),
+            row('justrite', 'v2', { store: 'library', mine: true }),
+            row('citisignal', 'main'),
+        ]);
+
+        expect(groups.find((g) => g.name === 'justrite')).toMatchObject({ store: 'library', mine: true });
+        expect(groups.find((g) => g.name === 'citisignal')).toMatchObject({ store: 'installer', mine: false });
+    });
+});
+

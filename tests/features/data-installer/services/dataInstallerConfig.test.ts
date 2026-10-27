@@ -16,6 +16,7 @@ import {
     isDataInstallerConfigured,
     isDataInstallerEnabled,
     resolveDataInstallerBaseUrl,
+    resolveDatapackStoreBaseUrl,
 } from '@/features/data-installer/services/dataInstallerConfig';
 
 const STAGE_URL = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
@@ -263,5 +264,22 @@ describe('isDataInstallerConfigured', () => {
         setupConfig({ enabled: true, apiBaseUrl: 'http://insecure.example.com' });
 
         expect(isDataInstallerConfigured()).toBe(false);
+    });
+
+    describe('resolveDatapackStoreBaseUrl', () => {
+        it('reads the library section, not the Data Installer one', () => {
+            setupConfig({ apiBaseUrl: `${STAGE_URL}/` });
+
+            expect(resolveDatapackStoreBaseUrl()).toEqual({ ok: true, baseUrl: STAGE_URL });
+            expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('demoBuilder.datapackStore');
+        });
+
+        it('applies the same rule as the Data Installer URL: http is refused, empty is not configured', () => {
+            setupConfig({ apiBaseUrl: 'http://insecure.example.test' });
+            expect(resolveDatapackStoreBaseUrl()).toMatchObject({ ok: false, reason: 'invalid-url' });
+
+            setupConfig({ apiBaseUrl: '  ' });
+            expect(resolveDatapackStoreBaseUrl()).toEqual({ ok: false, reason: 'not-configured' });
+        });
     });
 });

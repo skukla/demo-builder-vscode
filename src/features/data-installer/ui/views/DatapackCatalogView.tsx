@@ -38,7 +38,7 @@
  * @module features/data-installer/ui/views/DatapackCatalogView
  */
 
-import { Flex, Link, Switch } from '@adobe/react-spectrum';
+import { Flex, Switch } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     groupDatapacks,
@@ -46,16 +46,17 @@ import {
     type DatapackGroup,
 } from '../../services/datapackCatalog';
 import type {
+    CatalogPage,
     DataItemInventory,
     DatapackDetail,
     DatapackId,
-    DatapackSummary,
+    DatapackStoreName,
     InstalledDatapack,
     Page,
 } from '../../types';
+import { CatalogHeaderActions } from '../components/CatalogHeaderActions';
 import { DatapackCard } from '../components/DatapackCard';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
-import { ExportDatapackModal } from '../components/ExportDatapackModal';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -89,12 +90,14 @@ export function DatapackCatalogView(): React.JSX.Element {
     const [query, setQuery] = useState('');
     const [versions, setVersions] = useState<Record<string, string>>({});
     const [selected, setSelected] = useState<DatapackId | undefined>(undefined);
+    /** Which store the open flyout's pack lives in. */
+    const [selectedStore, setSelectedStore] = useState<DatapackStoreName>('installer');
     const [importing, setImporting] = useState<DatapackId | undefined>(undefined);
-    /** Stage 3: capture a NEW pack from the connected instance. */
-    const [exporting, setExporting] = useState(false);
 
+    // Both catalogs in one answer: the Data Installer's packs plus the library's,
+    // each tagged. A library outage still shows the Data Installer's, with a reason.
     const { load, loading, value, failure, settled } =
-        useDataInstallerRequest<Page<DatapackSummary>>('find-datapacks');
+        useDataInstallerRequest<CatalogPage>('find-datapacks');
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
     // What the open project was CREATED to hold, recorded by the wizard's Sample
     // Data area. Optional in every direction: no project, or a project that
@@ -102,7 +105,7 @@ export function DatapackCatalogView(): React.JSX.Element {
     const projectContext = useDataInstallerRequest<ProjectSampleData>('get-datapack-import-target');
 
     useEffect(() => {
-        load({ includeCommunity });
+        load({ includeCommunity, includeLibrary: true });
     }, [load, includeCommunity]);
 
     const loadProjectContext = projectContext.load;
@@ -161,7 +164,10 @@ export function DatapackCatalogView(): React.JSX.Element {
         [groups, query],
     );
 
-    const refresh = useCallback((): void => load({ includeCommunity }), [load, includeCommunity]);
+    const refresh = useCallback(
+        (): void => load({ includeCommunity, includeLibrary: true }),
+        [load, includeCommunity],
+    );
 
     /** Opens VS Code settings at the section a configuration refusal names. */
     const openDataInstallerSettings = useCallback((): void => {
@@ -175,13 +181,19 @@ export function DatapackCatalogView(): React.JSX.Element {
 
     const loadDetail = detail.load;
     const openDetail = useCallback(
-        (id: DatapackId): void => {
+        (id: DatapackId, store: DatapackStoreName): void => {
             setSelected(id);
-            loadDetail({ datapackName: id.name, version: id.version });
+            setSelectedStore(store);
+            loadDetail({ datapackName: id.name, version: id.version, store });
         },
         [loadDetail],
     );
     const closeDetail = useCallback((): void => setSelected(undefined), []);
+    // Removing your own library pack closes its flyout and re-reads the catalog.
+    const removedFromLibrary = useCallback((): void => {
+        setSelected(undefined);
+        refresh();
+    }, [refresh]);
 
     // The import modal is mounted HERE, not inside the flyout. As a child of the
     // Drawer it was a dialog nested in a drawer; `IntegrationsScreen` mounts its
@@ -211,9 +223,9 @@ export function DatapackCatalogView(): React.JSX.Element {
 
     const retryDetail = useCallback((): void => {
         if (selected) {
-            loadDetail({ datapackName: selected.name, version: selected.version });
+            loadDetail({ datapackName: selected.name, version: selected.version, store: selectedStore });
         }
-    }, [loadDetail, selected]);
+    }, [loadDetail, selected, selectedStore]);
 
     // `!settled`, not `loading`. `loading` starts FALSE and the fetch is kicked
     // off from a useEffect, which React runs AFTER the first paint -- so frame 1
@@ -270,14 +282,18 @@ export function DatapackCatalogView(): React.JSX.Element {
                                 >
                                     Include community datapacks
                                 </Switch>
-                                <Link isQuiet onPress={() => setExporting(true)}>
-                                    Export from this instance
-                                </Link>
+                                {/* Export from this instance, and Load from file. */}
+                                <CatalogHeaderActions onCatalogChanged={refresh} />
                             </Flex>
                         }
                     />
                 }
             >
+                {value?.libraryError ? (
+                    <p className="datapack-export-note">
+                        The datapack library could not be listed: {value.libraryError}
+                    </p>
+                ) : null}
                 {renderBody({
                     groups,
                     filtered,
@@ -298,9 +314,8 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onClose={closeDetail}
                 onRetry={retryDetail}
                 onImport={openImport}
+                onRemoved={removedFromLibrary}
             />
-
-            {exporting ? <ExportDatapackModal onClose={() => setExporting(false)} /> : null}
 
             {/* Only what the service HOLDS is importable — the inventory, never
                 the pack's declared types. Mounted while `importing` is set, so
@@ -343,6 +358,14 @@ interface ProjectSampleData {
  * invited the user to install what they had just installed.
  */
 
+/**
+ * Whether a card wears the installed check. Installed means the Data Installer put it
+ * on this instance; a library pack of the same name is not that pack.
+ */
+function installedHere(group: DatapackGroup, installedPacks?: ReadonlySet<string>): boolean {
+    return group.store === 'installer' && (installedPacks?.has(group.name) ?? false);
+}
+
 /** Pick the one body state to show under the header. */
 function renderBody(args: {
     groups: DatapackGroup[];
@@ -350,7 +373,7 @@ function renderBody(args: {
     query: string;
     versions: Record<string, string>;
     pickVersion: (name: string, version: string) => void;
-    openDetail: (id: DatapackId) => void;
+    openDetail: (id: DatapackId, store: DatapackStoreName) => void;
     /** Every pack believed installed on this instance — one check per card. */
     installedPacks?: ReadonlySet<string>;
 }): React.JSX.Element {
@@ -373,12 +396,12 @@ function renderBody(args: {
         <div className="datapack-grid">
             {filtered.map((group) => (
                 <DatapackCard
-                    key={group.name}
+                    key={group.key}
                     group={group}
-                    selectedVersion={versions[group.name] ?? pickDefaultVersion(group) ?? ''}
-                    onVersionChange={(version) => pickVersion(group.name, version)}
+                    selectedVersion={versions[group.key] ?? pickDefaultVersion(group) ?? ''}
+                    onVersionChange={(version) => pickVersion(group.key, version)}
                     onOpen={openDetail}
-                    isInstalled={installedPacks?.has(group.name) ?? false}
+                    isInstalled={installedHere(group, installedPacks)}
                 />
             ))}
         </div>
