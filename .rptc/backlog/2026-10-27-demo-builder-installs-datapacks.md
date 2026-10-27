@@ -23,3 +23,8 @@ so removal always goes back through the same one. Catalog kinds first, then cust
 (which completes Bodea), the rest only when a pack needs them.
 
 High value: SCs cannot install any datapack until this exists or the service changes back.
+
+## Shipped so far
+
+- 2026-10-27  refactor(data-installer): every datapack write goes through an engine (DI-5 step 1) (`1a1aeffb2`)
+- 2026-10-27  docs(plan): Demo Builder installs datapacks itself, beside the service (DI-5) (`4171d9f60`)
