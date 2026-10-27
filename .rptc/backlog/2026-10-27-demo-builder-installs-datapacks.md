@@ -40,3 +40,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-27  feat(data-installer): our engine installs and removes sources, stocks and their links (DI-5) (`8aeecbea6`)
 - 2026-10-27  feat(data-installer): our engine installs and removes products and sets their stock (DI-5) (`f4e2f2356`)
 - 2026-10-27  docs(plan): repeat installs and capture, and the service's export read as a spec (DI-5) (`b5c5283a1`)
+- 2026-10-27  docs(plan): undo, removal and repeat installs as an SC sees them; each demo's own pack; AB-83 decided (DI-5) (`68b988c1c`)
