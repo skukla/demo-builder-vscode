@@ -44,3 +44,5 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-27  docs(plan): the datapack engine plan in the RPTC shape, steps and research apart (DI-5) (`43b4c30a5`)
 - 2026-10-27  feat(data-installer): our engine installs a whole pack in order and removes it from its record (DI-5) (`d93fdab2e`)
 - 2026-10-27  docs(plan): every new part reuses the extension's own components, named per step (DI-5) (`02026e4e0`)
+- 2026-10-27  feat(data-installer): Demo Builder's engine behind the engine seam, with its install target (DI-5) (`7389d4143`)
+- 2026-10-27  docs(rptc): commit ids after the history rewrite; the service's maintainers are not named (`544b97be4`)
