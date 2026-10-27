@@ -21,7 +21,14 @@ every pack, every item.
   extension) and the **service engine** (what exists today, unchanged).
 - **One setting picks the engine.** `demoBuilder.dataInstaller.engine`: `demo-builder` or
   `service`. If the service is fixed, switching back is a setting change.
-- **Both engines read packs from the same catalog** — the service's, which still answers.
+- **Our engine installs a pack from wherever the screen lists it** (owner, 2026-10-27): the
+  service's catalog, the datapack library, or a datapack zip file. It needs only the pack's rows,
+  so a library pack is installed straight from the library, with no copy into the service's
+  catalog first. That copy ("Copy to the Data Installer", `copy_library_datapack_to_installer`)
+  is kept only for the service engine, which can install nothing else; it cannot be undone from
+  the extension and has never run live. Store-settings packs (step 5) depend on this, since the
+  service's catalog will most likely refuse that kind. The library and zip files came in by
+  merging `feature/datapack-zip` into this branch.
 - **Each installed pack records which engine installed it, and removal always goes through
   that engine.** Each engine knows exactly what it wrote; nothing either creates is ever
   removed by the other, and nothing is stranded (rule 1: whatever can be done can be undone).
