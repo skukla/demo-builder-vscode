@@ -42,3 +42,5 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-27  docs(plan): repeat installs and capture, and the service's export read as a spec (DI-5) (`b5c5283a1`)
 - 2026-10-27  docs(plan): undo, removal and repeat installs as an SC sees them; each demo's own pack; AB-83 decided (DI-5) (`68b988c1c`)
 - 2026-10-27  docs(plan): the datapack engine plan in the RPTC shape, steps and research apart (DI-5) (`8071e9d45`)
+- 2026-10-27  feat(data-installer): our engine installs a whole pack in order and removes it from its record (DI-5) (`8f9f38ea2`)
+- 2026-10-27  docs(plan): every new part reuses the extension's own components, named per step (DI-5) (`5d0876b5d`)
