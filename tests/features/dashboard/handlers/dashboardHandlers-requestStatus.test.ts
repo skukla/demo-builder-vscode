@@ -47,7 +47,7 @@ jest.mock(
 );
 
 import './dashboardValidatorMocks';
-import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
+import { handleReAuthenticate, handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { adobeSignInRestored } from '@/features/dashboard/services/adobeSignInPrompt';
 import { warmProjectReads } from '@/features/dashboard/handlers/warmProjectReads';
@@ -330,5 +330,31 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         });
         expect(statusData).toMatchObject({ name: 'test-project' });
         expect(warmProjectReads).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The dashboard's "Sign in" buttons appear only after Adobe has refused the sign-in, so they
+ * always ask for a FRESH one (`aio auth login -f`). A colleague on beta.149, 2026-10-27:
+ * Adobe answered 401 ErrInvalidOauthToken to a token whose saved expiry was hours away, so
+ * the normal login reused it in five seconds with no browser, reported success, and the
+ * dashboard stayed on "Not Checked" however often she pressed "Sign in to check".
+ */
+describe('handleReAuthenticate', () => {
+    it('asks for a fresh sign-in, never the saved one', async () => {
+        const { mockContext } = setupMocks();
+        const { ServiceLocator } = require('@/core/di/serviceLocator');
+        const signIn = jest.fn().mockResolvedValue(false);
+        ServiceLocator.getAuthenticationService.mockReturnValue({ loginAndRestoreProjectContext: signIn });
+        // The sign-in notice runs inside a cancellable progress window.
+        const vscode = require('vscode');
+        vscode.window.withProgress.mockImplementation((_options: unknown, task: (p: unknown, t: unknown) => unknown) =>
+            task({ report: jest.fn() }, { onCancellationRequested: jest.fn() }),
+        );
+
+        await handleReAuthenticate(mockContext);
+
+        expect(signIn).toHaveBeenCalledTimes(1);
+        expect(signIn.mock.calls[0][1]).toBe(true);
     });
 });

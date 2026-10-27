@@ -267,7 +267,8 @@ export const handleRequestStatus: MessageHandler = async (context) => {
  * Handle 'reAuthenticate' message - Re-authenticate with Adobe
  *
  * Called when user clicks "Sign in" link after session expired (needs-auth status).
- * Uses loginAndRestoreProjectContext to restore full project context after login,
+ * Always a fresh, forced sign-in (see the call). Uses loginAndRestoreProjectContext to
+ * restore full project context after login,
  * then requests a status refresh to update the mesh status display.
  */
 export const handleReAuthenticate: MessageHandler = async (context) => {
@@ -284,12 +285,21 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
     // The browser opens on the other side of this call — telegraph it, exactly as
     // ensureAdobeIOAuth does. Without it the click looks inert until a browser
     // window appears unannounced.
+    //
+    // FORCED (`aio auth login -f`): this link only shows after Adobe has refused the
+    // sign-in, and a normal login reuses the saved one while its own expiry says it is
+    // good. A colleague on beta.149, 2026-10-27: Adobe answered 401 ErrInvalidOauthToken
+    // hours before that expiry, so every press "succeeded" in five seconds with no
+    // browser, and the dashboard stayed on "Not Checked".
     const loginSuccess = await withBrowserSignInNotice(() =>
-        authManager.loginAndRestoreProjectContext({
-            organization: project.adobe?.organization,
-            projectId: project.adobe?.projectId,
-            workspace: project.adobe?.workspace,
-        }),
+        authManager.loginAndRestoreProjectContext(
+            {
+                organization: project.adobe?.organization,
+                projectId: project.adobe?.projectId,
+                workspace: project.adobe?.workspace,
+            },
+            true,
+        ),
     );
 
     if (!loginSuccess) {
