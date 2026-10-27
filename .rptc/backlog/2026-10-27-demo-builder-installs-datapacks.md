@@ -28,3 +28,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 
 - 2026-10-27  refactor(data-installer): every datapack write goes through an engine (DI-5 step 1) (`1a1aeffb2`)
 - 2026-10-27  docs(plan): Demo Builder installs datapacks itself, beside the service (DI-5) (`4171d9f60`)
+- 2026-10-27  docs(plan): the catalog spec read off the service, with Bodea's answers (DI-5) (`c3709948d`)
