@@ -34,3 +34,19 @@ export async function signInHeaders(signIn: DataInstallerSignIn): Promise<Record
         ...(signIn.orgCode ? { 'x-gw-ims-org-id': signIn.orgCode } : {}),
     };
 }
+
+/**
+ * The Adobe org number a service's address names. App Builder addresses start with the
+ * number of the org they run in (`https://285361-dsc-stage.adobeioruntime.net/...` is org
+ * 285361), and that org is the one the gateway wants named.
+ *
+ * @param baseUrl - the Data Installer address
+ * @returns the org number, or undefined when the address does not start with one
+ */
+export function orgNumberOf(baseUrl: string): string | undefined {
+    try {
+        return /^(\d+)-/.exec(new URL(baseUrl).hostname)?.[1];
+    } catch {
+        return undefined;
+    }
+}
