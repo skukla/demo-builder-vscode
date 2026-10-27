@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Updating an installed integration.** Opening the integrations screen checks whether each deployed integration, and the ERP, has newer code on its GitHub branch or a version Commerce has not installed; a card that has reads "Update needed", and so does the dashboard's Integrations tile. Update now fetches the newer code (fast-forward only; it refuses and names the files when the folder holds your edits), installs its dependencies and redeploys, which upgrades the app in Commerce. It used to redeploy the folder unchanged. Agents get `update_integration` and `check_integration_updates`.
 - **Reinstall in Commerce, when an upgrade is refused.** When Commerce will not upgrade an installed App Management integration in place, the integrations screen opens a confirmation offering to reinstall it: remove it from Commerce, then install the version already deployed. Until it is done, the card's menu offers "Reinstall in Commerce"; it appears nowhere else. Agents get `reinstall_integration`, which is confirm-gated and refused unless Commerce refused an upgrade.
 
+## [1.0.0-beta.151] - 2026-10-27
+
+A hotfix on beta.150, whose Data Installer fix did not reach most people.
+
+### Fixed
+- **Datapacks load from the Data Installer, every time.** beta.150 named your Adobe organization from a short-lived memory that is empty after a reload or a fresh sign-in, so the service often refused the request ("missing x-gw-ims-org-id header"). Demo Builder now reads the organization that runs the service from its address, finds it among your own Adobe organizations, and names that one. If your Adobe account is not in that organization, the Datapacks step says so plainly.
+
 ## [1.0.0-beta.150] - 2026-10-27
 
 A hotfix on beta.149: datapacks work again now that the Data Installer service has moved, and the dashboard's Adobe sign-in opens the browser again.
