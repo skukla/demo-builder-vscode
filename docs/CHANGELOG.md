@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-beta.151] - 2026-10-27
+
+A hotfix on beta.150, whose Data Installer fix did not reach most people.
+
+### Fixed
+- **Datapacks load from the Data Installer, every time.** beta.150 named your Adobe organization from a short-lived memory that is empty after a reload or a fresh sign-in, so the service often refused the request ("missing x-gw-ims-org-id header"). Demo Builder now reads the organization that runs the service from its address, finds it among your own Adobe organizations, and names that one. If your Adobe account is not in that organization, the Datapacks step says so plainly.
+
 ## [1.0.0-beta.150] - 2026-10-27
 
 A hotfix on beta.149: datapacks work again now that the Data Installer service has moved, and the dashboard's Adobe sign-in opens the browser again.

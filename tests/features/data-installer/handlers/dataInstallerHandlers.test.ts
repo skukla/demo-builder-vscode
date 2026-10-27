@@ -226,19 +226,53 @@ describe('dataInstallerHandlers', () => {
             expect(access.ok === false && access.response.code).toBe(ErrorCode.AUTH_REQUIRED);
         });
 
-        // Stage refused the bearer alone with "missing x-gw-ims-org-id header", 2026-10-27.
-        it('hands the client the org the SC is signed into', async () => {
-            const context = makeImportHarness();
-            (context.authManager!.getCachedOrganization as jest.Mock).mockReturnValue({
-                id: '1',
-                code: 'ORG@AdobeOrg',
-                name: 'Adobe Demo System',
+        /**
+         * The service's org is the number its address starts with (App Builder names every
+         * address `<org number>-<project>`), and its gateway refuses a request that does not
+         * name that org. beta.150 sent the CACHED org, which is empty after a reload and after
+         * a fresh sign-in, so the request named none (2026-10-27). Checked live the same day:
+         * `285361` from the Stage address, matched in the sign-in's own org list, gave the code
+         * Stage accepted, and 42 datapacks.
+         */
+        describe('the org the requests name', () => {
+            const STAGE = 'https://285361-dsc-stage.adobeioruntime.net/api/v1/web/data-installer-api';
+            const DEMO_SYSTEM = { id: '285361', code: 'DEMO@AdobeOrg', name: 'Adobe Demo System' };
+            const OTHER = { id: '999', code: 'OTHER@AdobeOrg', name: 'Somewhere Else' };
+
+            function signedInto(orgs: unknown, cached?: unknown) {
+                setupSettings({ apiBaseUrl: STAGE });
+                const context = makeImportHarness();
+                (context.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(cached);
+                const lookup = context.authManager!.getOrganizationsSdkOnly as jest.Mock;
+                if (orgs instanceof Error) lookup.mockRejectedValue(orgs);
+                else lookup.mockResolvedValue(orgs);
+                return context;
+            }
+
+            it("names the org the service's address belongs to, found in the sign-in's orgs", async () => {
+                const access = await resolveDataInstallerAccess(signedInto([OTHER, DEMO_SYSTEM], OTHER));
+
+                expect(access.ok && access.orgCode).toBe('DEMO@AdobeOrg');
+                expect(MockedClient).toHaveBeenLastCalledWith(expect.objectContaining({ orgCode: 'DEMO@AdobeOrg' }));
             });
 
-            const access = await resolveDataInstallerAccess(context);
+            it("says so when the sign-in is not in the service's org", async () => {
+                const access = await resolveDataInstallerAccess(signedInto([OTHER]));
 
-            expect(access.ok && access.orgCode).toBe('ORG@AdobeOrg');
-            expect(MockedClient).toHaveBeenLastCalledWith(expect.objectContaining({ orgCode: 'ORG@AdobeOrg' }));
+                expect(access.ok).toBe(false);
+                expect(!access.ok && access.response.code).toBe(ErrorCode.AUTH_FORBIDDEN);
+                expect(!access.ok && access.response.error).toBe(
+                    "Your Adobe sign-in isn't in the Adobe org that runs the Data Installer (org 285361). " +
+                        'Sign in with an account in that org, or check the Data Installer address in settings.',
+                );
+            });
+
+            it('still sends the request, naming no org, when Adobe cannot list the orgs', async () => {
+                const access = await resolveDataInstallerAccess(signedInto(new Error('401')));
+
+                expect(access.ok).toBe(true);
+                expect(access.ok && access.orgCode).toBeUndefined();
+            });
         });
 
         it('reports AUTH_REQUIRED when the token is missing after sign-in', async () => {

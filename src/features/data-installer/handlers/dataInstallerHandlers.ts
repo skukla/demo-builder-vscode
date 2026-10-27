@@ -21,6 +21,7 @@ import {
     resolveDataInstallerBaseUrl,
 } from '../services/dataInstallerConfig';
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
+import { orgNumberOf } from '../services/dataInstallerSignIn';
 import type { DatapackId, OperationMode } from '../types';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ErrorCode } from '@/types/errorCodes';
@@ -138,9 +139,9 @@ export async function resolveDataInstallerAccess(
     const getToken = async (): Promise<string> =>
         (await authManager.getTokenManager().inspectToken()).token ?? '';
 
-    // The org the SC signed into: the service's gateway refuses a request without it
-    // ("missing x-gw-ims-org-id header", Stage, 2026-10-27). See `dataInstallerSignIn`.
-    const orgCode = authManager.getCachedOrganization()?.code;
+    const org = await serviceOrgCode(authManager, resolved.baseUrl, context.logger);
+    if ('refusal' in org) return { ok: false, response: org.refusal };
+    const { orgCode } = org;
 
     return {
         ok: true,
@@ -157,6 +158,49 @@ export async function resolveDataInstallerAccess(
                 );
             },
         }),
+    };
+}
+
+/**
+ * The org the requests name, for the gateway's `x-gw-ims-org-id`: the org that RUNS the
+ * service, read off its address and found in the sign-in's own orgs for its code. The
+ * service refuses a request that names any other org, or none ("missing x-gw-ims-org-id
+ * header", Stage, 2026-10-27).
+ *
+ * beta.150 sent the CACHED org, which is empty after a reload and after a fresh sign-in,
+ * so its requests named none. The cache is still read first, but only counts when it IS
+ * that org. Adobe's org list is the quick one that never opens a browser.
+ *
+ * A sign-in that does not reach that org is refused here, saying why. When the address
+ * names no org, or Adobe cannot list the orgs, the request goes without one.
+ */
+async function serviceOrgCode(
+    authManager: NonNullable<HandlerContext['authManager']>,
+    baseUrl: string,
+    logger: HandlerContext['logger'],
+): Promise<{ orgCode?: string } | { refusal: HandlerResponse }> {
+    const orgNumber = orgNumberOf(baseUrl);
+    if (!orgNumber) return {};
+    const cached = authManager.getCachedOrganization();
+    if (cached?.id === orgNumber) return { orgCode: cached.code };
+    let orgs;
+    try {
+        orgs = await authManager.getOrganizationsSdkOnly();
+    } catch (error) {
+        logger.warn(`${LOG_PREFIX} Could not list Adobe orgs to name org ${orgNumber}: ${(error as Error).message}`);
+        return {};
+    }
+    if (!orgs) return {};
+    const org = orgs.find((candidate) => candidate.id === orgNumber);
+    if (org) return { orgCode: org.code };
+    return {
+        refusal: {
+            success: false,
+            error:
+                `Your Adobe sign-in isn't in the Adobe org that runs the Data Installer (org ${orgNumber}). ` +
+                'Sign in with an account in that org, or check the Data Installer address in settings.',
+            code: ErrorCode.AUTH_FORBIDDEN,
+        },
     };
 }
 
