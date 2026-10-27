@@ -456,7 +456,7 @@ setup guide's "Take erp_owner out again".
 (2026-10-10, AB-77) take the same shape: without `confirm` they read Commerce and answer what
 would change, and write nothing; with `confirm: true` they raise the consent dialog and
 write. The first applies an integration's setup steps through one engine shared with the
-card's "Prepare this store" and the guide's per-step Apply — settings through
+setup guide's Apply all and per-step Apply — settings through
 `PUT /V1/system/config` (whose `errors` list under HTTP 200 is read on every write), the
 `erp_owner`/`brand` attributes, a warehouse and stock per ERP, a shared catalog per company
 — checking each step first and skipping one a datapack already did, and recording what each

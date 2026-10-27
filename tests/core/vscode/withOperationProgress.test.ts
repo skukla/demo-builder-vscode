@@ -94,7 +94,7 @@ describe('started from a button on a screen (R1)', () => {
     // What a run changed reaches the result screen (live release test, 2026-10-22: "Store
     // prepared" named nothing it did). An empty list is not carried.
     it('ends the modal with the lines of what a run that succeeded changed', async () => {
-        await withOperationProgress({ id: ID, title: 'Preparing the store', inModal: true }, async () => ({
+        await withOperationProgress({ id: ID, title: 'Applying the demo setup', inModal: true }, async () => ({
             success: true,
             details: ['Product attributes:', 'Added erp_owner to the attribute set Default'],
         }));
@@ -104,7 +104,18 @@ describe('started from a button on a screen (R1)', () => {
             details: ['Product attributes:', 'Added erp_owner to the attribute set Default'],
         });
 
-        await withOperationProgress({ id: ID, title: 'Preparing the store', inModal: true }, async () => ({ success: true, details: [] }));
+        await withOperationProgress({ id: ID, title: 'Applying the demo setup', inModal: true }, async () => ({ success: true, details: [] }));
+        expect(modalPayloads().at(-1)).toEqual({ id: ID, state: 'succeeded' });
+    });
+
+    // Release test row 4.19, 2026-10-26: what each step changed is a row on the result, not
+    // a run of centred lines. An empty list is not carried.
+    it('ends the modal with the parts of a run that changed something', async () => {
+        const changes = [{ label: 'ERP warehouse', lines: ['Unassigned the source test_warehouse from the stock'] }];
+        await withOperationProgress({ id: ID, title: 'Undoing the store preparation', inModal: true }, async () => ({ success: true, changes }));
+        expect(modalPayloads().at(-1)).toEqual({ id: ID, state: 'succeeded', changes });
+
+        await withOperationProgress({ id: ID, title: 'Undoing the store preparation', inModal: true }, async () => ({ success: true, changes: [] }));
         expect(modalPayloads().at(-1)).toEqual({ id: ID, state: 'succeeded' });
     });
 

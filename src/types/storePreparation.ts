@@ -1,6 +1,6 @@
 /**
- * "Prepare this store" (AB-77): what Demo Builder recorded when it applied a catalog entry's
- * setup steps to Commerce, so "Undo preparation" can put each one back, step by step.
+ * the demo setup's Apply (AB-77): what Demo Builder recorded when it applied a catalog entry's
+ * setup steps to Commerce, so a step's Undo can put each one back, step by step.
  *
  * Shared between the extension and the webviews, so it imports nothing.
  *
@@ -47,6 +47,12 @@ export interface WarehouseStepRecord {
     createdStock?: { id: number; name: string };
     /** The stock-source links this run added. */
     links: Array<{ stockId: number; sourceCode: string }>;
+    /**
+     * Sources this run found switched off and switched back on, by code: an earlier undo
+     * switched off the source it had made, and applying again finds it there. The undo
+     * switches them off again. Absent on records written before 2026-10-26.
+     */
+    enabledSources?: string[];
 }
 
 /** What `company-shared-catalogs` recorded. */
@@ -63,7 +69,7 @@ export type StorePreparationStepRecord =
     | SharedCatalogsStepRecord;
 
 /**
- * The record "Prepare this store" leaves on the component: one entry per step applied, by
+ * The record the demo setup's Apply leaves on the component: one entry per step applied, by
  * step id. A step's entry is removed by its undo; the whole record goes with the last one, or
  * with the component.
  */
@@ -82,7 +88,7 @@ export interface CommerceConfigChangeRecord {
     previous: CommerceConfigPrevious[];
 }
 
-/** Where one step stands for "Prepare this store". */
+/** Where one step stands for the demo setup's Apply. */
 export type PreparationStepState =
     /** Its check, run fresh, found it done in the store: nothing to apply. Never from a saved answer. */
     | 'done'
@@ -113,6 +119,12 @@ export interface PreparationStepReport {
     state: PreparationStepState;
     /** What would change (preview) or what changed (result), one line each. */
     changes: string[];
+    /**
+     * A preview's one plain sentence of what the step will do, naming what `changes` lists
+     * exactly ("Add Test Warehouse to Justrite Stock"), for a person reading the preview.
+     * Absent when the step's title says it already.
+     */
+    summary?: string;
     /** What Commerce refused, by item, in its words. */
     rejected: string[];
     /** What stays by hand after the step, if anything. */
@@ -123,7 +135,7 @@ export interface PreparationStepReport {
 
 /**
  * What adding the ERP integration will change in the store, read when its confirm opens
- * (owner, 2026-10-22): every step as "Prepare this store" previews it, and the labels of the
+ * (owner, 2026-10-22): every step as the demo setup's Apply previews it, and the labels of the
  * steps that will change something every website on the Commerce instance shares.
  */
 export interface AddPreparationRead {

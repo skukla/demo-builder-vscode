@@ -27,6 +27,7 @@ import type { RowStatuses } from '../hooks/useUpdatesModal';
 import { groupsOf, type RowGroup } from './updateGroups';
 import { OperationPromptForm } from '@/core/ui/components/feedback/OperationPromptForm';
 import { StepStatusIcon, type StepStatus } from '@/core/ui/components/feedback/StepStatusIcon';
+import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { localCopyRowId, type PendingUpdateRow, type UpdateRowState, type UpdateRowStatus } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
@@ -93,22 +94,20 @@ interface StepProps {
 
 function Step({ label, detail, status, asking, onTyped }: StepProps) {
     const state = status?.state ?? 'waiting';
+    // Red only for a failure: a row left alone carries its yellow icon, and says why in
+    // the note's grey (it was red until 2026-10-21).
+    const note = status?.message && state !== 'running' ? status.message : undefined;
     return (
-        <div className="updates-run-row" data-state={state}>
-            <span className="updates-run-icon">
-                <StepStatusIcon status={asking ? 'warning' : ICON_OF[state]} />
-            </span>
-            <div className="updates-run-text">
-                <span className="checkbox-row-label">{label}</span>
-                <span className="checkbox-row-detail">{detail}</span>
-                {status?.message && state !== 'running' && (
-                    // Red only for a failure: a row left alone carries its yellow icon, and
-                    // says why in the note's grey (it was red until 2026-10-21).
-                    <div className={state === 'failed' ? 'updates-run-why' : 'updates-run-note'}>{status.message}</div>
-                )}
-                {asking && onTyped && <RunQuestion prompt={asking} onTyped={onTyped} />}
-            </div>
-        </div>
+        <WorkRow
+            status={asking ? 'warning' : ICON_OF[state]}
+            label={label}
+            detail={detail}
+            note={note}
+            why={state === 'failed'}
+            state={state}
+        >
+            {asking && onTyped && <RunQuestion prompt={asking} onTyped={onTyped} />}
+        </WorkRow>
     );
 }
 
@@ -140,7 +139,7 @@ function RunGroup({ group, statuses, live }: { group: RowGroup; statuses: RowSta
     return (
         <div className="updates-group">
             <div className="updates-group-header updates-run-header">
-                <span className="updates-run-icon"><StepStatusIcon status={groupStatusOf(states)} /></span>
+                <span className="work-row-icon"><StepStatusIcon status={groupStatusOf(states)} /></span>
                 <span className="project-row-name">{group.title}</span>
             </div>
             <div className="updates-group-rows">
@@ -162,9 +161,9 @@ export function UpdatesRunView({ rows, statuses, progress, onTyped, remaining }:
     // Inside the list, so a failure's reason does not make the window taller.
     return (
         <div className="updates-group-list">
-            {progress?.state === 'failed' && <p className="updates-run-why">{progress.error}</p>}
+            {progress?.state === 'failed' && <p className="work-row-why">{progress.error}</p>}
             {progress?.state === 'succeeded' && remaining > 0 && (
-                <p className="updates-run-note">{waitingLine(remaining)}</p>
+                <p className="work-row-note">{waitingLine(remaining)}</p>
             )}
             {question && !rowRunning && <RunQuestion prompt={question} onTyped={onTyped} />}
             {groupsOf(rows).map((group) => (

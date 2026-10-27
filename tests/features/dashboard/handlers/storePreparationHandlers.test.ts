@@ -95,7 +95,10 @@ describe('prepareCommerceStore', () => {
         await handlePrepareCommerceStore(context, { id: 'erp-integration' });
         const deps = mockPreview.mock.calls[0][2] as { runCheck: (check: string) => Promise<unknown> };
         await deps.runCheck('payment-on-account-enabled');
-        expect(mockRunCheck).toHaveBeenCalledWith('payment-on-account-enabled', expect.any(Function), { websiteCode: 'acme' });
+        expect(mockRunCheck).toHaveBeenCalledWith('payment-on-account-enabled', expect.any(Function), {
+            websiteCode: 'acme',
+            erpNames: ['Justrite ERP'],
+        });
     });
 
     it('a preview saves what its fresh checks found, so the guide and the card agree with it', async () => {
@@ -169,6 +172,11 @@ describe('prepareCommerceStore', () => {
         mockApply.mockResolvedValue({
             reports: [
                 { id: 'erp-attributes', label: 'Product attributes', title: 't', state: 'applied', changes: sets.map((set) => `Added erp_owner to the attribute set ${set}`), rejected: [] },
+                // The preview says only that a step leaves a part by hand; the result says what.
+                {
+                    id: 'card-payments', label: 'Card payments', title: 't', state: 'applied', rejected: [],
+                    changes: ['payment/payment_services/active at the website scope: 0 → 1'], manual: 'Connect the PayPal sandbox.',
+                },
                 { ...APPLIED_REPORT, state: 'rejected', changes: [], rejected: ['catalog/price/scope: no'] },
                 { ...APPLIED_REPORT, id: 'storefront-returns', label: 'Returns', state: 'skipped', changes: [] },
             ],
@@ -179,12 +187,21 @@ describe('prepareCommerceStore', () => {
         await handlePrepareCommerceStore(context, { id: 'erp-integration', confirm: true, progress: 'modal' });
         const end = endPush(context);
         expect(end).toMatchObject({ state: 'succeeded', warning: 'Price scope: catalog/price/scope: no' });
-        expect(end?.details).toStrictEqual([
-            'Product attributes:',
-            'Added erp_owner to the attribute set Default',
-            'Added erp_owner to the attribute set Phones',
-            'Added erp_owner to the attribute set Watches',
+        expect(end?.changes).toStrictEqual([
+            {
+                label: 'Product attributes',
+                lines: [
+                    'Added erp_owner to the attribute set Default',
+                    'Added erp_owner to the attribute set Phones',
+                    'Added erp_owner to the attribute set Watches',
+                ],
+            },
+            {
+                label: 'Card payments',
+                lines: ['payment/payment_services/active at the website scope: 0 → 1', 'By hand: Connect the PayPal sandbox.'],
+            },
         ]);
+        expect(end).not.toHaveProperty('details');
     });
 
     it('says nothing changed when every step was already done', async () => {
@@ -192,6 +209,7 @@ describe('prepareCommerceStore', () => {
         const { context } = setup();
         await handlePrepareCommerceStore(context, { id: 'erp-integration', confirm: true, progress: 'modal' });
         expect(endPush(context)?.details).toStrictEqual(['Nothing changed: every step was already done in the store.']);
+        expect(endPush(context)).not.toHaveProperty('changes');
     });
 
     it('refuses without the Adobe sign-in, as an answer', async () => {
@@ -236,9 +254,9 @@ describe('undoCommerceStorePreparation', () => {
         const { context } = setup({ storePreparation: RECORD });
         await handleUndoCommerceStorePreparation(context, { id: 'erp-integration', confirm: true, progress: 'modal' });
         const stages = pushes(context).filter((push) => push.stage).map((push) => [push.stage, push.step]);
-        expect(stages).toContainEqual(['Undoing the preparation', 'Product attributes: Putting it back']);
-        expect(stages.map(([stage]) => stage)).not.toContain('Preparing the store');
-        expect(endPush(context)?.details).toStrictEqual(['Price scope:', 'Took erp_owner out of the attribute set Default']);
+        expect(stages).toContainEqual(['Undoing the demo setup', 'Product attributes: Putting it back']);
+        expect(stages.map(([stage]) => stage)).not.toContain('Applying the demo setup');
+        expect(endPush(context)?.changes).toStrictEqual([{ label: 'Price scope', lines: ['Took erp_owner out of the attribute set Default'] }]);
     });
 });
 

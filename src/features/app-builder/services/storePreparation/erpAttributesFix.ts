@@ -65,7 +65,7 @@ async function plan(get: CommerceGet): Promise<Plan> {
         const row = await readAttribute(get, code);
         if (!row) missing.push(code);
         else if (code === OWNER_CODE && row.frontend_input !== TEXT_FIELD) {
-            wrongType = `erp_owner exists as a ${row.frontend_input}; it must be a Text Field. Change its type in the Admin, or delete it and prepare again.`;
+            wrongType = `erp_owner exists as a ${row.frontend_input}; it must be a Text Field. Change its type in the Admin, or delete it and apply this step again.`;
         }
     }
     const sets = await setsWithoutOwner(get, await readProductSets(get));
@@ -128,7 +128,7 @@ export const erpAttributesFix: StepFix = {
         for (const code of record.createdAttributes) {
             try {
                 await send('DELETE', `products/attributes/${code}`, undefined);
-                changes.push(`Deleted the ${code} product attribute (this run created it)`);
+                changes.push(`Deleted the ${code} product attribute (Demo Builder created it)`);
             } catch (error) {
                 rejected.push(`Delete the ${code} product attribute: ${errorText(error)}`);
             }

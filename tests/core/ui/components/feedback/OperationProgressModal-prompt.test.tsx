@@ -317,7 +317,7 @@ describe('the end of a run', () => {
 // A success with something left to do (AB-26x: an install that leaves demo setup steps)
 // says what is left and offers it, and waits for the SC rather than closing by itself.
 describe('a next step on success', () => {
-    const NEXT = { message: 'Next: 2 setup steps in Commerce for the demo.', action: 'Start setup guide' };
+    const NEXT = { message: 'Next: 2 setup steps in Commerce for the demo.', action: 'Open demo setup' };
 
     function renderWithNext(): { onClose: jest.Mock; onPress: jest.Mock } {
         const onClose = jest.fn();
@@ -339,7 +339,7 @@ describe('a next step on success', () => {
 
         expect(screen.getByText('Bodea republished')).toBeInTheDocument();
         expect(screen.getByText(NEXT.message)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Start setup guide' })).toHaveAttribute('data-variant', 'accent');
+        expect(screen.getByRole('button', { name: 'Open demo setup' })).toHaveAttribute('data-variant', 'accent');
     });
 
     it('waits for the SC instead of closing by itself', async () => {
@@ -357,7 +357,7 @@ describe('a next step on success', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         const { onClose, onPress } = renderWithNext();
 
-        await user().click(screen.getByRole('button', { name: 'Start setup guide' }));
+        await user().click(screen.getByRole('button', { name: 'Open demo setup' }));
 
         expect(onClose).toHaveBeenCalledTimes(1);
         expect(onPress).toHaveBeenCalledTimes(1);
@@ -367,7 +367,7 @@ describe('a next step on success', () => {
         progress = { id: OPERATION.id, state: 'running', stage: 'Deploying' };
         renderWithNext();
 
-        expect(screen.queryByRole('button', { name: 'Start setup guide' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Open demo setup' })).not.toBeInTheDocument();
     });
 });
 

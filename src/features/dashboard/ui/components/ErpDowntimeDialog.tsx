@@ -88,7 +88,7 @@ function DowntimeModal({ target, onClose }: {
                     is down for maintenance, so orders wait and go through once it is back. It
                     comes back by itself when the time is up.
                 </Text>
-                {!state && busy && <LoadingDisplay size="S" message={`Reading ${target.name}`} />}
+                {!state && busy && <LoadingDisplay size="L" message={`Reading ${target.name}`} />}
                 {running && <Text>{running.message}</Text>}
                 {running && <Text>End it now to bring {target.name} back.</Text>}
                 {state && !running && (

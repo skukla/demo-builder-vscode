@@ -37,7 +37,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `invoke_runtime_action` | **confirm** | Run one deployed action in this project's Adobe I/O Runtime namespace (or the |
 | `load_erp_demo_data` | **confirm** | Load demo data into the ERPs the ERP integration serves: copy Commerce's |
 | `open_erp_screen` | **confirm** | Open the ERP's own screen (products, partners, pricing, orders, events) in a private |
-| `prepare_commerce_store` | **confirm** | Prepare the Commerce store for an integration\ |
+| `prepare_commerce_store` | **confirm** | Apply an integration\ |
 | `redeploy_integration` |  | Redeploy one App Builder integration by its id (idempotent re-run of its deploy). |
 | `refresh_block_library` | **confirm** | Rebuild the current EDS project's DA.live authoring block library from its |
 | `regenerate_ai_files` |  | Regenerate the project's AI context files (AGENTS.md, .mcp.json, skills) |
@@ -61,7 +61,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `start_demo` |  | Start the current project's demo server |
 | `start_erp_downtime` | **confirm** | Simulate downtime on the demo ERP: for `minutes` (default 30, up to 1440) it |
 | `stop_demo` |  | Stop the current project's running demo server |
-| `undo_commerce_store_preparation` |  | Undo prepare_commerce_store ("Undo preparation" on the card): put back what it recorded, |
+| `undo_commerce_store_preparation` |  | Undo prepare_commerce_store (a step\ |
 | `undo_erp_assignment` |  | Undo an ERP's last assign_erp_products (\ |
 | `update_integration` |  | Update an integration to the newest code on its GitHub branch: fetch it |
 | `write_erp_rest` | **confirm** | POST, PUT, PATCH or DELETE one of the ERP's own routes — the actions a person takes |

@@ -39,7 +39,7 @@ function lastCheckOf(saved: SetupStepRecord | undefined): SetupCheckOutcome | un
  * attribute sets without `erp_owner`).
  *
  * This is the SAVED, no-network answer: what the card's "n of m done" line and the guide show
- * before a check runs. "Prepare this store" never reads it; it checks the store fresh.
+ * before a check runs. the demo setup's Apply never reads it; it checks the store fresh.
  */
 export function isStepDone(saved: SetupStepRecord | undefined): boolean {
     return saved?.state === 'done' && lastCheckOf(saved) !== 'unknown';

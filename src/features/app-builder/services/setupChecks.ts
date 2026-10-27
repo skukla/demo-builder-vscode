@@ -18,6 +18,7 @@ import {
     storefrontReturnsEnabled,
     websiteNamer,
 } from './setupConfigChecks';
+import { warehouseFor } from './storePreparation/warehouseFix';
 import type { SetupCheck } from '@/types/appBuilderComponents';
 
 /** A signed Commerce REST GET, answering the body as text or an "Error: " line. */
@@ -26,6 +27,8 @@ export type CommerceRead = (path: string) => Promise<string>;
 /** Where the project's store is, for a check that reads a website's own setting. */
 export interface SetupCheckScope {
     websiteCode?: string;
+    /** The integration's ERPs, as their cards name them, for a check made once per ERP. */
+    erpNames?: readonly string[];
 }
 
 /** How a check came out. `done` undefined = the check could not tell. */
@@ -167,10 +170,16 @@ const websitesOf = (stock: StockRow): string[] =>
  * 2026-09-27). Commerce's Default Stock holds only the Default Source ("Custom sources cannot
  * be assigned to Default Stock", Adobe's "Add a stock"; Commerce refused the link on Bodea the
  * same day), so a website sells from the ERP's warehouse only through a stock of its own.
+ *
+ * Told the project's ERPs, EACH needs its own, which is what the fix makes (`warehouseFix`).
+ * Without them it asks only whether any warehouse is sold: on Justrite (2026-10-26) that
+ * answered Done with Test ERP just added and no warehouse of its own, so the fix that would
+ * make one was never offered.
  */
-async function erpSourceInWebsiteStock(read: CommerceRead): Promise<SetupCheckResult> {
+async function erpSourceInWebsiteStock(read: CommerceRead, scope: SetupCheckScope): Promise<SetupCheckResult> {
     const sources = await readItems<SourceRow>(read, SOURCES_PATH, 'source');
     if (typeof sources === 'string') return couldNot(sources);
+    if (scope.erpNames && scope.erpNames.length > 0) return eachErpSourceSold(read, sources, scope);
     const others = sources.filter((s) => s.enabled && s.source_code !== DEFAULT_SOURCE);
     if (others.length === 0) return { done: false, note: 'Commerce has only the Default Source.' };
     const links = await readItems<StockLinkRow>(read, LINKS_PATH, 'stock link');
@@ -198,6 +207,53 @@ async function erpSourceInWebsiteStock(read: CommerceRead): Promise<SetupCheckRe
         done: false,
         note: `${listed(others)} assigned to no stock, so no website sells from ${plural(others, 'them', 'it')}.`,
     };
+}
+
+/** Each ERP's warehouse, found as the fix finds it: by the code it gives, or by the name. */
+async function eachErpSourceSold(read: CommerceRead, sources: SourceRow[], scope: SetupCheckScope): Promise<SetupCheckResult> {
+    const links = await readItems<StockLinkRow>(read, LINKS_PATH, 'stock link');
+    if (typeof links === 'string') return couldNot(links);
+    const stocks = await readItems<StockRow>(read, STOCKS_PATH, 'stock');
+    if (typeof stocks === 'string') return couldNot(stocks);
+    const sells = (stock: StockRow | undefined): stock is StockRow =>
+        stock !== undefined &&
+        (scope.websiteCode ? websitesOf(stock).includes(scope.websiteCode) : websitesOf(stock).length > 0);
+    const soldIn = (source: SourceRow): StockRow | undefined =>
+        links
+            .filter((link) => link.source_code === source.source_code)
+            .map((link) => stocks.find((stock) => stock.stock_id === link.stock_id))
+            .find(sells);
+    const found = (scope.erpNames ?? []).map((erp) => {
+        const wanted = warehouseFor(erp);
+        return { erp, source: sources.find((s) => s.source_code === wanted.code || s.name === wanted.name) };
+    });
+    const websiteName = await websiteNamer(read);
+    const where = scope.websiteCode ? websiteName(scope.websiteCode) : 'a website';
+    const problems = warehouseProblems(found, soldIn, where);
+    if (problems.length > 0) return { done: false, note: problems.join(' ') };
+    const present = found.flatMap((f) => (f.source ? [f.source] : []));
+    const stockNames = [...new Set(present.map((s) => soldIn(s)?.name ?? 'a stock'))];
+    return {
+        done: true,
+        note: `${andList(present.map(sourceName))} ${plural(present, 'are', 'is')} in ${andList(stockNames)}, which ${where} sells from.`,
+    };
+}
+
+/** What stops each ERP selling from its warehouse: none yet, disabled, or in no sold stock. */
+function warehouseProblems(
+    found: Array<{ erp: string; source?: SourceRow }>,
+    soldIn: (source: SourceRow) => StockRow | undefined,
+    where: string,
+): string[] {
+    const missing = found.filter((f) => !f.source).map((f) => f.erp);
+    const present = found.flatMap((f) => (f.source ? [f.source] : []));
+    const disabled = present.filter((s) => !s.enabled);
+    const unsold = present.filter((s) => s.enabled && !soldIn(s));
+    return [
+        missing.length > 0 ? `${andList(missing)} ${plural(missing, 'have', 'has')} no warehouse yet.` : '',
+        disabled.length > 0 ? `${andList(disabled.map(sourceName))} ${plural(disabled, 'are', 'is')} disabled.` : '',
+        unsold.length > 0 ? `${andList(unsold.map(sourceName))} ${plural(unsold, 'are', 'is')} in no stock ${where} sells from.` : '',
+    ].filter(Boolean);
 }
 
 const plural = (rows: unknown[], many: string, one: string): string => (rows.length > 1 ? many : one);

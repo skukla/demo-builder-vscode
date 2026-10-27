@@ -1,6 +1,6 @@
 /**
  * What the setup checks read Commerce with, and the ERP names a step's value is entered for:
- * shared by the checklist, "Prepare this store" and removal's undo of the store setup. Moved
+ * shared by the checklist, the demo setup's Apply and removal's undo of the store setup. Moved
  * out of the checklist's handlers (2026-10-19) so removal can use them without importing a
  * handler module, which imports removal back.
  *
@@ -36,7 +36,7 @@ export function erpNamesOf(project: Project, integrationId: string): string[] {
 
 /**
  * The signed Commerce GET a check reads with, and the project's store scope. Shared with
- * "Prepare this store" (`storePreparationHandlers.ts`), which checks a step before it writes it.
+ * the demo setup's Apply (`storePreparationHandlers.ts`), which checks a step before it writes it.
  *
  * UNCUT and unbounded, unlike the agent tool's `sendRest`: that one cuts an answer at
  * 30,000 characters and pages a search at 20, which is right for a chat answer and fatal

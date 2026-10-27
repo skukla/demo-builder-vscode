@@ -20,15 +20,16 @@ import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 /**
  * The one-line summary, shared with the flyout's Demo setup section. A dismissed step is
- * out of the count: the SC decided it does not apply to this demo. So is an optional step
- * until it is done (`isLeftToDo`).
+ * out of the count: the SC decided it does not apply to this demo. So is an optional step,
+ * done or not: counting it once done grew the total, "7 of 8" turning into "8 of 9" when
+ * card payments went on (owner, 2026-10-26).
  *
  * @param items - the checklist
  * @returns e.g. "1 of 2 done", or "All done" when nothing is left open
  */
 export function setupSummary(items: SetupChecklistItem[]): string {
     const open = items.filter(isLeftToDo).length;
-    const done = items.filter((item) => item.state === 'done').length;
+    const done = items.filter((item) => item.state === 'done' && !item.optional).length;
     return open === 0 ? 'All done' : `${done} of ${open + done} done`;
 }
 

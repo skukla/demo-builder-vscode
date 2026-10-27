@@ -1,5 +1,5 @@
 /**
- * "Prepare this store" (AB-77): one engine over a catalog entry's setup steps. It says where
+ * the demo setup's Apply (AB-77): one engine over a catalog entry's setup steps. It says where
  * each step stands, PREVIEWS what the applicable ones would change (reads only), APPLIES
  * them in the guide's order and records what each changed on the component, and UNDOES them
  * from that record, step by step, newest first.
@@ -69,6 +69,7 @@ interface ReportParts {
     rejected?: string[];
     manual?: string;
     note?: string;
+    summary?: string;
 }
 
 const report = (step: SetupStep, state: PreparationStepState, parts: ReportParts = {}): PreparationStepReport => ({
@@ -77,6 +78,7 @@ const report = (step: SetupStep, state: PreparationStepState, parts: ReportParts
     title: step.title,
     state,
     changes: parts.changes ?? [],
+    ...(parts.summary ? { summary: parts.summary } : {}),
     rejected: parts.rejected ?? [],
     ...(parts.manual ? { manual: parts.manual } : {}),
     ...(parts.note ? { note: parts.note } : {}),
@@ -113,7 +115,7 @@ export async function previewPreparation(steps: SetupStep[], saved: Saved, deps:
         }
         try {
             const preview = await fixFor(step.fix).preview(deps);
-            reports.push(report(step, state, { changes: preview.changes, manual: preview.manual, note }));
+            reports.push(report(step, state, { changes: preview.changes, summary: preview.summary, manual: preview.manual, note }));
         } catch (error) {
             // The fix cannot read either: "could not check", with why.
             reports.push(report(step, 'unknown', { rejected: [`Could not read what would change: ${errorText(error)}`], note }));

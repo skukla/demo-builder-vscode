@@ -72,9 +72,18 @@ function writeRow(item: { path: string; scope: 'default' | 'website'; scopeCode?
     };
 }
 
-/** "payment/companycredit/active at the website: 0 → 1". */
-function changeLine(item: { path: string; scope: string }, from: string, to: string): string {
-    return `${item.path} at the ${item.scope} scope: ${from} → ${to}`;
+/** How a step names a setting and its values; a bare path (the agent's `set_commerce_config`) names none. */
+type Named = Pick<SetupConfigFixItem, 'path' | 'scope' | 'field' | 'values'>;
+
+/**
+ * "Payment on Account for the website: No → Yes", in the Admin's words when the step gives
+ * them, else "payment/companycredit/active for the website: 0 → 1". Paths and 0/1 read as
+ * code (owner, release test row 4.19, 2026-10-26).
+ */
+function changeLine(item: Named, from: string, to: string): string {
+    const say = (value: string): string => item.values?.[value] ?? value;
+    const where = item.scope === 'website' ? ' for the website' : '';
+    return `${item.field ?? item.path}${where}: ${say(from)} → ${say(to)}`;
 }
 
 /** The rows Commerce refused, keyed by path and scope, in its words. */
@@ -118,6 +127,9 @@ export function configFix(fix: SetupConfigFix): StepFix {
             throw new Error('The project names no Commerce website, and this step writes a website setting.');
         }
     };
+    // A record holds the path and scope; the step's own item gives the Admin's words for it.
+    const namedAs = (item: CommerceConfigPrevious): Named =>
+        fix.items.find((own) => own.path === item.path && own.scope === item.scope) ?? item;
     return {
         async preview(deps): Promise<FixPreview> {
             scoped(deps);
@@ -146,16 +158,10 @@ export function configFix(fix: SetupConfigFix): StepFix {
             const rows = record.previous.flatMap((item, i) =>
                 now[i].effective === item.effective
                     ? []
-                    : [{ write: writeRow(item, item.effective), line: restoreLine(item, now[i].effective), previous: item }],
+                    : [{ write: writeRow(item, item.effective), line: changeLine(namedAs(item), now[i].effective, item.effective), previous: item }],
             );
             const written = await writeRows(deps, rows);
             return { changes: written.changes, rejected: written.rejected };
         },
     };
-}
-
-/** "catalog/price/scope at the default scope: 1 → 0 (restored)"; says when it was inherited before. */
-function restoreLine(item: CommerceConfigPrevious, from: string): string {
-    const back = `${changeLine(item, from, item.effective)} (restored`;
-    return item.stored === null ? `${back}; it was inherited before and is set at the ${item.scope} scope now)` : `${back})`;
 }

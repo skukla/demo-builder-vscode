@@ -210,9 +210,10 @@ describe('the progress modal', () => {
         ).not.toBeInTheDocument();
     });
 
-    // Live release test, 2026-10-22: "Store prepared" named nothing it changed. The lines
-    // come before how long it took, and the modal waits for them to be read.
-    it('lists what a run that succeeded changed above how long it took, and stays until closed', async () => {
+    // Live release test, 2026-10-22: "Store prepared" named nothing it changed. Since row
+    // 4.19 (2026-10-26) each part that changed is a row with its lines under it, after the
+    // lines to know and how long it took; the modal waits for them to be read.
+    it('lists what a run that succeeded changed as rows, and stays until closed', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
@@ -220,12 +221,20 @@ describe('the progress modal', () => {
         push({
             id: 'custom-app',
             state: 'succeeded',
-            details: ['Product attributes:', 'Added erp_owner to the attribute set Default'],
-            tookMs: 58000,
+            details: ['Removed 49 product pages.'],
+            changes: [{ label: 'Product attributes', lines: ['Added erp_owner to the attribute set Default', 'By hand: Check the PDP.'] }],
+            tookMs: 72000,
         });
 
         const lines = within(modal).getAllByTestId('status-detail').map((line) => line.textContent);
-        expect(lines).toStrictEqual(['Product attributes:', 'Added erp_owner to the attribute set Default', 'Took 58 seconds']);
+        expect(lines).toStrictEqual(['Removed 49 product pages.', 'Took 1 minute, 12 seconds']);
+        const rows = within(within(modal).getByTestId('operation-changes')).getAllByRole('listitem');
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toHaveTextContent('Product attributes');
+        expect(Array.from(rows[0].querySelectorAll('.work-row-note')).map((note) => note.textContent)).toStrictEqual([
+            'Added erp_owner to the attribute set Default',
+            'By hand: Check the PDP.',
+        ]);
         expect(within(modal).getByTestId('status-display')).toHaveAttribute('data-variant', 'success');
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);

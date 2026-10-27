@@ -364,7 +364,7 @@ describe('IntegrationDetailPanel', () => {
             const { onAction, panel } = renderPanel(model);
 
             const section = within(panel).getByRole('region', { name: 'Demo setup' });
-            fireEvent.click(within(section).getByText('Open setup guide'));
+            fireEvent.click(within(section).getByText('Open demo setup'));
 
             expect(onAction).toHaveBeenCalledTimes(1);
             expect(onAction).toHaveBeenCalledWith(model, 'setup-guide');

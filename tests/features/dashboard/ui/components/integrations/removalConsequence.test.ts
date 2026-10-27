@@ -28,7 +28,7 @@ describe('removalConsequence — the ERP integration and its ERPs', () => {
 
     it('says the integration undoes its store setup in Commerce first', () => {
         expect(removalConsequence(base)).toContain(
-            'Its store setup is undone in Commerce first: the ERP tags on products, erp_owner on the attribute sets Demo Builder added it to, and what Prepare this store changed.',
+            'Its store setup is undone in Commerce first: the ERP tags on products, erp_owner on the attribute sets Demo Builder added it to, and what the demo setup applied.',
         );
     });
 

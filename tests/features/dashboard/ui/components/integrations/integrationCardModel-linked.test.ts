@@ -132,10 +132,9 @@ describe('deriveIntegrationCard with systems', () => {
         expect(card.linked).toEqual({ cards: [system] });
         // Its own status: a broken system shows on the system's card, not here.
         expect(card.status).toBe('deployed');
-        // Prepare this store first, on an entry whose setup steps declare a fix (AB-77), then
-        // the ERP verbs (AB-16; order, 2026-10-18 and 2026-10-19).
+        // The ERP verbs (AB-16; order, 2026-10-18 and 2026-10-19). The demo setup has no verb
+        // on the card since AB-81: Apply all is in the guide.
         expect(card.menuActions).toEqual([
-            'prepare-store',
             'add-erp',
             'load-demo-data',
             'reset-records',

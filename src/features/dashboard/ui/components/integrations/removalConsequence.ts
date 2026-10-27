@@ -36,7 +36,7 @@ export function removalConsequence(target: IntegrationCardModel | undefined): st
  */
 function storeSetupConsequence(target: IntegrationCardModel): string {
     if (target.isSystem) return "Its products' ERP tags are cleared in Commerce first.";
-    return 'Its store setup is undone in Commerce first: the ERP tags on products, erp_owner on the attribute sets Demo Builder added it to, and what Prepare this store changed.';
+    return 'Its store setup is undone in Commerce first: the ERP tags on products, erp_owner on the attribute sets Demo Builder added it to, and what the demo setup applied.';
 }
 
 /**

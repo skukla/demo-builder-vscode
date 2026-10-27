@@ -25,7 +25,7 @@ import type { PreparationStepReport } from '@/types/storePreparation';
 const PAYLOAD = { id: 'erp-integration', name: 'Justrite ERP', apis: [] };
 const TARGET = { id: 'erp-integration', name: 'ERP Integration', payload: PAYLOAD };
 const STEPS: PreparationStepReport[] = [
-    { id: 'price-scope', label: 'Price scope', title: 't', state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'], rejected: [] },
+    { id: 'price-scope', label: 'Price scope', title: 'Set the catalog price scope to Website', state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'], rejected: [] },
     { id: 'warehouse', label: 'Warehouse', title: 't', state: 'done', changes: [], rejected: [] },
     { id: 'associate', label: 'Associate the app', title: 't', state: 'manual', changes: [], rejected: [] },
 ];
@@ -61,7 +61,8 @@ describe('the confirm in front of adding the ERP integration', () => {
         await act(async () => controls.confirmAdd(TARGET));
 
         expect(mockRequest).toHaveBeenCalledWith('addAppBuilderComponent', PAYLOAD);
-        expect(await screen.findByText('catalog/price/scope at the default scope: 0 → 1')).toBeInTheDocument();
+        // A step to apply says what it does in words, not the setting path its fix writes.
+        expect(await screen.findByText('Set the catalog price scope to Website')).toBeInTheDocument();
         expect(screen.getByTestId('prepare-on-add-steps').querySelectorAll('li[data-state]')).toHaveLength(3);
         expect(screen.getByTestId('prepare-on-add-every-website')).toHaveTextContent(
             PREPARE_ON_ADD_COPY.everyWebsite(['Price scope']),

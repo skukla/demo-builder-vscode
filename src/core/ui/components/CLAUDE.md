@@ -23,6 +23,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Warning/context banner ABOVE content the user can still use | `feedback/InlineNotice` (`tone`, `hint`, `action`) | a full-pane `StatusDisplay`, which reads as a wall |
 | Just the status dot | `ui/StatusDot` | a styled `<span>` |
 | One item's progress in a list of work (waiting, running, done, failed, warning) | `feedback/StepStatusIcon` (Prerequisites, the Updates modal's run) | a per-screen icon switch |
+| A row in a list of work: status icon, name, quieter detail, a note or failure under it | `feedback/WorkRow` (the Updates modal's run, the demo setup; a host bundle imports `work-row.css` and `checkbox-row.css` in its entry) | bare text with the state run into the note |
 | Centering any of the above at a fixed height | `layout/CenteredFeedbackContainer` | ad-hoc flex + height |
 | Adobe API catalog fetch states | `feedback/ApiCatalogFeedback` | re-deriving loading/sign-in/error |
 | "Add another" on a card grid — a dashed card as the grid's LAST cell, hidden while a filter is on, never counted | `ui/AddCard` (host passes its card class as `cardClassName`; its bundle imports `add-card.css`; pass `menu` — a Spectrum `Menu` — when adding is a choice, as Your Projects does) | a header "Add" button, or a per-grid dashed tile |

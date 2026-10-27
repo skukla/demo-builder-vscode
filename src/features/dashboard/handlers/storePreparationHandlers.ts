@@ -1,5 +1,5 @@
 /**
- * "Prepare this store" and its undo (AB-77), and `setCommerceConfig`: the handlers behind the
+ * the demo setup's Apply and its undo (AB-77), and `setCommerceConfig`: the handlers behind the
  * integration card's menu, the setup guide's per-step Apply and Undo, and the agent's
  * `prepare_commerce_store`, `undo_commerce_store_preparation` and `set_commerce_config`.
  *
@@ -36,6 +36,7 @@ import type { AppBuilderComponentState, SetupStepRecord } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 import type { PreparationStepReport, StorePreparationRecord } from '@/types/storePreparation';
+import type { OperationChange } from '@/types/webviewPayloads';
 import type {
     PrepareStoreRequestPayload,
     SetCommerceConfigRequestPayload,
@@ -58,11 +59,12 @@ async function openPreparation(context: HandlerContext, idArg: unknown, verb: st
     const commerce = await openCommerce(project, context.authManager, context.context?.secrets);
     if ('refusal' in commerce) return { error: { success: false, error: commerce.refusal, code: ErrorCode.CONFIG_INVALID } };
     const { read, scope } = await setupCheckReader(context, project);
+    const erpNames = erpNamesOf(project, id);
     const deps: PreparationDeps = {
         commerce,
         websiteCode: scope.websiteCode,
-        erpNames: erpNamesOf(project, id),
-        runCheck: (check) => runSetupCheck(check, read, scope),
+        erpNames,
+        runCheck: (check) => runSetupCheck(check, read, { ...scope, erpNames }),
     };
     return { ...checklist, commerce, deps };
 }
@@ -101,6 +103,7 @@ type RunOutcome = GuardableResult & {
     record?: StorePreparationRecord;
     warning?: string;
     details?: string[];
+    changes?: OperationChange[];
 };
 
 /** How a run reads in the progress modal: its stage while it runs, and what it says when nothing changed. */
@@ -111,21 +114,30 @@ interface RunWords {
 }
 
 const APPLY_WORDS: RunWords = {
-    title: 'Preparing the store',
+    title: 'Applying the demo setup',
     stage: OPERATION_STAGES.preparingStore,
     nothing: 'Nothing changed: every step was already done in the store.',
 };
-const UNDO_WORDS: RunWords = { title: 'Undoing the store preparation', stage: OPERATION_STAGES.undoingStorePreparation };
+const UNDO_WORDS: RunWords = { title: 'Undoing the demo setup', stage: OPERATION_STAGES.undoingStorePreparation };
 
 /**
  * What the run changed, for the result screen (live release test, 2026-10-22: it said only
- * "Store prepared"): each step that changed something by its label, then its lines. What
- * Commerce refused is the warning (`summarize`), not repeated here.
+ * "Store prepared"): a row for each step that changed something, its lines under it, then
+ * what it leaves by hand. The preview says only that a step leaves something by hand
+ * (owner, 2026-10-26), so the result is where the SC reads what it is. What Commerce
+ * refused is the warning (`summarize`), not repeated here. Rows rather than centred lines
+ * since 2026-10-26 (owner, release test row 4.19: the lines "look terrible").
  */
-function changedLines(reports: PreparationStepReport[], nothing?: string): string[] {
-    const lines = reports.filter((report) => report.changes.length > 0).flatMap((report) => [`${report.label}:`, ...report.changes]);
+function changedSteps(reports: PreparationStepReport[]): OperationChange[] {
+    return reports
+        .filter((report) => report.changes.length > 0)
+        .map((report) => ({ label: report.label, lines: [...report.changes, ...(report.manual ? [`By hand: ${report.manual}`] : [])] }));
+}
+
+/** The one line a run that changed nothing says, unless Commerce refused something (the warning says that). */
+function nothingLine(reports: PreparationStepReport[], changes: OperationChange[], nothing?: string): string[] | undefined {
     const refused = reports.some((report) => report.rejected.length > 0);
-    return lines.length === 0 && !refused && nothing ? [nothing] : lines;
+    return changes.length === 0 && !refused && nothing ? [nothing] : undefined;
 }
 
 /** The result's counts, and what Commerce refused, for the modal's success view. */
@@ -157,10 +169,18 @@ async function runInProgress(
                 const result = await work(deps);
                 await saveOutcome(context, opened, result);
                 const { warning } = summarize(result.reports);
-                const details = changedLines(result.reports, words.nothing);
-                return { success: true, reports: result.reports, record: result.record, details, ...(warning ? { warning } : {}) };
+                const changes = changedSteps(result.reports);
+                const details = nothingLine(result.reports, changes, words.nothing);
+                return {
+                    success: true,
+                    reports: result.reports,
+                    record: result.record,
+                    ...(changes.length ? { changes } : {}),
+                    ...(details ? { details } : {}),
+                    ...(warning ? { warning } : {}),
+                };
             } catch (error) {
-                return failed('prepare the store', error);
+                return failed('apply the demo setup', error);
             }
         },
     );

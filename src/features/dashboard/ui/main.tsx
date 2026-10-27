@@ -58,6 +58,8 @@ import '@/features/project-creation/ui/styles/add-demo.css';
 import '@/features/project-creation/ui/styles/add-integration-flow.css';
 // CheckboxRow, the API picker's rows (ADR-017 §6).
 import '@/core/ui/styles/checkbox-row.css';
+// WorkRow, the progress modal's rows of what a run changed (ADR-017 §6).
+import '@/core/ui/styles/work-row.css';
 // SectionLabel and LeadText (ADR-017 §6).
 import '@/core/ui/styles/modal-text.css';
 import '@/core/ui/styles/fact-list.css';

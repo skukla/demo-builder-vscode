@@ -1,5 +1,5 @@
 /**
- * The setup guide's step records as a check or a "Prepare this store" run leaves them: what a
+ * The setup guide's step records as a check or a the demo setup's Apply run leaves them: what a
  * check concluded, the state it gives the step, and the records after a run. Moved out of the
  * checklist's and the preparation's handlers (2026-10-22) so the ERP integration's add, which
  * prepares the store inside the runner, saves the record exactly as the manual Prepare does

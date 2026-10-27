@@ -769,7 +769,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Prepare the Commerce store for an integration\'s demo ("Prepare this store" on its card): ' +
+            'Apply an integration\'s demo setup to the Commerce store ("Apply all", or a step\'s Apply, in its setup guide): ' +
             'apply the setup steps Demo Builder can do itself, in the guide\'s order. For the ERP ' +
             'integration: catalog price scope = Website, Payment on Account, storefront returns and ' +
             'card payments on (settings written through PUT /V1/system/config at the default or the ' +
@@ -798,7 +798,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Undo prepare_commerce_store ("Undo preparation" on the card): put back what it recorded, ' +
+            'Undo prepare_commerce_store (a step\'s "Undo this step" in the setup guide): put back what it recorded, ' +
             'newest step first, or the one stepId names. Settings go back to the value in force before; ' +
             'an attribute or shared catalog the run created is deleted (never one that pre-existed); a ' +
             'stock the run created is deleted and a source the run created is DISABLED, because Commerce ' +

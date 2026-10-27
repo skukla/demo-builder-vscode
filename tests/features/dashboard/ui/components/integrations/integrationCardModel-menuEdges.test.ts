@@ -68,13 +68,12 @@ describe("the integration's own ERP verbs", () => {
 
     // "Prepare this store" (AB-77) goes before them: it shows only while a setup step is
     // open, so when it is there it is what the card needs (owner, 2026-10-19).
-    it('lead the ERP integration\'s menu after Prepare, in the order an SC uses them', () => {
+    it('lead the ERP integration\'s menu, in the order an SC uses them', () => {
         const card = deriveIntegrationCard(
             integration({ id: 'erp-integration', status: 'deployed' }),
         );
 
         expect(card.menuActions).toStrictEqual([
-            'prepare-store',
             'add-erp',
             'load-demo-data',
             'reset-records',
@@ -100,12 +99,10 @@ describe('the installed ERP integration, as Justrite has it', () => {
         );
 
         expect(card.menuActions).toStrictEqual([
-            'prepare-store',
             'open-admin',
             'add-erp',
             'load-demo-data',
             'reset-records',
-            'undo-store-preparation',
             'redeploy',
             'reinstall',
             'open',

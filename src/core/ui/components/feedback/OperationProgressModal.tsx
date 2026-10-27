@@ -41,7 +41,7 @@ import type { OperationOffer, OperationProgressPayload } from '@/types/webviewPa
 
 /** A success that says something beyond its title (a warning, a note, what it changed) waits to be read. */
 function holdsResult(progress: OperationProgressPayload | null | undefined): boolean {
-    return Boolean(progress?.warning || progress?.note || progress?.details?.length);
+    return Boolean(progress?.warning || progress?.note || progress?.details?.length || progress?.changes?.length);
 }
 
 /** The operation a progress modal shows: which one, and what it is called. */
@@ -62,9 +62,12 @@ export interface ProgressModalOperation {
 
 /** What to do next once the operation succeeds, offered on its success view. */
 export interface ProgressModalNextStep {
-    /** One sentence under the success title: "Next: 2 setup steps in Commerce for the demo." */
-    message: string;
-    /** The button that does it: "Start setup guide". */
+    /**
+     * One sentence under the success title, when the button alone does not say enough:
+     * "Test ERP owns no products yet." None when the button says it all.
+     */
+    message?: string;
+    /** The button that does it: "Open demo setup". */
     action: string;
     /** Runs after the modal closes. */
     onPress: () => void;

@@ -209,7 +209,9 @@
 .modal-progress-body {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    /* `safe`: content taller than the body (a result's rows) starts at the top and
+       scrolls, rather than overflowing above it where nothing can scroll to. */
+    justify-content: safe center;
     height: 240px;
     overflow-y: auto;
 }

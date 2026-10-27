@@ -14,9 +14,10 @@ import React from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { OperationPromptForm } from '@/core/ui/components/feedback/OperationPromptForm';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { tookLine, useRunClock } from '@/core/ui/hooks/useRunClock';
 import { expectationLine, stageLine } from '@/core/utils/stageLine';
-import type { OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationChange, OperationPrompt, OperationProgressPayload } from '@/types/webviewPayloads';
 
 export interface OperationProgressBodyProps {
     prompt?: OperationPrompt;
@@ -49,7 +50,8 @@ export function OperationProgressBody({
     // thing that moves while a step waits on Adobe.
     const total = useRunClock(progress?.state === 'running' ? progress.startedAt : undefined);
     // "Took 3 minutes, 12 seconds" on the last view, when the extension timed the run.
-    const took = progress?.tookMs === undefined ? undefined : [tookLine(progress.tookMs)];
+    const tookText = progress?.tookMs === undefined ? undefined : tookLine(progress.tookMs);
+    const took = tookText ? [tookText] : undefined;
     if (prompt?.fields?.length) {
         // The question and what it needs typed, together: the modal owns the form
         // rather than handing off to a VS Code input box (owner, 2026-09-20).
@@ -73,19 +75,7 @@ export function OperationProgressBody({
         return <StatusDisplay variant="error" title={failureTitle} message={progress?.error} details={took} />;
     }
     if (succeeded) {
-        // What the run changed, one line each, then how long it took.
-        const lines = [...(progress?.details ?? []), ...(took ?? [])];
-        return (
-            // Centred under the centred tick and title (owner, 2026-10-16). A failure's
-            // message stays left-aligned: it can run to several lines.
-            <StatusDisplay
-                variant={warned ? 'warning' : 'success'}
-                title={successTitle}
-                message={successMessage}
-                details={lines.length > 0 ? lines : undefined}
-                centerMessage
-            />
-        );
+        return <SuccessView title={successTitle} message={successMessage} warned={warned} progress={progress} took={took} />;
     }
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text (ImportDatapackModal).
@@ -97,5 +87,58 @@ export function OperationProgressBody({
             subMessage={progress?.step}
             helperText={expectationLine(progress?.expectation, total)}
         />
+    );
+}
+
+/**
+ * A run that succeeded: centred under the centred tick and title (owner, 2026-10-16), the
+ * lines it left to know, how long it took, then what it changed as rows, sized to them so
+ * a long list scrolls in the body. A failure's message stays left-aligned: it can run to
+ * several lines.
+ */
+function SuccessView({ title, message, warned, progress, took }: {
+    title: string;
+    message?: string;
+    warned: boolean;
+    progress?: OperationProgressPayload | null;
+    took?: string[];
+}): React.ReactElement {
+    const lines = [...(progress?.details ?? []), ...(took ?? [])];
+    const changes = progress?.changes ?? [];
+    return (
+        <StatusDisplay
+            variant={warned ? 'warning' : 'success'}
+            title={title}
+            message={message}
+            details={lines.length > 0 ? lines : undefined}
+            centerMessage
+            {...(changes.length > 0 ? { height: 'auto' } : {})}
+        >
+            {changes.length > 0 && <ChangeRows changes={changes} />}
+        </StatusDisplay>
+    );
+}
+
+/**
+ * What a run changed, a row per part: its name, then each change under it, left-aligned
+ * as the Updates modal's run lists its work. Centred lines read as a paragraph nobody
+ * could scan (owner, release test row 4.19, 2026-10-26). Styled by `work-row.css`, which
+ * only the bundles whose runs send `changes` import (integrations).
+ */
+function ChangeRows({ changes }: { changes: OperationChange[] }): React.ReactElement {
+    return (
+        <ul className="work-row-list work-row-result" data-testid="operation-changes">
+            {changes.map((change) => (
+                <li key={change.label}>
+                    <WorkRow status="success" label={change.label}>
+                        {change.lines.map((line) => (
+                            <div key={line} className="work-row-note">
+                                {line}
+                            </div>
+                        ))}
+                    </WorkRow>
+                </li>
+            ))}
+        </ul>
     );
 }

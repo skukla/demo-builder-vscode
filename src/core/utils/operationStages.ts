@@ -132,10 +132,11 @@ export const OPERATION_STAGES = {
         expectation: 'Usually a minute',
         detail: 'Only the ERPs whose products moved',
     },
-    preparingStore: { label: 'Preparing the store', expectation: 'Usually under a minute', detail: 'Each step checked first' },
-    // Its undo read "Preparing the store" under "Undoing the store preparation" (2026-10-22).
+    // The demo setup's words, one name for it everywhere (AB-81, 2026-10-26).
+    preparingStore: { label: 'Applying the demo setup', expectation: 'Usually under a minute', detail: 'Each step checked first' },
+    // Its undo once read the apply's stage under its own title (2026-10-22).
     undoingStorePreparation: {
-        label: 'Undoing the preparation',
+        label: 'Undoing the demo setup',
         expectation: 'Usually under a minute',
         detail: 'Each step put back, newest first',
     },
@@ -147,7 +148,7 @@ export const OPERATION_STAGES = {
     undoingStoreSetup: {
         label: 'Undoing the store setup',
         expectation: 'Usually a minute',
-        detail: 'Tags, attribute sets, prepared settings',
+        detail: 'Tags, attribute sets, demo setup',
     },
     resettingErpRecords: {
         label: 'Resetting the records',

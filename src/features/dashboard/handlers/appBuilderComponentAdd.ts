@@ -443,7 +443,7 @@ async function previewPreparingAdd(
         confirmed: false,
         adding: { id: entry.id, name: entry.name ?? entry.id },
         preparation: 'refusal' in read ? { unread: read.refusal } : read,
-        next: 'Show the user what the store preparation changes, then call again with confirm: true.',
+        next: 'Show the user what the demo setup changes, then call again with confirm: true.',
     };
     return { success: true, data };
 }

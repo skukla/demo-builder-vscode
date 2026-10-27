@@ -7,13 +7,16 @@ import React from 'react';
 import { DashboardTile, type DashboardTileStatus } from './DashboardTile';
 import { DashboardZone } from './DashboardZone';
 import { DataInstallerTile } from './DataInstallerTile';
-import { NEEDS_RESET_LABEL, NEEDS_RESET_LINE } from '@/features/eds/services/storefront/storefrontChanges';
+import { NEEDS_RESET_LINE } from '@/features/eds/services/storefront/storefrontChanges';
 
-/** The Reset tile's dot, word and explanation, when the storefront is behind. */
+/**
+ * The Reset tile's dot and explanation, when the storefront is behind. No word beside it:
+ * "Reset · Needs reset" said reset twice (owner, 2026-10-26). The project's card in the
+ * list carries the words; here the dot sits on the remedy and its hover says why.
+ */
 const NEEDS_RESET_STATUS: DashboardTileStatus = {
     variant: 'warning',
     tooltip: NEEDS_RESET_LINE,
-    label: NEEDS_RESET_LABEL,
     testId: 'reset-tile-dot',
 };
 

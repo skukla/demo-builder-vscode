@@ -65,7 +65,7 @@ export interface CommerceAttributeGroupList {
 }
 
 /*
- * "Prepare this store" (AB-77). Where each shape comes from:
+ * the demo setup's Apply (AB-77). Where each shape comes from:
  * - system/config GET and PUT: Adobe's Commerce as a Cloud Service REST reference,
  *   `saas-integrations/system-config` (fields `path`, `value`, `scope`, `scope_code`; the PUT
  *   answer's `items` and `errors`). The round trip was run live on Justrite on 2026-10-10

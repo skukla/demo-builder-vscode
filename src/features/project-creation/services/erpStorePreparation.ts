@@ -1,5 +1,5 @@
 /**
- * "Prepare this store" as part of adding the ERP integration (owner, 2026-10-22): before the
+ * the demo setup's Apply as part of adding the ERP integration (owner, 2026-10-22): before the
  * ERP is filled, the catalog's setup steps Demo Builder can apply are applied, because the
  * fill relies on `erp_owner` being in the attribute sets and on the ERP's warehouse. The run
  * is the manual Prepare's engine (`applyPreparation`), and its record and checklist are saved
@@ -54,11 +54,12 @@ async function preparationDeps(
     const commerce = await openCommerce(project, ctx.authManager, ctx.credentials, ctx.fetchImpl);
     if ('refusal' in commerce) return commerce;
     const { read, scope } = await setupCheckReaderFor(project, ctx.authManager, ctx.credentials, ctx.fetchImpl);
+    const erpNames = erpNamesOf(project, integrationId);
     return {
         commerce,
         websiteCode: scope.websiteCode,
-        erpNames: erpNamesOf(project, integrationId),
-        runCheck: (check) => runSetupCheck(check, read, scope),
+        erpNames,
+        runCheck: (check) => runSetupCheck(check, read, { ...scope, erpNames }),
     };
 }
 
@@ -93,7 +94,7 @@ export async function previewStoreForAdd(
 /** What Commerce refused, by step, as one sentence; undefined when it took everything. */
 function refusedWarning(reports: readonly PreparationStepReport[]): string | undefined {
     const refused = reports.flatMap((report) => report.rejected.map((why) => `${report.label}: ${why}`));
-    return refused.length > 0 ? `Commerce refused part of the store preparation: ${refused.join('; ')}.` : undefined;
+    return refused.length > 0 ? `Commerce refused part of the demo setup: ${refused.join('; ')}.` : undefined;
 }
 
 /**

@@ -2,7 +2,7 @@
  * The confirm in front of adding the ERP integration (owner, 2026-10-22). Adding it prepares
  * the store before its ERP is filled, and on a shared Commerce some of that changes settings
  * every website shares, so before the add runs the SC sees what it will change: every step as
- * "Prepare this store" previews it, read from the store as the dialog opens (the add answers
+ * the demo setup's Apply previews it, read from the store as the dialog opens (the add answers
  * that preview when it is sent without `confirm`), and which steps reach every website. Its
  * one accent button sends the add WITH confirm and opens the add's progress.
  *
@@ -14,8 +14,8 @@
 
 import { DialogContainer, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { PreviewWait } from './PrepareStepPreview';
-import { PreparationStepRow } from './PrepareStoreDialogs';
+import { PreparationStepRow } from './PreparationStepRow';
+import { PreviewWait } from './StepPlan';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { Modal } from '@/core/ui/components/ui/Modal';
@@ -27,14 +27,14 @@ import type { AddAppBuilderComponentRequestPayload } from '@/types/webviewReques
 /** Every string the dialog shows, in one place. */
 export const PREPARE_ON_ADD_COPY = {
     title: (name: string) => `Add ${name} and prepare the store`,
-    action: 'Add and prepare',
+    action: 'Add and apply',
     intro: (name: string) =>
-        `Adding ${name} also prepares this Commerce store before its ERP is filled. Each step is checked first; one already done is left as it is.`,
+        `Adding ${name} also applies its demo setup to this Commerce store before its ERP is filled. Each step is checked first; one already done is left as it is.`,
     everyWebsite: (labels: readonly string[]) =>
         `${labels.join(', ')} ${labels.length === 1 ? 'changes a setting' : 'change settings'} every website on this Commerce shares, other demos' websites included.`,
     unreadTitle: "Couldn't read the store now",
     unread: (reason: string) => `${reason} The add reads the store again and says what it could not do.`,
-    undo: 'What it changes is recorded, so Undo preparation on the card, or removing the integration, puts it back.',
+    undo: 'What it changes is recorded, so Undo this step in the demo setup, or removing the integration, puts it back.',
 };
 
 /** The add waiting for its confirm: the integration, its name, and the payload the flow built. */
@@ -120,7 +120,7 @@ function PreparationBody({ preparation }: { preparation: AddPreparationPreview }
             {preparation.everyWebsite.length > 0 && (
                 <Text data-testid="prepare-on-add-every-website">{PREPARE_ON_ADD_COPY.everyWebsite(preparation.everyWebsite)}</Text>
             )}
-            <ul data-testid="prepare-on-add-steps">
+            <ul className="work-row-list" data-testid="prepare-on-add-steps">
                 {preparation.steps.map((step) => (
                     <PreparationStepRow key={step.id} step={step} />
                 ))}

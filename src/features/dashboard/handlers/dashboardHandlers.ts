@@ -422,7 +422,7 @@ export const dashboardHandlers = defineHandlers({
     // redeploys.
     getIntegrationSettings: handleGetIntegrationSettings,
     saveIntegrationSettings: handleSaveIntegrationSettings,
-    // An integration's demo setup: the checklist (AB-26x) and "Prepare this store" (AB-77).
+    // An integration's demo setup: the checklist (AB-26x) and the demo setup's Apply (AB-77).
     ...setupHandlerMap,
     // The latest progress of an operation the SC started here, for its modal (PL-59).
     getOperationProgress: handleGetOperationProgress,

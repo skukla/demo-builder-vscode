@@ -87,7 +87,7 @@ export type SetupCheck =
     | 'card-payments-enabled';
 
 /**
- * A setup step's fix that is settings: the `path` = `value` rows "Prepare this store" writes
+ * A setup step's fix that is settings: the `path` = `value` rows the demo setup's Apply writes
  * through `PUT /V1/system/config` (AB-77). `scope: 'website'` is resolved to the project's
  * website code when applied; `'default'` writes the default scope. A second catalog entry
  * declares its own in JSON alone, with no code.
@@ -98,6 +98,10 @@ export interface SetupConfigFixItem {
     /** The value Commerce stores: a string, as the API takes it ("1" for Yes). */
     value: string;
     scope: 'default' | 'website';
+    /** The setting as the Admin names it, for what the SC reads: "Catalog Price Scope". */
+    field?: string;
+    /** Each stored value as the Admin shows it: `{ "0": "Global", "1": "Website" }`. */
+    values?: Record<string, string>;
 }
 
 /** A fix that is settings alone (see `SetupConfigFixItem`). */
@@ -217,7 +221,7 @@ export interface SetupChecklistItem {
     checkable: boolean;
     /** What Demo Builder can do about it itself (see `SetupStep`). */
     fix?: SetupFix;
-    /** Demo Builder can apply this one itself ("Prepare this store", AB-77): it declares a fix. Set on every item `setupChecklistOf` builds. */
+    /** Demo Builder can apply this one itself (the demo setup's Apply, AB-77): it declares a fix. Set on every item `setupChecklistOf` builds. */
     applicable?: boolean;
     /** Demo Builder applied the fix and recorded it, so it can be undone (AB-74, AB-77). */
     fixApplied?: boolean;

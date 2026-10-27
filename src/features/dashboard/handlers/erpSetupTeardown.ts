@@ -1,7 +1,7 @@
 /**
  * Undo what Demo Builder set up in Commerce for the ERP integration, before it is removed:
  * the `erp_owner` tags its ERPs' products carry, `erp_owner` on the attribute sets Demo Builder
- * added it to, and what "Prepare this store" changed. Removing a single ERP clears that ERP's
+ * added it to, and what the demo setup's Apply changed. Removing a single ERP clears that ERP's
  * own tags.
  *
  * Why here and first: the undo of each lived on the integration's card, and the record of the
@@ -87,26 +87,27 @@ async function removeSets({ commerce, project, id, report, out }: TeardownRun): 
     if (result.changed.length > 0) out.done.push(`Took erp_owner out of ${plural(result.changed.length, 'attribute set', 'attribute sets')}.`);
 }
 
-/** Put back what "Prepare this store" changed, from its record, as Undo preparation does. */
+/** Put back what the demo setup's Apply changed, from its record, as a step's Undo does. */
 async function undoPrepared({ context, project, id, commerce, report, out }: TeardownRun): Promise<void> {
     const state = getAppBuilderComponent(project, id);
     const record = state?.storePreparation;
     if (!state || !record) return;
     const steps = getAppBuilderComponentEntry(state.catalogId ?? id)?.setupSteps ?? [];
     const { read, scope } = await setupCheckReader(context, project);
+    const erpNames = erpNamesOf(project, id);
     const stage = OPERATION_STAGES.undoingStoreSetup.label;
     const deps: PreparationDeps = {
         commerce,
         websiteCode: scope.websiteCode,
-        erpNames: erpNamesOf(project, id),
-        runCheck: (check) => runSetupCheck(check, read, scope),
+        erpNames,
+        runCheck: (check) => runSetupCheck(check, read, { ...scope, erpNames }),
         onProgress: (step, what) => report(stage, `${step.title}: ${what}`),
     };
     const outcome = await undoPreparation(steps, record, deps);
     const rejected = outcome.reports.flatMap((step) => step.rejected.map((why) => `${step.title}: ${why}`));
-    if (rejected.length > 0) out.failed.push(`Some of the store preparation was not undone (${rejected.join('; ')}).`);
+    if (rejected.length > 0) out.failed.push(`Some of the demo setup was not undone (${rejected.join('; ')}).`);
     const undone = outcome.reports.filter((step) => step.state === 'undone').length;
-    if (undone > 0) out.done.push(`Undid ${plural(undone, 'store preparation step', 'store preparation steps')}.`);
+    if (undone > 0) out.done.push(`Undid ${plural(undone, 'demo setup step', 'demo setup steps')}.`);
 }
 
 /**

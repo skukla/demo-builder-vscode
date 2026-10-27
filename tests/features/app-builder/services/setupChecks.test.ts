@@ -208,6 +208,80 @@ describe('erp-source-in-website-stock', () => {
 });
 
 /*
+ * The same check told the project's ERPs: EACH needs its own warehouse in a stock the
+ * project's website sells from, which is what the fix makes. Justrite's inventory, read
+ * 2026-10-26 right after Test ERP was added: Justrite Warehouse (`justrite`) and Accuform
+ * Warehouse (`accuform`) in Justrite Stock, which the justrite website sells from. The
+ * check said Done there because ONE warehouse was sold, so the fix was never offered.
+ */
+describe('erp-source-in-website-stock, per ERP', () => {
+    const DEFAULT = { source_code: 'default', name: 'Default Source', enabled: true };
+    const JUSTRITE = { source_code: 'justrite', name: 'Justrite Warehouse', enabled: true };
+    const ACCUFORM = { source_code: 'accuform', name: 'Accuform Warehouse', enabled: true };
+    const TEST = { source_code: 'test_warehouse', name: 'Test Warehouse', enabled: true };
+    const LINKS = [
+        { stock_id: 1, source_code: 'default', priority: 1 },
+        { stock_id: 3, source_code: 'justrite', priority: 1 },
+        { stock_id: 3, source_code: 'accuform', priority: 2 },
+    ];
+    const TEST_LINK = { stock_id: 3, source_code: 'test_warehouse', priority: 3 };
+    const STOCKS = [
+        { stock_id: 1, name: 'Default Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'base' }] } },
+        { stock_id: 3, name: 'Justrite Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'justrite' }] } },
+    ];
+    const ERPS = ['Justrite ERP', 'Accuform ERP', 'Test ERP'];
+
+    function inventory(sources: object[], links: object[]) {
+        return jest.fn(async (path: string) => {
+            if (path === 'store/websites') return JSON.stringify([{ id: 2, code: 'justrite', name: 'Justrite Website' }]);
+            if (path.startsWith('inventory/sources')) return JSON.stringify({ items: sources });
+            if (path.startsWith('inventory/stock-source-links')) return JSON.stringify({ items: links });
+            return JSON.stringify({ items: STOCKS });
+        });
+    }
+    const check = (read: (path: string) => Promise<string>, erpNames = ERPS) =>
+        runSetupCheck('erp-source-in-website-stock', read, { websiteCode: 'justrite', erpNames });
+
+    it('is not done while an ERP has no warehouse, though the others are sold', async () => {
+        expect(await check(inventory([DEFAULT, JUSTRITE, ACCUFORM], LINKS))).toStrictEqual({
+            done: false,
+            note: 'Test ERP has no warehouse yet.',
+        });
+    });
+
+    it('is not done while an ERP warehouse is in no stock the website sells from', async () => {
+        expect(await check(inventory([DEFAULT, JUSTRITE, ACCUFORM, TEST], LINKS))).toStrictEqual({
+            done: false,
+            note: 'Test Warehouse is in no stock Justrite Website sells from.',
+        });
+    });
+
+    it('does not count a disabled warehouse, as the undo leaves one', async () => {
+        const disabled = { ...TEST, enabled: false };
+        expect(await check(inventory([DEFAULT, JUSTRITE, ACCUFORM, disabled], [...LINKS, TEST_LINK]))).toStrictEqual({
+            done: false,
+            note: 'Test Warehouse is disabled.',
+        });
+    });
+
+    it('is done when every ERP has its warehouse in the website stock', async () => {
+        expect(await check(inventory([DEFAULT, JUSTRITE, ACCUFORM, TEST], [...LINKS, TEST_LINK]))).toStrictEqual({
+            done: true,
+            note: 'Justrite Warehouse, Accuform Warehouse and Test Warehouse are in Justrite Stock, which Justrite Website sells from.',
+        });
+    });
+
+    it('finds a warehouse by the code the fix gives it as well as by its name', async () => {
+        const byCode = { source_code: 'test_warehouse', name: 'Test ERP stock', enabled: true };
+        expect((await check(inventory([DEFAULT, JUSTRITE, ACCUFORM, byCode], [...LINKS, TEST_LINK]))).done).toBe(true);
+    });
+
+    it('keeps the any-warehouse answer when it is told no ERPs', async () => {
+        expect((await check(inventory([DEFAULT, JUSTRITE, ACCUFORM], LINKS), [])).done).toBe(true);
+    });
+});
+
+/*
  * erp-attributes-exist: the two product values several ERPs route and sell by. Commerce
  * answers a missing attribute with a 404 (the read hands that on as an "Error: … HTTP 404."
  * line, `commerceRestClient`), which here means "not there", not "could not check".

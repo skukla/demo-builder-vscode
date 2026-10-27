@@ -29,7 +29,7 @@ import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import { withStepSink } from '@/core/utils/operationStepChannel';
 import { stageLine, stepUnder } from '@/core/utils/stageLine';
-import type { OperationOffer, OperationPosition, OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationChange, OperationOffer, OperationPosition, OperationProgressPayload } from '@/types/webviewPayloads';
 
 /** What an operation answers when it ends. */
 export interface OperationOutcome {
@@ -39,8 +39,10 @@ export interface OperationOutcome {
     warning?: string;
     /** What a run that succeeded leaves the SC to know, nothing to act on; said as a plain success. */
     note?: string;
-    /** What a run that succeeded changed, one line each; the modal's success view lists them. */
+    /** What a run that succeeded leaves to know, one line each; the modal's success view lists them. */
     details?: string[];
+    /** The parts of a run that succeeded that changed something; the success view shows a row each. */
+    changes?: OperationChange[];
     /** A next step its success view offers (AB-74). */
     offer?: OperationOffer;
 }
@@ -91,6 +93,7 @@ function endOf(id: string, result: OperationOutcome): OperationProgressPayload {
         ...(result.warning ? { warning: result.warning } : {}),
         ...(result.note ? { note: result.note } : {}),
         ...(result.details?.length ? { details: result.details } : {}),
+        ...(result.changes?.length ? { changes: result.changes } : {}),
         ...(result.offer ? { offer: result.offer } : {}),
     };
 }

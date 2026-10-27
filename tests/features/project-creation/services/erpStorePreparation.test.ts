@@ -92,9 +92,14 @@ describe('previewStoreForAdd', () => {
         const preview = await previewStoreForAdd(project(), ENTRY, ctx);
 
         expect(store.send).not.toHaveBeenCalled();
+        // The check is told the ERPs, as the fix is: the warehouse step is made once per ERP.
+        expect(mockRunCheck).toHaveBeenCalledWith('price-scope-website', expect.any(Function), {
+            websiteCode: 'justrite',
+            erpNames: expect.any(Array),
+        });
         expect(preview).toStrictEqual({
             steps: [
-                expect.objectContaining({ id: 'price-scope', state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'] }),
+                expect.objectContaining({ id: 'price-scope', state: 'applicable', changes: ['catalog/price/scope: 0 → 1'] }),
                 expect.objectContaining({ id: 'associate', state: 'manual' }),
             ],
             everyWebsite: ['Price scope'],
@@ -141,7 +146,7 @@ describe('prepareStoreOnAdd', () => {
 
         expect(outcome).toStrictEqual({
             status: 'prepared',
-            warning: 'Commerce refused part of the store preparation: Price scope: catalog/price/scope at the default scope: 0 → 1: not allowed.',
+            warning: 'Commerce refused part of the demo setup: Price scope: catalog/price/scope: 0 → 1: not allowed.',
         });
     });
 

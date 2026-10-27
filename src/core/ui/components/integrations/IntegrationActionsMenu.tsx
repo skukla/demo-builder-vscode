@@ -51,9 +51,6 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },
     // The ERP integration's: another ERP beside the one it has (AB-16).
     'add-erp': { label: 'Add another ERP', icon: 'add' },
-    // Apply the setup steps Demo Builder can, in Commerce, and put them back (AB-77).
-    'prepare-store': { label: 'Prepare this store', icon: 'play' },
-    'undo-store-preparation': { label: 'Undo preparation', icon: 'reset' },
     remove: { label: 'Remove', icon: 'delete' },
     'remove-anyway': { label: 'Remove anyway', icon: 'delete' },
     // A system card's own verbs.

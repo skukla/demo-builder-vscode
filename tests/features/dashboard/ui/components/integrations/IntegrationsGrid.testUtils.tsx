@@ -188,7 +188,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
 // The progress modal's failure view (PL-59): the shared status display has its own
 // suite, so a stand-in shows only what the modal hands it.
 jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
-    StatusDisplay: ({ title, message, variant, details = [] }: any) => (
+    StatusDisplay: ({ title, message, variant, details = [], children }: any) => (
         <div data-testid="status-display" data-variant={variant}>
             <strong>{title}</strong>
             <p>{message}</p>
@@ -197,6 +197,7 @@ jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
                     {line}
                 </span>
             ))}
+            {children}
         </div>
     ),
 }));
@@ -230,11 +231,8 @@ jest.mock('@/features/dashboard/ui/components/IntegrationSettingsModal', () => (
 // babel-plugin-jest-hoist lifts them above every import, so the component
 // module always loads against the mocks.
 import { IntegrationsGrid } from '@/features/dashboard/ui/components/integrations/IntegrationsGrid';
-import {
-    SetupGuideModal,
-    setupNextStep,
-    useSetupGuide,
-} from '@/features/dashboard/ui/components/integrations/SetupGuideModal';
+import { SetupGuideModal } from '@/features/dashboard/ui/components/integrations/SetupGuideModal';
+import { setupNextStep, useSetupGuide } from '@/features/dashboard/ui/components/integrations/useSetupGuide';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useComponentOperation } from '@/features/dashboard/ui/hooks/useComponentOperation';
 import { MESH_OPERATION } from '@/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions';

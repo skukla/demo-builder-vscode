@@ -57,7 +57,7 @@ describe('the store NOW decides, never the saved checklist', () => {
     it('a step saved done whose fresh check says not done previews as Will apply, with the change line', async () => {
         const d = deps([['catalog/price/scope', '0']]);
         const { reports, checks } = await previewPreparation(STEPS, SAVED_DONE, d, ['price-scope']);
-        expect(reports[0]).toMatchObject({ state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'], note: 'price-scope-website: not yet' });
+        expect(reports[0]).toMatchObject({ state: 'applicable', changes: ['catalog/price/scope: 0 → 1'], note: 'price-scope-website: not yet' });
         expect(checks).toEqual({ 'price-scope': { done: false, note: 'price-scope-website: not yet' } });
     });
 
@@ -113,7 +113,7 @@ describe('a check that could not tell', () => {
         const d = deps([['catalog/price/scope', '0']]);
         (d.runCheck as jest.Mock).mockResolvedValue(COULD_NOT);
         const { reports } = await previewPreparation([STEPS[1], NO_FIX_CHECKED], {}, d);
-        expect(reports[0]).toMatchObject({ state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'], note: COULD_NOT.note });
+        expect(reports[0]).toMatchObject({ state: 'applicable', changes: ['catalog/price/scope: 0 → 1'], note: COULD_NOT.note });
         expect(reports[1]).toMatchObject({ state: 'unknown', note: COULD_NOT.note, changes: [] });
     });
 
@@ -148,8 +148,8 @@ describe('previewPreparation', () => {
         const { reports } = await previewPreparation(STEPS, {}, d);
         expect(reports.map((r) => [r.id, r.state, r.changes])).toEqual([
             ['status', 'manual', []],
-            ['price-scope', 'applicable', ['catalog/price/scope at the default scope: 0 → 1']],
-            ['returns', 'applicable', ['sales/magento_rma/enabled at the website scope: 0 → 1']],
+            ['price-scope', 'applicable', ['catalog/price/scope: 0 → 1']],
+            ['returns', 'applicable', ['sales/magento_rma/enabled for the website: 0 → 1']],
         ]);
         expect(d.commerce.send).not.toHaveBeenCalled();
     });
@@ -189,7 +189,7 @@ describe('applyPreparation', () => {
             throw new Error('Commerce answered 500 for system/config');
         });
         const { reports, record } = await applyPreparation(STEPS, {}, d);
-        expect(reports[1]).toMatchObject({ state: 'rejected', rejected: ['catalog/price/scope at the default scope: 0 → 1: Commerce answered 500 for system/config'] });
+        expect(reports[1]).toMatchObject({ state: 'rejected', rejected: ['catalog/price/scope: 0 → 1: Commerce answered 500 for system/config'] });
         expect(reports[2].state).toBe('applied');
         expect(Object.keys(record?.steps ?? {})).toEqual(['returns']);
     });
