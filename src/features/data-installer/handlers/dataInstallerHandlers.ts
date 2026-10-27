@@ -46,6 +46,8 @@ export type DataInstallerAccess =
           client: DataInstallerClient;
           baseUrl: string;
           getToken: () => Promise<string>;
+          /** The SC's IMS org code, for the gateway's `x-gw-ims-org-id`; absent when unknown. */
+          orgCode?: string;
       }
     | { ok: false; response: HandlerResponse };
 
@@ -136,13 +138,19 @@ export async function resolveDataInstallerAccess(
     const getToken = async (): Promise<string> =>
         (await authManager.getTokenManager().inspectToken()).token ?? '';
 
+    // The org the SC signed into: the service's gateway refuses a request without it
+    // ("missing x-gw-ims-org-id header", Stage, 2026-10-27). See `dataInstallerSignIn`.
+    const orgCode = authManager.getCachedOrganization()?.code;
+
     return {
         ok: true,
         baseUrl: resolved.baseUrl,
         getToken,
+        ...(orgCode ? { orgCode } : {}),
         client: new DataInstallerClient({
             baseUrl: resolved.baseUrl,
             getToken,
+            orgCode,
             onDrift: (endpoint, missingKeys) => {
                 context.logger.warn(
                     `${LOG_PREFIX} shape-drift ${endpoint} missing=[${missingKeys.join(', ')}]`,
@@ -154,11 +162,13 @@ export async function resolveDataInstallerAccess(
 
 /** Turn a thrown error into a response the UI can act on. */
 function toFailure(error: unknown, fallback: string): HandlerResponse {
+    // Only reached past the guard, so the SC is signed in: the SERVICE turned the sign-in away,
+    // and signing in again would hand it the same one (2026-10-27).
     if (isDataInstallerAuthError(error)) {
         return {
             success: false,
-            error: 'Adobe sign-in is required.',
-            code: ErrorCode.AUTH_REQUIRED,
+            error: `The Data Installer didn't accept your Adobe sign-in. ${(error as Error).message}`,
+            code: ErrorCode.AUTH_FORBIDDEN,
         };
     }
     // UNKNOWN is the enum's documented fallback "when no specific code applies",
