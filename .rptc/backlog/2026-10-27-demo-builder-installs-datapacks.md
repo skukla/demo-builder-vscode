@@ -47,3 +47,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-27  feat(data-installer): Demo Builder's engine behind the engine seam, with its install target (DI-5) (`7389d4143`)
 - 2026-10-27  docs(rptc): commit ids after the history rewrite; the service's maintainers are not named (`544b97be4`)
 - 2026-10-27  feat(data-installer): the engine setting, and every write builds the chosen engine (DI-5) (`79105c983`)
+- 2026-10-27  docs(plan): reset clears a demo's part of the store (DI-5) (`8ccbdae5e`)
