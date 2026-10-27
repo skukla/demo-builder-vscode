@@ -333,7 +333,7 @@ describe('paged envelope — total is reported, never fabricated', () => {
     // no total at all, which is the whole point.
     const WIRE_ROW = {
         _id: 'objectid-03',
-        datapack_name: 'AFREEN-LG',
+        datapack_name: 'SCRATCH-LG',
         version: 'dev',
         display_name: 'My Test Datapack',
         data_types: ['products'],

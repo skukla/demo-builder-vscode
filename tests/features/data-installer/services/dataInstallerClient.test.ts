@@ -290,7 +290,7 @@ describe('DataInstallerClient', () => {
 
             const page = await makeClient(f).getInstalledDatapacks({
                 commerceInstance: 'instance-04',
-                datapackName: 'AFREEN-LG-DEMO',
+                datapackName: 'SCRATCH-LG-DEMO',
                 version: 'dev',
                 limit: 10,
                 skip: 5,
@@ -299,7 +299,7 @@ describe('DataInstallerClient', () => {
             const { url } = callArgs(f);
             expect(url).toContain('/get-installed-datapacks');
             expect(url).toContain('commerce_instance=instance-04');
-            expect(url).toContain('datapack_name=AFREEN-LG-DEMO');
+            expect(url).toContain('datapack_name=SCRATCH-LG-DEMO');
             expect(url).toContain('version=dev');
             expect(url).toContain('limit=10');
             expect(url).toContain('skip=5');

@@ -89,7 +89,7 @@ carrying a real `thumbnail_image` + `cover_image` (e.g.
 The 11 curated brands: `bodea`, `carvello`, `citisignal_new`, `citisignal_original`,
 `frescopa`, `grocery`, `healthbeauty`, `luma`, `venia`, `wecafe`, `wknd`.
 
-The remaining ~17 entries are developer scratch (`AFREEN-LG`, `afreen-test-datapack`,
+The remaining ~17 entries are developer scratch (`SCRATCH-LG`, `scratch-test-datapack`,
 `display_name: "Updated Display Name"`, `thumbnail_image: placekittens.com`). **A catalog UI
 must filter** — default to `shared: true`, and treat unshared packs as an opt-in "show all".
 
