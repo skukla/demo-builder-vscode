@@ -124,6 +124,35 @@ describe('SampleDataStep', () => {
         );
     });
 
+    /**
+     * A colleague on beta.149, 2026-10-26: the service's deployment was gone, so every request
+     * answered 404, and the step showed the error and Try Again with nothing saying the project
+     * can go ahead. The wizard's Continue was there all along; the step has to point at it, for
+     * every failure, not only the settings one.
+     */
+    it.each([
+        ['the service answers 404', refusal('find-datapacks: 404 Not Found — { "error": "The requested resource does not exist." }')],
+        ['the service cannot be reached', refusal('The Data Installer service is unreachable.')],
+        ['Adobe sign-in is missing', refusal('Adobe sign-in is required.', 'AUTH_REQUIRED')],
+        ['the service refuses the sign-in', refusal("The Data Installer didn't accept your Adobe sign-in.", 'AUTH_FORBIDDEN')],
+        ['the address is not set', notConfigured()],
+    ])('says the project can be created without a datapack when %s', async (_why, state) => {
+        setMockState(state);
+        renderStep();
+
+        expect(await screen.findByText('You can create this project without a datapack.')).toBeInTheDocument();
+    });
+
+    /** Signed in, and the service turned the sign-in away: no Sign In button (2026-10-27). */
+    it('does not ask a signed-in SC to sign in when the service refuses the sign-in', async () => {
+        setMockState(refusal("The Data Installer didn't accept your Adobe sign-in.", 'AUTH_FORBIDDEN'));
+        renderStep();
+
+        expect(await screen.findByText("The Data Installer didn't accept your sign-in")).toBeInTheDocument();
+        expect(screen.queryByText('Adobe sign-in required')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Sign In with Adobe' })).not.toBeInTheDocument();
+    });
+
     /** A catalog that cannot load must not block creating the project. */
     it('explains a failed catalog without offering a broken list', async () => {
         setMockState(refusal('The Data Installer service is unreachable.'));

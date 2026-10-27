@@ -35,6 +35,7 @@ import type { DatapackId, ImportStart, ValidationResult } from '../types';
 import { actionUrl } from './dataInstallerConfig';
 import { DataInstallerApiError, DataInstallerInputError } from './dataInstallerErrors';
 import { parseImportStart, parseValidation } from './dataInstallerParsers';
+import { signInHeaders, type DataInstallerSignIn } from './dataInstallerSignIn';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /** Commerce credentials, discriminated by backend because the shapes differ. */
@@ -159,9 +160,8 @@ export interface CredentialCheck {
     reason?: string;
 }
 
-export interface DataInstallerWriteClientDeps {
+export interface DataInstallerWriteClientDeps extends DataInstallerSignIn {
     baseUrl: string;
-    getToken: () => Promise<string>;
     fetchImpl?: typeof fetch;
     timeoutMs?: number;
     /**
@@ -209,7 +209,7 @@ export class DataInstallerWriteClient {
         const response = await this.fetchImpl(url, {
             method: 'GET',
             headers: {
-                Authorization: `Bearer ${await this.deps.getToken()}`,
+                ...(await signInHeaders(this.deps)),
                 // The FULL REST URL — this action cannot resolve a tenant id.
                 'x-commerce-instance': request.restBaseUrl,
                 ...exportAuthHeaders(request.credentials),
@@ -242,7 +242,7 @@ export class DataInstallerWriteClient {
         const response = await this.fetchImpl(url, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${await this.deps.getToken()}`,
+                ...(await signInHeaders(this.deps)),
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(buildExportBody(request)),
@@ -266,7 +266,7 @@ export class DataInstallerWriteClient {
         const response = await this.fetchImpl(url, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${await this.deps.getToken()}`,
+                ...(await signInHeaders(this.deps)),
                 'Content-Type': 'application/json',
             },
             // Access only: no datapack, no operation mode. Nothing here could be
@@ -371,7 +371,7 @@ export class DataInstallerWriteClient {
         const response = await this.fetchImpl(url, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${await this.deps.getToken()}`,
+                ...(await signInHeaders(this.deps)),
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(buildBody(request, mode)),

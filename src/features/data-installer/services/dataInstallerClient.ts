@@ -54,6 +54,7 @@ import {
     parseJobStatus,
     parseProcessorOrder,
 } from './dataInstallerParsers';
+import { signInHeaders, type DataInstallerSignIn } from './dataInstallerSignIn';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
@@ -74,11 +75,9 @@ const EXPECTED_KEYS: Record<string, readonly string[]> = {
 };
 
 /** Dependencies the client needs; none of them touch VS Code. */
-export interface DataInstallerClientDeps {
+export interface DataInstallerClientDeps extends DataInstallerSignIn {
     /** Validated base URL, no trailing slash. */
     baseUrl: string;
-    /** Resolves a fresh IMS bearer. Called per request — tokens expire. */
-    getToken: () => Promise<string>;
     /** Injectable for tests. */
     fetchImpl?: typeof fetch;
     /**
@@ -338,11 +337,8 @@ export class DataInstallerClient {
         } = {},
     ): Promise<unknown> {
         const url = actionUrl(this.deps.baseUrl, action, opts.query, opts.pathParam);
-        const headers: Record<string, string> = {};
+        const headers: Record<string, string> = opts.auth === false ? {} : await signInHeaders(this.deps);
 
-        if (opts.auth !== false) {
-            headers.Authorization = `Bearer ${await this.deps.getToken()}`;
-        }
         if (opts.body !== undefined) {
             headers['Content-Type'] = 'application/json';
         }
