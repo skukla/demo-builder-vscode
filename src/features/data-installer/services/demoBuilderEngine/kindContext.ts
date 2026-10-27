@@ -30,6 +30,12 @@ export interface CatalogSession {
      * found or made it, else the store's (Commerce's default, id 2, as the service assumes).
      */
     rootCategory: { id: number; name: string };
+    /**
+     * The website the install target sells on, by code: a pack's stocks sell to it whatever
+     * website they named in the store they came from (catalog spec §5). Absent, a pack with
+     * stocks cannot be installed.
+     */
+    websiteCode?: string;
 }
 
 /** What a kind's install is handed. */

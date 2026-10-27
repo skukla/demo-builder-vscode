@@ -1,0 +1,140 @@
+/**
+ * The `sources`, `stocks` and `stock_source_links` kinds: a pack's warehouses, the stocks a
+ * website sells from, and which warehouses each stock draws on (DI-5; catalog spec §5-7).
+ *
+ * What the store already has is used and left alone. What this engine makes is recorded, and
+ * removal takes it back:
+ * - a source cannot be deleted in Commerce, so removal switches it off (the ERP warehouse step
+ *   learned the same, `warehouseFix.ts`); a source the store had switched off and the pack
+ *   needs is switched on, and switched off again on removal;
+ * - a new stock sells to the install target's website, which takes that website off the stock
+ *   it sold from, so the record keeps that stock and removal puts the website back on it. The
+ *   service leaves the website with no stock at all (spec §5, Remove);
+ * - a link is taken out again. The service removes none (spec §7).
+ *
+ * Commerce answers a new stock with its id alone, a bare number (the ERP warehouse step, live).
+ * Putting the website back on the stock it came from has not yet run against a live store.
+ *
+ * @module features/data-installer/services/demoBuilderEngine/stockKinds
+ */
+
+import { z } from 'zod';
+import type { CreatedObject } from './installRecord';
+import { deleteIfPresent, type KindContext, readOrNull } from './kindContext';
+import { readInventory, sellsTo, setSourceEnabled } from '@/features/app-builder/services/storePreparation/warehouseFix';
+import type { CommerceGet, CommerceInventoryStock, CommerceSend } from '@/types/commerceWire';
+
+export const SOURCE_KIND = 'sources';
+export const STOCK_KIND = 'stocks';
+export const LINK_KIND = 'stock_source_links';
+
+const sourcesSchema = z.object({
+    sources: z.array(z.object({ source: z.object({ source_code: z.string().min(1), name: z.string() }).passthrough() })),
+});
+const stocksSchema = z.object({ stocks: z.array(z.object({ stock: z.object({ name: z.string().min(1) }).passthrough() })) });
+/** `stock_id` holds the stock's NAME (spec §7). */
+const linksSchema = z.object({
+    stockSourceLinks: z.array(
+        z.object({ stockSourceLink: z.object({ stock_id: z.string().min(1), source_code: z.string().min(1), priority: z.number().optional() }) }),
+    ),
+});
+
+export type SourcesPack = z.infer<typeof sourcesSchema>;
+export type StocksPack = z.infer<typeof stocksSchema>;
+export type LinksPack = z.infer<typeof linksSchema>;
+
+/** What removal needs to put a website back on the stock it sold from before. */
+interface StockPrevious {
+    websiteCode: string;
+    stockId?: number;
+}
+
+function parse<T>(schema: z.ZodType<T>, records: unknown, what: string): T {
+    const parsed = schema.safeParse(records);
+    if (!parsed.success) {
+        throw new Error(`The pack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+    }
+    return parsed.data;
+}
+
+export const parseSources = (records: unknown) => parse(sourcesSchema, records, 'sources');
+export const parseStocks = (records: unknown) => parse(stocksSchema, records, 'stocks');
+export const parseStockSourceLinks = (records: unknown) => parse(linksSchema, records, 'stock source links');
+
+/** Make the sources the store lacks; switch on one it has switched off. */
+export async function installSources(ctx: KindContext, pack: SourcesPack): Promise<void> {
+    const { sources } = await readInventory(ctx.get);
+    for (const { source } of pack.sources) {
+        const existing = sources.find((s) => s.source_code === source.source_code);
+        if (!existing) {
+            await ctx.send('POST', 'inventory/sources', { source });
+            await ctx.recorder.record({ kind: SOURCE_KIND, id: source.source_code });
+            ctx.log(`created source ${source.name}`);
+        } else if (existing.enabled === false) {
+            await setSourceEnabled(ctx, source.source_code, true);
+            await ctx.recorder.record({ kind: SOURCE_KIND, id: source.source_code, previous: { enabled: false } });
+            ctx.log(`switched source ${source.name} back on`);
+        }
+    }
+}
+
+/** Make the stocks the store lacks, each selling to the install target's website. */
+export async function installStocks(ctx: KindContext, pack: StocksPack): Promise<void> {
+    const websiteCode = ctx.session.websiteCode;
+    if (!websiteCode) throw new Error('The install target names no website, so the pack\'s stocks have nothing to sell to.');
+    const { stocks } = await readInventory(ctx.get);
+    for (const { stock } of pack.stocks) {
+        if (stocks.some((s) => s.name === stock.name)) continue;
+        const previous: StockPrevious = { websiteCode, stockId: stocks.find((s) => sellsTo(s, websiteCode))?.stock_id };
+        const body: { stock: CommerceInventoryStock } = {
+            stock: { ...stock, extension_attributes: { sales_channels: [{ type: 'website', code: websiteCode }] } },
+        };
+        const id = Number(await ctx.send('POST', 'inventory/stocks', body));
+        if (!Number.isInteger(id)) throw new Error(`Commerce did not answer the new stock ${stock.name}'s id.`);
+        await ctx.recorder.record({ kind: STOCK_KIND, id: String(id), previous });
+        stocks.push({ ...body.stock, stock_id: id });
+        ctx.log(`created stock ${stock.name}, selling to ${websiteCode}`);
+    }
+}
+
+/** Link each source to its stock, by the stock's name, unless the link is there already. */
+export async function installStockSourceLinks(ctx: KindContext, pack: LinksPack): Promise<void> {
+    const { stocks, links } = await readInventory(ctx.get);
+    for (const { stockSourceLink: link } of pack.stockSourceLinks) {
+        const stockId = stocks.find((s) => s.name === link.stock_id)?.stock_id;
+        if (stockId === undefined) throw new Error(`The store has no stock named ${link.stock_id}.`);
+        if (links.some((l) => l.stock_id === stockId && l.source_code === link.source_code)) continue;
+        await ctx.send('POST', 'inventory/stock-source-links', {
+            links: [{ stock_id: stockId, source_code: link.source_code, priority: link.priority ?? 1 }],
+        });
+        links.push({ stock_id: stockId, source_code: link.source_code });
+        await ctx.recorder.record({ kind: LINK_KIND, id: `${stockId}/${link.source_code}` });
+        ctx.log(`linked ${link.source_code} to ${link.stock_id}`);
+    }
+}
+
+/** Switch off a source this engine made or switched on: Commerce cannot delete one. */
+export async function removeSource(commerce: { get: CommerceGet; send: CommerceSend }, code: string): Promise<void> {
+    await setSourceEnabled(commerce, code, false);
+}
+
+/** Delete a stock this engine made, then put the website back on the stock it sold from. */
+export async function removeStock(commerce: { get: CommerceGet; send: CommerceSend }, object: CreatedObject): Promise<void> {
+    await deleteIfPresent(commerce.send, `inventory/stocks/${object.id}`);
+    const previous = object.previous as StockPrevious | undefined;
+    if (previous?.stockId === undefined) return;
+    const before = await readOrNull<CommerceInventoryStock>(commerce.get, `inventory/stocks/${previous.stockId}`);
+    if (!before || sellsTo(before, previous.websiteCode)) return;
+    const channels = before.extension_attributes?.sales_channels ?? [];
+    await commerce.send('PUT', `inventory/stocks/${previous.stockId}`, {
+        stock: { ...before, extension_attributes: { ...before.extension_attributes, sales_channels: [...channels, { type: 'website', code: previous.websiteCode }] } },
+    });
+}
+
+/** Take a link this engine made back out; `id` is `<stock id>/<source code>`. */
+export async function removeStockSourceLink(send: CommerceSend, id: string): Promise<void> {
+    const slash = id.indexOf('/');
+    await send('POST', 'inventory/stock-source-links-delete', {
+        links: [{ stock_id: Number(id.slice(0, slash)), source_code: id.slice(slash + 1) }],
+    });
+}
