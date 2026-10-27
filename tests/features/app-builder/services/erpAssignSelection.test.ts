@@ -17,6 +17,7 @@ import {
     ownerBody,
     previewAssignment,
     selectionProblem,
+    storeScopeOf,
     type AssignProductRow,
 } from '@/features/app-builder/services/erpAssignSelection';
 
@@ -169,5 +170,54 @@ describe('previewAssignment', () => {
         expect(ownerBody('ACC-100', 'accuform')).toEqual({
             product: { sku: 'ACC-100', custom_attributes: [{ attribute_code: 'erp_owner', value: 'accuform' }] },
         });
+    });
+});
+
+/**
+ * The project's store: its website by code, and the root category its store shows. Websites are
+ * the Bodea sandbox's own (`websites.json`, captured 2026-09-27); groups and views are shaped as
+ * Commerce's store routes answer them, with no capture of their own.
+ */
+describe('storeScopeOf', () => {
+    const websites = (JSON.parse(fs.readFileSync(path.join(FIXTURES, 'websites.json'), 'utf8')) as { body: unknown[] }).body;
+    const GROUPS = [
+        { id: 3, root_category_id: 51 },
+        { id: 7, root_category_id: 88 },
+    ];
+    const VIEWS = [
+        { id: 4, code: 'bodea_us', website_id: 3, store_group_id: 3 },
+        { id: 9, code: 'bodea_b2b', website_id: 3, store_group_id: 7 },
+        { id: 2, code: 'citisignal_us', website_id: 2, store_group_id: 2 },
+    ];
+    const get = jest.fn(async (requested: string) => {
+        if (requested === 'store/websites') return websites;
+        if (requested === 'store/storeGroups') return GROUPS;
+        if (requested === 'store/storeViews') return VIEWS;
+        throw new Error(`unexpected ${requested}`);
+    });
+
+    beforeEach(() => get.mockClear());
+
+    it('answers the website and the root its default store shows, by the website\'s code', async () => {
+        await expect(storeScopeOf(get, 'bodea')).resolves.toEqual({ websiteId: 3, websiteName: 'Bodea Website', rootCategoryId: '51' });
+        expect(get).not.toHaveBeenCalledWith('store/storeViews');
+    });
+
+    it('with a store view, answers that view\'s own store and its id', async () => {
+        await expect(storeScopeOf(get, 'bodea', 'bodea_b2b')).resolves.toEqual({
+            websiteId: 3,
+            websiteName: 'Bodea Website',
+            rootCategoryId: '88',
+            storeId: 9,
+        });
+    });
+
+    it('answers nothing for a store view on another website', async () => {
+        await expect(storeScopeOf(get, 'bodea', 'citisignal_us')).resolves.toBeUndefined();
+    });
+
+    it('answers nothing for an unknown website or none', async () => {
+        await expect(storeScopeOf(get, 'acme')).resolves.toBeUndefined();
+        await expect(storeScopeOf(get, undefined)).resolves.toBeUndefined();
     });
 });

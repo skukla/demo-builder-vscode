@@ -157,6 +157,16 @@ describe('installCategories', () => {
         expect(ctx.sent[0].body).toEqual({ category: { name: 'Sale', parent_id: 2 } });
     });
 
+    it('reads the first part of a rootless pack\'s paths as this store\'s root, whatever it is called', async () => {
+        const ctx = await fakeContext({ [childSearch(7, 'Sale')]: NONE }, numbered());
+        ctx.session.rootCategory = { id: 7, name: '' };
+        const pack = { categories: [{ category: { name: 'Sale', path: 'Default Category' } }] };
+
+        await installCategories(ctx, parseCategoryPack(pack));
+
+        expect(ctx.sent[0].body).toEqual({ category: { name: 'Sale', parent_id: 7 } });
+    });
+
     it('stops at a category whose parent the pack does not make', async () => {
         const ctx = await fakeContext({}, numbered());
         const pack = { categories: [{ category: { name: 'Orphan', path: 'Default Category/Gone' } }] };

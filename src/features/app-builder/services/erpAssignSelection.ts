@@ -159,22 +159,50 @@ export interface StoreScope {
     websiteId: number;
     websiteName: string;
     rootCategoryId: string;
+    /** The store view's id, when a store view code was given. */
+    storeId?: number;
 }
 
 /**
  * The project's website and the root catalog its store shows, by the website's code: a shared
  * sandbox holds several demos' catalogs, and the SC assigns from their own (owner,
  * 2026-10-18). Undefined when the code is unset or Commerce has no such website.
+ *
+ * With a store view's code, the store is that view's own (a website can hold several), and
+ * the answer carries the view's id: where the datapack engine installs (DI-5). Undefined too
+ * when the website has no such store view.
  */
-export async function storeScopeOf(get: CommerceGet, websiteCode: string | undefined): Promise<StoreScope | undefined> {
+export async function storeScopeOf(
+    get: CommerceGet,
+    websiteCode: string | undefined,
+    storeCode?: string,
+): Promise<StoreScope | undefined> {
     if (!websiteCode) return undefined;
     const sites = ((await get('store/websites')) ?? []) as Array<{ id: number | string; code: string; name: string; default_group_id?: number | string }>;
     const site = sites.find((candidate) => candidate.code === websiteCode);
     if (!site) return undefined;
+    const view = storeCode ? await storeViewOf(get, storeCode, site.id) : undefined;
+    if (storeCode && !view) return undefined;
+    const groupId = view ? view.store_group_id : site.default_group_id;
     const groups = ((await get('store/storeGroups')) ?? []) as Array<{ id: number | string; root_category_id?: number | string }>;
-    const group = groups.find((candidate) => String(candidate.id) === String(site.default_group_id));
+    const group = groups.find((candidate) => String(candidate.id) === String(groupId));
     if (!group?.root_category_id) return undefined;
-    return { websiteId: Number(site.id), websiteName: site.name, rootCategoryId: String(group.root_category_id) };
+    return {
+        websiteId: Number(site.id),
+        websiteName: site.name,
+        rootCategoryId: String(group.root_category_id),
+        ...(view ? { storeId: Number(view.id) } : {}),
+    };
+}
+
+/** The store view with this code on this website, if Commerce has one. */
+async function storeViewOf(
+    get: CommerceGet,
+    code: string,
+    websiteId: number | string,
+): Promise<{ id: number | string; store_group_id: number | string } | undefined> {
+    const views = ((await get('store/storeViews')) ?? []) as Array<{ id: number | string; code: string; website_id: number | string; store_group_id: number | string }>;
+    return views.find((candidate) => candidate.code === code && String(candidate.website_id) === String(websiteId));
 }
 
 /**

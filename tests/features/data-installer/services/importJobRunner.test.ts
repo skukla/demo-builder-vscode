@@ -265,6 +265,24 @@ describe('watchImportJob', () => {
             expect((await promise).outcome).toBe('error');
         });
 
+        // Demo Builder's engine knows why a kind failed ("The attribute cable_size has no option
+        // '9 foot'"); the screen shows `reason` for an error or a partial run, so it is asked.
+        it.each([
+            ['an error', { categories: 'error', products: 'error' } as const, 'error'],
+            ['a partial run', { categories: 'success', products: 'error' } as const, 'partial'],
+        ])('carries the engine\'s reason for %s', async (_label, perType, outcome) => {
+            const { promise } = runWith([snap(perType)], { failureReason: { error: 'The store has no customer group Platinum Buyer.' } });
+
+            expect(await promise).toMatchObject({ outcome, reason: 'The store has no customer group Platinum Buyer.' });
+        });
+
+        it('asks for no reason when every kind succeeded', async () => {
+            const { promise, getJobFailureReason } = runWith([snap({ categories: 'success', products: 'success' })]);
+
+            expect((await promise).reason).toBeUndefined();
+            expect(getJobFailureReason).not.toHaveBeenCalled();
+        });
+
         it('carries the processing time through when the service reports one', async () => {
             const { promise } = runWith([
                 snap({ categories: 'success', products: 'success' }, { processingTimeMs: 175496 }),

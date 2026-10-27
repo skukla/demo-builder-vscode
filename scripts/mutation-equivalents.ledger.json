@@ -12734,7 +12734,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 232,
+            "line": 242,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is `return undefined`, and an async function that falls off its end resolves to undefined too \u2014 so emptying the block produces the identical value on the identical path. The rejecting-echo case IS now driven (importJobRunner-interrupted.test.ts, 'still reports never-registered when the echo request fails'); it constrains the outcome, which is all there is to constrain here.",

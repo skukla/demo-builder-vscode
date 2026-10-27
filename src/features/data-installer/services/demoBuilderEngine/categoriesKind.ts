@@ -103,9 +103,11 @@ export async function installCategories(ctx: KindContext, pack: CategoryPack): P
         const id = await findOrCreate(ctx, pack.root_category, TREE_ROOT_ID);
         ctx.session.rootCategory = { id, name: pack.root_category.name };
     }
-    const root = ctx.session.rootCategory;
-    const byPath = new Map<string, number>([[root.name, root.id]]);
     const rows = [...pack.categories].sort((a, b) => depth(a.category.path) - depth(b.category.path));
+    // A pack with no root of its own names the root of the store it came from first in every
+    // path ("Default Category/…"); here that means this store's root, whatever it is called.
+    const rootLabel = pack.root_category?.name ?? rows[0]?.category.path.split('/')[0] ?? '';
+    const byPath = new Map<string, number>([[rootLabel, ctx.session.rootCategory.id]]);
     for (const { category } of rows) {
         const parentId = byPath.get(category.path);
         if (parentId === undefined) {

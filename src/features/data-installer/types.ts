@@ -230,7 +230,7 @@ export interface ImportJobRecord {
         // 'watching' forever and the panel claiming an import was still running.
         | 'unwatchable';
     perType: Record<string, DataTypeStatus>;
-    /** Why nothing happened — for `never-registered` and `unwatchable`. */
+    /** Why it did not all succeed: `never-registered`, `unwatchable`, and an `error` or `partial` run the engine explained. */
     reason?: string;
     processingTimeMs?: number;
 }
