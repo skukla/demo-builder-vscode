@@ -9,7 +9,6 @@ import * as os from 'os';
 import * as path from 'path';
 import {
     InstallRecordError,
-    type RecordFiles,
     forgetInstallRecord,
     installRecordPath,
     nodeRecordFiles,
@@ -17,21 +16,8 @@ import {
     readInstallRecord,
     removalOrder,
 } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import { NOW, PACK, PROJECT, memoryFiles } from './demoBuilderEngine.testUtils';
 
-const PROJECT = '/projects/bodea';
-const PACK = { name: 'bodea-main', version: '1.2.0' };
-const NOW = () => '2026-10-27T18:00:00.000Z';
-
-/** Files held in memory, so each test reads exactly what the recorder wrote. */
-function memoryFiles(seed: Record<string, string> = {}): RecordFiles & { data: Map<string, string> } {
-    const data = new Map(Object.entries(seed));
-    return {
-        data,
-        read: async (p) => data.get(p),
-        write: async (p, content) => void data.set(p, content),
-        remove: async (p) => void data.delete(p),
-    };
-}
 
 function stored(files: { data: Map<string, string> }): unknown {
     return JSON.parse(files.data.get(installRecordPath(PROJECT, PACK)) ?? 'null');
