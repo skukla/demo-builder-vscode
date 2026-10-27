@@ -96,6 +96,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The `demoBuilder.appBuilderComponents.custom` setting.** It promised that GitHub repos listed there would appear in the integration catalog, but nothing ever read it, so filling it in did nothing. Adding a custom integration from a GitHub URL in the Add Integration modal still works for each project; remembering those repos for future projects is tracked as AB-68.
 - **The `includeSecrets` option on `export_project_settings`, and the `includesSecrets` line in the exported file.** There is no way to ask for credentials in an export, so there is nothing for the file to claim about them. Older files that carry the line still import.
 
+## [1.0.0-beta.151] - 2026-10-27
+
+A hotfix on beta.150, whose Data Installer fix did not reach most people.
+
+### Fixed
+- **Datapacks load from the Data Installer, every time.** beta.150 named your Adobe organization from a short-lived memory that is empty after a reload or a fresh sign-in, so the service often refused the request ("missing x-gw-ims-org-id header"). Demo Builder now reads the organization that runs the service from its address, finds it among your own Adobe organizations, and names that one. If your Adobe account is not in that organization, the Datapacks step says so plainly.
+
+## [1.0.0-beta.150] - 2026-10-27
+
+A hotfix on beta.149: datapacks work again now that the Data Installer service has moved, and the dashboard's Adobe sign-in opens the browser again.
+
+**After updating:** the Data Installer's old address no longer answers. Set `demoBuilder.dataInstaller.apiBaseUrl` (VS Code Settings, search "Data Installer") to the service's new address, which you can get from the Demo Builder team, then reload the window.
+
+### Fixed
+- **Datapacks load from the moved Data Installer service.** Its new deployment checks every request at Adobe's gateway, which wants your Adobe organization named alongside your sign-in. Demo Builder now sends it, so the Datapacks step and the Data Installer screen list the catalog again instead of a sign-in error.
+- **A sign-in the Data Installer refuses no longer asks you to sign in.** You were already signed in, so signing in again changed nothing. The step now says "The Data Installer didn't accept your sign-in", shows the service's own words, and points at the address setting.
+- **Every Datapacks failure says you can go on without one.** When the catalog cannot load, the step now always says "You can create this project without a datapack." Continue always worked; nothing on screen said so.
+- **"Sign in to check" on the project dashboard opens the browser.** When Adobe had rejected your saved sign-in before its expiry, the link reused it: no browser, and the IMS Org badge stayed on "Not Checked". It now always asks for a fresh sign-in.
+
 ## [1.0.0-beta.149] - 2026-09-30
 
 One thing, released on its own so a colleague can use it this week: letting
