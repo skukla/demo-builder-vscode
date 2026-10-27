@@ -154,11 +154,15 @@ export async function resolveDataInstallerAccess(
 
 /** Turn a thrown error into a response the UI can act on. */
 function toFailure(error: unknown, fallback: string): HandlerResponse {
+    // Only reached past the guard, so the SC is signed in: the SERVICE turned the sign-in away,
+    // and signing in again would hand it the same one. Said as such, never as "sign in" — the
+    // Data Installer's Stage deployment refuses a sign-in its Production one takes, and the
+    // screen asked a signed-in owner to sign in (2026-10-27).
     if (isDataInstallerAuthError(error)) {
         return {
             success: false,
-            error: 'Adobe sign-in is required.',
-            code: ErrorCode.AUTH_REQUIRED,
+            error: `The Data Installer didn't accept your Adobe sign-in. ${(error as Error).message}`,
+            code: ErrorCode.AUTH_FORBIDDEN,
         };
     }
     // UNKNOWN is the enum's documented fallback "when no specific code applies",

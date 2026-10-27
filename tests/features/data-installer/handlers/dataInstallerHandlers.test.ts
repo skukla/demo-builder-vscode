@@ -376,13 +376,22 @@ describe('dataInstallerHandlers', () => {
             expect(order).toHaveBeenCalledWith('import');
         });
 
-        it('surfaces an auth failure as AUTH_REQUIRED so the UI offers Sign In', async () => {
+        /**
+         * The guard has already signed the SC in, so the service turning the sign-in away is not
+         * "sign in again": signing in again hands it the same sign-in. Measured 2026-10-27: the
+         * Data Installer's Stage deployment answers 401 to a valid sign-in that Production takes,
+         * and the screen asked a signed-in owner to sign in.
+         */
+        it.each([401, 403])('says the service refused a valid sign-in when it answers %s', async (status) => {
             MockedClient.prototype.findDatapacks = jest
                 .fn()
-                .mockRejectedValue(new DataInstallerApiError('nope', 401, 'find-datapacks'));
+                .mockRejectedValue(new DataInstallerApiError('find-datapacks: cannot authorize request', status, 'find-datapacks'));
             const res = await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {});
-            expect(res.success).toBe(false);
-            expect(res.code).toBe(ErrorCode.AUTH_REQUIRED);
+            expect(res).toEqual({
+                success: false,
+                error: "The Data Installer didn't accept your Adobe sign-in. find-datapacks: cannot authorize request",
+                code: ErrorCode.AUTH_FORBIDDEN,
+            });
         });
 
         it('surfaces other API failures without an auth code', async () => {
