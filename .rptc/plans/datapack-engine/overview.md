@@ -70,7 +70,10 @@ B2B kinds 4, stocks and sources 4, gift cards 2. Bodea `main` (ACCS) holds 14 ki
    removal (`services/demoBuilderEngine/`). Next in this step: run the kinds in order against a
    target, remove from the record, the dry run, and the engine setting.
 2b. **Packs and stores stay in step, both ways** (owner, 2026-10-27). See "Repeat installs and
-   capture" below. Comes before customers and B2B, because it shapes how every kind is written.
+   capture" below, with each demo's own pack and sharing by reference. Comes before customers and
+   B2B, because it shapes how every kind is written. In order: the shared "still as we left it?"
+   rule; capture and repeat installs; the setup-guide undos (AB-83); each demo's own pack; sharing
+   by reference.
 3. **Our engine becomes the default.** A test-plan row for each of dry run, install and remove.
 4. **Customers and B2B** (customer groups, customers, companies, shared catalogs and their
    assignments). Completes Bodea.
@@ -103,11 +106,14 @@ What it takes, kept to what those two need:
    `ownedPages.ts` (DA.live category pages, hashed from a read after the write). Commerce objects
    are the third, so the rule becomes one pure function: given what was recorded, what is there
    now and what is wanted, answer create, update, leave (changed by someone else), remove, or
-   leave (not provably ours). Each caller keeps its own read and write. The two existing copies
+   leave (not provably ours). The rule only answers "still as we left it, or changed?"; each
+   caller decides what to do with a change (see "What an SC sees" below). It lives in
+   `src/core/utils/` (owner, 2026-10-27), since four features use it. Each caller keeps its own
+   read and write. The two existing copies
    move onto it with their tests unchanged, which is the proof nothing moved. The sha-256 helper,
    written three times (`generatedFileWriter.ts`, `ownedPages.ts`, `envFileWatcherService.ts`),
-   becomes one. The setup guide's and the ERP's undos use the same rule later (backlog item
-   "undo leaves what changed since").
+   becomes one. The setup guide's and the ERP's undos use it too, on this branch and in an ERP
+   repo PR (AB-83, owner 2026-10-27).
 1. **Every name-to-id lookup runs both ways.** Install turns names into this store's ids; capture
    turns ids back into names, so a captured pack installs anywhere. The service has the reverse of
    every lookup we need (`export-spec.md` §2); ours is written once per field, both directions.
@@ -118,9 +124,9 @@ What it takes, kept to what those two need:
    fingerprints, so there is no second mechanism. (`updated_at` was considered and dropped: it
    exists on products and categories, not on attributes, sets, sources or stocks, live-checked
    2026-10-27, and a category's changes when a child is added under it.)
-3. **An Admin edit is never overwritten silently** (rule 2, applied to a store). A repeat install
-   that finds one stops and says which objects, and the SC chooses: capture the store's version
-   into the pack, or install the pack's over it.
+3. **An Admin edit is never overwritten silently** (rule 2, applied to a store). What happens
+   instead is in "What an SC sees" below: each action does what the SC most likely meant, and
+   says in one line what it kept.
 4. **Capture takes what the record lists, plus what those objects need**: the categories, sets,
    attributes and options a captured product names, so the new version installs on an empty store.
    The service's export pulls in nothing a selection depends on (`export-spec.md` §4). Things an
@@ -132,6 +138,87 @@ What it takes, kept to what those two need:
    without one exports the store's root as an ordinary category.
 7. **The agent can drive all of it:** dry run, install, "what would change", capture, remove, each
    answering with what it did and, when it stops, what to fix.
+
+### What an SC sees (owner, 2026-10-27: as few choices as possible, anticipate the intent)
+
+Who owns a thing decides what an undo does with a change made since. The ERP is transient by
+design (owner, 2026-09-23): while connected it owns the fields it writes, and its next sync would
+overwrite an Admin edit anyway. A pack and a setup-guide fix are the SC's starting point, and
+their later edits are the SC's.
+
+| Action | What it does | What the SC sees |
+|---|---|---|
+| Remove the ERP | Puts back everything the ERP wrote, edited since or not | One line in the result naming what had been edited ("Put back 1 price you had changed: VR Rack") |
+| Undo a setup-guide step | Undoes the step, keeping any setting changed since | One line ("Kept Price scope, which you had changed since") |
+| Install a pack again | Brings in the pack's changes, keeps the SC's own edits | One line ("Kept 2 things you had changed in the Admin") |
+| Remove a pack, nothing changed | Removes what it made | The confirmation that exists today |
+| Remove a pack, things changed | Removes what it made; first saves the changes to the demo's own pack, if the SC keeps the box ticked | The confirmation below |
+| Save store changes to this pack | Makes the demo's own pack match the store; the previous version is kept | One sentence saying exactly that |
+
+The confirmation when a removed pack holds the SC's changes:
+
+> **Remove Bodea from this store?**
+> You changed 3 things in it since it was installed: the category Critical Power, and 2 product
+> prices.
+>
+> ☑ **Save my changes to the Acme Demo pack first**
+> ☐ Always do this, and stop asking
+>
+> [Remove] [Cancel]
+
+- The box starts ticked: keeping the work is the likely intent, and unticking is the one choice.
+- "Always do this, and stop asking" (owner, 2026-10-27) turns on a user setting. After that, a
+  removal that finds changes shows the ordinary confirmation with one line, "Your changes will be
+  saved to the Acme Demo pack first", and the setting turns it back off. The setting is named when it
+  is built, in `package.json`, its schema and its type together. The agent's removal tool follows
+  it too: with it on, the tool saves without asking for a keep-or-drop answer.
+- The changes go to the demo's own pack (below). If saving fails, nothing is removed and the
+  screen says why.
+- A container the pack made that now holds the SC's own things (a category with a product they
+  added, say) is kept; removal takes out only what the pack put in, and says so. Emptying a
+  store whoever made what is the wipe's job ("Wiping a store completely"), with its own warning.
+- No "capture", "baseline" or "version" on screen. The agent tools use the same actions and
+  names; the removal tool reports the changes and needs a keep-or-drop answer, so an agent tells
+  the user rather than guessing.
+
+### Each demo has its own pack (owner, 2026-10-27)
+
+A shared library pack (Bodea) is a template. A demo built from it gets its own pack, and every
+save from that demo goes there, so one SC's customer edits never change the team's Bodea. The
+team's pack changes only on purpose, through "promote" (making a pack shared), which stays a
+curator's action.
+
+| Moment | What happens |
+|---|---|
+| Creating a project | Nothing new: no step, no choice, no write. The Datapacks step shows one line: "Your changes to this data are kept in this demo's own pack." |
+| First save (on purpose, or on removal) | The demo's pack is made then, so a demo with no edits never has one. A notice: "Saved to the Acme Demo pack." |
+| Naming | It takes the project's name, and follows a project rename until the SC renames the pack themselves. Renamed from the pack's card |
+| Each later save | A new version of the demo's pack. Reinstalling uses the newest; older ones stay listed in the pack's flyout |
+| Where it is managed | The Data Installer screen's catalog, which already lists Library and Yours packs with a flyout each: the flyout gains Rename and Delete (and Make shared, for curators). The project dashboard shows one line, "This demo's pack: Acme Demo", linking to it |
+| Copying a project | The copy starts from the original's demo pack, and gets its own on its first save |
+| Deleting a project | Its confirmation offers "Also delete its pack", unticked: keeping is reversible, deleting is not |
+| Agents | The same actions under the same names: save, rename, delete, list my packs |
+
+**Sharing a demo with a colleague: by reference, copied on arrival.** A project file already
+carries `datapack: { name, version }` (`DatapackReference`, the portable-demos contract, PL-56a).
+It gains which store the pack is in, and the pack it was made from. Creating a project from the
+file copies the referenced pack into the colleague's own library as that demo's pack, then
+installs it; from then on the colleague's demo stands alone. Owner's choice over the file
+carrying the whole pack, which makes files heavy (megabytes once images exist) and changes their
+format more.
+
+- **The library's "private" becomes "unlisted":** a Yours pack is left out of everyone else's
+  catalog, but anyone the library's guard admits (the team) can read it by its exact name and
+  version. Today private means only its owner can read it, which would leave a colleague's
+  reference unreadable. A truly owner-only pack can be added if one is ever needed.
+- **If the referenced pack has gone** (its owner deleted it before the colleague used the file),
+  project creation does not stop. The Datapacks step says "The Acme Demo pack this project uses
+  has been deleted by its owner. You can continue with Bodea, the pack it was made from; their
+  changes won't be included." If that version of Bodea has gone too, it uses Bodea's newest and
+  says so; if Bodea has gone entirely, the project continues without sample data and says why.
+- **Exporting marks the pack as shared in a file**, and deleting such a pack warns: "You shared
+  this pack in a project file on 27 October. Anyone who hasn't created that project yet will get
+  Bodea instead."
 
 Left out on purpose: incremental export (each capture is a full version; packs are small, and a
 full version installs on its own), and automatic suggestions of hand-made objects.
