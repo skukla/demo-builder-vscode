@@ -5,7 +5,7 @@
  * Removal reads this and takes away exactly what is in it, in reverse, and nothing the store
  * already had. The service's engine keeps no such list: it removes whatever a pack names,
  * matched by SKU, code or name, including things that were there before it installed
- * (`.rptc/plans/datapack-engine/catalog-spec.md`, "Installation record").
+ * (`.rptc/research/datapack-engine/catalog-spec.md`, "Installation record").
  *
  * The file is rewritten after every object, so a failed install leaves a record of what it
  * did make: a re-run skips those, and removal still finds them. Removal drops each object as
