@@ -25,6 +25,11 @@ export interface CatalogSession {
     groupIds: Map<string, number>;
     /** The store view labels are written for. */
     storeId: number;
+    /**
+     * The category a pack's tree hangs from: the pack's own root once the categories kind has
+     * found or made it, else the store's (Commerce's default, id 2, as the service assumes).
+     */
+    rootCategory: { id: number; name: string };
 }
 
 /** What a kind's install is handed. */
@@ -37,9 +42,12 @@ export interface KindContext {
     log: (line: string) => void;
 }
 
+/** Commerce's default root category, the service's default too (catalog spec §0). */
+const DEFAULT_ROOT_CATEGORY = { id: 2, name: 'Default Category' };
+
 /** A fresh session for one install, before any kind has run. */
 export function newCatalogSession(storeId = 1): CatalogSession {
-    return { setIds: new Map(), groupIds: new Map(), storeId };
+    return { setIds: new Map(), groupIds: new Map(), storeId, rootCategory: { ...DEFAULT_ROOT_CATEGORY } };
 }
 
 /** The thing at `path`, or `null` when Commerce answers that there is none (404). */
