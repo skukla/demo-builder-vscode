@@ -1,6 +1,6 @@
 /**
  * The Integrations screen's hold on the setup guide (AB-26x): which card's guide is open and
- * on which step, the trip out of it for a step's confirm and progress and back (AB-81), and
+ * on which step, the trip out of it for a step's confirm and progress and back (AB-82), and
  * the progress modal's way into it after another operation. Split out of
  * `SetupGuideModal.tsx` (2026-10-26). A hook: in the webviews the hooks are the service
  * layer (ADR-017).

@@ -68,7 +68,7 @@ interface Plan {
     /**
      * ERP warehouses that exist but are switched off, by code: what an undo leaves, since
      * Commerce cannot delete a source. The check counts a switched-off warehouse as not
-     * done, so applying again must switch it back on (AB-81, Justrite 2026-10-26).
+     * done, so applying again must switch it back on (AB-82, Justrite 2026-10-26).
      */
     toEnable: string[];
 }

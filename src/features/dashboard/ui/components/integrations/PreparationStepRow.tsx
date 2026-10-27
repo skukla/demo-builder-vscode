@@ -4,7 +4,7 @@
  * Drawn as the Updates modal draws its run (`WorkRow`).
  *
  * This file held "Prepare this store"'s window and the confirms in front of the setup guide's
- * Apply, Undo and Apply all until AB-81 (2026-10-26): the guide now applies in place
+ * Apply, Undo and Apply all until AB-82 (2026-10-26): the guide now applies in place
  * (`useGuideRun`), so only the row the add's confirm uses is left.
  *
  * @module features/dashboard/ui/components/integrations/PreparationStepRow

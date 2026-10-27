@@ -1,5 +1,5 @@
 /**
- * SetupGuideModal — Apply all, and the marks in the step list (AB-81). The guide is the one
+ * SetupGuideModal — Apply all, and the marks in the step list (AB-82). The guide is the one
  * place for the demo setup: Apply all does what "Prepare this store" did, for every step
  * still to do that Demo Builder can apply, and the list says at a glance which those are.
  */

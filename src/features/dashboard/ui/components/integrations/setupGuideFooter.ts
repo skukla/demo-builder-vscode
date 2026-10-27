@@ -1,5 +1,5 @@
 /**
- * The setup guide's buttons (AB-26x, AB-77, AB-81): the shown step's Apply and Undo, the
+ * The setup guide's buttons (AB-26x, AB-77, AB-82): the shown step's Apply and Undo, the
  * check, Mark as done and Open Commerce Admin in the footer, and which steps Apply all
  * applies. Split out of `SetupGuideModal.tsx` (2026-10-26), which keeps the dialog and
  * which step is shown.

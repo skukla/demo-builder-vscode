@@ -49,4 +49,4 @@ already sees, which says to press Republish. Creation and reset both run it.
 
 ## Shipped so far
 
-- 2026-10-27  fix(eds): a new storefront's template code reaches the site, or setup says it did not (`06ecf09bb`)
+- 2026-10-27  fix(eds): a new storefront's template code reaches the site, or setup says it did not (`a9467b4aa`)

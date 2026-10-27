@@ -1,5 +1,5 @@
 /**
- * integrationCardModel — the demo setup has no verbs on an integration's card (AB-81). "Prepare
+ * integrationCardModel — the demo setup has no verbs on an integration's card (AB-82). "Prepare
  * this store" and "Undo preparation" were a second door into the same steps the setup guide
  * lists; they were removed on 2026-10-26, and Apply all and each step's Undo live in the guide.
  */

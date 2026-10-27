@@ -83,7 +83,7 @@
 
 /* The list is wide enough to read its labels whole, and a label may wrap: a list of cut-off
    titles was "pointless as it is". */
-/* The list and, under it, Apply all (AB-81), with the rule beside both. */
+/* The list and, under it, Apply all (AB-82), with the rule beside both. */
 .setup-guide-side {
     display: flex;
     flex-direction: column;
@@ -194,7 +194,7 @@
     margin: 0;
 }
 
-/* A step's header (`StepHeader`, AB-81): the title, then the house banner for where the step
+/* A step's header (`StepHeader`, AB-82): the title, then the house banner for where the step
    stands, closer to the title than the step's other parts. */
 .setup-guide-step-head {
     display: flex;

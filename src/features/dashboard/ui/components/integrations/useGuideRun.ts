@@ -1,5 +1,5 @@
 /**
- * A demo setup run inside the setup guide (AB-81, owner 2026-10-26: "why are there so many
+ * A demo setup run inside the setup guide (AB-82, owner 2026-10-26: "why are there so many
  * modals?"): a step's Apply or Undo, or Apply all, started from the guide and followed there.
  * The guide closed for a confirm, then a progress window, then opened again; now the step's
  * line says what Apply will do, the button is the go-ahead, the step's badge and its mark in

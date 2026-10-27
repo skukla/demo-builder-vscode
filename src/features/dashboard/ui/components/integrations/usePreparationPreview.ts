@@ -1,5 +1,5 @@
 /**
- * The demo setup's preview, read when a confirm opens (AB-77, AB-81): what applying the
+ * The demo setup's preview, read when a confirm opens (AB-77, AB-82): what applying the
  * named steps would change, as the store stands now. The confirm in front of a setup step's
  * Apply, or of Apply all, says it (live release test, 2026-10-22). A hook: in the webviews
  * the hooks are the service layer (ADR-017).

@@ -98,7 +98,7 @@ describe('apply', () => {
 // Justrite, 2026-10-26: undo switched Test Warehouse off (Commerce cannot delete a source),
 // and applying again linked it without switching it on, so the step could never read Done.
 // The same apply put it at priority 1 beside justrite, which already held 1.
-describe('applying again after an undo (AB-81)', () => {
+describe('applying again after an undo (AB-82)', () => {
     const JUSTRITE_STOCK = { stock_id: 3, name: 'Justrite Stock', extension_attributes: { sales_channels: [{ type: 'website' as const, code: 'acme' }] } };
     const afterUndo = () =>
         store(

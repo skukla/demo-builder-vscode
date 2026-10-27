@@ -107,7 +107,7 @@ export function IntegrationsScreen({
     const erpAssign = useErpAssignDialogs(operations);
     // Adding the ERP integration prepares the store: confirmed first (owner, 2026-10-22).
     const prepareOnAdd = usePrepareOnAdd(operations.started);
-    // The guide applies its steps in place (AB-81). A run that stops on a question goes to the
+    // The guide applies its steps in place (AB-82). A run that stops on a question goes to the
     // progress modal, which asks it; closing that comes back to the guide on the same step,
     // with no "Open demo setup" offered for the guide the SC just left (owner, 2026-10-26).
     // Stable: the progress modal's close feeds a timer.

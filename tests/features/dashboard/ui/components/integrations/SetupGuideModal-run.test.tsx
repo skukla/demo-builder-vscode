@@ -1,5 +1,5 @@
 /**
- * SetupGuideModal — a demo setup run inside the guide (AB-81, owner 2026-10-26: "why are there
+ * SetupGuideModal — a demo setup run inside the guide (AB-82, owner 2026-10-26: "why are there
  * so many modals?"). The shown step's line says what Apply will do (read from the store), the
  * button runs it in place, the step's badge follows the run's `operationProgress` pushes and
  * flips when it ends, or says why it stopped. A run that stops on a question goes to the

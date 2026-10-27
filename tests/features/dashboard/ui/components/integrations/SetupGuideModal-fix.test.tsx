@@ -1,7 +1,7 @@
 /**
  * SetupGuideModal — a step's Apply and Undo (AB-74, generalized by AB-77): "Apply this step"
  * on an open step Demo Builder can do itself, "Undo this step" once it applied and recorded
- * it. Pressing either runs it in the guide, which stays open (AB-81: no confirm, no progress
+ * it. Pressing either runs it in the guide, which stays open (AB-82: no confirm, no progress
  * window; the step's pane says what Apply will do first). Split from
  * SetupGuideModal.test.tsx (its size); the stubs are the family's, in SetupGuideModal.testUtils.tsx.
  */

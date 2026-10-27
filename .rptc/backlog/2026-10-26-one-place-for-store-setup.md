@@ -1,5 +1,5 @@
 ---
-id: AB-81
+id: AB-82
 kind: feature
 area: app-builder
 needs: []
@@ -145,4 +145,4 @@ These landed first and this item builds on them:
 
 - 2026-10-26  Built uncommitted on feature/pl-80-updates-modal: Apply all under the guide's list, the old window and both menu items removed, one name (Demo setup), list marks, warehouse re-enable and priority, plain result rows. Apply all leaves out optional steps; the selected step's plain sentence is in its Apply confirm, not the pane. Visual baseline not captured: the browser tool was down.
 - 2026-10-26  Same day, owner: no confirm or progress window for the guide's runs. Will do in the step's pane, Apply runs in place (useGuideRun), the pane says Applying, Done or Stopped; a run that asks a question goes to the progress window. The confirm file was removed; PreparationStepRow keeps the add confirm's row.
-- 2026-10-27  feat(dashboard): the setup guide applies and undoes the demo setup in place (`3f7006d02`)
+- 2026-10-27  feat(dashboard): the setup guide applies and undoes the demo setup in place (`92970b746`)

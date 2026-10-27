@@ -383,7 +383,7 @@ PayPal sandbox business account) before it can be switched on. An optional step 
 checked and marked like any other, but while it is open it is not counted as left to do: the
 card's "Demo setup" line, the flyout's Next step and the guide's opening step all pass over it.
 
-## Applying the demo setup (AB-77, AB-81)
+## Applying the demo setup (AB-77, AB-82)
 
 Adobe Commerce as a Cloud Service gained `GET` and `PUT /V1/system/config` on 2026-09-08
 (measured live on Justrite 2026-10-10: `sales/totals_sort/tax` 40 → 41 → 40; a refused path
@@ -397,7 +397,7 @@ the current values, APPLIES in the guide's order, and RECORDS what each step cha
 integration (`appBuilderComponents[id].storePreparation`, by step id) so the guide's **Undo
 this step**, `undo_commerce_store_preparation` and Remove put it back, newest step first.
 
-**One place, one name (AB-81, 2026-10-26).** The setup guide is the only window that lists the
+**One place, one name (AB-82, 2026-10-26).** The setup guide is the only window that lists the
 steps; the card's "Demo setup" line and the flyout's Demo setup section are its two doors.
 "Prepare this store", its preview window and "Undo preparation" were removed: they listed the
 same steps under a second name behind a second door. Apply all applies every step still to do

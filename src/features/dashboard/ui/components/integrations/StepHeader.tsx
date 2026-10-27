@@ -1,6 +1,6 @@
 /**
  * A setup step's header in the guide: its title, then a house banner for where it stands with
- * a word or two and at most one short sentence (AB-81, owner 2026-10-26). It replaced a status box with a heading and
+ * a word or two and at most one short sentence (AB-82, owner 2026-10-26). It replaced a status box with a heading and
  * the check's sentence, then a run's report in the same box: "too busy", "vague and random",
  * "reads horridly". The SC needs where the step stands now, not the story of the last run.
  *

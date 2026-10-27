@@ -1,6 +1,6 @@
 /**
  * What a setup step's Apply would change, as one line under its title in the setup guide (live
- * release test, 2026-10-22: a confirm said only that Demo Builder checks first; AB-81 moved it
+ * release test, 2026-10-22: a confirm said only that Demo Builder checks first; AB-82 moved it
  * from that confirm into the guide). Read from the demo setup's preview for that step as it is
  * shown.
  * The wait for the confirm in front of adding the integration lives here too.
@@ -72,7 +72,7 @@ function willDo(step: PreparationStepReport): string {
 }
 
 /**
- * What a step's Apply will do, the one line under its title in the setup guide (AB-81), read
+ * What a step's Apply will do, the one line under its title in the setup guide (AB-82), read
  * from the store as the step is shown. Pressing Apply this step is the go-ahead: no confirm
  * window (owner, 2026-10-26).
  */

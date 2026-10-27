@@ -46,7 +46,7 @@ export interface SetupGuideModalProps {
     onOpenAdmin: () => void;
     /**
      * A run that stops on a question (sign in, another org) goes to the progress window, which
-     * asks it, with the step the SC was on (AB-81). Absent, the guide offers no Apply or Undo.
+     * asks it, with the step the SC was on (AB-82). Absent, the guide offers no Apply or Undo.
      */
     onAsk?: (operation: StartableOperation, stepId: string) => void;
     /** The step to open on, by id: the one the SC left the guide from. Else the first open one. */
@@ -153,7 +153,7 @@ function Guide({
     }, [items, busy, runChecks]);
 
     const item = items[Math.min(index, items.length - 1)];
-    // Apply, Undo and Apply all run here, in the guide (AB-81): no confirm, no progress window.
+    // Apply, Undo and Apply all run here, in the guide (AB-82): no confirm, no progress window.
     // A run that stops on a question is the exception: the guide closes and the progress
     // window asks it, then the SC comes back to this step.
     const handOff = useCallback(
@@ -175,7 +175,7 @@ function Guide({
         openAdmin: onOpenAdmin,
         fix: onAsk && item ? (mode) => run.start(mode, [item.id]) : undefined,
     });
-    // Apply all (AB-81): what "Prepare this store" did, from the one place the steps live.
+    // Apply all (AB-82): what "Prepare this store" did, from the one place the steps live.
     const ready = readyToApply(items);
     const applyAll = onAsk && ready.length > 0 ? () => run.start('apply', ready.map((step) => step.id)) : undefined;
     return (
@@ -188,7 +188,7 @@ function Guide({
         >
             <GuideNotice items={items} failures={actions.failures} error={actions.error} />
             <div className="setup-guide-layout">
-                {/* The list, and under it what acts on the list as a whole (AB-81). */}
+                {/* The list, and under it what acts on the list as a whole (AB-82). */}
                 <div className="setup-guide-side">
                     <StepList
                         items={items}

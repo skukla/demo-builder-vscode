@@ -132,7 +132,7 @@ export const OPERATION_STAGES = {
         expectation: 'Usually a minute',
         detail: 'Only the ERPs whose products moved',
     },
-    // The demo setup's words, one name for it everywhere (AB-81, 2026-10-26).
+    // The demo setup's words, one name for it everywhere (AB-82, 2026-10-26).
     preparingStore: { label: 'Applying the demo setup', expectation: 'Usually under a minute', detail: 'Each step checked first' },
     // Its undo once read the apply's stage under its own title (2026-10-22).
     undoingStorePreparation: {

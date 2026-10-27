@@ -133,7 +133,7 @@ describe('deriveIntegrationCard with systems', () => {
         // Its own status: a broken system shows on the system's card, not here.
         expect(card.status).toBe('deployed');
         // The ERP verbs (AB-16; order, 2026-10-18 and 2026-10-19). The demo setup has no verb
-        // on the card since AB-81: Apply all is in the guide.
+        // on the card since AB-82: Apply all is in the guide.
         expect(card.menuActions).toEqual([
             'add-erp',
             'load-demo-data',
