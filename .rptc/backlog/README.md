@@ -320,7 +320,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-66` | fix | [A new storefront's template code reaches the site, or setup says it did not](2026-10-27-template-code-reaches-the-site.md) | — | med | active |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (126)
+### app-builder  (127)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -449,6 +449,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-80` | fix | [An add into a workspace it just made skips the leftover-code check](2026-10-17-add-skips-leftover-check-on-fresh-workspace.md) | — | low | built |
 | `AB-81` | fix | [An order paid on account leaves the buyer short by its shipping](2026-10-22-erp-invoice-carries-no-shipping.md) | — | med | backlog |
 | `AB-82` | feature | [One place for store setup](2026-10-26-one-place-for-store-setup.md) | — | med | active |
+| `AB-83` | fix | [Undo leaves what changed since](2026-10-27-undo-leaves-what-changed-since.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (5)
@@ -710,7 +711,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*310 item(s) sit outside the A–G chain.*
+*311 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

@@ -66,6 +66,11 @@ B2B kinds 4, stocks and sources 4, gift cards 2. Bodea `main` (ACCS) holds 14 ki
    it created; remove takes away exactly that, in reverse order. Dry run lists what install
    would create and writes nothing. Unit tests from captured Commerce answers, then live on a
    throwaway ACCS store (never Justrite or a colleague's), on the owner's go.
+   **Built 2026-10-27, not yet wired:** the install record and every catalog kind's install and
+   removal (`services/demoBuilderEngine/`). Next in this step: run the kinds in order against a
+   target, remove from the record, the dry run, and the engine setting.
+2b. **Packs and stores stay in step, both ways** (owner, 2026-10-27). See "Repeat installs and
+   capture" below. Comes before customers and B2B, because it shapes how every kind is written.
 3. **Our engine becomes the default.** A test-plan row for each of dry run, install and remove.
 4. **Customers and B2B** (customer groups, customers, companies, shared catalogs and their
    assignments). Completes Bodea.
@@ -79,6 +84,65 @@ B2B kinds 4, stocks and sources 4, gift cards 2. Bodea `main` (ACCS) holds 14 ki
    the service's catalog checks each kind against its own list and will most likely refuse an
    unknown one.
 6. **Later, when a pack needs it:** cart rules, coupons, gift cards, ACO.
+
+## Repeat installs and capture (owner, 2026-10-27)
+
+Two ways an SC or an agent works, and the one design that serves both:
+
+- **The pack changes and the store follows.** An agent writes a pack, installs it, looks, edits
+  the pack, installs again. A repeat install updates what this engine made where its row changed,
+  adds what is new, and removes what the pack no longer has, but only what this engine made.
+- **The store changes and the pack follows.** An SC installs a pack, fixes things in the Admin,
+  and makes that the pack. **Capture** reads back what the install record lists and saves it as a
+  new version of the pack, in the library; the old version stays, so it can be undone.
+
+What it takes, kept to what those two need:
+
+0. **One rule for "is this still as we left it?", shared, built first** (owner, 2026-10-27). It is
+   already written twice: `generatedFileWriter.ts` (ADR-013, files in a project) and
+   `ownedPages.ts` (DA.live category pages, hashed from a read after the write). Commerce objects
+   are the third, so the rule becomes one pure function: given what was recorded, what is there
+   now and what is wanted, answer create, update, leave (changed by someone else), remove, or
+   leave (not provably ours). Each caller keeps its own read and write. The two existing copies
+   move onto it with their tests unchanged, which is the proof nothing moved. The sha-256 helper,
+   written three times (`generatedFileWriter.ts`, `ownedPages.ts`, `envFileWatcherService.ts`),
+   becomes one. The setup guide's and the ERP's undos use the same rule later (backlog item
+   "undo leaves what changed since").
+1. **Every name-to-id lookup runs both ways.** Install turns names into this store's ids; capture
+   turns ids back into names, so a captured pack installs anywhere. The service has the reverse of
+   every lookup we need (`export-spec.md` §2); ours is written once per field, both directions.
+2. **One fingerprint per object: its row in pack form, hashed.** Recorded when the object is
+   written: from Commerce's answer where it carries the saved object, else one read (a new stock
+   is answered with its id alone, seen live by the ERP warehouse step), and compared at the next install or capture. The pack's row changed: update it. The
+   store's copy changed: someone edited it in the Admin. The same capture transform makes both
+   fingerprints, so there is no second mechanism. (`updated_at` was considered and dropped: it
+   exists on products and categories, not on attributes, sets, sources or stocks, live-checked
+   2026-10-27, and a category's changes when a child is added under it.)
+3. **An Admin edit is never overwritten silently** (rule 2, applied to a store). A repeat install
+   that finds one stops and says which objects, and the SC chooses: capture the store's version
+   into the pack, or install the pack's over it.
+4. **Capture takes what the record lists, plus what those objects need**: the categories, sets,
+   attributes and options a captured product names, so the new version installs on an empty store.
+   The service's export pulls in nothing a selection depends on (`export-spec.md` §4). Things an
+   SC made by hand in the Admin are added by picking them, through the export item list that
+   already exists; guessing which ones belong is left until someone needs it.
+5. **SKUs are kept exactly.** The service's export lowercases every SKU and strips characters
+   (`export-spec.md` §2), so a round trip makes different products. Ours does not.
+6. **The root category is named, never guessed.** The service can only match it by name, and
+   without one exports the store's root as an ordinary category.
+7. **The agent can drive all of it:** dry run, install, "what would change", capture, remove, each
+   answering with what it did and, when it stops, what to fix.
+
+Left out on purpose: incremental export (each capture is a full version; packs are small, and a
+full version installs on its own), and automatic suggestions of hand-made objects.
+
+Later, recorded so they are not lost:
+- **Images**, as an optional kind. Nothing carries them today: the service's export removes
+  `media_gallery_entries`, keeps the file paths, and uploads nothing (`export-spec.md` §6). Open:
+  how today's demo storefronts get their images, before packing any.
+- **`product_export`** (Luma's only product form; Venia has both): Commerce's bulk import,
+  `POST /V1/import/json`. The service sends `behavior: "import"`, not one of Commerce's own four;
+  unverified on ACCS (`export-spec.md` §5).
 
 ## Where packs live: the library is home, the service is read (owner, 2026-10-27)
 
