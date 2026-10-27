@@ -1,6 +1,6 @@
 # Step 01: the engine seam, no behaviour change
 
-Status: **done** 2026-10-27 (`1a1aeffb2`). Part of [DI-5](../../backlog/2026-10-27-demo-builder-installs-datapacks.md); overview in [overview.md](overview.md).
+Status: **done** 2026-10-27 (`41824afda`). Part of [DI-5](../../backlog/2026-10-27-demo-builder-installs-datapacks.md); overview in [overview.md](overview.md).
 
 A `DatapackEngine` interface (`src/features/data-installer/services/datapackEngine.ts`) over what
 the write side does: check credentials, dry run, start an install, start a removal, follow the

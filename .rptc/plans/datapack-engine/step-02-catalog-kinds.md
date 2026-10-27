@@ -1,7 +1,7 @@
 # Step 02: the install record and the catalog kinds
 
-Status: **done** 2026-10-27 (`5cbb59f26` record; `d2575438b` attributes and sets; `1fcf1bdfe`
-categories; `8aeecbea6` stock; `f4e2f2356` products and quantities). Not yet run against a live
+Status: **done** 2026-10-27 (`c8670cbc7` record; `548fabcf3` attributes and sets; `5524817b1`
+categories; `39691b4c0` stock; `a0dc9d815` products and quantities). Not yet run against a live
 store.
 
 Specification: [catalog-spec.md](../../research/datapack-engine/catalog-spec.md), the service's

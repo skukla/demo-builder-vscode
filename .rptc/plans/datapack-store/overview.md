@@ -77,8 +77,8 @@ deployment's configuration. It is one function in the code:
 - The fix is spreading `getMongoParams(params)` into the context (one line plus a test).
   Prepared as a local branch in the clone, never pushed: the `kukla_adobe` account has
   pull-only access, forking is disabled, `main` is protected.
-- **"The service is locked" is no longer true.** PR #12 was merged 2026-09-02 by
-  `afreens_adobe`; #10 (Node 22) on 2026-07-09 by `abhisin_adobe`. There are maintainers to
+- **"The service is locked" is no longer true.** PR #12 was merged 2026-09-02 and #10
+  (Node 22) on 2026-07-09, each by one of the service's maintainers. There are maintainers to
   hand the patch to. The owner also holds developer access to the Stage workspace, so a
   redeploy from a patched checkout is technically possible — a governance choice, not a
   technical one.
