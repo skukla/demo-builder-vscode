@@ -38,3 +38,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-27  docs(plan): library as home, starting packs, oversized items, and wiping a store (DI-5) (`35f3e9da5`)
 - 2026-10-27  feat(data-installer): our engine installs and removes a pack's category tree (DI-5) (`1fcf1bdfe`)
 - 2026-10-27  feat(data-installer): our engine installs and removes sources, stocks and their links (DI-5) (`8aeecbea6`)
+- 2026-10-27  feat(data-installer): our engine installs and removes products and sets their stock (DI-5) (`f4e2f2356`)
