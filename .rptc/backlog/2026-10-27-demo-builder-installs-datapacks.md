@@ -35,3 +35,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-27  feat(data-installer): our engine installs and removes attributes and attribute sets (DI-5) (`d2575438b`)
 - 2026-10-27  docs(plan): our engine installs from the library and zip files too (DI-5) (`b90772ec5`)
 - 2026-10-27  merge: the datapack library and zip files into the engine branch (DI-5) (`2155e6b78`)
+- 2026-10-27  docs(plan): library as home, starting packs, oversized items, and wiping a store (DI-5) (`35f3e9da5`)
