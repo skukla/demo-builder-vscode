@@ -17,6 +17,7 @@
 
 import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
 import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
+import type { DataInstallerClient } from '../services/dataInstallerClient';
 import type { CommerceCredentials } from '../services/dataInstallerWriteClient';
 import type { JobStatusSource } from '../services/importJobRunner';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
@@ -35,6 +36,8 @@ export interface DatapackWriteAccess {
     orgCode?: string;
     /** The service's job reads, for the service engine (`datapackEngine`). */
     jobs: JobStatusSource;
+    /** The service catalog's reads, where Demo Builder's engine reads a pack's rows from. */
+    catalog: Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'>;
     project: Project;
     credentials: CommerceCredentials;
 }
@@ -129,6 +132,7 @@ export async function resolveDatapackWriteAccess(
         getToken: access.getToken,
         orgCode: access.orgCode,
         jobs: access.client,
+        catalog: access.client,
         project,
         credentials: credentials.credentials,
     };

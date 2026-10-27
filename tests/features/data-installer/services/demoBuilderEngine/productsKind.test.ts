@@ -134,6 +134,47 @@ describe('installProducts', () => {
         expect(product.custom_attributes).toEqual([{ attribute_code: 'cable_size', value: '301' }]);
     });
 
+    // Frescopa `main`'s own bundle, trimmed (read from the service on 2026-10-27): its options name
+    // their parts by SKU, which Commerce takes as is, so only the website and categories change.
+    it('sends a bundle\'s options as the pack has them, its parts named by SKU', async () => {
+        const options = [
+            {
+                title: 'Machine',
+                required: true,
+                type: 'select',
+                position: 0,
+                sku: 'coffeeexperience',
+                product_links: [{ sku: 'frescoexpresso', qty: 1, position: 0, is_default: false, price: 2499, price_type: null, can_change_quantity: 1 }],
+            },
+        ];
+        const bundle = {
+            product: {
+                sku: 'coffeeexperience',
+                name: 'Coffee Experience',
+                type_id: 'bundle',
+                attribute_set_id: 'Default',
+                price: 0,
+                tier_prices: [],
+                custom_attributes: [
+                    { attribute_code: 'price_type', value: '0' },
+                    { attribute_code: 'category_ids', value: ['racks'] },
+                ],
+                extension_attributes: { website_ids: [2], category_links: [{ position: -1, category_id: 'racks' }], bundle_product_options: options },
+            },
+        };
+        const ctx = await storeContext();
+
+        await installProducts(ctx, parseProductRows([bundle]));
+
+        expect(posted(ctx)[0]).toMatchObject({
+            custom_attributes: [
+                { attribute_code: 'price_type', value: '0' },
+                { attribute_code: 'category_ids', value: ['41'] },
+            ],
+            extension_attributes: { website_ids: [1], category_links: [{ position: -1, category_id: '41' }], bundle_product_options: options },
+        });
+    });
+
     it('leaves a product the store already has alone, and records nothing for it', async () => {
         const ctx = await storeContext({ 'products/vrrack': { id: 12, sku: 'vrrack' } });
 

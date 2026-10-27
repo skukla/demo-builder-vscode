@@ -76,6 +76,7 @@ export const SETTING_KEYS = [
     'demoBuilder.ai.engine',
     'demoBuilder.ai.permissions',
     'demoBuilder.dataInstaller.enabled',
+    'demoBuilder.dataInstaller.engine',
     'demoBuilder.dataInstaller.apiBaseUrl',
     'demoBuilder.datapackStore.apiBaseUrl',
 ] as const;

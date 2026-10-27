@@ -180,6 +180,21 @@ describe('watch', () => {
         expect(mockedWatch.mock.calls[0][0].onProgress).toBe(onProgress);
     });
 
+    // Demo Builder's engine keeps its jobs in memory, so the job is watched through the engine
+    // that started it. Building a second one would answer "no such job" (DI-5).
+    it('watches through the same engine that started the job', async () => {
+        reachable(readClient());
+        const d = deps();
+
+        await d.startImport({ datapack: PACK, dataTypes: ['categories'] } as unknown as Parameters<typeof d.startImport>[0]);
+        await d.watch({ activationId: 'imp-1', requestedTypes: ['categories'] });
+        await d.watch({ activationId: 'imp-1', requestedTypes: ['categories'] });
+
+        expect(mockedAccess).toHaveBeenCalledTimes(1);
+        expect(MockedWriteClient).toHaveBeenCalledTimes(1);
+        expect(mockedWatch.mock.calls[0][0].client).toBe(mockedWatch.mock.calls[1][0].client);
+    });
+
     it('refuses when the service is unreachable, rather than polling nothing', async () => {
         unreachable();
 

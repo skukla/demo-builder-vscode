@@ -31,6 +31,7 @@ import type { HandlerContext } from '@/types/handlers';
 import type { DataTypeStatus } from '@/features/data-installer/types';
 import { importHarness, ACCS_PROJECT } from './sampleDataInstallDeps.testUtils';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const mockedResolve = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
@@ -74,7 +75,9 @@ describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
     >('@/features/data-installer/services/commerceCredentials');
 
     /** A declared ACCS pair, so resolution needs no broker and no network. */
-    const ACCS_WITH_PAIR = {
+    const ACCS_WITH_PAIR = createMockProject({
+        // No Adobe context, as before the canonical fixture: resolution must need no broker.
+        adobe: undefined,
         componentSelections: { backend: 'adobe-commerce-accs' },
         componentConfigs: {
             'adobe-commerce-accs': {
@@ -82,7 +85,7 @@ describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
                 ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret',
             },
         },
-    };
+    });
 
     it('resolves an ACCS project that declares its own pair', async () => {
         mockedResolve.mockImplementation(actual.resolveCommerceCredentials);

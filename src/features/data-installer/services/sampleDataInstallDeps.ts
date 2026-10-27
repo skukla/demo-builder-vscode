@@ -12,11 +12,14 @@
 
 import { resolveDataInstallerAccess } from '../handlers/dataInstallerHandlers';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
+import { buildDatapackEngine, engineThatInstalled } from './buildDatapackEngine';
 import { resolveProjectCredentials } from './commerceCredentialBroker';
-import { buildServiceEngine, type DatapackEngine } from './datapackEngine';
+import { selectedDatapackEngine } from './dataInstallerConfig';
+import type { DatapackEngine } from './datapackEngine';
 import { watchImportJob } from './importJobRunner';
 import type { SampleDataDeps } from './sampleDataInstall';
 import { PollingService } from '@/core/shell/pollingService';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -64,10 +67,14 @@ export interface SampleDataProgress {
 
 export function buildSampleDataDeps(
     context: HandlerContext,
-    project: SampleDataProject,
+    project: Project,
     report: (progress: SampleDataProgress) => void,
     mode: SampleDataMode = 'install',
 ): SampleDataDeps {
+    // One engine for the whole job: Demo Builder's keeps its jobs in memory, so the engine
+    // that starts one has to be the engine that is asked how it is going.
+    let built: Promise<DatapackEngine> | undefined;
+    const engineOnce = (): Promise<DatapackEngine> => (built ??= engine(context, project, mode));
     return {
         credentials: async () => {
             // The broker matters MORE here than anywhere else: this runs during
@@ -105,10 +112,10 @@ export function buildSampleDataDeps(
             return inventory.present;
         },
 
-        startImport: async (request) => (await engine(context)).startImport(request),
+        startImport: async (request) => (await engineOnce()).startImport(request),
 
         // The Reset workflow's half. Same request, same engine, different verb.
-        startDelete: async (request) => (await engine(context)).startDelete(request),
+        startDelete: async (request) => (await engineOnce()).startDelete(request),
 
         /**
          * Polls through the engine. For the service engine that is the READ client,
@@ -126,7 +133,7 @@ export function buildSampleDataDeps(
          */
         watch: async ({ activationId, requestedTypes, operation, onProgress }) => {
             const result = await watchImportJob({
-                client: await engine(context),
+                client: await engineOnce(),
                 activationId,
                 requestedTypes,
                 polling: new PollingService(),
@@ -151,13 +158,18 @@ export function buildSampleDataDeps(
     };
 }
 
-/** The engine, built the way the import handlers build it (`buildServiceEngine`). */
-async function engine(context: HandlerContext): Promise<DatapackEngine> {
+/** The engine the setting chooses, built the way the import handlers build it (`buildDatapackEngine`). */
+async function engine(context: HandlerContext, project: Project, mode: SampleDataMode): Promise<DatapackEngine> {
     const access = await resolveDataInstallerAccess(context);
     if (!access.ok) {
         throw new Error('The Data Installer is not reachable for this project.');
     }
-    return buildServiceEngine({ ...access, jobs: access.client }, (line) =>
-        context.debugLogger.debug(`[Data Installer] ${line}`),
+    // A removal goes through the engine that installed the project's pack (DI-5).
+    const engineId =
+        mode === 'remove' && project.datapack ? await engineThatInstalled(project.path, project.datapack) : selectedDatapackEngine();
+    return buildDatapackEngine(
+        engineId,
+        { ...access, jobs: access.client, catalog: access.client, project, authManager: context.authManager, secrets: context.context?.secrets },
+        (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
     );
 }

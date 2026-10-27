@@ -25,6 +25,7 @@
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
 
 /**
  * A context with a real debug logger fake — the write client logs one line per
@@ -36,12 +37,12 @@ export function importHarness(overrides: Partial<HandlerContext> = {}): HandlerC
 }
 
 /** An ACCS project, in the shape the credential resolver dispatches on. */
-export const ACCS_PROJECT = {
+export const ACCS_PROJECT = createMockProject({
     name: 'demo',
     adobe: { organization: '285361' },
     componentSelections: { backend: 'adobe-commerce-accs' },
     componentConfigs: {},
-};
+});
 
 /** The refusal both the write client and the poller give when access fails. */
 export const NOT_REACHABLE = 'The Data Installer is not reachable for this project.';

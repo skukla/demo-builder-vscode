@@ -15,6 +15,7 @@
  */
 
 import * as vscode from 'vscode';
+import type { DatapackEngineId } from './datapackEngine';
 import { validateURL } from '@/core/validation/URLValidator';
 
 /** Longest base URL we will accept from settings. */
@@ -33,6 +34,16 @@ const STORE_SETTINGS_SECTION = 'demoBuilder.datapackStore';
 export function isDataInstallerEnabled(): boolean {
     const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<boolean>('enabled', true);
     return typeof raw === 'boolean' ? raw : true;
+}
+
+/**
+ * Which engine installs and removes datapacks (`demoBuilder.dataInstaller.engine`, DI-5). The
+ * service until the SC chooses Demo Builder's own; anything unrecognised reads as the service,
+ * which is what ran before the setting existed.
+ */
+export function selectedDatapackEngine(): DatapackEngineId {
+    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('engine', 'service');
+    return raw === 'demo-builder' ? 'demo-builder' : 'service';
 }
 
 /**

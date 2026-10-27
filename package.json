@@ -333,6 +333,19 @@
                         "default": true,
                         "description": "Enable the Data Installer surface for browsing and installing Adobe Commerce sample-data datapacks. When off, the panel and its AI tools report the feature as unavailable."
                     },
+                    "demoBuilder.dataInstaller.engine": {
+                        "type": "string",
+                        "enum": [
+                            "service",
+                            "demo-builder"
+                        ],
+                        "enumDescriptions": [
+                            "The Data Installer service installs and removes datapacks.",
+                            "Demo Builder installs and removes datapacks itself, over the project's own Commerce access."
+                        ],
+                        "default": "service",
+                        "description": "What installs and removes datapacks. A pack is always removed by the one that installed it."
+                    },
                     "demoBuilder.dataInstaller.apiBaseUrl": {
                         "scope": "machine",
                         "type": "string",

@@ -22,12 +22,14 @@
  * @module features/data-installer/handlers/importHandlers
  */
 
-import { buildServiceEngine, type DatapackEngine } from '../services/datapackEngine';
+import { buildDatapackEngine, engineThatInstalled } from '../services/buildDatapackEngine';
+import { selectedDatapackEngine } from '../services/dataInstallerConfig';
 import type { ImportRequest, ImportTarget } from '../services/dataInstallerWriteClient';
+import type { DatapackEngine } from '../services/datapackEngine';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { ImportJobRecord } from '../types';
-import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
+import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { datapackZipHandlers } from './datapackZipHandlers';
 import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
@@ -162,7 +164,7 @@ export const importHandlers = defineHandlers({
             };
         }
 
-        const prepared = await prepareImport(context, payload);
+        const prepared = await prepareImport(context, payload, 'remove');
         if ('response' in prepared) {
             return prepared.response;
         }
@@ -194,6 +196,9 @@ export const importHandlers = defineHandlers({
 async function prepareImport(
     context: HandlerContext,
     payload: StartImportPayload | undefined,
+    // A removal goes through the engine that installed the pack; anything else through the
+    // one the setting chooses (DI-5).
+    write: 'install' | 'remove' = 'install',
 ): Promise<
     { engine: DatapackEngine; request: ImportRequest } | { response: HandlerResponse }
 > {
@@ -207,10 +212,16 @@ async function prepareImport(
         return gate;
     }
 
+    const pack = { name: input.datapackName, version: input.version };
+    const engineId = write === 'remove' ? await engineThatInstalled(gate.project.path, pack) : selectedDatapackEngine();
     return {
-        engine: buildServiceEngine(gate, (line) => context.debugLogger.debug(`[Data Installer] ${line}`)),
+        engine: buildDatapackEngine(
+            engineId,
+            { ...gate, authManager: context.authManager, secrets: context.context?.secrets },
+            (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
+        ),
         request: {
-            id: { name: input.datapackName, version: input.version },
+            id: pack,
             commerceInstance: input.commerceInstance,
             dataTypes: input.dataTypes,
             // A caller that names a scope means it. One that names NONE gets the

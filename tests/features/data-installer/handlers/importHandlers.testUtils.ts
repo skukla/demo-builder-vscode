@@ -71,6 +71,8 @@ export function makeStores() {
  */
 export const PAAS_PROJECT: Partial<Project> = {
     name: 'demo-a',
+    // Every project has one; a removal looks beside it for Demo Builder's install record (DI-5).
+    path: '/nonexistent/projects/demo-a',
     componentSelections: { backend: 'adobe-commerce-paas' },
     componentConfigs: {
         'adobe-commerce-paas': {
