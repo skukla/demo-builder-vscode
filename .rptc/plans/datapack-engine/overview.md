@@ -86,7 +86,7 @@ Ours is written from scratch, tested, and checked live.
 | 07 | [Each demo has its own pack, shared by reference](step-07-demo-packs.md) | to do |
 | 08 | [Customers and B2B](step-08-customers-b2b.md) | to do |
 | 09 | [Store settings in a pack](step-09-store-settings.md) | to do |
-| 10 | [Wiping a store completely](step-10-wipe.md) | not designed |
+| 10 | [Reset clears a demo's part of the store](step-10-wipe.md) | to do |
 | 11 | [Later, when a pack needs it](step-11-later.md) | not started |
 
 Every step is test-first, reuses before it writes (the house component, hook, client or rule that

@@ -1,32 +1,79 @@
-# Step 10: wiping a store completely
+# Step 10: reset clears a demo's part of the store
 
-Status: **to do; not designed yet** (owner's ask, 2026-10-27).
+Status: **to do**, after steps 04 and 05 (reset's "save my changes first" box depends on them).
+Decided by the owner, 2026-10-27.
 
-Removing a pack takes away what that pack installed. The SC also needs to take a whole store
-back to empty, whatever put the data there: a pack, an earlier demo, or hand edits.
+## Why
 
-- **The service has nothing for this.** It knows two operations, `import` and `delete`
-  (`OPERATION_MODES`, `actions/constants.js`), and its delete removes one pack's named items.
-  Its "purge by commerce_instance" (`getInstalledDatapacks.js`) deletes its own install
-  RECORDS for an instance, not anything in Commerce.
-- **The ERP work already knows some things Commerce will not delete over REST**, and what it
-  does instead:
-  - an inventory source cannot be deleted, so it is switched off (`warehouseFix.ts`);
-  - notes the ERP wrote on orders cannot be deleted; its `erp/detach` reverts what it can
-    (credit limits, blocks, ERP order numbers) (`erpDetach.ts`).
-  Those are the start of the list, not the whole of it.
-- **What a wipe has to settle before it is built:**
-  1. **The full list of kinds a demo store holds**, and for each one whether Commerce deletes
-     it over REST, only switches it off, or keeps it whatever we do. Orders, invoices and
-     the store's own default website and root category are the likely "keeps" to check;
-     none of this is verified yet.
-  2. **The order to delete in**, the reverse of the install order (catalog spec §0), so nothing is
-     refused for still being in use.
-  3. **What is never touched:** the default website, store and root category, the admin
-     users, and the integration's own credential.
-  4. **What the SC is told afterwards:** exactly what could not be removed, by kind and count.
-- **It cannot be undone, and it says so.** A wipe removes things no install record lists, so
-  there is nothing to restore from (rule 1: what cannot be undone is stated plainly). It is
-  confirmed before it runs, names the store it will empty, and is never run by an agent
-  without that confirmation (rule 5). A dry run lists what it would delete and writes nothing.
-- **Afterwards every install record for that store is cleared**, since what they list is gone.
+An SC resets a demo to put new data in. The cases:
+
+| What the SC wants | What does it |
+|---|---|
+| Swap to a different pack (Bodea's data, then Frescopa's) | Removing the pack, then installing the new one |
+| Start the same pack over after breaking it in the Admin | Removing, then installing again (changes saved first, step 05) |
+| Clear data Demo Builder did not install (hand-made in the Admin, the service's installs, an earlier demo's leftovers) | A wipe: there is no record, so removal cannot know these things exist |
+| A clean slate for a new customer | A wipe |
+
+## What reset does
+
+1. **Reset always removes what Demo Builder installed**, from its install record. This covers
+   most resets.
+2. **If the demo's part of the store also holds data Demo Builder did not install, reset says so
+   and offers to clear it too**: one unticked box, saying it cannot be undone.
+
+   > **Reset Acme Demo?**
+   > Frescopa's 64 items will be removed.
+   > This demo's store also holds 31 things Demo Builder didn't install: 18 products and 13
+   > categories.
+   >
+   > ☐ **Also remove those**, to leave this demo's store empty. This can't be undone.
+   >
+   > [Reset] [Cancel]
+
+   With nothing else there, the box does not appear.
+3. **It only ever clears this demo's part of the store.** The owner's one ACCS instance holds
+   several demos (Justrite, Bodea and others), so emptying the instance would empty theirs:
+   - **products** on this demo's website; one another website also sells is only taken off this
+     website;
+   - **categories** under this demo's own root category. If that root is shared with another
+     store (as `justrite_test_website`'s is with Justrite's, root 119), categories are left and
+     the screen says why;
+   - **customers** of this demo's website;
+   - **never** anything the instance shares (product attributes, attribute sets), the websites,
+     stores and root categories themselves, admin users, or the integration's credential. A
+     new pack reuses an attribute that is already there, so leaving them blocks nothing.
+
+Emptying a whole instance is not part of reset. If it is ever offered, it is its own action with
+the strongest warning.
+
+## What has to be settled when it is built
+
+- **What else a demo's part holds**, kind by kind (orders, invoices, cart rules, companies,
+  shared catalogs), and whether Commerce deletes each over REST, only switches it off, or keeps
+  it. Known so far, from the ERP work: an inventory source cannot be deleted, only switched off
+  (`warehouseFix.ts`); notes on orders cannot be deleted (`erpDetach.ts`). Orders and invoices
+  are the likely "keeps"; none of this is verified yet.
+- **The order to delete in**: the reverse of the install order (catalog spec §0), so nothing is
+  refused for still being in use.
+- **What the SC is told afterwards**: exactly what could not be removed, by kind and count.
+
+## Safety
+
+- **The clearing cannot be undone, and says so.** It removes things no install record lists, so
+  there is nothing to restore from (rule 1: what cannot be undone is stated plainly).
+- It names the website it will clear, is confirmed before it runs, and is never run by an agent
+  without that confirmation (rule 5). A dry run lists what it would clear and writes nothing.
+- Afterwards the demo's install records are cleared, since what they list is gone.
+- **The service has nothing like it**: it knows `import` and `delete` (`OPERATION_MODES`,
+  `actions/constants.js`), and its "purge by commerce_instance" (`getInstalledDatapacks.js`)
+  deletes its own install records, not anything in Commerce.
+
+## Reuse
+
+| Need | Reuse | Where it is |
+|---|---|---|
+| The reset confirmation | Project reset's existing confirmation and progress | `edsResetSampleData.ts`, `OperationProgressModal` |
+| The box | The house checkbox row | `CheckboxRow` |
+| Which website, store view and root | The same lookup the engine and Assign products use | `storeScopeOf` |
+| Removing what Demo Builder installed | The engine's removal | `removePack` (`runPack.ts`) |
+| Switching off a source | The ERP warehouse step's switch | `setSourceEnabled` |
