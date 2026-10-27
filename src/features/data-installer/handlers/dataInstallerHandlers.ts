@@ -46,6 +46,8 @@ export type DataInstallerAccess =
           client: DataInstallerClient;
           baseUrl: string;
           getToken: () => Promise<string>;
+          /** The SC's IMS org code, for the gateway's `x-gw-ims-org-id`; absent when unknown. */
+          orgCode?: string;
       }
     | { ok: false; response: HandlerResponse };
 
@@ -136,13 +138,19 @@ export async function resolveDataInstallerAccess(
     const getToken = async (): Promise<string> =>
         (await authManager.getTokenManager().inspectToken()).token ?? '';
 
+    // The org the SC signed into: the service's gateway refuses a request without it
+    // ("missing x-gw-ims-org-id header", Stage, 2026-10-27). See `dataInstallerSignIn`.
+    const orgCode = authManager.getCacheManager().getCachedOrganization()?.code;
+
     return {
         ok: true,
         baseUrl: resolved.baseUrl,
         getToken,
+        ...(orgCode ? { orgCode } : {}),
         client: new DataInstallerClient({
             baseUrl: resolved.baseUrl,
             getToken,
+            orgCode,
             onDrift: (endpoint, missingKeys) => {
                 context.logger.warn(
                     `${LOG_PREFIX} shape-drift ${endpoint} missing=[${missingKeys.join(', ')}]`,

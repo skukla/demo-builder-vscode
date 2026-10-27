@@ -169,6 +169,7 @@ async function writeClient(context: HandlerContext): Promise<DataInstallerWriteC
     return new DataInstallerWriteClient({
         baseUrl: access.baseUrl,
         getToken: access.getToken,
+        orgCode: access.orgCode,
         // One line per service call in Debug Logs — the first live dry run
         // refused with an EMPTY channel, undebuggable for the user and for us.
         log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),

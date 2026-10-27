@@ -226,6 +226,35 @@ describe('dataInstallerHandlers', () => {
             expect(access.ok === false && access.response.code).toBe(ErrorCode.AUTH_REQUIRED);
         });
 
+        /**
+         * The service's gateway wants the org the SC signed into (`x-gw-ims-org-id`): Stage
+         * refused the bearer alone with "missing x-gw-ims-org-id header", 2026-10-27.
+         */
+        it('hands the clients the org the SC is signed into', async () => {
+            const context = makeImportHarness({
+                authManager: createMockAuthenticationService(
+                    {
+                        isAuthenticated: jest.fn().mockResolvedValue(true),
+                        getTokenManager: jest.fn().mockReturnValue({
+                            inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 55, token: 'tok' }),
+                        }),
+                    },
+                    {
+                        cache: {
+                            getCachedOrganization: jest
+                                .fn()
+                                .mockReturnValue({ id: '1', code: 'ORG@AdobeOrg', name: 'Adobe Demo System' }),
+                        },
+                    },
+                ),
+            });
+
+            const access = await resolveDataInstallerAccess(context);
+
+            expect(access.ok && access.orgCode).toBe('ORG@AdobeOrg');
+            expect(MockedClient).toHaveBeenLastCalledWith(expect.objectContaining({ orgCode: 'ORG@AdobeOrg' }));
+        });
+
         it('reports AUTH_REQUIRED when the token is missing after sign-in', async () => {
             const context = makeImportHarness();
             (

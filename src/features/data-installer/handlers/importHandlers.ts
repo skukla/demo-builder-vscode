@@ -208,6 +208,7 @@ async function prepareImport(
         writeClient: new DataInstallerWriteClient({
             baseUrl: gate.baseUrl,
             getToken: gate.getToken,
+            orgCode: gate.orgCode,
             // One line per service call in Debug Logs. The first live dry run
             // refused with an EMPTY channel — undebuggable for the user and us.
             log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
