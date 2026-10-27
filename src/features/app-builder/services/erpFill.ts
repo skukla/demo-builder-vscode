@@ -14,19 +14,7 @@
  */
 
 import { seedFrom, type CommercePost, type ErpSeed } from './erpFillPricing';
-import {
-    listCompanies,
-    listCustomerGroupCodes,
-    listProducts,
-    listSharedCatalogs,
-    listSources,
-    listStock,
-    listVariantAttributes,
-    listWebsites,
-    storeConfigs,
-    tierPricesFor,
-    type CommerceGet,
-} from './erpFillReaders';
+import { listCompanies, listCustomerGroupCodes, listProducts, listSharedCatalogs, listSources, listStock, listVariantAttributes, listWebsites, storeConfigs, tierPricesFor } from './erpFillReaders';
 import {
     ownedRowOf,
     partnersFrom,
@@ -42,6 +30,7 @@ import {
     type ErpStructure,
 } from './erpFillRows';
 import { describeOwnsAcross, ownedSkusAcross, ownsRuleOf } from './erpOwnership';
+import type { CommerceGet } from '@/types/commerceWire';
 import type { ErpOwnsEntry } from '@/types/erpOwnership';
 
 /** The integration's settings in force (`GET erp/settings?websites=`). */

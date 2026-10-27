@@ -23,7 +23,7 @@ import { commerceClientForProject } from './erpFillForProject';
 import { listedErpNames, readErpRules } from './erpRules';
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
-import { followBulk, startBulk, type BulkFollowDeps, type CommerceSend } from '@/features/app-builder/services/commerceBulk';
+import { followBulk, startBulk, type BulkFollowDeps } from '@/features/app-builder/services/commerceBulk';
 import {
     categoryChoicesOf,
     listAssignableProducts,
@@ -35,7 +35,7 @@ import {
     type AssignProductRow,
     type ProductScope,
 } from '@/features/app-builder/services/erpAssignSelection';
-import { listWebsites, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
+import { listWebsites } from '@/features/app-builder/services/erpFillReaders';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf } from '@/features/app-builder/services/erpList';
 import { OWNER_CODE, setsWithoutOwner } from '@/features/app-builder/services/erpOwnerAttributeSets';
@@ -44,6 +44,7 @@ import type { AuthenticationService } from '@/features/authentication/services/a
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { extractConfigParams } from '@/features/eds/services/storefrontConfigParams';
 import type { Project } from '@/types/base';
+import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type {
     AttributeSetWithoutOwner,
     CommerceBulkOutcome,

@@ -26,7 +26,6 @@ import {
 } from '@/features/ai/server/commerceRestClient';
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
-import type { CommerceSend } from '@/features/app-builder/services/commerceBulk';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import { listIdOf } from '@/features/app-builder/services/deployInputs';
 import {
@@ -36,10 +35,7 @@ import {
 } from '@/features/app-builder/services/erpFill';
 import type { ErpMappingReport } from '@/features/app-builder/services/erpFillMapping';
 import type { CommercePost } from '@/features/app-builder/services/erpFillPricing';
-import {
-    CommerceReadError,
-    type CommerceGet,
-} from '@/features/app-builder/services/erpFillReaders';
+import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import {
     ErpIntegrationClient,
     callErpApi,
@@ -49,6 +45,7 @@ import type { AuthenticationService } from '@/features/authentication/services/a
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import type { Project } from '@/types/base';
+import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 export interface ErpFillForProjectDeps {
     authManager: AuthenticationService;

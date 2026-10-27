@@ -188,3 +188,18 @@ export interface CommerceSharedCatalogList {
     items?: CommerceSharedCatalog[];
     total_count?: number;
 }
+
+/**
+ * A Commerce GET that answers the parsed body, or throws. Shared by every feature that reads a
+ * store through the signed REST call it is handed: the ERP fill and setup guide, and the
+ * datapack engine (DI-5), which moved it here from app-builder so both could.
+ */
+export type CommerceGet = (path: string) => Promise<unknown>;
+
+/** A signed Commerce call that answers the parsed body, or throws in Commerce's words. */
+export type CommerceSend = (
+    method: 'POST' | 'PUT' | 'DELETE',
+    path: string,
+    body: unknown,
+    route?: { bulk?: boolean },
+) => Promise<unknown>;

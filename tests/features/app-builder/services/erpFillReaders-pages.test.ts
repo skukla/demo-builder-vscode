@@ -4,7 +4,8 @@
  * Add another ERP waited on every one of them.
  */
 
-import { readAllPages, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
+import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
+import type { CommerceGet } from '@/types/commerceWire';
 
 const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 

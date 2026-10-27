@@ -21,14 +21,7 @@
  * @module features/app-builder/services/erpOwnerAttributeSets
  */
 
-import type { CommerceSend } from './commerceBulk';
-import type { CommerceGet } from './erpFillReaders';
-import type {
-    CommerceAttributeGroupList,
-    CommerceAttributeSetList,
-    CommerceProductSetPage,
-    CommerceSetAttribute,
-} from '@/types/commerceWire';
+import type { CommerceAttributeGroupList, CommerceAttributeSetList, CommerceProductSetPage, CommerceSetAttribute, CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { AttributeSetWithoutOwner } from '@/types/erpAssign';
 
 export const OWNER_CODE = 'erp_owner';

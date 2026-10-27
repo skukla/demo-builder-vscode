@@ -5,9 +5,9 @@
  * are on the calls that leave: which URL, which method, which body.
  */
 
-import type { CommerceGet } from '@/features/app-builder/services/erpFillReaders';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { mapAfterFill } from '@/features/project-creation/services/erpMappingAfterFill';
+import type { CommerceGet } from '@/types/commerceWire';
 
 const AUTH = { accessToken: 'fake-test-pw-not-a-secret', imsOrgId: 'ABC@AdobeOrg' };
 const ERPS_URL = 'https://ns.adobeioruntime.net/api/v1/web/erp/erps';

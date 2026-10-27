@@ -12,9 +12,8 @@
  * @module features/app-builder/services/storePreparation/sharedCatalogsFix
  */
 
-import type { CommerceGet } from '../erpFillReaders';
 import { errorText, type FixApplied, type FixPreview, type FixUndone, type StepFix } from './fixContract';
-import type { CommerceCompanyList, CommerceCompanyRow, CommerceSharedCatalog, CommerceSharedCatalogList } from '@/types/commerceWire';
+import type { CommerceCompanyList, CommerceCompanyRow, CommerceSharedCatalog, CommerceSharedCatalogList, CommerceGet } from '@/types/commerceWire';
 import type { SharedCatalogsStepRecord, StorePreparationStepRecord } from '@/types/storePreparation';
 
 const COMPANIES_PATH = 'company/?searchCriteria[pageSize]=200&fields=items[id,company_name,customer_group_id]';

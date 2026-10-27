@@ -15,16 +15,8 @@
  * @module features/app-builder/services/storePreparation/warehouseFix
  */
 
-import type { CommerceGet } from '../erpFillReaders';
 import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
-import type {
-    CommerceInventorySource,
-    CommerceInventorySourceList,
-    CommerceInventoryStock,
-    CommerceInventoryStockList,
-    CommerceStockSourceLink,
-    CommerceStockSourceLinkList,
-} from '@/types/commerceWire';
+import type { CommerceInventorySource, CommerceInventorySourceList, CommerceInventoryStock, CommerceInventoryStockList, CommerceStockSourceLink, CommerceStockSourceLinkList, CommerceGet } from '@/types/commerceWire';
 import type { StorePreparationStepRecord, WarehouseStepRecord } from '@/types/storePreparation';
 
 const SOURCES_PATH = 'inventory/sources?searchCriteria[pageSize]=200';

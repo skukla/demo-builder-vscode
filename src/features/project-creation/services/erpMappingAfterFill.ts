@@ -25,11 +25,12 @@ import {
     type ErpMappingReport,
     type ErpSalesOrganization,
 } from '@/features/app-builder/services/erpFillMapping';
-import { listWebsites, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
+import { listWebsites } from '@/features/app-builder/services/erpFillReaders';
 import {
     callErpApi,
     type ErpIntegrationClient,
 } from '@/features/app-builder/services/erpIntegrationClient';
+import type { CommerceGet } from '@/types/commerceWire';
 
 interface MappingAfterFillArgs {
     /** The ERP just filled: its component id, its id in the integration's list, its URLs. */

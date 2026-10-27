@@ -17,19 +17,7 @@
  * that records every call, so a test asserts the ARGUMENT a write was handed.
  */
 
-import type { CommerceSend } from '@/features/app-builder/services/commerceBulk';
-import type { CommerceGet } from '@/features/app-builder/services/erpFillReaders';
-import type {
-    CommerceCompanyList,
-    CommerceInventorySourceList,
-    CommerceInventoryStockList,
-    CommerceProductAttribute,
-    CommerceSharedCatalogList,
-    CommerceStockSourceLinkList,
-    CommerceSystemConfigList,
-    CommerceSystemConfigPutAnswer,
-    CommerceSystemConfigRow,
-} from '@/types/commerceWire';
+import type { CommerceCompanyList, CommerceInventorySourceList, CommerceInventoryStockList, CommerceProductAttribute, CommerceSharedCatalogList, CommerceStockSourceLinkList, CommerceSystemConfigList, CommerceSystemConfigPutAnswer, CommerceSystemConfigRow, CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 /** The rows `GET system/config` answers for some paths at one scope. */
 export function configList(rows: Array<[path: string, value: string | null]>, scope: 'default' | 'website' = 'default', scopeCode?: string): CommerceSystemConfigList {

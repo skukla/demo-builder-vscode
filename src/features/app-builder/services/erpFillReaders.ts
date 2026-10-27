@@ -21,9 +21,8 @@ import type {
     VariantAttribute,
     WebsiteConfig,
 } from './erpFillRows';
+import type { CommerceGet } from '@/types/commerceWire';
 
-/** A Commerce GET that answers the parsed body, or throws a CommerceReadError. */
-export type CommerceGet = (path: string) => Promise<unknown>;
 
 /** A read Commerce refused or never answered; `status` is the HTTP status when there was one. */
 export class CommerceReadError extends Error {

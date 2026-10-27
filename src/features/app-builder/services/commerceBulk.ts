@@ -13,19 +13,11 @@
  * @module features/app-builder/services/commerceBulk
  */
 
-import type { CommerceGet } from './erpFillReaders';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { CommerceBulkAccepted, CommerceBulkStatus } from '@/types/commerceWire';
+import type { CommerceBulkAccepted, CommerceBulkStatus, CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { CommerceBulkOutcome } from '@/types/erpAssign';
 
-/** A signed Commerce call that answers the parsed body, or throws in Commerce's words. */
-export type CommerceSend = (
-    method: 'POST' | 'PUT' | 'DELETE',
-    path: string,
-    body: unknown,
-    route?: { bulk?: boolean },
-) => Promise<unknown>;
 
 const COMPLETE = 1;
 const OPEN = 4;

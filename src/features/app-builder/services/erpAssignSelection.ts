@@ -11,8 +11,9 @@
  * @module features/app-builder/services/erpAssignSelection
  */
 
-import { readAllPages, type CommerceGet } from './erpFillReaders';
+import { readAllPages } from './erpFillReaders';
 import { OWNER_CODE } from './erpOwnerAttributeSets';
+import type { CommerceGet } from '@/types/commerceWire';
 import type {
     AttributeSetWithoutOwner,
     ErpAssignChoice,

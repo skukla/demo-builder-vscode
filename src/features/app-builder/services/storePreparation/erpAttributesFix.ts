@@ -12,10 +12,10 @@
  */
 
 import { listAssignableProducts } from '../erpAssignSelection';
-import { CommerceReadError, type CommerceGet } from '../erpFillReaders';
+import { CommerceReadError } from '../erpFillReaders';
 import { addOwnerToSets, OWNER_CODE, readProductSets, removeOwnerFromSets, setsWithoutOwner } from '../erpOwnerAttributeSets';
 import { errorText, type FixApplied, type FixPreview, type FixUndone, type StepFix } from './fixContract';
-import type { CommerceProductAttribute } from '@/types/commerceWire';
+import type { CommerceProductAttribute, CommerceGet } from '@/types/commerceWire';
 import type { AttributeSetWithoutOwner } from '@/types/erpAssign';
 import type { ErpAttributesStepRecord, StorePreparationStepRecord } from '@/types/storePreparation';
 
