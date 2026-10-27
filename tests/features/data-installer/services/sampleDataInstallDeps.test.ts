@@ -166,16 +166,20 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     /**
-     * CONTROL. The assertion above must be sensitive to WHICH client is passed —
-     * a write client has neither method, which is exactly the bug. Asserting the
-     * identity pins it to the one `resolveDataInstallerAccess` supplies.
+     * CONTROL. The assertion above must be sensitive to WHICH client answers — a
+     * write client has neither method, which is exactly the bug. Since DI-5 the
+     * poller is handed the ENGINE, and the service engine must answer from the
+     * read client `resolveDataInstallerAccess` supplies: the poll reaches it.
      */
-    it('CONTROL — it is the access client, not some other one', async () => {
+    it('CONTROL — the polls reach the access client, not some other one', async () => {
         const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: ['categories'] });
+        await watchImportJob.mock.calls[0][0].client.getJobStatus('act-1');
+        await watchImportJob.mock.calls[0][0].client.getJobFailureReason('act-1');
 
-        expect(watchImportJob.mock.calls[0][0].client).toBe(readClient);
+        expect(readClient.getJobStatus).toHaveBeenCalledWith('act-1');
+        expect(readClient.getJobFailureReason).toHaveBeenCalledWith('act-1');
     });
 
     // The poller names the job from this; a removal labelled `import` is what the

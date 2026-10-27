@@ -22,11 +22,8 @@
  * @module features/data-installer/handlers/importHandlers
  */
 
-import {
-    DataInstallerWriteClient,
-    type ImportRequest,
-    type ImportTarget,
-} from '../services/dataInstallerWriteClient';
+import { buildServiceEngine, type DatapackEngine } from '../services/datapackEngine';
+import type { ImportRequest, ImportTarget } from '../services/dataInstallerWriteClient';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { ImportJobRecord } from '../types';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
@@ -77,13 +74,13 @@ export const importHandlers = defineHandlers({
         if ('response' in prepared) {
             return prepared.response;
         }
-        const { writeClient, request } = prepared;
+        const { engine, request } = prepared;
 
         // The sync twin is the only thing that will tell us this request is
         // malformed. A 202 from the async entry point would not.
-        return runAndWatch(context, writeClient, request, {
+        return runAndWatch(context, engine, request, {
             operation: 'import',
-            begin: () => writeClient.startImport(request),
+            begin: () => engine.startImport(request),
             rejected: 'The Data Installer rejected this import request.',
             failed: 'The import could not be started.',
         });
@@ -113,7 +110,7 @@ export const importHandlers = defineHandlers({
             // the request is well-formed is not the answer anyone needs — and
             // `get-websites-and-stores` answers it without going near
             // process-datapack, so it cannot start work by accident.
-            const access = await prepared.writeClient.checkCredentials(prepared.request);
+            const access = await prepared.engine.checkCredentials(prepared.request);
             if (!access.usable) {
                 return {
                     success: true,
@@ -125,7 +122,7 @@ export const importHandlers = defineHandlers({
             }
             return {
                 success: true,
-                data: await prepared.writeClient.validateImport(prepared.request),
+                data: await prepared.engine.validateImport(prepared.request),
             };
         } catch (error) {
             return {
@@ -163,11 +160,11 @@ export const importHandlers = defineHandlers({
         if ('response' in prepared) {
             return prepared.response;
         }
-        const { writeClient, request } = prepared;
+        const { engine, request } = prepared;
 
-        return runAndWatch(context, writeClient, request, {
+        return runAndWatch(context, engine, request, {
             operation: 'reset',
-            begin: () => writeClient.startDelete(request),
+            begin: () => engine.startDelete(request),
             rejected: 'The Data Installer rejected this reset request.',
             failed: 'The reset could not be started.',
         });
@@ -192,7 +189,7 @@ async function prepareImport(
     context: HandlerContext,
     payload: StartImportPayload | undefined,
 ): Promise<
-    { writeClient: DataInstallerWriteClient; request: ImportRequest } | { response: HandlerResponse }
+    { engine: DatapackEngine; request: ImportRequest } | { response: HandlerResponse }
 > {
     const input = readInput(payload);
     if ('error' in input) {
@@ -205,14 +202,7 @@ async function prepareImport(
     }
 
     return {
-        writeClient: new DataInstallerWriteClient({
-            baseUrl: gate.baseUrl,
-            getToken: gate.getToken,
-            orgCode: gate.orgCode,
-            // One line per service call in Debug Logs. The first live dry run
-            // refused with an EMPTY channel — undebuggable for the user and us.
-            log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
-        }),
+        engine: buildServiceEngine(gate, (line) => context.debugLogger.debug(`[Data Installer] ${line}`)),
         request: {
             id: { name: input.datapackName, version: input.version },
             commerceInstance: input.commerceInstance,

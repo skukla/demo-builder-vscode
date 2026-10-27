@@ -14,11 +14,11 @@
  * @module features/data-installer/handlers/importJobWatch
  */
 
-import type { DataInstallerWriteClient, ImportRequest } from '../services/dataInstallerWriteClient';
+import type { DatapackEngine } from '../services/datapackEngine';
+import type { ImportRequest } from '../services/dataInstallerWriteClient';
 import { watchImportJob } from '../services/importJobRunner';
 import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
 import { progressLabel, progressStep, summarizeProgress } from '../ui/importProgress';
-import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
@@ -64,19 +64,12 @@ async function watchAndRecord(
     context: HandlerContext,
     transient: TransientStateManager,
     record: ImportJobRecord,
+    engine: DatapackEngine,
 ): Promise<void> {
-    const access = await resolveDataInstallerAccess(context);
-    if (!access.ok) {
-        await stopWatching(
-            transient,
-            record,
-            'The Data Installer could not be reached to watch this job.',
-        );
-        return;
-    }
     try {
+        // The engine that started the job is the one asked how it is going: only it knows.
         const result = await watchImportJob({
-            client: access.client,
+            client: engine,
             activationId: record.activationId,
             requestedTypes: record.dataTypes,
             polling: new PollingService(),
@@ -158,7 +151,7 @@ async function stopWatching(
  */
 export async function runAndWatch(
     context: HandlerContext,
-    writeClient: DataInstallerWriteClient,
+    engine: DatapackEngine,
     request: ImportRequest,
     spec: {
         operation: ImportJobRecord['operation'];
@@ -170,7 +163,7 @@ export async function runAndWatch(
     },
 ): Promise<HandlerResponse> {
     try {
-        const verdict = await writeClient.validateImport(request);
+        const verdict = await engine.validateImport(request);
         if (!verdict.valid) {
             return { success: false, error: verdict.reason ?? spec.rejected };
         }
@@ -192,7 +185,7 @@ export async function runAndWatch(
 
         await recordDatapackOnProject(context, spec.operation, request);
 
-        void watchAndRecord(context, transient, record);
+        void watchAndRecord(context, transient, record, engine);
 
         return { success: true, data: { activationId: started.activationId } };
     } catch (error) {

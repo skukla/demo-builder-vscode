@@ -18,6 +18,7 @@
 import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
 import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
 import type { CommerceCredentials } from '../services/dataInstallerWriteClient';
+import type { JobStatusSource } from '../services/importJobRunner';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -32,6 +33,8 @@ export interface DatapackWriteAccess {
     getToken: () => Promise<string>;
     /** The SC's IMS org code, for the gateway (`dataInstallerSignIn`). */
     orgCode?: string;
+    /** The service's job reads, for the service engine (`datapackEngine`). */
+    jobs: JobStatusSource;
     project: Project;
     credentials: CommerceCredentials;
 }
@@ -125,6 +128,7 @@ export async function resolveDatapackWriteAccess(
         baseUrl: access.baseUrl,
         getToken: access.getToken,
         orgCode: access.orgCode,
+        jobs: access.client,
         project,
         credentials: credentials.credentials,
     };

@@ -41,11 +41,14 @@ function contextWith(project = PROJECT) {
     });
 }
 
+/** The read client the gate passes on as the service's job reads. */
+const READ_CLIENT = new DataInstallerClient({ baseUrl: BASE_URL, getToken });
+
 beforeEach(() => {
     jest.clearAllMocks();
     mockedAccess.mockResolvedValue({
         ok: true,
-        client: new DataInstallerClient({ baseUrl: BASE_URL, getToken }),
+        client: READ_CLIENT,
         baseUrl: BASE_URL,
         getToken,
     });
@@ -174,6 +177,7 @@ describe('resolveDatapackWriteAccess — when every check passes', () => {
         expect(gate).toEqual({
             baseUrl: BASE_URL,
             getToken,
+            jobs: READ_CLIENT,
             project: PROJECT,
             credentials: {
                 kind: 'accs',

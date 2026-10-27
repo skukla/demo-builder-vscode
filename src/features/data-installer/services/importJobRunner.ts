@@ -76,7 +76,7 @@ export interface ImportJobResult {
 }
 
 /** The read-client methods this needs. Narrowed so tests need no client. */
-interface JobStatusSource {
+export interface JobStatusSource {
     getJobStatus: (activationId: string) => Promise<JobStatusSnapshot>;
     getJobFailureReason: (activationId: string) => Promise<JobFailureReason | undefined>;
 }

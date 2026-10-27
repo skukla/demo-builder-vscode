@@ -13,7 +13,7 @@
 import { resolveDataInstallerAccess } from '../handlers/dataInstallerHandlers';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
 import { resolveProjectCredentials } from './commerceCredentialBroker';
-import { DataInstallerWriteClient } from './dataInstallerWriteClient';
+import { buildServiceEngine, type DatapackEngine } from './datapackEngine';
 import { watchImportJob } from './importJobRunner';
 import type { SampleDataDeps } from './sampleDataInstall';
 import { PollingService } from '@/core/shell/pollingService';
@@ -105,19 +105,14 @@ export function buildSampleDataDeps(
             return inventory.present;
         },
 
-        startImport: async (request) => {
-            const client = await writeClient(context);
-            return client.startImport(request);
-        },
+        startImport: async (request) => (await engine(context)).startImport(request),
 
-        // The Reset workflow's half. Same request, same client, different verb.
-        startDelete: async (request) => {
-            const client = await writeClient(context);
-            return client.startDelete(request);
-        },
+        // The Reset workflow's half. Same request, same engine, different verb.
+        startDelete: async (request) => (await engine(context)).startDelete(request),
 
         /**
-         * Polls with the READ client, which is the only one that can answer.
+         * Polls through the engine. For the service engine that is the READ client,
+         * the only one that can answer.
          *
          * `watchImportJob` needs a `JobStatusSource` — `getJobStatus` and
          * `getJobFailureReason` — and those live on `DataInstallerClient`. This
@@ -130,12 +125,8 @@ export function buildSampleDataDeps(
          * the same call, made the same way. Another cast, another silent mismatch.
          */
         watch: async ({ activationId, requestedTypes, operation, onProgress }) => {
-            const access = await resolveDataInstallerAccess(context);
-            if (!access.ok) {
-                throw new Error('The Data Installer is not reachable for this project.');
-            }
             const result = await watchImportJob({
-                client: access.client,
+                client: await engine(context),
                 activationId,
                 requestedTypes,
                 polling: new PollingService(),
@@ -160,18 +151,13 @@ export function buildSampleDataDeps(
     };
 }
 
-/** The write client, built the way the import handlers build it. */
-async function writeClient(context: HandlerContext): Promise<DataInstallerWriteClient> {
+/** The engine, built the way the import handlers build it (`buildServiceEngine`). */
+async function engine(context: HandlerContext): Promise<DatapackEngine> {
     const access = await resolveDataInstallerAccess(context);
     if (!access.ok) {
         throw new Error('The Data Installer is not reachable for this project.');
     }
-    return new DataInstallerWriteClient({
-        baseUrl: access.baseUrl,
-        getToken: access.getToken,
-        orgCode: access.orgCode,
-        // One line per service call in Debug Logs — the first live dry run
-        // refused with an EMPTY channel, undebuggable for the user and for us.
-        log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
-    });
+    return buildServiceEngine({ ...access, jobs: access.client }, (line) =>
+        context.debugLogger.debug(`[Data Installer] ${line}`),
+    );
 }
