@@ -226,6 +226,21 @@ describe('dataInstallerHandlers', () => {
             expect(access.ok === false && access.response.code).toBe(ErrorCode.AUTH_REQUIRED);
         });
 
+        // Stage refused the bearer alone with "missing x-gw-ims-org-id header", 2026-10-27.
+        it('hands the client the org the SC is signed into', async () => {
+            const context = makeImportHarness();
+            (context.authManager!.getCachedOrganization as jest.Mock).mockReturnValue({
+                id: '1',
+                code: 'ORG@AdobeOrg',
+                name: 'Adobe Demo System',
+            });
+
+            const access = await resolveDataInstallerAccess(context);
+
+            expect(access.ok && access.orgCode).toBe('ORG@AdobeOrg');
+            expect(MockedClient).toHaveBeenLastCalledWith(expect.objectContaining({ orgCode: 'ORG@AdobeOrg' }));
+        });
+
         it('reports AUTH_REQUIRED when the token is missing after sign-in', async () => {
             const context = makeImportHarness();
             (
@@ -376,13 +391,21 @@ describe('dataInstallerHandlers', () => {
             expect(order).toHaveBeenCalledWith('import');
         });
 
-        it('surfaces an auth failure as AUTH_REQUIRED so the UI offers Sign In', async () => {
+        /**
+         * The guard has already signed the SC in, so the service turning the sign-in away is not
+         * "sign in again" (2026-10-27: Stage refused a valid sign-in and the screen asked a
+         * signed-in SC to sign in).
+         */
+        it.each([401, 403])('says the service refused a valid sign-in when it answers %s', async (status) => {
             MockedClient.prototype.findDatapacks = jest
                 .fn()
-                .mockRejectedValue(new DataInstallerApiError('nope', 401, 'find-datapacks'));
+                .mockRejectedValue(new DataInstallerApiError('find-datapacks: cannot authorize request', status, 'find-datapacks'));
             const res = await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {});
-            expect(res.success).toBe(false);
-            expect(res.code).toBe(ErrorCode.AUTH_REQUIRED);
+            expect(res).toEqual({
+                success: false,
+                error: "The Data Installer didn't accept your Adobe sign-in. find-datapacks: cannot authorize request",
+                code: ErrorCode.AUTH_FORBIDDEN,
+            });
         });
 
         it('surfaces other API failures without an auth code', async () => {
