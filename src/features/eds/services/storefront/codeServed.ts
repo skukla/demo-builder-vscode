@@ -40,6 +40,14 @@ const PUBLISH_ROUNDS = 3;
 /** How many files are fetched at once. */
 const CONCURRENCY = 8;
 
+/**
+ * Two files every storefront's pages load. They come in the template's commit and no later
+ * commit need touch them, so the changed-file check never looks at them. On
+ * mrajkovich/bodea (2026-10-27, EDS-66) AEM accepted the publish of `/*` and never brought
+ * the template's files: the site served no styles and no scripts, and nothing looked.
+ */
+const TEMPLATE_PROBES = ['scripts/aem.js', 'styles/styles.css'];
+
 /** What the check reads and does; built by {@link codeServedDeps}, faked in tests. */
 export interface CodeServedDeps {
     /** The repository's copy of a file at the branch head, or undefined when it has none. */
@@ -114,6 +122,43 @@ export async function confirmCodeServed(changed: readonly string[], deps: CodeSe
 }
 
 /**
+ * Confirm the site serves the template's code, publishing ALL the code again when it does
+ * not: a missing probe means the template is missing as a whole, which file by file would
+ * not mend. Republish does the same, and it is what mended mrajkovich/bodea.
+ *
+ * @param deps - how to read both copies and publish
+ * @returns the probe files the site still does not serve; empty when it serves them
+ */
+async function confirmTemplateServed(deps: CodeServedDeps): Promise<string[]> {
+    let missing = await notServed(TEMPLATE_PROBES, deps);
+    for (let round = 0; round < PUBLISH_ROUNDS && missing.length > 0; round++) {
+        deps.logger.info(
+            `[Code Served] The site does not serve the template's code (${missing.join(', ')}); publishing all the code again`,
+        );
+        await deps.publish('*').catch((error: unknown) => {
+            deps.logger.warn(`[Code Served] Could not publish all the code: ${(error as Error).message}`);
+        });
+        await deps.pause(TIMEOUTS.CODE_SERVED_RECHECK);
+        missing = await notServed(missing, deps);
+    }
+    if (missing.length > 0) deps.logger.warn(`[Code Served] Still not serving the template's code: ${missing.join(', ')}`);
+    return missing;
+}
+
+/**
+ * The sentence for a site that does not serve the template's code.
+ *
+ * @param missing - what {@link confirmTemplateServed} returned
+ * @returns the sentence
+ */
+function templateNotServedSentence(missing: readonly string[]): string {
+    return (
+        `The storefront's code did not reach the live site (${missing.join(', ')}), so its pages show ` +
+        'without styles or scripts. Select Republish on the project dashboard to publish the code again.'
+    );
+}
+
+/**
  * The sentence for files the site still does not serve.
  *
  * @param stale - what {@link confirmCodeServed} returned
@@ -167,9 +212,10 @@ type StorefrontRepoReads = Pick<GitHubFileOperations, 'getFileContent' | 'getLat
 };
 
 /**
- * The whole check for one storefront: every file committed after `since` (or, for a
- * storefront just created, after the commit its template made), compared on the site
- * and published again where it differs. Creation and reset both run it, after their
+ * The whole check for one storefront: first the template's own code (two files every
+ * page loads, all the code published again when they are missing), then every file
+ * committed after `since` (or, for a storefront just created, after the commit its
+ * template made), compared on the site and published again where it differs. Creation and reset both run it, after their
  * content copy, so AEM has had minutes to catch up first.
  *
  * Never throws: a check that cannot run is logged and says nothing.
@@ -193,8 +239,10 @@ export async function confirmStorefrontCodeServed(
         const base = since ?? (await githubFileOps.treeCommits.earliestRecentCommitSha(site.owner, site.repo));
         if (!head || !base || head === base) return undefined;
         const changed = await githubFileOps.treeCommits.filesChangedSince(site.owner, site.repo, base);
-        const stale = await confirmCodeServed(changed, codeServedDeps(githubFileOps, helix, site, head, logger));
-        return codeNotServedSentence(stale);
+        const deps = codeServedDeps(githubFileOps, helix, site, head, logger);
+        const missing = await confirmTemplateServed(deps);
+        if (missing.length > 0) return templateNotServedSentence(missing);
+        return codeNotServedSentence(await confirmCodeServed(changed, deps));
     } catch (error) {
         logger.warn(`[Code Served] Could not check the code the site serves: ${(error as Error).message}`);
         return undefined;
