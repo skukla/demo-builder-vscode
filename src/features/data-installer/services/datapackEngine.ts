@@ -18,11 +18,12 @@
  */
 
 import type { DatapackEngineId, ImportStart, ValidationResult } from '../types';
-
-export type { DatapackEngineId };
 import type { DataInstallerSignIn } from './dataInstallerSignIn';
 import { type CredentialCheck, DataInstallerWriteClient, type ImportRequest } from './dataInstallerWriteClient';
 import type { JobStatusSource } from './importJobRunner';
+
+/** Re-exported: the type lives in `../types` so the screens can read it too. */
+export type { DatapackEngineId };
 
 
 /**
