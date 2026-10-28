@@ -22,6 +22,14 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
 }));
 
+// These suites drive the SERVICE engine. Demo Builder's own is the default since 2026-10-28,
+// so they say which one they mean rather than lean on the default. A jest.fn, so a suite that
+// needs the other engine can still choose it.
+jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
+    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
+    selectedDatapackEngine: jest.fn(() => 'service'),
+}));
+
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';

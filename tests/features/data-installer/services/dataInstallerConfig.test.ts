@@ -66,19 +66,24 @@ describe('dataInstallerConfig', () => {
     });
 
     describe('selectedDatapackEngine', () => {
-        it('is the service until the SC chooses otherwise', () => {
+        /**
+         * Demo Builder's own by default (owner, 2026-10-28): the service still answers the
+         * catalog, but since 2026-10-27 it ignores the Commerce credentials a caller sends, so
+         * it installs nothing for us. Choosing the service again is one setting.
+         */
+        it("is Demo Builder's own until the SC chooses otherwise", () => {
             setupConfig({});
-            expect(selectedDatapackEngine()).toBe('service');
-        });
-
-        it('is Demo Builder\'s own when chosen', () => {
-            setupConfig({ engine: 'demo-builder' });
             expect(selectedDatapackEngine()).toBe('demo-builder');
         });
 
-        it('reads anything else as the service rather than guessing', () => {
-            setupConfig({ engine: 'mystery' });
+        it('is the service when chosen', () => {
+            setupConfig({ engine: 'service' });
             expect(selectedDatapackEngine()).toBe('service');
+        });
+
+        it('reads anything else as the default rather than guessing', () => {
+            setupConfig({ engine: 'mystery' });
+            expect(selectedDatapackEngine()).toBe('demo-builder');
         });
 
         it('is declared in package.json with the same two values and the same default', () => {
@@ -86,7 +91,7 @@ describe('dataInstallerConfig', () => {
                 contributes: { configuration: Array<{ properties?: Record<string, { enum?: string[]; default?: unknown }> }> };
             };
             const setting = pkg.contributes.configuration.map((c) => c.properties?.['demoBuilder.dataInstaller.engine']).find(Boolean);
-            expect(setting).toMatchObject({ enum: ['service', 'demo-builder'], default: 'service' });
+            expect(setting).toMatchObject({ enum: ['service', 'demo-builder'], default: 'demo-builder' });
         });
     });
 

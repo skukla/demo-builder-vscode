@@ -37,13 +37,15 @@ export function isDataInstallerEnabled(): boolean {
 }
 
 /**
- * Which engine installs and removes datapacks (`demoBuilder.dataInstaller.engine`, DI-5). The
- * service until the SC chooses Demo Builder's own; anything unrecognised reads as the service,
- * which is what ran before the setting existed.
+ * Which engine installs and removes datapacks (`demoBuilder.dataInstaller.engine`, DI-5).
+ * Demo Builder's own unless the SC chooses the service (owner, 2026-10-28): the service still
+ * answers the catalog, but since 2026-10-27 it ignores the Commerce credentials a caller sends,
+ * so it installs nothing for us. Anything unrecognised reads as the default. A pack already
+ * installed is removed by whichever engine installed it, whatever this says.
  */
 export function selectedDatapackEngine(): DatapackEngineId {
-    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('engine', 'service');
-    return raw === 'demo-builder' ? 'demo-builder' : 'service';
+    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('engine', 'demo-builder');
+    return raw === 'service' ? 'service' : 'demo-builder';
 }
 
 /**

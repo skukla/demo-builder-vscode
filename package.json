@@ -343,8 +343,8 @@
                             "The Data Installer service installs and removes datapacks.",
                             "Demo Builder installs and removes datapacks itself, over the project's own Commerce access."
                         ],
-                        "default": "service",
-                        "description": "What installs and removes datapacks. A pack is always removed by the one that installed it."
+                        "default": "demo-builder",
+                        "description": "What installs and removes datapacks. Demo Builder's own by default; the Data Installer service still provides the catalog either way. A pack is always removed by the one that installed it."
                     },
                     "demoBuilder.dataInstaller.apiBaseUrl": {
                         "scope": "machine",

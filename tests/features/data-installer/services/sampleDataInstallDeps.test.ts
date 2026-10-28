@@ -14,6 +14,14 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
 }));
 
+// These suites drive the SERVICE engine. Demo Builder's own is the default since 2026-10-28,
+// so they say which one they mean rather than lean on the default. A jest.fn, so a suite that
+// needs the other engine can still choose it.
+jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
+    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
+    selectedDatapackEngine: jest.fn(() => 'service'),
+}));
+
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import type { HandlerContext } from '@/types/handlers';
 import type { DataTypeStatus } from '@/features/data-installer/types';

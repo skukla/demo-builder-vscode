@@ -12,8 +12,8 @@ Status: **in progress**. Items 1 to 6 built (2026-10-27/28); 7, the live run, to
    start answers an id, the work runs in the extension, and the job reads come from memory.
 4. **The dry run.** Writes nothing: parses every kind and checks every name a row needs can be
    found, saying what would be made and what is already there.
-5. **The engine setting** `demoBuilder.dataInstaller.engine` (`service`, the default, or
-   `demo-builder`), read by `selectedDatapackEngine` and declared in `package.json` (pinned by
+5. **The engine setting** `demoBuilder.dataInstaller.engine` (`demo-builder`, the default since
+   2026-10-28, or `service`; the service still provides the catalog either way, owner), read by `selectedDatapackEngine` and declared in `package.json` (pinned by
    its test). One function builds whichever engine it names (`buildDatapackEngine.ts`), for the
    screen's import, dry run and removal and for the wizard's creation install and project
    reset. **Removal goes through the engine that installed**, answered without a manifest
