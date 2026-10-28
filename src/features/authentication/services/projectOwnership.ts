@@ -75,18 +75,19 @@ export async function stampProjectsDeletable(
     }));
 }
 
-/** Ownership verification needs the token surface plus an org-scoped project list. */
+/** Ownership verification needs the token surface plus a single-project read. */
 export interface OwnershipProjectSource extends OwnershipAuthService {
-    getProjects(options: { orgId: string }): Promise<AdobeProject[]>;
+    /** The one project, by id: not the org's whole list (see `adobeProjectReads.getProject`). */
+    getProject(target: { orgId: string; projectId: string }): Promise<AdobeProject | undefined>;
 }
 
 /**
  * SECURITY GATE: verify the current token user created the target project,
- * fetching `who_created` independently from the Console list (never trusting
- * webview-supplied data). Any unknown — invalid token, project not in the org
- * list, missing `who_created`, fetch failure — resolves to false.
+ * fetching `who_created` independently from Adobe, one project by id (never
+ * trusting webview-supplied data). Any unknown — invalid token, no such project in
+ * the org, missing `who_created`, fetch failure — resolves to false.
  *
- * @param authService - Token + project-list provider (optional; fail closed)
+ * @param authService - Token + single-project provider (optional; fail closed)
  * @param target - The org and project the caller wants to delete
  * @returns True only for a verified ownership match — never throws
  */
@@ -99,8 +100,7 @@ export async function verifyProjectOwnership(
         if (!userId || !authService) {
             return false;
         }
-        const projects = await authService.getProjects({ orgId: target.orgId });
-        const project = projects.find((candidate) => candidate.id === target.projectId);
+        const project = await authService.getProject(target);
         return isProjectOwnedBy(project?.who_created, userId);
     } catch {
         return false;

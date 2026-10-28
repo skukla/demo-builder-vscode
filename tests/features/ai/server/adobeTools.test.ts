@@ -437,7 +437,7 @@ describe('response-size ceilings', () => {
         expect(out).not.toContain('@techacct');
     });
 
-    it('select_project — a bad id reports a count, never the catalog', async () => {
+    it('select_project — a bad id never reports the catalog', async () => {
         const s = fakeServer();
         registerAdobeTools(s, ctxFactoryWith(makeAuth({ getProjects: jest.fn(async () => many) })));
         setAdobeTarget({ orgId: 'org-1', orgCode: 'C@AdobeOrg', orgName: 'Org' });

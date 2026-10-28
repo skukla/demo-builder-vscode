@@ -220,16 +220,23 @@ describe('stampProjectsDeletable', () => {
 describe('verifyProjectOwnership', () => {
     const TARGET = { orgId: 'org-123', projectId: 'proj-1' };
 
-    /** Project source stub: token inspection + org-scoped project list. */
+    /**
+     * Project source stub: token inspection + a single-project read, answering from the
+     * given projects by id. Since 2026-10-28 the gate asks Adobe for the ONE project: it
+     * downloaded the org's whole list before (780 projects, 1.2 s; the single read is
+     * 0.3 s), every time the trash can was pressed, before the question appeared.
+     */
     function createProjectSource(
-        projects: AdobeProject[] | (() => Promise<AdobeProject[]>),
+        projects: AdobeProject[] | (() => Promise<AdobeProject | undefined>),
         inspection = { valid: true, expiresIn: 60, token: makeJwt({ user_id: USER_ID }) },
-    ): OwnershipProjectSource & { getProjects: jest.Mock } {
+    ): OwnershipProjectSource & { getProject: jest.Mock } {
         return {
             ...createAuthService(inspection),
-            getProjects: typeof projects === 'function'
+            getProject: typeof projects === 'function'
                 ? jest.fn().mockImplementation(projects)
-                : jest.fn().mockResolvedValue(projects),
+                : jest.fn().mockImplementation(async ({ projectId }: { projectId: string }) =>
+                      projects.find((project) => project.id === projectId),
+                  ),
         };
     }
 
@@ -237,7 +244,7 @@ describe('verifyProjectOwnership', () => {
         const source = createProjectSource([makeProject({ who_created: USER_ID })]);
 
         await expect(verifyProjectOwnership(source, TARGET)).resolves.toBe(true);
-        expect(source.getProjects).toHaveBeenCalledWith({ orgId: 'org-123' });
+        expect(source.getProject).toHaveBeenCalledWith({ orgId: 'org-123', projectId: 'proj-1' });
     });
 
     it('should match who_created case-insensitively', async () => {
@@ -258,7 +265,7 @@ describe('verifyProjectOwnership', () => {
         await expect(verifyProjectOwnership(source, TARGET)).resolves.toBe(false);
     });
 
-    it('should return false when the project is not in the org list (fail closed)', async () => {
+    it('should return false when Adobe has no such project in the org (fail closed)', async () => {
         const source = createProjectSource([makeProject({ id: 'someone-elses', who_created: USER_ID })]);
 
         await expect(verifyProjectOwnership(source, TARGET)).resolves.toBe(false);
@@ -271,7 +278,7 @@ describe('verifyProjectOwnership', () => {
         );
 
         await expect(verifyProjectOwnership(source, TARGET)).resolves.toBe(false);
-        expect(source.getProjects).not.toHaveBeenCalled();
+        expect(source.getProject).not.toHaveBeenCalled();
     });
 
     it('should return false when the project fetch rejects (fail closed, no throw)', async () => {

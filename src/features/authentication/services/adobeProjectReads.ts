@@ -84,6 +84,41 @@ export class AdobeProjectReads {
     }
 
     /**
+     * One project, by id: the SDK's single-project read, else the org's list.
+     *
+     * For the delete gate's ownership check and `select_project`, which need one
+     * project and used to download the org's whole list for it: 780 projects, 1.2 s,
+     * before the delete question could appear (2026-10-28). The single read answers in
+     * 0.3 s with the same fields, `who_created` included. When it gets no answer (SDK
+     * not ready, a refused call, no such project) this reads the list as both callers
+     * did before, so an SDK hiccup is never reported as "unknown project" or "not
+     * yours"; the slow path runs only then.
+     *
+     * @param target - the org and the project
+     * @returns the project, or undefined when Adobe has none in that org
+     */
+    async getProject(target: { orgId: string; projectId: string }): Promise<AdobeProject | undefined> {
+        return withTiming('getProject', async () => {
+            await ensureSDKReady(this.sdkClient);
+            const client = this.sdkClient.getClient() as {
+                getProject: (orgId: string, projectId: string) => Promise<SDKResponse<RawAdobeProject>>;
+            };
+            const found = await this.sdkFetch.trySDKFetch(
+                async () => {
+                    const answer = await client.getProject(target.orgId, target.projectId);
+                    return { ...answer, body: answer.body ? [answer.body] : [] };
+                },
+                mapProjects,
+                'project',
+                Date.now(),
+            );
+            if (found?.[0]) return found[0];
+            const listed = await this.getProjects({ orgId: target.orgId, silent: true });
+            return listed.find((project) => project.id === target.projectId);
+        });
+    }
+
+    /**
      * Get list of projects (SDK with CLI fallback).
      *
      * @param options.silent - If true, suppress user-facing log messages (used for internal ID resolution)

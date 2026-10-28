@@ -105,6 +105,7 @@ export function createMockAuthenticationService(
 
         // --- kept for the structural interfaces (see the class) ---
         getOrganizations: jest.fn().mockResolvedValue([]),
+        getProject: jest.fn().mockResolvedValue(undefined),
         getProjects: jest.fn().mockResolvedValue([]),
 
         ...overrides,

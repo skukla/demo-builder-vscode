@@ -14605,7 +14605,7 @@
             "anchors": [
                 "if (!silent) {"
             ],
-            "line": 137,
+            "line": 172,
             "mutants": 2,
             "category": "block+branch",
             "reason": "Gates the 'loading projects' step line and nothing else; the SDK read, the CLI fallback and the returned list are outside the block. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",
@@ -14618,7 +14618,7 @@
             "anchors": [
                 "if (!silent) {"
             ],
-            "line": 159,
+            "line": 194,
             "mutants": 4,
             "category": "block+branch",
             "reason": "Gates the 'projects loaded' step line and nothing else; the list has already been fetched and is returned after the block either way. Killing it means asserting the logger's arguments, which no-logger-wording-assertions forbids, and no return value, cache write or CLI call changes.",

@@ -294,6 +294,11 @@ export class AuthenticationService {
         return (await this.getEntityServices()).orgReads.getOrganizations();
     }
 
+    /** One project by id, SDK only (`projectReads.getProject`); the delete gate's read. */
+    async getProject(target: { orgId: string; projectId: string }): Promise<AdobeProject | undefined> {
+        return (await this.getEntityServices()).projectReads.getProject(target);
+    }
+
     /** Projects, optionally org-targeted (`projectReads.getProjects`). */
     async getProjects(options?: { orgId?: string }): Promise<AdobeProject[]> {
         return (await this.getEntityServices()).projectReads.getProjects(options);

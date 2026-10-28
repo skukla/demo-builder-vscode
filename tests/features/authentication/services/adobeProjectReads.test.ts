@@ -102,6 +102,59 @@ describe('project reads', () => {
         });
     });
 
+    /**
+     * The delete gate's read (2026-10-28): ONE project by id, SDK only. The gate needs
+     * that project's `who_created`, and downloading the org's whole list for it (780
+     * projects, 1.2 s) held the delete question back; this read took 0.3 s live.
+     */
+    describe('getProject()', () => {
+        it("asks Adobe for that one project and answers it, creator included", async () => {
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            const getProject = jest.fn().mockResolvedValue({
+                body: { id: 'proj1', name: 'Project 1', title: 'Project 1 Title', who_created: 'USER@x.e' },
+            });
+            mockSDKClient.getClient.mockReturnValue({ getProject } as ReturnType<typeof mockSDKClient.getClient>);
+
+            const result = await entities.projectReads.getProject({ orgId: '123456', projectId: 'proj1' });
+
+            expect(getProject).toHaveBeenCalledWith('123456', 'proj1');
+            expect(result).toMatchObject({ id: 'proj1', who_created: 'USER@x.e' });
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+
+        // An SDK hiccup must not read as "no such project": the delete gate would say
+        // "not yours" and select_project "unknown id". It falls back to the list, as both
+        // did before; the slow path runs only then.
+        it('falls back to the org list when the single read gets no answer', async () => {
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            const getProject = jest.fn().mockRejectedValue(new Error('SDK error'));
+            const getProjectsForOrg = jest.fn().mockResolvedValue({
+                body: [{ id: 'proj1', name: 'Project 1', title: 'Project 1 Title', who_created: 'USER@x.e' }],
+            });
+            mockSDKClient.getClient.mockReturnValue({ getProject, getProjectsForOrg } as ReturnType<
+                typeof mockSDKClient.getClient
+            >);
+
+            const result = await entities.projectReads.getProject({ orgId: '123456', projectId: 'proj1' });
+
+            expect(getProjectsForOrg).toHaveBeenCalledWith('123456');
+            expect(result).toMatchObject({ id: 'proj1', who_created: 'USER@x.e' });
+        });
+
+        it('CONTROL: the list is not read when the single read answers', async () => {
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            const getProjectsForOrg = jest.fn();
+            mockSDKClient.getClient.mockReturnValue({
+                getProject: jest.fn().mockResolvedValue({ body: { id: 'proj1', name: 'P', title: 'P' } }),
+                getProjectsForOrg,
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            await entities.projectReads.getProject({ orgId: '123456', projectId: 'proj1' });
+
+            expect(getProjectsForOrg).not.toHaveBeenCalled();
+        });
+    });
+
     describe('getProjects()', () => {
         it('should fetch projects via SDK with valid org ID', async () => {
             mockCacheManager.getCachedOrganization.mockReturnValue({

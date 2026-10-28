@@ -283,9 +283,9 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
             const org = await resolveAgentOrg(mgr);
             if ('error' in org) return asText(org);
             const stored = { ...getAdobeTarget(), orgId: org.orgId };
-            // List projects within the stored org via env targeting (no global mutation).
-            const projects = await mgr.getProjects({ orgId: stored.orgId });
-            const project = projects.find((p) => p.id === args.projectId);
+            // Ask Adobe for the ONE project within the stored org: it downloaded the org's
+            // whole list (780 projects) to check one id until 2026-10-28.
+            const project = await mgr.getProject({ orgId: stored.orgId, projectId: String(args.projectId) });
             if (!project) {
                 // NEVER enumerate here. This path used to return every project in
                 // the org as `validOptions` — 725 rows / 111,748 bytes measured in
@@ -293,7 +293,6 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
                 // tool catalogue. Name the tool that can search instead.
                 return asText({
                     error: `Unknown projectId: ${args.projectId}. Use list_adobe_projects with a search term to find the right id.`,
-                    projectsInOrg: projects.length,
                 });
             }
             // Merge the project into the stored target; switching projects drops

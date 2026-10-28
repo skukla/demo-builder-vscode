@@ -72,6 +72,12 @@ export function makeAuth(overrides: Record<string, unknown> = {}) {
         getProjects: jest.fn(async () => [
             { id: 'proj-1', name: 'Proj One', title: 'P1', who_created: 'ABC123@AdobeID.e' },
         ]),
+        // The one-project read select_project uses (2026-10-28): it answers proj-1 only.
+        getProject: jest.fn(async ({ projectId }: { projectId: string }) =>
+            projectId === 'proj-1'
+                ? { id: 'proj-1', name: 'Proj One', title: 'P1', who_created: 'ABC123@AdobeID.e' }
+                : undefined,
+        ),
         getWorkspaces: jest.fn(async () => [{ id: 'ws-1', name: 'Stage' }]),
         getCurrentOrganization: jest.fn(async () => ({ id: 'org-1', name: 'Org One' })),
         getCurrentProject: jest.fn(async () => ({ id: 'proj-1', name: 'Proj One' })),

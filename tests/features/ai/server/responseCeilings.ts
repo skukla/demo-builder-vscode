@@ -216,7 +216,7 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     select_org: { bytes: 6_000, why: 'selection, or valid options — orgs are a short list' },
     select_project: {
         bytes: 2_000,
-        why: 'selection; on a bad id it reports a COUNT, never the 725-row list it used to enumerate',
+        why: 'selection; on a bad id a sentence naming the search, never the 725-row list it used to enumerate',
     },
     select_workspace: { bytes: 6_000, why: 'selection, or valid options — workspaces are few' },
 

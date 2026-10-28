@@ -49,7 +49,7 @@ const PAYLOAD = { projectId: 'proj-1', projectTitle: 'My Project', orgId: 'org-1
 /** The current user's IMS user id (token user_id === who_created for own projects). */
 const USER_TOKEN = makeJwt({ user_id: USER_ID });
 
-/** The target project as returned by getProjects — created by the current user. */
+/** The target project as returned by getProject — created by the current user. */
 const OWNED_PROJECT = {
     id: 'proj-1',
     name: 'My Project',
@@ -99,7 +99,7 @@ function createDeleteContext() {
     ]);
     // The target project is present and owned by the current user by default,
     // so the ownership gate passes unless a test overrides it.
-    context.authManager.getProjects.mockResolvedValue([OWNED_PROJECT]);
+    context.authManager.getProject.mockResolvedValue(OWNED_PROJECT);
     context.authManager.getCacheManager().getCachedProject = jest.fn().mockReturnValue(undefined);
     entityServicesOf(context.authManager).selector.clearConsoleContext = jest.fn().mockResolvedValue(undefined);
     entityServicesOf(context.authManager).workspaceReads.getWorkspaces = jest.fn().mockResolvedValue([]);
@@ -218,9 +218,9 @@ describe('handleDeleteAdobeProject', () => {
         const NOT_OWNER_ERROR = 'You can only delete Adobe projects you created.';
 
         it('rejects with NOT_PROJECT_OWNER when the project was created by another user', async () => {
-            mockContext.authManager.getProjects.mockResolvedValue([
+            mockContext.authManager.getProject.mockResolvedValue(
                 { ...OWNED_PROJECT, who_created: OTHER_USER_ID },
-            ]);
+            );
 
             const result = await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
@@ -232,9 +232,9 @@ describe('handleDeleteAdobeProject', () => {
         });
 
         it('rejects when who_created is missing on the fetched project (fail closed)', async () => {
-            mockContext.authManager.getProjects.mockResolvedValue([
+            mockContext.authManager.getProject.mockResolvedValue(
                 { id: 'proj-1', name: 'My Project', title: 'My Project' },
-            ]);
+            );
 
             const result = await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
@@ -244,10 +244,8 @@ describe('handleDeleteAdobeProject', () => {
             expect(mockTeardown).not.toHaveBeenCalled();
         });
 
-        it('rejects when the project is not in the org list (fail closed)', async () => {
-            mockContext.authManager.getProjects.mockResolvedValue([
-                { id: 'proj-other', name: 'Other', title: 'Other', who_created: USER_ID },
-            ]);
+        it('rejects when Adobe has no such project in the org (fail closed)', async () => {
+            mockContext.authManager.getProject.mockResolvedValue(undefined);
 
             const result = await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
@@ -274,20 +272,26 @@ describe('handleDeleteAdobeProject', () => {
             expect(mockTeardown).not.toHaveBeenCalled();
         });
 
-        it('verifies ownership from the fetched list, NOT the webview payload', async () => {
+        it('verifies ownership from Adobe, NOT the webview payload, one project not the list', async () => {
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            // The ownership fetch targets the payload org and runs before the modal.
-            expect(mockContext.authManager.getProjects).toHaveBeenCalledWith({ orgId: 'org-123' });
-            expect(mockContext.authManager.getProjects.mock.invocationCallOrder[0]).toBeLessThan(
+            // The ownership read targets the payload org and project and runs before the
+            // modal. It reads the ONE project: the org's whole list (780 projects) held the
+            // question back by over a second (2026-10-28).
+            expect(mockContext.authManager.getProject).toHaveBeenCalledWith({ orgId: 'org-123', projectId: 'proj-1' });
+            // The list is only read afterwards, to refresh the picker.
+            expect(mockContext.authManager.getProjects.mock.invocationCallOrder[0]).toBeGreaterThan(
+                mockShowWarning.mock.invocationCallOrder[0]
+            );
+            expect(mockContext.authManager.getProject.mock.invocationCallOrder[0]).toBeLessThan(
                 mockShowWarning.mock.invocationCallOrder[0]
             );
         });
 
         it('matches who_created case-insensitively (owned → proceeds to the modal)', async () => {
-            mockContext.authManager.getProjects.mockResolvedValue([
+            mockContext.authManager.getProject.mockResolvedValue(
                 { ...OWNED_PROJECT, who_created: USER_ID.toLowerCase() },
-            ]);
+            );
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
@@ -376,9 +380,9 @@ describe('handleDeleteAdobeProject', () => {
         });
 
         it('does NOT signal when ownership is rejected', async () => {
-            mockContext.authManager.getProjects.mockResolvedValue([
+            mockContext.authManager.getProject.mockResolvedValue(
                 { ...OWNED_PROJECT, who_created: OTHER_USER_ID },
-            ]);
+            );
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
@@ -473,9 +477,10 @@ describe('handleDeleteAdobeProject', () => {
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            // The first call is the ownership gate; the refresh is the second, and
-            // must carry the org too (toHaveBeenCalledWith would match the first).
-            expect(mockContext.authManager.getProjects.mock.calls[1][0]).toEqual({ orgId: 'org-123' });
+            // The ownership gate reads one project (getProject), so the list read is the
+            // refresh alone, and it must carry the org.
+            expect(mockContext.authManager.getProjects).toHaveBeenCalledTimes(1);
+            expect(mockContext.authManager.getProjects).toHaveBeenCalledWith({ orgId: 'org-123' });
             // The refresh push goes through the same deletable stamping as get-projects.
             expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', [
                 { ...OWNED_PROJECT, deletable: true },
@@ -586,8 +591,8 @@ describe('handleDeleteAdobeProject', () => {
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
             expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).not.toHaveBeenCalled();
-            // Exactly ONE getProjects call — the ownership gate; no refresh fetch or push.
-            expect(mockContext.authManager.getProjects).toHaveBeenCalledTimes(1);
+            // No list read at all: the ownership gate reads one project, and there is no refresh.
+            expect(mockContext.authManager.getProjects).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
                 'get-projects',
                 expect.anything()
