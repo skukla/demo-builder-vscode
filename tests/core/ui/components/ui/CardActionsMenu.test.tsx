@@ -24,7 +24,11 @@ jest.mock('@adobe/react-spectrum', () => ({
             {children}
         </button>
     ),
-    MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
+    MenuTrigger: ({ children, direction }: any) => (
+        <div data-testid="menu-trigger" data-direction={direction}>
+            {children}
+        </div>
+    ),
     Menu: ({ children, onAction }: any) => (
         <ul data-testid="menu">
             {require('react').Children.map(children, (child: any) =>
@@ -142,5 +146,23 @@ describe('CardActionsMenu', () => {
 
             expect(onTileKeyDown).not.toHaveBeenCalled();
         });
+    });
+});
+
+/**
+ * The menu opens BESIDE its button (owner, 2026-10-28). Opened below or above, a project
+ * card's twelve rows did not fit either way in an 820 px window, and the menu became a
+ * scrolling list with Delete out of sight. Beside the button it can use the window's
+ * whole height.
+ */
+describe('CardActionsMenu — where it opens', () => {
+    it('opens beside its button', () => {
+        render(
+            <CardActionsMenu ariaLabel="More actions" onAction={jest.fn()}>
+                {items()}
+            </CardActionsMenu>,
+        );
+
+        expect(screen.getByTestId('menu-trigger')).toHaveAttribute('data-direction', 'end');
     });
 });

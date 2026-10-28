@@ -9,11 +9,11 @@
  */
 
 import { Flex, Text } from '@adobe/react-spectrum';
-import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useMemo } from 'react';
 import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
+import { PinToggle } from '@/core/ui/components/ui/PinToggle';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -83,18 +83,10 @@ export function ProjectCard({
             onKeyDown={handleKeyDown}
             className="project-card-spectrum"
         >
-            {/* Header Row: Pin indicator (when pinned) + Name + More Menu */}
+            {/* Header Row: Name, then the pin and the More Menu. The pin is a button
+                beside the menu (owner, 2026-10-28): it was a menu row. */}
             <Flex alignItems="center" justifyContent="space-between" gap="size-100">
                 <Flex alignItems="center" gap="size-75" minWidth={0}>
-                    {project.pinned && (
-                        <span
-                            data-testid="project-card-pin-indicator"
-                            aria-label="Pinned"
-                            className="pin-indicator"
-                        >
-                            <PinOn size="XS" />
-                        </span>
-                    )}
                     {/* Rename-in-place: the pencil (hover-revealed) swaps the name
                         for an input; hidden while running (backend rejects) or
                         when the rename callback isn't wired. */}
@@ -114,11 +106,18 @@ export function ProjectCard({
                         }
                     />
                 </Flex>
-                <ProjectActionsMenu
-                    project={project}
-                    isRunning={isRunning}
-                    actions={actions}
-                />
+                <Flex alignItems="center" gap="size-50">
+                    <PinToggle
+                        pinned={Boolean(project.pinned)}
+                        subject="project"
+                        onToggle={actions.onPinToggle ? () => actions.onPinToggle?.(project) : undefined}
+                    />
+                    <ProjectActionsMenu
+                        project={project}
+                        isRunning={isRunning}
+                        actions={actions}
+                    />
+                </Flex>
             </Flex>
 
             {/* Brand & Stack Summary */}

@@ -118,25 +118,28 @@ describe('ProjectRow — pin, summary and aria-label', () => {
     const summarySlot = (container: HTMLElement) =>
         container.querySelector('.project-row-components');
 
-    it('shows the pin indicator, laid out inline, only for a pinned project', () => {
-        const project = createProjectsDashboardProject({ name: 'Pinned Row', pinned: true });
-        renderWithProvider(<ProjectRow project={project} onSelect={jest.fn()} />);
+    // The pin is a button beside the row's menu (owner, 2026-10-28), as on the card.
+    it('pins a project from its row, without opening it', () => {
+        const project = createProjectsDashboardProject({ name: 'Plain Row' });
+        const onPinToggle = jest.fn();
+        const onSelect = jest.fn();
+        renderWithProvider(<ProjectRow project={project} onSelect={onSelect} actions={{ onPinToggle }} />);
 
-        const pin = screen.getByTestId('project-row-pin-indicator');
-        expect(pin).toHaveAttribute('aria-label', 'Pinned');
-        // The inline-flex baseline fix is `.pin-indicator` (shared-ui.css) since
-        // 2026-09-10 — one rule for the three components that each carried their
-        // own copy. Without it the icon breaks the row's baseline, which no text
-        // assertion would notice; jsdom cannot read the rule, so the contract here
-        // is the class.
-        expect(pin).toHaveClass('pin-indicator');
+        fireEvent.click(screen.getByRole('button', { name: 'Pin project' }));
+
+        expect(onPinToggle).toHaveBeenCalledWith(project);
+        expect(onSelect).not.toHaveBeenCalled();
     });
 
-    it('shows no pin indicator for a project that is not pinned', () => {
-        const project = createProjectsDashboardProject({ name: 'Plain Row' });
-        renderWithProvider(<ProjectRow project={project} onSelect={jest.fn()} />);
+    it('marks a pinned project when nothing can toggle it, and an unpinned one not at all', () => {
+        const { unmount } = renderWithProvider(
+            <ProjectRow project={createProjectsDashboardProject({ name: 'Pinned Row', pinned: true })} onSelect={jest.fn()} />,
+        );
+        expect(screen.getByLabelText('Pinned')).toHaveClass('pin-indicator');
+        unmount();
 
-        expect(screen.queryByTestId('project-row-pin-indicator')).not.toBeInTheDocument();
+        renderWithProvider(<ProjectRow project={createProjectsDashboardProject({ name: 'Plain Row' })} onSelect={jest.fn()} />);
+        expect(screen.queryByLabelText('Pinned')).not.toBeInTheDocument();
     });
 
     it('renders the component summary inside its own slot, and in the aria-label', () => {

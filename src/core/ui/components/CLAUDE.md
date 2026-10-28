@@ -28,6 +28,7 @@ The counterpart index for hooks is `../hooks/CLAUDE.md`.
 | Adobe API catalog fetch states | `feedback/ApiCatalogFeedback` | re-deriving loading/sign-in/error |
 | "Add another" on a card grid — a dashed card as the grid's LAST cell, hidden while a filter is on, never counted | `ui/AddCard` (host passes its card class as `cardClassName`; its bundle imports `add-card.css`; pass `menu` — a Spectrum `Menu` — when adding is a choice, as Your Projects does) | a header "Add" button, or a per-grid dashed tile |
 | Card overflow (kebab) menu | `ui/CardActionsMenu` + `ui/menuIcons` | a bespoke `MenuTrigger` |
+| Pin or unpin a card, beside its menu | `ui/PinToggle` (styles in `shared-ui.css`; the hosting feature's sheet reveals an unpinned one on hover) | a Pin row in the card's menu, or a bespoke pin icon |
 | A menu row's icon | `renderMenuIcon('<concept>')` | importing a Spectrum icon per menu |
 | One integration in a list or grid | `integrations/IntegrationCard` | a per-surface integration row |
 | One integration as a full-width row (the List view) | `integrations/IntegrationRow` | The card's twin for the integrations screen's rows mode: same model, same rename/kebab/status; `IntegrationsGrid` picks card or row from `viewMode` |

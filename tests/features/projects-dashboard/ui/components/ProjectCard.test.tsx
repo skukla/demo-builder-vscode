@@ -283,38 +283,50 @@ describe('ProjectCard', () => {
     });
 
     /**
-     * The pin is a leading marker, not a status line: it appears only for a
-     * pinned project, and its inline flex rule is what keeps it from being
-     * squeezed out by a long project name (the name beside it truncates).
+     * The pin is a button on the card beside its menu (owner, 2026-10-28): it was a row in
+     * the menu, which had grown past what fits a window. Pinned: always shown. Unpinned:
+     * shown on hover or focus (CSS; jsdom cannot see it, so the class is the contract).
+     * Without a toggle callback it is the plain mark, for a pinned project only.
      */
-    describe('pin indicator', () => {
-        it('marks a pinned project', () => {
+    describe('pin', () => {
+        it('pins an unpinned project with one press, without opening the card', () => {
+            const project = createProjectsDashboardProject({ name: 'Plain Demo' });
+            const onPinToggle = jest.fn();
+            const onSelect = jest.fn();
+            renderWithProvider(<ProjectCard project={project} onSelect={onSelect} actions={{ onPinToggle }} />);
+
+            const pin = screen.getByRole('button', { name: 'Pin project' });
+            expect(pin.closest('.pin-toggle')).toHaveClass('pin-toggle--unpinned');
+            fireEvent.click(pin);
+
+            expect(onPinToggle).toHaveBeenCalledWith(project);
+            expect(onSelect).not.toHaveBeenCalled();
+        });
+
+        it('shows a pinned project its pin, offering to unpin', () => {
+            const project = createProjectsDashboardProject({ name: 'Pinned Demo', pinned: true });
+            renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} actions={{ onPinToggle: jest.fn() }} />,
+            );
+
+            const pin = screen.getByRole('button', { name: 'Unpin project' });
+            expect(pin.closest('.pin-toggle')).toHaveClass('pin-toggle--pinned');
+        });
+
+        it('marks a pinned project when nothing can toggle it', () => {
             const project = createProjectsDashboardProject({ name: 'Pinned Demo', pinned: true });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            const pin = screen.getByTestId('project-card-pin-indicator');
-            expect(pin).toHaveAttribute('aria-label', 'Pinned');
+            // `.pin-indicator` (shared-ui.css) holds the mark at its own size.
+            expect(screen.getByLabelText('Pinned')).toHaveClass('pin-indicator');
         });
 
-        it('renders no pin for an unpinned project', () => {
+        it('renders no pin for an unpinned project when nothing can toggle it', () => {
             const project = createProjectsDashboardProject({ name: 'Plain Demo' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            expect(screen.queryByTestId('project-card-pin-indicator')).not.toBeInTheDocument();
-        });
-
-        it('holds the pin at its own size beside the name', () => {
-            // `flex: 0 0 auto` is the decision: the name is the flexible half of
-            // the header row, so without it the pin is the element that gives way.
-            const project = createProjectsDashboardProject({ name: 'Pinned Demo', pinned: true });
-            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
-
-            // All four declarations are `.pin-indicator` (shared-ui.css) since
-            // 2026-09-10 — one rule for the three components that each carried
-            // their own copy. jsdom loads no stylesheets, so the contract here is
-            // the class; the declarations themselves are pinned by the visual
-            // fingerprint, which is the only thing that can actually see them.
-            expect(screen.getByTestId('project-card-pin-indicator')).toHaveClass('pin-indicator');
+            expect(screen.queryByLabelText('Pinned')).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /pin project/i })).not.toBeInTheDocument();
         });
     });
 

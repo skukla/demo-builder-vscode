@@ -327,4 +327,13 @@
     border-color: var(--spectrum-global-color-blue-500);
     transform: none;
 }
+
+/* The pin button (core PinToggle, 2026-10-28) on an unpinned project shows while its card
+   or row is hovered or focused; hidden, it keeps its space (shared-ui.css). */
+.project-card-spectrum:hover .pin-toggle--unpinned,
+.project-card-spectrum:focus-within .pin-toggle--unpinned,
+.project-row:hover .pin-toggle--unpinned,
+.project-row:focus-within .pin-toggle--unpinned {
+    visibility: visible;
+}
 }

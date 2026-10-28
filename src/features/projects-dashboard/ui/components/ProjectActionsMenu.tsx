@@ -131,7 +131,6 @@ export function ProjectActionsMenu({
         onEdit,
         onExport,
         onOpenAi,
-        onPinToggle,
         onDelete,
     } = actions;
 
@@ -153,7 +152,6 @@ export function ProjectActionsMenu({
             edit: onEdit,
             export: onExport,
             openAi: onOpenAi,
-            pinToggle: onPinToggle,
             delete: onDelete,
         }),
         [
@@ -168,7 +166,6 @@ export function ProjectActionsMenu({
             onEdit,
             onExport,
             onOpenAi,
-            onPinToggle,
             onDelete,
         ],
     );
@@ -231,13 +228,6 @@ export function ProjectActionsMenu({
         if (onOpenIntegrations) {
             manage.push({ key: 'openIntegrations', label: 'Integrations', icon: 'apiAccess' });
         }
-        if (onPinToggle) {
-            manage.push({
-                key: 'pinToggle',
-                label: project.pinned ? 'Unpin' : 'Pin',
-                icon: project.pinned ? 'pinOff' : 'pinOn',
-            });
-        }
         if (onResetProject) {
             manage.push({ key: 'resetProject', label: 'Reset', icon: 'reset' });
         }
@@ -267,7 +257,6 @@ export function ProjectActionsMenu({
         onEdit,
         onExport,
         onOpenAi,
-        onPinToggle,
     ]);
 
     // Nothing to show — render no trigger at all. A project still being created has

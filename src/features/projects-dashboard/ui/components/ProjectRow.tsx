@@ -8,11 +8,11 @@
 
 import { Flex, Text } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
-import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useMemo } from 'react';
 import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
+import { PinToggle } from '@/core/ui/components/ui/PinToggle';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -60,21 +60,9 @@ export function ProjectRow({
             className="project-row"
         >
             <Flex alignItems="center" justifyContent="space-between" width="100%">
-                {/* Left: Status dot + Pin (when pinned) + Name + Components */}
+                {/* Left: Status dot + Name + Components */}
                 <Flex alignItems="center" gap="size-150">
                     <StatusDot variant={statusVariant} size={8} />
-                    {project.pinned && (
-                        <span
-                            data-testid="project-row-pin-indicator"
-                            aria-label="Pinned"
-                            className="pin-indicator"
-                            // ProjectRow's pin was the one WITHOUT `flex: 0 0 auto`,
-                            // so it keeps the default shrink behaviour it had.
-                            style={{ '--pin-flex': '0 1 auto' } as React.CSSProperties}
-                        >
-                            <PinOn size="XS" />
-                        </span>
-                    )}
                     {/* Rename-in-place, matching the card grid: hover pencil,
                         hidden while running or when the callback isn't wired. */}
                     <InlineRenameField
@@ -97,8 +85,14 @@ export function ProjectRow({
                     )}
                 </Flex>
 
-                {/* Right: More menu + Status text + Chevron */}
+                {/* Right: Pin + More menu + Status text + Chevron. The pin is a button
+                    beside the menu, as on the card (owner, 2026-10-28). */}
                 <Flex alignItems="center" gap="size-150">
+                    <PinToggle
+                        pinned={Boolean(project.pinned)}
+                        subject="project"
+                        onToggle={actions.onPinToggle ? () => actions.onPinToggle?.(project) : undefined}
+                    />
                     <ProjectActionsMenu
                         project={project}
                         isRunning={isRunning}
