@@ -14,15 +14,17 @@ rule_once=0
 
 rule_match() {
     [ "$1" = "Bash" ] || return 1
-    case "$2" in
-        *"git push"*) ;;
-        *) return 1 ;;
-    esac
-    case "$2" in
-        *--no-verify*) return 0 ;;
-        # `-n` is the short form and means the same thing.
-        *" -n "*|*" -n") return 0 ;;
-    esac
+    case "$2" in *"git push"*) ;; *) return 1 ;; esac
+    local pieces piece args
+    pieces=${2//&&/$'\n'}; pieces=${pieces//||/$'\n'}
+    pieces=${pieces//;/$'\n'}; pieces=${pieces//|/$'\n'}
+    while IFS= read -r piece; do
+        case "$piece" in *"git push"*) ;; *) continue ;; esac
+        args=" ${piece#*git push} "
+        case "$args" in
+            *" --no-verify "*|*" --no-verify="*|*" -n "*) return 0 ;;
+        esac
+    done <<< "$pieces"
     return 1
 }
 
