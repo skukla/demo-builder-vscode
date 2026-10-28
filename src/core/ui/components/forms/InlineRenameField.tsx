@@ -155,7 +155,7 @@ export function InlineRenameField({
         // name click. Edit mode (below) contains the whole editor.
         return (
             <span className="inline-rename">
-                <span className={cn('inline-rename-text', textClassName)}>{name}</span>
+                <span className={cn('inline-rename-text', textClassName)} title={name}>{name}</span>
                 {!disabled && (
                     // The SLOT, not the button, is what collapses while hidden —
                     // clipping a Spectrum ActionButton's own box would mean

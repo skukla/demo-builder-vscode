@@ -116,6 +116,18 @@
     white-space: nowrap;
 }
 
+/* A long name gets two lines before it is cut, not one: beside the badge and the
+ * kebab a single line held about twelve characters ("Custom Integra…", release
+ * test 2026-10-28). The full name is the hover title. Two classes, to outrank
+ * `.inline-rename-text`'s one-line rule on a renamable card. */
+.integration-card .integration-card-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
 /* `.integration-statusline` is the same row inside the detail flyout — one rule
  * rather than a third copy of the four declarations. The flyout is the card's
  * detail view, so the status has to read identically in both; it used to render

@@ -203,6 +203,31 @@ it('still offers Run in background when nothing is being asked', async () => {
     });
 });
 
+// The target under a short title, not inside a long one that wrapped (2026-10-28).
+describe('an operation with a subject', () => {
+    const WITH_SUBJECT = { ...OPERATION, title: 'Changing destination', subject: 'Kukla Test App 2 · Production' };
+
+    it('titles the modal short and shows the subject on its own line', () => {
+        progress = { id: OPERATION.id, state: 'running', stage: 'Redeploying' };
+        render(<OperationProgressModal operation={WITH_SUBJECT} onRetry={jest.fn()} onClose={jest.fn()} />);
+
+        expect(screen.getByRole('dialog', { name: 'Changing destination' })).toBeInTheDocument();
+        expect(screen.getByText('Kukla Test App 2 · Production')).toBeInTheDocument();
+    });
+
+    it('names the subject in the background notification', async () => {
+        progress = { id: OPERATION.id, state: 'running', stage: 'Redeploying' };
+        render(<OperationProgressModal operation={WITH_SUBJECT} onRetry={jest.fn()} onClose={jest.fn()} />);
+
+        await user().click(screen.getByRole('button', { name: 'Run in background' }));
+
+        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
+            id: OPERATION.id,
+            title: 'Changing destination: Kukla Test App 2 · Production',
+        });
+    });
+});
+
 describe('a question that needs something typed', () => {
     const SIGN_IN = {
         message: 'Sign in to DA.live.',

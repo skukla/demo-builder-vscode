@@ -73,6 +73,14 @@ describe('IntegrationCard', () => {
         expect(screen.getByText('Deployed')).toBeInTheDocument();
     });
 
+    // The name wraps to two lines, then clamps (CSS); the full name is the hover
+    // title on both name forms, renamable and plain.
+    it.each([true, false])('carries the full name as its hover title (canRename %s)', (canRename) => {
+        renderCard(makeModel({ canRename }));
+
+        expect(screen.getByText('ERP Sync')).toHaveAttribute('title', 'ERP Sync');
+    });
+
     it('is a keyboard-reachable button (role + tabIndex)', () => {
         const { card } = renderCard(makeModel());
 

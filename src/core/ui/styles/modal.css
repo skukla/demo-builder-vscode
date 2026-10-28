@@ -215,4 +215,15 @@
     height: 240px;
     overflow-y: auto;
 }
+
+/* What the operation acts on, under a short title instead of inside a long one that
+ * wrapped ("Changing destination to Kukla Test App 2 · Production", 2026-10-28). One
+ * line in every state, so the body below keeps its one height. */
+.modal-progress-subject {
+    font-size: 14px;
+    color: var(--spectrum-global-color-gray-700);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 }

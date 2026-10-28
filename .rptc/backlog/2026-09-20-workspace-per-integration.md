@@ -512,3 +512,4 @@ and re-adding an integration — no migration code ships.
 - 2026-10-28  fix(integrations): any project can add its first integration (`a4e409d5d`)
 - 2026-10-28  fix(integrations): the last project or workspace row is no longer cut off (`4d1f62d3e`)
 - 2026-10-28  fix(integrations): filtering keeps the selected project in view (`507291f05`)
+- 2026-10-28  docs(release-test): row 4.28 passes (`78ea55502`)

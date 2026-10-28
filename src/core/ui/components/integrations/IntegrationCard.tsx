@@ -149,7 +149,7 @@ export function IntegrationCard({
                         textClassName="integration-card-name"
                     />
                 ) : (
-                    <div className="integration-card-name">{model.name}</div>
+                    <div className="integration-card-name" title={model.name}>{model.name}</div>
                 )}
                 {model.typeBadge && (
                     <Badge variant="neutral" UNSAFE_className="integration-card-badge">

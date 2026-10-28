@@ -50,6 +50,11 @@ export interface ProgressModalOperation {
     id: string;
     /** "-ing verb + object": the modal's title, and the notification's on handover. */
     title: string;
+    /**
+     * What it acts on, as its own line under a short title rather than inside a long
+     * one that wraps (release test, 2026-10-28). The notification joins the two.
+     */
+    subject?: string;
     /** The failure view's title: "Couldn't redeploy ERP integration". */
     failureTitle: string;
     /** The success view's title: "ERP integration redeployed". */
@@ -222,7 +227,7 @@ export function OperationProgressModal({
         } else if (operation && !failed && !succeeded) {
             webviewClient.postMessage('backgroundOperation', {
                 id: operation.id,
-                title: operation.title,
+                title: operation.subject ? `${operation.title}: ${operation.subject}` : operation.title,
             });
         }
         onClose();
@@ -247,6 +252,7 @@ export function OperationProgressModal({
                         : [...failureButtons(failed, onRetry), ...nextStepButtons(offering, onClose)]
                 }
             >
+                {operation.subject && <div className="modal-progress-subject" title={operation.subject}>{operation.subject}</div>}
                 {/* One fixed height for every state, so the modal never resizes as
                         stages come and go or it turns into a failure. */}
                 <div className="modal-progress-body">

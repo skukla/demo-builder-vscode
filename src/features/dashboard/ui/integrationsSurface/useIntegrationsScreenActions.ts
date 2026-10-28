@@ -112,7 +112,9 @@ export function useIntegrationsScreenActions(
                 name: target,
                 message: 'setProjectDestination',
                 payload: { project: chosen.project, workspace: chosen.workspace },
-                title: `Changing destination to ${target}`,
+                // The target on its own line: "project · workspace" in the title wrapped.
+                title: 'Changing destination',
+                subject: target,
                 failureTitle: "Couldn't change the destination",
                 successTitle: 'Destination changed',
             });

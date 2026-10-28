@@ -36,6 +36,11 @@ export interface ScreenOperation {
     payload?: Record<string, unknown>;
     /** The modal's title, and the notification's when it runs in the background. */
     title: string;
+    /**
+     * What it acts on, on its own line under the title, when naming it IN the title
+     * would wrap: "Changing destination" over "Kukla Test App 2 · Production".
+     */
+    subject?: string;
     /** The failure view's title: "Couldn't redeploy ERP integration". */
     failureTitle: string;
     /**
