@@ -96,7 +96,18 @@ describe('undo', () => {
             { sku: 'A', attribute_set_id: 4, custom_attributes: [{ attribute_code: 'erp_owner', value: 'justrite' }] },
         ]);
         const undone = await erpAttributesFix.undo({ commerce, ...DEPS }, RECORD);
-        expect(undone.rejected).toEqual(['1 products carry an erp_owner value the undo would lose. Undo their ERP\'s last assignment first.']);
+        expect(undone.rejected).toEqual([
+            "1 product is assigned to Justrite ERP. Undo Justrite ERP's last product assignment first, or the undo would clear them.",
+        ]);
         expect(commerce.send).not.toHaveBeenCalled();
+    });
+
+    it('names each ERP holding products, with its count, and the value itself for one it cannot name', async () => {
+        const tag = (sku: string, owner: string) => ({ sku, attribute_set_id: 4, custom_attributes: [{ attribute_code: 'erp_owner', value: owner }] });
+        const commerce = store({ erp_owner: true, brand: true }, true, [tag('A', 'justrite'), tag('B', 'justrite'), tag('C', 'renamed')]);
+        const undone = await erpAttributesFix.undo({ commerce, ...DEPS }, RECORD);
+        expect(undone.rejected).toEqual([
+            "3 products are assigned to Justrite ERP (2) and renamed (1). Undo each ERP's last product assignment first, or the undo would clear them.",
+        ]);
     });
 });

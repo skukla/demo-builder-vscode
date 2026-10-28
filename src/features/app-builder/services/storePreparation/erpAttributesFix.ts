@@ -14,6 +14,7 @@
 import { listAssignableProducts } from '../erpAssignSelection';
 import { CommerceReadError, type CommerceGet } from '../erpFillReaders';
 import { addOwnerToSets, OWNER_CODE, readProductSets, removeOwnerFromSets, setsWithoutOwner } from '../erpOwnerAttributeSets';
+import { taggedRefusal } from '../erpTaggedRefusal';
 import { errorText, type FixApplied, type FixPreview, type FixUndone, type StepFix } from './fixContract';
 import type { CommerceProductAttribute } from '@/types/commerceWire';
 import type { AttributeSetWithoutOwner } from '@/types/erpAssign';
@@ -116,10 +117,8 @@ export const erpAttributesFix: StepFix = {
         const { get, send } = deps.commerce;
         const deletesOwner = record.createdAttributes.includes(OWNER_CODE);
         const setIds = new Set(record.sets.map((set) => set.id));
-        const tagged = (await listAssignableProducts(get)).filter((row) => row.owner !== '' && (deletesOwner || setIds.has(row.attributeSetId))).length;
-        if (tagged > 0) {
-            return { changes: [], rejected: [`${tagged} products carry an erp_owner value the undo would lose. Undo their ERP's last assignment first.`] };
-        }
+        const tagged = (await listAssignableProducts(get)).filter((row) => row.owner !== '' && (deletesOwner || setIds.has(row.attributeSetId)));
+        if (tagged.length > 0) return { changes: [], rejected: [taggedRefusal(tagged.map((row) => row.owner), deps.erpNames)] };
         const changes: string[] = [];
         const rejected: string[] = [];
         const removed = await removeOwnerFromSets(send, record.sets);

@@ -22,6 +22,7 @@
 
 import { Text } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
+import CheckmarkCircleOutline from '@spectrum-icons/workflow/CheckmarkCircleOutline';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
@@ -35,8 +36,12 @@ export interface InlineNoticeProps {
      * any products in this store view.").
      */
     children?: React.ReactNode;
-    /** Amber (default) for something to act on; blue for context. */
-    tone?: 'warning' | 'info';
+    /**
+     * Amber (default) for something to act on; blue for context; green for something that
+     * finished and worked. Green was added 2026-10-28 (release test row 4.19): until then a
+     * finished step's "Done" and Site access's success both drew the blue info icon.
+     */
+    tone?: 'warning' | 'info' | 'success';
     /** Optional secondary line, rendered smaller and dimmer. */
     hint?: React.ReactNode;
     /** Optional right-hand action — a Button, typically. Never shrinks. */
@@ -50,6 +55,9 @@ export interface InlineNoticeProps {
     /** Hook for tests and for callers that need to find their own banner. */
     testId?: string;
 }
+
+/** Each tone's icon: Spectrum's workflow outlines, at the banner's size. */
+const ICONS = { warning: AlertCircle, info: InfoOutline, success: CheckmarkCircleOutline } as const;
 
 /**
  * Render an inline notice.
@@ -66,13 +74,16 @@ export function InlineNotice({
     actionBelow = false,
     testId,
 }: InlineNoticeProps): React.ReactElement {
-    const Icon = tone === 'info' ? InfoOutline : AlertCircle;
+    const Icon = ICONS[tone];
     return (
         // The modifier spelled out, not built from `tone`: the bundle-stylesheet scan reads
         // literal class names and counts a template as a blind spot in every bundle that
         // renders this. Reading it showed `inline-notice--warning` was styled nowhere —
-        // warning is the base look — so only the info modifier exists (ADR-017 §6, 2026-10-01).
-        <div className={cn('inline-notice', tone === 'info' && 'inline-notice--info')} data-testid={testId}>
+        // warning is the base look — so only the info and success modifiers exist (ADR-017 §6, 2026-10-01).
+        <div
+            className={cn('inline-notice', tone === 'info' && 'inline-notice--info', tone === 'success' && 'inline-notice--success')}
+            data-testid={testId}
+        >
             <Icon size="S" UNSAFE_className="inline-notice-icon" />
             <div className="inline-notice-body">
                 <Text UNSAFE_className="inline-notice-title">{title}</Text>

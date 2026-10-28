@@ -27,7 +27,7 @@
 import { Button, DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
-import { FIX_COPY, checkableIds, footerButtons, readyToApply } from './setupGuideFooter';
+import { FIX_COPY, applyAllIds, checkLabel, checkableIds, footerButtons } from './setupGuideFooter';
 import { SetupGuideStep, StepList } from './SetupGuideStep';
 import { useGuideRun } from './useGuideRun';
 import { type CheckFailure, useSetupChecklist } from './useSetupChecklist';
@@ -168,16 +168,13 @@ function Guide({
     const buttons = footerButtons({
         item,
         busy: busyNow,
-        progress: actions.progress,
-        connecting: actions.connecting,
         setDone: () => item && actions.setStep(item.id, 'done'),
-        checkAll: () => void checkAll(),
         openAdmin: onOpenAdmin,
         fix: onAsk && item ? (mode) => run.start(mode, [item.id]) : undefined,
     });
     // Apply all (AB-82): what "Prepare this store" did, from the one place the steps live.
-    const ready = readyToApply(items);
-    const applyAll = onAsk && ready.length > 0 ? () => run.start('apply', ready.map((step) => step.id)) : undefined;
+    const ready = applyAllIds(items, item?.id);
+    const applyAll = onAsk && ready.length > 0 ? () => run.start('apply', ready) : undefined;
     return (
         <Modal
             title={`Demo setup: ${model.name}`}
@@ -188,7 +185,7 @@ function Guide({
         >
             <GuideNotice items={items} failures={actions.failures} error={actions.error} />
             <div className="setup-guide-layout">
-                {/* The list, and under it what acts on the list as a whole (AB-82). */}
+                {/* The list, and under it what acts on the list as a whole (AB-82, 2026-10-28). */}
                 <div className="setup-guide-side">
                     <StepList
                         items={items}
@@ -197,11 +194,18 @@ function Guide({
                         checkingId={actions.progress?.stepId ?? run.workingId}
                         animateMarks={hasChecked}
                     />
-                    {applyAll && (
-                        <Button variant="secondary" onPress={applyAll} isDisabled={busyNow}>
-                            {FIX_COPY.all(ready.length)}
-                        </Button>
-                    )}
+                    <div className="setup-guide-list-actions">
+                        {hasCheckable && (
+                            <Button variant="secondary" onPress={() => void checkAll()} isDisabled={busyNow}>
+                                {checkLabel(actions.progress, actions.connecting)}
+                            </Button>
+                        )}
+                        {applyAll && (
+                            <Button variant="secondary" onPress={applyAll} isDisabled={busyNow}>
+                                {FIX_COPY.all(ready.length)}
+                            </Button>
+                        )}
+                    </div>
                 </div>
                 {/* Steps differ in length. Every step is laid in the same cell and only the
                     shown one is visible, so the pane is as tall as the TALLEST step from the

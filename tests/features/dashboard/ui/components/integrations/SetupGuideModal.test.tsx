@@ -12,7 +12,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
-import { SetupGuideModal, setupNextStep } from './SetupGuideModal.testUtils';
+import { DONE_COPY, SetupGuideModal, setupNextStep } from './SetupGuideModal.testUtils';
 import { NO_ANSWER } from '@/features/dashboard/ui/components/integrations/useSetupChecklist';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
@@ -83,7 +83,8 @@ const shown = () => screen.getByTestId('setup-guide-step');
 /** The step's status banner, in the house `InlineNotice`: its title, then one short sentence at most. */
 const status = () => within(shown()).getByTestId('setup-guide-step-status');
 // The icon mock renders its name as text; the banner's words follow it.
-const says = () => status().textContent?.replace(/^DefaultIcon/u, '');
+// The banner keeps a blank second line when a state has nothing to say (same height every state).
+const says = () => status().textContent?.replace(/^DefaultIcon/u, '').replace(/\u00a0$/u, '');
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -187,9 +188,9 @@ describe('SetupGuideModal', () => {
         expect(within(pane).queryByText(STRUCTURED.where)).not.toBeInTheDocument();
     });
 
-    // A done step is a green Done badge and nothing else: its check's sentence was noise
-    // (owner, 2026-10-26: "reads horridly").
-    it('shows a passed check as a blue Done banner under the title, with no sentence', async () => {
+    // A done step is a green Done banner saying how, never the check's sentence: that was noise
+    // (owner, 2026-10-26: "reads horridly"). The how is what tells two done steps apart (2026-10-28).
+    it('shows a passed check as a green Done banner saying the store has it, not the check\'s sentence', async () => {
         await renderGuide([
             step({
                 id: 'c',
@@ -200,8 +201,8 @@ describe('SetupGuideModal', () => {
                 lastCheck: 'passed',
             }),
         ]);
-        expect(says()).toBe('Done');
-        expect(status()).toHaveClass('inline-notice--info');
+        expect(says()).toBe(`Done${DONE_COPY.found}`);
+        expect(status()).toHaveClass('inline-notice--success');
     });
 
     it('shows a failed check, and one that could not tell, as an amber banner with what it found', async () => {
@@ -345,16 +346,16 @@ describe('SetupGuideModal', () => {
             step({ id: 'a', title: 'Step A', checkable: true, state: 'done', note: 'Set.', lastCheck: 'passed' }),
         ]);
         // Positive control: the step and its badge rendered.
-        expect(says()).toBe('Done');
+        expect(says()).toBe(`Done${DONE_COPY.found}`);
         expect(within(shown()).queryByRole('link')).not.toBeInTheDocument();
     });
 
-    it('offers Check all steps in place of Mark as done on a step Demo Builder can check', async () => {
+    it('keeps Check all steps under the list, and offers no Mark as done on a step Demo Builder can check', async () => {
         await renderGuide();
-        expect(screen.queryByRole('button', { name: 'Check all steps' })).not.toBeInTheDocument();
+        // Under the list, with Apply all: it acts on the whole list, not the shown step (2026-10-28).
+        expect(screen.getByRole('button', { name: 'Check all steps' }).closest('.setup-guide-list-actions')).not.toBeNull();
         fireEvent.click(screen.getByRole('tab', { name: 'Step C' }));
         expect(screen.queryByRole('button', { name: 'Mark as done' })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Check all steps' })).toBeInTheDocument();
     });
 
     it('checks the steps one at a time, showing which and how far, then lands on the first still open', async () => {

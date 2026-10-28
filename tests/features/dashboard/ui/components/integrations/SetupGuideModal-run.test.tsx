@@ -12,7 +12,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
-import { FIX_COPY, STATUS_COPY, SetupGuideModal } from './SetupGuideModal.testUtils';
+import { DONE_COPY, FIX_COPY, STATUS_COPY, SetupGuideModal } from './SetupGuideModal.testUtils';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
@@ -67,7 +67,8 @@ const pane = () => screen.getByTestId('setup-guide-step');
  */
 const banner = () => within(pane()).getByTestId('setup-guide-step-status');
 // The icon mock renders its name as text; the banner's words follow it.
-const says = () => banner().textContent?.replace(/^DefaultIcon/u, '');
+// The banner keeps a blank second line when a state has nothing to say (same height every state).
+const says = () => banner().textContent?.replace(/^DefaultIcon/u, '').replace(/\u00a0$/u, '');
 
 beforeEach(() => {
     mockPostMessage.mockReset();
@@ -107,8 +108,8 @@ describe('Apply runs in the guide', () => {
             ],
         });
         // The badge flips; nothing reports the run (owner, 2026-10-26).
-        expect(says()).toBe(STATUS_COPY.done);
-        expect(banner()).toHaveClass('inline-notice--info');
+        expect(says()).toBe(`${STATUS_COPY.done}${DONE_COPY.applied}`);
+        expect(banner()).toHaveClass('inline-notice--success');
         expect(within(pane()).queryByText(/Switched Test Warehouse/)).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Check all steps' })).not.toBeDisabled();
         expect(onClose).not.toHaveBeenCalled();

@@ -14,7 +14,7 @@
  * the font size hierarchy is really awful / the status badges are loud": the rail widened
  * and its labels got short enough to read whole, everything sits at one body size with the
  * title one size up, and the coloured dots went — a done step carries a check mark, an open
- * one nothing, a skipped one a muted dash. Nothing here names a state in words; the actions
+ * one nothing (a hollow circle since 2026-10-28), a skipped one a muted dash. Nothing here names a state in words; the actions
  * do that. A fourth reading, "not wild about the buttons", moved them into the dialog footer
  * where every other modal keeps its actions, and the reason, one or two sentences on every
  * step, stopped folding away.
@@ -25,6 +25,7 @@
 import { Link, ProgressCircle } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import Circle from '@spectrum-icons/workflow/Circle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React from 'react';
 import { StepHeader } from './StepHeader';
@@ -35,8 +36,8 @@ import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { cn } from '@/core/ui/utils/classNames';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
-/** The text mark a step carries in the list when it is not done: nothing open, a dash skipped. */
-const MARK = { open: '', dismissed: '–' } as const;
+/** The text mark a skipped step carries in the list: a dash. */
+const SKIPPED_MARK = '–';
 
 interface StepListProps {
     items: SetupChecklistItem[];
@@ -63,7 +64,7 @@ function RailMark({ item, checking }: { item: SetupChecklistItem; checking: bool
     const kind = markOf(item);
     return (
         <span key={kind} className="setup-guide-rail-mark" data-mark={kind} aria-hidden="true">
-            {MARK_ICON[kind] ?? MARK[item.state as keyof typeof MARK]}
+            {MARK_ICON[kind] ?? SKIPPED_MARK}
         </span>
     );
 }
@@ -73,7 +74,9 @@ type MarkKind = 'done' | 'ready' | 'unknown' | 'open' | 'dismissed';
 /**
  * What a step's mark says (AB-82, the list is the at-a-glance summary Prepare's list was):
  * done; Demo Builder can apply it (the steps Apply all counts); its check could not tell;
- * else nothing for a step left to the SC, and a dash for one skipped.
+ * else a hollow circle for a step left to the SC, and a dash for one skipped. The hollow
+ * circle was nothing until 2026-10-28 (release test row 4.19): Card payments and App
+ * Management, the two by-hand steps, looked broken beside their ticked neighbours.
  */
 function markOf(item: SetupChecklistItem): MarkKind {
     if (item.state === 'done') return 'done';
@@ -85,12 +88,14 @@ function markOf(item: SetupChecklistItem): MarkKind {
 /**
  * The extension's own marks, Spectrum's workflow icons at the list's size: done is the
  * green CheckmarkCircle the project summary and the prerequisites list draw; Pending is
- * what the progress lists draw for work waiting to run (`StepStatusIcon`).
+ * what the progress lists draw for work waiting to run (`StepStatusIcon`); an open step left
+ * to the SC is a muted hollow Circle.
  */
 const MARK_ICON: Partial<Record<MarkKind, React.ReactElement>> = {
     done: <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" />,
     ready: <Pending size="XS" UNSAFE_className="text-gray-600" />,
     unknown: <AlertCircle size="XS" UNSAFE_className="text-yellow-600" />,
+    open: <Circle size="XS" UNSAFE_className="text-gray-500" />,
 };
 
 /** Every step down the left by its short label, done ones checked; the shown one highlighted. */

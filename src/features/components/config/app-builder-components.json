@@ -126,7 +126,7 @@
           "id": "company-catalogs",
           "label": "Shared catalogs",
           "title": "Give each priced company its own shared catalog",
-          "why": "The ERP publishes a company's prices into that company's shared catalog; companies sharing one would share prices.",
+          "why": "The ERP publishes each company's prices into that company's shared catalog. Companies that share a catalog would share prices.",
           "where": "Catalog > Shared Catalogs > Add Shared Catalog, then Assign Companies.",
           "path": [
             "Catalog",
@@ -145,7 +145,7 @@
           "check": "price-scope-website",
           "label": "Price scope",
           "title": "Set the catalog price scope to Website",
-          "why": "The ERP publishes a company's prices per website; at the default scope, Global, every site would show the same prices.",
+          "why": "The ERP publishes a company's prices per website. At the default scope, Global, every site would show the same prices.",
           "where": "Stores > Configuration > Catalog > Catalog > Price > Catalog Price Scope: set to Website, Save Config. Catalog > Shared Catalogs > Set Pricing and Structure then shows a Website chooser above the prices.",
           "path": [
             "Stores",
@@ -176,8 +176,8 @@
           "id": "second-source",
           "label": "ERP warehouse",
           "title": "Give each ERP a warehouse, and assign it to the website's stock",
-          "why": "Each ERP keeps stock per Commerce source (a warehouse). The Default Stock can hold only the Default Source, so the website needs a stock of its own.",
-          "where": "Stores > Inventory > Sources > Add New Source, one per ERP (for example Northwind Warehouse); Stores > Inventory > Stocks > Add New Stock with the website as its sales channel and the warehouses assigned; then move the website's products' quantities to the new source (Catalog > Products > Actions > Move stock between the ERP's warehouses) and save each product once, so the storefront's catalog reads the new stock.",
+          "why": "Each ERP keeps its own stock, in its own warehouse. The website needs a stock of its own to sell from more than one.",
+          "where": "Stores > Inventory > Sources > Add New Source, one per ERP (for example Northwind Warehouse). Then Stores > Inventory > Stocks > Add New Stock, with the website as its sales channel and the warehouses assigned. Then move the website's products' quantities to the new source (Catalog > Products > Actions > Move stock between the ERP's warehouses) and save each product once, so the storefront's catalog reads the new stock.",
           "path": [
             "Stores",
             "Inventory",
@@ -187,7 +187,7 @@
           "enter": [
             "<ERP name> Warehouse"
           ],
-          "then": "Add a stock for the website and assign the warehouses to it, move the products' quantities to them, and save each product once.",
+          "then": "Add a stock for the website and assign the warehouses to it. Then move each product's quantity to them and save it.",
           "check": "erp-source-in-website-stock",
           "fix": {
             "kind": "handler",
@@ -198,8 +198,8 @@
           "id": "erp-attributes",
           "label": "Product attributes",
           "title": "Create the erp_owner and brand product attributes",
-          "why": "A product goes to the ERP its erp_owner names (the ERP's list id: its name in lower case without the word ERP — Accuform ERP is accuform); a product with no erp_owner stays with the ERP that owns everything. brand is what buyers filter on.",
-          "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand; then Stores > Attributes > Attribute Set to add both to every set your products use (the check names any set erp_owner is missing from, and Demo Builder can add it). Give each additional ERP its products with Assign products on its card, and set brand on the products you sell.",
+          "why": "erp_owner names the ERP a product belongs to (Accuform ERP is accuform). A product without one stays with the main ERP. Buyers filter on brand.",
+          "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand. Then Stores > Attributes > Attribute Set, to add both to every set your products use (the check names any set erp_owner is missing from, and Demo Builder can add it). Give each additional ERP its products with Assign products on its card, and set brand on the products you sell.",
           "path": [
             "Stores",
             "Attributes",
@@ -210,7 +210,7 @@
             "erp_owner",
             "brand"
           ],
-          "then": "erp_owner is a Text Field in every attribute set your products use; a value for an attribute not in a product's set is dropped without an error. Give each additional ERP its products with Assign products on its card; untagged products stay with the ERP on everything.",
+          "then": "Make both Text Fields, and add erp_owner to every attribute set your products use, or Commerce drops it without an error. Then give each other ERP its products with Assign products on its card.",
           "check": "erp-attributes-exist",
           "fix": {
             "kind": "handler",
@@ -222,7 +222,7 @@
           "check": "partially-held-status",
           "label": "Partially Held status",
           "title": "Create the \"Partially Held\" order status",
-          "why": "When one ERP holds its part of an order and another carries on, the order says so; without it the integration writes only a note.",
+          "why": "When one ERP holds its part of an order and another carries on, the order says so. Without it, the integration writes only a note.",
           "where": "Stores > Settings > Order Status: create partially_held (label Partially Held), then assign it to Processing and to Pending (not as default, not visible on the storefront).",
           "path": [
             "Stores",

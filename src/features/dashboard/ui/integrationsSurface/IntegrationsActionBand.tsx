@@ -37,7 +37,7 @@ export function formatDestination(destination?: { projectTitle?: string }): stri
     return destination?.projectTitle || undefined;
 }
 
-/** "2 integrations", or "1 integration · 1 system" once a system is on screen. */
+/** "2 integrations", or "1 integration, 1 system" once a system is on screen. */
 function countCards(cards: IntegrationCardModel[]): string {
     const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
     const systems = cards.filter((card) => card.isSystem).length;
@@ -45,7 +45,7 @@ function countCards(cards: IntegrationCardModel[]): string {
     // The mesh counts as an integration, as it always has on this screen.
     return systems === 0
         ? count(integrations, 'integration')
-        : `${count(integrations, 'integration')} · ${count(systems, 'system')}`;
+        : `${count(integrations, 'integration')}, ${count(systems, 'system')}`;
 }
 
 export interface IntegrationsActionBandProps {

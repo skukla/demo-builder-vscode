@@ -52,6 +52,16 @@
     color: var(--spectrum-global-color-blue-600);
 }
 
+/* Green for something that finished and worked (2026-10-28), drawn the way info is:
+   the border and the icon, all the way round. */
+.inline-notice--success {
+    border-color: var(--spectrum-global-color-green-500);
+}
+
+.inline-notice--success .inline-notice-icon {
+    color: var(--spectrum-global-color-green-600);
+}
+
 .inline-notice-icon {
     color: var(--spectrum-global-color-orange-600);
     flex-shrink: 0;

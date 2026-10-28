@@ -86,7 +86,7 @@ ERP wrote into Commerce; this and Load demo data are offered only while both car
 deployed), **Redeploy** and
 **Remove**. The integration keeps its own verbs; its **Open Commerce Admin** opens the Admin
 UI SDK screen. Remove on either card names both. The screen's count names the kinds once a system is
-there ("1 integration · 1 system"). The dashboard's Integrations tile counts the ERP's card
+there ("1 integration, 1 system"). The dashboard's Integrations tile counts the ERP's card
 too: its dot shows the worst status across both, and turns amber for a removal that
 stopped.
 

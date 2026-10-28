@@ -3,8 +3,8 @@
  * that fixes it, check whether the fix has landed, or repair the refused
  * configuration write.
  *
- * Built on the shared `InlineNotice`; it has two tones, so success reads as
- * info and anything to act on reads as a warning.
+ * Built on the shared `InlineNotice`: success reads green, and anything to act
+ * on reads as a warning.
  *
  * @module features/eds/ui/siteAccess/SiteAccessNoticeView
  */
@@ -39,7 +39,7 @@ export function SiteAccessNoticeView({
     return (
         <InlineNotice
             title={TITLES[notice.tone]}
-            tone={notice.tone === 'success' ? 'info' : 'warning'}
+            tone={notice.tone === 'success' ? 'success' : 'warning'}
             testId="site-access-notice"
             actionBelow
             action={

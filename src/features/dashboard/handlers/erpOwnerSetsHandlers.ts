@@ -28,6 +28,8 @@ import {
     setsWithoutOwner,
     type SetsChanged,
 } from '@/features/app-builder/services/erpOwnerAttributeSets';
+import { taggedRefusal } from '@/features/app-builder/services/erpTaggedRefusal';
+import { erpNamesOf } from '@/features/dashboard/services/setupCheckReader';
 import { openCommerce, type CommerceClient } from '@/features/project-creation/services/erpAssignProducts';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { ErpOwnerSetsRecord } from '@/types/erpAssign';
@@ -124,9 +126,9 @@ export const handleAddErpOwnerToAttributeSets: MessageHandler<ErpOwnerSetsReques
 );
 
 /** Products in the recorded sets that carry an `erp_owner` value; the undo waits for none. */
-async function taggedInSets(commerce: CommerceClient, record: ErpOwnerSetsRecord): Promise<number> {
+async function taggedInSets(commerce: CommerceClient, record: ErpOwnerSetsRecord): Promise<string[]> {
     const ids = new Set(record.sets.map((set) => set.id));
-    return (await listAssignableProducts(commerce.get)).filter((row) => ids.has(row.attributeSetId) && row.owner !== '').length;
+    return (await listAssignableProducts(commerce.get)).filter((row) => ids.has(row.attributeSetId) && row.owner !== '').map((row) => row.owner);
 }
 
 /**
@@ -139,14 +141,14 @@ export const handleRemoveErpOwnerFromAttributeSets: MessageHandler<ErpOwnerSetsR
         if ('error' in opened) return opened.error;
         const record = opened.call.integration.erpOwnerSets;
         if (!record) return { success: false, error: 'Demo Builder has added erp_owner to no attribute set.', code: ErrorCode.INVALID_OPERATION };
-        let tagged: number;
+        let tagged: string[];
         try {
             tagged = await taggedInSets(opened.commerce, record);
         } catch (error) {
             return { success: false, error: `Could not read the products: ${error instanceof Error ? error.message : String(error)}` };
         }
-        if (tagged > 0) {
-            const error = `${tagged} products in those sets carry an erp_owner value. Undo their ERP's last assignment first, so no tag is lost.`;
+        if (tagged.length > 0) {
+            const error = taggedRefusal(tagged, erpNamesOf(opened.call.project, opened.call.id));
             return { success: false, error, code: ErrorCode.INVALID_OPERATION };
         }
         if (payload?.confirm !== true) return { success: true, data: { confirmed: false, sets: record.sets } };

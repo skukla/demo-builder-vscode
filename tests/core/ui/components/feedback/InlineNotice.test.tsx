@@ -38,6 +38,20 @@ describe('InlineNotice', () => {
         expect(notice.querySelector('.status-text')).toBeNull();
     });
 
+    it('draws the success tone green, apart from info', () => {
+        render(
+            <Provider theme={defaultTheme}>
+                <InlineNotice title="Done" tone="success" testId="ok" />
+                <InlineNotice title="Note" tone="info" testId="note" />
+            </Provider>,
+        );
+
+        expect(screen.getByTestId('ok')).toHaveClass('inline-notice--success');
+        expect(screen.getByTestId('ok')).not.toHaveClass('inline-notice--info');
+        // CONTROL: info keeps its own modifier.
+        expect(screen.getByTestId('note')).toHaveClass('inline-notice--info');
+    });
+
     it('puts the action under the text with actionBelow', () => {
         renderNotice(true);
 

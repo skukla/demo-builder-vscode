@@ -112,10 +112,10 @@ describe('IntegrationsActionBand', () => {
     });
 
     it.each([
-        ['names both kinds once a system is on screen', [INTEGRATION, SYSTEM], '1 integration · 1 system'],
+        ['names both kinds once a system is on screen', [INTEGRATION, SYSTEM], '1 integration, 1 system'],
         ['counts integrations alone without a system', [INTEGRATION, INTEGRATION], '2 integrations'],
         ['says none for an empty project', [], '0 integrations'],
-        ['pluralises systems', [SYSTEM, SYSTEM], '0 integrations · 2 systems'],
+        ['pluralises systems', [SYSTEM, SYSTEM], '0 integrations, 2 systems'],
     ])('%s', (_label, cards, text) => {
         renderBand({ cards });
 

@@ -108,7 +108,11 @@ describe('removeErpOwnerFromAttributeSets', () => {
         mockList.mockResolvedValue([{ sku: 'A', attributeSetId: 4, owner: 'accuform' }, { sku: 'B', attributeSetId: 9, owner: 'x' }]);
         const { context } = setup({ erpOwnerSets: RECORD });
         const result = await handleRemoveErpOwnerFromAttributeSets(context, { id: 'erp-integration', confirm: true });
-        expect(result).toMatchObject({ success: false, error: expect.stringContaining('1 products in those sets carry an erp_owner value') });
+        // No ERP is linked in this fake, so the erp_owner value itself names it.
+        expect(result).toMatchObject({
+            success: false,
+            error: "1 product is assigned to accuform. Undo accuform's last product assignment first, or the undo would clear them.",
+        });
         expect(mockRemove).not.toHaveBeenCalled();
     });
 
