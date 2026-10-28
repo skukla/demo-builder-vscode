@@ -81,6 +81,23 @@ The confirmation when a removed pack holds the SC's changes:
   names; the removal tool reports the changes and needs a keep-or-drop answer, so an agent tells
   the user rather than guessing.
 
+## Agent surface
+
+Names are proposed; fixed when built.
+
+| Tool | New or changed | Read or write | Chat wording | Dialog |
+|---|---|---|---|---|
+| `preview_datapack_changes` | new: what installing a pack again would update, add, remove and keep, by kind, with counts and names | read | "Checking what installing Frescopa would change" | none |
+| `save_store_changes_to_pack` | new: the screen's "Save store changes to this pack" | write | "Saving the store's changes to the Acme Demo pack" | yes: makes the pack match the store; the previous version is kept. Names the pack |
+| `start_datapack_import` | its answer says what it kept ("Kept 2 things you had changed") | write | unchanged | unchanged |
+| `reset_datapack` | names the changes it found, and needs a keep-or-drop answer unless the "always" setting answers it | write | unchanged | unchanged, plus the changes |
+
+**Lean answers:** `preview_datapack_changes` answers counts per kind and at most a few names per
+kind, never rows; its ceiling is set from Frescopa and Bodea measured live. **Battery prompts:**
+"I changed some prices in the Admin. Make that the Frescopa pack", expecting
+`save_store_changes_to_pack`; "What would reinstalling Frescopa change?", expecting
+`preview_datapack_changes`. Each traced, then `ai-coverage-scan`.
+
 ## Reuse
 
 | Need | Reuse | Where it is |

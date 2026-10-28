@@ -93,6 +93,52 @@ Ours is written from scratch, tested, and checked live.
 Every step is test-first, reuses before it writes (the house component, hook, client or rule that
 already does the job), and runs the `gate` skill before it is committed.
 
+## Agents get every action, and every answer is lean (owner, 2026-10-28)
+
+A step that adds a screen action names its agent tools in an **Agent surface** section, with the
+three declarations each needs (`mcp-tool-authoring`): read or write, the chat's wording, and the
+consent dialog when it changes something. **A step is done only when `ai-coverage-scan` shows no
+new gap between what a person can do and what an agent can.**
+
+Every new or changed tool is held to what the existing ones already are:
+
+- **Its answer is shaped** to what an agent needs (the descriptor row's `shape`): counts and
+  names, never a pack's rows or a store's raw objects.
+- **It has a ceiling** in `tests/features/ai/server/responseCeilings.ts`, set from a measurement
+  of the running tool (`mcp-live-probe`), and the response-size suites hold it there.
+- **It is traced through a real agent:** a prompt in the evaluation battery
+  (`.rptc/plans/evaluation-mode/battery/prompts.json`) declares the tool that should answer, the
+  battery runs it, and the trace (`toolTraceRecorder.ts`) shows the agent reached it without
+  detours, repeated reads or wasted calls.
+
+## Security (owner, 2026-10-28)
+
+The Data Installer service has had security tickets. Its two fixes, read from its own commits,
+and where we stand:
+
+| The service's fix | Ours |
+|---|---|
+| **DEMOSYS-1695:** 30 actions needed no Adobe sign-in; the gateway check (`require-adobe-auth`) was turned on | Our library's actions always ran their own guard (sign-in confirmed with IMS, then the email domain, closed when unset). The gateway check is now on for all 12 as a second lock (`accs-discovery-service` `ff2c953`; every SC is in the owning org), and library writes now name the org as reads do. **Takes effect at the next deploy, on the owner's go** |
+| **DEMOSYS-1698:** Commerce secrets sent in every request were no longer accepted | Demo Builder's engine never sends them. The service engine still does; its newest code ignores them, its older code used them. **Removing them waits** for the maintainers to say caller credentials are gone for good, so that no deployment that still uses them breaks |
+
+**Which org each action is checked against** (owner, 2026-10-28). Never a named org: each is
+the org that owns the thing acted on.
+
+| Action | Checked against | How |
+|---|---|---|
+| Install, dry run or remove a pack in a store (Demo Builder's engine) | The org that owns the store | `orgGuard` (`detectProjectOrgMismatch`, adobe-org-context) before anything is written, answering ORG_MISMATCH and "Switch IMS Org"; Commerce's own refusal of the project's org-bound credential behind it. On the screen, the wizard's creation install and project reset alike |
+| Read or save packs in the library | The org that runs the library | Adobe's gateway (`require-adobe-auth`), the org read from the library's own address (`serviceOrgCode`), plus the library's guard |
+
+And ours: **a pack is untrusted input.** Anyone on the team can make one, through the library or
+a file. Every code a pack supplies is checked against Commerce's own rule when the pack is read,
+and every value placed into a Commerce address, a file name or a log line is escaped where it is
+placed. A crafted attribute code had been able to point a request at another part of Commerce;
+fixed and tested.
+
+**Every step ends with the `security-review` skill on its changes**, beside the gate and
+`ai-coverage-scan`. If the maintainers name a kind of problem not covered here, it is checked
+for.
+
 ## Looking and working like the rest of the extension (owner, 2026-10-27)
 
 Nothing in this feature gets its own look. Every screen it touches already exists, and every

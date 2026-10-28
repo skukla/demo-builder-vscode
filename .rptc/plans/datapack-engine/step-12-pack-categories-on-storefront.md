@@ -50,3 +50,9 @@ menu. Removal in reverse: take down the pack's category pages, switch back, remo
 | Rebuilding category pages and the menu, and taking them down | Reset's and republish's existing steps | `applyCatalogMenuStep`, `removeCatalogMenuStep` (`edsResetCatalogMenu.ts`) |
 | Showing an Admin step with values to copy | The demo setup guide's manual steps | the setup guide's step view and `CopyableText` |
 | Waiting on Catalog Service | The category reader the menu step uses | `categoryReader.ts` |
+
+## Agent surface
+
+No new tool. `start_datapack_import`'s answer says when the SC has one Admin step to do, with
+the values; `republish` already rebuilds the category pages and menu. A battery prompt, "Install
+Frescopa and make the storefront show its categories", is traced. Then `ai-coverage-scan`.

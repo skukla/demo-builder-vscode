@@ -68,6 +68,20 @@ the strongest warning.
   `actions/constants.js`), and its "purge by commerce_instance" (`getInstalledDatapacks.js`)
   deletes its own install records, not anything in Commerce.
 
+## Agent surface
+
+Names are proposed; fixed when built.
+
+| Tool | New or changed | Read or write | Chat wording | Dialog |
+|---|---|---|---|---|
+| `check_demo_data` | new: what Demo Builder installed in this demo's part of the store, and what else is there, by kind with counts | read | "Checking this demo's store data" | none |
+| `reset_project` | takes "also clear the data Demo Builder did not install", off unless asked | write | unchanged | names the website it will clear, and says it cannot be undone |
+
+**Lean answers:** `check_demo_data` answers counts per kind, never the objects. **Battery
+prompt:** "Reset this demo and leave its store empty", expecting `check_demo_data` then
+`reset_project` with the clearing asked for, and the agent asking the user first. Traced, then
+`ai-coverage-scan`.
+
 ## Reuse
 
 | Need | Reuse | Where it is |

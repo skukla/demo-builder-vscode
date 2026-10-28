@@ -11,3 +11,10 @@ codes are mapped to the install target's website and store. Export reads a chose
 paths back out of a store. Limit: packs that carry it live in OUR library and zip files;
 the service's catalog checks each kind against its own list and will most likely refuse an
 unknown one.
+
+## Agent surface
+
+No new tool: settings packs install through `start_datapack_import` and are removed through
+`reset_datapack`, which answer which settings they set or put back, by path, never the whole
+configuration. A battery prompt installs a settings pack and is traced. Then
+`ai-coverage-scan`.

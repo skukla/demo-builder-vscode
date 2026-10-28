@@ -50,3 +50,7 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-27  docs(plan): reset clears a demo's part of the store (DI-5) (`8ccbdae5e`)
 - 2026-10-28  docs(plan): the storefront shows a pack's own categories (DI-5) (`a8a86a40c`)
 - 2026-10-28  feat(data-installer): Demo Builder's engine installs a pack from the library (DI-5) (`6d851fed2`)
+- 2026-10-28  feat(data-installer): Demo Builder's engine writes only for a sign-in in the store's own org (DI-5) (`eef29f920`)
+- 2026-10-28  fix(data-installer): library writes name the caller's org, as its reads do (DI-5) (`19be668de`)
+- 2026-10-28  fix(data-installer): a pack's codes cannot steer a Commerce request elsewhere (DI-5) (`a3b9246c9`)
+- 2026-10-28  style(data-installer): the engine id re-export sits below the imports (DI-5) (`d6ccb50fd`)

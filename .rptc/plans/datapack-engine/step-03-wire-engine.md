@@ -41,7 +41,26 @@ Status: **in progress**. Items 1 to 6 built (2026-10-27/28); 7, the live run, to
      website only, one stock link (Default Stock, already there) and 25 quantities.
    - Shared across the instance, and so taken back on removal: the attributes, their options,
      the assignment. Nothing that exists is changed.
-   - Before it: a bundle-product test, since Frescopa has bundles and no test covers them.
+   - Before it: a bundle-product test, since Frescopa has bundles and no test covers them (built).
+   - With it, on the owner's go: deploy the library's gateway check (`accs-discovery-service`
+     `ff2c953`), then load and read a library pack, so the second lock is proven live.
+
+## Agent surface
+
+No new tool: the screen gained no action an agent lacked.
+
+| Tool | Change | Read or write | Chat wording | Dialog |
+|---|---|---|---|---|
+| `validate_datapack_import` | takes `source` (built) | read | unchanged | none |
+| `start_datapack_import` | takes `source` (built) | write | unchanged | unchanged |
+| `reset_datapack` | takes `source` (built); goes through the engine that installed | write | unchanged | unchanged |
+| `set_setting` | can set `demoBuilder.dataInstaller.engine` (built) | unchanged | unchanged | unchanged |
+| `find_datapacks` | with the library, its answer carries `engine` (built) | read | unchanged | none |
+
+**Before the step is done:** a battery prompt, "Install the Frescopa datapack from the library
+into this project", expecting `validate_datapack_import` then `start_datapack_import` with
+`source: library`; its trace read for detours; `find_datapacks`'s measured size checked against
+its ceiling with the new field; `ai-coverage-scan` run.
 
 ## Reuse
 

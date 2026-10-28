@@ -41,6 +41,22 @@ format more.
   this pack in a project file on 27 October. Anyone who hasn't created that project yet will get
   Bodea instead."
 
+## Agent surface
+
+Names are proposed; fixed when built.
+
+| Tool | New or changed | Read or write | Chat wording | Dialog |
+|---|---|---|---|---|
+| `rename_datapack` | new: rename the SC's own pack | write | "Renaming the Acme Demo pack" | yes: names the pack and the new name |
+| `find_datapacks` | already lists the SC's own packs (`mine`) | read | unchanged | none |
+| `delete_library_datapack` | already deletes the SC's own; warns when the pack was shared in a project file | write | unchanged | unchanged, plus the warning |
+| `delete_project` | takes "also delete its pack", off unless asked | write | unchanged | names the pack when asked |
+| `create_project_from_file` | copies the referenced pack into the colleague's library, or falls back and says why | write | unchanged | unchanged |
+
+**Battery prompts:** "Rename my demo's pack to Acme Q4", and "Create a project from the file
+Priya sent me" with the pack deleted (expects the fallback, said plainly). Each traced, then
+`ai-coverage-scan`.
+
 ## Reuse
 
 | Need | Reuse | Where it is |
