@@ -212,8 +212,19 @@
     /* `safe`: content taller than the body (a result's rows) starts at the top and
        scrolls, rather than overflowing above it where nothing can scroll to. */
     justify-content: safe center;
-    height: 240px;
+    /* 240px until 2026-10-28, when the delete question (two boxes, each naming what it
+       deletes) overflowed it; 280 leaves a margin for a question one box longer. */
+    height: 280px;
     overflow-y: auto;
+}
+
+/* A question's checkbox detail (what the box deletes), on its own smaller line inside the
+   box's label, so it lines up under the label and the delete question fits the body's one
+   height without scrolling (owner, 2026-10-28). */
+.prompt-checkbox-detail {
+    display: block;
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    color: var(--spectrum-global-color-gray-700);
 }
 
 /* What the operation acts on, under a short title instead of inside a long one that

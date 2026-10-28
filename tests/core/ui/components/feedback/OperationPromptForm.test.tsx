@@ -27,6 +27,30 @@ describe('OperationPromptForm — field kinds', () => {
         expect(last()).toEqual({ repo: '' });
     });
 
+    /**
+     * A box's detail (what it deletes: a repository, a site) sits inside its label, as a
+     * smaller line, so it lines up under the label and takes less height. The progress
+     * window's body is one fixed height (owner, 2026-09-19), and the delete question,
+     * with its detail as a separate full-size line, overflowed it and looked cut off
+     * (owner, 2026-10-28).
+     */
+    it("a checkbox's detail is part of its label, as a smaller line", () => {
+        renderForm([
+            {
+                id: 'github',
+                label: 'Also delete the GitHub repository',
+                kind: 'checkbox',
+                value: '',
+                description: 'skukla/scratch-1022-b',
+            },
+        ]);
+        const box = screen.getByRole('checkbox', { name: /Also delete the GitHub repository/ });
+        const detail = screen.getByText('skukla/scratch-1022-b');
+
+        expect(detail).toHaveClass('prompt-checkbox-detail');
+        expect(box.closest('label')).toContainElement(detail);
+    });
+
     it('a choice starts on its first option and answers the chosen id', () => {
         const { last } = renderForm([
             {

@@ -75,7 +75,7 @@ async function askCleanupInModal(
         daLive: 'Also delete the DA.live site',
     };
     const asked = await askForDetailsDuringOperation({
-        message: `Delete "${project.name}"? Its files are removed from this machine. You can also delete what it created online. Sign-in may be required.`,
+        message: `Delete "${project.name}"? Its files are removed from this machine. You can also delete what it created online.`,
         fields: items.map((item) => ({
             id: item.id,
             label: labels[item.id],

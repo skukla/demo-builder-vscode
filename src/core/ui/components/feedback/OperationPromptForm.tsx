@@ -19,7 +19,7 @@
  * @module core/ui/components/feedback/OperationPromptForm
  */
 
-import { Checkbox, Flex, Item, Picker, Text, TextField } from '@adobe/react-spectrum';
+import { Checkbox, Flex, Item, Picker, TextField } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import type { OperationPromptField } from '@/types/webviewPayloads';
 
@@ -47,13 +47,14 @@ function PromptField({ field, value, onChange }: {
     onChange: (value: string) => void;
 }): React.ReactElement {
     if (field.kind === 'checkbox') {
+        // The detail (what the box deletes) sits INSIDE the label, as a smaller line: it
+        // lines up under the label by construction, and takes less of the progress window's
+        // one fixed height, which the delete question overflowed (owner, 2026-10-28).
         return (
-            <Flex direction="column">
-                <Checkbox isSelected={value === 'true'} onChange={(on) => onChange(on ? 'true' : '')}>
-                    {field.label}
-                </Checkbox>
-                {field.description && <Text>{field.description}</Text>}
-            </Flex>
+            <Checkbox isSelected={value === 'true'} onChange={(on) => onChange(on ? 'true' : '')}>
+                {field.label}
+                {field.description && <span className="prompt-checkbox-detail">{field.description}</span>}
+            </Checkbox>
         );
     }
     if (field.kind === 'choice') {
@@ -136,7 +137,7 @@ export function OperationPromptForm({
     const boxes = fields.filter((field) => field.kind === 'checkbox').map((field) => field.id);
 
     return (
-        <Flex direction="column" gap="size-200" width="100%">
+        <Flex direction="column" gap="size-100" width="100%">
             {boxes.length > 1 && <SelectAllBox ids={boxes} values={values} onChange={replace} />}
             {fields.map((field) => (
                 <PromptField
