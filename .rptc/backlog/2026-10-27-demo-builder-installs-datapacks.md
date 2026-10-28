@@ -54,3 +54,6 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-28  fix(data-installer): library writes name the caller's org, as its reads do (DI-5) (`19be668de`)
 - 2026-10-28  fix(data-installer): a pack's codes cannot steer a Commerce request elsewhere (DI-5) (`a3b9246c9`)
 - 2026-10-28  style(data-installer): the engine id re-export sits below the imports (DI-5) (`d6ccb50fd`)
+- 2026-10-28  feat(data-installer): Demo Builder's engine installs by default; the service keeps the catalog (`e6be8e0ee`)
+- 2026-10-28  docs(rptc): datapack-engine plan updates (`364018383`)
+- 2026-10-28  fix(data-installer): the Data Installer service is sent no Commerce secrets (DI-5) (`c69e7a7b3`)
