@@ -17,6 +17,7 @@
 
 import type { CommerceGet } from '../erpFillReaders';
 import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
+import { andList } from '@/core/utils/andList';
 import type {
     CommerceInventorySource,
     CommerceInventorySourceList,
@@ -113,10 +114,6 @@ function lines(plan: Plan, inventory: Inventory): string[] {
         ...plan.linksToAdd.map((code) => `Add ${nameOf(code)} to ${stockNameOf(plan)}`),
     ];
 }
-
-/** "A", "A and B", "A, B and C". */
-const andList = (names: string[]): string =>
-    names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 
 /**
  * The plan in one sentence: "Add Test Warehouse to Justrite Stock", "Switch Test Warehouse

@@ -15,6 +15,7 @@
 import { Text } from '@adobe/react-spectrum';
 import React from 'react';
 import { ConfirmActionDialog } from './ConfirmActionDialog';
+import { andList } from '@/core/utils/andList';
 
 export interface ErpResetDialogProps {
     isOpen: boolean;
@@ -31,7 +32,7 @@ export interface ErpResetDialogProps {
  * @returns the dialog container
  */
 export function ErpResetDialog({ isOpen, erpNames, onConfirm, onClose }: ErpResetDialogProps): React.ReactElement {
-    const which = erpNames.length > 0 ? erpNames.join(' and ') : 'every ERP this integration serves';
+    const which = erpNames.length > 0 ? andList(erpNames) : 'every ERP this integration serves';
     const them = erpNames.length === 1 ? 'it' : 'them';
     return (
         <ConfirmActionDialog

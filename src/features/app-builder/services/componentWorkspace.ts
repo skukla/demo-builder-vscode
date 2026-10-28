@@ -159,9 +159,13 @@ export function inheritedWorkspace(
  *
  * @returns a reason when the workspace could not be made, otherwise undefined
  */
-/** What an add says when the project has no Adobe project to make a workspace in. */
+/**
+ * What an add says when the project has no Adobe project to make a workspace in. It named
+ * "Deploys to" until 2026-10-28, which a project with no destination does not show; the
+ * screen's add flow is what asks for one. The agent's way is in add_integration's description.
+ */
 export const NO_ADOBE_PROJECT =
-    'This project has no Adobe project yet. Choose one under Deploys to on the Integrations screen, then add it again.';
+    'This project has no Adobe project to deploy to yet. Add it from the Integrations screen, which asks for one, then try again.';
 
 export async function ensureComponentWorkspace(
     project: Project,

@@ -40,6 +40,7 @@
  * @module features/eds/services/storefront/productPageRemoval
  */
 
+import { andList } from '@/core/utils/andList';
 import { formatHelixError } from '@/features/eds/services/errorFormatters';
 import type { Logger } from '@/types/logger';
 
@@ -149,7 +150,7 @@ function refusal(kind: OverlayPageKind, site: string, others: string[]): string 
     const who =
         quoted.length === 1
             ? `the project ${quoted[0]} also publishes`
-            : `the projects ${quoted.slice(0, -1).join(', ')} and ${quoted[quoted.length - 1]} also publish`;
+            : `the projects ${andList(quoted)} also publish`;
     const whose = quoted.length === 1 ? 'its' : 'their';
     return (
         `${capitalised(kind.noun)} pages were left published: ${who} to ${site}, ` +
@@ -195,7 +196,6 @@ function describe(
               'so those preview copies remain.';
     return { status: liveFailed === 0 ? 'live-only' : 'incomplete', ...counts, summary: `${live}${preview}` };
 }
-
 
 /**
  * Whether a published path is a product page the overlay made: the

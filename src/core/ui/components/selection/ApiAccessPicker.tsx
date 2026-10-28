@@ -34,6 +34,7 @@ import {
     pickableApis,
 } from './apiAccessFilters';
 import { CheckboxRow } from './CheckboxRow';
+import { andList } from '@/core/utils/andList';
 import type { CloudGrouping } from '@/types/adobeApis';
 
 /** Show the filter only once the list is big enough to warrant it (catalog parity). */
@@ -123,11 +124,7 @@ function lockedReason(api: ApiAccessOption): string | undefined {
     if (api.ownership !== 'other-required') return undefined;
     const owners = api.requiredBy ?? [];
     if (owners.length === 0) return undefined;
-    const names =
-        owners.length === 1
-            ? owners[0]
-            : `${owners.slice(0, -1).join(', ')} and ${owners[owners.length - 1]}`;
-    return `Required by ${names}`;
+    return `Required by ${andList(owners)}`;
 }
 
 /** One checkbox row: display name primary, code secondary; locked = checked + disabled. */

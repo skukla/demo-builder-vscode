@@ -89,6 +89,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             "of its own (an ERP and its integration share one; a mesh stays in the project's " +
             'workspace), clone it, subscribe its Adobe APIs there, build and deploy it, and ' +
             'register it on the dashboard. get_project shows the workspace on its record. ' +
+            'A project with no Adobe project yet (get_project shows none) refuses the add: ' +
+            'choose one with set_project_destination first, asking the user which. ' +
             'Pass a catalog `id` (from list_components) OR a custom GitHub `source`. Adding a ' +
             'catalog id the project already has adds a numbered copy in its own workspace; a ' +
             'project has one mesh and one ERP integration (a second ERP is add_erp). Adding the ' +

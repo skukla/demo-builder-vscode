@@ -6,6 +6,7 @@
  */
 
 import type { IntegrationCardModel } from './integrationCardModel';
+import { andList } from '@/core/utils/andList';
 import { MESH_NEEDED_NOTE } from '@/features/components/services/demoPackageLoader';
 
 /**
@@ -44,7 +45,7 @@ function storeSetupConsequence(target: IntegrationCardModel): string {
  * records, which removal deletes before the undeploy.
  */
 function linkedRemovalConsequence(target: IntegrationCardModel): string {
-    const names = (target.linked?.cards ?? []).map((card) => card.name).join(' and ');
+    const names = andList((target.linked?.cards ?? []).map((card) => card.name));
     // An ERP added from the integration's card goes alone (AB-16).
     if (target.removesAlone)
         return `Its records will be deleted, and ${names} stops sending it orders.`;

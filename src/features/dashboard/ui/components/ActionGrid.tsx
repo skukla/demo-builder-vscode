@@ -113,11 +113,6 @@ export interface ActionGridProps {
     /** Whether mesh-related actions (Configure) should be disabled */
     isMeshActionDisabled: boolean;
     /**
-     * Integrations card inputs. The card is the last of the Open row: a
-     * destination of the same weight as the storefront, authoring and admin.
-     */
-    hasAdobeContext?: boolean;
-    /**
      * Whether to offer the Sample Data tile. The Data Installer needs BOTH
      * `dataInstaller.enabled` and a usable `apiBaseUrl`; without the URL the
      * surface refuses every request, so a tile is an invitation to a dead end.
@@ -227,7 +222,6 @@ export function ActionGrid({
     isOpeningBrowser,
     demoStatus,
     handleRestartDemo,
-    hasAdobeContext,
     dataInstallerAvailable,
     appBuilderComponents,
     hasMesh,
@@ -286,9 +280,7 @@ export function ActionGrid({
                 handleOpenDaLive={handleOpenDaLive}
                 handleOpenAdminPanel={handleOpenAdminPanel}
                 integrations={
-                    // Renders nothing without an Adobe org.
                     <IntegrationsSummaryTile
-                        hasAdobeContext={hasAdobeContext}
                         appBuilderComponents={appBuilderComponents}
                         hasMesh={hasMesh}
                         meshStatus={meshStatus}

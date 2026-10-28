@@ -87,6 +87,17 @@ describe('AddIntegrationFlowAdapter', () => {
             });
             expect(modalProps().state.adobeOrg).toEqual({ id: 'org-1' });
         });
+
+        // A project with no Adobe org (no integration and no mesh at creation, so nothing
+        // signed it in) starts signed out, as the wizard does, so the flow walks its own
+        // sign-in, project and workspace stages (release walk 2026-10-28). Said signed in
+        // with no org, the sign-in step opened on "Select Your Organization".
+        it('starts signed out on a project with no Adobe org, so the flow signs in itself', () => {
+            renderAdapter({ adobeOrgId: undefined, adobeProjectId: undefined, adobeWorkspaceId: undefined });
+
+            expect(modalProps().state.adobeAuth).toEqual({ isAuthenticated: false, isChecking: false });
+            expect(modalProps().state.adobeOrg).toBeUndefined();
+        });
     });
 
     // REGRESSION (2026-08-03): the adapter's updateState swallowed every write

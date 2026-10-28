@@ -23,6 +23,7 @@
 
 import type { CommerceSend } from './commerceBulk';
 import type { CommerceGet } from './erpFillReaders';
+import { andList } from '@/core/utils/andList';
 import type {
     CommerceAttributeGroupList,
     CommerceAttributeSetList,
@@ -107,7 +108,7 @@ export async function setsWithoutOwner(
 /** The sets in words: "Default (12 products) and Gear (3 products)". */
 export function setsInWords(sets: readonly AttributeSetWithoutOwner[]): string {
     const each = sets.map((set) => `${set.name} (${set.products} product${set.products === 1 ? '' : 's'})`);
-    return each.length < 2 ? each.join('') : `${each.slice(0, -1).join(', ')} and ${each[each.length - 1]}`;
+    return andList(each);
 }
 
 /**

@@ -25,6 +25,7 @@
 
 import { fillEveryErp, type ErpFillForProjectDeps, type ErpFillOutcomes } from './erpFillForProject';
 import { readErpOwnershipOptionsForProject, saveErpOwnership } from './erpOwnershipSync';
+import { andList } from '@/core/utils/andList';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { erpListIdOf } from '@/features/app-builder/services/erpList';
 import { describeOwns, overlapsIn, ownersAcross } from '@/features/app-builder/services/erpOwnership';
@@ -269,8 +270,7 @@ function ownedBy(owners: ReadonlyMap<string, readonly string[]>, listId: string)
 /** The ERPs in words: "both X and Y", or "X, Y and Z". */
 function namesOf(listIds: readonly string[], options: ErpOwnershipOptions): string {
     const names = listIds.map((listId) => options.erps.find((entry) => entry.erp === listId)?.name ?? listId);
-    if (names.length === 2) return `both ${names[0]} and ${names[1]}`;
-    return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+    return names.length === 2 ? `both ${andList(names)}` : andList(names);
 }
 
 /**

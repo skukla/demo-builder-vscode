@@ -8,6 +8,7 @@
  */
 
 import { erpListIdFor } from './erpListId';
+import { andList } from '@/core/utils/andList';
 
 /** The ERP an erp_owner value names, by the name it was slugged from; the value itself when none matches (a rename). */
 function erpNamed(owner: string, erpNames: readonly string[]): string {
@@ -28,7 +29,6 @@ export function taggedRefusal(owners: string[], erpNames: readonly string[]): st
         const [{ name }] = named;
         return `${products} assigned to ${name}. Undo ${name}'s last product assignment first, or the undo would clear them.`;
     }
-    const list = named.map(({ name, count }) => `${name} (${count})`);
-    const joined = `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
-    return `${products} assigned to ${joined}. Undo each ERP's last product assignment first, or the undo would clear them.`;
+    const list = andList(named.map(({ name, count }) => `${name} (${count})`));
+    return `${products} assigned to ${list}. Undo each ERP's last product assignment first, or the undo would clear them.`;
 }

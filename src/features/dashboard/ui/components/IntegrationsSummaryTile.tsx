@@ -27,8 +27,6 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AppBuilderComponentState } from '@/types/base';
 
 export interface IntegrationsSummaryTileProps {
-    /** Render gate: integrations need an Adobe workspace to deploy into. */
-    hasAdobeContext?: boolean;
     /** Keyed persisted component map. */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     /** Whether the project has a mesh — it counts as a peer card on the surface. */
@@ -99,16 +97,18 @@ function worstFace(
     return worst && label ? { variant: worst.variant, label } : undefined;
 }
 
+/**
+ * Rendered on every project, an Adobe org or not (release walk 2026-10-28). It used to need
+ * one, and a project created without an integration or a mesh never gets one, since only the
+ * add flow signs in to Adobe: that project could never add an integration at all. The add flow
+ * on the integrations screen signs in and picks the Adobe project itself, and the first add
+ * records that destination under the signed-in org (`projectDestinationRecord.ts`).
+ */
 export function IntegrationsSummaryTile({
-    hasAdobeContext,
     appBuilderComponents,
     hasMesh,
     meshStatus,
-}: IntegrationsSummaryTileProps): React.ReactElement | null {
-    if (!hasAdobeContext) {
-        return null;
-    }
-
+}: IntegrationsSummaryTileProps): React.ReactElement {
     // Integrations and the systems they use, each a card on the surface. A
     // `kind: 'mesh'` entry in the keyed map is the mesh's persisted record, not
     // a card of its own; the mesh counts via `hasMesh`.

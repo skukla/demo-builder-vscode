@@ -76,7 +76,7 @@ describe('a project with no Adobe project', () => {
         expect(saveProject).not.toHaveBeenCalled();
         expect(result).toStrictEqual({
             error:
-                'This project has no Adobe project yet. Choose one under Deploys to on the Integrations screen, then add it again.',
+                'This project has no Adobe project to deploy to yet. Add it from the Integrations screen, which asks for one, then try again.',
         });
     });
 });

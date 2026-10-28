@@ -292,7 +292,6 @@ describe('ActionGrid — every dot has words', () => {
             {
                 ...edsProps,
                 demoStatus: published,
-                hasAdobeContext: true,
                 appBuilderComponents: {
                     a: { kind: 'integration', status: 'error', source: { owner: 'o', repo: 'r' } },
                 },

@@ -19,6 +19,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { andList } from '@/core/utils/andList';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     isPlaceholderStub,
@@ -88,5 +89,5 @@ export function labelsPutBack(paths: readonly string[]): string[] {
     if (paths.length === 0) return [];
     const pages = paths.map(pageOf);
     if (pages.length === 1) return [`Fixed the ${pages[0]} page's labels.`];
-    return [`Fixed the labels of the ${pages.slice(0, -1).join(', ')} and ${pages[pages.length - 1]} pages.`];
+    return [`Fixed the labels of the ${andList(pages)} pages.`];
 }

@@ -19,6 +19,7 @@ import {
     websiteNamer,
 } from './setupConfigChecks';
 import { warehouseFor } from './storePreparation/warehouseFix';
+import { andList } from '@/core/utils/andList';
 import type { SetupCheck } from '@/types/appBuilderComponents';
 
 /** A signed Commerce REST GET, answering the body as text or an "Error: " line. */
@@ -130,11 +131,6 @@ function catalogsInWords(withOwn: CompanyRow[], onPublic: CompanyRow[]): string 
         parts.push(onPublic.length === 1 ? `${names} uses ${catalog}.` : `${names} use ${catalog}.`);
     }
     return parts.join(' ');
-}
-
-/** "A", "A and B", "A, B and C". */
-function andList(names: string[]): string {
-    return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
 interface SourceRow {

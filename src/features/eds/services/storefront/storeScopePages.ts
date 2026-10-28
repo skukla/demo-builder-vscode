@@ -37,6 +37,7 @@ import {
     type ProductPageSite,
 } from './productPageRemoval';
 import { clearCatalogPagesPending } from './storeScopeChange';
+import { andList } from '@/core/utils/andList';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { itemCount } from '@/core/utils/storefrontJobs';
 import { formatDuration } from '@/core/utils/timeFormatting';
@@ -96,8 +97,7 @@ function removedSentence(removal: ProductPageRemovalResult): string | undefined 
 function keptSentence(kept: string[]): string | undefined {
     if (kept.length === 0) return undefined;
     const quoted = kept.map((path) => `"${path}"`);
-    const names = quoted.length === 1 ? quoted[0] : `${quoted.slice(0, -1).join(', ')} and ${quoted[quoted.length - 1]}`;
-    return `Kept ${names}: you edited ${kept.length === 1 ? 'it' : 'them'}.`;
+    return `Kept ${andList(quoted)}: you edited ${kept.length === 1 ? 'it' : 'them'}.`;
 }
 
 function productSentence(publish: PrewarmResult): string | undefined {

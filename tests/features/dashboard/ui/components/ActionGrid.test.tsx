@@ -105,20 +105,23 @@ describe('ActionGrid', () => {
             const cards = Array.from(
                 container.querySelectorAll('.dashboard-card-row > .dashboard-action-button')
             );
+            // Integrations is on every project, an Adobe org or not (2026-10-28).
             expect(cards.map((n) => n.querySelector('.icon-label')?.textContent)).toEqual([
                 'Open in Browser',
                 'Author Content',
                 'Manage Commerce',
+                'Integrations',
             ]);
             expect(cards.map((n) => n.querySelector('.dashboard-tile-description')?.textContent)).toEqual([
                 'The live storefront',
                 'Edit storefront pages',
                 'The Commerce Admin',
+                'Connected systems',
             ]);
         });
 
-        it('makes Integrations the last card when the project has an Adobe org, not a Build line', () => {
-            const { container } = render(<ActionGrid {...edsProps} hasAdobeContext />);
+        it('makes Integrations the last card, not a Build line, with or without an Adobe org', () => {
+            const { container } = render(<ActionGrid {...edsProps} />);
 
             const cards = Array.from(
                 container.querySelectorAll('.dashboard-card-row > .dashboard-action-button')
@@ -134,7 +137,7 @@ describe('ActionGrid', () => {
         });
 
         it('puts AEM Assets in Build after Datapacks, and nothing beside the Open cards', () => {
-            const { container } = render(<ActionGrid {...edsProps} hasAdobeContext dataInstallerAvailable />);
+            const { container } = render(<ActionGrid {...edsProps} dataInstallerAvailable />);
 
             const build = Array.from(getZone(container, 'build').querySelectorAll('.icon-label')).map(
                 (n) => n.textContent
@@ -147,7 +150,7 @@ describe('ActionGrid', () => {
         });
 
         it('has no Dev Console on the dashboard (each integration card opens its own workspace)', () => {
-            render(<ActionGrid {...edsProps} hasAdobeContext />);
+            render(<ActionGrid {...edsProps} />);
 
             expect(screen.queryByText('Dev Console')).not.toBeInTheDocument();
         });

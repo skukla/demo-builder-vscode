@@ -256,7 +256,6 @@ export function ProjectDashboardScreen({
                                     isOpeningBrowser={isOpeningBrowser}
                                     demoStatus={demoStatusDisplay}
                                     handleRestartDemo={handleRestartDemo}
-                                    hasAdobeContext={hasAdobeContext}
                                     dataInstallerAvailable={dataInstallerAvailable}
                                     appBuilderComponents={appBuilderComponents}
                                     hasMesh={hasMesh}

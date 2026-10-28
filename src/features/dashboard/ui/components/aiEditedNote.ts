@@ -16,16 +16,11 @@
  */
 
 import { skillDisplayTitle } from './AiSkillsList';
+import { andList } from '@/core/utils/andList';
 import type { SkillInventoryEntry } from '@/types/ai';
 
 /** Bundle prefix of a skill file, as the edited list writes it (project-relative posix). */
 const SKILLS_PREFIX = '.claude/skills/';
-
-/** "A", "A and B", "A, B and C". */
-function andList(names: string[]): string {
-    if (names.length < 2) return names.join('');
-    return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-}
 
 /**
  * Does this skill's on-disk file match the edited path? Suffix match: inventory

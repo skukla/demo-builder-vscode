@@ -73,3 +73,7 @@ They were not removed in the same change because existing projects hold values i
 - **Afreen's answer on product profiles** (is it a matter of adding the service's technical account
   to the store's profile?) decides whether the service can install into an SC's store again. It
   still needs no secrets from us either way.
+
+## Shipped so far
+
+- 2026-10-28  fix(data-installer): stop gathering Commerce secrets; remove the shared-credential broker (`ff7c67be1`)

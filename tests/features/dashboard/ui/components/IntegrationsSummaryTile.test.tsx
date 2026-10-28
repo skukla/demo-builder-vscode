@@ -80,12 +80,13 @@ beforeEach(() => {
 });
 
 describe('IntegrationsSummaryTile', () => {
-    it('renders nothing without an Adobe context (same gate as the old block)', () => {
-        const { container } = render(
-            <IntegrationsSummaryTile appBuilderComponents={components('deployed')} />
-        );
+    // A project with no Adobe org still gets the tile: it is the only way in to add the first
+    // integration, and the add flow signs in itself (release walk 2026-10-28).
+    it('renders on a project with no integrations and no Adobe org, with no dot', () => {
+        render(<IntegrationsSummaryTile appBuilderComponents={{}} />);
 
-        expect(container).toBeEmptyDOMElement();
+        expect(screen.getByText('Integrations')).toBeInTheDocument();
+        expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
     });
 
     // No count: "how many?" is idle trivia from the dashboard next to "is
@@ -94,7 +95,6 @@ describe('IntegrationsSummaryTile', () => {
     it('renders NO count', () => {
         render(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 hasMesh
                 appBuilderComponents={components('deployed', 'deployed')}
             />
@@ -110,7 +110,7 @@ describe('IntegrationsSummaryTile', () => {
     // preceding a click through to check on it. The marker class is its exemption.
     it('carries the marker exempting the dot from the tile hover-blanking rule', () => {
         render(
-            <IntegrationsSummaryTile hasAdobeContext appBuilderComponents={components('error')} />
+            <IntegrationsSummaryTile appBuilderComponents={components('error')} />
         );
 
         expect(screen.getByTestId('integrations-tile-dot')).toHaveClass('tile-status-dot');
@@ -126,7 +126,6 @@ describe('IntegrationsSummaryTile', () => {
         ])('%s → %s', (statuses, expected) => {
             render(
                 <IntegrationsSummaryTile
-                    hasAdobeContext
                     appBuilderComponents={components(
                         ...(statuses as Array<AppBuilderComponentState['status']>)
                     )}
@@ -143,7 +142,6 @@ describe('IntegrationsSummaryTile', () => {
     it('reads a deployed integration with a recorded update as needing one, as its card does', () => {
         render(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 appBuilderComponents={{
                     'erp-integration': {
                         kind: 'integration',
@@ -161,7 +159,6 @@ describe('IntegrationsSummaryTile', () => {
     it("reports a system's health too: the ERP is a card of its own", () => {
         render(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 appBuilderComponents={{
                     'erp-integration': { ...DEPLOYED },
                     'demo-erp': { ...DEPLOYED, kind: 'system', status: 'error' },
@@ -175,7 +172,7 @@ describe('IntegrationsSummaryTile', () => {
     it('reads a stopped removal as amber, with its words, below a failure only', () => {
         const stopped = { ...DEPLOYED, kind: 'system' as const, removalStopped: 'Nothing was removed.' };
         const { rerender } = render(
-            <IntegrationsSummaryTile hasAdobeContext appBuilderComponents={{ a: { ...DEPLOYED }, b: stopped }} />
+            <IntegrationsSummaryTile appBuilderComponents={{ a: { ...DEPLOYED }, b: stopped }} />
         );
 
         expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute('data-variant', 'warning');
@@ -183,7 +180,6 @@ describe('IntegrationsSummaryTile', () => {
 
         rerender(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 appBuilderComponents={{ a: { ...DEPLOYED, status: 'error' }, b: stopped }}
             />
         );
@@ -196,7 +192,7 @@ describe('IntegrationsSummaryTile', () => {
         const stopped = { ...DEPLOYED, status: 'unknown', removalStopped: 'Nothing was removed.' };
         const map = { a: stopped } as unknown as Record<string, AppBuilderComponentState>;
 
-        render(<IntegrationsSummaryTile hasAdobeContext appBuilderComponents={map} />);
+        render(<IntegrationsSummaryTile appBuilderComponents={map} />);
 
         expect(screen.getByTestId('integrations-tile-dot')).toHaveAttribute('data-variant', 'warning');
         expect(screen.getByRole('tooltip')).toHaveTextContent('Removal stopped');
@@ -209,7 +205,6 @@ describe('IntegrationsSummaryTile', () => {
         it('reports a mesh error even when every integration is healthy', () => {
             render(
                 <IntegrationsSummaryTile
-                    hasAdobeContext
                     hasMesh
                     meshStatus="error"
                     appBuilderComponents={components('deployed', 'deployed')}
@@ -225,7 +220,6 @@ describe('IntegrationsSummaryTile', () => {
         it('maps mesh config drift to the warning dot (same mapping as the card)', () => {
             render(
                 <IntegrationsSummaryTile
-                    hasAdobeContext
                     hasMesh
                     meshStatus="config-changed"
                     appBuilderComponents={components('deployed')}
@@ -241,7 +235,6 @@ describe('IntegrationsSummaryTile', () => {
         it('ignores the in-flight "checking" mesh state (not a health signal)', () => {
             render(
                 <IntegrationsSummaryTile
-                    hasAdobeContext
                     hasMesh
                     meshStatus={undefined}
                     appBuilderComponents={components('deployed')}
@@ -263,7 +256,6 @@ describe('IntegrationsSummaryTile', () => {
         ])('reports a %s mesh with the same words its card uses', (status, variant, label) => {
             render(
                 <IntegrationsSummaryTile
-                    hasAdobeContext
                     hasMesh
                     meshStatus={status as 'needs-auth'}
                     appBuilderComponents={components('deployed')}
@@ -280,7 +272,6 @@ describe('IntegrationsSummaryTile', () => {
         it('ignores mesh status entirely when the project has no mesh', () => {
             render(
                 <IntegrationsSummaryTile
-                    hasAdobeContext
                     meshStatus="error"
                     appBuilderComponents={components('deployed')}
                 />
@@ -299,7 +290,6 @@ describe('IntegrationsSummaryTile', () => {
         it('ignores a failed mesh RECORD on a project with no mesh', () => {
             render(
                 <IntegrationsSummaryTile
-                    hasAdobeContext
                     appBuilderComponents={{
                         'api-mesh': { ...DEPLOYED, kind: 'mesh', status: 'error' },
                         'app-0': DEPLOYED,
@@ -314,7 +304,6 @@ describe('IntegrationsSummaryTile', () => {
         it('shows no dot at all when the mesh record is the only entry', () => {
             render(
                 <IntegrationsSummaryTile
-                    hasAdobeContext
                     appBuilderComponents={{
                         'api-mesh': { ...DEPLOYED, kind: 'mesh', status: 'error' },
                     }}
@@ -330,7 +319,7 @@ describe('IntegrationsSummaryTile', () => {
     // empty project green — "all good" about nothing at all.
     describe('nothing to report → no dot', () => {
         it('shows no dot when the project has no integrations and no mesh', () => {
-            render(<IntegrationsSummaryTile hasAdobeContext appBuilderComponents={{}} />);
+            render(<IntegrationsSummaryTile appBuilderComponents={{}} />);
 
             expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
             // The tile itself still renders — it is the way IN to add the first one.
@@ -340,7 +329,6 @@ describe('IntegrationsSummaryTile', () => {
         it('shows no dot when the only mesh is still being checked', () => {
             render(
                 <IntegrationsSummaryTile
-                    hasAdobeContext
                     hasMesh
                     meshStatus="checking"
                     appBuilderComponents={{}}
@@ -353,7 +341,6 @@ describe('IntegrationsSummaryTile', () => {
         it('still shows a dot once a mesh resolves, with no integrations', () => {
             render(
                 <IntegrationsSummaryTile
-                    hasAdobeContext
                     hasMesh
                     meshStatus="error"
                     appBuilderComponents={{}}
@@ -371,7 +358,6 @@ describe('IntegrationsSummaryTile', () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         render(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 appBuilderComponents={components('deployed')}
             />
         );
@@ -389,7 +375,6 @@ describe('IntegrationsSummaryTile', () => {
     it('pulses while an integration is deploying', () => {
         render(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 appBuilderComponents={components('deploying')}
             />
         );
@@ -402,7 +387,6 @@ describe('IntegrationsSummaryTile', () => {
     it('does not pulse once everything has settled', () => {
         render(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 appBuilderComponents={components('stale')}
             />
         );
@@ -436,7 +420,6 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
     ])('says what a %s dot means', (status, label) => {
         render(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 appBuilderComponents={{ a: integration(status) }}
             />
         );
@@ -449,7 +432,6 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
         // exists for; the words must agree with the colour.
         render(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 appBuilderComponents={{
                     a: integration('deployed'),
                     b: integration('error'),
@@ -468,7 +450,6 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
     it('says it beside the label too, not only on hover', () => {
         render(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 appBuilderComponents={{ a: integration('error') }}
             />
         );
@@ -485,7 +466,6 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
     it('wears no dot and no words when everything is deployed', () => {
         render(
             <IntegrationsSummaryTile
-                hasAdobeContext
                 hasMesh
                 meshStatus="deployed"
                 appBuilderComponents={{ a: integration('deployed'), b: integration('deployed') }}
@@ -499,7 +479,7 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
 
     it('still explains the tile when there is no dot to explain', () => {
         // Nothing deployed yet: no dot, but the tile is the way IN, so it says so.
-        render(<IntegrationsSummaryTile hasAdobeContext appBuilderComponents={{}} />);
+        render(<IntegrationsSummaryTile appBuilderComponents={{}} />);
 
         expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
         expect(screen.getByRole('tooltip')).toHaveTextContent(/integrations/i);

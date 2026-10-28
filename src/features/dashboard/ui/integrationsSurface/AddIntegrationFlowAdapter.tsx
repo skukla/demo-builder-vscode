@@ -205,11 +205,15 @@ export function AddIntegrationFlowAdapter({
 
     const state = useMemo(
         () => ({
-            // A live project IS authenticated and org-scoped — the surface only
-            // renders with hasAdobeContext. Without BOTH of these isAdobeSignedIn()
-            // is false and the flow walks sign-in → project → workspace instead of
-            // collapsing to the summary.
-            adobeAuth: { isAuthenticated: true, isChecking: false },
+            // A project with an Adobe org is signed in and org-scoped, so the flow
+            // collapses to the summary. One with none (created with no integration
+            // and no mesh, so nothing ever signed it in) starts signed out, as the
+            // wizard does: the flow walks sign-in → project → workspace, the sign-in
+            // step's own check writes the real state over this, and the first add
+            // records the destination under the signed-in org (release walk
+            // 2026-10-28). Said signed-in with no org, the step showed "Select Your
+            // Organization" first.
+            adobeAuth: { isAuthenticated: Boolean(adobeOrgId), isChecking: false },
             adobeOrg: adobeOrgId ? { id: adobeOrgId } : undefined,
             adobeProject: adobeProjectId
                 ? { id: adobeProjectId, title: adobeProjectTitle }
