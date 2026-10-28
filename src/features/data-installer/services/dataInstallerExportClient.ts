@@ -21,7 +21,6 @@ import {
     type CommerceCredentials,
     type DataInstallerWriteClientDeps,
     type WriteMode,
-    credentialFields,
     describe,
     safeParse,
 } from './dataInstallerWriteClient';
@@ -179,20 +178,16 @@ export class DataInstallerExportClient {
 }
 
 /**
- * Auth headers for the list call, by backend.
+ * The scope header for the list call, ACCS only.
  *
- * ACCS additionally needs `x-client-scope`: the source drop does not mention it,
- * the wiki lists it as optional, and without it the action fails pre-flight for
- * every site type.
+ * ACCS needs `x-client-scope`: the source drop does not mention it, the wiki lists it as
+ * optional, and without it the action fails pre-flight for every site type. It names a scope,
+ * not a secret. The Commerce credentials themselves are no longer sent: the service stopped
+ * accepting a caller's on purpose (DEMOSYS-1698, confirmed intended 2026-10-28) and signs in
+ * with its own, so sending them only put secrets on the wire (DI-5).
  */
 function exportAuthHeaders(credentials: CommerceCredentials): Record<string, string> {
-    return credentials.kind === 'paas'
-        ? { 'x-admin-username': credentials.username, 'x-admin-password': credentials.password }
-        : {
-              'x-client-id': credentials.clientId,
-              'x-client-secret': credentials.clientSecret,
-              'x-client-scope': ACCS_EXPORT_SCOPE,
-          };
+    return credentials.kind === 'paas' ? {} : { 'x-client-scope': ACCS_EXPORT_SCOPE };
 }
 
 /**
@@ -212,7 +207,6 @@ function buildExportBody(request: ExportRequest): Record<string, unknown> {
         operation_mode: 'export' satisfies WriteMode,
         verbose: 'full',
         ...(request.selections ? { selections: toServiceSelections(request.selections) } : {}),
-        ...credentialFields(request.credentials),
     };
 }
 

@@ -78,14 +78,12 @@ describe('listExportItems', () => {
         expect(headers['x-commerce-instance']).toBe(ACCS_EXPORT.restBaseUrl);
     });
 
-    it('sends the credential pair AND the scope ACCS needs', async () => {
+    it('sends the scope ACCS needs', async () => {
         const fetchImpl = ok(PAGE);
 
         await makeExportClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
 
         const { headers } = fetchImpl.mock.calls[0][1];
-        expect(headers['x-client-id']).toBe('cid-1');
-        expect(headers['x-client-secret']).toBe('fake-test-secret-not-a-secret');
         // The exact list, in order: the action fails pre-flight without the
         // ACCS scope, and a partial list is the same failure with a longer header.
         expect(headers['x-client-scope']).toBe(
@@ -106,22 +104,22 @@ describe('listExportItems', () => {
         expect(page.excludedCount).toBe(1);
     });
 
-    it('uses the admin pair for PaaS instead of the client headers', async () => {
-        const fetchImpl = ok(PAGE);
+    // The service signs in with its own credential (DEMOSYS-1698), so no Commerce secret travels:
+    // not in a header for the list, not in the body for the export (DI-5).
+    it('sends no Commerce credential with the list call, for either backend', async () => {
+        for (const credentials of [
+            ACCS_EXPORT.credentials,
+            { kind: 'paas' as const, username: 'admin', password: 'fake-test-pw-not-a-secret' },
+        ]) {
+            const fetchImpl = ok(PAGE);
 
-        await makeExportClient(fetchImpl).listExportItems(
-            {
-                ...ACCS_EXPORT,
-                credentials: { kind: 'paas', username: 'admin', password: 'fake-test-pw-not-a-secret' },
-            },
-            'attribute_sets',
-        );
+            await makeExportClient(fetchImpl).listExportItems({ ...ACCS_EXPORT, credentials }, 'attribute_sets');
 
-        const { headers } = fetchImpl.mock.calls[0][1];
-        expect(headers['x-admin-username']).toBe('admin');
-        expect(headers['x-admin-password']).toBe('fake-test-pw-not-a-secret');
-        expect(headers['x-client-id']).toBeUndefined();
+            const sent = JSON.stringify(fetchImpl.mock.calls[0][1].headers);
+            expect(sent).not.toMatch(/x-admin-|x-client-id|x-client-secret|fake-test-pw-not-a-secret/);
+        }
     });
+
 
     it('surfaces the service reason when the list call is refused', async () => {
         const fetchImpl = ok({ success: false, error: 'Instance unreachable' }, 500);

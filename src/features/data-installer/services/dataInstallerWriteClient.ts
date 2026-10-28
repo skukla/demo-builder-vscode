@@ -140,10 +140,7 @@ export class DataInstallerWriteClient {
             },
             // Access only: no datapack, no operation mode. Nothing here could be
             // mistaken by the service for a request to do work.
-            body: JSON.stringify({
-                commerce_instance: request.commerceInstance,
-                ...credentialFields(request.credentials),
-            }),
+            body: JSON.stringify({ commerce_instance: request.commerceInstance }),
             signal: AbortSignal.timeout(this.timeoutMs),
         });
 
@@ -278,7 +275,6 @@ function buildBody(request: ImportRequest, mode: WriteMode): Record<string, unkn
         data_types: request.dataTypes,
         operation_mode: mode,
         ...targetFields(request.target),
-        ...credentialFields(request.credentials),
     };
 }
 
@@ -292,29 +288,6 @@ function buildBody(request: ImportRequest, mode: WriteMode): Record<string, unkn
  */
 function targetFields(target: ImportTarget | undefined): Record<string, string> {
     return target ? { website_code: target.websiteCode, store_code: target.storeCode } : {};
-}
-
-/**
- * Credential fields, by backend.
- *
- * **`admin_username`/`admin_password` are the names the service's own docs use.**
- * An earlier version of this function invented `commerce_username`/
- * `commerce_password` — no source, no verification — which would have failed in
- * the worker minutes after a 202, with a credentials error and no clue why.
- *
- * Still UNCONFIRMED against a live call: the spike read these from vendor docs
- * that are wrong in seven known places, and it used no credentials. The Validate
- * button is what settles it — a documented name is merely better grounded than an
- * invented one, not proven.
- *
- * Which scope the service requests for ACCS is unknown and will not be answered,
- * so this sends the pair and lets the attempt report its own failure rather than
- * branching on a value nobody has confirmed.
- */
-export function credentialFields(credentials: CommerceCredentials): Record<string, string> {
-    return credentials.kind === 'paas'
-        ? { admin_username: credentials.username, admin_password: credentials.password }
-        : { client_id: credentials.clientId, client_secret: credentials.clientSecret };
 }
 
 /** Parse, tolerating a body that is not JSON at all. */

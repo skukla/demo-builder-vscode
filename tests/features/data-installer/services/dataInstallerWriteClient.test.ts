@@ -368,16 +368,13 @@ describe('DataInstallerWriteClient', () => {
             expect(result.reason).toMatch(/Authentication failed/);
         });
 
-        it('carries the instance and credentials, not the datapack', async () => {
+        it('carries the instance alone: no credentials, no datapack', async () => {
             const fetchImpl = ok({ success: true });
 
             await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
-            expect(body).toMatchObject({
-                commerce_instance: 'whatever-the-user-typed',
-                admin_username: 'admin',
-            });
+            expect(body).toEqual({ commerce_instance: 'whatever-the-user-typed' });
             // Nothing about a datapack — this checks access, not a request.
             expect(body.datapack_name).toBeUndefined();
             expect(body.operation_mode).toBeUndefined();
@@ -465,33 +462,19 @@ describe('DataInstallerWriteClient', () => {
             expect(fetchImpl.mock.calls[0][1].headers.Authorization).toBe('Bearer ims-token');
         });
 
-        it('carries PaaS admin credentials in the body', async () => {
+        // The service stopped accepting a caller's Commerce credentials on purpose (its security
+        // fix, DEMOSYS-1698; confirmed intended by its maintainers 2026-10-28) and installs with
+        // its own. Sending them anyway only put secrets on the wire, so neither kind leaves (DI-5).
+        it.each([
+            ['PaaS admin credentials', undefined],
+            ['ACCS OAuth credentials', { kind: 'accs' as const, clientId: 'cid', clientSecret: 'fake-test-pw-not-a-secret' }],
+        ])('never sends %s to the service', async (_label, credentials) => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeLoggingClient(fetchImpl).startImport(REQUEST);
+            await makeLoggingClient(fetchImpl).startImport(credentials ? { ...REQUEST, credentials } : REQUEST);
 
-            const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
-            // The names the service's own docs use. An earlier version of this
-            // client invented `commerce_username`/`commerce_password`, which had
-            // no source at all — PaaS imports would have failed in the worker.
-            expect(body).toMatchObject({
-                admin_username: 'admin',
-                admin_password: 'fake-test-pw-not-a-secret',
-            });
-            expect(body.client_id).toBeUndefined();
-        });
-
-        it('carries ACCS OAuth credentials in the body', async () => {
-            const fetchImpl = ok({ activation_id: 'x' }, 202);
-
-            await makeLoggingClient(fetchImpl).startImport({
-                ...REQUEST,
-                credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'fake-test-pw-not-a-secret' },
-            });
-
-            const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
-            expect(body).toMatchObject({ client_id: 'cid', client_secret: 'fake-test-pw-not-a-secret' });
-            expect(body.admin_username).toBeUndefined();
+            const sent = String(fetchImpl.mock.calls[0][1].body);
+            expect(sent).not.toMatch(/admin_username|admin_password|client_id|client_secret|fake-test-pw-not-a-secret/);
         });
 
         // Credentials must never reach a log line. The client's own error text is

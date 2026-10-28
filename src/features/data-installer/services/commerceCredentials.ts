@@ -160,10 +160,11 @@ async function resolvePaas(
  * same declared-config surface, so a user supplies either backend's credential
  * where they already supply everything else about it.
  *
- * **No admin-pair fallback.** The service accepts `admin_username`/`admin_password`
- * for ACCS too, but that is the legacy path — OAuth Server-to-Server is the IMS
+ * **No admin-pair fallback.** The service accepted `admin_username`/`admin_password`
+ * for ACCS too, but that was the legacy path — OAuth Server-to-Server is the IMS
  * model for SaaS. Accepting both here would quietly make the worse credential the
- * easy one.
+ * easy one. (Since its DEMOSYS-1698 change the service accepts neither from a caller,
+ * and Demo Builder no longer sends them; DI-5.)
  */
 async function resolveAccs(
     deps: CommercePairDeps,
