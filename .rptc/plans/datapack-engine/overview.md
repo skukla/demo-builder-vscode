@@ -88,6 +88,7 @@ Ours is written from scratch, tested, and checked live.
 | 09 | [Store settings in a pack](step-09-store-settings.md) | to do |
 | 10 | [Reset clears a demo's part of the store](step-10-wipe.md) | to do |
 | 11 | [Later, when a pack needs it](step-11-later.md) | not started |
+| 12 | [The storefront shows a pack's own categories](step-12-pack-categories-on-storefront.md), after 03's live run | to do |
 
 Every step is test-first, reuses before it writes (the house component, hook, client or rule that
 already does the job), and runs the `gate` skill before it is committed.
