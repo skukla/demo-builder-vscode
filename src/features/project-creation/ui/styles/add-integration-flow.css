@@ -106,8 +106,14 @@
     flex: 0 0 auto;
     /* The viewport term reserves the modal chrome (title, search, count, context
        line, footer, dialog margins) so a short window shrinks the list rather than
-       overflowing the dialog. */
-    height: min(420px, calc(100vh - 22rem));
+       overflowing the dialog.
+       It was 22rem, which undercounted that chrome by 21px (measured 2026-10-28 at a
+       725px-tall webview, on both the project and the workspace list): `.modal-body`
+       ended up shorter than its content and scrolled, clipping the list's last row
+       and pulling its top row under the header. Scrolling the LIST cannot reveal
+       that strip, so a selected last row stayed half-hidden. 24rem leaves ~11px of
+       slack. */
+    height: min(420px, calc(100vh - 24rem));
 }
 
 /* A committed choice (project/workspace) collapsed to one compact boxed line. */
