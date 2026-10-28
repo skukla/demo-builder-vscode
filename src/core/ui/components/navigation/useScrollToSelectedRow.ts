@@ -87,11 +87,19 @@ export interface UseScrollToSelectedRowOptions {
     selectedIndex: number;
     /** Whether the list currently has rows to scroll through. */
     hasItems: boolean;
+    /**
+     * The filter text. A new filter is a new list: the grid keeps the scroll offset it
+     * had, but rows it had only estimated are measured taller once rendered, which left
+     * the selected last row sitting below the visible edge. Re-centring on a filter
+     * change puts it back. Each keystroke cancels the pending pass, so this runs once
+     * typing pauses and never moves the list under the caret.
+     */
+    filterQuery?: string;
 }
 
 /**
- * Scroll the selected row to the middle of the list when the selection changes or
- * when rows first arrive.
+ * Scroll the selected row to the middle of the list when the selection changes,
+ * when rows first arrive, or when the filter changes.
  *
  * @param options - Container ref, the selection, and whether rows exist yet
  */
@@ -100,13 +108,14 @@ export function useScrollToSelectedRow({
     selectedId,
     selectedIndex,
     hasItems,
+    filterQuery = '',
 }: UseScrollToSelectedRowOptions): void {
-    // Read inside the async passes without making them a dependency: the index moves
-    // as the user filters, and re-running the effect for that would fight the typing.
+    // Read inside the async passes without making it a dependency: the filter query
+    // is the dependency that says the list changed, and the index follows from it.
     const selectedIndexRef = useRef(selectedIndex);
     selectedIndexRef.current = selectedIndex;
 
-    // "id:hasItems" — re-attempting when data ARRIVES is the point, so a scroll
+    // "id:hasItems:filter" — re-attempting when data ARRIVES is the point, so a scroll
     // attempted against an empty list must not count as handled.
     const handledRef = useRef<string | null>(null);
 
@@ -115,7 +124,7 @@ export function useScrollToSelectedRow({
             handledRef.current = null;
             return;
         }
-        const attempt = `${selectedId}:${hasItems}`;
+        const attempt = `${selectedId}:${hasItems}:${filterQuery}`;
         if (handledRef.current === attempt || !hasItems) return;
         handledRef.current = attempt;
 
@@ -164,5 +173,5 @@ export function useScrollToSelectedRow({
             clearTimeout(timer);
             cancelAnimationFrame(frame);
         };
-    }, [selectedId, hasItems, containerRef]);
+    }, [selectedId, hasItems, filterQuery, containerRef]);
 }

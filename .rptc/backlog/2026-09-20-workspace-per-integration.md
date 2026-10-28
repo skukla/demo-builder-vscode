@@ -510,3 +510,4 @@ and re-adding an integration — no migration code ships.
 - 2026-09-22  fix(integrations): a pair that never stored its link is still a pair (`aade1e06c`)
 - 2026-09-28  2026-09-28 status tidy (owner: yes): built. A second pair added live 09-22, each in its own workspace; remove_integration took records and workspace away (AB-26 log, 09-24). Left: release.
 - 2026-10-28  fix(integrations): any project can add its first integration (`a4e409d5d`)
+- 2026-10-28  fix(integrations): the last project or workspace row is no longer cut off (`4d1f62d3e`)

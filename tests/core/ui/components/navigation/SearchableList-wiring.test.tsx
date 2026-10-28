@@ -133,6 +133,12 @@ describe('what the scroll hook is told', () => {
 
         expect(scrollArgs[0]).toMatchObject({ selectedId: '4', selectedIndex: -1, hasItems: true });
     });
+
+    it('passes the filter text, so a new filter re-centres the selected row', () => {
+        render(<SearchableList {...defaultProps} searchQuery="Kukla" />);
+
+        expect(scrollArgs[0]).toMatchObject({ filterQuery: 'Kukla' });
+    });
 });
 
 describe('the refreshing state', () => {

@@ -123,14 +123,15 @@ export function SearchableList<T extends SearchableListItem>({
     // Ref for the list container to scroll to selected item
     const listContainerRef = useRef<HTMLDivElement>(null);
 
-    // Centre the selected row when the selection changes or when rows first arrive.
-    // The geometry (and why it is two-phase) lives in useScrollToSelectedRow.
+    // Centre the selected row when the selection changes, rows first arrive, or the
+    // filter changes. The geometry (and why it is two-phase) lives in useScrollToSelectedRow.
     const selectedId = selectedKeys[0];
     useScrollToSelectedRow({
         containerRef: listContainerRef,
         selectedId,
         selectedIndex: filteredItems.findIndex((item) => item.id === selectedId),
         hasItems: filteredItems.length > 0,
+        filterQuery: searchQuery,
     });
 
     return (
