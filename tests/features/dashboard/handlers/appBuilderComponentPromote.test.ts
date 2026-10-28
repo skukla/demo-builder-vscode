@@ -272,6 +272,10 @@ describe('handleUnpromoteAppBuilderComponent', () => {
         expect(result).toEqual({ success: true, deleted: 'steve/order-sync' });
         expect(project.appBuilderComponents?.['my-app']?.source).toEqual(SHELL);
         expect(stateManager.saveProject).toHaveBeenCalledWith(project);
+        // A success says so as every success does, a ✅ line that goes by itself (owner,
+        // 2026-10-15), not a notification that waits in the corner (2026-10-28).
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        expect((vscode.window.setStatusBarMessage as jest.Mock).mock.calls[0][0]).toBe('✅ Deleted steve/order-sync');
     });
 
     it('deletes nothing when the SC says no, or when Demo Builder did not make the repository', async () => {

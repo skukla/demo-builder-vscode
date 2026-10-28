@@ -22,6 +22,7 @@ import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { normalizeRepositoryName } from '@/core/validation/normalizers';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { askForDetailsDuringOperation, withModalAsking } from '@/core/vscode/operationPrompt';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import {
     collectAppFiles,
@@ -329,7 +330,8 @@ export const handleUnpromoteAppBuilderComponent: MessageHandler<{ id?: string; c
         await unpromoteApp(promotionDeps(context), project, id);
         await context.stateManager.saveProject(project);
         await postComponentsSnapshot(context);
-        void vscode.window.showInformationMessage(`Deleted ${fullName}.`);
+        // As every success reads (owner, 2026-10-15): a ✅ line that goes by itself.
+        showSuccessInStatusBar(`Deleted ${fullName}`);
         return { success: true, deleted: fullName };
     } catch (error) {
         return failed(context, `Could not delete ${fullName}`, error);

@@ -17,6 +17,7 @@ import { resolveOrgContext, sendOrgMismatch } from './projectHandlers';
 import { BASELINE_API } from '@/core/constants';
 import { stageLine } from '@/core/utils/stageLine';
 import { validateOrgId, validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
     teardownConsoleProject,
@@ -202,12 +203,11 @@ function countDeleted(result: ConsoleProjectTeardownResult, kind: 'registration'
     return result.items.filter((item) => item.kind === kind && item.outcome === 'deleted').length;
 }
 
-/** Success toast: what was deleted, with entity counts. */
-function buildSuccessMessage(result: ConsoleProjectTeardownResult, title: string): string {
+/** What else went with the project, for Debug Logs: the success line names only the project. */
+function describeRemoved(result: ConsoleProjectTeardownResult): string {
     const registrations = countDeleted(result, 'registration');
     const providers = countDeleted(result, 'provider');
-    return `Deleted Adobe project "${title}" `
-        + `(${registrations} event registration(s) and ${providers} event provider(s) removed).`;
+    return `${registrations} event registration(s) and ${providers} event provider(s) removed`;
 }
 
 /**
@@ -238,7 +238,10 @@ async function finalizeTeardown(
     if (result.projectDeleted) {
         await clearSelectionIfCurrent(context, result, target.projectId);
         await refreshProjects(context, target.orgId);
-        void vscode.window.showInformationMessage(buildSuccessMessage(result, target.title));
+        // As every success reads (owner, 2026-10-15): a ✅ line that goes by itself. An
+        // information notification stayed in the corner until closed (2026-10-28).
+        context.debugLogger.debug(`[Project] Deleted Adobe project "${target.title}": ${describeRemoved(result)}`);
+        showSuccessInStatusBar(`Deleted Adobe project "${target.title}"`);
     } else {
         void vscode.window.showWarningMessage(buildFailureMessage(result, target.title));
     }

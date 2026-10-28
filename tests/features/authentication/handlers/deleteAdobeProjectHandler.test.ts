@@ -459,14 +459,19 @@ describe('handleDeleteAdobeProject', () => {
             expect(report).toHaveBeenCalledWith({ message: 'Finding workspaces (1 of 4)' });
         });
 
-        it('shows an info toast with deleted registration/provider counts', async () => {
+        /**
+         * A success says so the way every success does: a ✅ line in the status bar for a
+         * few seconds (owner, 2026-10-15). It was an information notification, which stayed
+         * in the corner until closed (owner, 2026-10-28) and listed "0 event
+         * registration(s) and 0 event provider(s)". The counts go to Debug Logs.
+         */
+        it('says it worked in the status bar, not a notification that waits', async () => {
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(mockShowInfo).toHaveBeenCalledTimes(1);
-            const message = mockShowInfo.mock.calls[0][0] as string;
-            expect(message).toContain('My Project');
-            expect(message).toContain('2 event registration');
-            expect(message).toContain('1 event provider');
+            expect(mockShowInfo).not.toHaveBeenCalled();
+            expect((vscode.window.setStatusBarMessage as jest.Mock).mock.calls[0][0]).toBe(
+                '✅ Deleted Adobe project "My Project"',
+            );
         });
 
         it('refreshes the project list for the target org (mirrors create)', async () => {
