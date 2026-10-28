@@ -257,6 +257,7 @@ export const datapackZipHandlers = defineHandlers({
             const writer = new DatapackStoreWriter({
                 baseUrl: access.baseUrl,
                 getToken: access.getToken,
+                ...(access.orgCode ? { orgCode: access.orgCode } : {}),
                 log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
             });
             const outcome = await writePackToStore(writer, pack, {

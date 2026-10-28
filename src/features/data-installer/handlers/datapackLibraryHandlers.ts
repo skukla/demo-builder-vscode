@@ -51,11 +51,12 @@ function idOf(payload?: { datapackName?: string; version?: string }): DatapackId
 
 function writerFor(
     context: HandlerContext,
-    access: { baseUrl: string; getToken: () => Promise<string> },
+    access: { baseUrl: string; getToken: () => Promise<string>; orgCode?: string },
 ) {
     return new DatapackStoreWriter({
         baseUrl: access.baseUrl,
         getToken: access.getToken,
+        ...(access.orgCode ? { orgCode: access.orgCode } : {}),
         log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
     });
 }

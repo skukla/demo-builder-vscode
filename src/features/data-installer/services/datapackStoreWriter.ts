@@ -17,11 +17,16 @@
 import type { DatapackId } from '../types';
 import { actionUrl } from './dataInstallerConfig';
 import { DataInstallerApiError } from './dataInstallerErrors';
+import { type DataInstallerSignIn, signInHeaders } from './dataInstallerSignIn';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
-export interface DatapackStoreWriterDeps {
+/**
+ * The store's address and the caller's sign-in. The sign-in carries the org, sent as
+ * `x-gw-ims-org-id` as every read already sends it (`signInHeaders`): with Adobe's gateway check
+ * on for the store's actions, a write that names no org is refused (DI-5).
+ */
+export interface DatapackStoreWriterDeps extends DataInstallerSignIn {
     baseUrl: string;
-    getToken: () => Promise<string>;
     fetchImpl?: typeof fetch;
     timeoutMs?: number;
     /** One line per call: route and status. Never the rows. */
@@ -109,7 +114,7 @@ export class DatapackStoreWriter {
         });
         const response = await this.fetchImpl(url, {
             method: 'DELETE',
-            headers: { Authorization: `Bearer ${await this.deps.getToken()}` },
+            headers: await signInHeaders(this.deps),
             signal: AbortSignal.timeout(this.timeoutMs),
         });
         this.deps.log?.(`delete-datapack → ${response.status}`);
@@ -122,7 +127,7 @@ export class DatapackStoreWriter {
         const response = await this.fetchImpl(actionUrl(this.deps.baseUrl, route), {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${await this.deps.getToken()}`,
+                ...(await signInHeaders(this.deps)),
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(body),

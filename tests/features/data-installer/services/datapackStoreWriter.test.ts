@@ -177,3 +177,24 @@ describe('deleteDatapack', () => {
         ).rejects.toThrow('Could not delete the datapack.');
     });
 });
+
+/**
+ * With Adobe's gateway check on for the store's actions, a request that names no org is refused,
+ * so every write names the caller's org as every read already does (DI-5).
+ */
+describe('the org a write names', () => {
+    it('sends x-gw-ims-org-id beside the token on every write when the org is known', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+        const signed = new DatapackStoreWriter({
+            baseUrl: BASE,
+            getToken: async () => 'sc-token',
+            orgCode: 'ORG@AdobeOrg',
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        await signed.deleteDatapack({ name: 'justrite', version: 'v1' });
+
+        const [, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+        expect(init.headers).toEqual({ Authorization: 'Bearer sc-token', 'x-gw-ims-org-id': 'ORG@AdobeOrg' });
+    });
+});
