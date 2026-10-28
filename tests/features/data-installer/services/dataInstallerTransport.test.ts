@@ -167,17 +167,17 @@ describe('DataInstallerTransport', () => {
     });
 
     describe('what a request carries', () => {
-        it('sends the bearer by default and none when auth is false', async () => {
+        it('sends the bearer on every request, health-check included', async () => {
             const f = jsonFetch({ status: 'ok' });
             const transport = makeTransport(f);
 
             await transport.request('find-datapacks');
-            await transport.request('health-check', { auth: false });
+            await transport.request('health-check');
 
             const header = (n: number) =>
                 (f.mock.calls[n][1].headers as Record<string, string>).Authorization;
             expect(header(0)).toBe(`Bearer ${TOKEN}`);
-            expect(header(1)).toBeUndefined();
+            expect(header(1)).toBe(`Bearer ${TOKEN}`);
         });
 
         it('is a GET unless told otherwise, and a POST with a JSON body when told', async () => {

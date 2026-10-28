@@ -35,22 +35,6 @@ jest.mock('@/features/components/ui/components/ConfigFieldRenderer', () => ({
     ),
 }));
 
-jest.mock('@/features/components/ui/components/BrokeredCredentialFields', () => ({
-    BrokeredCredentialFields: ({
-        idField,
-        secretField,
-    }: {
-        idField: { key: string };
-        secretField?: { key: string };
-    }) => (
-        <div
-            data-testid="brokered-credentials"
-            data-id-field={idField.key}
-            data-secret-field={secretField?.key ?? 'none'}
-        />
-    ),
-}));
-
 // Deliberately below the mocks: babel-plugin-jest-hoist lifts them above every
 // import, so the row always loads against the doubles.
 export { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';

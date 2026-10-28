@@ -14,14 +14,13 @@
  */
 
 import type { DatapackId } from '../types';
+import type { CommerceBackend } from './commerceBackend';
 import { actionUrl } from './dataInstallerConfig';
 import { DataInstallerApiError } from './dataInstallerErrors';
 import { signInHeaders } from './dataInstallerSignIn';
 import {
-    type CommerceCredentials,
     type DataInstallerWriteClientDeps,
     type WriteMode,
-    credentialFields,
     describe,
     safeParse,
 } from './dataInstallerWriteClient';
@@ -43,7 +42,8 @@ export interface ExportRequest {
     /** What `get-export-items` takes — the Commerce REST base URL. */
     restBaseUrl: string;
     dataTypes: string[];
-    credentials: CommerceCredentials;
+    /** The instance's backend: an ACCS list call names the ACCS scope. */
+    backend: CommerceBackend;
     /**
      * Chosen items per data type, as `{<type>: {<idField>: [ids]}}`. Omitted
      * entirely when the user picked nothing — the service then exports
@@ -128,7 +128,7 @@ export class DataInstallerExportClient {
                 ...(await signInHeaders(this.deps)),
                 // The FULL REST URL — this action cannot resolve a tenant id.
                 'x-commerce-instance': request.restBaseUrl,
-                ...exportAuthHeaders(request.credentials),
+                ...exportAuthHeaders(request.backend),
             },
             signal: AbortSignal.timeout(this.timeoutMs),
         });
@@ -179,20 +179,16 @@ export class DataInstallerExportClient {
 }
 
 /**
- * Auth headers for the list call, by backend.
+ * The scope header for the list call, ACCS only.
  *
- * ACCS additionally needs `x-client-scope`: the source drop does not mention it,
- * the wiki lists it as optional, and without it the action fails pre-flight for
- * every site type.
+ * ACCS needs `x-client-scope`: the source drop does not mention it, the wiki lists it as
+ * optional, and without it the action fails pre-flight for every site type. It names a scope,
+ * not a secret. The Commerce credentials themselves are no longer sent: the service stopped
+ * accepting a caller's on purpose (DEMOSYS-1698, confirmed intended 2026-10-28) and signs in
+ * with its own, so sending them only put secrets on the wire (DI-5, DI-6).
  */
-function exportAuthHeaders(credentials: CommerceCredentials): Record<string, string> {
-    return credentials.kind === 'paas'
-        ? { 'x-admin-username': credentials.username, 'x-admin-password': credentials.password }
-        : {
-              'x-client-id': credentials.clientId,
-              'x-client-secret': credentials.clientSecret,
-              'x-client-scope': ACCS_EXPORT_SCOPE,
-          };
+function exportAuthHeaders(backend: CommerceBackend): Record<string, string> {
+    return backend === 'accs' ? { 'x-client-scope': ACCS_EXPORT_SCOPE } : {};
 }
 
 /**
@@ -212,7 +208,6 @@ function buildExportBody(request: ExportRequest): Record<string, unknown> {
         operation_mode: 'export' satisfies WriteMode,
         verbose: 'full',
         ...(request.selections ? { selections: toServiceSelections(request.selections) } : {}),
-        ...credentialFields(request.credentials),
     };
 }
 

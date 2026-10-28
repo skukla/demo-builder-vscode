@@ -39,7 +39,7 @@ export function watchedActivation(
     if (lastAction === 'start') {
         return startId;
     }
-    // No write yet (a dry run, or provisioning): whichever exists is the job
+    // No write yet (a dry run): whichever exists is the job
     // this modal was reopened onto.
     return startId ?? resetId;
 }
@@ -75,16 +75,13 @@ export function resolveView(state: {
 }
 
 /** Which in-flight operation the one busy spinner is narrating. */
-export function busyMessage(starting: boolean, resetting: boolean, provisioning: boolean): string {
+export function busyMessage(starting: boolean, resetting: boolean): string {
     if (starting) {
         return 'Starting import';
     }
     if (resetting) {
         // "removal", matching the button and the progress verb.
         return 'Starting removal';
-    }
-    if (provisioning) {
-        return 'Setting up credentials';
     }
     return 'Checking with the service';
 }
@@ -96,15 +93,12 @@ export function buildActions(a: {
     checking: boolean;
     starting: boolean;
     resetting: boolean;
-    provisioning: boolean;
-    offerProvisioning: boolean;
     stopWatching: () => void;
     validate: () => void;
     armReset: () => void;
     disarmReset: () => void;
     confirmReset: () => void;
     startImport: () => void;
-    provisionCredentials: () => void;
     goBack: () => void;
 }): {
     label: string;
@@ -123,18 +117,7 @@ export function buildActions(a: {
         ];
     }
     if (a.view === 'result') {
-        return [
-            { label: 'Back', variant: 'secondary', onPress: a.goBack },
-            ...(a.offerProvisioning
-                ? [
-                      {
-                          label: 'Set up credentials automatically',
-                          variant: 'accent' as const,
-                          onPress: a.provisionCredentials,
-                      },
-                  ]
-                : []),
-        ];
+        return [{ label: 'Back', variant: 'secondary', onPress: a.goBack }];
     }
     // form and busy share the row; busy swaps the active label and freezes it —
     // ManageApisModal's 'Applying…' pattern.
@@ -153,27 +136,10 @@ export function buildActions(a: {
         // ("cannot be undone") was true here and false there.
         { label: 'Remove data', variant: 'secondary', onPress: a.armReset, isDisabled: !a.canStart },
         {
-            label: startLabel(a.provisioning, a.starting),
+            label: a.starting ? 'Starting' : 'Start import',
             variant: 'accent',
             onPress: a.startImport,
             isDisabled: !a.canStart,
         },
     ];
-}
-
-/**
- * The start button's label for the phase it is in.
- *
- * Provisioning wins over starting: the credential setup runs FIRST and can take
- * ~50s on its own, so a "Starting…" label during it would be describing the
- * wrong wait.
- */
-function startLabel(provisioning: boolean, starting: boolean): string {
-    if (provisioning) {
-        return 'Setting up';
-    }
-    if (starting) {
-        return 'Starting';
-    }
-    return 'Start import';
 }

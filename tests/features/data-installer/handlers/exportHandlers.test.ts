@@ -16,7 +16,6 @@
 
 import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
-import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import { DataInstallerExportClient } from '@/features/data-installer/services/dataInstallerExportClient';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -31,18 +30,12 @@ import {
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
-jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
-    resolveCommerceCredentials: jest.fn(),
-}));
 jest.mock('@/features/data-installer/services/dataInstallerExportClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
 }));
 
-const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
-    typeof resolveCommerceCredentials
->;
 const MockedClient = DataInstallerExportClient as jest.MockedClass<typeof DataInstallerExportClient>;
 
 const ACCS_ENDPOINT = 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql';
@@ -108,14 +101,6 @@ beforeEach(() => {
                 ? 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api'
                 : true
         ),
-    });
-    mockedCredentials.mockResolvedValue({
-        ok: true,
-        credentials: {
-            kind: 'accs',
-            clientId: 'cid',
-            clientSecret: 'fake-test-secret-not-a-secret',
-        },
     });
     listExportItems = jest.fn().mockResolvedValue({ items: [], totalCount: 0, excludedCount: 0 });
     startExport = jest.fn().mockResolvedValue({ success: true, perType: [] });
@@ -270,19 +255,23 @@ describe('start-datapack-export', () => {
         expect(succeeded.logger.warn).not.toHaveBeenCalled();
     });
 
-    it('refuses when the project has no usable Commerce credentials', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+    it('refuses when the project has no Commerce backend', async () => {
+        const result = await importHandlers['start-datapack-export'](
+            makeImportHarness({ ...accsProject(), componentSelections: { backend: '' } }),
+            PAYLOAD,
+        );
 
         expect(result.success).toBe(false);
         expect(startExport).not.toHaveBeenCalled();
     });
 
-    it('never puts the credential pair in the response', async () => {
+    // The service signs in with its own credential (DEMOSYS-1698), so the export names
+    // only the backend: an ACCS project that saved no Commerce pair is not refused (DI-6).
+    it('exports for an ACCS project that saved no Commerce credentials, naming its backend', async () => {
         const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
 
-        expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
+        expect(result.success).toBe(true);
+        expect(startExport).toHaveBeenCalledWith(expect.objectContaining({ backend: 'accs' }));
     });
 });
 
@@ -390,68 +379,6 @@ describe('prepareExport guards', () => {
         startExport.mockClear();
         await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
         expect(startExport.mock.calls[0][0]).not.toHaveProperty('selections');
-    });
-});
-
-describe('credential refusals', () => {
-    it('names the specific gap rather than a generic one', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' });
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result.error).toMatch(/no Commerce admin username and password saved/);
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    it('falls back to a generic message for a gap it has no wording for', async () => {
-        mockedCredentials.mockResolvedValue({
-            ok: false,
-            reason: 'something-new' as 'missing-paas-admin',
-        });
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result.error).toBe('Commerce credentials are missing.');
-    });
-
-    /**
-     * The provisioning offer is gated on the Adobe binding for the same reason
-     * the import spine's is: an offer that leads nowhere is worse than none.
-     */
-    it('offers ACCS provisioning when the reason is ACCS and the project is bound', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
-
-        const result = await importHandlers['start-datapack-export'](
-            makeImportHarness({
-                ...accsProject(),
-                adobe: { organization: 'org', projectId: 'proj', workspace: 'stage' },
-            }),
-            PAYLOAD
-        );
-
-        expect(result.data).toEqual({ needsAccsCredentials: true });
-    });
-
-    it('withholds the offer when the project has no Adobe workspace to provision into', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result.data).toEqual({ needsAccsCredentials: false });
-    });
-
-    it('withholds the offer for a non-ACCS gap even on a bound project', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' });
-
-        const result = await importHandlers['start-datapack-export'](
-            makeImportHarness({
-                ...accsProject(),
-                adobe: { organization: 'org', projectId: 'proj', workspace: 'stage' },
-            }),
-            PAYLOAD
-        );
-
-        expect(result.data).toEqual({ needsAccsCredentials: false });
     });
 });
 

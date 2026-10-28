@@ -29,7 +29,6 @@ import { watchImportJob } from '@/features/data-installer/services/importJobRunn
 import type { DataTypeStatus } from '@/features/data-installer/types';
 import {
     importHarness,
-    ACCS_PROJECT,
     NOT_REACHABLE,
 } from './sampleDataInstallDeps.testUtils';
 
@@ -39,7 +38,6 @@ const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<
 const MockedWriteClient = DataInstallerWriteClient as unknown as jest.Mock;
 const mockedWatch = watchImportJob as unknown as jest.Mock;
 
-const PROJECT = ACCS_PROJECT;
 const PACK = { name: 'citisignal', version: '1.2.0' };
 
 /** The read client, with the two catalog calls `inventory` makes. */
@@ -69,7 +67,7 @@ function unreachable(): void {
 }
 
 function deps(mode: 'install' | 'remove' = 'install') {
-    return buildSampleDataDeps(importHarness(), PROJECT, jest.fn(), mode);
+    return buildSampleDataDeps(importHarness(), jest.fn(), mode);
 }
 
 beforeEach(() => {
@@ -200,7 +198,7 @@ describe('watch', () => {
 describe('onProgress counting', () => {
     function reported(perType: Record<string, DataTypeStatus>) {
         const report = jest.fn();
-        buildSampleDataDeps(importHarness(), PROJECT, report).onProgress?.(perType);
+        buildSampleDataDeps(importHarness(), report).onProgress?.(perType);
         return report.mock.calls[0][0];
     }
 

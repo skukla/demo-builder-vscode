@@ -13,10 +13,10 @@
  * `TransientStateManager`. Closing the panel does not abandon an import, and the
  * webview request is not held open for the ten minutes a long install can take.
  *
- * **Credentials are checked before anything is sent.** A missing pair is a
- * reason, not a failed request.
+ * **Access is checked before anything is sent.** A dry run first asks whether the
+ * service can sign in to the instance; a refusal is a reason, not a failed request.
  *
- * Opens through `resolveDatapackWriteAccess` (config/auth, project, credentials),
+ * Opens through `resolveDatapackWriteAccess` (config/auth, project, backend),
  * the gate the export handlers share, so a new write handler cannot skip a check.
  *
  * @module features/data-installer/handlers/importHandlers
@@ -33,7 +33,6 @@ import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
-import { provisionAccsHandlers } from './provisionAccsHandler';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { handleBackgroundOperation } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
@@ -64,11 +63,10 @@ export const importHandlers = defineHandlers({
     // a prerequisite missing, a merge needing a decision (PL-59, owner 2026-09-20).
     answerOperationPrompt: handleAnswerOperationPrompt,
     // Stage 3 lives in its own module; merged here so the panel and the tests
-    // keep ONE handler map to reach for. The modal's prefill reads and the
-    // Console provisioning button were split out the same way (2026-10-08).
+    // keep ONE handler map to reach for. The modal's prefill reads were split out
+    // the same way (2026-10-08).
     ...exportHandlers,
     ...importTargetHandlers,
-    ...provisionAccsHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,
@@ -92,7 +90,7 @@ export const importHandlers = defineHandlers({
     /**
      * The dry run — validate and stop.
      *
-     * Same guard, same credentials, same request body as a real start; it simply
+     * Same guard, same request body as a real start; it simply
      * does not go on to `startImport`. This exists because there was otherwise NO
      * way to check a request without writing: the start handler chains validate
      * and start, so a passing validation went straight to a real import.
@@ -109,7 +107,7 @@ export const importHandlers = defineHandlers({
             return prepared.response;
         }
         try {
-            // Credentials first. If the pair cannot reach the instance, whether
+            // Access first. If the service cannot sign in to the instance, whether
             // the request is well-formed is not the answer anyone needs — and
             // `get-websites-and-stores` answers it without going near
             // process-datapack, so it cannot start work by accident.
@@ -119,7 +117,7 @@ export const importHandlers = defineHandlers({
                     success: true,
                     data: {
                         valid: false,
-                        reason: access.reason ?? 'These credentials did not reach that Commerce instance.',
+                        reason: access.reason ?? 'The Data Installer could not sign in to that Commerce instance.',
                     },
                 };
             }
@@ -184,7 +182,7 @@ export const importHandlers = defineHandlers({
  * Everything both write handlers need, or the response to return instead.
  *
  * Extracted at the SECOND caller rather than the third: the two paths have to
- * agree on the guard, the credentials and the request body byte for byte, or a
+ * agree on the guard and the request body byte for byte, or a
  * dry run would check something other than what a start would send — which is the
  * one thing that would make a dry run worse than useless.
  */
@@ -229,7 +227,6 @@ async function prepareImport(
             // cannot complete a partial specification into something the caller
             // did not ask for.
             target: input.target ?? resolveInstallTarget(gate.project) ?? undefined,
-            credentials: gate.credentials,
         },
     };
 }

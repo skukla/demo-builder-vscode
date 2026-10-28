@@ -8,8 +8,8 @@
  * Two assertions are load-bearing rather than routine:
  *   - `batchGetDataItems` with no data types refuses BEFORE the network, because
  *     omitting them trips a live server-side 400,
- *   - health-check carries no Authorization header, since it is the one endpoint
- *     that must work when the token is dead.
+ *   - health-check is signed in like every other call: behind Adobe's gateway an
+ *     unsigned one is refused 401, which read as "the service is down".
  *
  * Failure mapping, timeouts and the drift canary moved to
  * `dataInstallerTransport.test.ts` with the transport (2026-10-08).
@@ -81,13 +81,13 @@ describe('DataInstallerClient', () => {
             expect(headerOf(callArgs(f).init, 'Authorization')).toBe(`Bearer ${TOKEN}`);
         });
 
-        it('sends NO Authorization header on health-check', async () => {
-            // Health must answer even when the token is expired — that is what
-            // makes it useful for telling "our auth" apart from "their outage".
+        // The gateway refuses an unsigned health check 401 ("missing authorization
+        // header"), so a healthy service read as down (live, 2026-10-28).
+        it('signs the health check in, like every other call', async () => {
             const f = jsonFetch(load('health-check.json'));
             await makeClient(f).checkHealth();
             expect(callArgs(f).url).toContain('/health-check');
-            expect(headerOf(callArgs(f).init, 'Authorization')).toBeUndefined();
+            expect(headerOf(callArgs(f).init, 'Authorization')).toBe(`Bearer ${TOKEN}`);
         });
 
         it('puts the action in the last path segment', async () => {

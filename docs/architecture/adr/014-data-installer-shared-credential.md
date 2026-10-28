@@ -1,6 +1,6 @@
 # ADR-014: The ACCS datapack credential is served from the shared discovery service
 
-**Status**: Accepted — implemented 2026-08-16 (`feature/data-installer-credential-broker`) — the `get-commerce-credentials` action in `accs-discovery-service`; `commerceCredentialBroker.ts` is the client seam; `resolveCommerceCredentials` is where precedence lives
+**Status**: Superseded — 2026-10-28 (DI-6), by the Data Installer service's own sign-in: since its DEMOSYS-1698 security fix it ignores a caller's Commerce credentials and uses its own, so Demo Builder sends none and the shared credential, its broker and the credential gathering behind it were deleted. The action that served the pair also let any allowed caller fetch a credential that could write to every store in the org
 **Date**: 2026-08-16
 **Decision Maker**: Project Owner
 **Implementer**: Implemented on `feature/data-installer-credential-broker` (steps 01-03, TDD)
@@ -205,3 +205,8 @@ this was being decided, which is the strongest available argument against
 
 - `CommercePartnersSDK` — an Adobe I/O service entitlement name appearing in the
   control row of the entitlement table, not a symbol in this codebase.
+- `get-commerce-credentials`, `commerceCredentialBroker.ts`, `resolveCommerceCredentials`,
+  `fetchSharedCommerceCredentials`, `selectCredentialService`, `credentialServiceProbe.ts`,
+  `check-credential-service`, `BrokeredCredentialFields`, `accsCredentialProvisioner.ts`,
+  `provision-accs-credentials` — removed 2026-10-28 (DI-6) with the decision they
+  implemented. Named here because this record is what they were.

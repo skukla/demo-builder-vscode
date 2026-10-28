@@ -1,10 +1,10 @@
 /**
  * `DiagnosticsCommand` — what the run COLLECTS, as opposed to how it reads.
  *
- * The two sibling suites (`-copyReport`, `-credentialService`) both drive
+ * The sibling suite (`-copyReport`) drives
  * `buildSummaryLines`, which lives in `diagnosticsReport.ts`. Nothing exercised
  * the command itself: measured 2026-09-05, every decision in this file below
- * `runDiagnosticsAction` was uncovered — the four concurrent probes, the two
+ * `runDiagnosticsAction` was uncovered — the concurrent probes, the two
  * "no EDS project" guards, the MCP result mapping, and the PII redaction that
  * keeps colleague addresses out of an exportable log buffer.
  *
@@ -47,9 +47,6 @@ jest.mock('@/features/eds/services/catalogSampleSku', () => ({ pickSampleSku: je
 jest.mock('@/features/eds/services/configService/configServiceProbe', () => ({
     probeConfigService: jest.fn(),
 }));
-jest.mock('@/features/eds/services/credentialServiceProbe', () => ({
-    probeCredentialService: jest.fn(),
-}));
 jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => mockTokenProvider),
 }));
@@ -87,14 +84,11 @@ import type {
     ToolsInfo,
     VSCodeInfo,
 } from '@/commands/diagnosticsReport';
-import { ServiceLocator } from '@/core/di/serviceLocator';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import { pickSampleSku } from '@/features/eds/services/catalogSampleSku';
 import type { SamplePdp } from '@/features/eds/services/catalogSampleSku';
 import { probeConfigService } from '@/features/eds/services/configService/configServiceProbe';
 import type { ConfigServiceProbeResult } from '@/features/eds/services/configService/configServiceProbe';
-import { probeCredentialService } from '@/features/eds/services/credentialServiceProbe';
-import type { CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 import { probeGitHubCredential } from '@/features/eds/services/github/githubCredentialProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/github/githubCredentialProbe';
 import { probeStorefrontDelivery } from '@/features/eds/services/storefront/storefrontProbe';
@@ -102,7 +96,6 @@ import { readStorefrontReport, type StorefrontReport } from '@/features/eds/serv
 import type { StorefrontProbeResult } from '@/features/eds/services/storefront/storefrontProbe';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-import { createMockAuthenticationService } from '../helpers/authenticationServiceFake';
 import { createMockDebugLogger } from './diagnostics.testUtils';
 import { createMockExtensionContext } from '../helpers/extensionContextFake';
 import { createMockLogger } from '../helpers/loggerFake';
@@ -118,7 +111,6 @@ const mockDebugLogger = createMockDebugLogger();
 const mockTokenService = { getToken: jest.fn() };
 const mockDaLiveAuthService = { getAccessToken: jest.fn() };
 const mockTokenProvider = { getAccessToken: jest.fn() };
-const mockAuthService = createMockAuthenticationService();
 
 const TOOL = { installed: true, duration: 1 };
 const TOOLS: ToolsInfo = { node: TOOL, npm: TOOL, fnm: TOOL, git: TOOL, aio: TOOL };
@@ -165,11 +157,6 @@ const STOREFRONT_PROBE: StorefrontProbeResult = {
     baseUrl: 'https://main--demo-storefront--acme.aem.live',
     site: { reachable: true, status: 200 },
     verdict: 'Storefront delivery looks correct.',
-};
-const CREDENTIAL_SERVICE: CredentialServiceProbeResult = {
-    configured: true,
-    endpoint: { httpStatus: 200 },
-    verdict: 'Shared credential available.',
 };
 const SAMPLE_PDP: SamplePdp = {
     sku: 'ADB-1',
@@ -224,7 +211,6 @@ function reportFrom(logger: jest.Mocked<Logger>): DiagnosticsReport {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    jest.mocked(ServiceLocator.getAuthenticationService).mockReturnValue(mockAuthService);
     jest.mocked(getSystemInfo).mockResolvedValue(SYSTEM);
     jest.mocked(getVSCodeInfo).mockReturnValue(VSCODE_INFO);
     jest.mocked(checkTools).mockResolvedValue(TOOLS);
@@ -236,7 +222,6 @@ beforeEach(() => {
     jest.mocked(probeInExtensionMcpTools).mockResolvedValue({ ok: true, tools: ['sign_in', 'get_status'] });
     jest.mocked(probeGitHubCredential).mockResolvedValue(GITHUB_PROBE);
     jest.mocked(probeStorefrontDelivery).mockResolvedValue(STOREFRONT_PROBE);
-    jest.mocked(probeCredentialService).mockResolvedValue(CREDENTIAL_SERVICE);
     jest.mocked(probeConfigService).mockResolvedValue({ token: { present: true }, verdict: 'ok' });
     jest.mocked(pickSampleSku).mockResolvedValue(SAMPLE_PDP);
     // `as jest.Mock`, the house pattern: the real signature is four overloads and
@@ -245,7 +230,7 @@ beforeEach(() => {
     (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
 });
 
-describe('the four remote probes', () => {
+describe('the remote probes', () => {
     it('asks GitHub about the project’s own repo, with the command’s token service', async () => {
         const { command, logger } = setup(edsProject());
 
@@ -287,33 +272,6 @@ describe('the four remote probes', () => {
         await command.execute();
 
         expect(probeConfigService).not.toHaveBeenCalled();
-    });
-
-    it('probes the credential service with the project’s Adobe org', async () => {
-        const { command } = setup(edsProject());
-
-        await command.execute();
-
-        expect(probeCredentialService).toHaveBeenCalledWith({
-            auth: mockAuthService,
-            orgId: '285361',
-        });
-    });
-
-    it('omits the org rather than sending an empty one when the project has none', async () => {
-        const { command } = setup(edsProject({ adobe: undefined }));
-
-        await command.execute();
-
-        expect(probeCredentialService).toHaveBeenCalledWith({ auth: mockAuthService });
-    });
-
-    it('runs the credential probe with no project at all — it is a global capability', async () => {
-        const { command } = setup(null);
-
-        await command.execute();
-
-        expect(probeCredentialService).toHaveBeenCalledWith({ auth: mockAuthService });
     });
 });
 
@@ -496,7 +454,6 @@ describe('the report it logs', () => {
         const report = reportFrom(logger);
         expect(report.configService).toBeUndefined();
         expect(report.githubCredential).toEqual(GITHUB_PROBE);
-        expect(report.credentialService).toEqual(CREDENTIAL_SERVICE);
     });
 
     it('stamps the report with the moment the run happened', async () => {

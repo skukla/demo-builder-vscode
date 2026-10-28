@@ -12,7 +12,6 @@
  * @module features/data-installer/handlers/importTargetHandlers
  */
 
-import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
 import { deriveImportInstance } from '../services/importInstance';
 import {
     buildScopeDiscoveryParams,
@@ -100,7 +99,7 @@ export const importTargetHandlers = defineHandlers({
      * pair extension-side. So the structure is discovered where the credentials
      * already live and only the codes travel back.
      *
-     * Optional by design: no project, no credentials or a failed discovery all
+     * Optional by design: no project, nothing to discover with, or a failed discovery all
      * leave the user with a manual import onto the service's default. Only a
      * discovery that actively failed is worth an error — the rest is an empty
      * list.
@@ -111,14 +110,9 @@ export const importTargetHandlers = defineHandlers({
             return { success: true, data: { websites: [] } };
         }
 
-        const credentials = await resolveProjectCredentials(context, project);
-        if (!credentials.ok) {
-            // Not an error: the import still works, it just lands on the default.
-            return { success: true, data: { websites: [] } };
-        }
-
-        const params = await buildScopeDiscoveryParams(context, project, credentials.credentials);
+        const params = await buildScopeDiscoveryParams(context, project);
         if (!params) {
+            // Not an error: the import still works, it just lands on the default.
             return { success: true, data: { websites: [] } };
         }
 

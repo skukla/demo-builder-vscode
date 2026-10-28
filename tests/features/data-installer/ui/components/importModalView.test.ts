@@ -51,10 +51,10 @@ describe('watchedActivation', () => {
     });
 
     /**
-     * A dry run and provisioning start no job, so neither should change which
-     * job is being watched — the modal may have been reopened onto a running one.
+     * A dry run starts no job, so it should not change which job is being
+     * watched — the modal may have been reopened onto a running one.
      */
-    it.each<[LastAction | null]>([['dryRun'], ['provision'], [null]])(
+    it.each<[LastAction | null]>([['dryRun'], [null]])(
         'falls back to whichever job exists when the last action was %s',
         (action) => {
             expect(watchedActivation(action, 'act-import', undefined)).toBe('act-import');
@@ -126,25 +126,20 @@ describe('resolveView', () => {
 
 describe('busyMessage', () => {
     it('names the import when an import is starting', () => {
-        expect(busyMessage(true, false, false)).toBe('Starting import');
+        expect(busyMessage(true, false)).toBe('Starting import');
     });
 
     it('says removal when a removal is starting', () => {
-        expect(busyMessage(false, true, false)).toBe('Starting removal');
+        expect(busyMessage(false, true)).toBe('Starting removal');
     });
 
-    it('names the credential setup when that is what runs', () => {
-        expect(busyMessage(false, false, true)).toBe('Setting up credentials');
-    });
-
-    /** A dry run is the only busy state with none of the three flags set. */
+    /** A dry run is the only busy state with neither flag set. */
     it('says it is checking when nothing else is running', () => {
-        expect(busyMessage(false, false, false)).toBe('Checking with the service');
+        expect(busyMessage(false, false)).toBe('Checking with the service');
     });
 
-    it('prefers the import, then the removal, when several flags are set', () => {
-        expect(busyMessage(true, true, true)).toBe('Starting import');
-        expect(busyMessage(false, true, true)).toBe('Starting removal');
+    it('prefers the import when both flags are set', () => {
+        expect(busyMessage(true, true)).toBe('Starting import');
     });
 });
 
@@ -158,15 +153,12 @@ function actionArgs(over: Partial<ActionArgs> = {}): ActionArgs {
         checking: false,
         starting: false,
         resetting: false,
-        provisioning: false,
-        offerProvisioning: false,
         stopWatching: jest.fn(),
         validate: jest.fn(),
         armReset: jest.fn(),
         disarmReset: jest.fn(),
         confirmReset: jest.fn(),
         startImport: jest.fn(),
-        provisionCredentials: jest.fn(),
         goBack: jest.fn(),
         ...over,
     };
@@ -199,20 +191,10 @@ describe('buildActions', () => {
         expect(actions[1].onPress).toBe(args.confirmReset);
     });
 
-    it('offers only Back on a result that has no provisioning offer', () => {
+    it('offers only Back on a result', () => {
         const args = actionArgs({ view: 'result' });
         expect(rows(args)).toStrictEqual([{ label: 'Back', variant: 'secondary' }]);
         expect(buildActions(args)[0].onPress).toBe(args.goBack);
-    });
-
-    it('adds the credential setup beside Back when the result offers it', () => {
-        const args = actionArgs({ view: 'result', offerProvisioning: true });
-        const actions = buildActions(args);
-        expect(rows(args)).toStrictEqual([
-            { label: 'Back', variant: 'secondary' },
-            { label: 'Set up credentials automatically', variant: 'accent' },
-        ]);
-        expect(actions[1].onPress).toBe(args.provisionCredentials);
     });
 
     it('shows Dry run, Remove data and Start import on the form, each wired', () => {
@@ -241,12 +223,5 @@ describe('buildActions', () => {
 
     it('reads Starting on the start button while an import starts', () => {
         expect(buildActions(actionArgs({ view: 'busy', starting: true }))[2].label).toBe('Starting');
-    });
-
-    /** Credential setup runs FIRST and takes ~50s, so it outranks Starting. */
-    it('reads Setting up on the start button while credentials are set up, even when starting', () => {
-        const busy = actionArgs({ view: 'busy', provisioning: true, starting: true });
-        expect(buildActions(busy)[2].label).toBe('Setting up');
-        expect(buildActions(actionArgs({ provisioning: true }))[2].label).toBe('Setting up');
     });
 });

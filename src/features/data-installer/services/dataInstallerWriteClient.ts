@@ -1,10 +1,10 @@
 /**
  * Data Installer write client — the credentialed sibling of the read client.
  *
- * **Two classes, not one, on purpose.** Reads need only the extension's IMS
- * bearer. Writes additionally need Commerce credentials, which ACCS projects do
- * not store, so "do we have credentials yet?" is a TYPE question the compiler
- * answers rather than a runtime check every method repeats.
+ * **Two classes, not one, on purpose.** Reads go to the catalog; writes act on a
+ * Commerce instance, and a write request names one. No Commerce credential travels
+ * with either: the service signs in to Commerce with its own (DEMOSYS-1698), so
+ * Demo Builder stopped gathering and sending them (DI-6, 2026-10-28).
  *
  * Two methods, because a write is two steps by contract:
  *
@@ -22,8 +22,8 @@
  * drives the two-step export contract and shares this file's credential fields
  * and body parsing (split 2026-10-08).
  *
- * **Status polling is deliberately NOT here.** Watching a job is a read, it needs
- * no credentials, and it already lives on the read client. Duplicating it would
+ * **Status polling is deliberately NOT here.** Watching a job is a read, and it
+ * already lives on the read client. Duplicating it would
  * put the same endpoint behind two auth requirements.
  *
  * The instance string is passed through untouched. It is whatever the user typed:
@@ -42,11 +42,6 @@ import { parseImportStart, parseValidation } from './dataInstallerParsers';
 import { signInHeaders, type DataInstallerSignIn } from './dataInstallerSignIn';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
-/** Commerce credentials, discriminated by backend because the shapes differ. */
-export type CommerceCredentials =
-    | { kind: 'paas'; username: string; password: string }
-    | { kind: 'accs'; clientId: string; clientSecret: string };
-
 /** Everything one import needs. */
 export interface ImportRequest {
     id: DatapackId;
@@ -54,7 +49,6 @@ export interface ImportRequest {
     commerceInstance: string;
     /** Explicit types only — omitting them is a 400 from the service. */
     dataTypes: string[];
-    credentials: CommerceCredentials;
     /**
      * Where the pack lands. Absent means the service's own default (`base`).
      *
@@ -113,13 +107,13 @@ export class DataInstallerWriteClient {
     }
 
     /**
-     * Do these credentials actually reach this Commerce instance?
+     * Does the service's own credential reach this Commerce instance?
      *
      * `get-websites-and-stores` is the cheapest way to answer that — the spike's
-     * own conclusion. It takes the instance and the credential pair, touches
-     * `process-datapack` not at all, and so cannot start anything by accident.
-     * It also answers a question `validate` may not: whether the pair WORKS, as
-     * opposed to whether the request is well-formed.
+     * own conclusion. It takes the instance, touches `process-datapack` not at
+     * all, and so cannot start anything by accident. It also answers a question
+     * `validate` may not: whether the sign-in WORKS, as opposed to whether the
+     * request is well-formed.
      *
      * A refusal is a verdict, not an error.
      */
@@ -133,10 +127,7 @@ export class DataInstallerWriteClient {
             },
             // Access only: no datapack, no operation mode. Nothing here could be
             // mistaken by the service for a request to do work.
-            body: JSON.stringify({
-                commerce_instance: request.commerceInstance,
-                ...credentialFields(request.credentials),
-            }),
+            body: JSON.stringify({ commerce_instance: request.commerceInstance }),
             signal: AbortSignal.timeout(this.timeoutMs),
         });
 
@@ -249,8 +240,7 @@ export class DataInstallerWriteClient {
             return safeParse(raw);
         }
         if (!response.ok) {
-            // The service's own message only. The request body is never quoted
-            // back — it carries the Commerce credentials.
+            // The service's own message only. The request body is never quoted back.
             throw new DataInstallerApiError(
                 describe(safeParse(raw)) ?? `The Data Installer rejected the request (HTTP ${response.status}).`,
                 response.status,
@@ -271,7 +261,6 @@ function buildBody(request: ImportRequest, mode: WriteMode): Record<string, unkn
         data_types: request.dataTypes,
         operation_mode: mode,
         ...targetFields(request.target),
-        ...credentialFields(request.credentials),
     };
 }
 
@@ -285,29 +274,6 @@ function buildBody(request: ImportRequest, mode: WriteMode): Record<string, unkn
  */
 function targetFields(target: ImportTarget | undefined): Record<string, string> {
     return target ? { website_code: target.websiteCode, store_code: target.storeCode } : {};
-}
-
-/**
- * Credential fields, by backend.
- *
- * **`admin_username`/`admin_password` are the names the service's own docs use.**
- * An earlier version of this function invented `commerce_username`/
- * `commerce_password` — no source, no verification — which would have failed in
- * the worker minutes after a 202, with a credentials error and no clue why.
- *
- * Still UNCONFIRMED against a live call: the spike read these from vendor docs
- * that are wrong in seven known places, and it used no credentials. The Validate
- * button is what settles it — a documented name is merely better grounded than an
- * invented one, not proven.
- *
- * Which scope the service requests for ACCS is unknown and will not be answered,
- * so this sends the pair and lets the attempt report its own failure rather than
- * branching on a value nobody has confirmed.
- */
-export function credentialFields(credentials: CommerceCredentials): Record<string, string> {
-    return credentials.kind === 'paas'
-        ? { admin_username: credentials.username, admin_password: credentials.password }
-        : { client_id: credentials.clientId, client_secret: credentials.clientSecret };
 }
 
 /** Parse, tolerating a body that is not JSON at all. */

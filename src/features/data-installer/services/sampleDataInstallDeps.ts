@@ -12,26 +12,11 @@
 
 import { resolveDataInstallerAccess } from '../handlers/dataInstallerHandlers';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
-import { resolveProjectCredentials } from './commerceCredentialBroker';
 import { DataInstallerWriteClient } from './dataInstallerWriteClient';
 import { watchImportJob } from './importJobRunner';
 import type { SampleDataDeps } from './sampleDataInstall';
 import { PollingService } from '@/core/shell/pollingService';
 import type { HandlerContext } from '@/types/handlers';
-
-/**
- * What this needs to know about a project.
- *
- * Typed rather than `unknown` because the credential resolver dispatches on
- * `stackBackend`, which is NOT a persisted field — it is mapped from
- * `componentSelections.backend`, and `unknown` plus a cast is exactly how that
- * mapping went missing (see {@link buildSampleDataDeps}).
- */
-export interface SampleDataProject {
-    componentSelections?: { backend?: string };
-    componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
-    adobe?: { organization?: string };
-}
 
 /** What this deps set is being built for. */
 export type SampleDataMode = 'install' | 'remove';
@@ -64,30 +49,10 @@ export interface SampleDataProgress {
 
 export function buildSampleDataDeps(
     context: HandlerContext,
-    project: SampleDataProject,
     report: (progress: SampleDataProgress) => void,
     mode: SampleDataMode = 'install',
 ): SampleDataDeps {
     return {
-        credentials: async () => {
-            // The broker matters MORE here than anywhere else: this runs during
-            // project creation, and a project that selected no App Builder
-            // components is exactly the one with no workspace to mint a pair in.
-            // Omitting it would leave every unit test green and the feature inert
-            // on its main path.
-            //
-            // Through the shared resolver, which owns the `stackBackend` mapping.
-            // This line passed a raw project through `as never` and so resolved
-            // nothing for anyone — see `resolveProjectCredentials` for the three
-            // sites that made the same mistake.
-            const resolution = await resolveProjectCredentials(context, project);
-            // The pair goes into the REQUEST and nowhere else — never into the
-            // result, never into a log line.
-            return resolution.ok
-                ? { ok: true, credentials: resolution.credentials }
-                : { ok: false, reason: 'This project has no usable Commerce credentials.' };
-        },
-
         // What the service HOLDS, which is the detail plus a batch item lookup —
         // the same pairing `get-datapack-detail` does. A pack can DECLARE a type
         // the service stores no item for, and asking for it imports nothing while

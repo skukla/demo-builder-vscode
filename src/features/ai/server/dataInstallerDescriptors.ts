@@ -23,14 +23,6 @@
  * which `get_datapack_import_status` reads. So polling works with no webview,
  * and no handler needed changing.
  *
- * ## `provision_accs_credentials` is deliberately NOT here
- *
- * Its own handler docstring says so: "Panel-only by construction (never in the
- * MCP maps): it creates a credential in the user's Console workspace." That is a
- * decision already recorded in the code, and its bare `{success: true}` is
- * deliberate for the same reason — "The response never carries the values."
- * Exposing it would be overriding a prior judgement, not filling a gap.
- *
  * ## Shared infrastructure, and what that changes
  *
  * The datapack catalog holds entries other teams depend on, and an EXPORT writes

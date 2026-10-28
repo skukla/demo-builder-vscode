@@ -36,11 +36,7 @@ const ACCS_EXPORT = {
     commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi',
     restBaseUrl: 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi',
     dataTypes: ['attribute_sets'],
-    credentials: {
-        kind: 'accs' as const,
-        clientId: 'cid-1',
-        clientSecret: 'fake-test-secret-not-a-secret',
-    },
+    backend: 'accs' as const,
 };
 
 describe('listExportItems', () => {
@@ -78,14 +74,12 @@ describe('listExportItems', () => {
         expect(headers['x-commerce-instance']).toBe(ACCS_EXPORT.restBaseUrl);
     });
 
-    it('sends the credential pair AND the scope ACCS needs', async () => {
+    it('sends the scope ACCS needs', async () => {
         const fetchImpl = ok(PAGE);
 
         await makeExportClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
 
         const { headers } = fetchImpl.mock.calls[0][1];
-        expect(headers['x-client-id']).toBe('cid-1');
-        expect(headers['x-client-secret']).toBe('fake-test-secret-not-a-secret');
         // The exact list, in order: the action fails pre-flight without the
         // ACCS scope, and a partial list is the same failure with a longer header.
         expect(headers['x-client-scope']).toBe(
@@ -106,22 +100,18 @@ describe('listExportItems', () => {
         expect(page.excludedCount).toBe(1);
     });
 
-    it('uses the admin pair for PaaS instead of the client headers', async () => {
+    // The service signs in with its own credential (DEMOSYS-1698), so no Commerce secret travels
+    // (DI-5), and the request carries none to send (DI-6). PaaS names no ACCS scope either.
+    it('sends no credential headers, and no scope for a PaaS instance', async () => {
         const fetchImpl = ok(PAGE);
 
-        await makeExportClient(fetchImpl).listExportItems(
-            {
-                ...ACCS_EXPORT,
-                credentials: { kind: 'paas', username: 'admin', password: 'fake-test-pw-not-a-secret' },
-            },
-            'attribute_sets',
-        );
+        await makeExportClient(fetchImpl).listExportItems({ ...ACCS_EXPORT, backend: 'paas' }, 'attribute_sets');
 
         const { headers } = fetchImpl.mock.calls[0][1];
-        expect(headers['x-admin-username']).toBe('admin');
-        expect(headers['x-admin-password']).toBe('fake-test-pw-not-a-secret');
-        expect(headers['x-client-id']).toBeUndefined();
+        expect(JSON.stringify(headers)).not.toMatch(/x-admin-|x-client-id|x-client-secret/);
+        expect(headers['x-client-scope']).toBeUndefined();
     });
+
 
     it('surfaces the service reason when the list call is refused', async () => {
         const fetchImpl = ok({ success: false, error: 'Instance unreachable' }, 500);

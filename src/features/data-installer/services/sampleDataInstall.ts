@@ -6,7 +6,7 @@
  * the target chosen in the wizard, and this closes that loop.
  *
  * The argument against installing during creation was that an import needs a
- * reachable instance with working credentials. That does not survive the
+ * reachable instance. That does not survive the
  * wizard's own order: the Commerce **Connection** sub-step validates exactly
  * that, several sub-steps earlier, and **Business Structure** records the
  * website and store view this writes into. By the time this runs, both are
@@ -27,7 +27,7 @@
  */
 
 import type { DataTypeStatus } from '../types';
-import type { CommerceCredentials, ImportRequest } from './dataInstallerWriteClient';
+import type { ImportRequest } from './dataInstallerWriteClient';
 import { deriveImportInstance } from './importInstance';
 import type { ComponentConfigs } from '@/types/components';
 
@@ -114,10 +114,6 @@ export function typesToInstall(declared: string[], stored: string[]): string[] {
 
 /** What the phase needs, injected so every branch is testable without a service. */
 export interface SampleDataDeps {
-    /** Resolves the pair the request carries. The pair itself never leaves here. */
-    credentials: (
-        project: ProjectLike
-    ) => Promise<{ ok: true; credentials: CommerceCredentials } | { ok: false; reason: string }>;
     /** The types the service actually stores for this pack. */
     inventory: (id: { name: string; version: string }) => Promise<string[]>;
     /**
@@ -203,15 +199,6 @@ async function runSampleDataJob(
     }
 
     try {
-        const credentials = await deps.credentials(project);
-        if (!credentials.ok) {
-            return {
-                ran: false,
-                skipped: true,
-                reason: credentials.reason ?? 'No usable Commerce credentials.',
-            };
-        }
-
         const stored = await deps.inventory(id);
         const dataTypes = typesToInstall(stored, stored);
         if (dataTypes.length === 0) {
@@ -222,15 +209,13 @@ async function runSampleDataJob(
             };
         }
 
-        // The REAL request shape: `target` is nested and `credentials` rides
-        // along. An earlier version flattened websiteCode/storeCode to the top
-        // level — a shape the client does not accept, which the test agreed with
-        // because the test invented it too.
+        // The REAL request shape: `target` is nested. An earlier version flattened
+        // websiteCode/storeCode to the top level — a shape the client does not
+        // accept, which the test agreed with because the test invented it too.
         const request = {
             id,
             commerceInstance,
             dataTypes,
-            credentials: credentials.credentials,
             target,
         };
         const start = mode === 'remove' ? deps.startDelete : deps.startImport;

@@ -16,7 +16,6 @@
 
 import { selectDiscoveryService } from '../services/accsDiscoveryConfig';
 import { discoverStoreStructure } from '../services/commerceStoreDiscovery';
-import { handleCheckCredentialService } from './credentialServiceHandler';
 import {
     handleCheckDaLiveAuth,
     handleOpenDaLiveLogin,
@@ -304,10 +303,6 @@ export const edsHandlers = defineHandlers({
 
     // Store discovery
     'discover-store-structure': handleDiscoverStoreStructure,
-
-    // Will the shared service hand this user a Commerce credential? Status only —
-    // the pair never crosses to the webview.
-    'check-credential-service': handleCheckCredentialService,
 
     // Agent-facing: headless store-structure read behind the get_store_structure MCP tool
     'get-store-structure': handleGetStoreStructure,

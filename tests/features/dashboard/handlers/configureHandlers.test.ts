@@ -129,7 +129,9 @@ describe('configureHandlers', () => {
             // 7 → 11: getOperationProgress, answerOperationPrompt, backgroundOperation and
             // openDebugLogs added 2026-10-15 — the storefront Republish is told in this
             // screen's progress modal, which sends all four.
-            expect(types).toHaveLength(11);
+            // 11 → 10: check-credential-service removed 2026-10-28 with the shared
+            // credential it reported on (DI-6).
+            expect(types).toHaveLength(10);
         });
 
         it('should NOT include AI handlers (they live in aiHandlers.ts)', () => {

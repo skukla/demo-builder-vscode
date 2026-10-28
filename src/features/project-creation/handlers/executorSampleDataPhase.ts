@@ -53,7 +53,7 @@ export async function executeSampleDataPhase(
 
         const result = await installSampleData(
             project,
-            buildSampleDataDeps(context, project, (sd) =>
+            buildSampleDataDeps(context, (sd) =>
                 // The step stays the step; how far it has got, and the types being
                 // installed right now, go on the line under it (progress vocabulary,
                 // owner 2026-10-16).

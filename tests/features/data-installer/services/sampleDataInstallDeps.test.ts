@@ -1,22 +1,11 @@
 /**
- * The live wiring behind a build's sample-data install.
+ * The live wiring behind a build's sample-data install: which client each dep is
+ * handed, and what it reports.
  *
- * ONE property is pinned here, and it is the trap the credential-broker plan
- * called out by name: this call site passed `{ project }` and nothing else for
- * its whole life.
- *
- * `resolveCommerceCredentials`'s broker parameter is OPTIONAL — deliberately, so
- * that a caller with no way to build one keeps its old behaviour. That means
- * forgetting it here is silent: the type checks, every other suite stays green,
- * and the feature is simply inert on its main path. And this is the main path —
- * an install during project creation, for a project that selected no App Builder
- * components and therefore has no workspace to mint an OAuth pair in. That is the
- * exact population the shared credential exists to serve.
+ * It resolves no Commerce credentials. The service signs in with its own
+ * (DEMOSYS-1698), so the install no longer gathers a pair to send (DI-6).
  */
 
-jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
-    resolveCommerceCredentials: jest.fn(),
-}));
 jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
     resolveDataInstallerAccess: jest.fn().mockResolvedValue({ ok: false }),
 }));
@@ -26,17 +15,10 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
 }));
 
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
-import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import type { HandlerContext } from '@/types/handlers';
 import type { DataTypeStatus } from '@/features/data-installer/types';
-import { importHarness, ACCS_PROJECT } from './sampleDataInstallDeps.testUtils';
+import { importHarness } from './sampleDataInstallDeps.testUtils';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
-
-const mockedResolve = resolveCommerceCredentials as jest.MockedFunction<
-    typeof resolveCommerceCredentials
->;
-
-const PROJECT = ACCS_PROJECT;
 
 function makeImportHarness(): HandlerContext {
     return importHarness({
@@ -48,66 +30,6 @@ function makeImportHarness(): HandlerContext {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockedResolve.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
-});
-
-/**
- * The dispatch, exercised for real.
- *
- * Every suite that touches this question mocks `resolveCommerceCredentials`, and
- * that is precisely how the same defect survived at three call sites: the mock
- * answers `ok` regardless of what it was handed, so a project object missing the
- * field the resolver dispatches on looks identical to a correct one.
- *
- * These use the REAL resolver against the REAL project shape. `stackBackend` is
- * not persisted — it is mapped from `componentSelections.backend` — and passing a
- * raw project through a cast leaves it undefined, which matches neither backend
- * and returns `unsupported-backend`.
- *
- * Measured live 2026-08-17: a reset was answered "Remove Sample Data" at a prompt
- * whose own credential check had just succeeded, ran the full pipeline, and then
- * reported "This project has no usable Commerce credentials" from this module.
- */
-describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
-    const actual = jest.requireActual<
-        typeof import('@/features/data-installer/services/commerceCredentials')
-    >('@/features/data-installer/services/commerceCredentials');
-
-    /** A declared ACCS pair, so resolution needs no broker and no network. */
-    const ACCS_WITH_PAIR = {
-        componentSelections: { backend: 'adobe-commerce-accs' },
-        componentConfigs: {
-            'adobe-commerce-accs': {
-                ACCS_OAUTH_CLIENT_ID: 'declared-id',
-                ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret',
-            },
-        },
-    };
-
-    it('resolves an ACCS project that declares its own pair', async () => {
-        mockedResolve.mockImplementation(actual.resolveCommerceCredentials);
-        const deps = buildSampleDataDeps(makeImportHarness(), ACCS_WITH_PAIR, jest.fn());
-
-        const result = await deps.credentials(ACCS_WITH_PAIR);
-
-        expect(result.ok).toBe(true);
-    });
-
-    /**
-     * CONTROL. The assertion above must be sensitive to the BACKEND mapping, not
-     * merely to the pair being present — otherwise it would pass against code
-     * that never sets `stackBackend`, which is the bug. Same configs, no backend
-     * declared: resolution must fail.
-     */
-    it('CONTROL — the same configs with no backend cannot resolve', async () => {
-        mockedResolve.mockImplementation(actual.resolveCommerceCredentials);
-        const noBackend = { ...ACCS_WITH_PAIR, componentSelections: undefined };
-        const deps = buildSampleDataDeps(makeImportHarness(), noBackend, jest.fn());
-
-        const result = await deps.credentials(noBackend);
-
-        expect(result.ok).toBe(false);
-    });
 });
 
 /**
@@ -156,7 +78,7 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     it('passes a client that can report job status', async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: ['categories'] });
 
@@ -166,22 +88,25 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     /**
-     * CONTROL. The assertion above must be sensitive to WHICH client is passed —
-     * a write client has neither method, which is exactly the bug. Asserting the
-     * identity pins it to the one `resolveDataInstallerAccess` supplies.
+     * CONTROL. The assertion above must be sensitive to WHICH client answers — a
+     * write client has neither method, which is exactly the bug: the poll must
+     * reach the read client `resolveDataInstallerAccess` supplies.
      */
-    it('CONTROL — it is the access client, not some other one', async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
+    it('CONTROL — the polls reach the access client, not some other one', async () => {
+        const deps = buildSampleDataDeps(makeImportHarness(), jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: ['categories'] });
+        await watchImportJob.mock.calls[0][0].client.getJobStatus('act-1');
+        await watchImportJob.mock.calls[0][0].client.getJobFailureReason('act-1');
 
-        expect(watchImportJob.mock.calls[0][0].client).toBe(readClient);
+        expect(readClient.getJobStatus).toHaveBeenCalledWith('act-1');
+        expect(readClient.getJobFailureReason).toHaveBeenCalledWith('act-1');
     });
 
     // The poller names the job from this; a removal labelled `import` is what the
     // 2026-08-17 log said while deleting.
     it('labels the job with the operation it was given', async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: [], operation: 'reset' });
 
@@ -189,7 +114,7 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     it('defaults the label to import when none is given', async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: [] });
 
@@ -197,7 +122,7 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     it("defaults to 'reset' when the deps were built for a removal", async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn(), 'remove');
+        const deps = buildSampleDataDeps(makeImportHarness(), jest.fn(), 'remove');
 
         await deps.watch({ activationId: 'act-1', requestedTypes: [] });
 
@@ -223,7 +148,7 @@ describe('buildSampleDataDeps — progress wording', () => {
 
     it('counts finished types, not pending ones', () => {
         const report = jest.fn();
-        buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'remove').onProgress?.(perType);
+        buildSampleDataDeps(makeImportHarness(), report, 'remove').onProgress?.(perType);
 
         expect(report).toHaveBeenCalledWith(expect.objectContaining({ done: 1, total: 2 }));
     });
@@ -234,46 +159,10 @@ describe('buildSampleDataDeps — progress wording', () => {
             categories: 'success',
             customer_groups: 'processing',
         };
-        buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'install').onProgress?.(live);
+        buildSampleDataDeps(makeImportHarness(), report, 'install').onProgress?.(live);
 
         expect(report).toHaveBeenCalledWith(
             expect.objectContaining({ processing: ['Customer groups'] })
         );
-    });
-});
-
-describe('buildSampleDataDeps — credentials', () => {
-    it('supplies a broker, so a project with no workspace can still install', async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
-
-        await deps.credentials(PROJECT);
-
-        expect(mockedResolve).toHaveBeenCalledWith(
-            expect.objectContaining({ broker: expect.any(Function) })
-        );
-    });
-
-    it('passes the shared pair through when the broker supplies one', async () => {
-        mockedResolve.mockResolvedValue({
-            ok: true,
-            credentials: { kind: 'accs', clientId: 'shared', clientSecret: 'fake-not-a-secret' },
-        });
-        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
-
-        await expect(deps.credentials(PROJECT)).resolves.toEqual({
-            ok: true,
-            credentials: { kind: 'accs', clientId: 'shared', clientSecret: 'fake-not-a-secret' },
-        });
-    });
-
-    // The refusal wording stays a plain reason — the install reports it, and it
-    // must not carry anything about credentials beyond "there are none".
-    it('reports a refusal without leaking what was tried', async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
-
-        const result = await deps.credentials(PROJECT);
-
-        expect(result.ok).toBe(false);
-        expect(JSON.stringify(result)).not.toContain('client');
     });
 });

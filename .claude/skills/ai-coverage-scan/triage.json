@@ -143,9 +143,6 @@
         "storefront-setup-cancel": {
             "reason": "Aborts the wizard's in-flight storefront setup through its own AbortController, behind a modal confirmation. An agent undoes with delete_github_repo and cleanup_dalive_site."
         },
-        "provision-accs-credentials": {
-            "reason": "Creates a credential in the user's Console workspace. Kept panel-only on purpose; the handler's own comment says never in the MCP maps."
-        },
         "use-bundle-setup": {
             "reason": "Closes the wizard and reopens it pre-filled from a bundle's setup. UI navigation; the job behind it, starting a project from an exported file, is create_project_from_file."
         },
@@ -154,9 +151,6 @@
         }
     },
     "gaps": {
-        "check-credential-service": {
-            "reason": "No tool asks whether the shared credential service serves this org; only the Diagnostics command and the Commerce step do."
-        },
         "check-store-view-products": {
             "reason": "No tool asks on its own whether a store view shows guests any products. create_project runs the same check (probeStoreViewProducts) on its storeScope and puts the pickers' sentence in its answer's warnings (EDS-46)."
         },

@@ -297,7 +297,7 @@ describe('finishEditWithoutRebuild — the datapack changed', () => {
 
         expect(await finishEditWithoutRebuild(context, NEW_PACK, progress, ask)).toBe(true);
 
-        expect(planDatapackChange).toHaveBeenCalledWith(context, project, ['datapack'], ask.removeOldDatapack);
+        expect(planDatapackChange).toHaveBeenCalledWith(project, ['datapack'], ask.removeOldDatapack);
         expect(applyDatapackChange).toHaveBeenCalledWith(context, project, NEW_PACK, plan, progress, false);
         // Nothing of Adobe's is touched for a datapack: no sign-in check, no add.
         expect(runGuards).not.toHaveBeenCalled();

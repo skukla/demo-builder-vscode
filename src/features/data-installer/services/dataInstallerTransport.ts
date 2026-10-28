@@ -10,10 +10,9 @@
  * Imports no `vscode`: the base URL and token arrive as dependencies, so it is
  * unit-testable with an injected `fetchImpl` and zero VS Code mocks.
  *
- * Two rules this file keeps:
- *   - the sign-in is built in one place (`signInHeaders`) and never reaches a message,
- *   - `auth: false` is how `health-check` sends no Authorization header, because
- *     it must answer when the token is dead.
+ * One rule this file keeps: the sign-in is built in one place (`signInHeaders`),
+ * goes on every request (the gateway refuses an unsigned one), and never reaches a
+ * message.
  *
  * @module features/data-installer/services/dataInstallerTransport
  */
@@ -61,7 +60,6 @@ export interface DataInstallerTransportDeps extends DataInstallerSignIn {
 
 /** How one request is shaped. */
 export interface TransportRequestOptions {
-    auth?: boolean;
     query?: ActionQuery;
     method?: 'GET' | 'POST';
     body?: unknown;
@@ -112,7 +110,7 @@ export class DataInstallerTransport {
     /** Issue one request, map failures, and check the response shape. */
     async request(action: string, opts: TransportRequestOptions = {}): Promise<unknown> {
         const url = actionUrl(this.deps.baseUrl, action, opts.query, opts.pathParam);
-        const headers: Record<string, string> = opts.auth === false ? {} : await signInHeaders(this.deps);
+        const headers: Record<string, string> = await signInHeaders(this.deps);
 
         if (opts.body !== undefined) {
             headers['Content-Type'] = 'application/json';

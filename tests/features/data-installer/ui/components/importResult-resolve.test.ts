@@ -4,8 +4,8 @@
  * The rule worth not losing is stated in the module: the result is keyed on the
  * LAST ACTION, not on which request objects happen to hold values. Request
  * state persists after settling, so a fixed precedence replays an old outcome
- * over a new one — a provisioning success would outrank the dry run the user
- * just ran. Every case below therefore fixes the last action and leaves the
+ * over a new one — an earlier import's failure would outrank the dry run the
+ * user just ran. Every case below therefore fixes the last action and leaves the
  * other requests holding stale values, which is the state the modal is really
  * in.
  */
@@ -63,17 +63,7 @@ describe('resolveResult — dry run', () => {
             variant: 'error',
             title: 'Dry run failed',
             message: 'Request timed out',
-            offerProvisioning: false,
         });
-    });
-
-    it('offers console-free provisioning when the refusal flags missing credentials', () => {
-        const result = resolveResult(
-            'dryRun',
-            sources({ dryRun: failed('No ACCS credentials', { needsAccsCredentials: true }) })
-        );
-
-        expect(result?.offerProvisioning).toBe(true);
     });
 
     it('prefers the failure over a value the request is still holding', () => {
@@ -84,29 +74,6 @@ describe('resolveResult — dry run', () => {
 
     it('shows nothing while the dry run has neither answered nor failed', () => {
         expect(resolveResult('dryRun', sources({ dryRun: idle() }))).toBeNull();
-    });
-});
-
-describe('resolveResult — automatic credential setup', () => {
-    it('reports a settled provision as configured credentials', () => {
-        const result = resolveResult('provision', sources());
-
-        expect(result).toMatchObject({ variant: 'success', title: 'Credentials configured' });
-    });
-
-    it('reports a failure as an error, ahead of the settled flag', () => {
-        const failure = { ...failed<never>('Workspace has no OAuth quota'), settled: true };
-
-        expect(resolveResult('provision', sources({ provision: failure }))).toEqual({
-            variant: 'error',
-            title: 'Automatic setup failed',
-            message: 'Workspace has no OAuth quota',
-            offerProvisioning: false,
-        });
-    });
-
-    it('shows nothing before the provision has settled', () => {
-        expect(resolveResult('provision', sources({ provision: idle<never>() }))).toBeNull();
     });
 });
 

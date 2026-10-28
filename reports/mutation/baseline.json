@@ -3894,20 +3894,6 @@
             "openGaps": 0,
             "recorded": "2026-10-10T01:20:04.912Z"
         },
-        "src/features/components/ui/components/BrokeredCredentialFields.tsx": {
-            "score": 90.48,
-            "killed": 38,
-            "survived": 4,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 4
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/features/components/ui/components/ConfigFieldRenderer.tsx": {
             "score": 84.91,
             "killed": 45,
@@ -4780,56 +4766,6 @@
             "equivalent": 6,
             "openGaps": 0
         },
-        "src/features/data-installer/services/accsCredentialProvisioner.ts": {
-            "score": 80,
-            "killed": 44,
-            "survived": 11,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "other": 2,
-                "string": 8,
-                "block": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 1,
-            "equivalent": 3,
-            "openGaps": 0,
-            "recorded": "2026-10-10T01:25:39.613Z"
-        },
-        "src/features/data-installer/services/commerceCredentialBroker.ts": {
-            "score": 75.42,
-            "killed": 89,
-            "survived": 25,
-            "noCoverage": 4,
-            "timeout": 0,
-            "survivorCategories": {
-                "optionalChain": 9,
-                "string": 7,
-                "block": 4,
-                "branch": 4,
-                "logPresentation": 1
-            },
-            "uncoveredCategories": {
-                "string": 4
-            },
-            "highValueSurvivors": 8,
-            "equivalent": 17,
-            "openGaps": 0,
-            "recorded": "2026-10-10T00:42:17.004Z"
-        },
-        "src/features/data-installer/services/commerceCredentials.ts": {
-            "score": 100,
-            "killed": 60,
-            "survived": 0,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {},
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/features/data-installer/services/dataInstallerClient.ts": {
             "score": 98.53,
             "killed": 67,
@@ -5286,20 +5222,6 @@
             "openGaps": 0,
             "recorded": "2026-10-10T00:53:48.562Z"
         },
-        "src/features/data-installer/services/workspaceConfigDownload.ts": {
-            "score": 94.44,
-            "killed": 17,
-            "survived": 1,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/features/data-installer/ui/DataInstallerScreen.tsx": {
             "score": 92.86,
             "killed": 13,
@@ -5561,20 +5483,6 @@
             "survivorCategories": {
                 "logPresentation": 2,
                 "string": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
-        "src/features/eds/handlers/credentialServiceHandler.ts": {
-            "score": 86.96,
-            "killed": 20,
-            "survived": 3,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "logPresentation": 3
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
@@ -6132,24 +6040,6 @@
             "equivalent": 8,
             "openGaps": 0,
             "recorded": "2026-10-09T23:44:09.016Z"
-        },
-        "src/features/eds/services/credentialServiceProbe.ts": {
-            "score": 90.77,
-            "killed": 59,
-            "survived": 5,
-            "noCoverage": 1,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 2,
-                "block": 1,
-                "optionalChain": 2
-            },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 1,
-            "equivalent": 3,
-            "openGaps": 0
         },
         "src/features/eds/services/daAuthHelperToken.ts": {
             "score": 90,
@@ -9875,22 +9765,6 @@
                 "string": 5
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
-        "src/features/data-installer/handlers/provisionAccsHandler.ts": {
-            "score": 93.1,
-            "killed": 54,
-            "survived": 3,
-            "noCoverage": 1,
-            "timeout": 0,
-            "survivorCategories": {
-                "logPresentation": 3
-            },
-            "uncoveredCategories": {
-                "logPresentation": 1
-            },
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0

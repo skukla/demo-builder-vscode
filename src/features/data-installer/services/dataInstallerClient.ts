@@ -11,9 +11,7 @@
  * Reads only. Writes need Commerce credentials and get a sibling client, so
  * "do we have credentials yet?" stays a type question rather than a runtime one.
  *
- * Two rules this file exists to keep (the transport keeps the token rule):
- *   - `health-check` is the one call that sends no Authorization header, because
- *     it must answer when the token is dead,
+ * One rule this file exists to keep (the transport keeps the token rule):
  *   - `batchGetDataItems` refuses an empty type list before the network, since
  *     omitting it trips a live server-side 400.
  *
@@ -90,9 +88,15 @@ export class DataInstallerClient {
         this.transport = new DataInstallerTransport(deps);
     }
 
-    /** Service reachability. The one call that sends no Authorization header. */
+    /**
+     * Service reachability, signed in like every other call. It used to send no
+     * Authorization header so it could answer with a dead token; since the service
+     * sits behind Adobe's gateway (DEMOSYS-1695) an unsigned call is refused 401
+     * ("missing authorization header"), so the check reported every healthy
+     * service as down (found 2026-10-28).
+     */
     async checkHealth(): Promise<ServiceHealth> {
-        const body = await this.transport.request('health-check', { auth: false });
+        const body = await this.transport.request('health-check');
         return parseHealth(body);
     }
 

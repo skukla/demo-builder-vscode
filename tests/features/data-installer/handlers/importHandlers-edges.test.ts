@@ -152,7 +152,7 @@ describe('a dry run that throws', () => {
         expect(result.error).toBe('The request could not be validated.');
     });
 
-    it('uses its own wording when the credentials check gives no reason', async () => {
+    it('uses its own wording when the access check gives no reason', async () => {
         const { context } = makeImportHarness();
         stubWriteClient({
             checkCredentials: jest.fn().mockResolvedValue({ usable: false }),
@@ -167,7 +167,7 @@ describe('a dry run that throws', () => {
         expect(result.success).toBe(true);
         expect(result.data).toEqual({
             valid: false,
-            reason: 'These credentials did not reach that Commerce instance.',
+            reason: 'The Data Installer could not sign in to that Commerce instance.',
         });
     });
 });

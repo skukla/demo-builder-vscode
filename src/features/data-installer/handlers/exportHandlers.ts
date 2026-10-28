@@ -194,7 +194,7 @@ async function prepareExport(
             commerceInstance,
             restBaseUrl: deriveRestBaseUrl(gate.project.componentConfigs ?? {}),
             dataTypes,
-            credentials: gate.credentials,
+            backend: gate.backend,
             ...(payload?.selections ? { selections: payload.selections } : {}),
         },
     };

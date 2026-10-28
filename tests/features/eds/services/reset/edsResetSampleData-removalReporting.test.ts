@@ -24,7 +24,6 @@ import {
     vscode,
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
-import type { SampleDataProgress } from '@/features/data-installer/services/sampleDataInstallDeps';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -45,12 +44,6 @@ jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
 }));
 jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
     buildSampleDataDeps: jest.fn(() => ({})),
-}));
-jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
-    resolveCommerceCredentials: jest.fn().mockResolvedValue({
-        ok: true,
-        credentials: { kind: 'accs', clientId: 'id', clientSecret: 'fake-test-pw-not-a-secret' },
-    }),
 }));
 
 import { startModalRun } from '@/core/vscode/operationProgress';
@@ -150,14 +143,9 @@ describe('the removal narration', () => {
         await run(context);
 
         expect(report).toHaveBeenCalledWith({ message: 'Removing the sample data' });
-        expect(mockedDeps).toHaveBeenCalledWith(
-            context,
-            expect.objectContaining({ name: 'test-project' }),
-            expect.any(Function),
-            'remove',
-        );
+        expect(mockedDeps).toHaveBeenCalledWith(context, expect.any(Function), 'remove');
 
-        const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
+        const relay = mockedDeps.mock.calls[0][1];
         // A notification shows the step alone: the count of types is the line under
         // it, never the step's position (progress vocabulary slice 5, 2026-10-16).
         relay({ done: 1, total: 3, processing: ['Products', 'Categories'] });
@@ -185,7 +173,7 @@ describe('the removal narration in a screen\'s modal', () => {
             progress: 'modal',
             operationId: 'reset-modal',
         });
-        const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
+        const relay = mockedDeps.mock.calls[0][1];
         relay({ done: 1, total: 3, processing: ['Products', 'Categories'] });
 
         expect(send).toHaveBeenLastCalledWith(

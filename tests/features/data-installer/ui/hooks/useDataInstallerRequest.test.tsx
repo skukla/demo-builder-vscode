@@ -149,34 +149,6 @@ describe('useDataInstallerRequest', () => {
         await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
     });
 });
-// The refusal envelope can carry structured data (e.g. needsAccsCredentials, so
-// the modal can offer provisioning without matching a message string).
-describe('failure data passthrough', () => {
-    function DataProbe(): React.JSX.Element {
-        const { load, failure } = useDataInstallerRequest('validate-datapack-import');
-        React.useEffect(() => {
-            load({});
-        }, [load]);
-        return <span data-testid="failure-data">{JSON.stringify(failure?.data ?? null)}</span>;
-    }
-
-    it('exposes the envelope data on a refusal', async () => {
-        mockRequest.mockResolvedValue({
-            success: false,
-            error: 'ACCS imports need a pair.',
-            code: 'INVALID_OPERATION',
-            data: { needsAccsCredentials: true },
-        });
-
-        render(<DataProbe />);
-
-        await waitFor(() =>
-            expect(screen.getByTestId('failure-data')).toHaveTextContent(
-                '{"needsAccsCredentials":true}'
-            )
-        );
-    });
-});
 
 /**
  * `settled` answers "did anything come back yet", which no other field can:

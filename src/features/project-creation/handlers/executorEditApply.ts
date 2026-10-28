@@ -141,7 +141,7 @@ async function applyInPlace(
         delta.removed,
         ask.leaveAdobeProject,
     );
-    const datapack = await planDatapackChange(context, project, changes, ask.removeOldDatapack);
+    const datapack = await planDatapackChange(project, changes, ask.removeOldDatapack);
     const packageChange = await planPackageChange(project, changes, ask.resetStorefront);
     if (delta.added.length + delta.removed.length > 0 || destination.moves) {
         const refused = await runGuards(context, project);

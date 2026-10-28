@@ -22,7 +22,6 @@ import {
     ACCS_STORE_CODE,
     ACCS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
-import type { CredentialServiceState } from '@/features/components/ui/hooks/useCredentialService';
 import {
     StoreConfigFieldRow,
     makeField as sharedField,
@@ -200,37 +199,11 @@ describe('StoreConfigFieldRow — which fields render at all', () => {
     });
 });
 
-describe('StoreConfigFieldRow — the brokered OAuth pair', () => {
-    // A settled probe that answered nothing — the shape a PaaS-free surface sees
-    // once the request is done. `status` stays absent rather than undefined-typed.
-    const credentialService: CredentialServiceState = { loading: false };
-    const withService = { credentialService };
-
-    it('renders the pair as one unit from the id row', () => {
-        renderRow({ ...withService, field: makeField(ACCS_OAUTH_CLIENT_ID) });
-
-        const pair = screen.getByTestId('brokered-credentials');
-        expect(pair).toHaveAttribute('data-id-field', ACCS_OAUTH_CLIENT_ID);
-        // The SECRET, picked out of the group by key — the pair covers both halves
-        // and a sibling row cannot own half a toggle.
-        expect(pair).toHaveAttribute('data-secret-field', ACCS_OAUTH_CLIENT_SECRET);
-    });
-
-    it('draws nothing for the secret row, which the id row already covers', () => {
-        const { container } = renderRow({
-            ...withService,
-            field: makeField(ACCS_OAUTH_CLIENT_SECRET),
-        });
-
-        expect(container).toBeEmptyDOMElement();
-    });
-
-    // The pairing is opt-in. A caller that never probes the service — PaaS, and
-    // any surface that has not adopted it — gets the two plain inputs it always had.
-    it('renders the id as a plain field when no caller offered a service', () => {
+describe('StoreConfigFieldRow — the ACCS OAuth fields', () => {
+    // Two plain inputs: nothing offers them as a shared credential any more (DI-6).
+    it('renders the id as a plain field', () => {
         renderRow({ field: makeField(ACCS_OAUTH_CLIENT_ID) });
 
-        expect(screen.queryByTestId('brokered-credentials')).not.toBeInTheDocument();
         expect(screen.getByTestId(`config-field-${ACCS_OAUTH_CLIENT_ID}`)).toBeInTheDocument();
     });
 
@@ -238,14 +211,5 @@ describe('StoreConfigFieldRow — the brokered OAuth pair', () => {
         renderRow({ field: makeField(ACCS_OAUTH_CLIENT_SECRET) });
 
         expect(screen.getByTestId(`config-field-${ACCS_OAUTH_CLIENT_SECRET}`)).toBeInTheDocument();
-    });
-
-    // And an ordinary field is untouched by the pairing rules even when a service
-    // IS offered — both are keyed on the exact OAuth keys, not on the service.
-    it('leaves an ordinary field alone while a service is offered', () => {
-        renderRow(withService);
-
-        expect(screen.queryByTestId('brokered-credentials')).not.toBeInTheDocument();
-        expect(screen.getByTestId(`config-field-${DEPENDENT}`)).toBeInTheDocument();
     });
 });

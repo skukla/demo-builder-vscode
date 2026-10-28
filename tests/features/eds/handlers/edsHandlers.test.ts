@@ -79,13 +79,13 @@ describe('edsHandlers', () => {
             // When: Getting registered types
             const types = getRegisteredTypes(edsHandlers);
 
-            // Then: 5 GitHub + 5 DA.live + 2 store discovery (wizard +
-            // agent-facing get-store-structure) + 1 credential-service probe +
-            // 2 Storefront Setup + 1 refresh-block-library = 16.
+            // Then: 14, counted from the map 2026-10-28.
             // History: 20 → 14 when five superseded handlers were removed
             // 2026-08-05; 14 → 15 with get-store-structure; 15 → 16 with
-            // check-credential-service.
-            expect(types).toHaveLength(15);
+            // check-credential-service; later removals left it at 15; 15 → 14 when
+            // check-credential-service was removed 2026-10-28 with the shared
+            // credential it reported on (DI-6).
+            expect(types).toHaveLength(14);
         });
 
         it('should have handlers as functions', () => {

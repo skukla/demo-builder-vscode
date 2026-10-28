@@ -15,7 +15,7 @@
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import type { ProgressTracker } from './shared';
 import {
-    beginSampleDataCredentialCheck,
+    beginSampleDataRemovalCheck,
     removeProjectSampleData,
 } from '@/features/eds/services/reset/edsResetSampleData';
 import {
@@ -46,21 +46,19 @@ export interface DatapackPlan {
  * Ask, before anything runs, what to do with the old pack's data. Nothing is
  * asked when the datapack did not change, or the project had none.
  *
- * @param context - the handler context, for the credential check behind the question
  * @param project - the project as it was before the Edit
  * @param changes - the changed choices (`editChanges`)
  * @param ask - the question (Reset's own, in production)
  * @returns the plan
  */
 export async function planDatapackChange(
-    context: HandlerContext,
     project: Project,
     changes: readonly string[],
     ask: AskRemoveOldDatapack,
 ): Promise<DatapackPlan> {
     if (!changes.includes('datapack')) return { changes: false, removeOld: false };
     if (!project.datapack) return { changes: true, removeOld: false };
-    return { changes: true, removeOld: await ask(project, beginSampleDataCredentialCheck(project, context)) };
+    return { changes: true, removeOld: await ask(project, beginSampleDataRemovalCheck(project)) };
 }
 
 /**

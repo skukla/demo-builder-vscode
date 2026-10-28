@@ -24,7 +24,6 @@ import {
     handleOpenDebugLogs,
 } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
-import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
 import { handleCheckStoreViewProducts } from '@/features/eds/handlers/storeViewProductsHandler';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
@@ -160,8 +159,6 @@ export const configureHandlers = defineHandlers({
     'open-eds-settings': handleOpenEdsSettings,
     'open-block-library-settings': handleOpenBlockLibrarySettings,
     'discover-store-structure': handleDiscoverStoreStructureAndPersist,
-    // Whether the OAuth fields need filling in at all. Status only — never a pair.
-    'check-credential-service': handleCheckCredentialService,
     // The same store pickers as the wizard, so the same no-products warning (EDS-46).
     'check-store-view-products': handleCheckStoreViewProducts,
     // The Republish progress modal (CONFIGURE_REPUBLISH_OPERATION_ID): where the run is

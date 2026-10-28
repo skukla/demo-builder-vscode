@@ -68,9 +68,10 @@ tools, so a handler a tool calls by hand counts as covered without a row (2 toda
 reachable (98 by name, 2 dispatched, 23 aliased); 43 not for an agent (26 UI verbs, 17
 listed); **6 real gaps (3%)**; 0 untriaged. The same tree under the old rule read 48
 (28%). The six: settings import from a path (`importFromFile`), headless project reset
-(`resetProject`), the credential-service probe (`check-credential-service`), DA.live
-sign-out (`clear-dalive-auth`), GitHub account switch (`github-change-account`), and the
-"Add another ERP" options read (`getErpOwnershipOptions`).
+(`resetProject`), the credential-service probe (`check-credential-service`, removed
+2026-10-28 with the shared credential, DI-6), DA.live sign-out (`clear-dalive-auth`),
+GitHub account switch (`github-change-account`), and the "Add another ERP" options read
+(`getErpOwnershipOptions`).
 
 **UNTRIAGED is the number to act on.** A handler added after the last reading lands
 there. Read the handler (not its name), then add one row to `triage.json`. A rising
@@ -108,7 +109,7 @@ sibling modules with verbatim re-exports, and the scan correctly reported no cha
 ## Three traps, each of which produced a wrong number before the scan was trusted
 
 1. **Handler keys use TWO conventions.** Unquoted camelCase (`requestStatus:`) and quoted
-   kebab-case (`'provision-accs-credentials':`). Matching one gives ~50 types instead of 106 —
+   kebab-case (`'list-datapack-import-scopes':`). Matching one gives ~50 types instead of 106 —
    and the resulting figure looks plausible, which is what makes it dangerous.
 2. **Not every MCP tool is a descriptor row.** Many are registered directly
    (`createProjectTool.ts`, `resetProjectTool.ts`). Counting only descriptor `type:` values reports

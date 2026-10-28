@@ -18,8 +18,7 @@
  * and a response without one is a failure rather than a silent success.
  *
  * NOT here: the status endpoints. Polling is a READ and already lives on the read
- * client — which is the point of splitting them. "Do we have credentials yet?" is
- * a type question, and watching a job does not need them.
+ * client — which is the point of splitting them.
  *
  * Strict TDD: written BEFORE the client exists.
  */
@@ -40,7 +39,6 @@ const REQUEST = {
     id: { name: 'bodea', version: 'main' },
     commerceInstance: 'whatever-the-user-typed',
     dataTypes: ['categories', 'products'],
-    credentials: { kind: 'paas' as const, username: 'admin', password: 'fake-test-pw-not-a-secret' },
 };
 
 describe('DataInstallerWriteClient', () => {
@@ -89,7 +87,6 @@ describe('DataInstallerWriteClient', () => {
             await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             const joined = logLines.join('\n');
-            expect(joined).not.toContain(REQUEST.credentials.kind === 'paas' ? REQUEST.credentials.password : '');
             expect(joined).not.toMatch(/password|client_secret/);
         });
 
@@ -368,16 +365,13 @@ describe('DataInstallerWriteClient', () => {
             expect(result.reason).toMatch(/Authentication failed/);
         });
 
-        it('carries the instance and credentials, not the datapack', async () => {
+        it('carries the instance alone: no credentials, no datapack', async () => {
             const fetchImpl = ok({ success: true });
 
             await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
-            expect(body).toMatchObject({
-                commerce_instance: 'whatever-the-user-typed',
-                admin_username: 'admin',
-            });
+            expect(body).toEqual({ commerce_instance: 'whatever-the-user-typed' });
             // Nothing about a datapack — this checks access, not a request.
             expect(body.datapack_name).toBeUndefined();
             expect(body.operation_mode).toBeUndefined();
@@ -465,46 +459,17 @@ describe('DataInstallerWriteClient', () => {
             expect(fetchImpl.mock.calls[0][1].headers.Authorization).toBe('Bearer ims-token');
         });
 
-        it('carries PaaS admin credentials in the body', async () => {
+        // The service stopped accepting a caller's Commerce credentials on purpose (its security
+        // fix, DEMOSYS-1698; confirmed intended by its maintainers 2026-10-28) and installs with
+        // its own. Sending them only put secrets on the wire (DI-5), and the request no longer
+        // carries any to send (DI-6).
+        it('sends no Commerce credential field to the service', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
             await makeLoggingClient(fetchImpl).startImport(REQUEST);
 
-            const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
-            // The names the service's own docs use. An earlier version of this
-            // client invented `commerce_username`/`commerce_password`, which had
-            // no source at all — PaaS imports would have failed in the worker.
-            expect(body).toMatchObject({
-                admin_username: 'admin',
-                admin_password: 'fake-test-pw-not-a-secret',
-            });
-            expect(body.client_id).toBeUndefined();
-        });
-
-        it('carries ACCS OAuth credentials in the body', async () => {
-            const fetchImpl = ok({ activation_id: 'x' }, 202);
-
-            await makeLoggingClient(fetchImpl).startImport({
-                ...REQUEST,
-                credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'fake-test-pw-not-a-secret' },
-            });
-
-            const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
-            expect(body).toMatchObject({ client_id: 'cid', client_secret: 'fake-test-pw-not-a-secret' });
-            expect(body.admin_username).toBeUndefined();
-        });
-
-        // Credentials must never reach a log line. The client's own error text is
-        // the one place they could leak by accident.
-        it('names no credential value in the error it throws', async () => {
-            const fetchImpl = ok({ success: false, error: 'nope' }, 400);
-
-            await expect(
-                makeLoggingClient(fetchImpl).startImport({
-                    ...REQUEST,
-                    credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'super-secret-value' },
-                }),
-            ).rejects.toThrow(expect.not.stringMatching(/super-secret-value/) as unknown as string);
+            const sent = String(fetchImpl.mock.calls[0][1].body);
+            expect(sent).not.toMatch(/admin_username|admin_password|client_id|client_secret/);
         });
     });
 

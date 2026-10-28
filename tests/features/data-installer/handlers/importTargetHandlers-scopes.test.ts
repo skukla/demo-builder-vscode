@@ -4,8 +4,8 @@
  * **Why a handler and not the webview's own discovery.** The wizard's
  * `useStoreDiscovery` hook posts PaaS admin credentials from the webview, because
  * the wizard has them in form state. The Data Installer deliberately does not:
- * `resolveCommerceCredentials` runs extension-side and the pair never crosses to
- * the panel. Reusing the hook here would have meant sending admin credentials to
+ * the PaaS admin pair is read extension-side (`resolvePaasAdminPair`) and never
+ * crosses to the panel. Reusing the hook here would have meant sending admin credentials to
  * a webview that had been designed not to hold them. So the discovery runs where
  * the credentials already are, and only the resulting codes travel.
  *
@@ -21,7 +21,6 @@
 
 import { importTargetHandlers } from '@/features/data-installer/handlers/importTargetHandlers';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
-import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import type { Project } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
@@ -30,14 +29,8 @@ import { makeTargetHarness } from './importTargetHandlers.testUtils';
 jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
     discoverStoreStructure: jest.fn(),
 }));
-jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
-    resolveCommerceCredentials: jest.fn(),
-}));
 
 const mockedDiscover = discoverStoreStructure as jest.MockedFunction<typeof discoverStoreStructure>;
-const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
-    typeof resolveCommerceCredentials
->;
 
 const STRUCTURE: CommerceStoreStructure = {
     websites: [
@@ -82,7 +75,11 @@ function paasProject(): Partial<Project> {
         // 'ADOBE_COMMERCE_URL'. A fixture keyed on the constant's name looks
         // right and discovers nothing.
         componentConfigs: {
-            'adobe-commerce-paas': { ADOBE_COMMERCE_URL: 'https://demo.example.com' },
+            'adobe-commerce-paas': {
+                ADOBE_COMMERCE_URL: 'https://demo.example.com',
+                ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
+                ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
+            },
         },
     };
 }
@@ -105,10 +102,6 @@ function websitesOf(result: { data?: unknown }): unknown {
 describe('list-datapack-import-scopes', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockedCredentials.mockResolvedValue({
-            ok: true,
-            credentials: { kind: 'paas', username: 'admin', password: 'fake-test-pw-not-a-secret' },
-        });
         mockedDiscover.mockResolvedValue({ success: true, data: STRUCTURE });
     });
 
@@ -177,17 +170,18 @@ describe('list-datapack-import-scopes', () => {
     });
 
     it('does not attempt discovery when the project names no Commerce URL', async () => {
-        // Credentials are fine; there is simply nowhere to send the discovery.
+        // The admin pair is there; there is simply nowhere to send the discovery.
         // buildScopeDiscoveryParams returns undefined, and the picker gets an
         // empty list rather than an error it cannot act on.
-        mockedCredentials.mockResolvedValue({
-            ok: true,
-            credentials: { kind: 'paas', username: 'admin', password: 'fake-test-pw-not-a-secret' },
-        });
         const context = makeImportHarness({
             name: 'demo-paas',
             componentSelections: { backend: 'adobe-commerce-paas' },
-            componentConfigs: { 'adobe-commerce-paas': {} },
+            componentConfigs: {
+                'adobe-commerce-paas': {
+                    ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
+                    ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
+                },
+            },
         });
 
         const result = await importTargetHandlers['list-datapack-import-scopes'](context);
@@ -197,13 +191,36 @@ describe('list-datapack-import-scopes', () => {
         expect(mockedDiscover).not.toHaveBeenCalled();
     });
 
-    it('does not attempt discovery when the project has no usable credentials', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' });
-        const context = makeImportHarness();
+    it('does not attempt PaaS discovery without the admin pair it signs in with', async () => {
+        const context = makeImportHarness({
+            name: 'demo-paas',
+            componentSelections: { backend: 'adobe-commerce-paas' },
+            componentConfigs: { 'adobe-commerce-paas': { ADOBE_COMMERCE_URL: 'https://demo.example.com' } },
+        });
 
         const result = await importTargetHandlers['list-datapack-import-scopes'](context);
 
         expect(result.success).toBe(true);
+        expect(websitesOf(result)).toStrictEqual([]);
+        expect(mockedDiscover).not.toHaveBeenCalled();
+    });
+
+    it('discovers with the PaaS admin pair the project saved', async () => {
+        await importTargetHandlers['list-datapack-import-scopes'](makeImportHarness());
+
+        expect(mockedDiscover).toHaveBeenCalledWith({
+            backendType: 'paas',
+            baseUrl: 'https://demo.example.com',
+            username: 'admin',
+            password: 'fake-test-pw-not-a-secret',
+        });
+    });
+
+    it('does not attempt discovery for a project with no Commerce backend', async () => {
+        const context = makeImportHarness({ ...paasProject(), componentSelections: { backend: '' } });
+
+        const result = await importTargetHandlers['list-datapack-import-scopes'](context);
+
         expect(websitesOf(result)).toStrictEqual([]);
         expect(mockedDiscover).not.toHaveBeenCalled();
     });

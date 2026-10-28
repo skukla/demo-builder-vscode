@@ -23,20 +23,20 @@ sample-data step refuses and the dashboard tile is hidden
 **Open Settings** button rather than reporting a dead end — this was mistaken for a
 bug on 2026-08-18.
 
-## Credentials: three sources, in precedence
+## Credentials: none are sent
 
-| | Source |
-|---|---|
-| 1 | the pair declared on the `adobe-commerce-accs` component |
-| 2 | the shared credential service (`get-commerce-credentials`) |
-| 3 | nothing — the operation refuses, and offers Console provisioning only where that could succeed |
+The Data Installer service signs in to Commerce with a credential of its own. Since its
+security fix (DEMOSYS-1698) it ignores any a caller sends, and its maintainers confirmed
+on 2026-10-28 that this is intended. So Demo Builder sends none, and gathers none for it:
+a datapack write needs only a project with a Commerce backend (`datapackWriteGate.ts`).
+An ACCS export still names the ACCS scope in `x-client-scope`; that is a scope, not a
+secret.
 
-**A declared pair always wins**, so a project that has one is unaffected by source 2
-existing. Source 2 exists because the pair can only be *created* inside an Adobe I/O
-workspace, and a demo project selecting no App Builder components never gets one — it
-could browse the catalog and never import.
-
-**The brokered pair is never persisted** ([ADR-014](../architecture/adr/014-data-installer-shared-credential.md)).
+Removed on 2026-10-28 (DI-6), each with the reason it existed: the shared credential
+handed out by the discovery service, and its broker ([ADR-014](../architecture/adr/014-data-installer-shared-credential.md),
+now Superseded); the credential-service probe in the Connection step, Configure and
+Diagnostics; and the "Set up credentials automatically" offer that minted a pair in the
+project's workspace.
 
 ## The contract, as measured
 
@@ -48,8 +48,8 @@ processor count, not the status code. Nine candidates plus a deliberate nonsense
 string all behaved identically, which is what makes the four real answers mean
 something.
 
-**The service derives the site type; nothing sends it.** `buildBody` uploads only
-`commerce_instance` and the credential pair, so classification is server-side
+**The service derives the site type; nothing sends it.** `buildBody` uploads
+`commerce_instance` and no site type, so classification is server-side
 inference from the instance's shape. Across all 1,063 log records the vocabulary is
 `accs` (a 21–22 char base62 id) and `local` (a full URL). **There is no `paas`
 value** — code branching on one would never match.
@@ -111,7 +111,6 @@ A dated finding about a service we do not own — re-verify before relying on it
 
 ## Conventions that bind this
 
-The rules are in [the handbook](../development/handbook.md). Two matter here: the
-credential pair is served and never persisted, and a destructive tool refuses without
-`confirm: true` — which is why the delete scoping above is proved rather than
+The rules are in [the handbook](../development/handbook.md). One matters most here: a
+destructive tool refuses without `confirm: true` — which is why the delete scoping above is proved rather than
 asserted.
