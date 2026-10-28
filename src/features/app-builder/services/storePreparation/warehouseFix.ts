@@ -214,8 +214,8 @@ export async function setSourceEnabled(
     code: string,
     enabled: boolean,
 ): Promise<string | undefined> {
-    const row = (await commerce.get(`inventory/sources/${code}`)) as CommerceInventorySource | null;
-    await commerce.send('PUT', `inventory/sources/${code}`, {
+    const row = (await commerce.get(`inventory/sources/${encodeURIComponent(code)}`)) as CommerceInventorySource | null;
+    await commerce.send('PUT', `inventory/sources/${encodeURIComponent(code)}`, {
         source: { ...(row ?? { source_code: code, name: code, ...SOURCE_ADDRESS }), enabled },
     });
     return row?.name;

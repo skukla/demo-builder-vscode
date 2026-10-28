@@ -5,9 +5,12 @@
 
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import {
+    ATTRIBUTE_CODE,
+    SOURCE_CODE,
     deleteIfPresent,
     isAlreadyGone,
     readOrNull,
+    segment,
 } from '@/features/data-installer/services/demoBuilderEngine/kindContext';
 
 describe('readOrNull', () => {
@@ -64,5 +67,35 @@ describe('deleteIfPresent', () => {
         const send = jest.fn().mockRejectedValue(new CommerceReadError('boom', 500));
 
         await expect(deleteIfPresent(send, 'categories/41')).rejects.toThrow('boom');
+    });
+});
+
+/**
+ * A pack is untrusted input (DI-5): a crafted code must not reach a Commerce address, so the
+ * rules refuse it when the pack is read and `segment` escapes whatever is placed in an address.
+ */
+describe('untrusted pack codes', () => {
+    it.each(['../../customers/5', 'color/../x', 'with space', '', '9starts_with_digit', 'a'.repeat(61)])(
+        'refuses the attribute code %j',
+        (code) => {
+            expect(ATTRIBUTE_CODE.test(code)).toBe(false);
+        },
+    );
+
+    it.each(['color', 'bodea_fabric', 'cs_unlimited_talk_text', 'A1'])('accepts the attribute code %j', (code) => {
+        expect(ATTRIBUTE_CODE.test(code)).toBe(true);
+    });
+
+    it.each(['../x', 'a/b', 'a b'])('refuses the source code %j', (code) => {
+        expect(SOURCE_CODE.test(code)).toBe(false);
+    });
+
+    it.each(['default', 'carvelo_long_island', 'ac-us-store'])('accepts the source code %j', (code) => {
+        expect(SOURCE_CODE.test(code)).toBe(true);
+    });
+
+    it('escapes a value into one path segment, so a slash cannot climb', () => {
+        expect(segment('../../customers/5')).toBe('..%2F..%2Fcustomers%2F5');
+        expect(segment(41)).toBe('41');
     });
 });

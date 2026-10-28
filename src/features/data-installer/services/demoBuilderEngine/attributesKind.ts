@@ -16,7 +16,7 @@
  */
 
 import { z } from 'zod';
-import { deleteIfPresent, type KindContext, readOrNull } from './kindContext';
+import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, readOrNull, segment } from './kindContext';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const ATTRIBUTE_KIND = 'product_attributes';
@@ -33,7 +33,7 @@ const optionSchema = z
 const rowSchema = z.object({
     attribute: z
         .object({
-            attribute_code: z.string().min(1),
+            attribute_code: z.string().regex(ATTRIBUTE_CODE, 'is not a Commerce attribute code'),
             frontend_input: z.string(),
             options: z.array(optionSchema).optional(),
             frontend_labels: z.array(z.object({ store_id: z.number(), label: z.string() })).optional(),
@@ -65,7 +65,7 @@ export async function installAttributes(ctx: KindContext, rows: readonly Attribu
         if (SWATCH_INPUTS.has(row.attribute.frontend_input)) {
             throw new Error(`The attribute ${code} is a swatch, which Demo Builder does not install yet.`);
         }
-        const existing = await readOrNull<object>(ctx.get, `products/attributes/${code}`);
+        const existing = await readOrNull<object>(ctx.get, `products/attributes/${segment(code)}`);
         if (existing && !ctx.recorder.has(ATTRIBUTE_KIND, code)) {
             await addMissingOptions(ctx, code, row.attribute.options ?? []);
             continue;
@@ -90,7 +90,7 @@ function sameLabel(a: string | undefined, b: string): boolean {
 }
 
 async function readOptions(ctx: KindContext, code: string): Promise<StoreOption[]> {
-    return (await ctx.get(`products/attributes/${code}/options`)) as StoreOption[] | null ?? [];
+    return (await ctx.get(`products/attributes/${segment(code)}/options`)) as StoreOption[] | null ?? [];
 }
 
 /**
@@ -103,7 +103,7 @@ async function addMissingOptions(ctx: KindContext, code: string, options: readon
     const missing = options.filter((o) => !have.some((h) => sameLabel(h.label, o.label)));
     for (const option of missing) {
         const { value: _sourceValue, ...body } = option;
-        await ctx.send('POST', `products/attributes/${code}/options`, { option: body });
+        await ctx.send('POST', `products/attributes/${segment(code)}/options`, { option: body });
         const added = (await readOptions(ctx, code)).find((h) => sameLabel(h.label, option.label));
         if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
         await ctx.recorder.record({ kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}` });
@@ -113,11 +113,11 @@ async function addMissingOptions(ctx: KindContext, code: string, options: readon
 
 /** Take back one attribute this engine created. */
 export function removeAttribute(send: CommerceSend, code: string): Promise<void> {
-    return deleteIfPresent(send, `products/attributes/${code}`);
+    return deleteIfPresent(send, `products/attributes/${segment(code)}`);
 }
 
 /** Take back one option this engine added; `id` is `<code>/<option id>`. */
 export function removeAttributeOption(send: CommerceSend, id: string): Promise<void> {
     const [code, optionId] = id.split('/');
-    return deleteIfPresent(send, `products/attributes/${code}/options/${optionId}`);
+    return deleteIfPresent(send, `products/attributes/${segment(code)}/options/${segment(optionId)}`);
 }

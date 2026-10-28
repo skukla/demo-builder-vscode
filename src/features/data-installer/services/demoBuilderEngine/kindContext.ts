@@ -58,6 +58,24 @@ export function newCatalogSession(storeId = 1): CatalogSession {
     return { setIds: new Map(), groupIds: new Map(), storeId, rootCategory: { ...DEFAULT_ROOT_CATEGORY } };
 }
 
+/**
+ * A pack is untrusted input: it can come from anyone on the team, through the library or a file.
+ * So every code a pack supplies is checked against Commerce's own rule for that code when the
+ * pack is read, and every value placed into a Commerce address is escaped where it is placed.
+ * A code like `../../customers/5` would otherwise point a request at another part of Commerce.
+ * Checked 2026-10-28 against every pack in the service's catalog: all 130 attribute codes and
+ * all 6 source codes pass these rules, so no real pack is refused.
+ */
+/** Commerce's attribute code: a letter, then letters, digits or underscores, at most 60. */
+export const ATTRIBUTE_CODE = /^[a-zA-Z][a-zA-Z0-9_]{0,59}$/u;
+/** An inventory source code: letters, digits, underscores and hyphens. */
+export const SOURCE_CODE = /^[A-Za-z0-9_-]{1,255}$/u;
+
+/** One value, escaped to sit inside a Commerce address as a single path segment. */
+export function segment(value: string | number): string {
+    return encodeURIComponent(String(value));
+}
+
 /** The thing at `path`, or `null` when Commerce answers that there is none (404). */
 export async function readOrNull<T>(get: CommerceGet, path: string): Promise<T | null> {
     try {

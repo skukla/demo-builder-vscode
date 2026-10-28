@@ -18,7 +18,7 @@
  */
 
 import { z } from 'zod';
-import { deleteIfPresent, type KindContext } from './kindContext';
+import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, segment } from './kindContext';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import { pickAttributeGroup, readSetGroups } from '@/features/app-builder/services/erpOwnerAttributeSets';
 import type { CommerceAttributeSetList, CommerceSend, CommerceSetAttribute } from '@/types/commerceWire';
@@ -44,7 +44,7 @@ const setRowSchema = z.object({
 /** `attributeSetId` holds the set's NAME, not an id (spec §3). */
 const assignmentRowSchema = z.object({
     attributeSetId: z.string().min(1),
-    attributeCode: z.string().min(1),
+    attributeCode: z.string().regex(ATTRIBUTE_CODE, 'is not a Commerce attribute code'),
     sortOrder: z.number().optional(),
 });
 
@@ -130,7 +130,7 @@ export async function installAssignments(ctx: KindContext, rows: readonly Assign
         const setId = ctx.session.setIds.get(row.attributeSetId);
         if (setId === undefined) throw new Error(`The store has no attribute set named ${row.attributeSetId}.`);
         if (!inSet.has(setId)) {
-            const attributes = ((await ctx.get(`products/attribute-sets/${setId}/attributes`)) ?? []) as CommerceSetAttribute[];
+            const attributes = ((await ctx.get(`products/attribute-sets/${segment(setId)}/attributes`)) ?? []) as CommerceSetAttribute[];
             inSet.set(setId, new Set(attributes.map((a) => a.attribute_code ?? '')));
         }
         if (inSet.get(setId)?.has(row.attributeCode)) continue;
@@ -150,11 +150,11 @@ export async function installAssignments(ctx: KindContext, rows: readonly Assign
 
 /** Take back one set this engine created; its own group goes with it. */
 export function removeAttributeSet(send: CommerceSend, id: string): Promise<void> {
-    return deleteIfPresent(send, `products/attribute-sets/${id}`);
+    return deleteIfPresent(send, `products/attribute-sets/${segment(id)}`);
 }
 
 /** Take one attribute this engine added back out of its set; `id` is `<set id>/<code>`. */
 export function removeAssignment(send: CommerceSend, id: string): Promise<void> {
     const [setId, code] = id.split('/');
-    return deleteIfPresent(send, `products/attribute-sets/${setId}/attributes/${code}`);
+    return deleteIfPresent(send, `products/attribute-sets/${segment(setId)}/attributes/${segment(code)}`);
 }

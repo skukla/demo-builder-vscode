@@ -20,7 +20,7 @@
 
 import { z } from 'zod';
 import type { CreatedObject } from './installRecord';
-import { deleteIfPresent, type KindContext, readOrNull } from './kindContext';
+import { SOURCE_CODE, deleteIfPresent, type KindContext, readOrNull, segment } from './kindContext';
 import { readInventory, sellsTo, setSourceEnabled } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { CommerceGet, CommerceInventoryStock, CommerceSend } from '@/types/commerceWire';
 
@@ -29,13 +29,13 @@ export const STOCK_KIND = 'stocks';
 export const LINK_KIND = 'stock_source_links';
 
 const sourcesSchema = z.object({
-    sources: z.array(z.object({ source: z.object({ source_code: z.string().min(1), name: z.string() }).passthrough() })),
+    sources: z.array(z.object({ source: z.object({ source_code: z.string().regex(SOURCE_CODE, 'is not a source code'), name: z.string() }).passthrough() })),
 });
 const stocksSchema = z.object({ stocks: z.array(z.object({ stock: z.object({ name: z.string().min(1) }).passthrough() })) });
 /** `stock_id` holds the stock's NAME (spec §7). */
 const linksSchema = z.object({
     stockSourceLinks: z.array(
-        z.object({ stockSourceLink: z.object({ stock_id: z.string().min(1), source_code: z.string().min(1), priority: z.number().optional() }) }),
+        z.object({ stockSourceLink: z.object({ stock_id: z.string().min(1), source_code: z.string().regex(SOURCE_CODE, 'is not a source code'), priority: z.number().optional() }) }),
     ),
 });
 
@@ -120,13 +120,13 @@ export async function removeSource(commerce: { get: CommerceGet; send: CommerceS
 
 /** Delete a stock this engine made, then put the website back on the stock it sold from. */
 export async function removeStock(commerce: { get: CommerceGet; send: CommerceSend }, object: CreatedObject): Promise<void> {
-    await deleteIfPresent(commerce.send, `inventory/stocks/${object.id}`);
+    await deleteIfPresent(commerce.send, `inventory/stocks/${segment(object.id)}`);
     const previous = object.previous as StockPrevious | undefined;
     if (previous?.stockId === undefined) return;
-    const before = await readOrNull<CommerceInventoryStock>(commerce.get, `inventory/stocks/${previous.stockId}`);
+    const before = await readOrNull<CommerceInventoryStock>(commerce.get, `inventory/stocks/${segment(previous.stockId)}`);
     if (!before || sellsTo(before, previous.websiteCode)) return;
     const channels = before.extension_attributes?.sales_channels ?? [];
-    await commerce.send('PUT', `inventory/stocks/${previous.stockId}`, {
+    await commerce.send('PUT', `inventory/stocks/${segment(previous.stockId)}`, {
         stock: { ...before, extension_attributes: { ...before.extension_attributes, sales_channels: [...channels, { type: 'website', code: previous.websiteCode }] } },
     });
 }

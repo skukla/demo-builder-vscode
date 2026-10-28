@@ -21,7 +21,7 @@
  */
 
 import { z } from 'zod';
-import { deleteIfPresent, type KindContext } from './kindContext';
+import { deleteIfPresent, type KindContext, segment } from './kindContext';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const CATEGORY_KIND = 'categories';
@@ -119,5 +119,5 @@ export async function installCategories(ctx: KindContext, pack: CategoryPack): P
 
 /** Take back one category this engine made; Commerce takes its children with it. */
 export function removeCategory(send: CommerceSend, id: string): Promise<void> {
-    return deleteIfPresent(send, `categories/${id}`);
+    return deleteIfPresent(send, `categories/${segment(id)}`);
 }

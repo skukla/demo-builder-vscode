@@ -53,6 +53,15 @@ function inventory(parts: { sources?: unknown[]; stocks?: unknown[]; links?: unk
     };
 }
 
+describe('untrusted source codes', () => {
+    it('refuses a crafted source code in sources and in links before anything reaches Commerce', () => {
+        expect(() => parseSources({ sources: [{ source: { ...BROADWAY, source_code: '../stocks/1' } }] })).toThrow(/not a source code/);
+        expect(() =>
+            parseStockSourceLinks({ stockSourceLinks: [{ stockSourceLink: { stock_id: 'Default Stock', source_code: 'a/b' } }] }),
+        ).toThrow(/not a source code/);
+    });
+});
+
 describe('installSources', () => {
     it('makes a source the store lacks, sent as the pack has it, and records it', async () => {
         const ctx = await fakeContext(inventory({}));

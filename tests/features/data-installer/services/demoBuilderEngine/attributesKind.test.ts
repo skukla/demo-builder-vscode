@@ -27,7 +27,13 @@ describe('parseAttributeRows', () => {
         expect(parseAttributeRows([FABRIC])).toHaveLength(1);
     });
 
-    it('refuses a row with no attribute code', () => {
+    it('refuses a crafted attribute code before anything reaches Commerce', () => {
+        const row = { attribute: { ...FABRIC.attribute, attribute_code: '../../customers/5' } };
+
+        expect(() => parseAttributeRows([row])).toThrow(/not a Commerce attribute code/);
+    });
+
+        it('refuses a row with no attribute code', () => {
         expect(() => parseAttributeRows([{ attribute: { frontend_input: 'text' } }])).toThrow(/product attributes/);
     });
 });
