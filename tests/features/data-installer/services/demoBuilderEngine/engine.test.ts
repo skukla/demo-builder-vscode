@@ -122,6 +122,16 @@ describe('demoBuilderEngine install', () => {
         expect(ctx.sent).toStrictEqual([]);
     });
 
+    it('reads the pack from the store the request names, the Data Installer when it names none', async () => {
+        const readPack = jest.fn(async (_id: unknown, _kinds: unknown, _source: string) => ITEMS);
+        const { engine } = await engineWith({}, () => ({}), { readPack });
+
+        await settle(engine, (await engine.startImport(request({ source: 'library' }))).activationId);
+        await settle(engine, (await engine.startImport(request())).activationId);
+
+        expect(readPack.mock.calls.map((call) => call[2])).toEqual(['library', 'installer']);
+    });
+
     it('fails when the pack does not hold a kind it was asked for', async () => {
         const { engine } = await engineWith({}, () => ({}), { readPack: async () => ({ attribute_sets: [] }) });
 

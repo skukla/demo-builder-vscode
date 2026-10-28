@@ -16,7 +16,7 @@
  */
 
 import * as crypto from 'crypto';
-import type { DataTypeStatus, DatapackId, ImportStart, ValidationResult } from '../../types';
+import type { DataTypeStatus, DatapackId, DatapackStoreName, ImportStart, ValidationResult } from '../../types';
 import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient';
 import type { DatapackEngine } from '../datapackEngine';
 import { type RecordFiles, nodeRecordFiles, openInstallRecord } from './installRecord';
@@ -29,8 +29,8 @@ import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 export interface DemoBuilderEngineDeps {
     /** The project's signed Commerce access, or why there is none. */
     commerce: () => Promise<{ get: CommerceGet; send: CommerceSend } | { refusal: string }>;
-    /** The pack's rows for the kinds asked, from whichever store it is in. */
-    readPack: (id: DatapackId, dataTypes: string[]) => Promise<PackItems>;
+    /** The pack's rows for the kinds asked, from the store that holds it. */
+    readPack: (id: DatapackId, dataTypes: string[], source: DatapackStoreName) => Promise<PackItems>;
     projectPath: string;
     log: (line: string) => void;
     files?: RecordFiles;
@@ -63,7 +63,7 @@ async function access(deps: DemoBuilderEngineDeps): Promise<{ get: CommerceGet; 
 /** Install: the target, the rows, then each kind in order, its status moving as it runs. */
 async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, job: Job): Promise<void> {
     if (!request.target) throw new Error(NO_TARGET);
-    const items = await deps.readPack(request.id, request.dataTypes);
+    const items = await deps.readPack(request.id, request.dataTypes, request.source ?? 'installer');
     const missing = request.dataTypes.filter((kind) => !(kind in items));
     if (missing.length > 0) throw new Error(`The pack holds no ${missing.join(', ')}.`);
     const commerce = await access(deps);

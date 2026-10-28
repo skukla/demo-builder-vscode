@@ -1,6 +1,6 @@
 # Step 03: wire the engine together
 
-Status: **in progress**. Items 1 to 5 built (2026-10-27); 6 and 7 to do.
+Status: **in progress**. Items 1 to 6 built (2026-10-27/28); 7, the live run, to do.
 
 1. **Run a pack in order, remove it from its record.** Built: `runPack.ts`. The service's order
    (catalog spec §0); a kind this engine cannot install refuses the pack before any write; removal
@@ -21,8 +21,14 @@ Status: **in progress**. Items 1 to 5 built (2026-10-27); 6 and 7 to do.
    (`engineThatInstalled`), so existing projects need no migration. Changed from the first
    plan, which added `datapack.engine` to the manifest. The creation install builds one engine
    per job, since Demo Builder's keeps its jobs in memory.
-6. **Read packs from wherever the screen lists them:** the service's catalog, the library, a zip
-   file (owner, 2026-10-27). One reader serves all three (`readPackFromStore`).
+6. **Read packs from wherever the screen lists them** (owner, 2026-10-27). Built: an install
+   request names its store (`source`: `installer`, the default, or `library`), and Demo Builder's
+   engine reads the pack from there through `readPackFromStore`. A zip file is loaded into the
+   library by the existing load, so it installs from there. The service installs only from its
+   own catalog, so with it chosen a library pack is refused with what to do instead. The
+   catalog's answer carries the chosen `engine`, and a library pack's panel offers Import in
+   place of Copy to the Data Installer when it is Demo Builder's. The agent's import, dry run
+   and removal take the same optional `source`.
 7. **First live run**, on the owner's go, each step separately: dry run, install, a look in the
    Admin and storefront, remove, back to zero.
    - **Where** (owner, 2026-10-27; the only ACCS instance there is): website

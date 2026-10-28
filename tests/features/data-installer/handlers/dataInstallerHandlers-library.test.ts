@@ -147,7 +147,8 @@ describe('the library store', () => {
 
             expect(res).toEqual({
                 success: true,
-                data: { items: [INSTALLER_ROW, { ...LIBRARY_ROW, store: 'library' }], count: 2 },
+                // `engine`: the screen offers Import on a library pack only with Demo Builder's (DI-5).
+                data: { items: [INSTALLER_ROW, { ...LIBRARY_ROW, store: 'library' }], count: 2, engine: 'service' },
             });
         });
 

@@ -16,7 +16,7 @@
  * @module features/data-installer/services/buildDatapackEngine
  */
 
-import type { DatapackId } from '../types';
+import type { DatapackId, DatapackStoreName } from '../types';
 import type { DataInstallerClient } from './dataInstallerClient';
 import { type DatapackEngine, type DatapackEngineId, type ServiceEngineAccess, buildServiceEngine } from './datapackEngine';
 import { readPackFromStore } from './datapackTransfer';
@@ -33,13 +33,17 @@ export interface DatapackEngineAccess extends ServiceEngineAccess {
     project: Project;
     /** The service catalog's reads, where Demo Builder's engine reads a pack's rows from. */
     catalog: Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'>;
+    /** The datapack library's reads, opened only when a pack is read from it. */
+    libraryCatalog?: () => Promise<Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'>>;
     authManager: AuthenticationService | undefined;
     secrets: CredentialStore | undefined;
 }
 
-/** A pack's rows by kind, read from the service's catalog. */
-async function readFromCatalog(catalog: DatapackEngineAccess['catalog'], id: Parameters<typeof readPackFromStore>[1]): Promise<PackItems> {
-    const file = await readPackFromStore(catalog, id, 'installer');
+/** A pack's rows by kind, read from the store that holds it. */
+async function readFromStore(access: DatapackEngineAccess, id: DatapackId, source: DatapackStoreName): Promise<PackItems> {
+    if (source === 'library' && !access.libraryCatalog) throw new Error('The datapack library cannot be read from here.');
+    const catalog = source === 'library' && access.libraryCatalog ? await access.libraryCatalog() : access.catalog;
+    const file = await readPackFromStore(catalog, id, source);
     return Object.fromEntries(file.items.map((item) => [item.dataType, item.records]));
 }
 
@@ -58,7 +62,7 @@ export function buildDatapackEngine(id: DatapackEngineId, access: DatapackEngine
             authManager
                 ? commerceClientForProject(access.project, authManager, access.secrets)
                 : { refusal: 'Adobe sign-in is required to write to this project\'s store.' },
-        readPack: (pack) => readFromCatalog(access.catalog, pack),
+        readPack: (pack, _dataTypes, source) => readFromStore(access, pack, source),
         projectPath: access.project.path,
         log,
     });

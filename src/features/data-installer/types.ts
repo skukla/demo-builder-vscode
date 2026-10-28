@@ -125,7 +125,15 @@ export interface ActivityEntry {
  * The catalog the panel shows: the Data Installer's packs, plus the library's when
  * asked. `libraryError` says why the library's are missing, when they are.
  */
-export type CatalogPage = Page<DatapackSummary> & { libraryError?: string };
+/** Which engine installs and removes datapacks (`demoBuilder.dataInstaller.engine`, DI-5). */
+export type DatapackEngineId = 'service' | 'demo-builder';
+
+/**
+ * The catalog with the library's rows. `engine` says which engine will install, so the screen
+ * offers Install on a library pack only when Demo Builder's engine is chosen: the service
+ * installs only from its own catalog.
+ */
+export type CatalogPage = Page<DatapackSummary> & { libraryError?: string; engine?: DatapackEngineId };
 
 export interface Page<T> {
     items: T[];

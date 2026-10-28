@@ -224,6 +224,8 @@ describe('what each row accepts', () => {
             'commerceInstance',
             'dataTypes',
             'datapackName',
+            // Which store holds the pack, installer or library (DI-5).
+            'source',
             'storeCode',
             'version',
             'websiteCode',

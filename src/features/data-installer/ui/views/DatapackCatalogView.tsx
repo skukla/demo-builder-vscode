@@ -315,6 +315,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onRetry={retryDetail}
                 onImport={openImport}
                 onRemoved={removedFromLibrary}
+                installsFromLibrary={value?.engine === 'demo-builder'}
             />
 
             {/* Only what the service HOLDS is importable — the inventory, never
@@ -325,6 +326,7 @@ export function DatapackCatalogView(): React.JSX.Element {
                     id={importing}
                     displayName={detail.value.detail.displayName}
                     availableTypes={detail.value.inventory.present}
+                    source={selectedStore}
                     onClose={closeImport}
                 />
             ) : null}

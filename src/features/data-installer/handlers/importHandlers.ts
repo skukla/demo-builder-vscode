@@ -27,9 +27,10 @@ import { selectedDatapackEngine } from '../services/dataInstallerConfig';
 import type { ImportRequest, ImportTarget } from '../services/dataInstallerWriteClient';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
-import type { ImportJobRecord } from '../types';
+import type { DatapackId, DatapackStoreName, ImportJobRecord } from '../types';
+import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
-import { resolveDatapackWriteAccess } from './datapackWriteGate';
+import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
 import { datapackZipHandlers } from './datapackZipHandlers';
 import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
@@ -55,6 +56,8 @@ interface StartImportPayload {
     storeCode?: string;
     /** Reset only: must be true. Nothing removes data by default. */
     confirm?: boolean;
+    /** Which store holds the pack: `installer` (absent) or `library` (DI-5). */
+    source?: string;
 }
 
 export const importHandlers = defineHandlers({
@@ -213,15 +216,15 @@ async function prepareImport(
     }
 
     const pack = { name: input.datapackName, version: input.version };
-    const engineId = write === 'remove' ? await engineThatInstalled(gate.project.path, pack) : selectedDatapackEngine();
+    const engine = await engineFor(context, gate, { pack, write, source: input.source });
+    if ('response' in engine) {
+        return engine;
+    }
     return {
-        engine: buildDatapackEngine(
-            engineId,
-            { ...gate, authManager: context.authManager, secrets: context.context?.secrets },
-            (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
-        ),
+        engine: engine.engine,
         request: {
             id: pack,
+            source: input.source,
             commerceInstance: input.commerceInstance,
             dataTypes: input.dataTypes,
             // A caller that names a scope means it. One that names NONE gets the
@@ -242,6 +245,46 @@ async function prepareImport(
 }
 
 
+/**
+ * The engine for one write: for a removal the one that installed the pack, otherwise the one
+ * the setting chooses (DI-5). The service installs only from its own catalog, so a library pack
+ * with the service chosen is refused with what to do instead.
+ */
+async function engineFor(
+    context: HandlerContext,
+    gate: DatapackWriteAccess,
+    write: { pack: DatapackId; write: 'install' | 'remove'; source: DatapackStoreName },
+): Promise<{ engine: DatapackEngine } | { response: HandlerResponse }> {
+    const engineId =
+        write.write === 'remove' ? await engineThatInstalled(gate.project.path, write.pack) : selectedDatapackEngine();
+    if (engineId === 'service' && write.source === 'library') {
+        return {
+            response: {
+                success: false,
+                error:
+                    'The Data Installer service installs only packs in its own catalog. Copy this one to the Data Installer first, ' +
+                    'or set demoBuilder.dataInstaller.engine to demo-builder.',
+            },
+        };
+    }
+    return {
+        engine: buildDatapackEngine(
+            engineId,
+            {
+                ...gate,
+                authManager: context.authManager,
+                secrets: context.context?.secrets,
+                libraryCatalog: async () => {
+                    const library = await resolveDataInstallerAccess(context, 'library');
+                    if (!library.ok) throw new Error('The datapack library is not reachable.');
+                    return library.client;
+                },
+            },
+            (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
+        ),
+    };
+}
+
 /** Validate the payload, returning either usable input or the reason it is not. */
 function readInput(
     payload: StartImportPayload | undefined,
@@ -252,6 +295,7 @@ function readInput(
           commerceInstance: string;
           dataTypes: string[];
           target: ImportTarget | undefined;
+          source: DatapackStoreName;
       }
     | { error: string } {
     const datapackName = payload?.datapackName;
@@ -274,7 +318,11 @@ function readInput(
     if ('error' in target) {
         return target;
     }
-    return { datapackName, version, commerceInstance, dataTypes, target: target.target };
+    const source = payload?.source ?? 'installer';
+    if (source !== 'installer' && source !== 'library') {
+        return { error: `There is no datapack store called ${source}: it is installer or library.` };
+    }
+    return { datapackName, version, commerceInstance, dataTypes, target: target.target, source };
 }
 
 /**

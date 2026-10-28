@@ -99,7 +99,9 @@ const IMPORT_TARGET = {
         .describe(
             'Store VIEW code, from list_datapack_import_scopes. Omit to use the project’s; ' +
                 'send with websiteCode to override',
-        ),
+        ),    // Which store holds the pack (DI-5). The service installs only from its own catalog; Demo
+    // Builder's engine reads either, so a library pack is installed without copying it first.
+    source: z.enum(['installer', 'library']).optional().describe('Which store holds the pack: installer (default) or library. A library pack needs the demo-builder engine'),
 };
 
 /**

@@ -182,6 +182,29 @@ describe('ImportDatapackModal', () => {
             );
         });
 
+        // DI-5: a library pack names its store so Demo Builder's engine reads it from there; a
+        // Data Installer pack sends no store at all, as before.
+        it('names the library as the store of a library pack', async () => {
+            renderModal({ source: 'library' });
+            await awaitForm();
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+
+            await press(startButton());
+
+            await waitFor(() => expect(startPayload()).toMatchObject({ datapackName: 'bodea', source: 'library' }));
+        });
+
+        it('sends no store for a Data Installer pack', async () => {
+            renderModal();
+            await awaitForm();
+            await press(screen.getByRole('checkbox', { name: 'Categories' }));
+
+            await press(startButton());
+
+            await waitFor(() => expect(startPayload()).toMatchObject({ datapackName: 'bodea' }));
+            expect(startPayload()).not.toHaveProperty('source');
+        });
+
         it('shows the service refusal verbatim when the start is rejected', async () => {
             mockRequest.mockImplementation(async (type: string) =>
                 type === 'start-datapack-import'

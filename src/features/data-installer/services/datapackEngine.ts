@@ -17,13 +17,13 @@
  * @module features/data-installer/services/datapackEngine
  */
 
-import type { ImportStart, ValidationResult } from '../types';
+import type { DatapackEngineId, ImportStart, ValidationResult } from '../types';
+
+export type { DatapackEngineId };
 import type { DataInstallerSignIn } from './dataInstallerSignIn';
 import { type CredentialCheck, DataInstallerWriteClient, type ImportRequest } from './dataInstallerWriteClient';
 import type { JobStatusSource } from './importJobRunner';
 
-/** Which engine did the work: recorded so removal goes back through the same one. */
-export type DatapackEngineId = 'service' | 'demo-builder';
 
 /**
  * Installs, removes, and reports on jobs. A job is started by `startImport` or

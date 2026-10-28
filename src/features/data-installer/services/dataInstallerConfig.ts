@@ -15,7 +15,7 @@
  */
 
 import * as vscode from 'vscode';
-import type { DatapackEngineId } from './datapackEngine';
+import type { DatapackEngineId } from '../types';
 import { validateURL } from '@/core/validation/URLValidator';
 
 /** Longest base URL we will accept from settings. */

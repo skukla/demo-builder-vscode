@@ -65,6 +65,12 @@ export interface DatapackDetailPanelProps {
     onImport: (id: DatapackId) => void;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
+    /**
+     * Whether a library pack can be installed where it is: true when Demo Builder's engine is
+     * chosen, which reads the library itself. The service installs only from its own catalog,
+     * so with it chosen a library pack offers Copy to the Data Installer instead (DI-5).
+     */
+    installsFromLibrary: boolean;
 }
 
 export function DatapackDetailPanel({
@@ -77,6 +83,7 @@ export function DatapackDetailPanel({
     onRetry,
     onImport,
     onRemoved,
+    installsFromLibrary,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selected?.name ?? 'Datapack';
 
@@ -100,7 +107,12 @@ export function DatapackDetailPanel({
                     <div className="db-drawer-body">
                         {renderPanelBody({ detail, inventory, loading, failure, onRetry })}
                         {canImport({ importable, loading, failure }) && detail ? (
-                            <PanelActions detail={detail} onImport={onImport} onRemoved={onRemoved} />
+                            <PanelActions
+                                detail={detail}
+                                onImport={onImport}
+                                onRemoved={onRemoved}
+                                installsFromLibrary={installsFromLibrary}
+                            />
                         ) : null}
                     </div>
                 </>
@@ -139,18 +151,21 @@ function canImport(args: {
 /**
  * The flyout's actions, by store.
  *
- * A Data Installer pack: Import and Save as file. A library pack: Copy to the Data
- * Installer (installing runs there, and it does not hold library packs — Import is
- * offered once the copy lands), Save as file, and Remove when it is the SC's own.
+ * A Data Installer pack: Import and Save as file. A library pack: Import when Demo Builder's
+ * engine is chosen (it reads the library itself), else Copy to the Data Installer (the service
+ * installs only from its own catalog; Import is offered once the copy lands); then Save as
+ * file, and Remove when it is the SC's own.
  */
 function PanelActions({
     detail,
     onImport,
     onRemoved,
+    installsFromLibrary,
 }: {
     detail: DatapackDetail;
     onImport: (id: DatapackId) => void;
     onRemoved: () => void;
+    installsFromLibrary: boolean;
 }): React.JSX.Element {
     if (detail.store !== 'library') {
         return (
@@ -164,8 +179,13 @@ function PanelActions({
     }
     return (
         <>
-            <CopyToInstallerButton id={detail.id} onImport={onImport} />
+            {installsFromLibrary ? null : <CopyToInstallerButton id={detail.id} onImport={onImport} />}
             <div className="db-drawer-actions">
+                {installsFromLibrary ? (
+                    <Button variant="accent" onPress={() => onImport(detail.id)}>
+                        Import
+                    </Button>
+                ) : null}
                 <SaveDatapackFileButton id={detail.id} source="library" />
                 {detail.mine ? (
                     <RemoveFromLibraryButton id={detail.id} onRemoved={onRemoved} />

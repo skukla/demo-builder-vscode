@@ -20,6 +20,7 @@ import {
     isDataInstallerEnabled,
     resolveDataInstallerBaseUrl,
     resolveDatapackStoreBaseUrl,
+    selectedDatapackEngine,
 } from '../services/dataInstallerConfig';
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
 import { orgNumberOf } from '../services/dataInstallerSignIn';
@@ -298,13 +299,14 @@ async function withLibraryRows(
     );
     if (!library.success) {
         const libraryError = library.error ?? LIBRARY_LIST_FAILED;
-        return { success: true, data: { ...installer, libraryError } satisfies CatalogPage };
+        return { success: true, data: { ...installer, libraryError, engine: selectedDatapackEngine() } satisfies CatalogPage };
     }
     const extra = (library.data as Page<DatapackSummary>).items;
     // No `total`: the two stores' totals do not add up to anything a caller can use.
     const merged: CatalogPage = {
         items: [...installer.items, ...extra],
         count: installer.count + extra.length,
+        engine: selectedDatapackEngine(),
     };
     return { success: true, data: merged };
 }

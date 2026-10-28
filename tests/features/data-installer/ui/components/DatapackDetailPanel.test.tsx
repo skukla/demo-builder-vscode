@@ -57,6 +57,7 @@ function renderPanel(over: Partial<React.ComponentProps<typeof DatapackDetailPan
             onRetry={jest.fn()}
             onImport={jest.fn()}
             onRemoved={jest.fn()}
+            installsFromLibrary={false}
             {...over}
         />
     );
@@ -385,6 +386,18 @@ describe('DatapackDetailPanel — a library pack', () => {
         expect(
             screen.getByRole('button', { name: 'Remove it from the library' })
         ).toBeInTheDocument();
+    });
+
+    // DI-5: Demo Builder's engine reads the library itself, so with it chosen a library pack is
+    // imported where it is, and there is nothing to copy first.
+    it("offers Import in place of Copy when Demo Builder's engine is chosen", () => {
+        const onImport = jest.fn();
+        renderPanel({ detail: LIBRARY, installsFromLibrary: true, onImport });
+
+        expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+        expect(onImport).toHaveBeenCalledWith(LIBRARY.id);
+        expect(screen.getByRole('button', { name: 'Save as file' })).toBeInTheDocument();
     });
 
     it('a Data Installer pack keeps Import and never offers Remove — the control', () => {
