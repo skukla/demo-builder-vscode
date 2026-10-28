@@ -3,21 +3,19 @@
  *
  * The modal shows ONE view at a time: `form`, `busy`, `confirm-reset`,
  * `watching`, or `result`, with the footer narrating each. An earlier shape let
- * the form, dry-run verdicts, three failure displays and a provisioning notice
+ * the form, dry-run verdicts, three failure displays and a credentials notice
  * coexist as conditional fragments — and that produced a live bug nobody could
  * localize (a bare error icon whose words were lost somewhere in the pile).
  * One view at a time makes that class of bug unwritable.
  *
  * **Every outcome is a RESULT view with an explicit Back.** Success does not
  * silently restore the form; failures do not stack under it. The result's
- * contextual actions live in the footer with Back — e.g. the credentials
- * refusal offers "Set up credentials automatically", the console-free loop
- * proven live 2026-08-13.
+ * actions live in the footer with Back.
  *
  * **Which result shows is decided by the LAST ACTION**, not by which request
  * objects happen to hold values: request state persists after settling, so
- * fixed precedence would replay an old outcome over a new one (a provisioning
- * success would outrank the dry run the user just ran).
+ * fixed precedence would replay an old outcome over a new one (an earlier
+ * import's failure would outrank the dry run the user just ran).
  *
  * **The target comes from the project, and is shown rather than typed.** An
  * editable `ImportTargetField` was retired for it — the instance is decided by the
@@ -52,12 +50,6 @@ import { resolveResult, type LastAction } from './importResult';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
-
-/**
- * Provisioning talks to the Console three times; the subscribe PUT alone took
- * 46 seconds live. Three minutes is headroom, not hope.
- */
-const PROVISION_TIMEOUT_MS = 180_000;
 
 /** How often to re-read the recorded job while one is in flight. */
 const STATUS_POLL_MS = 2000;
@@ -109,12 +101,6 @@ export function ImportDatapackModal({
     const dryRun = useDataInstallerRequest<{ valid: boolean; reason?: string }>(
         'validate-datapack-import',
     );
-    // Sized to the MEASURED loop, not the default: provisioning took ~50s live
-    // (the Console subscribe PUT alone was 46s), and the default timeout gave
-    // up first — the modal showed a failure over an operation that succeeded.
-    const provision = useDataInstallerRequest<never>('provision-accs-credentials', {
-        timeout: PROVISION_TIMEOUT_MS,
-    });
     const status = useDataInstallerRequest<ImportJobRecord | null>('get-datapack-import-status');
     const target = useDataInstallerRequest<ImportTarget>('get-datapack-import-target');
     // Owns the discovered scopes AND the user's choice within them — see the hook.
@@ -240,17 +226,12 @@ export function ImportDatapackModal({
         reset.load({ ...requestBody(), confirm: true });
     }, [act, reset, requestBody]);
 
-    const provisionCredentials = useCallback((): void => {
-        act('provision');
-        provision.load({});
-    }, [act, provision]);
-
     const goBack = useCallback((): void => setDismissed(true), []);
 
-    const busy = dryRun.loading || start.loading || reset.loading || provision.loading;
+    const busy = dryRun.loading || start.loading || reset.loading;
     const result =
         !dismissed && !busy
-            ? resolveResult(lastAction, { dryRun, start, reset, provision, record, startedActivation })
+            ? resolveResult(lastAction, { dryRun, start, reset, record, startedActivation })
             : null;
     // `scopes.loading` is in here because the target is still resolving while it
     // is true. Without it the user can tick types and press Start during the
@@ -274,7 +255,7 @@ export function ImportDatapackModal({
         record,
         watching,
         result,
-        busyMessage: busyMessage(start.loading, reset.loading, provision.loading),
+        busyMessage: busyMessage(start.loading, reset.loading),
         scope,
         toggle,
         toggleAll,
@@ -318,15 +299,12 @@ export function ImportDatapackModal({
                     checking: dryRun.loading,
                     starting: start.loading,
                     resetting: reset.loading,
-                    provisioning: provision.loading,
-                    offerProvisioning: result?.offerProvisioning ?? false,
                     stopWatching: () => setWatching(false),
                     validate,
                     armReset: () => setResetArmed(true),
                     disarmReset: () => setResetArmed(false),
                     confirmReset,
                     startImport,
-                    provisionCredentials,
                     goBack,
                 })}
             >

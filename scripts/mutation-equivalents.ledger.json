@@ -1130,18 +1130,6 @@
             "source": "PL-22 batch MUT-07, edsResetUI focus run"
         },
         {
-            "module": "src/features/eds/services/reset/edsResetSampleData.ts",
-            "anchors": [
-                "})().catch(() => false);"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The catch handler's value reaches one consumer, confirmSampleDataRemoval, which tests it with `!(await canRemove)`; `false` and `undefined` take the same branch and no prompt appears either way. The edsResetSampleData suite's CONTROL (a lookup that throws asks nothing) holds against both. Making the difference observable would mean giving the promise a third state the caller does not need. Re-homed 2026-10-08 (EDS-8): the credential check moved to edsResetSampleData.ts with its consumer.",
-            "decision": "none \u2014 `false` says what a failed lookup means; the mutant only removes the word",
-            "recorded": "2026-09-03",
-            "source": "PL-22 batch MUT-07, edsResetUI focus run"
-        },
-        {
             "module": "src/features/eds/services/reset/edsResetFileOverrides.ts",
             "anchors": [
                 "logger.warn(`[EdsReset] Failed to generate demo-config.json: ${configResult.error}`);"
@@ -6517,7 +6505,7 @@
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 168,
+            "line": 167,
             "mutants": 2,
             "category": "block",
             "reason": "Both arms of this if/else contain exactly one statement, and each is a logger call: context.logger.info with the website/store-group/store-view counts, and context.logger.warn with the discovery error. Emptying either block removes a log line and changes nothing the webview sees or the caller receives, so the only test that could tell them apart would assert log wording \u2014 which is what the ratchet exists to refuse to reward. The anchor names the if because '} else {' appears twice in this module.",
@@ -9602,7 +9590,7 @@
             "anchors": [
                 "default:"
             ],
-            "line": 210,
+            "line": 184,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable through the only route into describeOutcome. Its switch names six outcomes; the record type declares eight. The two it omits cannot arrive: terminalResult returns before this call for 'success', and resolveResult only reaches terminalResult when record.outcome !== 'watching'. So no ImportJobRecord a caller can build lands in the default arm, and no test can distinguish it from the arms above.",
@@ -9748,7 +9736,7 @@
             "anchors": [
                 "const [selection, setSelection] = useState<TypeSelection>({ selected: [], auto: [] });"
             ],
-            "line": 98,
+            "line": 90,
             "mutants": 1,
             "category": "other",
             "reason": "The 'auto' provenance set is only ever consulted as auto.has(t) for a type that is already in 'selected' and is a declared dependency of the type being unticked. A seeded entry that is not a real data type therefore matches nothing, and deselectType's final filter (auto kept only where it appears in the surviving selection) removes it on the first untick. Nothing rendered or sent reads 'auto' at all.",
@@ -9761,7 +9749,7 @@
             "anchors": [
                 "allSelected ? { selected: [], auto: [] } : { selected: [...availableTypes], auto: [] },"
             ],
-            "line": 198,
+            "line": 184,
             "mutants": 2,
             "category": "other",
             "reason": "Both survivors seed the 'auto' provenance set rather than the selection. 'auto' is read only as auto.has(t) while unticking, and only for types that are both currently selected and declared dependencies of the departing type, so an entry that is not a real data type can never match. The checkboxes, the Start guard and the request body all read 'selected'; none of them reads 'auto'.",
@@ -9786,7 +9774,7 @@
             "anchors": [
                 "}, [loadStatus]);"
             ],
-            "line": 128,
+            "line": 114,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9799,7 +9787,7 @@
             "anchors": [
                 "}, [loadTarget]);"
             ],
-            "line": 133,
+            "line": 119,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9812,7 +9800,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 221,
+            "line": 207,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves.",
@@ -9825,7 +9813,7 @@
             "anchors": [
                 "const goBack = useCallback((): void => setDismissed(true), []);"
             ],
-            "line": 248,
+            "line": 229,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function. goBack closes over nothing but a setState function, which React guarantees is stable.",
@@ -9836,22 +9824,9 @@
         {
             "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
             "anchors": [
-                "}, [act, provision]);"
-            ],
-            "line": 246,
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying this dependency array freezes provisionCredentials on the FIRST render's closure, and neither thing it closes over can go stale: act is a useCallback with an empty dependency list, and the only member of provision it touches is load, which useDataInstallerRequest memoises on execute, itself memoised on the literal request type. So the frozen callback calls the same two functions the fresh one would.",
-            "decision": "none \u2014 the array names what the callback reads, which is what makes it checkable",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
-            "anchors": [
                 "setWatching(true);"
             ],
-            "line": 237,
+            "line": 223,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false. watching only becomes false through the Stop watching button, which buildActions renders solely for the 'watching' view; that view requires a running record, and turning the watch off also stops the poll that could retire it. So while watching is false the modal offers no Remove data affordance to arm, and this call can only ever re-assert a value that is already true.",
@@ -9864,7 +9839,7 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 230,
+            "line": 216,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false, for the same reason as the removal's call: watching only turns false through Stop watching, which buildActions renders solely for the 'watching' view, and that view needs a running record whose poll the same press stops. So while watching is false the modal shows no Start import button, and this call can only re-assert a value that is already true.",
@@ -10567,84 +10542,6 @@
             "category": "optionalChain",
             "reason": "outcome is never null at these three reads. useDataInstallerRequest makes value and failure mutually exclusive \u2014 value is null exactly when the envelope reports failure, and failure then carries a message that is never empty (data.error ?? UNSTATED_FAILURE). ExportResult returns on that message before reaching any of these lines, and the view renders at all only when one of the two is truthy. So the ?. is required by the type and unreachable in fact. Verified by planting a non-null assertion at all three.",
             "decision": "none \u2014 the type makes outcome nullable and the compiler requires the chain",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
-            "anchors": [
-                "log?.('shared credential: no Adobe session, not asking');",
-                "log?.(`shared credential: ${response.status}${describe(body) ? ` \u2014 ${describe(body)}` : ''}`);",
-                "log?.('shared credential: the service answered without a usable pair');",
-                "if (body?.success !== true) {",
-                "const clientId = body.data?.clientId;",
-                "const clientSecret = body.data?.clientSecret;"
-            ],
-            "mutants": 6,
-            "category": "optionalChain",
-            "reason": "This module's contract is that it NEVER throws: it runs in front of a modal and inside project creation, and every failure comes back as undefined meaning 'no credential from here'. All six of these reads sit inside the one try block that implements that promise, so dropping the ?. turns a value that was already going to yield undefined into a TypeError the same catch converts into undefined. The returned verdict is identical; only a log line differs, and pinning log wording is what the ratchet exists to refuse. The ?. itself is required by the types \u2014 body is undefined for an unparseable gateway page, data is optional, and log is an optional dep. Verified by planting non-null assertions at all six.",
-            "decision": "none \u2014 each chain is required by its type, and the surrounding contract makes the difference unobservable",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
-            "anchors": [
-                "if (!pair) {"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Removing the guard changes no answer. pair is already undefined here, so falling through returns undefined by the other route \u2014 the same verdict the caller acts on. What changes is the log line: without the guard a failed lookup would report 'obtained from the discovery service'. That is a real diagnostic difference and the only one, and asserting it would pin wording. Verified by deleting the whole guard: all sixty tests pass.",
-            "decision": "OPEN \u2014 the guard earns its place only through the log line it writes; if that line ever stops mattering, delete the guard rather than keeping it as decoration",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
-            "anchors": [
-                "} catch (error) {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying the catch leaves the function returning undefined implicitly, which is exactly what the body returns explicitly. The only loss is the one status line naming AbortError or TypeError, and asserting that is a wording assertion. Verified by planting an empty catch.",
-            "decision": "none \u2014 the explicit return says what the contract is, and the log line is the diagnostic",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
-            "anchors": [
-                "getToken: async () => (await deps.auth?.getTokenManager().inspectToken())?.token,"
-            ],
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "Both chains are unreachable as written. deps.auth is proven non-null eight lines above, where the broker returns 'unavailable' without it, and inspectToken is typed to resolve with an object whose token alone is optional. The compiler cannot follow either fact, so it requires the chains. Verified by planting non-null assertions on both.",
-            "decision": "none \u2014 required by the types, guarded in fact",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
-            "anchors": [
-                "} catch {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "safeParse's catch returns undefined explicitly; emptying it returns undefined implicitly. There is no third thing the function does. Verified by planting an empty catch.",
-            "decision": "none \u2014 the explicit return is what makes 'a gateway HTML page is not a pair' readable",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
-            "anchors": [
-                "function describe(body: CredentialResponse | undefined): string | undefined {",
-                "return typeof body?.error === 'string' ? body.error : undefined;"
-            ],
-            "mutants": 5,
-            "category": "branch",
-            "reason": "describe has exactly one consumer: the status line written when the response is not ok. Nothing it returns reaches a caller, a return value or any state, so every test that could kill these mutants would have to assert that log line's text \u2014 the one thing the ratchet refuses to reward and the enforcer in tests/sop/no-logger-wording-assertions.test.ts bans. Verified by planting a version that returns body?.error unguarded: all sixty tests pass.",
-            "decision": "none \u2014 the typeof guard is what stops a non-string error field being interpolated into the channel a user pastes into a ticket",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
         },
@@ -12293,18 +12190,6 @@
             "source": "PL-22 batch MUT-08"
         },
         {
-            "module": "src/features/eds/services/credentialServiceProbe.ts",
-            "anchors": [
-                "return (await deps?.getTokenManager().inspectToken())?.token;"
-            ],
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "Either optional chain, removed, turns a missing auth dep or a token manager that answers undefined into a TypeError \u2014 which this function's own try/catch converts back into the same undefined it would have returned anyway. Verified by planting BOTH removals together and probing the two inputs that reach them (no auth deps at all; inspectToken resolving undefined): the probe reads 'not signed in' and makes no fetch either way.",
-            "decision": "none \u2014 the catch that makes this function total also makes both chains unobservable",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-08"
-        },
-        {
             "module": "src/features/eds/services/daAuthHelperToken.ts",
             "anchors": [
                 "return null; // not present / unreadable"
@@ -12337,19 +12222,6 @@
             "category": "branch",
             "reason": "Two mutants on this line, both unobservable. The operator swap (&& for ||) only differs for a value that is a number but NOT finite \u2014 NaN or +/-Infinity \u2014 and the only input this module ever sees is JSON.parse output of the on-disk cache, which cannot express either. The narrower one replaces the typeof test alone with true, leaving if (Number.isFinite(value)); Number.isFinite returns true ONLY for values whose typeof is already number, so the test it drops is entailed by the call beside it. Verified by planting.",
             "decision": "none \u2014 one is unreachable through the module's only input (a JSON file path); the other drops a guard that its neighbour already implies",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-08"
-        },
-        {
-            "module": "src/features/eds/services/credentialServiceProbe.ts",
-            "anchors": [
-                "return undefined;"
-            ],
-            "line": 107,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this catch does not change what readToken answers: a function that falls off its end returns undefined, which is exactly what the deleted statement returned. The caller's 'not signed in' branch is reached either way.",
-            "decision": "none \u2014 an explicit undefined and an implicit one are the same value",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-08"
         },
@@ -13294,42 +13166,6 @@
             "decision": "none \u2014 [] is the correct dependency list",
             "recorded": "2026-10-08",
             "source": "EDS-8 ConfigureScreen split"
-        },
-        {
-            "module": "src/features/data-installer/services/accsCredentialProvisioner.ts",
-            "anchors": [
-                "} else {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "The whole body of this else branch is one log call saying the service was already subscribed. Emptying it changes nothing a caller can observe - the same result comes back, no collaborator is called differently - so the only assertion that could kill it is on the logger's text, which the ratchet exists to refuse to reward. The branch's real subject, that the subscribe PUT is skipped when the code is already there, is pinned by its own test.",
-            "decision": "none - the else says out loud which way the guard went, and the log is the point of it",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-03"
-        },
-        {
-            "module": "src/features/data-installer/services/accsCredentialProvisioner.ts",
-            "anchors": [
-                "log(`subscribing ${ACCS_SERVICE_CODE} (union of ${subscribed.length + 1} services)`);"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The + 1 exists only inside a log message. The union actually sent to the Console is built on the next line from a spread, and that argument is asserted by the union test; this arithmetic reaches no decision, no return value and no collaborator. The only test that could tell + from - would assert the logger's text, which is banned. Note the classifier reads this as 'other' rather than log wording because the call is a bare log(), not logger.log().",
-            "decision": "none - the count tells the reader how many services the PUT is about to carry",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-03"
-        },
-        {
-            "module": "src/features/data-installer/services/accsCredentialProvisioner.ts",
-            "anchors": [
-                "const credentials = parsed.project?.workspace?.details?.credentials ?? [];"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Stryker fills the fallback array with one string. That array is consumed by exactly one expression - .find(entry => entry.integration_type === 'oauth_server_to_server') - and a string has no integration_type, so find returns undefined for the filled array exactly as it does for the empty one. Every path after it is identical: s2s undefined, clientId undefined, the missing-credential reason. There is no value the fallback could carry that a test could tell apart from none.",
-            "decision": "none - the empty array is what makes the find total",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-03"
         },
         {
             "module": "src/features/ai/server/consentViaChat.ts",
@@ -16027,7 +15863,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 373,
+            "line": 365,
             "mutants": 1,
             "category": "block",
             "reason": "The catch in checkStorefrontOrigin holds a logger.debug call and 'return undefined'. Emptying it leaves the catch in place, so the failed read is still swallowed, and the function then falls off its end \u2014 which answers undefined, the same value. The only difference is whether the debug line prints. Planted 2026-10-10 with the body removed and all 23 tests pass, including the one that makes the read throw and checks the section is left out.",

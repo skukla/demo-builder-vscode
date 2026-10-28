@@ -15,8 +15,12 @@
  * @module features/data-installer/services/importScopeDiscovery
  */
 
-import type { CommerceCredentials } from './dataInstallerWriteClient';
+import { commerceBackendOf } from './commerceBackend';
 import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
+import {
+    resolvePaasAdminPair,
+    type CommercePairDeps,
+} from '@/features/components/services/commerceCredentialStore';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { selectDiscoveryService } from '@/features/eds/services/accsDiscoveryConfig';
 import type { Project } from '@/types/base';
@@ -33,26 +37,33 @@ export interface TargetWebsiteScope {
 /**
  * Discovery params for whichever backend this project runs.
  *
- * Returns undefined when the project cannot be discovered against (no URL, or
- * ACCS without a configured discovery service / usable token) — targeting is
- * optional, so that is an empty picker rather than an error.
+ * Returns undefined when the project cannot be discovered against (no Commerce
+ * backend, no URL, PaaS without its admin pair, or ACCS without a configured
+ * discovery service / usable token) — targeting is optional, so that is an empty
+ * picker rather than an error.
+ *
+ * PaaS discovery signs in with the project's own admin pair, read from the credential
+ * store. That pair is the store discovery's, not the Data Installer's: no write sends it.
  */
 export async function buildScopeDiscoveryParams(
     context: HandlerContext,
     project: Project,
-    credentials: CommerceCredentials,
 ): Promise<StoreDiscoveryParams | undefined> {
     const configs = project.componentConfigs ?? {};
+    const backend = commerceBackendOf(project);
+    if (!backend) {
+        return undefined;
+    }
 
-    if (credentials.kind === 'paas') {
+    if (backend === 'paas') {
         const baseUrl = lookupComponentConfigValue(configs, PAAS_URL);
-        return baseUrl
-            ? {
-                  backendType: 'paas',
-                  baseUrl,
-                  username: credentials.username,
-                  password: credentials.password,
-              }
+        const pairDeps: CommercePairDeps = {
+            ...(context.context?.secrets ? { secrets: context.context.secrets } : {}),
+            ...(project.path ? { projectId: project.path } : {}),
+        };
+        const admin = baseUrl ? await resolvePaasAdminPair(pairDeps, configs) : undefined;
+        return baseUrl && admin
+            ? { backendType: 'paas', baseUrl, username: admin.username, password: admin.password }
             : undefined;
     }
 

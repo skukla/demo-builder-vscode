@@ -46,12 +46,6 @@ jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
 jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
     buildSampleDataDeps: jest.fn(() => ({})),
 }));
-jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
-    resolveCommerceCredentials: jest.fn().mockResolvedValue({
-        ok: true,
-        credentials: { kind: 'accs', clientId: 'id', clientSecret: 'fake-test-pw-not-a-secret' },
-    }),
-}));
 
 import { startModalRun } from '@/core/vscode/operationProgress';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';

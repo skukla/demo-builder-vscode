@@ -55,9 +55,9 @@ interface SubscribeResponseBody {
  * Both subscribe wrappers used to discard the response entirely, so this read as
  * success. That mattered because **the subscription IS the entitlement** — it is
  * what moves an S2S credential's scopes from `AdobeID,openid` to `commerce.accs`
- * — so `provisionAccsCredentials` went on to return a scope-less credential whose
- * only symptom was a Data Installer pre-flight 400 minutes later, in a different
- * feature, with nothing connecting the two. Measured 2026-08-16 against an org
+ * — so the Data Installer's ACCS credential provisioning (removed 2026-10-28, DI-6)
+ * went on to return a scope-less credential whose only symptom was a pre-flight 400
+ * minutes later, in a different feature, with nothing connecting the two. Measured 2026-08-16 against an org
  * holding no ACCS product (`.rptc/plans/data-installer-credential-broker/step-05.md`).
  *
  * **Only positive evidence fails.** The SDK does not always return a body, and an

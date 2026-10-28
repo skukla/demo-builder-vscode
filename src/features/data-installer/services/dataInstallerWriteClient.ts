@@ -1,10 +1,10 @@
 /**
  * Data Installer write client — the credentialed sibling of the read client.
  *
- * **Two classes, not one, on purpose.** Reads need only the extension's IMS
- * bearer. Writes additionally need Commerce credentials, which ACCS projects do
- * not store, so "do we have credentials yet?" is a TYPE question the compiler
- * answers rather than a runtime check every method repeats.
+ * **Two classes, not one, on purpose.** Reads go to the catalog; writes act on a
+ * Commerce instance, and a write request names one. No Commerce credential travels
+ * with either: the service signs in to Commerce with its own (DEMOSYS-1698), so
+ * Demo Builder stopped gathering and sending them (DI-6, 2026-10-28).
  *
  * Two methods, because a write is two steps by contract:
  *
@@ -22,8 +22,8 @@
  * drives the two-step export contract and shares this file's credential fields
  * and body parsing (split 2026-10-08).
  *
- * **Status polling is deliberately NOT here.** Watching a job is a read, it needs
- * no credentials, and it already lives on the read client. Duplicating it would
+ * **Status polling is deliberately NOT here.** Watching a job is a read, and it
+ * already lives on the read client. Duplicating it would
  * put the same endpoint behind two auth requirements.
  *
  * The instance string is passed through untouched. It is whatever the user typed:
@@ -42,11 +42,6 @@ import { parseImportStart, parseValidation } from './dataInstallerParsers';
 import { signInHeaders, type DataInstallerSignIn } from './dataInstallerSignIn';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
-/** Commerce credentials, discriminated by backend because the shapes differ. */
-export type CommerceCredentials =
-    | { kind: 'paas'; username: string; password: string }
-    | { kind: 'accs'; clientId: string; clientSecret: string };
-
 /** Everything one import needs. */
 export interface ImportRequest {
     id: DatapackId;
@@ -54,7 +49,6 @@ export interface ImportRequest {
     commerceInstance: string;
     /** Explicit types only — omitting them is a 400 from the service. */
     dataTypes: string[];
-    credentials: CommerceCredentials;
     /**
      * Where the pack lands. Absent means the service's own default (`base`).
      *
@@ -120,13 +114,13 @@ export class DataInstallerWriteClient {
     }
 
     /**
-     * Do these credentials actually reach this Commerce instance?
+     * Does the service's own credential reach this Commerce instance?
      *
      * `get-websites-and-stores` is the cheapest way to answer that — the spike's
-     * own conclusion. It takes the instance and the credential pair, touches
-     * `process-datapack` not at all, and so cannot start anything by accident.
-     * It also answers a question `validate` may not: whether the pair WORKS, as
-     * opposed to whether the request is well-formed.
+     * own conclusion. It takes the instance, touches `process-datapack` not at
+     * all, and so cannot start anything by accident. It also answers a question
+     * `validate` may not: whether the sign-in WORKS, as opposed to whether the
+     * request is well-formed.
      *
      * A refusal is a verdict, not an error.
      */
@@ -253,8 +247,7 @@ export class DataInstallerWriteClient {
             return safeParse(raw);
         }
         if (!response.ok) {
-            // The service's own message only. The request body is never quoted
-            // back — it carries the Commerce credentials.
+            // The service's own message only. The request body is never quoted back.
             throw new DataInstallerApiError(
                 describe(safeParse(raw)) ?? `The Data Installer rejected the request (HTTP ${response.status}).`,
                 response.status,

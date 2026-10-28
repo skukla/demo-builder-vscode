@@ -34,7 +34,6 @@ import {
     type VSCodeInfo,
 } from './diagnosticsReport';
 import { BaseCommand } from '@/core/base/baseCommand';
-import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, type DebugLogger } from '@/core/logging/debugLogger';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
@@ -47,10 +46,6 @@ import {
     probeConfigService,
     type ConfigServiceProbeResult,
 } from '@/features/eds/services/configService/configServiceProbe';
-import {
-    probeCredentialService,
-    type CredentialServiceProbeResult,
-} from '@/features/eds/services/credentialServiceProbe';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import {
     probeGitHubCredential,
@@ -217,9 +212,8 @@ export class DiagnosticsCommand extends BaseCommand {
             report.claudeCode = await collectClaudeCodeFootprint();
 
             // The remote probes run CONCURRENTLY: each is pure HTTP against
-            // a different service (GitHub/AEM, the Config Service, aem.live, the
-            // shared credential service, and GitHub again for the storefront's
-            // origin), they share no state, and none reads another's result — so
+            // a different service (GitHub/AEM, the Config Service, aem.live, and
+            // GitHub again for the storefront's origin), they share no state, and none reads another's result — so
             // serialising them only added their latencies together.
             //
             // The `aio` checks above stay sequential on purpose. The first aio
@@ -228,17 +222,15 @@ export class DiagnosticsCommand extends BaseCommand {
             // only by in-process flags — so running those concurrently would race
             // that write for a saving these three already cover.
             this.logger.debug('Probing GitHub, Config Service and storefront');
-            const [githubCredential, configService, storefront, credentialService, storefrontOrigin] =
+            const [githubCredential, configService, storefront, storefrontOrigin] =
                 await Promise.all([
                     this.checkGitHubCredential(),
                     this.checkConfigService(),
                     this.checkStorefront(),
-                    this.checkCredentialService(),
                     this.checkStorefrontOrigin(),
                 ]);
             report.githubCredential = githubCredential;
             report.configService = configService;
-            report.credentialService = credentialService;
             report.storefront = storefront?.probe;
             report.storefrontScope = storefront?.scope;
             report.storefrontOrigin = storefrontOrigin;
@@ -383,23 +375,6 @@ export class DiagnosticsCommand extends BaseCommand {
      * Returns undefined without an EDS project: there is no site to address,
      * and an invented one would produce a 404 that reads like a real finding.
      */
-    /**
-     * Is the shared Commerce credential service configured and serving this user?
-     *
-     * Runs with or WITHOUT a project open, unlike the probes around it: the
-     * service is a global capability, and the person most likely to need this
-     * answer is someone whose project cannot import — who has no reason to think
-     * the cause is a setting they have never heard of.
-     */
-    private async checkCredentialService(): Promise<CredentialServiceProbeResult> {
-        const project = await this.stateManager.getCurrentProject();
-        const orgId = project?.adobe?.organization;
-        return probeCredentialService({
-            auth: ServiceLocator.getAuthenticationService(),
-            ...(orgId ? { orgId } : {}),
-        });
-    }
-
     private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {
         const project = await this.stateManager.getCurrentProject();
         // GitHub owner/repo — NOT the DA.live org/site. The Config Service keys

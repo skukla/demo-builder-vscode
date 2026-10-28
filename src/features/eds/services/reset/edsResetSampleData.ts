@@ -11,6 +11,7 @@
 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
+import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -18,42 +19,24 @@ import type { HandlerContext } from '@/types/handlers';
 /**
  * Can this project's sample data actually be removed? Started early, awaited late.
  *
- * Answering needs a Commerce credential, and getting one is the slow part of this
- * dialog — not the HTTP call (130-230ms measured) but the IMS token behind it,
- * which `tokenManager.inspectToken` reads by spawning the whole `aio` CLI when its
- * inspection cache is cold. Kicking it off before the reset confirmation spends
- * that time against a dialog the user is already reading.
+ * Returns undefined when there is no pack — nothing to ask about. Otherwise it
+ * resolves true when the project has a Commerce backend to remove the pack from.
  *
- * Returns undefined when there is no pack — nothing to ask about, so nothing to
- * spend. **Never rejects**: this is held unawaited across a modal, where a
- * rejection would surface as an unhandled promise rather than as a failed reset.
+ * It used to resolve the project's Commerce credentials, which was the slow part of
+ * the reset dialog. The Data Installer service stopped accepting a caller's
+ * credentials on purpose (DEMOSYS-1698) and signs in with its own, so a project with
+ * no saved pair can be cleaned like any other (DI-6, 2026-10-28). The Promise shape
+ * stays because both callers hold it across a modal. **Never rejects.**
  *
  * Checked BEFORE the prompt rather than during the reset. Measured live
- * 2026-08-16: this asked, ran the full ~3-minute storefront reset, and only then
- * reported "no usable Commerce credentials" — three minutes spent on a question
- * that could not be honoured. The original gate was `datapack` alone, justified by
- * "no network call in front of a modal"; that rule was really about not adding
- * failure modes, and a bounded GET that degrades silently removes one.
+ * 2026-08-16: the reset once asked, ran the full ~3-minute storefront reset, and only
+ * then reported it could not remove anything.
  */
-export function beginSampleDataCredentialCheck(
-    project: Project,
-    context: HandlerContext,
-): Promise<boolean> | undefined {
+export function beginSampleDataRemovalCheck(project: Project): Promise<boolean> | undefined {
     if (!project.datapack) {
         return undefined;
     }
-
-    // Through the shared resolver, which owns the `stackBackend` mapping. This
-    // site passed a raw Project through `as never`, so the dispatch matched
-    // neither backend and the prompt never appeared for any project — see
-    // `resolveProjectCredentials` for the three sites that made that mistake.
-    return (async () => {
-        const { resolveProjectCredentials } = await import(
-            '@/features/data-installer/services/commerceCredentialBroker'
-        );
-        const credentials = await resolveProjectCredentials(context, project);
-        return credentials.ok;
-    })().catch(() => false);
+    return Promise.resolve(commerceBackendOf(project) !== undefined);
 }
 
 /**

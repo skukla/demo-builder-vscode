@@ -30,7 +30,6 @@ function request(overrides: Partial<ImportRequest> = {}): ImportRequest {
         id: PACK,
         commerceInstance: 'ignored by this engine',
         dataTypes: ['attribute_sets', 'categories'],
-        credentials: { kind: 'accs', clientId: 'not-used', clientSecret: 'not-used' },
         target: { websiteCode: 'base', storeCode: 'default' },
         ...overrides,
     };

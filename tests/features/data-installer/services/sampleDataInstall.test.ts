@@ -6,7 +6,7 @@
  * target picked in the wizard — so this is the phase that closes that loop.
  *
  * The reasoning that argued against installing during creation ("it needs a
- * reachable instance with working credentials") does not survive contact with
+ * reachable instance") does not survive contact with
  * the wizard's own order: the Commerce **Connection** sub-step validates exactly
  * that, several steps earlier. By the time this phase runs, reachability is a
  * measured fact rather than a hope.
@@ -162,10 +162,6 @@ describe('installSampleData', () => {
                 perType: { categories: 'success', products: 'success' },
             }),
             inventory: jest.fn().mockResolvedValue(['categories', 'products']),
-            credentials: jest.fn().mockResolvedValue({
-                ok: true,
-                credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'fake-test-secret-not-a-secret' },
-            }),
             onProgress: jest.fn(),
             ...over,
         };
@@ -176,7 +172,7 @@ describe('installSampleData', () => {
 
         await installSampleData(project(), d);
 
-        // The client's real shape: target NESTED, credentials alongside. An
+        // The client's real shape: target NESTED. An
         // earlier version of this test asserted a flat websiteCode/storeCode and
         // the implementation obligingly sent one — a shape the client rejects.
         expect(d.startImport).toHaveBeenCalledWith(
@@ -273,24 +269,6 @@ describe('installSampleData', () => {
             expect(d.startImport).not.toHaveBeenCalled();
         });
 
-        it('skips when the project has no usable Commerce credentials', async () => {
-            const d = deps({
-                credentials: jest.fn().mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' }),
-            });
-
-            const result = await installSampleData(project(), d);
-
-            // The resolver's OWN refusal is forwarded, not replaced by the
-            // generic fallback — it is the only thing that says which credential
-            // is missing.
-            expect(result).toMatchObject({
-                ran: false,
-                skipped: true,
-                reason: 'needs-accs-credentials',
-            });
-            expect(d.startImport).not.toHaveBeenCalled();
-        });
-
         /** Nothing stored means nothing to ask for — a request would 400. */
         it('skips when the service holds no item for the pack', async () => {
             const d = deps({ inventory: jest.fn().mockResolvedValue([]) });
@@ -359,10 +337,6 @@ describe('removeSampleData', () => {
                 perType: { categories: 'success' },
             }),
             inventory: jest.fn().mockResolvedValue(['categories', 'products']),
-            credentials: jest.fn().mockResolvedValue({
-                ok: true,
-                credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'fake-test-secret-not-a-secret' },
-            }),
             onProgress: jest.fn(),
             ...over,
         };

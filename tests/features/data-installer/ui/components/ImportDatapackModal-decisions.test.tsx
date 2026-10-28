@@ -279,34 +279,6 @@ describe('ImportDatapackModal — decisions', () => {
 
             expect(screen.getByText('Starting removal')).toBeInTheDocument();
         });
-
-        it('says credentials are being set up, and labels Start for that wait', async () => {
-            mockRequest.mockImplementation(async (type: string) => {
-                if (type === 'validate-datapack-import') {
-                    return {
-                        success: false,
-                        error: 'ACCS imports need credentials.',
-                        code: 'INVALID_OPERATION',
-                        data: { needsAccsCredentials: true },
-                    };
-                }
-                if (type === 'provision-accs-credentials') {
-                    return new Promise(() => undefined);
-                }
-                return defaultResponse(type);
-            });
-            renderModal();
-            await awaitForm();
-            await press(screen.getByRole('checkbox', { name: 'Categories' }));
-            await press(screen.getByRole('button', { name: /^dry run$/i }));
-
-            await press(
-                await screen.findByRole('button', { name: /set up credentials automatically/i })
-            );
-
-            expect(screen.getByText('Setting up credentials')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Setting up' })).toBeInTheDocument();
-        });
     });
 
     describe('the result footer', () => {
@@ -323,12 +295,9 @@ describe('ImportDatapackModal — decisions', () => {
             await screen.findByText(/dry run passed/i);
         }
 
-        it('offers Back and nothing else when the outcome carries no credentials offer', async () => {
+        it('offers Back and nothing else', async () => {
             await passedDryRun();
 
-            expect(
-                screen.queryByRole('button', { name: /set up credentials automatically/i })
-            ).not.toBeInTheDocument();
             // Every button, unfiltered: an extra footer entry with no label is
             // exactly what a broken actions array produces, and dropping the
             // nameless ones would hide it.

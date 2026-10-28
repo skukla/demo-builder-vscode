@@ -1,28 +1,13 @@
 /**
- * Selecting the shared service, and deriving its credential endpoint.
+ * Selecting the shared discovery service.
  *
  * `selectDiscoveryService` had no test of its own — the rule lived only in the
- * two consumers that call it. Adding a third consumer (the Data Installer
- * credential broker) is the point at which that stops being acceptable, so the
- * existing selection rule is pinned here alongside the new derivation.
- *
- * The derivation matters for a reason beyond tidiness: it is what stops a
- * misconfigured setting from building a credential request to an arbitrary host.
- * A URL that is not recognisably a `discover-stores` action yields nothing, the
- * same rule `pdp404Snippet` applies to its own sibling derivation.
+ * consumers that call it — so the selection rule is pinned here.
  */
 
-
 import * as vscode from 'vscode';
-import {
-    deriveCredentialServiceUrl,
-    selectCredentialService,
-    selectDiscoveryService,
-} from '@/features/eds/services/accsDiscoveryConfig';
+import { selectDiscoveryService } from '@/features/eds/services/accsDiscoveryConfig';
 
-const DISCOVER = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/discover-stores';
-const CREDENTIALS =
-    'https://example.adobeioruntime.net/api/v1/web/accs-discovery/get-commerce-credentials';
 
 /** Seed `demoBuilder.accsDiscovery.services` with the given entries. */
 function seedServices(services: unknown[]): void {
@@ -43,78 +28,8 @@ function seedUnsetSetting(): void {
     });
 }
 
-/**
- * The cap `deriveCredentialServiceUrl` refuses past, mirrored here so the
- * boundary can be tested from both sides. If the module's own constant moves,
- * these fail — which is the point: the cap is a stated protection, not an
- * implementation detail.
- */
-const MAX_SERVICE_URL_LENGTH = 2048;
-
-/** A well-formed discover-stores URL of exactly `total` characters. */
-function discoverUrlOfLength(total: number): string {
-    const prefix = 'https://example.adobeioruntime.net/api/v1/web/';
-    const suffix = '/discover-stores';
-    return `${prefix}${'a'.repeat(total - prefix.length - suffix.length)}${suffix}`;
-}
-
 beforeEach(() => {
     jest.clearAllMocks();
-});
-
-describe('deriveCredentialServiceUrl', () => {
-    it('swaps the action segment', () => {
-        expect(deriveCredentialServiceUrl(DISCOVER)).toBe(CREDENTIALS);
-    });
-
-    it('tolerates a trailing slash', () => {
-        expect(deriveCredentialServiceUrl(`${DISCOVER}/`)).toBe(CREDENTIALS);
-    });
-
-    it('drops any query string', () => {
-        expect(deriveCredentialServiceUrl(`${DISCOVER}?org=x&site=y`)).toBe(CREDENTIALS);
-    });
-
-    // The guard that matters: a setting pointing somewhere else must not become
-    // a credential request to that somewhere else.
-    it.each([
-        ['not a discover-stores action', 'https://evil.example.com/api/v1/web/x/steal'],
-        ['action segment only resembles it', 'https://example.adobeioruntime.net/discover-stores-x'],
-        ['not a URL at all', 'discover-stores'],
-        ['empty', ''],
-    ])('returns undefined when the URL is %s', (_label, url) => {
-        expect(deriveCredentialServiceUrl(url)).toBeUndefined();
-    });
-
-    /**
-     * The length cap, from both sides.
-     *
-     * Everything past this point is parsed by `new URL` and pattern-matched, so
-     * the cap is what stops a pathological setting value from being handed to
-     * the parser at all. Testing only the over-cap side leaves the comparison
-     * free to slide by one; testing only the under-cap side leaves the whole
-     * guard deletable, because a long-but-valid URL derives perfectly well
-     * without it.
-     */
-    it(`refuses a URL longer than ${MAX_SERVICE_URL_LENGTH} characters`, () => {
-        const tooLong = discoverUrlOfLength(MAX_SERVICE_URL_LENGTH + 1);
-
-        expect(tooLong).toHaveLength(MAX_SERVICE_URL_LENGTH + 1);
-        expect(deriveCredentialServiceUrl(tooLong)).toBeUndefined();
-    });
-
-    it(`still derives from a URL of exactly ${MAX_SERVICE_URL_LENGTH} characters`, () => {
-        const atCap = discoverUrlOfLength(MAX_SERVICE_URL_LENGTH);
-
-        expect(atCap).toHaveLength(MAX_SERVICE_URL_LENGTH);
-        expect(deriveCredentialServiceUrl(atCap)).toContain('/get-commerce-credentials');
-    });
-
-    // CONTROL: the happy path still works, so the row above is not passing
-    // because the function returns undefined for everything.
-    it('CONTROL — still derives from a well-formed URL after the refusals', () => {
-        expect(deriveCredentialServiceUrl(DISCOVER)).toBe(CREDENTIALS);
-    });
 });
 
 describe('selectDiscoveryService', () => {
@@ -189,28 +104,5 @@ describe('selectDiscoveryService', () => {
         seedServices([{ orgName: 'A', serviceUrl: 'http://insecure.example.com/discover-stores' }]);
 
         expect(selectDiscoveryService()).toEqual({ ok: false, reason: 'invalid-url' });
-    });
-});
-
-describe('selectCredentialService', () => {
-    it('selects then derives, in one step', () => {
-        seedServices([{ orgName: 'A', orgId: '111', serviceUrl: DISCOVER }]);
-
-        expect(selectCredentialService('111')).toEqual({ ok: true, serviceUrl: CREDENTIALS });
-    });
-
-    it('carries the selection failure through unchanged', () => {
-        seedServices([]);
-
-        expect(selectCredentialService()).toEqual({ ok: false, reason: 'none-configured' });
-    });
-
-    // A configured service whose URL is valid https but not a discover-stores
-    // action is a THIRD failure, distinct from both selection failures: something
-    // is configured, and we still cannot build a credential request from it.
-    it('reports not-derivable when the selected URL is not a discover-stores action', () => {
-        seedServices([{ orgName: 'A', serviceUrl: 'https://example.com/something-else' }]);
-
-        expect(selectCredentialService()).toEqual({ ok: false, reason: 'not-derivable' });
     });
 });

@@ -39,7 +39,6 @@ describe('buildDatapackEngine', () => {
                 id: { name: 'frescopa', version: 'main' },
                 commerceInstance: 'unused',
                 dataTypes: ['categories'],
-                credentials: { kind: 'accs', clientId: 'unused', clientSecret: 'unused' },
             }),
         ).resolves.toEqual({ usable: false, reason: "Adobe sign-in is required to write to this project's store." });
     });

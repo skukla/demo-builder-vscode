@@ -6,7 +6,7 @@
  */
 
 jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
-    beginSampleDataCredentialCheck: jest.fn().mockReturnValue(Promise.resolve(true)),
+    beginSampleDataRemovalCheck: jest.fn().mockReturnValue(Promise.resolve(true)),
     removeProjectSampleData: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/features/project-creation/handlers/executorSampleDataPhase', () => ({
@@ -21,7 +21,7 @@ jest.mock('@/features/project-creation/services/catalogMenuPhase', () => ({
 }));
 
 import {
-    beginSampleDataCredentialCheck,
+    beginSampleDataRemovalCheck,
     removeProjectSampleData,
 } from '@/features/eds/services/reset/edsResetSampleData';
 import {
@@ -56,10 +56,10 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('planDatapackChange — asked before anything runs', () => {
     it('asks nothing when the datapack did not change', async () => {
-        const { context, project } = setup();
+        const { project } = setup();
         const ask = jest.fn();
 
-        expect(await planDatapackChange(context, project, ['selectedAppBuilderComponents'], ask)).toStrictEqual({
+        expect(await planDatapackChange(project, ['selectedAppBuilderComponents'], ask)).toStrictEqual({
             changes: false,
             removeOld: false,
         });
@@ -67,23 +67,23 @@ describe('planDatapackChange — asked before anything runs', () => {
     });
 
     it('asks nothing when the project had no pack: there is no data to remove', async () => {
-        const { context, project } = setup({ datapack: undefined });
+        const { project } = setup({ datapack: undefined });
         const ask = jest.fn();
 
-        expect(await planDatapackChange(context, project, ['datapack'], ask)).toStrictEqual({
+        expect(await planDatapackChange(project, ['datapack'], ask)).toStrictEqual({
             changes: true,
             removeOld: false,
         });
         expect(ask).not.toHaveBeenCalled();
     });
 
-    it("asks Reset's question about the old pack, with the credential check already started", async () => {
-        const { context, project } = setup();
+    it("asks Reset's question about the old pack, with the removal check already started", async () => {
+        const { project } = setup();
         const ask = jest.fn().mockResolvedValue(true);
 
-        const plan = await planDatapackChange(context, project, ['datapack'], ask);
+        const plan = await planDatapackChange(project, ['datapack'], ask);
 
-        expect(beginSampleDataCredentialCheck).toHaveBeenCalledWith(project, context);
+        expect(beginSampleDataRemovalCheck).toHaveBeenCalledWith(project);
         expect(ask).toHaveBeenCalledWith(project, expect.any(Promise));
         expect(plan).toStrictEqual({ changes: true, removeOld: true });
     });

@@ -60,7 +60,6 @@ describe('every client sends the org', () => {
             id: { name: 'bodea', version: 'main' },
             commerceInstance: 'x',
             dataTypes: ['categories'],
-            credentials: { kind: 'paas', username: 'admin', password: 'fake-test-pw-not-a-secret' },
         });
         expect(headersOf(f)['x-gw-ims-org-id']).toBe(ORG);
     });
@@ -74,7 +73,7 @@ describe('every client sends the org', () => {
                     commerceInstance: 't',
                     restBaseUrl: 'https://na1-sandbox.api.commerce.adobe.com/t',
                     dataTypes: ['attribute_sets'],
-                    credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'fake-test-secret-not-a-secret' },
+                    backend: 'accs',
                 },
                 'attribute_sets',
             )

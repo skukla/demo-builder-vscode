@@ -182,7 +182,6 @@ export function ConfigureScreen({
         project,
         componentConfigs,
         componentSecretFlags,
-        serviceGroups,
         getFieldValue,
         updateField,
         validationErrors,

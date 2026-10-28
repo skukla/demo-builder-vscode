@@ -36,11 +36,7 @@ const ACCS_EXPORT = {
     commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi',
     restBaseUrl: 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi',
     dataTypes: ['attribute_sets'],
-    credentials: {
-        kind: 'accs' as const,
-        clientId: 'cid-1',
-        clientSecret: 'fake-test-secret-not-a-secret',
-    },
+    backend: 'accs' as const,
 };
 
 describe('listExportItems', () => {
@@ -104,20 +100,16 @@ describe('listExportItems', () => {
         expect(page.excludedCount).toBe(1);
     });
 
-    // The service signs in with its own credential (DEMOSYS-1698), so no Commerce secret travels:
-    // not in a header for the list, not in the body for the export (DI-5).
-    it('sends no Commerce credential with the list call, for either backend', async () => {
-        for (const credentials of [
-            ACCS_EXPORT.credentials,
-            { kind: 'paas' as const, username: 'admin', password: 'fake-test-pw-not-a-secret' },
-        ]) {
-            const fetchImpl = ok(PAGE);
+    // The service signs in with its own credential (DEMOSYS-1698), so no Commerce secret travels
+    // (DI-5), and the request carries none to send (DI-6). PaaS names no ACCS scope either.
+    it('sends no credential headers, and no scope for a PaaS instance', async () => {
+        const fetchImpl = ok(PAGE);
 
-            await makeExportClient(fetchImpl).listExportItems({ ...ACCS_EXPORT, credentials }, 'attribute_sets');
+        await makeExportClient(fetchImpl).listExportItems({ ...ACCS_EXPORT, backend: 'paas' }, 'attribute_sets');
 
-            const sent = JSON.stringify(fetchImpl.mock.calls[0][1].headers);
-            expect(sent).not.toMatch(/x-admin-|x-client-id|x-client-secret|fake-test-pw-not-a-secret/);
-        }
+        const { headers } = fetchImpl.mock.calls[0][1];
+        expect(JSON.stringify(headers)).not.toMatch(/x-admin-|x-client-id|x-client-secret/);
+        expect(headers['x-client-scope']).toBeUndefined();
     });
 
 

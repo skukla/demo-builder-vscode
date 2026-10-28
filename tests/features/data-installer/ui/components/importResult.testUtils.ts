@@ -24,13 +24,13 @@ export function idle<T>(): DataInstallerRequest<T> {
 }
 
 /** A request that came back with a refusal or a transport failure. */
-export function failed<T>(message: string, data?: unknown): DataInstallerRequest<T> {
+export function failed<T>(message: string): DataInstallerRequest<T> {
     return {
         settled: true,
         load: jest.fn(),
         loading: false,
         value: null,
-        failure: { message, data },
+        failure: { message },
     };
 }
 
@@ -49,7 +49,6 @@ export function sources(overrides: Partial<ResultSources> = {}): ResultSources {
         dryRun: succeeded({ valid: true }),
         start: succeeded({ activationId: 'stale-act' }),
         reset: succeeded({ activationId: 'stale-act' }),
-        provision: { ...idle<never>(), settled: true },
         record: null,
         startedActivation: undefined,
         ...overrides,
@@ -62,7 +61,6 @@ export function recordOnlySources(record: ImportJobRecord): ResultSources {
         dryRun: idle<{ valid: boolean; reason?: string }>(),
         start: idle<{ activationId: string }>(),
         reset: idle<{ activationId: string }>(),
-        provision: idle<never>(),
         record,
         startedActivation: ACTIVATION,
     };

@@ -11,9 +11,6 @@
  *   consistency with its siblings.
  * - **The export item page size.** `listExportItems` asks the service for 1,000
  *   rows; unpaged, that is phase 2's 25KB finding all over again.
- * - **`provision_accs_credentials` is absent**, because its handler docstring
- *   says panel-only. A test states it so the next person adding "the missing
- *   ninth handler" finds the reason instead of the gap.
  */
 
 import {
@@ -40,14 +37,6 @@ it('registers the thirteen tools, and only those', () => {
         'start_datapack_import',
         'validate_datapack_import',
     ]);
-});
-
-it('omits provision_accs_credentials, which its handler declares panel-only', () => {
-    // "Panel-only by construction (never in the MCP maps): it creates a
-    // credential in the user's Console workspace." — importHandlers.ts
-    expect(row('provision_accs_credentials')).toBeUndefined();
-    // The handler still exists; it is the EXPOSURE that is withheld.
-    expect(importHandlers['provision-accs-credentials']).toBeDefined();
 });
 
 it('every row dispatches to a handler that actually exists', () => {

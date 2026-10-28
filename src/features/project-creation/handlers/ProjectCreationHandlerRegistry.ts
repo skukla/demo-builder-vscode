@@ -23,7 +23,6 @@ import { handleOpenDataInstallerSettings } from '@/features/data-installer/handl
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
-import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveHandlers';
 import { handleEditAddedDemo } from '@/features/eds/handlers/editAddedDemoHandler';
 import { handleCheckGitHubAuth, handleCreateGitHubRepo, handleGetGitHubRepos, handleGitHubChangeAccount, handleGitHubOAuth } from '@/features/eds/handlers/edsGitHubHandlers';
@@ -124,10 +123,6 @@ export const projectCreationHandlers = defineHandlers({
     // EDS handlers - ACCS
     // EDS handlers - Store Discovery
     'discover-store-structure': handleDiscoverStoreStructure,
-    // Whether the shared service supplies the Commerce credential, so the
-    // Connection step can say the OAuth fields need no filling in. Status only —
-    // the pair never crosses to the webview.
-    'check-credential-service': handleCheckCredentialService,
     // Whether the store view the SC picked shows guests any products (EDS-46).
     // ACCS only; answers `unknown` otherwise, which the pickers render as nothing.
     'check-store-view-products': handleCheckStoreViewProducts,

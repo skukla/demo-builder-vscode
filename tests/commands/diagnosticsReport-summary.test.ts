@@ -90,12 +90,6 @@ describe('the whole summary', () => {
         const report = makeTypedReport({
             tools: { ...TOOLS, fnm: { installed: true, output: '1.35.1', duration: 1 } },
             adobe: { installed: false },
-            credentialService: {
-                configured: true,
-                orgId: '285361',
-                endpoint: { httpStatus: 200 },
-                verdict: 'Shared credential available.',
-            },
             configService: {
                 token: { present: true },
                 configService: { httpStatus: 200 },
@@ -133,11 +127,6 @@ describe('the whole summary', () => {
             'GitHub / AEM credential:',
             '  Signed in as: sc',
             '  \u2192 Credential is fine.',
-            '',
-            'Commerce credential service (shared):',
-            '  Configured: yes (org 285361)',
-            '  Endpoint: HTTP 200',
-            '  \u2192 Shared credential available.',
             '',
             'Configuration Service (site config):',
             '  Site config read: HTTP 200',

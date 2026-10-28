@@ -34,7 +34,7 @@ import {
     checkOrgContext,
 } from './edsResetPreflight';
 import {
-    beginSampleDataCredentialCheck,
+    beginSampleDataRemovalCheck,
     confirmSampleDataRemoval,
     removeProjectSampleData,
 } from './edsResetSampleData';
@@ -202,21 +202,11 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     const { repoOwner, repoName } = paramsResult.params;
     const repoFullName = `${repoOwner}/${repoName}`;
 
-    // Started BEFORE the first modal and awaited after it, so the wait happens
-    // while the user is reading a dialog rather than staring at nothing.
-    //
-    // MEASURED 2026-08-17: the second prompt took ~2s to appear. It is not the
-    // HTTP call — that endpoint answers in 130-230ms. It is the IMS token, which
-    // `tokenManager.inspectToken` reads by spawning the whole `aio` Node CLI
-    // (~3.7s cold, per its own comment) whenever its inspection cache is empty. A
-    // reset is a common way to arrive at that cold cache.
-    //
-    // Deliberately NOT awaited here, and gated on the recorded pack so a project
-    // that will never be asked never pays for it. Cancelling the reset therefore
-    // costs one GET whose answer is discarded — bounded, idempotent, and it warms
-    // a token cache eight other call sites want anyway.
+    // Asked before the first modal, answered after it: whether there is sample data
+    // this project can remove. Gated on the recorded pack, so a project that will
+    // never be asked is never checked.
     const withinEdit = options.withinEdit;
-    const canRemoveSampleData = withinEdit ? undefined : beginSampleDataCredentialCheck(project, context);
+    const canRemoveSampleData = withinEdit ? undefined : beginSampleDataRemovalCheck(project);
 
     if (!withinEdit && !(await confirmReset(vscode, getProjectDisplayName(project)))) {
         context.logger.info(`${logPrefix} resetEds: User cancelled reset`);
