@@ -73,6 +73,22 @@ Ours is written from scratch, tested, and checked live.
   4. **Research:** whether a Stage workspace has limits or clean-up rules a production one
      does not, before the library is relied on.
 
+## The hybrid: the service's catalog, our engine, zip files and settings (owner, 2026-10-28)
+
+We do not change the Data Installer service: it is not ours, and since 2026-10-28 its code is
+not visible to us. Everything it lacks is added around it.
+
+| Piece | Who does it |
+|---|---|
+| The catalog of existing packs | the service (reading works) |
+| Zip files, our own packs, edited copies | us: the zip loader and our library |
+| Install and remove | us: Demo Builder's engine, the default since 2026-10-28 |
+| Store settings, which the service cannot set | us: a settings layer beside each pack (step 09) |
+| Packs for demos not built with Demo Builder | published to the service's catalog, settings split off (step 13) |
+
+Two decisions keep the way open for the service to take settings over later (step 09): the
+layer is stored as ordinary pack rows, and when a pack carries settings itself, the pack wins.
+
 ## Steps
 
 | # | Step | Status |
@@ -85,10 +101,11 @@ Ours is written from scratch, tested, and checked live.
 | 06 | [The setup guide's undos keep what changed since](step-06-setup-guide-undos.md) (AB-83) | to do |
 | 07 | [Each demo has its own pack, shared by reference](step-07-demo-packs.md) | to do |
 | 08 | [Customers and B2B](step-08-customers-b2b.md) | to do |
-| 09 | [Store settings in a pack](step-09-store-settings.md) | to do |
+| 09 | [Store settings, as a layer beside a pack](step-09-store-settings.md) | to do |
 | 10 | [Reset clears a demo's part of the store](step-10-wipe.md) | to do |
 | 11 | [Later, when a pack needs it](step-11-later.md) | not started |
 | 12 | [The storefront shows a pack's own categories](step-12-pack-categories-on-storefront.md), after 03's live run | to do |
+| 13 | [Publish our packs to the Data Installer, settings split off](step-13-publish-to-data-installer.md), after 09 | to do |
 
 Every step is test-first, reuses before it writes (the house component, hook, client or rule that
 already does the job), and runs the `gate` skill before it is committed.
