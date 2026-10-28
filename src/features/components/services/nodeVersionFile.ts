@@ -8,8 +8,9 @@
  * **Why this does not go through `generatedFileWriter`** (ADR-013's seam). The seam's
  * write rule treats a file it has no recorded hash for as unmodified ONCE and overwrites
  * it. Here the folder is a git clone, and the component's own repository may ship a
- * `.node-version` (headless-commerce-mesh does): overwriting that would rewrite a tracked
- * upstream file. Its hash store is also the AI bundle's (`aiFileHashes`), which nothing on
+ * `.node-version`: overwriting that would rewrite a tracked upstream file. (None of the
+ * four mesh and ingestion repos tracks one as of 2026-10-28, checked with `git ls-files`;
+ * headless-commerce-mesh gitignores it. The guard is for a repo that starts to.) Its hash store is also the AI bundle's (`aiFileHashes`), which nothing on
  * the install path persists. So: create only when absent (exclusive, no symlink follow),
  * and rewrite an existing file only on positive proof it is ours.
  *
