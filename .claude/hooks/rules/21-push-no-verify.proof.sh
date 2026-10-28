@@ -60,3 +60,12 @@ runcmd "git commit -m 'ok'"                    "a commit"                   -
 runcmd "git log --oneline -1"                  "a log"                      -
 # `-n` means something else entirely here, and this rule must not claim it.
 runcmd "git log -n 5"                          "git log -n 5 — not a push"  -
+# A -n belonging to ANOTHER command on the same line (2026-10-28: each of these was
+# blocked, the last one for a grep whose pattern was the words of a push).
+runcmd "$PUSH origin x > out.txt 2>&1; grep -E 'x' out.txt | sed -n 1,5p" "sed -n after a push" -
+runcmd "[ -n \"\$b\" ] && $PUSH origin x"      "[ -n ] before a push"       -
+runcmd "$PUSH origin x && grep -n done out.txt" "grep -n after a push"      -
+runcmd "grep -n \"$PUSH\" notes.txt"           "grep -n for the words"      -
+# ...while the push's OWN flag is still caught on a busy line.
+runcmd "cd repo && $PUSH -n origin x | sed -n 1p"  "-n on the push, sed -n beside it" push-no-verify
+runcmd "[ -n \"\$b\" ] && $PUSH origin x $NV"      "$NV after a [ -n ]"         push-no-verify

@@ -122,6 +122,31 @@ blind spot; a pre-push gate runs against committed state, which is exactly what 
 Both of 2026-09-02's breaks would have been caught. `git push --no-verify` skips it, for a
 genuine emergency.
 
+**What the hook runs depends on what the push changes** (2026-10-16). A push whose every
+changed file is Markdown or under `docs/` or `.rptc/` runs `npm run gate:docs` (~35s): the
+enforcers in `tests/sop`, the hook tests, `tests/templates` and the tool-prompt coverage,
+which are the suites that read those files. A new suite that reads a doc from outside those
+four places must be added to `gate:docs`, or a docs-only push will skip it locally and CI
+will be the first to say.
+
+A push that changes code runs `scripts/gate-push.sh` (2026-10-28):
+steps 1–5 and 7 of the table below across the whole repo, `gate:docs`, and the tests jest
+says are related to the changed files (`--findRelatedTests`). Not the full jest run, which
+CI does on every push. The full gate (~9 min on the owner's machine) still runs when the
+push touches config no test imports (`package.json`, the lockfile, `jest.config.*`,
+`tsconfig*.json`, `.swcrc`, `tests/setup/`), or when the hook cannot read the range. The
+cost: a test that breaks far from the changed files is found by CI, minutes after the push.
+
+A brand-new branch is measured from the nearer of `develop` and `master`. Measuring from
+`master` alone counted everything `develop` had added as the branch's own, and the
+stylesheet check refused a branch that touched no CSS.
+
+The hook also records `core.bare`, `core.hooksPath` and the git identity before the gate,
+and refuses the push if any changed during it, putting them back. From a worktree the hook
+runs with `GIT_DIR` set, and a git command in a test that does not strip it writes to THIS
+repository. The fix for a test is to run its git commands with every `GIT_*` variable
+removed from the environment.
+
 **One command, deliberately.** This used to be the six commands below, listed for
 you to run by hand — and a list of six is a memory test you eventually fail. The
 2026-07-30 dream run found a whole feature shipped after someone hand-ran a scoped
