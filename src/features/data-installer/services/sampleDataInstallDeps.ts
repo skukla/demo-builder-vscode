@@ -19,6 +19,7 @@ import type { DatapackEngine } from './datapackEngine';
 import { watchImportJob } from './importJobRunner';
 import type { SampleDataDeps } from './sampleDataInstall';
 import { PollingService } from '@/core/shell/pollingService';
+import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -167,6 +168,12 @@ async function engine(context: HandlerContext, project: Project, mode: SampleDat
     // A removal goes through the engine that installed the project's pack (DI-5).
     const engineId =
         mode === 'remove' && project.datapack ? await engineThatInstalled(project.path, project.datapack) : selectedDatapackEngine();
+    // The org that owns the store is the org the sign-in must be in, as the screen's import
+    // checks (`importHandlers`, `orgGuard`).
+    if (engineId === 'demo-builder' && context.authManager) {
+        const orgFailure = await orgGuard(context, project, context.authManager);
+        if (orgFailure) throw new Error(orgFailure.error);
+    }
     return buildDatapackEngine(
         engineId,
         { ...access, jobs: access.client, catalog: access.client, project, authManager: context.authManager, secrets: context.context?.secrets },

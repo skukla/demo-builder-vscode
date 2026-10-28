@@ -39,6 +39,7 @@ import { provisionAccsHandlers } from './provisionAccsHandler';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { handleBackgroundOperation } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
+import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -257,6 +258,16 @@ async function engineFor(
 ): Promise<{ engine: DatapackEngine } | { response: HandlerResponse }> {
     const engineId =
         write.write === 'remove' ? await engineThatInstalled(gate.project.path, write.pack) : selectedDatapackEngine();
+    // Demo Builder's engine writes into the project's own store with the project's credential, so
+    // the sign-in must be in the org that owns that store. Checked before anything is written, with
+    // the extension's one org guard (adobe-org-context): a mismatch says "Switch IMS Org" rather
+    // than failing half way through with Commerce's refusal (owner, 2026-10-28).
+    if (engineId === 'demo-builder' && context.authManager) {
+        const orgFailure = await orgGuard(context, gate.project, context.authManager);
+        if (orgFailure) {
+            return { response: { success: false, error: orgFailure.error, code: ErrorCode.ORG_MISMATCH } };
+        }
+    }
     if (engineId === 'service' && write.source === 'library') {
         return {
             response: {
