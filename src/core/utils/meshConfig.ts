@@ -51,7 +51,7 @@ function getMeshComponentNodeVersion(data: ComponentsData | null): string | numb
  * This ensures all mesh-related commands use the same Node version
  * as defined in the component's requirements.
  *
- * @returns Node version string (e.g., "20") or fallback default "20"
+ * @returns Node version string (e.g., "24") or fallback default "24"
  *
  * @example
  * ```typescript
@@ -65,19 +65,19 @@ export function getMeshNodeVersion(): string {
     try {
         const extension = vscode.extensions.getExtension('adobe-demo-team.adobe-demo-builder');
         if (!extension) {
-            return '20'; // Fallback to known default
+            return '24'; // Fallback to known default
         }
 
         const componentsPath = path.join(extension.extensionPath, 'src', 'features', 'components', 'config', 'components.json');
         if (!fs.existsSync(componentsPath)) {
-            return '20'; // Fallback to known default
+            return '24'; // Fallback to known default
         }
 
         const componentsData: ComponentsData = JSON.parse(fs.readFileSync(componentsPath, 'utf8'));
         const meshNodeVersion = getMeshComponentNodeVersion(componentsData);
 
-        return meshNodeVersion ? String(meshNodeVersion) : '20'; // Fallback to known default
+        return meshNodeVersion ? String(meshNodeVersion) : '24'; // Fallback to known default
     } catch {
-        return '20'; // Fallback to known default
+        return '24'; // Fallback to known default
     }
 }

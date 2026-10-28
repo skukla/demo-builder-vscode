@@ -55,7 +55,7 @@ function installComponentsJson(data: unknown): void {
     mockedRead.mockReturnValue(JSON.stringify(data));
 }
 
-const WITH_NODE_20 = { infrastructure: { 'adobe-cli': { nodeVersion: '20' } } };
+const WITH_NODE_20 = { infrastructure: { 'adobe-cli': { configuration: { nodeVersion: '20' } } } };
 
 /**
  * A current version that does NOT satisfy Node 20. It must not contain "20"
@@ -106,7 +106,7 @@ describe('EnvironmentSetup — session decisions', () => {
         });
 
         it('reads the version as a string even when the file holds a number', async () => {
-            installComponentsJson({ infrastructure: { 'adobe-cli': { nodeVersion: 20 } } });
+            installComponentsJson({ infrastructure: { 'adobe-cli': { configuration: { nodeVersion: 20 } } } });
 
             await expect(environmentSetup.getInfrastructureNodeVersion('adobe-cli')).resolves
                 .toBe('20');

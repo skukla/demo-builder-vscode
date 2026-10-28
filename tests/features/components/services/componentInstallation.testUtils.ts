@@ -31,6 +31,13 @@ jest.mock('fs/promises', () => ({
     readFile: (...a: unknown[]) => mockFs.readFile(...a),
 }));
 
+// The .node-version write has its own suite against a real directory
+// (nodeVersionFile.test.ts); here only the CALL is the decision under test.
+const mockWriteNodeVersionFile = jest.fn();
+jest.mock('@/features/components/services/nodeVersionFile', () => ({
+    writeNodeVersionFileIfAbsent: (...a: unknown[]) => mockWriteNodeVersionFile(...a),
+}));
+
 import * as vscode from 'vscode';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 // Below the factory on purpose: it hoists above these imports, so the subject
@@ -42,7 +49,7 @@ import type { TransformedComponentDefinition } from '@/types/components';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-export { ComponentInstallation, DEFAULT_SHELL, TIMEOUTS, mockFs };
+export { ComponentInstallation, DEFAULT_SHELL, TIMEOUTS, mockFs, mockWriteNodeVersionFile };
 
 export const PROJECT = '/projects/demo';
 export const COMPONENT_PATH = '/projects/demo/components/eds-storefront';
@@ -112,6 +119,7 @@ export function resetDoubles(): void {
     mockFs.rm.mockResolvedValue(undefined);
     mockFs.writeFile.mockResolvedValue(undefined);
     mockFs.readFile.mockRejectedValue(new Error('ENOENT'));
+    mockWriteNodeVersionFile.mockResolvedValue('written');
     mockExecute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
     setUpdateChannel('beta');
     global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404 });

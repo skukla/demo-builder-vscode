@@ -4,7 +4,7 @@
  * Manages commerce-demo-ingestion tool lifecycle including:
  * - Tool installation (clone from GitHub)
  * - Configuration (.env generation with ACO credentials)
- * - Execution (npm scripts with Node 18+)
+ * - Execution (npm scripts with Node 24, the one Node Demo Builder uses)
  * - Commerce and ACO ingestion/cleanup commands
  * - Dry run mode for safe deletion testing
  *
@@ -46,8 +46,8 @@ const DATA_REPO_CONFIG = {
     branch: 'accs',
 };
 
-/** Node version for tool execution (LTS) */
-const NODE_VERSION = '18';
+/** Node version for tool execution: the one Node major Demo Builder uses everywhere. */
+const NODE_VERSION = '24';
 
 /** npm install flags for faster installation */
 const NPM_INSTALL_FLAGS = '--no-fund';

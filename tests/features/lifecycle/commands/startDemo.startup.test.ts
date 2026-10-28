@@ -103,20 +103,20 @@ describe('the guards', () => {
 });
 
 describe('the Node version', () => {
-    it('defaults to 20 when the frontend has no metadata', async () => {
+    it('defaults to 24 when the frontend has no metadata', async () => {
         setup(withFrontend({ metadata: undefined }));
 
         await run();
 
-        expect(fnmLine()).toBe('eval "$(fnm env)" && fnm use 20 && npm run dev');
+        expect(fnmLine()).toBe('eval "$(fnm env)" && fnm use 24 && npm run dev');
     });
 
-    it('defaults to 20 when the recorded version is not a string', async () => {
-        setup(withFrontend({ metadata: { nodeVersion: 24 } }));
+    it('defaults to 24 when the recorded version is not a string', async () => {
+        setup(withFrontend({ metadata: { nodeVersion: 20 } }));
 
         await run();
 
-        expect(fnmLine()).toBe('eval "$(fnm env)" && fnm use 20 && npm run dev');
+        expect(fnmLine()).toBe('eval "$(fnm env)" && fnm use 24 && npm run dev');
     });
 });
 

@@ -48,7 +48,7 @@ describe('EnvironmentSetup - Configuration', () => {
             mockVSCodeExtension({
                 infrastructure: {
                     'adobe-cli': {
-                        nodeVersion: '18'
+                        configuration: { nodeVersion: '18' }
                     }
                 }
             });
@@ -71,7 +71,7 @@ describe('EnvironmentSetup - Configuration', () => {
             mockVSCodeExtension({
                 infrastructure: {
                     'adobe-cli': {
-                        nodeVersion: '18'
+                        configuration: { nodeVersion: '18' }
                     }
                 }
             });
@@ -110,7 +110,7 @@ describe('EnvironmentSetup - Configuration', () => {
             mockVSCodeExtension({
                 infrastructure: {
                     'adobe-cli': {
-                        nodeVersion: '18'
+                        configuration: { nodeVersion: '18' }
                     }
                 }
             });
@@ -134,7 +134,7 @@ describe('EnvironmentSetup - Configuration', () => {
             mockVSCodeExtension({
                 infrastructure: {
                     'adobe-cli': {
-                        nodeVersion: '18'
+                        configuration: { nodeVersion: '18' }
                     }
                 }
             });

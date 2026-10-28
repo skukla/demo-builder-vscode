@@ -17,6 +17,7 @@ import {
     makeDef,
     mockExecute,
     mockFs,
+    mockWriteNodeVersionFile,
     resetDoubles,
 } from './componentInstallation.testUtils';
 
@@ -170,27 +171,17 @@ describe('the Node version the component runs on', () => {
         expect(result.component?.metadata).toBeUndefined();
     });
 
-    it('writes .node-version so fnm switches automatically', async () => {
+    // Never over an existing file: that rule lives in, and is pinned by, nodeVersionFile.test.ts.
+    it('asks for .node-version in the component folder, with the catalog version', async () => {
         await install(withNode());
 
-        expect(mockFs.writeFile).toHaveBeenCalledWith(
-            `${COMPONENT_PATH}/.node-version`,
-            '20.11.0\n',
-            'utf-8'
-        );
-    });
-
-    it('does NOT overwrite an existing .node-version', async () => {
-        mockFs.access.mockResolvedValue(undefined);
-
-        await install(withNode());
-
-        expect(mockFs.writeFile).not.toHaveBeenCalled();
+        expect(mockWriteNodeVersionFile).toHaveBeenCalledWith(COMPONENT_PATH, '20.11.0');
     });
 
     it('writes nothing when no Node version is configured', async () => {
         await install();
 
+        expect(mockWriteNodeVersionFile).not.toHaveBeenCalled();
         expect(mockFs.writeFile).not.toHaveBeenCalled();
     });
 });

@@ -11,6 +11,7 @@ import { execSync } from 'child_process';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { majorsWithAio } from '@/core/shell/aioNodeVersion';
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
 import { createEnvironmentSetup, resetAllMocks } from './environmentSetup.testUtils';
 
@@ -37,14 +38,8 @@ function onlyTheseExist(...paths: string[]): void {
     mockedExists.mockImplementation((p: string) => set.has(p));
 }
 
-/** Reach the private scanner directly — the two callers only vary its arguments. */
-function scan(setup: EnvironmentSetup, base: string, binSubpath: string): string | null {
-    return (
-        setup as unknown as {
-            scanNodeManagerForAio(b: string, s: string): string | null;
-        }
-    ).scanNodeManagerForAio(base, binSubpath);
-}
+/** The fnm layout the scanner reads in every case below. */
+const scanFnm = (): string[] => majorsWithAio({ basePath: FNM_BASE, binSubpath: 'installation/bin/aio' });
 
 /** Reach the private path collector directly, for the same reason. */
 function collect(setup: EnvironmentSetup, base: string, templates: string[]): string[] {
@@ -80,38 +75,60 @@ describe('EnvironmentSetup — discovery decisions', () => {
         it('does not read a directory that is not there', () => {
             onlyTheseExist();
 
-            expect(scan(environmentSetup, FNM_BASE, 'installation/bin/aio')).toBeNull();
+            expect(scanFnm()).toStrictEqual([]);
             expect(mockedReaddir).not.toHaveBeenCalled();
         });
 
-        it('picks the version that actually holds aio, not the first one listed', () => {
+        it('lists only the versions that actually hold aio', () => {
             mockedReaddir.mockReturnValue(['v18.0.0', 'v20.11.0']);
             onlyTheseExist(FNM_BASE, path.join(FNM_BASE, 'v20.11.0', 'installation/bin/aio'));
 
-            expect(scan(environmentSetup, FNM_BASE, 'installation/bin/aio')).toBe('20');
+            expect(scanFnm()).toEqual(['20']);
+        });
+
+        it('lists majors newest first, whatever order the directory gives', () => {
+            mockedReaddir.mockReturnValue(['v18.20.8', 'v24.22.1', 'v20.19.6']);
+            onlyTheseExist(
+                FNM_BASE,
+                ...['v18.20.8', 'v24.22.1', 'v20.19.6'].map((v) => path.join(FNM_BASE, v, 'installation/bin/aio')),
+            );
+
+            expect(scanFnm()).toEqual(['24', '20', '18']);
+        });
+
+        it('lists a major once when two patch versions of it have aio', () => {
+            mockedReaddir.mockReturnValue(['v24.12.0', 'v24.22.1']);
+            onlyTheseExist(
+                FNM_BASE,
+                path.join(FNM_BASE, 'v24.12.0', 'installation/bin/aio'),
+                path.join(FNM_BASE, 'v24.22.1', 'installation/bin/aio'),
+            );
+
+            expect(scanFnm()).toEqual(['24']);
         });
 
         it('reads the major version out of a directory named without a leading v', () => {
             mockedReaddir.mockReturnValue(['20.11.0']);
             onlyTheseExist(FNM_BASE, path.join(FNM_BASE, '20.11.0', 'installation/bin/aio'));
 
-            expect(scan(environmentSetup, FNM_BASE, 'installation/bin/aio')).toBe('20');
+            expect(scanFnm()).toEqual(['20']);
         });
 
-        it('falls back to the directory name when it carries no number', () => {
+        // A name with no number is not a version `fnm exec --using` can take.
+        it('skips a directory whose name carries no number', () => {
             mockedReaddir.mockReturnValue(['system']);
             onlyTheseExist(FNM_BASE, path.join(FNM_BASE, 'system', 'installation/bin/aio'));
 
-            expect(scan(environmentSetup, FNM_BASE, 'installation/bin/aio')).toBe('system');
+            expect(scanFnm()).toStrictEqual([]);
         });
 
-        it('answers null when reading the directory throws', () => {
+        it('answers an empty list when reading the directory throws', () => {
             onlyTheseExist(FNM_BASE);
             mockedReaddir.mockImplementation(() => {
                 throw new Error('EACCES');
             });
 
-            expect(scan(environmentSetup, FNM_BASE, 'installation/bin/aio')).toBeNull();
+            expect(scanFnm()).toStrictEqual([]);
         });
     });
 

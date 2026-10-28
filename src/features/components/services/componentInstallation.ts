@@ -15,6 +15,7 @@ import * as vscode from 'vscode';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { writeNodeVersionFileIfAbsent } from '@/features/components/services/nodeVersionFile';
 import type {
     ComponentInstallOptions,
     ComponentInstallResult,
@@ -271,14 +272,8 @@ export class ComponentInstallation {
             return;
         }
 
-        const nodeVersionFile = path.join(componentPath, '.node-version');
-        try {
-            // Check if file already exists
-            await fs.access(nodeVersionFile);
-        } catch {
-            // File doesn't exist, create it
-            await fs.writeFile(nodeVersionFile, `${configuredNodeVersion}\n`, 'utf-8');
-        }
+        // Never over a file already there: the component's own repository may ship one.
+        await writeNodeVersionFileIfAbsent(componentPath, configuredNodeVersion);
     }
 
     /**

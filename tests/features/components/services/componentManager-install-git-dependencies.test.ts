@@ -28,6 +28,12 @@ import { setupComponentManager } from './componentManager.testUtils';
 // Mock fs/promises
 jest.mock('fs/promises');
 const fs = require('fs/promises');
+// The .node-version write is pinned against a real directory in nodeVersionFile.test.ts;
+// here the decision is whether installation asks for it, and with what.
+jest.mock('@/features/components/services/nodeVersionFile', () => ({
+    writeNodeVersionFileIfAbsent: jest.fn().mockResolvedValue('written'),
+}));
+const { writeNodeVersionFileIfAbsent } = require('@/features/components/services/nodeVersionFile');
 
 describe('ComponentManager - Installation (Git Dependencies)', () => {
     let componentManager: ComponentManager;
@@ -41,9 +47,8 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
     });
 
     describe('Node version management', () => {
-        it('should create .node-version file when configured', async () => {
+        it('should ask for a .node-version file when configured', async () => {
             mockFileNotFound();
-            (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
 
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
@@ -60,14 +65,13 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
 
             await componentManager.installComponent(mockProject, componentDef);
 
-            expect(fs.writeFile).toHaveBeenCalledWith(
-                expect.stringContaining('.node-version'),
-                '20.11.0\n',
-                'utf-8'
+            expect(writeNodeVersionFileIfAbsent).toHaveBeenCalledWith(
+                expect.stringContaining('test-component'),
+                '20.11.0',
             );
         });
 
-        it('should skip creating .node-version if already exists', async () => {
+        it('should not write .node-version through fs directly', async () => {
             mockFileExists();
             (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
 
@@ -86,10 +90,8 @@ describe('ComponentManager - Installation (Git Dependencies)', () => {
 
             await componentManager.installComponent(mockProject, componentDef);
 
-            // writeFile should not be called for .node-version
-            const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
-            const nodeVersionCall = writeFileCalls.find(call =>
-                call[0].includes('.node-version')
+            const nodeVersionCall = (fs.writeFile as jest.Mock).mock.calls.find(call =>
+                String(call[0]).includes('.node-version')
             );
             expect(nodeVersionCall).toBeUndefined();
         });

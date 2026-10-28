@@ -124,13 +124,13 @@ describe('ToolManager decisions', () => {
             );
         });
 
-        it('installs dependencies in the tool directory under Node 18', async () => {
+        it('installs dependencies in the tool directory under Node 24', async () => {
             await toolManager.ensureToolInstalled();
 
             expect(executor.execute).toHaveBeenCalledWith('npm install --no-fund', {
                 cwd: TOOL_PATH,
                 timeout: 180000,
-                useNodeVersion: '18',
+                useNodeVersion: '24',
             });
         });
 
@@ -176,7 +176,7 @@ describe('ToolManager decisions', () => {
             expect(executor.execute).toHaveBeenCalledWith('npm run import:aco', {
                 cwd: TOOL_PATH,
                 timeout: 600000,
-                useNodeVersion: '18',
+                useNodeVersion: '24',
                 streaming: false,
                 onOutput: undefined,
             });

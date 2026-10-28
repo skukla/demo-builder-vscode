@@ -25,6 +25,12 @@
  * no state-backed persistence). Manifests are saved only when something moved
  * (a write/removal happened, the hash map changed, or the stamp advanced);
  * the healthy path makes zero disk writes and zero saves.
+ *
+ * It also carries one pass that is not about the AI bundle: a component folder's
+ * `.node-version` written by an earlier install, brought to the catalog's Node major on
+ * proof it is ours (`nodeVersionFile.ts`). It lives here because this is the one sweep
+ * that visits every existing project, so creation (which writes the catalog's major) and
+ * an existing project end in the same place. It needs no manifest save.
  */
 
 import { refreshContextAndSkills, refreshMcpConfigs } from './aiBundleService';
@@ -37,6 +43,13 @@ import {
     type ProjectSummary,
 } from '@/core/state/projectDirectoryScanner';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
+import {
+    catalogNodeVersions,
+    isTrackedByRepo,
+    refreshProjectNodeVersionFiles,
+    type IsTrackedByRepo,
+} from '@/features/components/services/nodeVersionFile';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /** Injectable collaborators — the test seam. Production uses the defaults. */
@@ -46,6 +59,10 @@ export interface ActivationRefreshDeps {
     configWriter: Pick<ProjectConfigWriter, 'saveProjectConfig'>;
     /** Node binary resolution — resolved ONCE and reused across all projects. */
     resolveNode: () => Promise<string>;
+    /** The catalog's Node major per component id — read ONCE per sweep. */
+    nodeVersions: () => Promise<Record<string, string>>;
+    /** Whether a component's own git repository tracks a file. */
+    isTracked: IsTrackedByRepo;
 }
 
 type SweepAction = 'healthy' | 'repaired' | 'refreshed';
@@ -81,6 +98,8 @@ export async function refreshAiBundlesOnActivation(
             loader: deps?.loader ?? new ProjectFileLoader(logger),
             configWriter: deps?.configWriter ?? new ProjectConfigWriter(logger),
             resolveNode: deps?.resolveNode ?? resolveNodePath,
+            nodeVersions: deps?.nodeVersions ?? (() => catalogNodeVersions(extensionPath)),
+            isTracked: deps?.isTracked ?? isTrackedByRepo,
         };
 
         const summaries = await resolved.scanner.getAllProjects();
@@ -90,14 +109,14 @@ export async function refreshAiBundlesOnActivation(
         }
 
         const nodePath = await resolved.resolveNode();
+        const nodeVersions = await readNodeVersions(resolved, logger);
         const tally = { repaired: 0, refreshed: 0, skippedFiles: 0 };
 
         for (const summary of summaries) {
             try {
                 const outcome = await refreshProjectBundle(
                     summary,
-                    extensionPath,
-                    nodePath,
+                    { extensionPath, nodePath, nodeVersions },
                     resolved,
                     logger,
                 );
@@ -131,16 +150,18 @@ export async function refreshAiBundlesOnActivation(
  */
 async function refreshProjectBundle(
     summary: ProjectSummary,
-    extensionPath: string,
-    nodePath: string,
+    inputs: { extensionPath: string; nodePath: string; nodeVersions: Record<string, string> },
     deps: ActivationRefreshDeps,
     logger: Logger,
 ): Promise<ProjectOutcome | undefined> {
+    const { extensionPath, nodePath } = inputs;
     const project = await deps.loader.loadProject(summary.path);
     if (!project) {
         logger.warn(`[AI Bundle] Sweep could not load ${summary.name} — skipping`);
         return undefined;
     }
+
+    await refreshNodeVersionFilesFor(summary, project.componentInstances, inputs.nodeVersions, deps, logger);
 
     const recorded = project.aiFileHashes ?? {};
     const writer = createGeneratedFileWriter(summary.path, recorded, logger);
@@ -199,6 +220,31 @@ async function refreshProjectBundle(
     project.aiFileHashes = updatedHashes;
     await deps.configWriter.saveProjectConfig(project);
     return { action: stampStale ? 'refreshed' : 'repaired', skippedFiles: report.skipped.length };
+}
+
+/** The catalog's versions, or none: a catalog that cannot be read skips that pass only. */
+async function readNodeVersions(deps: ActivationRefreshDeps, logger: Logger): Promise<Record<string, string>> {
+    try {
+        return await deps.nodeVersions();
+    } catch (err) {
+        logger.warn(`[Components] Could not read catalog Node versions — not checking .node-version files: ${describeError(err)}`);
+        return {};
+    }
+}
+
+/** Its own failure boundary: a `.node-version` problem never stops the bundle refresh. */
+async function refreshNodeVersionFilesFor(
+    summary: ProjectSummary,
+    instances: Project['componentInstances'],
+    nodeVersions: Record<string, string>,
+    deps: ActivationRefreshDeps,
+    logger: Logger,
+): Promise<void> {
+    try {
+        await refreshProjectNodeVersionFiles(instances, nodeVersions, logger, deps.isTracked);
+    } catch (err) {
+        logger.warn(`[Components] ${summary.name}: could not check .node-version files: ${describeError(err)}`);
+    }
 }
 
 /** Same keys, same values — a changed map is "movement" that must persist. */

@@ -206,7 +206,7 @@ export class DependencyResolver {
         config.frontend = {
             id: frontend.id,
             port: frontend.configuration?.port || defaultPort,
-            nodeVersion: frontend.configuration?.nodeVersion || '20',
+            nodeVersion: frontend.configuration?.nodeVersion || '24',
         };
         config.backend = {
             id: backend.id,

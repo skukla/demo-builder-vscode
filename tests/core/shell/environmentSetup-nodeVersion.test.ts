@@ -47,7 +47,7 @@ describe('EnvironmentSetup - Node Version Management', () => {
             mockVSCodeExtension({
                 infrastructure: {
                     'adobe-cli': {
-                        nodeVersion: '18'
+                        configuration: { nodeVersion: '18' }
                     }
                 }
             });
@@ -91,11 +91,46 @@ describe('EnvironmentSetup - Node Version Management', () => {
     });
 
     describe('findAdobeCLINodeVersion', () => {
+        const FNM = path.join('/mock/home', '.local/share/fnm/node-versions');
+
+        /** components.json names `catalog` for aio, and fnm has aio under each of `withAio`. */
+        function catalogAndFnm(catalog: string, withAio: string[]): void {
+            delete process.env.FNM_DIR;
+            const componentsPath = path.join(mockVSCodeExtension().extensionPath,
+                'src', 'features', 'components', 'config', 'components.json');
+            const aioPaths = new Set(withAio.map((v) => path.join(FNM, v, 'installation/bin/aio')));
+            (fsSync.existsSync as jest.Mock).mockImplementation((p: string) =>
+                p === componentsPath || p === FNM || aioPaths.has(p));
+            (fsSync.readFileSync as jest.Mock).mockReturnValue(JSON.stringify({
+                infrastructure: { 'adobe-cli': { configuration: { nodeVersion: catalog } } },
+            }));
+            (fsSync.readdirSync as jest.Mock).mockImplementation((dir: string) =>
+                dir === FNM ? ['v18.20.8', 'v20.19.6', 'v22.21.1', 'v24.22.1'] : []);
+        }
+
+        const warn = () =>
+            (environmentSetup as unknown as { logger: { warn: jest.Mock } }).logger.warn;
+
+        it('picks the catalog version when it has aio, even when older ones have it too', async () => {
+            catalogAndFnm('24', ['v18.20.8', 'v20.19.6', 'v24.22.1']);
+
+            await expect(environmentSetup.findAdobeCLINodeVersion()).resolves.toBe('24');
+            expect(warn()).not.toHaveBeenCalled();
+        });
+
+        it('falls back to the NEWEST version with aio when the catalog version lacks it, and says so', async () => {
+            catalogAndFnm('24', ['v18.20.8', 'v20.19.6']);
+
+            await expect(environmentSetup.findAdobeCLINodeVersion()).resolves.toBe('20');
+            // The fallback is an event, not silence. Its wording is not the contract.
+            expect(warn()).toHaveBeenCalledTimes(1);
+        });
+
         it('should use infrastructure-defined version first', async () => {
             mockVSCodeExtension({
                 infrastructure: {
                     'adobe-cli': {
-                        nodeVersion: '18'
+                        configuration: { nodeVersion: '18' }
                     }
                 }
             });
@@ -165,7 +200,7 @@ describe('EnvironmentSetup - Node Version Management', () => {
             mockVSCodeExtension({
                 infrastructure: {
                     'adobe-cli': {
-                        nodeVersion: '18'
+                        configuration: { nodeVersion: '18' }
                     }
                 }
             });

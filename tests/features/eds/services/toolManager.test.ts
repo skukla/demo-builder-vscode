@@ -323,16 +323,16 @@ describe('ToolManager', () => {
             expect(result.success).toBe(true);
         });
 
-        it('should use Node 18+ for tool execution', async () => {
+        it('should use Node 24 for tool execution', async () => {
             // Given: Tool is installed
             // When: Executing any tool command
             await toolManager.executeAcoIngestion();
 
-            // Then: Should use Node 18+ (useNodeVersion option)
+            // Then: Should use Node 24 (useNodeVersion option)
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 expect.any(String),
                 expect.objectContaining({
-                    useNodeVersion: expect.stringMatching(/^18|^20|^22|auto/),
+                    useNodeVersion: '24',
                 })
             );
         });

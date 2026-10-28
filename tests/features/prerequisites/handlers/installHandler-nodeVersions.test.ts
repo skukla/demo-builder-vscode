@@ -126,12 +126,12 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
      * WHICH Node versions a per-version tool installs for when NOTHING requires one.
      *
      * `installHandler.ts:72` and `:142` both answer it, with the same expression
-     * written twice: `nodeVersions.length ? nodeVersions : [version || '20']`. Both
+     * written twice: `nodeVersions.length ? nodeVersions : [version || '24']`. Both
      * were unconstrained — six mutants between them — because the shared setup always
      * returns `['18', '20']`, so the empty case never ran in any test.
      *
      * The rule: with no Node version required by the project, fall back to the version
-     * the caller asked for, or to Node 20. Get it wrong and the tool installs against a
+     * the caller asked for, or to Node 24, the one Node Demo Builder uses. Get it wrong and the tool installs against a
      * runtime the user never chose — silently, since the install still succeeds.
      *
      * These assert the ARGUMENT handed to the collaborator rather than the outcome:
@@ -147,24 +147,24 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
             (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
                 perNodeVersionStatus: [],
                 perNodeVariantMissing: true,
-                missingVariantMajors: ['20'],
+                missingVariantMajors: ['24'],
             });
         }
 
-        it('falls back to Node 20 when the caller names no version either', async () => {
+        it('falls back to Node 24 when the caller names no version either', async () => {
             usePerNodeWithNoRequiredVersions();
 
             await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
             expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
                 mockAdobeCliPrereq,
-                ['20'],
+                ['24'],
                 mockContext
             );
             // The SECOND copy of the same decision, read by the install planner.
             expect(mockContext.prereqManager?.getInstallSteps).toHaveBeenCalledWith(
                 mockAdobeCliPrereq,
-                { nodeVersions: ['20'] }
+                { nodeVersions: ['24'] }
             );
         });
 

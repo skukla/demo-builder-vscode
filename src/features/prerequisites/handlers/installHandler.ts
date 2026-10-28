@@ -82,7 +82,7 @@ function determineNodeVersionsForInstall(
 ): string[] | undefined {
     // Per-node-version prerequisites need to install for all Node versions
     if (prereq.perNodeVersion) {
-        return nodeVersions.length ? nodeVersions : [version || '20'];
+        return nodeVersions.length ? nodeVersions : [version || '24'];
     }
 
     return undefined;
@@ -143,7 +143,7 @@ async function resolvePerNodeTargetVersions(
     prereqId: number,
     version?: string,
 ): Promise<{ targetVersions: string[] | undefined; earlyReturn: boolean }> {
-    const versionsToCheck = nodeVersions.length ? nodeVersions : [version || '20'];
+    const versionsToCheck = nodeVersions.length ? nodeVersions : [version || '24'];
     versionsToCheck.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
     const perNodeStatus = await checkPerNodeVersionStatus(prereq, versionsToCheck, context);

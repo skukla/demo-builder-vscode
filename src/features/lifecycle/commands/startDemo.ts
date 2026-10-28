@@ -273,7 +273,7 @@ export class StartDemoCommand extends BaseCommand {
                 const frontendPath = frontendComponent.path;
                 // Extract nodeVersion from metadata with proper type coercion
                 const rawNodeVersion = frontendComponent.metadata?.nodeVersion;
-                const nodeVersion = typeof rawNodeVersion === 'string' ? rawNodeVersion : '20';
+                const nodeVersion = typeof rawNodeVersion === 'string' ? rawNodeVersion : '24';
 
                 // SECURITY: Validate nodeVersion before using in terminal command
                 // Prevents command injection (CWE-77) if project state is corrupted
