@@ -66,3 +66,9 @@ runcmd "git log -n 5"                          "git log -n 5 — not a push"  -
 # the `sed -n 1p` that read its result).
 runcmd "$PUSH origin x; git status -sb | sed -n 1p" "sed -n after the push"     -
 runcmd "$PUSH origin x > log 2>&1 && grep -n x log" "grep -n after the push"    -
+# More shapes (2026-10-28): a -n BEFORE the push, a grep whose pattern is the words of
+# a push, and the push's own flag still caught on a busy line.
+runcmd "[ -n \"\$b\" ] && $PUSH origin x"      "[ -n ] before a push"       -
+runcmd "grep -n \"$PUSH\" notes.txt"           "grep -n for the words"      -
+runcmd "cd repo && $PUSH -n origin x | sed -n 1p"  "-n on the push, sed -n beside it" push-no-verify
+runcmd "[ -n \"\$b\" ] && $PUSH origin x $NV"      "$NV after a [ -n ]"         push-no-verify
