@@ -20,6 +20,7 @@ import {
     fastForwardClone,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
+import { gitTestEnv } from '../../../helpers/gitTestEnv';
 
 const REAL_GIT_TIMEOUT_MS = 60_000;
 
@@ -31,21 +32,8 @@ interface Fixture {
     upstream: string;
 }
 
-function gitEnv(home: string): NodeJS.ProcessEnv {
-    const inherited = Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'));
-    return {
-        ...Object.fromEntries(inherited),
-        HOME: home,
-        XDG_CONFIG_HOME: home,
-        GIT_AUTHOR_NAME: 'test',
-        GIT_AUTHOR_EMAIL: 'test@example.com',
-        GIT_COMMITTER_NAME: 'test',
-        GIT_COMMITTER_EMAIL: 'test@example.com',
-    };
-}
-
 function git(fx: Fixture, cwd: string, ...args: string[]): string {
-    return execFileSync('git', args, { cwd, env: gitEnv(fx.home), encoding: 'utf8' }).trim();
+    return execFileSync('git', args, { cwd, env: gitTestEnv(fx.home), encoding: 'utf8' }).trim();
 }
 
 function write(dir: string, file: string, content: string): void {
@@ -81,7 +69,7 @@ function buildFixture(): Fixture {
     git(fx, fx.upstream, 'remote', 'add', 'origin', fx.origin);
     git(fx, fx.upstream, 'push', '-q', 'origin', 'main');
     fs.mkdirSync(path.dirname(fx.clone), { recursive: true });
-    execFileSync('git', ['clone', '-q', '-b', 'main', fx.origin, fx.clone], { env: gitEnv(home) });
+    execFileSync('git', ['clone', '-q', '-b', 'main', fx.origin, fx.clone], { env: gitTestEnv(home) });
     return fx;
 }
 
@@ -96,7 +84,7 @@ function publish(fx: Fixture, content = 'version 0.2.0\n'): string {
 function realGit(fx: Fixture): jest.MockedFunction<GitRunner> {
     return jest.fn(async (command: string, cwd: string) => {
         if (!command.startsWith('git ')) throw new Error(`not a git command: ${command}`);
-        const run = spawnSync('/bin/bash', ['-c', command], { cwd, env: gitEnv(fx.home), encoding: 'utf8' });
+        const run = spawnSync('/bin/bash', ['-c', command], { cwd, env: gitTestEnv(fx.home), encoding: 'utf8' });
         return { code: run.status, stdout: run.stdout, stderr: run.stderr };
     });
 }

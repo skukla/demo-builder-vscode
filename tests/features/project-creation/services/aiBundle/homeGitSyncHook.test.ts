@@ -19,6 +19,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { buildHomeGitSyncCommand } from '@/features/project-creation/services/aiBundle/claudeSettingsWriter';
+import { gitTestEnv } from '../../../../helpers/gitTestEnv';
 
 /**
  * The environment every git command here runs with: this process's, WITHOUT any
@@ -29,13 +30,7 @@ import { buildHomeGitSyncCommand } from '@/features/project-creation/services/ai
  * tree deleting every file onto the branch and set `core.bare = true` on the
  * shared config. The CONTROL at the bottom replays that environment.
  */
-const GIT_ENV = {
-    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'))),
-    GIT_AUTHOR_NAME: 'test',
-    GIT_AUTHOR_EMAIL: 'test@example.com',
-    GIT_COMMITTER_NAME: 'test',
-    GIT_COMMITTER_EMAIL: 'test@example.com',
-};
+const GIT_ENV = gitTestEnv();
 
 function git(cwd: string, ...args: string[]): string {
     return execFileSync('git', args, { cwd, env: GIT_ENV, encoding: 'utf8' }).trim();

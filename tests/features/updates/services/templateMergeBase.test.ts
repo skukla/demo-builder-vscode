@@ -36,6 +36,7 @@ import type { ExecuteOptions } from '@/core/shell/types';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { Project } from '@/types/base';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { gitTestEnv } from '../../../helpers/gitTestEnv';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
@@ -57,20 +58,6 @@ const SC_CONFLICTING_A = 'line 1\nline 2 from the SC\nline 3\n';
 const BINARY_B = Buffer.from([0, 1, 2, 255, 254, 0, 7]);
 const SC_CONFIG = '{"commerce-endpoint":"the SC\'s own"}\n';
 
-/** This process's environment with every GIT_* variable removed, plus a fixed identity. */
-function gitEnv(home: string): NodeJS.ProcessEnv {
-    const inherited = Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'));
-    return {
-        ...Object.fromEntries(inherited),
-        HOME: home,
-        XDG_CONFIG_HOME: home,
-        GIT_AUTHOR_NAME: 'test',
-        GIT_AUTHOR_EMAIL: 'test@example.com',
-        GIT_COMMITTER_NAME: 'test',
-        GIT_COMMITTER_EMAIL: 'test@example.com',
-    };
-}
-
 interface Fixture {
     root: string;
     home: string;
@@ -80,7 +67,7 @@ interface Fixture {
 }
 
 function git(fx: Pick<Fixture, 'home'>, cwd: string, ...args: string[]): string {
-    return execFileSync('git', args, { cwd, env: gitEnv(fx.home), encoding: 'utf8' }).trim();
+    return execFileSync('git', args, { cwd, env: gitTestEnv(fx.home), encoding: 'utf8' }).trim();
 }
 
 function write(dir: string, file: string, content: string | Buffer): void {
@@ -158,7 +145,7 @@ function realGitExecutor(fx: Fixture) {
             pathToFileURL(path.join(fx.root, 'github', owner, `${repo}.git`)).href,
         );
         const run = spawnSync('/bin/bash', ['-c', local], {
-            cwd: options.cwd, env: gitEnv(fx.home), encoding: 'utf8',
+            cwd: options.cwd, env: gitTestEnv(fx.home), encoding: 'utf8',
         });
         return { code: run.status, stdout: run.stdout, stderr: run.stderr, duration: 0 };
     };
@@ -210,7 +197,7 @@ describe('merging a template update from the recorded version (real git)', () =>
         git(fx, fx.root, 'clone', '-q', fx.scBare, probe);
         git(fx, probe, 'fetch', '-q', path.join(fx.root, 'github', TEMPLATE.owner, `${TEMPLATE.repo}.git`), 'main');
         const refused = spawnSync('git', ['merge', 'FETCH_HEAD', '--no-commit', '--no-ff'], {
-            cwd: probe, env: gitEnv(fx.home), encoding: 'utf8',
+            cwd: probe, env: gitTestEnv(fx.home), encoding: 'utf8',
         });
         expect(refused.status).toBe(128);
         expect(refused.stderr).toContain('unrelated histories');
@@ -228,7 +215,7 @@ describe('merging a template update from the recorded version (real git)', () =>
         expect(originFile(fx, 'C.txt')).toBe('c edited by the SC');
         // A preserved file keeps the SC's version even though the template changed it.
         expect(originFile(fx, 'config.json')).toBe(SC_CONFIG.trim());
-        const bin = execFileSync('git', ['show', 'main:B.bin'], { cwd: fx.scBare, env: gitEnv(fx.home) });
+        const bin = execFileSync('git', ['show', 'main:B.bin'], { cwd: fx.scBare, env: gitTestEnv(fx.home) });
         expect(Buffer.compare(bin, BINARY_B)).toBe(0);
     }, REAL_GIT_TIMEOUT_MS);
 

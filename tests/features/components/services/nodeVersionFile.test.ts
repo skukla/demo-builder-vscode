@@ -11,6 +11,7 @@ import {
     refreshNodeVersionFile,
     writeNodeVersionFileIfAbsent,
 } from '@/features/components/services/nodeVersionFile';
+import { gitTestEnv } from '../../../helpers/gitTestEnv';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 const notTracked = jest.fn(async () => false);
@@ -117,22 +118,21 @@ describe('refreshNodeVersionFile — existing projects', () => {
 });
 
 describe('isTrackedByRepo — the real git answer', () => {
-    function gitInit(): void {
-        const git = (...args: string[]) => execFileSync('git', ['-C', dir, ...args], { stdio: 'ignore' });
-        git('init', '-q');
-        git('config', 'user.email', 'test@example.com');
-        git('config', 'user.name', 'Test');
-    }
+    // Never inherit a hook's GIT_DIR: see gitTestEnv for what it did to the real repository.
+    const git = (...args: string[]) =>
+        execFileSync('git', ['-C', dir, ...args], { stdio: 'ignore', env: gitTestEnv() });
 
-    it('is true for a committed file and false for an untracked one', async () => {
-        gitInit();
+    it('is true for a staged file and false for an untracked one', async () => {
+        git('init', '-q');
         fs.writeFileSync(file(), '20\n');
-        execFileSync('git', ['-C', dir, 'add', '.node-version'], { stdio: 'ignore' });
+        git('add', '.node-version');
 
         await expect(isTrackedByRepo(dir, '.node-version')).resolves.toBe(true);
         await expect(isTrackedByRepo(dir, 'other-file')).resolves.toBe(false);
     });
 
+    // Also the guard for an inherited GIT_DIR: run with one exported, the old code answered
+    // for that repository and this failed (`GIT_DIR=… npx jest <this file>`).
     it('is false outside any repository', async () => {
         fs.writeFileSync(file(), '20\n');
 

@@ -57,11 +57,26 @@ function nodeVersionFileContent(major: string): string {
 /** Does the component's own git repository track this file? */
 export type IsTrackedByRepo = (componentPath: string, fileName: string) => Promise<boolean>;
 
+/**
+ * Git settings that override which repository `-C <dir>` resolves to. A process started
+ * inside a git hook inherits them (the pre-push gate does), and with them set the question
+ * is answered for THAT repository, not the component folder's.
+ */
+const GIT_LOCATION_VARS = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_PREFIX'];
+
+/** The environment with {@link GIT_LOCATION_VARS} removed, so git finds the folder's own repo. */
+function envForFolderRepo(): NodeJS.ProcessEnv {
+    const env = { ...process.env };
+    for (const name of GIT_LOCATION_VARS) delete env[name];
+    return env;
+}
+
 /** `git ls-files --error-unmatch` exits 0 only for a tracked file. */
 export const isTrackedByRepo: IsTrackedByRepo = async (componentPath, fileName) => {
     try {
         await execFileAsync('git', ['-C', componentPath, 'ls-files', '--error-unmatch', fileName], {
             timeout: TIMEOUTS.QUICK,
+            env: envForFolderRepo(),
         });
         return true;
     } catch {
