@@ -15,6 +15,7 @@ import * as vscode from 'vscode';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging/debugLogger';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 
 interface RepoQuickPickItem extends vscode.QuickPickItem {
     repoFullName: string;
@@ -210,11 +211,9 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
 
         // Step 7: Show results
         if (deleted.length > 0 && failed.length === 0) {
-            // A result, not progress — the same plain message the two failure
-            // branches below use.
-            vscode.window.showInformationMessage(
-                `Deleted ${deleted.length} repositor${deleted.length !== 1 ? 'ies' : 'y'}.`,
-            );
+            // A success says so as every success does: a ✅ line that goes by itself
+            // (owner, 2026-10-15). The failure branches below stay messages that wait.
+            showSuccessInStatusBar(`Deleted ${deleted.length} repositor${deleted.length !== 1 ? 'ies' : 'y'}`);
         } else if (deleted.length > 0 && failed.length > 0) {
             const failedList = failed.map((f) => f.repo).join(', ');
             vscode.window.showWarningMessage(

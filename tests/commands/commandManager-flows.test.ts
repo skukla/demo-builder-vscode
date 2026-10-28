@@ -317,8 +317,9 @@ describe('registerGlobalMcp', () => {
         expect(mockRegisterGlobalMcp).toHaveBeenCalledWith('/test/extension/path/dist');
         // Both agents, by the paths an SC would recognise — and no agent named, since
         // whichever one they use is the one that just became reachable.
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-            expect.stringContaining('~/.claude.json and ~/.copilot/mcp-config.json')
+        // A success: a ✅ status-bar line that goes by itself (owner, 2026-10-15).
+        expect((vscode.window.setStatusBarMessage as jest.Mock).mock.calls[0][0]).toBe(
+            '✅ Registered in ~/.claude.json and ~/.copilot/mcp-config.json'
         );
     });
 

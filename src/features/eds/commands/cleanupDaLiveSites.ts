@@ -26,6 +26,7 @@ import {
 } from '../services/storefront/storefrontTeardown';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging/debugLogger';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import type { Logger } from '@/types/logger';
 
@@ -305,7 +306,8 @@ function showDeletionResult({ deleted, failed, stillLive }: SiteDeletionOutcome)
         if (stillLive.length > 0) {
             vscode.window.showWarningMessage(message);
         } else {
-            vscode.window.showInformationMessage(message);
+            // A clean success: a ✅ line that goes by itself (owner, 2026-10-15).
+            showSuccessInStatusBar(`Deleted ${plural(deleted.length)}`);
         }
     } else if (deleted.length > 0) {
         const failedList = failed.map(f => f.site).join(', ');

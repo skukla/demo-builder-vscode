@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import {
     CREATE_REPOSITORY,
     DELETE_REPOSITORY,
+    OPEN_ON_GITHUB,
     handlePromoteAppBuilderComponent,
     handleUnpromoteAppBuilderComponent,
 } from '@/features/dashboard/handlers/appBuilderComponentPromote';
@@ -258,6 +259,20 @@ describe('handleUnpromoteAppBuilderComponent', () => {
         source: { owner: 'steve', repo: 'order-sync', branch: 'main' },
         promotion: { from: { ...SHELL }, at: '2026-10-05T00:00:00.000Z' },
     };
+
+    // Saved from the card's command (not the modal): a notification with a way to the
+    // repository, since a status-bar line cannot be clicked (owner, 2026-10-28).
+    it('says it is saved, and Open on GitHub opens the repository', async () => {
+        const { context } = setup();
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce(OPEN_ON_GITHUB);
+
+        const result = await handlePromoteAppBuilderComponent(context, { id: 'my-app', repoName: 'Order Sync', confirm: true });
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(result).toMatchObject({ success: true });
+        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('"Order Sync" is saved to GitHub.', OPEN_ON_GITHUB);
+        expect(vscode.env.openExternal).toHaveBeenCalledTimes(1);
+    });
 
     it('deletes only after the modal yes, and makes it a blank-starter app again', async () => {
         const { project, stateManager, context } = setup(PROMOTED);

@@ -24,6 +24,7 @@ import {
 import { getGitHubServices } from './edsHelpers';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getRepositoryNameError } from '@/core/validation/normalizers';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { rememberAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
 import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -206,7 +207,8 @@ export async function importDemoBundle(context: HandlerContext, zipPath: string)
             await rememberAddedDemo(card);
             context.logger.info(`[Zip] Bundle: ${created.fullName} created and "${card.name}" added to the Welcome step`);
             if (settings) settings = setupForCard(settings, card);
-            else void vscode.window.showInformationMessage(`"${card.name}" is on your Welcome step now.`);
+            // A success: a ✅ line that goes by itself (owner, 2026-10-15).
+            else showSuccessInStatusBar(`"${card.name}" is on your Welcome step now`);
         }
     } catch (error) {
         context.logger.error(`[Zip] Bundle import failed: ${(error as Error).message}`);

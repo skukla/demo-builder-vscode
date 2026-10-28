@@ -7088,7 +7088,7 @@
             "anchors": [
                 "if (debounceTimer) {"
             ],
-            "line": 89,
+            "line": 90,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing the test true makes the body run with debounceTimer undefined, and clearTimeout(undefined) is a documented no-op in Node and under jest fake timers alike. The very next statement then overwrites debounceTimer with a fresh handle either way, so the coalescing behaviour the debounce test pins is unchanged and no observable differs \u2014 the guard only avoids a pointless call.",
@@ -7101,7 +7101,7 @@
             "anchors": [
                 "if (debounceTimer) {"
             ],
-            "line": 106,
+            "line": 107,
             "mutants": 1,
             "category": "branch",
             "reason": "The dispose copy of the same guard. With the test forced true and no timer pending, clearTimeout(undefined) does nothing and debounceTimer is reassigned undefined when it is already undefined, after which subscription.dispose() runs exactly as before. The cancelling behaviour that matters \u2014 disposing before the debounce fires must stop the handler \u2014 is pinned by its own test and is unaffected by the guard.",
@@ -7114,7 +7114,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 155,
+            "line": 156,
             "mutants": 1,
             "category": "block",
             "reason": "The per-project catch body extracts a message and logs a warning; it does not rethrow, does not touch successCount and does not alter the loop. Emptying it still swallows the failure, so the remaining projects are still republished and the completion toast still reports the partial count \u2014 which the failing-flip test now asserts. The only thing the mutant removes is the warning text.",
@@ -7127,7 +7127,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 162,
+            "line": 163,
             "mutants": 1,
             "category": "block",
             "reason": "The outer catch body extracts a message and logs an error. Emptying it still absorbs the failure, so handleEwSettingChange still resolves, no prompt appears and no flip runs \u2014 which the enumeration-failure test asserts. Since the handler is invoked as void and returns nothing, there is no value or side effect left for a test to see beyond the log line.",
@@ -8301,7 +8301,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 606,
+            "line": 608,
             "mutants": 1,
             "category": "block",
             "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints. Re-anchored 2026-10-19 (608 -> 609): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-20 (609 -> 614): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (614 -> 613): unchanged code; the global MCP registration toast above it became one line.",
@@ -15863,7 +15863,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 365,
+            "line": 367,
             "mutants": 1,
             "category": "block",
             "reason": "The catch in checkStorefrontOrigin holds a logger.debug call and 'return undefined'. Emptying it leaves the catch in place, so the failed read is still swallowed, and the function then falls off its end \u2014 which answers undefined, the same value. The only difference is whether the debug line prints. Planted 2026-10-10 with the body removed and all 23 tests pass, including the one that makes the read throw and checks the section is left out.",

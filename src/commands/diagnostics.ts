@@ -38,6 +38,7 @@ import { getLogger, type DebugLogger } from '@/core/logging/debugLogger';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import { getDaLiveAuthService, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
@@ -93,8 +94,9 @@ export async function runDiagnosticsAction(
     if (action === 'Copy Report') {
         await vscode.env.clipboard.writeText(summary);
         // Confirm explicitly: a silent clipboard write is indistinguishable
-        // from a no-op, and the user is about to paste it somewhere.
-        await vscode.window.showInformationMessage('Diagnostic report copied to clipboard.');
+        // from a no-op, and the user is about to paste it somewhere. As every
+        // success reads: a ✅ line that goes by itself (owner, 2026-10-15).
+        showSuccessInStatusBar('Diagnostic report copied to clipboard');
     } else if (action === 'Show Logs') {
         logger.show(false);
     } else if (action === 'Export Log') {

@@ -54,6 +54,20 @@ function cancelled(): HandlerResponse {
 /** How a door tells the SC: a notification, unless a modal is already saying it. */
 type Say = (message: string) => void;
 
+/** The button on the saved-to-GitHub notification. */
+export const OPEN_ON_GITHUB = 'Open on GitHub';
+
+/**
+ * Say an app was saved to GitHub, with a button to open the repository.
+ *
+ * @param name - the app
+ * @param url - its repository
+ */
+async function offerOpenOnGitHub(name: string, url: string): Promise<void> {
+    const choice = await vscode.window.showInformationMessage(`"${name}" is saved to GitHub.`, OPEN_ON_GITHUB);
+    if (choice === OPEN_ON_GITHUB) await vscode.env.openExternal(vscode.Uri.parse(url));
+}
+
 const notify: Say = (message) => void vscode.window.showErrorMessage(message);
 
 /** A refusal, said in a notification too when nobody is waiting on the answer. */
@@ -255,11 +269,9 @@ async function promote(
     answers?: PromotePayload,
 ): Promise<HandlerResponse> {
     // The modal says a refusal or a failure itself; a notification would say it twice.
-    const say = (message: string, kind: 'error' | 'info' = 'error'): void => {
+    const say = (message: string): void => {
         if (inModal) return;
-        void (kind === 'error'
-            ? vscode.window.showErrorMessage(message)
-            : vscode.window.showInformationMessage(message));
+        void vscode.window.showErrorMessage(message);
     };
     const refusal = promotionRefusal(project, id);
     if (refusal) return refuse(refusal, say);
@@ -286,7 +298,10 @@ async function promote(
         );
         await context.stateManager.saveProject(project);
         await postComponentsSnapshot(context);
-        say(`"${name}" is saved to ${saved.url}.`, 'info');
+        // The modal says it itself. Elsewhere, a notification with a way to the repository
+        // (owner, 2026-10-28): a status-bar line cannot be clicked, and the URL is the point.
+        // Not awaited: the save is done, and nobody need click.
+        if (!inModal) void offerOpenOnGitHub(name, saved.url);
         const { owner, repo, url, fileCount } = saved;
         return { success: true, repository: { owner, repo, url, fileCount } };
     } catch (error) {

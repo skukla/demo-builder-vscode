@@ -12,6 +12,7 @@
  */
 
 import * as vscode from 'vscode';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import type { AiPrompt, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -274,7 +275,8 @@ export async function handleCopyAiPrompt(
         return { success: false, error: 'Invalid prompt payload', code: ErrorCode.CONFIG_INVALID };
     }
     await vscode.env.clipboard.writeText(prompt);
-    void vscode.window.showInformationMessage('Prompt copied to clipboard');
+    // A success: a ✅ line that goes by itself (owner, 2026-10-15).
+    showSuccessInStatusBar('Prompt copied to clipboard');
     const name = payload?.name ?? '';
     context.logger.info(`[handleCopyAiPrompt] prompt copied to clipboard (name=${name})`);
     return { success: true };

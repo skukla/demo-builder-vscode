@@ -21,6 +21,12 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
+/** The last status-bar line: a success says so there, a ✅ line that goes by itself (owner, 2026-10-15). */
+const lastStatusBarLine = (): unknown => {
+    const calls = (vscode.window.setStatusBarMessage as jest.Mock).mock.calls;
+    return calls[calls.length - 1]?.[0];
+};
+
 const mockApplyAuthoringExperienceFlip = jest.fn().mockResolvedValue({
     editorPath: 'ok',
     quickEdit: 'ok',
@@ -241,11 +247,10 @@ describe('registerEwSettingChangeListener', () => {
         await flushDebounce();
 
         expect(mockApplyAuthoringExperienceFlip).toHaveBeenCalledTimes(2);
-        // Prompt + completion toast.
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(2);
-        expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
-            'Re-applied Experience Workspace config to 2 of 2 projects'
-        );
+        // The prompt is a notification; the completion is a ✅ status-bar line (owner,
+        // 2026-10-15), so only one notification.
+        expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);
+        expect(lastStatusBarLine()).toBe('✅ Re-applied Experience Workspace config to 2 of 2 projects');
     });
 
     it('single affected project → completion toast names it', async () => {
@@ -256,9 +261,7 @@ describe('registerEwSettingChangeListener', () => {
         fireChange('demoBuilder.daLive.authoringExperience');
         await flushDebounce();
 
-        expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
-            'Re-applied Experience Workspace config to solo'
-        );
+        expect(lastStatusBarLine()).toBe('✅ Re-applied Experience Workspace config to solo');
     });
 
     it('debounce coalesces rapid edits into a single handling pass', async () => {
@@ -446,9 +449,7 @@ describe('registerEwSettingChangeListener', () => {
         await flushDebounce();
 
         expect(mockApplyAuthoringExperienceFlip).toHaveBeenCalledTimes(2);
-        expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
-            'Re-applied Experience Workspace config to 1 of 2 projects'
-        );
+        expect(lastStatusBarLine()).toBe('✅ Re-applied Experience Workspace config to 1 of 2 projects');
     });
 
     it('an enumeration failure stays silent rather than prompting about nothing', async () => {
@@ -501,9 +502,7 @@ describe('registerEwSettingChangeListener', () => {
         fireChange('demoBuilder.daLive.authoringExperience');
         await flushDebounce();
 
-        expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
-            'Re-applied Experience Workspace config to justrite'
-        );
+        expect(lastStatusBarLine()).toBe('✅ Re-applied Experience Workspace config to justrite');
     });
 
     it('re-applies cleanly when no host callback is registered, reporting no failure', async () => {

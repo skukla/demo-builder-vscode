@@ -102,6 +102,7 @@ jest.mock('vscode', () => ({
     },
     window: {
         showInformationMessage: jest.fn().mockResolvedValue(undefined),
+        setStatusBarMessage: jest.fn(),
     },
     workspace: {
         workspaceFolders: undefined as { uri: { fsPath: string } }[] | undefined,

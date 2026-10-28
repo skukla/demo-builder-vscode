@@ -21,6 +21,7 @@ import { resolveProjectAuthoringExperience } from '../handlers/edsHelpers';
 import { applyAuthoringExperienceFlip } from './authoringExperienceFlip';
 import type { GitHubTokenService } from './github/githubTokenService';
 import { COMPONENT_IDS } from '@/core/constants';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import type { AuthoringExperience, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
@@ -220,15 +221,11 @@ function hasAuthoringOverride(project: Project): boolean {
     return !!metadataValue && AUTHORING_EXPERIENCES.has(metadataValue);
 }
 
-/** Toast on completion: single project names it; many report a count. */
+/** Success on completion, as every success reads (a ✅ status-bar line, owner 2026-10-15): one project names it; many report a count. */
 function notifyCompletion(affected: Project[], successCount: number): void {
     if (affected.length === 1) {
-        void vscode.window.showInformationMessage(
-            `Re-applied Experience Workspace config to ${affected[0].name}`,
-        );
+        showSuccessInStatusBar(`Re-applied Experience Workspace config to ${affected[0].name}`);
         return;
     }
-    void vscode.window.showInformationMessage(
-        `Re-applied Experience Workspace config to ${successCount} of ${affected.length} projects`,
-    );
+    showSuccessInStatusBar(`Re-applied Experience Workspace config to ${successCount} of ${affected.length} projects`);
 }

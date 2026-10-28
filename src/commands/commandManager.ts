@@ -16,6 +16,7 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { openUrl } from '@/core/utils/browserUtils';
 import { formatMinutes } from '@/core/utils/timeFormatting';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
@@ -480,7 +481,8 @@ export class CommandManager {
                 // Just the files, by the paths an SC recognises: the longer sentence this
                 // replaced was cut off in the toast before the second path (2026-10-22).
                 const files = written.map((file) => file.replace(os.homedir(), '~')).join(' and ');
-                void vscode.window.showInformationMessage(`Registered in ${files}.`);
+                // A success: a ✅ line that goes by itself (owner, 2026-10-15).
+                showSuccessInStatusBar(`Registered in ${files}`);
             } catch (error) {
                 this.logger.error('[MCP] global registration failed', error as Error);
                 void vscode.window.showErrorMessage(
