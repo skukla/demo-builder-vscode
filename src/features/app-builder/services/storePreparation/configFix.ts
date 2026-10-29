@@ -6,15 +6,24 @@
  * Reads first: a row whose value already stands is not written. Writes only the rest, in one
  * PUT, and reads the answer's `errors` list — a refused path comes back there under HTTP 200,
  * so a write that does not read it cannot tell. Records, per row written, what the scope
- * stored before and what was in force, so the undo can put it back.
+ * stored before, what was in force, and the value written, so the undo can put it back.
+ *
+ * The undo puts a setting back only while it still holds the value written (datapack-engine
+ * step 06, AB-83): the store's value now, the value written and the value before go to the one
+ * rule (`decideOwnedChange`, `core/utils/ownedChange`). A setting changed since is kept, and
+ * the undo says so in one line (`kept`). A record written before 2026-10-29 has no `wrote`;
+ * the step's own value is what it wrote. With neither (an older `set_commerce_config` record),
+ * nothing says it is still ours, so it is kept too.
  *
  * @module features/app-builder/services/storePreparation/configFix
  */
 
 import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
+import { andList } from '@/core/utils/andList';
+import { decideOwnedChange } from '@/core/utils/ownedChange';
 import type { SetupConfigFix, SetupConfigFixItem } from '@/types/appBuilderComponents';
 import type { CommerceSystemConfigList, CommerceSystemConfigPutAnswer, CommerceSystemConfigWrite, CommerceGet } from '@/types/commerceWire';
-import type { CommerceConfigPrevious, StorePreparationStepRecord } from '@/types/storePreparation';
+import type { CommerceConfigPrevious, ConfigStepRecord, StorePreparationStepRecord } from '@/types/storePreparation';
 
 /** What Commerce holds for a Yes/No or a choice nothing has set. */
 const COMMERCE_DEFAULT = '0';
@@ -72,7 +81,7 @@ function writeRow(item: { path: string; scope: 'default' | 'website'; scopeCode?
 }
 
 /** How a step names a setting and its values; a bare path (the agent's `set_commerce_config`) names none. */
-type Named = Pick<SetupConfigFixItem, 'path' | 'scope' | 'field' | 'values'>;
+type Named = Pick<SetupConfigFixItem, 'path' | 'scope' | 'field' | 'values'> & Partial<Pick<SetupConfigFixItem, 'value'>>;
 
 /**
  * "Payment on Account for the website: No → Yes", in the Admin's words when the step gives
@@ -81,8 +90,22 @@ type Named = Pick<SetupConfigFixItem, 'path' | 'scope' | 'field' | 'values'>;
  */
 function changeLine(item: Named, from: string, to: string): string {
     const say = (value: string): string => item.values?.[value] ?? value;
-    const where = item.scope === 'website' ? ' for the website' : '';
-    return `${item.field ?? item.path}${where}: ${say(from)} → ${say(to)}`;
+    return `${settingName(item)}: ${say(from)} → ${say(to)}`;
+}
+
+/** "Payment on Account for the website", or the path when the step gives no Admin name. */
+function settingName(item: Named): string {
+    return `${item.field ?? item.path}${item.scope === 'website' ? ' for the website' : ''}`;
+}
+
+/** The one line an undo says about the settings it kept, or nothing when it kept none. */
+function keptLine(edited: string[], untold: string[]): string | undefined {
+    const parts: string[] = [];
+    if (edited.length === 1) parts.push(`Kept ${edited[0]} as it is: it was changed after Demo Builder set it.`);
+    if (edited.length > 1) parts.push(`Kept ${andList(edited)} as they are: they were changed after Demo Builder set them.`);
+    if (untold.length === 1) parts.push(`Kept ${untold[0]} as it is: Demo Builder cannot tell it still holds the value it wrote.`);
+    if (untold.length > 1) parts.push(`Kept ${andList(untold)} as they are: Demo Builder cannot tell they still hold the values it wrote.`);
+    return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
 /** The rows Commerce refused, keyed by path and scope, in its words. */
@@ -119,8 +142,13 @@ async function writeRows(
     return { changes, rejected, saved };
 }
 
+/** A settings fix, which can also say what its undo would do. */
+export interface ConfigStepFix extends StepFix {
+    previewUndo: (deps: FixDeps, record: ConfigStepRecord) => Promise<Pick<FixUndone, 'changes' | 'kept'>>;
+}
+
 /** The fix for a step whose `fix` is settings. */
-export function configFix(fix: SetupConfigFix): StepFix {
+export function configFix(fix: SetupConfigFix): ConfigStepFix {
     const scoped = (deps: FixDeps): void => {
         if (fix.items.some((item) => item.scope === 'website') && !deps.websiteCode) {
             throw new Error('The project names no Commerce website, and this step writes a website setting.');
@@ -144,7 +172,7 @@ export function configFix(fix: SetupConfigFix): StepFix {
             const rows = fix.items.flatMap((item, i) =>
                 previous[i].effective === item.value
                     ? []
-                    : [{ write: writeRow(previous[i], item.value), line: changeLine(item, previous[i].effective, item.value), previous: previous[i] }],
+                    : [{ write: writeRow(previous[i], item.value), line: changeLine(item, previous[i].effective, item.value), previous: { ...previous[i], wrote: item.value } }],
             );
             const written = await writeRows(deps, rows);
             const record: StorePreparationStepRecord | undefined =
@@ -153,14 +181,37 @@ export function configFix(fix: SetupConfigFix): StepFix {
         },
         async undo(deps, record): Promise<FixUndone> {
             if (record.kind !== 'config') return { changes: [], rejected: [`The record is not a settings record (${record.kind}).`] };
-            const now = await readPrevious(deps.commerce.get, record.previous, deps.websiteCode);
-            const rows = record.previous.flatMap((item, i) =>
-                now[i].effective === item.effective
-                    ? []
-                    : [{ write: writeRow(item, item.effective), line: changeLine(namedAs(item), now[i].effective, item.effective), previous: item }],
-            );
-            const written = await writeRows(deps, rows);
-            return { changes: written.changes, rejected: written.rejected };
+            const plan = await planUndo(deps, record.previous, namedAs);
+            const written = await writeRows(deps, plan.rows);
+            return { changes: written.changes, rejected: written.rejected, ...(plan.kept ? { kept: plan.kept } : {}) };
+        },
+        /** What the undo would put back and keep, writing nothing (`set_commerce_config`'s undo preview). */
+        async previewUndo(deps: FixDeps, record: ConfigStepRecord): Promise<Pick<FixUndone, 'changes' | 'kept'>> {
+            const plan = await planUndo(deps, record.previous, namedAs);
+            return { changes: plan.rows.map((row) => row.line), ...(plan.kept ? { kept: plan.kept } : {}) };
         },
     };
+}
+
+/**
+ * Which recorded settings the undo writes back, and which it keeps, by the shared rule: the
+ * value now against the value written (`wrote`, else the step's own value) and the value before.
+ */
+async function planUndo(deps: FixDeps, previous: CommerceConfigPrevious[], namedAs: (item: CommerceConfigPrevious) => Named) {
+    const now = await readPrevious(deps.commerce.get, previous, deps.websiteCode);
+    const rows: Array<{ write: CommerceSystemConfigWrite; line: string; previous: CommerceConfigPrevious }> = [];
+    const edited: string[] = [];
+    const untold: string[] = [];
+    previous.forEach((item, i) => {
+        const current = now[i].effective;
+        // Already back at the value it had before: nothing to write, nothing to say.
+        if (current === item.effective) return;
+        const named = namedAs(item);
+        const wrote = item.wrote ?? named.value;
+        const outcome = decideOwnedChange({ recorded: wrote, current, wanted: item.effective });
+        if (outcome === 'update') rows.push({ write: writeRow(item, item.effective), line: changeLine(named, current, item.effective), previous: item });
+        else if (outcome === 'leave-edited') edited.push(settingName(named));
+        else untold.push(settingName(named));
+    });
+    return { rows, kept: keptLine(edited, untold) };
 }

@@ -170,7 +170,7 @@ describe('applyPreparation', () => {
             ['PUT', 'system/config', { items: [{ path: 'sales/magento_rma/enabled', value: '1', scope: 'website', scope_code: 'acme' }] }],
         ]);
         expect(record?.steps).toEqual({
-            returns: { kind: 'config', previous: [{ path: 'sales/magento_rma/enabled', scope: 'website', scopeCode: 'acme', stored: null, effective: '0' }] },
+            returns: { kind: 'config', previous: [{ path: 'sales/magento_rma/enabled', scope: 'website', scopeCode: 'acme', stored: null, effective: '0', wrote: '1' }] },
         });
     });
 
@@ -236,6 +236,38 @@ describe('undoPreparation', () => {
         const d = deps([['catalog/price/scope', '1'], ['sales/magento_rma/enabled', '1']]);
         const { record } = await undoPreparation(STEPS, RECORD, d, 'returns');
         expect(Object.keys(record?.steps ?? {})).toEqual(['price-scope']);
+    });
+
+    // Step 06: what an undo kept is not a refusal. The step is undone, its record goes, and the
+    // report carries the one line the result screen and the agent show.
+    it('reports what an undo kept as a line on an undone step, and lets its record go', async () => {
+        const d = deps([['catalog/price/scope', '1'], ['sales/magento_rma/enabled', '0']]);
+        const changed: StorePreparationRecord = {
+            at: 't',
+            steps: { returns: { kind: 'config', previous: [{ path: 'sales/magento_rma/enabled', scope: 'website', scopeCode: 'acme', stored: '2', effective: '2', wrote: '1' }] } },
+        };
+        const { reports, record } = await undoPreparation(STEPS, changed, d);
+        expect(reports).toEqual([expect.objectContaining({ id: 'returns', state: 'undone', changes: [], rejected: [], kept: expect.stringMatching(/^Kept .+ as it is: it was changed after Demo Builder set it\.$/) })]);
+        expect(d.commerce.send).not.toHaveBeenCalled();
+        expect(record).toBeUndefined();
+    });
+
+    // Owner 2026-10-29, as step 05's container rule: a kept catalog or stock stays on the
+    // record, so a later undo takes it once it is empty. Driven through the real catalog fix.
+    it('keeps on the record a catalog the undo kept, and reports the step undone', async () => {
+        const catalog = { id: 9, name: 'Harbor Catalog', companyId: 3, companyName: 'Harbor', held: { companies: [3], products: [], categories: [] } };
+        const commerce = commerceFake({
+            'sharedCatalog/9/companies': '["3"]',
+            'sharedCatalog/9/products': ['RACK-1'],
+            'sharedCatalog/9/categories': [],
+            'sharedCatalog/': { items: [{ id: 9, name: 'Harbor Catalog', customer_group_id: 6, type: 0 }] },
+        });
+        const steps: SetupStep[] = [{ id: 'catalogs', title: 'Shared catalogs', why: 'w', where: 'Admin', fix: { kind: 'handler', handler: 'company-shared-catalogs' } }];
+        const record: StorePreparationRecord = { at: 't', steps: { catalogs: { kind: 'shared-catalogs', catalogs: [catalog] } } };
+        const out = await undoPreparation(steps, record, { ...deps([]), commerce });
+        expect(commerce.writes().map(([m, p]) => `${m} ${p}`)).toEqual(['POST sharedCatalog/9/unassignCompanies']);
+        expect(out.reports).toEqual([expect.objectContaining({ id: 'catalogs', state: 'undone', kept: expect.stringContaining('Kept the shared catalog Harbor Catalog') })]);
+        expect(out.record).toEqual(record);
     });
 
     it('keeps the record of a step Commerce refused to put back', async () => {

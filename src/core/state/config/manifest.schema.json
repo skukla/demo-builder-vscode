@@ -1116,6 +1116,10 @@
         "effective": {
           "type": "string",
           "description": "The value in force at that scope before the write (own, else inherited, else Commerce's \"0\")."
+        },
+        "wrote": {
+          "type": "string",
+          "description": "The value Demo Builder wrote over it. The undo puts the setting back only while it still holds this (datapack-engine step 06). Absent on records written before 2026-10-29."
         }
       },
       "required": [
@@ -1222,6 +1226,13 @@
             "type": "string"
           },
           "description": "Sources this run found switched off and switched back on, by code: an earlier undo switched off the source it had made, and applying again finds it there. The undo switches them off again. Absent on records written before 2026-10-26."
+        },
+        "sourceFingerprints": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Each created or switched-on source as the apply left it: its row in the sources list, read after the writes and hashed (`fingerprintRow`). The undo switches a source off only while its row still hashes the same (step 06). Absent on records written before 2026-10-29, and for a source the read-back missed: the undo then keeps it on and says why."
         }
       },
       "required": [
@@ -1254,6 +1265,9 @@
               },
               "companyName": {
                 "type": "string"
+              },
+              "held": {
+                "$ref": "#/definitions/SharedCatalogHeld"
               }
             },
             "required": [
@@ -1263,7 +1277,7 @@
               "companyName"
             ]
           },
-          "description": "The catalogs this run created, each with the company it assigned."
+          "description": "The catalogs this run created, each with the company it assigned and what the catalog held once made (`held`, read back), so the undo can tell what was put in it since (step 06). `held` is absent on records written before 2026-10-29, and when the read-back failed: the catalog then counts as holding only its company."
         }
       },
       "required": [
@@ -1271,6 +1285,35 @@
         "catalogs"
       ],
       "description": "What `company-shared-catalogs` recorded."
+    },
+    "SharedCatalogHeld": {
+      "type": "object",
+      "properties": {
+        "companies": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        }
+      },
+      "required": [
+        "companies",
+        "products",
+        "categories"
+      ],
+      "description": "What a shared catalog holds, as Commerce lists it: company ids, SKUs, category ids."
     },
     "AddedDemo": {
       "type": "object",

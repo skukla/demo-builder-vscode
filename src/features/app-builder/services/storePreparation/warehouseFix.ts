@@ -10,13 +10,21 @@
  * could write in bulk, but nothing here knows the quantities, so it is not offered.
  *
  * The undo unlinks, deletes a stock this run created, and DISABLES a source this run created
- * or switched back on: Commerce cannot delete a source, and the result says so.
+ * or switched back on: Commerce cannot delete a source, and the result says so. It keeps what
+ * changed since (datapack-engine step 06, AB-83), by the one rule (`decideOwnedChange`) over one
+ * read of the inventory's three lists: a stock holding a source the fix did not link is kept,
+ * with the fix's own links still taken out; a source is switched off only while its row in the
+ * sources list hashes as the apply left it (`sourceFingerprints`). What it kept, it says in one
+ * line; a kept stock stays on the step's record (`remaining`), so a later undo deletes it once it
+ * holds no source. A read that fails stops the undo before it writes anything.
  *
  * @module features/app-builder/services/storePreparation/warehouseFix
  */
 
 import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
 import { andList } from '@/core/utils/andList';
+import { decideOwnedChange } from '@/core/utils/ownedChange';
+import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
 import type {
     CommerceGet,
     CommerceInventorySource,
@@ -163,43 +171,129 @@ export const warehouseFix: StepFix = {
         await enableSources(deps, plan, record, outcome);
         const stockId = await ensureStock(deps, plan, record, changes, rejected);
         if (stockId !== undefined) await linkSources(deps, { plan, inventory, stockId }, record, outcome);
+        await recordSourcesAsLeft(get, record);
         const wrote =
             record.createdSources.length > 0 || record.createdStock || record.links.length > 0 || (record.enabledSources?.length ?? 0) > 0;
         return { changes, rejected, ...(wrote ? { record } : {}), manual: MOVE_STOCK_MANUAL };
     },
     async undo(deps, record: StorePreparationStepRecord): Promise<FixUndone> {
         if (record.kind !== 'warehouse') return { changes: [], rejected: [`The record is not a warehouse record (${record.kind}).`] };
-        const { get, send } = deps.commerce;
-        const changes: string[] = [];
-        const rejected: string[] = [];
-        const { sourceName, stockName } = await undoNamers(get, record);
-        if (record.links.length > 0) {
-            try {
-                await send('POST', 'inventory/stock-source-links-delete', { links: record.links.map((l) => ({ stock_id: l.stockId, source_code: l.sourceCode })) });
-                changes.push(...record.links.map((l) => `Took ${sourceName(l.sourceCode)} out of ${stockName(l.stockId)}`));
-            } catch (error) {
-                rejected.push(`Take the warehouses out of the stock: ${errorText(error)}`);
-            }
+        let inventory: Inventory;
+        try {
+            inventory = await readInventory(deps.commerce.get);
+        } catch (error) {
+            return { changes: [], rejected: [`Read the store's warehouses: ${errorText(error)}`] };
         }
-        if (record.createdStock) {
-            try {
-                await send('DELETE', `inventory/stocks/${record.createdStock.id}`, undefined);
-                changes.push(`Deleted ${record.createdStock.name}`);
-            } catch (error) {
-                rejected.push(`Delete ${record.createdStock.name}: ${errorText(error)}`);
-            }
-        }
-        for (const code of [...record.createdSources, ...(record.enabledSources ?? [])]) {
-            try {
-                const name = await setSourceEnabled(deps.commerce, code, false);
-                changes.push(`Switched off ${name ?? sourceName(code)} (Commerce can't delete a warehouse)`);
-            } catch (error) {
-                rejected.push(`Switch off ${sourceName(code)}: ${errorText(error)}`);
-            }
-        }
-        return { changes, rejected };
+        const undo: UndoRun = { commerce: deps.commerce, record, inventory, ...undoNamers(inventory, record), changes: [], rejected: [], kept: [] };
+        await unlinkOwn(undo);
+        await deleteStockUnlessHolding(undo);
+        await switchOffUnchanged(undo);
+        const { changes, rejected, kept, remaining } = undo;
+        return { changes, rejected, ...(kept.length > 0 ? { kept: kept.join(' ') } : {}), ...(remaining ? { remaining } : {}) };
     },
 };
+
+/** One undo's state: what it read once, and the lines it is building. */
+interface UndoRun {
+    commerce: FixDeps['commerce'];
+    record: WarehouseStepRecord;
+    inventory: Inventory;
+    sourceName: (code: string) => string;
+    stockName: (id: number) => string;
+    changes: string[];
+    rejected: string[];
+    kept: string[];
+    /** A kept stock, still recorded so a later undo deletes it once it holds no source. */
+    remaining?: WarehouseStepRecord;
+}
+
+/** Take out the links the fix made that are still there. */
+async function unlinkOwn(undo: UndoRun): Promise<void> {
+    const present = undo.record.links.filter((l) => undo.inventory.links.some((x) => x.stock_id === l.stockId && x.source_code === l.sourceCode));
+    if (present.length === 0) return;
+    try {
+        await undo.commerce.send('POST', 'inventory/stock-source-links-delete', { links: present.map((l) => ({ stock_id: l.stockId, source_code: l.sourceCode })) });
+        undo.changes.push(...present.map((l) => `Took ${undo.sourceName(l.sourceCode)} out of ${undo.stockName(l.stockId)}`));
+    } catch (error) {
+        undo.rejected.push(`Take the warehouses out of the stock: ${errorText(error)}`);
+    }
+}
+
+/** Delete the stock the fix made, unless it holds a source the fix did not link to it. */
+async function deleteStockUnlessHolding(undo: UndoRun): Promise<void> {
+    const stock = undo.record.createdStock;
+    if (!stock || !undo.inventory.stocks.some((s) => s.stock_id === stock.id)) return;
+    const ownLink = (code: string) => undo.record.links.some((l) => l.stockId === stock.id && l.sourceCode === code);
+    const others = undo.inventory.links.filter((l) => l.stock_id === stock.id && !ownLink(l.source_code)).map((l) => l.source_code);
+    const outcome = decideOwnedChange({ recorded: fingerprintRow([]), current: fingerprintRow(others), wanted: undefined });
+    if (outcome !== 'remove') {
+        undo.kept.push(`Kept ${stock.name}: it holds ${andList(others.map(undo.sourceName))}, which Demo Builder did not add to it.`);
+        // Its own links are gone and its sources are dealt with: only the stock stays recorded.
+        undo.remaining = { kind: 'warehouse', createdSources: [], links: [], createdStock: stock };
+        return;
+    }
+    try {
+        await undo.commerce.send('DELETE', `inventory/stocks/${stock.id}`, undefined);
+        undo.changes.push(`Deleted ${stock.name}`);
+    } catch (error) {
+        undo.rejected.push(`Delete ${stock.name}: ${errorText(error)}`);
+    }
+}
+
+/**
+ * Switch off each source the fix made or switched on, while its row still hashes as the apply
+ * left it. One already off, or gone from the list, needs nothing.
+ */
+async function switchOffUnchanged(undo: UndoRun): Promise<void> {
+    const edited: string[] = [];
+    const untold: string[] = [];
+    for (const code of [...undo.record.createdSources, ...(undo.record.enabledSources ?? [])]) {
+        const row = undo.inventory.sources.find((s) => s.source_code === code);
+        if (!row || row.enabled === false) continue;
+        const outcome = decideOwnedChange({
+            recorded: undo.record.sourceFingerprints?.[code],
+            current: fingerprintRow(row),
+            wanted: fingerprintRow({ ...row, enabled: false }),
+        });
+        if (outcome === 'leave-edited') edited.push(row.name);
+        else if (outcome === 'leave-not-ours') untold.push(row.name);
+        else await switchOff(undo, code);
+    }
+    const line = sourcesKeptLine(edited, untold);
+    if (line) undo.kept.push(line);
+}
+
+async function switchOff(undo: UndoRun, code: string): Promise<void> {
+    try {
+        const name = await setSourceEnabled(undo.commerce, code, false);
+        undo.changes.push(`Switched off ${name ?? undo.sourceName(code)} (Commerce can't delete a warehouse)`);
+    } catch (error) {
+        undo.rejected.push(`Switch off ${undo.sourceName(code)}: ${errorText(error)}`);
+    }
+}
+
+/** The one line about the sources the undo left switched on, or nothing. */
+function sourcesKeptLine(edited: string[], untold: string[]): string | undefined {
+    const parts: string[] = [];
+    if (edited.length === 1) parts.push(`Kept ${edited[0]} switched on: it was changed after Demo Builder set it up.`);
+    if (edited.length > 1) parts.push(`Kept ${andList(edited)} switched on: they were changed after Demo Builder set them up.`);
+    if (untold.length === 1) parts.push(`Kept ${untold[0]} switched on: Demo Builder cannot tell it is still as it left it.`);
+    if (untold.length > 1) parts.push(`Kept ${andList(untold)} switched on: Demo Builder cannot tell they are still as it left them.`);
+    return parts.length > 0 ? parts.join(' ') : undefined;
+}
+
+/**
+ * Hash each source the apply made or switched on, as the sources list shows it after the writes,
+ * so the undo can tell one changed since. A read that fails records no hash: the undo then keeps
+ * the source on and says so, rather than guess.
+ */
+async function recordSourcesAsLeft(get: CommerceGet, record: WarehouseStepRecord): Promise<void> {
+    const codes = [...record.createdSources, ...(record.enabledSources ?? [])];
+    if (codes.length === 0) return;
+    const sources = await get(SOURCES_PATH).then((answer) => (answer as CommerceInventorySourceList | null)?.items ?? [], (): CommerceInventorySource[] => []);
+    const hashes = Object.fromEntries(sources.filter((s) => codes.includes(s.source_code)).map((s) => [s.source_code, fingerprintRow(s)]));
+    if (Object.keys(hashes).length > 0) record.sourceFingerprints = hashes;
+}
 
 /** Where an apply's lines go, and how it names a source in them. */
 interface Outcome {
@@ -265,15 +359,8 @@ async function linkSources(
     }
 }
 
-/**
- * Names for the undo's lines. The record keeps codes and ids; the store has the names. A
- * read that fails leaves the codes, since the undo itself must not wait on it.
- */
-async function undoNamers(
-    get: CommerceGet,
-    record: WarehouseStepRecord,
-): Promise<{ sourceName: (code: string) => string; stockName: (id: number) => string }> {
-    const inventory = await readInventory(get).catch((): Inventory => ({ sources: [], stocks: [], links: [] }));
+/** Names for the undo's lines: the record keeps codes and ids, the store has the names. */
+function undoNamers(inventory: Inventory, record: WarehouseStepRecord): { sourceName: (code: string) => string; stockName: (id: number) => string } {
     const stockName = (id: number): string =>
         inventory.stocks.find((stock) => stock.stock_id === id)?.name ?? (record.createdStock?.id === id ? record.createdStock.name : `stock ${id}`);
     return { sourceName: sourceNamer(inventory.sources), stockName };

@@ -130,7 +130,8 @@ describe('prepareStoreOnAdd', () => {
         const state = target.appBuilderComponents?.['erp-integration'];
         expect(state?.storePreparation?.steps['price-scope']).toStrictEqual({
             kind: 'config',
-            previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0' }],
+            // `wrote`: what the undo compares the store with, so a setting changed since is kept (step 06).
+            previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' }],
         });
         expect(state?.setupSteps?.['price-scope']).toMatchObject({ lastCheck: 'failed' });
         expect(saveProject).toHaveBeenCalledWith(target);

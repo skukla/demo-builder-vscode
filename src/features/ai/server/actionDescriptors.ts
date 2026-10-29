@@ -804,8 +804,14 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'newest step first, or the one stepId names. Settings go back to the value in force before; ' +
             'an attribute or shared catalog the run created is deleted (never one that pre-existed); a ' +
             'stock the run created is deleted and a source the run created is DISABLED, because Commerce ' +
-            'cannot delete a source. A step whose undo Commerce refuses keeps its record. WITHOUT confirm ' +
-            'it only answers which steps are recorded and what each holds. Takes the integration id.',
+            'cannot delete a source. What changed since is KEPT, never overwritten: a setting no longer ' +
+            'holding the value written, a shared catalog holding products, categories or companies the ' +
+            'run did not put there (its company is still taken out), a stock holding a source the run did ' +
+            'not link (its own links still go), a source changed since. Each step says what it kept in one ' +
+            'line (steps[].kept); show it to the user. Keeping is not a refusal; a kept catalog or stock stays ' +
+            'recorded, so undoing the step again deletes it once it is empty. A ' +
+            'step whose undo Commerce refuses keeps its record. WITHOUT confirm it only answers which ' +
+            'steps are recorded and what each holds. Takes the integration id.',
         map: dashboardHandlers,
         type: 'undoCommerceStorePreparation',
         inputSchema: {
@@ -826,7 +832,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'reading first; a value already in force is not written. With confirm:true it writes the ' +
             'rest in one call, names what Commerce refused (rejected, from the answer\'s errors list), ' +
             'and records the previous values on the project (data.previous); undo:true writes those ' +
-            'back and forgets them. Only the LAST write is recorded. For the settings a setup step ' +
+            'back and forgets them, keeping (data.kept) a setting no longer holding the value written; ' +
+            'undo:true without confirm previews that. Only the LAST write is recorded. For the settings a setup step ' +
             'declares, use prepare_commerce_store instead, which records per step.',
         map: dashboardHandlers,
         type: 'setCommerceConfig',

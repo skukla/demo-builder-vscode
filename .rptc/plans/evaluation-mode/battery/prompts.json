@@ -1371,6 +1371,16 @@
         "tier": 2
     },
     {
+        "id": "undo-price-scope-step",
+        "prompt": "Undo the price-scope setup step in my Commerce store, and tell me if anything was kept because it changed since.",
+        "expect": [
+            "undo_commerce_store_preparation"
+        ],
+        "cwd": "project",
+        "why": "Added 2026-10-29 with datapack-engine step 06 (AB-83): one step's undo by stepId, which keeps a setting changed since and says so in steps[].kept. A MISS means the agent rewrites the setting by hand with set_commerce_config or write_commerce_rest, over whatever was set since. Tier 2: it writes to the live store with confirm.",
+        "tier": 2
+    },
+    {
         "id": "set-commerce-config",
         "prompt": "Switch the catalog price scope in my Commerce store to Website, and tell me what it was before so I can put it back.",
         "expect": [

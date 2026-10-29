@@ -98,6 +98,14 @@ describe('undoErpSetup', () => {
         });
     });
 
+    // Step 06: removing the integration runs the same undo, so it says what it kept the same way.
+    it('says what the undo kept because it changed since, beside what it undid', async () => {
+        const kept = 'Kept the shared catalog Harbor Catalog: it holds 2 products Demo Builder did not put there.';
+        mockUndoPreparation.mockResolvedValueOnce({ reports: [{ title: 'Shared catalogs', state: 'undone', rejected: [], kept }], record: undefined, checks: {} });
+        const out = await undoErpSetup(createMockHandlerContext(), project(), 'erp-integration', report);
+        expect(out?.done).toEqual(['Cleared the erp_owner tag on 2 products.', 'Took erp_owner out of 1 attribute set.', 'Undid 1 demo setup step.', kept]);
+    });
+
     it('for one ERP: clears only its own tags, and leaves the sets and the preparation', async () => {
         await undoErpSetup(createMockHandlerContext(), project(), 'demo-erp-2', report);
 

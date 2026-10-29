@@ -71,7 +71,8 @@ describe('apply', () => {
         expect(applied).toEqual({
             changes: ['Payment on Account for the website: No → Yes'],
             rejected: [],
-            record: { kind: 'config', previous: [{ path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0' }] },
+            // `wrote` is what the undo compares the store with (step 06): kept when it moved since.
+            record: { kind: 'config', previous: [{ path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0', wrote: '1' }] },
             manual: 'Connect PayPal by hand.',
         });
     });
@@ -91,7 +92,7 @@ describe('apply', () => {
         const applied = await configFix(FIX).apply({ commerce, websiteCode: 'justrite', erpNames: [] });
         expect(applied.changes).toEqual(['Catalog Price Scope: Global → Website']);
         expect(applied.rejected).toEqual(['Payment on Account for the website: No → Yes: The path is not allowed']);
-        expect(applied.record).toEqual({ kind: 'config', previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0' }] });
+        expect(applied.record).toEqual({ kind: 'config', previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' }] });
     });
 
     it('a PUT that throws rejects every row it carried and records nothing', async () => {
@@ -126,8 +127,8 @@ describe('undo', () => {
             {
                 kind: 'config',
                 previous: [
-                    { path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0' },
-                    { path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0' },
+                    { path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' },
+                    { path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0', wrote: '1' },
                 ],
             },
         );
@@ -149,6 +150,84 @@ describe('undo', () => {
                 'Payment on Account for the website: Yes → No',
             ],
             rejected: [],
+        });
+    });
+
+    // Step 06 (AB-83, owner 2026-10-27): a setting whose value now is not the one the fix wrote
+    // is kept, and the undo says so in one line. No "undo anyway".
+    it('keeps a setting changed since the fix wrote it, writing back only the one still as it left it', async () => {
+        const commerce = store([['catalog/price/scope', '1']], [['payment/companycredit/active', '2']]);
+        const undone = await configFix(FIX).undo(
+            { commerce, websiteCode: 'justrite', erpNames: [] },
+            {
+                kind: 'config',
+                previous: [
+                    { path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' },
+                    // Written 1 over an inherited 0, and set to something else (2) since.
+                    { path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0', wrote: '1' },
+                ],
+            },
+        );
+        expect(commerce.writes()).toEqual([['PUT', 'system/config', { items: [{ path: 'catalog/price/scope', value: '0', scope: 'default' }] }]]);
+        expect(undone).toEqual({
+            changes: ['Catalog Price Scope: Website → Global'],
+            rejected: [],
+            kept: 'Kept Payment on Account for the website as it is: it was changed after Demo Builder set it.',
+        });
+    });
+
+    it('reads a record written before `wrote` was kept by the value the step writes', async () => {
+        const commerce = store([['catalog/price/scope', '1']]);
+        const undone = await configFix(FIX).undo(
+            { commerce, websiteCode: 'justrite', erpNames: [] },
+            { kind: 'config', previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0' }] },
+        );
+        // The step writes 1 and the store holds 1: still as the fix left it, so it goes back.
+        expect(commerce.writes()).toEqual([['PUT', 'system/config', { items: [{ path: 'catalog/price/scope', value: '0', scope: 'default' }] }]]);
+        expect(undone.kept).toBeUndefined();
+    });
+
+    it('keeps, and says why, a setting whose written value nothing records (an old set_commerce_config record)', async () => {
+        const commerce = store([['catalog/price/scope', '1'], ['sales/totals_sort/tax', '41']]);
+        const undone = await configFix({ kind: 'config', items: [] }).undo(
+            { commerce, websiteCode: 'justrite', erpNames: [] },
+            {
+                kind: 'config',
+                previous: [
+                    { path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0' },
+                    { path: 'sales/totals_sort/tax', scope: 'default', stored: '40', effective: '40' },
+                ],
+            },
+        );
+        expect(commerce.send).not.toHaveBeenCalled();
+        expect(undone.kept).toBe('Kept catalog/price/scope and sales/totals_sort/tax as they are: Demo Builder cannot tell they still hold the values it wrote.');
+    });
+
+    it('says nothing about a setting already back at the value it had before', async () => {
+        const commerce = store([['catalog/price/scope', '0']]);
+        const undone = await configFix(FIX).undo(
+            { commerce, websiteCode: 'justrite', erpNames: [] },
+            { kind: 'config', previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' }] },
+        );
+        expect(undone).toEqual({ changes: [], rejected: [] });
+    });
+
+    it('previews an undo the way it would run, writing nothing', async () => {
+        const commerce = store([['catalog/price/scope', '1']], [['payment/companycredit/active', '2']]);
+        const preview = await configFix(FIX).previewUndo(
+            { commerce, websiteCode: 'justrite', erpNames: [] },
+            {
+                kind: 'config',
+                previous: [
+                    { path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' },
+                    { path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0', wrote: '1' },
+                ],
+            },
+        );
+        expect(commerce.send).not.toHaveBeenCalled();
+        expect(preview).toEqual({
+            changes: ['Catalog Price Scope: Website → Global'],
+            kept: 'Kept Payment on Account for the website as it is: it was changed after Demo Builder set it.',
         });
     });
 

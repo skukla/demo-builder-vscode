@@ -35,11 +35,16 @@ export function mergedStepRecord(earlier: StorePreparationStepRecord | undefined
     }
     if (earlier?.kind === 'warehouse' && next.kind === 'warehouse') {
         const createdStock = earlier.createdStock ?? next.createdStock;
+        // A source's hash is of the store as the LATEST apply left it.
+        const hashes = { ...earlier.sourceFingerprints, ...next.sourceFingerprints };
+        const enabledSources = union(earlier.enabledSources ?? [], next.enabledSources ?? [], (code) => code);
         return {
             kind: 'warehouse',
             createdSources: union(earlier.createdSources, next.createdSources, (code) => code),
             ...(createdStock ? { createdStock } : {}),
             links: union(earlier.links, next.links, (link) => `${link.stockId}:${link.sourceCode}`),
+            ...(enabledSources.length > 0 ? { enabledSources } : {}),
+            ...(Object.keys(hashes).length > 0 ? { sourceFingerprints: hashes } : {}),
         };
     }
     if (earlier?.kind === 'shared-catalogs' && next.kind === 'shared-catalogs') {

@@ -40,10 +40,22 @@ export interface FixApplied {
     manual?: string;
 }
 
-/** What an undo put back, and what Commerce refused. */
+/** What an undo put back, what Commerce refused, and what it kept. */
 export interface FixUndone {
     changes: string[];
     rejected: string[];
+    /**
+     * One line naming what the undo left as it is because it changed since the fix (step 06,
+     * AB-83): a setting set again, a catalog or a stock holding someone else's things. Not a
+     * refusal. Absent when nothing was kept.
+     */
+    kept?: string;
+    /**
+     * What stays on the step's record: a catalog or stock the undo kept, so a later undo takes
+     * it once it is empty (owner 2026-10-29, as step 05's container rule). Absent when nothing
+     * stays; a kept setting or source is the SC's now and leaves the record.
+     */
+    remaining?: StorePreparationStepRecord;
 }
 
 export interface StepFix {

@@ -108,6 +108,8 @@ async function undoPrepared({ context, project, id, commerce, report, out }: Tea
     if (rejected.length > 0) out.failed.push(`Some of the demo setup was not undone (${rejected.join('; ')}).`);
     const undone = outcome.reports.filter((step) => step.state === 'undone').length;
     if (undone > 0) out.done.push(`Undid ${plural(undone, 'demo setup step', 'demo setup steps')}.`);
+    // What an undo kept because it changed since (step 06), in the step's own one line.
+    out.done.push(...outcome.reports.flatMap((step) => (step.kept ? [step.kept] : [])));
 }
 
 /**

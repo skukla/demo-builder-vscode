@@ -41,7 +41,7 @@ jest.mock('@/features/app-builder/services/storePreparation/storePreparationEngi
     applyPreparation: (...a: unknown[]) => mockApply(...a),
     undoPreparation: (...a: unknown[]) => mockUndo(...a),
 }));
-const mockConfigFix = { preview: jest.fn(), apply: jest.fn(), undo: jest.fn() };
+const mockConfigFix = { preview: jest.fn(), apply: jest.fn(), undo: jest.fn(), previewUndo: jest.fn() };
 jest.mock('@/features/app-builder/services/storePreparation/configFix', () => ({
     configFix: jest.fn(() => mockConfigFix),
 }));
@@ -258,6 +258,30 @@ describe('undoCommerceStorePreparation', () => {
         expect(stages.map(([stage]) => stage)).not.toContain('Applying the demo setup');
         expect(endPush(context)?.changes).toStrictEqual([{ label: 'Price scope', lines: ['Took erp_owner out of the attribute set Default'] }]);
     });
+
+    // Step 06: what an undo kept is said in one line, under its step on the result screen, and
+    // on the step in the agent's answer.
+    it('shows what an undo kept under its step, and answers it on the step', async () => {
+        const KEPT = 'Kept Catalog Price Scope as it is: it was changed after Demo Builder set it.';
+        mockUndo.mockResolvedValue({ reports: [{ ...APPLIED_REPORT, state: 'undone', changes: [], kept: KEPT }], record: undefined, checks: {} });
+        const { context } = setup({ storePreparation: RECORD });
+        const result = await handleUndoCommerceStorePreparation(context, { id: 'erp-integration', confirm: true, progress: 'modal' });
+        expect(endPush(context)?.changes).toStrictEqual([{ label: 'Price scope', lines: [KEPT] }]);
+        expect(result).toMatchObject({ success: true, data: { steps: [expect.objectContaining({ id: 'price-scope-website', kept: KEPT })] } });
+    });
+
+    it('without confirm, leaves the hashes out of what it answers is recorded', async () => {
+        const warehouse: StorePreparationRecord = {
+            at: 't',
+            steps: { 'erp-warehouse': { kind: 'warehouse', createdSources: ['justrite_warehouse'], links: [], sourceFingerprints: { justrite_warehouse: 'a'.repeat(64) } } },
+        };
+        const { context } = setup({ storePreparation: warehouse });
+        const result = await handleUndoCommerceStorePreparation(context, { id: 'erp-integration' });
+        expect(result).toStrictEqual({
+            success: true,
+            data: { confirmed: false, at: 't', steps: [{ id: 'erp-warehouse', recorded: { kind: 'warehouse', createdSources: ['justrite_warehouse'], links: [] } }] },
+        });
+    });
 });
 
 describe('setCommerceConfig', () => {
@@ -300,8 +324,19 @@ describe('setCommerceConfig', () => {
         expect(await handleSetCommerceConfig(context, { undo: true, confirm: true })).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
         const recorded = setup({}, { commerceConfigChange: { at: 't', previous: PREVIOUS } });
         const result = await handleSetCommerceConfig(recorded.context, { undo: true, confirm: true });
+        // Built with no items: the record's `wrote`, not a guessed value, says what was written.
+        expect(configFix).toHaveBeenLastCalledWith({ kind: 'config', items: [] });
         expect(mockConfigFix.undo).toHaveBeenCalledWith(expect.objectContaining({ commerce: COMMERCE }), { kind: 'config', previous: PREVIOUS });
         expect(recorded.saved()).not.toHaveProperty('commerceConfigChange');
         expect(result).toMatchObject({ success: true, data: { confirmed: true, undone: true } });
+    });
+
+    it('undo: true without confirm previews the undo as it would run, keeping what changed since', async () => {
+        mockConfigFix.previewUndo.mockResolvedValue({ changes: [], kept: 'Kept catalog/price/scope as it is: it was changed after Demo Builder set it.' });
+        const recorded = setup({}, { commerceConfigChange: { at: 't', previous: PREVIOUS } });
+        const result = await handleSetCommerceConfig(recorded.context, { undo: true });
+        expect(mockConfigFix.previewUndo).toHaveBeenCalledWith({ commerce: COMMERCE, websiteCode: 'acme', erpNames: [] }, { kind: 'config', previous: PREVIOUS });
+        expect(mockConfigFix.preview).not.toHaveBeenCalled();
+        expect(result).toStrictEqual({ success: true, data: { confirmed: false, changes: [], kept: 'Kept catalog/price/scope as it is: it was changed after Demo Builder set it.' } });
     });
 });

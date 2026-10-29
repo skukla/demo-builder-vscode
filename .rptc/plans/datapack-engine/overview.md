@@ -98,7 +98,7 @@ layer is stored as ordinary pack rows, and when a pack carries settings itself, 
 | 03 | [Wire the engine together](step-03-wire-engine.md), then make it the default | in progress |
 | 04 | [One rule for "is this still as we left it?"](step-04-still-as-we-left-it.md) | done |
 | 05 | [Capture and repeat installs](step-05-capture-and-repeat-installs.md) | built, not yet live; the removal box and the "Always" setting wait on 07 |
-| 06 | [The setup guide's undos keep what changed since](step-06-setup-guide-undos.md) (AB-83) | to do |
+| 06 | [The setup guide's undos keep what changed since](step-06-setup-guide-undos.md) (AB-83) | built, not yet live |
 | 07 | [Each demo has its own pack, shared by reference](step-07-demo-packs.md) | to do |
 | 08 | [Customers and B2B](step-08-customers-b2b.md) | to do |
 | 09 | [Store settings, as a layer beside a pack](step-09-store-settings.md) | to do |

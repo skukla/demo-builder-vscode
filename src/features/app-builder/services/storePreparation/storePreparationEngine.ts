@@ -70,6 +70,7 @@ interface ReportParts {
     manual?: string;
     note?: string;
     summary?: string;
+    kept?: string;
 }
 
 const report = (step: SetupStep, state: PreparationStepState, parts: ReportParts = {}): PreparationStepReport => ({
@@ -82,6 +83,7 @@ const report = (step: SetupStep, state: PreparationStepState, parts: ReportParts
     rejected: parts.rejected ?? [],
     ...(parts.manual ? { manual: parts.manual } : {}),
     ...(parts.note ? { note: parts.note } : {}),
+    ...(parts.kept ? { kept: parts.kept } : {}),
 });
 
 /** The steps a run covers: the ones asked for, else every one. */
@@ -171,7 +173,9 @@ export async function applyPreparation(steps: SetupStep[], saved: Saved, deps: P
 /**
  * Undo the recorded steps, newest first (the guide's order reversed), or one of them. A
  * step's entry leaves the record once its undo ran with nothing refused; the record itself
- * goes with the last entry.
+ * goes with the last entry. What a fix kept because it changed since (step 06) is not a
+ * refusal: the report carries the fix's one line as `kept`, and the entry goes, except for a
+ * kept catalog or stock (`remaining`), which stays so a later undo can take it once empty.
  */
 export async function undoPreparation(steps: SetupStep[], record: StorePreparationRecord, deps: PreparationDeps, stepId?: string): Promise<PreparationOutcome> {
     const reports: PreparationStepReport[] = [];
@@ -188,9 +192,10 @@ export async function undoPreparation(steps: SetupStep[], record: StorePreparati
             const undone = await fixFor(step.fix).undo(deps, entry);
             if (undone.rejected.length === 0) {
                 const { [step.id]: _done, ...rest } = left;
-                left = rest;
+                // A kept catalog or stock stays recorded, so a later undo takes it once it is empty.
+                left = undone.remaining ? { ...rest, [step.id]: undone.remaining } : rest;
             }
-            reports.push(report(step, undone.rejected.length > 0 ? 'rejected' : 'undone', { changes: undone.changes, rejected: undone.rejected }));
+            reports.push(report(step, undone.rejected.length > 0 ? 'rejected' : 'undone', { changes: undone.changes, rejected: undone.rejected, kept: undone.kept }));
         } catch (error) {
             reports.push(report(step, 'rejected', { rejected: [errorText(error)] }));
         }

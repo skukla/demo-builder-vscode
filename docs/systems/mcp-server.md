@@ -461,7 +461,10 @@ setup guide's Apply all and per-step Apply — settings through
 `erp_owner`/`brand` attributes, a warehouse and stock per ERP, a shared catalog per company
 — checking each step first and skipping one a datapack already did, and recording what each
 changed on the integration so the second puts it back newest first (a source it created is
-disabled, not deleted: Commerce cannot). The third writes settings outside a catalog step and
+disabled, not deleted: Commerce cannot). The undo keeps what changed since and says so in one
+line per step (`steps[].kept`, datapack-engine step 06): a setting no longer holding the value
+written, a shared catalog holding what the run did not put there, a stock holding a source the
+run did not link, a source changed since. The third writes settings outside a catalog step and
 records the previous values on the project, which `undo: true` writes back. The setup
 checklist tools say which steps are applicable (`fix` on the item) and which were applied
 (`fixApplied`). `add_integration` for the ERP integration runs the same engine before its ERP

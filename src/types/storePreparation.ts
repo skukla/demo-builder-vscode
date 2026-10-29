@@ -21,6 +21,11 @@ export interface CommerceConfigPrevious {
     stored: string | null;
     /** The value in force at that scope before the write (own, else inherited, else Commerce's "0"). */
     effective: string;
+    /**
+     * The value Demo Builder wrote over it. The undo puts the setting back only while it still
+     * holds this (datapack-engine step 06). Absent on records written before 2026-10-29.
+     */
+    wrote?: string;
 }
 
 /** What a config fix recorded. */
@@ -53,13 +58,32 @@ export interface WarehouseStepRecord {
      * switches them off again. Absent on records written before 2026-10-26.
      */
     enabledSources?: string[];
+    /**
+     * Each created or switched-on source as the apply left it: its row in the sources list, read
+     * after the writes and hashed (`fingerprintRow`). The undo switches a source off only while
+     * its row still hashes the same (step 06). Absent on records written before 2026-10-29, and
+     * for a source the read-back missed: the undo then keeps it on and says why.
+     */
+    sourceFingerprints?: Record<string, string>;
+}
+
+/** What a shared catalog holds, as Commerce lists it: company ids, SKUs, category ids. */
+export interface SharedCatalogHeld {
+    companies: number[];
+    products: string[];
+    categories: number[];
 }
 
 /** What `company-shared-catalogs` recorded. */
 export interface SharedCatalogsStepRecord {
     kind: 'shared-catalogs';
-    /** The catalogs this run created, each with the company it assigned. */
-    catalogs: Array<{ id: number; name: string; companyId: number; companyName: string }>;
+    /**
+     * The catalogs this run created, each with the company it assigned and what the catalog held
+     * once made (`held`, read back), so the undo can tell what was put in it since (step 06).
+     * `held` is absent on records written before 2026-10-29, and when the read-back failed: the
+     * catalog then counts as holding only its company.
+     */
+    catalogs: Array<{ id: number; name: string; companyId: number; companyName: string; held?: SharedCatalogHeld }>;
 }
 
 export type StorePreparationStepRecord =
@@ -131,6 +155,12 @@ export interface PreparationStepReport {
     manual?: string;
     /** What the step's check found in the store just now, in its words: shown beside the state. */
     note?: string;
+    /**
+     * An undo's one line about what it left as it is because it changed since the fix
+     * (datapack-engine step 06): "Kept the shared catalog Harbor Catalog: it holds 2 products
+     * Demo Builder did not put there." Shown on the result screen under the step.
+     */
+    kept?: string;
 }
 
 /**

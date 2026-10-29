@@ -20,6 +20,7 @@ import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operatio
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
 import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
 import { configFix } from '@/features/app-builder/services/storePreparation/configFix';
+import type { FixDeps } from '@/features/app-builder/services/storePreparation/fixContract';
 import {
     applyPreparation,
     previewPreparation,
@@ -32,10 +33,10 @@ import { erpNamesOf, setupCheckReader } from '@/features/dashboard/services/setu
 import { recordsAfterRun } from '@/features/dashboard/services/setupStepRecords';
 import { openCommerce, type CommerceClient } from '@/features/project-creation/services/erpAssignProducts';
 import type { SetupConfigFixItem } from '@/types/appBuilderComponents';
-import type { AppBuilderComponentState, SetupStepRecord } from '@/types/base';
+import type { AppBuilderComponentState, Project, SetupStepRecord } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
-import type { PreparationStepReport, StorePreparationRecord } from '@/types/storePreparation';
+import type { ConfigStepRecord, PreparationStepReport, StorePreparationRecord, StorePreparationStepRecord } from '@/types/storePreparation';
 import type { OperationChange } from '@/types/webviewPayloads';
 import type {
     PrepareStoreRequestPayload,
@@ -130,8 +131,23 @@ const UNDO_WORDS: RunWords = { title: 'Undoing the demo setup', stage: OPERATION
  */
 function changedSteps(reports: PreparationStepReport[]): OperationChange[] {
     return reports
-        .filter((report) => report.changes.length > 0)
-        .map((report) => ({ label: report.label, lines: [...report.changes, ...(report.manual ? [`By hand: ${report.manual}`] : [])] }));
+        .filter((report) => report.changes.length > 0 || report.kept)
+        .map((report) => ({ label: report.label, lines: linesOf(report) }));
+}
+
+/** A step's result lines: what it changed, then what an undo kept because it changed since (step 06), then what stays by hand. */
+function linesOf(report: PreparationStepReport): string[] {
+    const lines = [...report.changes];
+    if (report.kept) lines.push(report.kept);
+    if (report.manual) lines.push(`By hand: ${report.manual}`);
+    return lines;
+}
+
+/** A recorded step as the undo's preview answers it: the source hashes are for the undo, not the reader. */
+function readableEntry(entry: StorePreparationStepRecord): StorePreparationStepRecord {
+    if (entry.kind !== 'warehouse') return entry;
+    const { sourceFingerprints: _hashes, ...rest } = entry;
+    return rest;
 }
 
 /** The one line a run that changed nothing says, unless Commerce refused something (the warning says that). */
@@ -238,7 +254,7 @@ export const handleUndoCommerceStorePreparation: MessageHandler<UndoStorePrepara
         if (payload?.confirm !== true) {
             const steps = Object.entries(record.steps)
                 .filter(([id]) => !stepId || id === stepId)
-                .map(([id, entry]) => ({ id, recorded: entry }));
+                .map(([id, entry]) => ({ id, recorded: readableEntry(entry) }));
             return { success: true, data: { confirmed: false, at: record.at, steps } };
         }
         const outcome = await runInProgress(context, opened, payload, UNDO_WORDS, (deps) => undoPreparation(opened.steps, record, deps, stepId));
@@ -263,6 +279,26 @@ function validItems(items: unknown): SetupConfigFixItem[] | string {
 }
 
 /**
+ * `set_commerce_config`'s `undo: true`: preview, or put back what the project records and forget
+ * it. The fix names no items, so only the record's `wrote` says what was written (step 06), and a
+ * setting changed since is kept (`kept`).
+ */
+async function undoCommerceConfig(context: HandlerContext, project: Project, deps: FixDeps, record: ConfigStepRecord, confirm: boolean): Promise<HandlerResponse> {
+    const fix = configFix({ kind: 'config', items: [] });
+    try {
+        if (!confirm) return { success: true, data: { confirmed: false, ...(await fix.previewUndo(deps, record)) } };
+        const refused = await guardOrBlock(context, project, () => undefined);
+        if (refused) return { success: false, error: refused.error, code: refused.code };
+        const undone = await fix.undo(deps, record);
+        const { commerceConfigChange: _old, ...rest } = project;
+        if (undone.rejected.length === 0) await context.stateManager.saveProject(rest);
+        return { success: true, data: { confirmed: true, undone: true, ...undone } };
+    } catch (error) {
+        return failed('change the settings', error);
+    }
+}
+
+/**
  * Handle 'setCommerceConfig' — write settings through `PUT /V1/system/config`, previewing
  * without `confirm`, recording the previous values on the project so `undo: true` puts them
  * back. The one tool that writes settings outside a catalog step.
@@ -280,17 +316,12 @@ export const handleSetCommerceConfig: MessageHandler<SetCommerceConfigRequestPay
     if ('refusal' in commerce) return { success: false, error: commerce.refusal, code: ErrorCode.CONFIG_INVALID };
     const { scope } = await setupCheckReader(context, project);
     const deps = { commerce, websiteCode: scope.websiteCode, erpNames: [] };
-    const fix = configFix({ kind: 'config', items: undo ? (record?.previous ?? []).map((row) => ({ path: row.path, value: row.effective, scope: row.scope })) : items });
+    if (undo && record) return undoCommerceConfig(context, project, deps, { kind: 'config', previous: record.previous }, payload?.confirm === true);
+    const fix = configFix({ kind: 'config', items });
     try {
         if (payload?.confirm !== true) return { success: true, data: { confirmed: false, ...(await fix.preview(deps)) } };
         const refused = await guardOrBlock(context, project, () => undefined);
         if (refused) return { success: false, error: refused.error, code: refused.code };
-        if (undo && record) {
-            const undone = await fix.undo(deps, { kind: 'config', previous: record.previous });
-            const { commerceConfigChange: _old, ...rest } = project;
-            if (undone.rejected.length === 0) await context.stateManager.saveProject(rest);
-            return { success: true, data: { confirmed: true, undone: true, ...undone } };
-        }
         const applied = await fix.apply(deps);
         if (applied.record?.kind === 'config') {
             await context.stateManager.saveProject({ ...project, commerceConfigChange: { at: new Date().toISOString(), previous: applied.record.previous } });
