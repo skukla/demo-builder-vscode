@@ -203,7 +203,8 @@ describe('ProjectCard', () => {
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
             expect(screen.getByText('Republishing')).toBeInTheDocument();
-            expect(screen.getByText('Deployed')).toBeInTheDocument();
+            // Alone: what is deployed is changing under it (owner, 2026-10-29).
+            expect(screen.queryByText('Deployed')).not.toBeInTheDocument();
         });
 
         it('keeps the RUNTIME line separate — a different axis', () => {

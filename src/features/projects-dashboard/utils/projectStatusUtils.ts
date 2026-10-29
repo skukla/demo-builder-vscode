@@ -220,6 +220,9 @@ function concernFromStorefront(
  * @returns the line, or null when the project has nothing deployable at all
  */
 export function getDeploymentSummary(project: Project): DeploymentSummary | null {
+    // While work is in flight what is deployed is changing under it; the work's own
+    // line ("Resetting") is the one to show (2026-10-29: "Resetting" sat over "Deployed").
+    if (UNSETTLED_TEXT[project.status]) return null;
     const concerns = [
         concernFromComponentStatus(getMeshStatusKey(project)),
         concernFromStorefront(project.edsStorefrontStatusSummary),

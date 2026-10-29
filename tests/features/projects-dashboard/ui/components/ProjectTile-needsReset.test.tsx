@@ -112,6 +112,18 @@ describe.each(TILES)('the project %s', (name, Tile) => {
         expect(screen.queryByText('Needs reset')).not.toBeInTheDocument();
     });
 
+    // Found 2026-10-29: Bodea's card read "Resetting" with "Deployed" under it. What is
+    // deployed is in flux until the work ends, so the work in flight is the only line.
+    it.each(['creating', 'resetting', 'republishing'] as const)(
+        'says nothing about what is deployed while %s',
+        (status) => {
+            renderTile(Tile, storefront(new Date('2026-01-01T00:00:00Z'), '2999-01-01', status));
+
+            expect(screen.queryByText('Deployed')).not.toBeInTheDocument();
+            expect(screen.queryByText('Published')).not.toBeInTheDocument();
+        },
+    );
+
     it('says "Republishing" while a republish runs', () => {
         renderTile(Tile, storefront(new Date('2026-01-01T00:00:00Z'), undefined, 'republishing'));
 

@@ -9864,7 +9864,7 @@
             "anchors": [
                 "].filter((concern): concern is DeploymentConcern => concern !== null);"
             ],
-            "line": 228,
+            "line": 231,
             "mutants": 2,
             "category": "branch",
             "reason": "Both survivors here let nulls stay in the concerns array, and a null cannot change the answer: the winner is chosen with CONCERN_ORDER.find(c => concerns.includes(c)), and CONCERN_ORDER holds only the four real concerns, so a null matches nothing. When every source is null the array is non-empty but the find still returns undefined, and the guard below returns null exactly as the length check would have.",
@@ -9901,7 +9901,7 @@
             "anchors": [
                 "text: getStatusText(project.status, undefined, true),"
             ],
-            "line": 273,
+            "line": 276,
             "mutants": 1,
             "category": "branch",
             "reason": "This call is only reached for an EDS project whose status is in UNSETTLED_TEXT ('creating', 'resetting', 'republishing') \u2014 the guard above returns null for anything else. getStatusText answers from UNSETTLED_TEXT for those before it looks at isEds, so the flag cannot change the text here. Re-checked 2026-10-16 when 'creating' joined the guard (PL-82).",
@@ -9914,7 +9914,7 @@
             "anchors": [
                 "variant: getStatusVariant(project.status, true),"
             ],
-            "line": 274,
+            "line": 277,
             "mutants": 1,
             "category": "branch",
             "reason": "This call is only reached for an EDS project whose status is in UNSETTLED_TEXT ('creating', 'resetting', 'republishing') \u2014 the guard above returns null for anything else. getStatusVariant answers 'info' for all three before it looks at isEds, so the flag cannot change the variant here. Re-checked 2026-10-16 when 'creating' joined the guard (PL-82) and in-progress turned blue.",
