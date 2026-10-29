@@ -174,6 +174,43 @@ describe('confirmStorefrontCodeServed', () => {
         expect(files.treeCommits.earliestRecentCommitSha).not.toHaveBeenCalled();
     });
 
+    // Bodea's reset, 2026-10-29: "28 code files did not reach the live site", every one a
+    // `blocks/<name>/_<name>.json`. Its .hlxignore says `_*.json`: AEM never serves them.
+    it('leaves out what the storefront tells AEM never to serve', async () => {
+        serve({ ...TEMPLATE_SERVED, 'blocks/hero-3/hero-3.js': 'new' });
+        const files = github({
+            filesChangedSince: jest.fn().mockResolvedValue(['blocks/hero-3/_hero-3.json', 'blocks/hero-3/hero-3.js']),
+        });
+        files.getFileContent.mockImplementation(async (_o: string, _r: string, path: string) => ({
+            content: path === '.hlxignore' ? '.*\n_*.json\n' : 'new',
+            sha: 's',
+            path,
+        }));
+        const previewCode = jest.fn().mockResolvedValue(undefined);
+
+        const said = await confirmStorefrontCodeServed(files, { previewCode }, SITE, 'reset', createMockLogger());
+
+        expect(said).toBeUndefined();
+        expect(previewCode).not.toHaveBeenCalled();
+        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-justrite', '.hlxignore', 'head');
+        const fetched = (global.fetch as jest.Mock).mock.calls.map(([url]) => new URL(url).pathname);
+        expect(fetched).not.toContain('/blocks/hero-3/_hero-3.json');
+    });
+
+    it('CONTROL: still checks a changed file when there is no .hlxignore', async () => {
+        serve({ ...TEMPLATE_SERVED });
+        const files = github({ filesChangedSince: jest.fn().mockResolvedValue(['blocks/hero-3/_hero-3.json']) });
+        files.getFileContent.mockImplementation(async (_o: string, _r: string, path: string) =>
+            path === '.hlxignore' ? undefined : { content: 'new', sha: 's', path },
+        );
+
+        const previewCode = jest.fn().mockResolvedValue(undefined);
+
+        const said = await confirmStorefrontCodeServed(files, { previewCode }, SITE, 'reset', createMockLogger());
+
+        expect(said).toContain('blocks/hero-3/_hero-3.json');
+    });
+
     it("compares a just-created storefront from the commit its template made", async () => {
         serve('new');
         const files = github();

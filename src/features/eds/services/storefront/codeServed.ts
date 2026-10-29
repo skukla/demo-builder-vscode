@@ -20,6 +20,7 @@
  * @module features/eds/services/storefront/codeServed
  */
 
+import { hlxIgnored, parseHlxIgnore } from './hlxIgnore';
 import { aemLiveBaseUrl } from './storefrontProbe';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { sleep } from '@/core/utils/sleep';
@@ -238,7 +239,12 @@ export async function confirmStorefrontCodeServed(
         const head = await githubFileOps.getLatestCommitSha(site.owner, site.repo);
         const base = since ?? (await githubFileOps.treeCommits.earliestRecentCommitSha(site.owner, site.repo));
         if (!head || !base || head === base) return undefined;
-        const changed = await githubFileOps.treeCommits.filesChangedSince(site.owner, site.repo, base);
+        // What the storefront tells AEM never to serve is not "missing" (Bodea's `_*.json`).
+        const hlxignore = (await githubFileOps.getFileContent(site.owner, site.repo, '.hlxignore', head))?.content;
+        const rules = parseHlxIgnore(hlxignore ?? '');
+        const changed = (await githubFileOps.treeCommits.filesChangedSince(site.owner, site.repo, base)).filter(
+            (path) => !hlxIgnored(rules, path),
+        );
         const deps = codeServedDeps(githubFileOps, helix, site, head, logger);
         const missing = await confirmTemplateServed(deps);
         if (missing.length > 0) return templateNotServedSentence(missing);
