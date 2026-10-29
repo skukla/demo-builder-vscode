@@ -90,6 +90,7 @@ import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromp
 import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
+import { registerDaLiveForcedSignInWatch } from '@/features/eds/handlers/daLive/daLiveSignedOutNotice';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
@@ -468,6 +469,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 void ProjectDashboardWebviewCommand.refreshStatus();
             }),
         );
+
+        // A FORCED Adobe sign-in also ends the DA.live sign-in (measured 2026-10-28); the
+        // SC is told at once, on every forced path, and offered the DA.live sign-in.
+        context.subscriptions.push(registerDaLiveForcedSignInWatch(context, authenticationService));
 
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it

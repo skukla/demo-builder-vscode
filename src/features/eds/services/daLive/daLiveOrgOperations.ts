@@ -256,30 +256,6 @@ export class DaLiveOrgOperations {
 }
 
 /**
- * Does DA.live accept this token RIGHT NOW? One `HEAD /list/{org}/`.
- *
- * 401 → `refused`: the only status that indicts the CREDENTIAL. 403 → `accepted`: the
- * org refused a credential the server honoured, a permission fact rather than an auth
- * one. Anything else that returns → `accepted`. A transport failure → `unknown`, so a
- * flaky network never reads as a refusal.
- *
- * Shared by the sign-in check (`DaLiveAuthService.isServerAccepted`) and the config
- * reads, where a 401 alone cannot say whether the sign-in expired or the identity does
- * not own the org (EDS-54).
- */
-export async function serverVerdict(orgName: string, token: string): Promise<'accepted' | 'refused' | 'unknown'> {
-    try {
-        const response = await fetch(`${DA_LIVE_BASE_URL}/list/${encodeURIComponent(orgName)}/`, {
-            method: 'HEAD',
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        return response.status === 401 ? 'refused' : 'accepted';
-    } catch {
-        return 'unknown';
-    }
-}
-
-/**
  * Check whether a DA.live org grants write access to the token holder.
  *
  * Sends `HEAD /list/{org}` and reads the `X-da-actions` response header.

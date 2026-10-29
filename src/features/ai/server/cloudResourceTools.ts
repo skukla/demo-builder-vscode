@@ -18,15 +18,21 @@
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
+import { agentSiteCode } from './agentProjectCleanup';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
+import {
+    getDaLiveAuthService,
+    getGitHubServices,
+    tryCreateDaLiveTokenProvider,
+} from '@/features/eds/handlers/edsHelpers';
 import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import { firstUsableDaLiveToken } from '@/features/eds/services/daLive/daLiveTokenChain';
 import { projectsSharingRepo } from '@/features/eds/services/storefront/sharedRepoProjects';
+import { deleteStorefrontRepository } from '@/features/eds/services/storefront/storefrontCodeRemoval';
 import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -214,7 +220,7 @@ export function registerCloudResourceTools(
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Permanently delete a GitHub repository (irreversible). Requires confirm:true and confirmName="owner/repo".',
+                'Permanently delete a GitHub repository (irreversible), and for a storefront its code on aem.live. A storefront is kept (kept:true, deleted:false) when there is no working DA.live sign-in, because its code cannot be removed once the repository is gone. Requires confirm:true and confirmName="owner/repo".',
             inputSchema: {
                 owner: z.string().describe('Repository owner (GitHub username or org)'),
                 repo: z.string().describe('Repository name (not the full owner/repo)'),
@@ -244,8 +250,17 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_GITHUB);
             }
             try {
-                await getGitHubServices(ctx.context.secrets).repoLifecycle.deleteRepository(owner, repo);
-                return asText({ deleted: true, repo: fullName });
+                // The button's path: a storefront's code on aem.live goes after the repository (EDS-67).
+                const { repoLifecycle, fileOperations } = getGitHubServices(ctx.context.secrets);
+                const { code, kept } = await deleteStorefrontRepository({ owner, repo }, {
+                    files: fileOperations,
+                    deleteRepository: (o, r) => repoLifecycle.deleteRepository(o, r),
+                    tokenProvider: tryCreateDaLiveTokenProvider(ctx.context),
+                    logger: ctx.logger,
+                });
+                // A storefront with no working DA.live sign-in is kept, so its code can go later.
+                if (kept) return asText({ deleted: false, kept: true, repo: fullName, error: kept });
+                return asText({ deleted: true, repo: fullName, ...(code ? { siteCode: agentSiteCode(code) } : {}) });
             } catch (err) {
                 return asText({
                     deleted: false,
@@ -301,7 +316,7 @@ export function registerCloudResourceTools(
             needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Delete all content for a DA.live site, and take its pages (product pages included; see productPages in the result) off the CDN when the GitHub repo is given (irreversible). The pages to unpublish are what Helix lists as published, so a site whose content is already gone still comes down. stillPublished is false only when the live host was checked afterwards and the pages were gone; publishState (down, still-live, unknown) and publishSummary say which, including when it could not be told. Requires confirm:true and confirmName="org/site".',
+                'Delete all content for a DA.live site, and take its pages (product pages included; see productPages in the result) off the CDN when the GitHub repo is given (irreversible). The pages to unpublish are what Helix lists as published, so a site whose content is already gone still comes down. stillPublished is false only when the live host was checked afterwards and the pages were gone; publishState (down, still-live, sign-in-refused, unknown) and publishSummary say which, including when it could not be told. Pages still live or AEM refusing the sign-in stop it before the content is deleted (error says so). Requires confirm:true and confirmName="org/site".',
             inputSchema: {
                 org: z.string().describe('DA.live organization name'),
                 site: z.string().describe('DA.live site name'),

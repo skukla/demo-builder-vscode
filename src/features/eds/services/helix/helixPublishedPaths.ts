@@ -26,6 +26,7 @@
  * @module features/eds/services/helix/helixPublishedPaths
  */
 
+import { DaLiveAuthError } from '../types';
 import type { HelixAdminAuth } from './helixAdminAuth';
 import { HELIX_ADMIN_URL } from './helixApiClient';
 import { parseBulkJobResponse } from './helixBulkJobs';
@@ -47,6 +48,18 @@ interface StatusJobDetails {
 const STATUS_TOPIC = 'status';
 
 /**
+ * A refusal of the SIGN-IN, not "could not tell": thrown as the error every DA.live call
+ * raises when its sign-in is refused, so a teardown stops on it (EDS-65's stop) instead of
+ * carrying on as if the listing merely failed. Measured 2026-10-28: after a forced Adobe
+ * sign-in cancelled the DA.live token, this listing answered 403 and a delete went on to
+ * remove the DA.live content and config.
+ */
+function refusedOr(response: Response, error: string): Error {
+    const message = `${error} (HTTP ${response.status})`;
+    return response.status === 401 || response.status === 403 ? new DaLiveAuthError(message) : new Error(message);
+}
+
+/**
  * The DA.live Bearer (what a site with an admin role requires) plus the GitHub token when
  * there is one. Teardown builds its Helix client without GitHub, so its absence is not
  * an error here; Helix's own answer decides.
@@ -66,7 +79,7 @@ async function readStoppedJob(url: string, headers: Record<string, string>): Pro
     const response = await fetch(url, { method: 'GET', headers, signal: AbortSignal.timeout(TIMEOUTS.NORMAL) });
     // The job endpoint can lag the 202 that announced it.
     if (response.status === 404) return undefined;
-    if (!response.ok) throw new Error(`Helix refused the status job's results (HTTP ${response.status})`);
+    if (!response.ok) throw refusedOr(response, "Helix refused the status job's results");
     const details = (await response.json()) as StatusJobDetails;
     if (details.state !== 'stopped') return undefined;
     if (details.error) throw new Error(`Helix's status job failed: ${details.error}`);
@@ -84,8 +97,8 @@ async function readStoppedJob(url: string, headers: Record<string, string>): Pro
  * @param branch - the ref, `main`
  * @param pattern - a path pattern such as `/products/*`
  * @returns the paths; empty only when Helix answered with an empty list
- * @throws when the request is refused, the job fails or outlives its deadline, or the
- *   answer carries no page list
+ * @throws when the request is refused (a `DaLiveAuthError` for a 401 or 403), the job
+ *   fails or outlives its deadline, or the answer carries no page list
  */
 export async function listPublishedPaths(
     deps: PublishedPathsDeps,
@@ -102,7 +115,7 @@ export async function listPublishedPaths(
         signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
     });
     if (response.status !== 202) {
-        throw new Error(`Helix refused to list the published pages (HTTP ${response.status})`);
+        throw refusedOr(response, 'Helix refused to list the published pages');
     }
     const { jobName } = await parseBulkJobResponse(response, STATUS_TOPIC, deps.logger);
     if (!jobName) throw new Error('Helix accepted the status request but named no job');

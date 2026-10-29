@@ -188,6 +188,24 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             expect(kept).toHaveBeenCalledTimes(1);
         });
 
+        // 2026-10-28: a forced sign-in also ends the DA.live sign-in, so the eds
+        // feature registers a watch; every registered watch is read around a forced run.
+        it('reads every registered watch around a forced sign-in, and none once disposed', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult('x'.repeat(150)));
+            const afterKept = jest.fn(async () => undefined);
+            const kept = jest.fn(async () => afterKept);
+            const gone = jest.fn(async () => async () => undefined);
+            authService.watchForcedSignIns(kept);
+            authService.watchForcedSignIns(gone).dispose();
+
+            await authService.login(true);
+            await authService.login(false);
+
+            expect(kept).toHaveBeenCalledTimes(1);
+            expect(afterKept).toHaveBeenCalledTimes(1);
+            expect(gone).not.toHaveBeenCalled();
+        });
+
         it('should NOT retry when CLI succeeds with valid token', async () => {
             const token = 'x'.repeat(150);
             mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));

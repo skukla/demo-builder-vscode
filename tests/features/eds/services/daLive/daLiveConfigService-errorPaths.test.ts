@@ -223,7 +223,10 @@ describe('a transport failure is re-wrapped', () => {
 });
 
 // EDS-54: a config 401 means an expired sign-in OR an identity that does not own the org,
-// and one HEAD on the org's listing tells them apart (a 401 there indicts the credential).
+// and IMS's validate_token tells them apart (valid:false indicts the credential).
+const IMS_VALIDATE =
+    'https://ims-na1.adobelogin.com/ims/validate_token/v1?client_id=darkalley&type=access_token';
+const imsSays = (valid: boolean) => ({ status: 200, json: async () => ({ valid, expires_at: 1 }) });
 describe('DaLiveConfigService — a 401 on a config read', () => {
     let service: DaLiveConfigService;
 
@@ -232,21 +235,21 @@ describe('DaLiveConfigService — a 401 on a config read', () => {
         ({ service } = setupConfigService());
     });
 
-    it('is the expired sign-in when DA.live refuses the credential itself', async () => {
-        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce({ status: 401 });
+    it('is the expired sign-in when IMS no longer accepts the credential', async () => {
+        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce(imsSays(false));
 
         await expect(service.getOrgConfig(testOrg)).rejects.toBeInstanceOf(DaLiveAuthError);
-        expect(mockFetch.mock.calls[1][0]).toBe(`https://admin.da.live/list/${testOrg}/`);
+        expect(mockFetch.mock.calls[1][0]).toBe(IMS_VALIDATE);
     });
 
     it('stays the plain 401 when the credential is fine: this identity does not own the org', async () => {
-        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce({ status: 200 });
+        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce(imsSays(true));
 
         await expect(service.getOrgConfig(testOrg)).rejects.toThrow(/^Failed to read org config: 401 Unauthorized$/);
     });
 
     it('stops the access grant with it, rather than logging and carrying on', async () => {
-        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce({ status: 401 });
+        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce(imsSays(false));
 
         await expect(service.grantUserAccess(testOrg, testSite, 'user@example.com')).rejects.toBeInstanceOf(DaLiveAuthError);
     });

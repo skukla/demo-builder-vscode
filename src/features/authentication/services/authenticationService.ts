@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { forgetPreviousSignIn, runAdobeLogin, type AdobeSignInDeps } from './adobeSignIn';
+import { forgetPreviousSignIn, runAdobeLogin, type AdobeSignInDeps, type ForcedSignInWatch } from './adobeSignIn';
 import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
 import type { SavedState } from './orgServicesSavedCatalog';
 import { getLogger } from '@/core/logging/debugLogger';
@@ -48,6 +48,8 @@ export class AuthenticationService {
     private readonly signIn: (force: boolean) => Promise<boolean>;
     /** Who hears that a sign-in succeeded (see onDidSignIn). */
     private readonly signInListeners = new Set<() => void>();
+    /** What a forced sign-in is watched for (see watchForcedSignIns). */
+    private readonly forcedSignInWatches = new Set<ForcedSignInWatch>();
 
     constructor(
         extensionPath: string,
@@ -86,6 +88,12 @@ export class AuthenticationService {
             logger,
             debugLogger: this.debugLogger,
             stepLogger: () => this.ensureStepLogger(),
+            watchForcedSignIn: async () => {
+                const afters = await Promise.all([...this.forcedSignInWatches].map((watch) => watch()));
+                return async () => {
+                    for (const after of afters) await after();
+                };
+            },
         };
         this.signIn = createSignInGate({
             run: async (force) => {
@@ -218,6 +226,18 @@ export class AuthenticationService {
     onDidSignIn(listener: () => void): { dispose(): void } {
         this.signInListeners.add(listener);
         return { dispose: () => this.signInListeners.delete(listener) };
+    }
+
+    /**
+     * Watch every FORCED sign-in for what it ends elsewhere: `watch` runs just before
+     * `aio auth login -f` and its answer once that sign-in succeeds, on every forced path
+     * (the org switch, "Sign in again", and the retry a normal sign-in falls back to).
+     * Measured 2026-10-28: a forced sign-in also ends the DA.live sign-in, so the eds
+     * feature watches for that (`daLiveForcedSignInWatch`).
+     */
+    watchForcedSignIns(watch: ForcedSignInWatch): { dispose(): void } {
+        this.forcedSignInWatches.add(watch);
+        return { dispose: () => this.forcedSignInWatches.delete(watch) };
     }
 
     /**

@@ -497,6 +497,47 @@ describe('spine choke-points', () => {
         ]);
     });
 
+    it("storefront REPOSITORY delete: every door lists, deletes, then removes the site's code (EDS-67)", () => {
+        // Audited 2026-10-28. Deleting a storefront's repository left AEM's copy of its
+        // code serving on aem.live. The code bus is cleared one file at a time, and only
+        // a listing made BEFORE the delete can name the files, so the repository delete
+        // and the code removal are one function, `deleteStorefrontRepository`.
+        //
+        // Traced down, the doors that delete a repository: the delete-project button
+        // (edsExternalCleanup), the agent's delete_project (agentProjectCleanup) and
+        // delete_github_repo (cloudResourceTools), Manage GitHub Repositories, and the
+        // setup cancel (cleanupService; its ARCHIVE keeps the repository and the code).
+        // Each hands the primitive to the shared function as a lambda, so each still
+        // matches `.deleteRepository(` below. Two doors are NOT storefronts and delete
+        // the repository directly: an App Builder app's repository (appRepoPromotion) and
+        // the repository a zip import made for an added demo (forgetAddedDemoHandler).
+        // Demo Builder never publishes that one: importStorefrontZipHandler pushes it and
+        // makes no Helix call. Whether the AEM Code Sync App mirrors it on push anyway
+        // depends on which repositories the App is installed on, and is unverified.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\bdeleteStorefrontRepository\(/)).toStrictEqual([
+            'features/ai/server/agentProjectCleanup.ts',
+            'features/ai/server/cloudResourceTools.ts',
+            'features/eds/commands/manageGitHubRepos.ts',
+            'features/eds/services/cleanupService.ts',
+            'features/eds/services/storefront/storefrontCodeRemoval.ts',
+            'features/projects-dashboard/services/edsExternalCleanup.ts',
+        ]);
+        expect(sorted(/\.deleteRepository\(/)).toStrictEqual([
+            'features/ai/server/agentProjectCleanup.ts',
+            'features/ai/server/cloudResourceTools.ts',
+            'features/app-builder/services/appRepoPromotion.ts',
+            'features/eds/commands/manageGitHubRepos.ts',
+            'features/eds/handlers/forgetAddedDemoHandler.ts',
+            'features/eds/services/cleanupService.ts',
+            'features/eds/services/storefront/storefrontCodeRemoval.ts',
+            'features/projects-dashboard/services/edsExternalCleanup.ts',
+        ]);
+        // The one call of the code-bus DELETE.
+        expect(sorted(/\.deleteCode\(/)).toStrictEqual(['features/eds/services/storefront/storefrontCodeRemoval.ts']);
+    });
+
     it('STORE CHANGE pages: one service, two doors (EDS-44)', () => {
         // Audited 2026-10-15. After a store change the old store's product and category
         // pages are replaced by ONE service, `replaceStoreScopePages`. Its doors:

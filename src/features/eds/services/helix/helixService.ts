@@ -14,7 +14,7 @@
  * The class is the public face; the operations live in collaborators and every
  * method here delegates: credentials in `helixAdminAuth`, single-page preview /
  * publish / status in `helixPageContent`, DELETE and unpublish in
- * `helixPageDeletion`, code preview and cache purge in `helixCodeOperations`,
+ * `helixPageDeletion`, code preview, code deletion and cache purge in `helixCodeOperations`,
  * Admin API keys in `helixApiKeys`, the bulk preview/publish in `helixBulkPublish`,
  * the DA.live page listing in `helixPageDiscovery`, and the whole-site publish
  * policy (bulk first, page-by-page fallback) in `helixSiteContent`.
@@ -30,7 +30,7 @@ import { HelixAdminAuth } from './helixAdminAuth';
 import { HelixApiKeys } from './helixApiKeys';
 import type { BulkProgressCallback } from './helixBulkJobs';
 import { HelixBulkPublish } from './helixBulkPublish';
-import { previewCode, purgeCacheAll } from './helixCodeOperations';
+import { deleteCode, previewCode, purgeCacheAll } from './helixCodeOperations';
 import * as keyStore from './helixKeyStore';
 import {
     getResourceStatus,
@@ -384,5 +384,10 @@ export class HelixService {
         branch: string = DEFAULT_BRANCH,
     ): Promise<void> {
         return previewCode(this.opDeps, org, site, path, branch);
+    }
+
+    /** Delete one file from AEM's copy of the site's code (EDS-67). Delegates to `helixCodeOperations`. */
+    async deleteCode(org: string, site: string, path: string, branch: string = DEFAULT_BRANCH): Promise<void> {
+        return deleteCode(this.opDeps, org, site, path, branch);
     }
 }

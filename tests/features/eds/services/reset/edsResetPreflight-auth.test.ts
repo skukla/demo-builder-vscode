@@ -177,12 +177,11 @@ describe('edsResetUI - checkDaLiveAuth (refactored to use ensureDaLiveAuth)', ()
             packages: testPackages,
         });
 
-        // Then: ensureDaLiveAuth should have been called with context AND the
-        // storefront's DA.live org, which arms the guard's server probe.
+        // Then: ensureDaLiveAuth should have been called with context. It asks IMS
+        // itself, so it needs no org to catch a sign-in IMS no longer accepts.
         expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(
             context,
             expect.any(String), // logPrefix
-            'test-org'
         );
 
         // And: Reset should proceed (not fail with auth error)

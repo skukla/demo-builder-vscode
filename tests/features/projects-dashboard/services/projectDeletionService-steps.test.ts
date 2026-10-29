@@ -102,14 +102,16 @@ describe('in the progress modal', () => {
         const steps = await modalSteps(() => deleteFromScreen({ github: true, daLive: true }));
 
         expect(steps).toStrictEqual([
-            [OPERATION_STAGES.checkingRequirements.label, at(1, 7), 'Your DA.live sign-in'],
-            [OPERATION_STAGES.takingPagesOffSite.label, at(2, 7), OPERATION_STAGES.takingPagesOffSite.detail],
-            [OPERATION_STAGES.removingProductPages.label, at(3, 7), OPERATION_STAGES.removingProductPages.detail],
-            [OPERATION_STAGES.removingProductPages.label, at(3, 7), 'The page made for each product'],
-            [OPERATION_STAGES.clearingDaLiveContent.label, at(4, 7), OPERATION_STAGES.clearingDaLiveContent.detail],
-            [OPERATION_STAGES.clearingSiteSettings.label, at(5, 7), OPERATION_STAGES.clearingSiteSettings.detail],
-            [OPERATION_STAGES.deletingRepository.label, at(6, 7), OPERATION_STAGES.deletingRepository.detail],
-            [OPERATION_STAGES.removingProjectFiles.label, at(7, 7), OPERATION_STAGES.removingProjectFiles.detail],
+            [OPERATION_STAGES.checkingRequirements.label, at(1, 8), 'Your DA.live sign-in'],
+            [OPERATION_STAGES.takingPagesOffSite.label, at(2, 8), OPERATION_STAGES.takingPagesOffSite.detail],
+            [OPERATION_STAGES.removingProductPages.label, at(3, 8), OPERATION_STAGES.removingProductPages.detail],
+            [OPERATION_STAGES.removingProductPages.label, at(3, 8), 'The page made for each product'],
+            [OPERATION_STAGES.clearingDaLiveContent.label, at(4, 8), OPERATION_STAGES.clearingDaLiveContent.detail],
+            [OPERATION_STAGES.clearingSiteSettings.label, at(5, 8), OPERATION_STAGES.clearingSiteSettings.detail],
+            [OPERATION_STAGES.deletingRepository.label, at(6, 8), OPERATION_STAGES.deletingRepository.detail],
+            // EDS-67: AEM's copy of the code, once the repository is gone.
+            [OPERATION_STAGES.removingSiteCode.label, at(7, 8), OPERATION_STAGES.removingSiteCode.detail],
+            [OPERATION_STAGES.removingProjectFiles.label, at(8, 8), OPERATION_STAGES.removingProjectFiles.detail],
         ]);
     });
 
@@ -117,8 +119,9 @@ describe('in the progress modal', () => {
         const steps = await modalSteps(() => deleteFromScreen({ github: true, daLive: false }));
 
         expect(steps.map(([stage, position]) => [stage, position])).toStrictEqual([
-            [OPERATION_STAGES.deletingRepository.label, at(1, 2)],
-            [OPERATION_STAGES.removingProjectFiles.label, at(2, 2)],
+            [OPERATION_STAGES.deletingRepository.label, at(1, 3)],
+            [OPERATION_STAGES.removingSiteCode.label, at(2, 3)],
+            [OPERATION_STAGES.removingProjectFiles.label, at(3, 3)],
         ]);
     });
 
@@ -145,14 +148,15 @@ describe('in a notification', () => {
 
         const lines = mockProgressReport.mock.calls.map(([update]) => (update as { message?: string }).message);
         expect(lines).toStrictEqual([
-            'Checking requirements (1 of 7)',
-            'Taking pages off the site (2 of 7)',
-            'Removing product pages (3 of 7)',
-            'Removing product pages (3 of 7)',
-            'Clearing DA.live content (4 of 7)',
-            'Clearing site settings (5 of 7)',
-            'Deleting the repository (6 of 7)',
-            'Removing project files (7 of 7)',
+            'Checking requirements (1 of 8)',
+            'Taking pages off the site (2 of 8)',
+            'Removing product pages (3 of 8)',
+            'Removing product pages (3 of 8)',
+            'Clearing DA.live content (4 of 8)',
+            'Clearing site settings (5 of 8)',
+            'Deleting the repository (6 of 8)',
+            "Removing the site's code (7 of 8)",
+            'Removing project files (8 of 8)',
         ]);
     });
 });

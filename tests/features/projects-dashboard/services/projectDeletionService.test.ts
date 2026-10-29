@@ -606,9 +606,10 @@ describe('where a delete narrates', () => {
 
         await deleteProject(context(), edsProject(), SERVICES);
 
-        // One line from the repository cleanup, one for the files. Dropping the
-        // forwarding, or forwarding blanks, leaves the file removal alone.
-        expect(notified()).toHaveLength(2);
+        // Two lines from the repository cleanup (the repository, then its code on
+        // aem.live, EDS-67), one for the files. Dropping the forwarding, or forwarding
+        // blanks, leaves the file removal alone.
+        expect(notified()).toHaveLength(3);
         expect(mockDeleteRepository).toHaveBeenCalled();
     });
 });

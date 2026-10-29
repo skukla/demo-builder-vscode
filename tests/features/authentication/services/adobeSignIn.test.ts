@@ -183,3 +183,88 @@ describe('runAdobeLogin', () => {
         expect(deps.logger.error).toHaveBeenCalledTimes(1);
     });
 });
+
+// A forced sign-in also ends the DA.live sign-in (measured 2026-10-28). The watch is
+// read on EVERY forced run, including the retry a normal sign-in falls back to, and
+// never on a normal one.
+describe('runAdobeLogin — the forced sign-in watch', () => {
+    function watched() {
+        const order: string[] = [];
+        const after = jest.fn(async () => {
+            order.push('after');
+        });
+        const watch = jest.fn(async () => {
+            order.push('before');
+            return after;
+        });
+        return { order, watch, after };
+    }
+
+    it('reads before the forced command and again once it succeeds', async () => {
+        const { deps, execute } = buildDeps();
+        const { order, watch, after } = watched();
+        deps.watchForcedSignIn = watch;
+        execute.mockImplementation(async () => {
+            order.push('execute');
+            return createSuccessResult(VALID_TOKEN);
+        });
+
+        await expect(runAdobeLogin(deps, true)).resolves.toBe(true);
+
+        expect(order).toStrictEqual(['before', 'execute', 'after']);
+        expect(after).toHaveBeenCalledTimes(1);
+    });
+
+    it('covers the forced retry a normal sign-in falls back to', async () => {
+        const { deps, execute } = buildDeps();
+        const { order, watch } = watched();
+        deps.watchForcedSignIn = watch;
+        execute.mockImplementation(async (command: string) => {
+            order.push(command);
+            return createSuccessResult(command.endsWith('-f') ? VALID_TOKEN : 'no token printed');
+        });
+
+        await expect(runAdobeLogin(deps, false)).resolves.toBe(true);
+
+        expect(order).toStrictEqual(['aio auth login', 'before', 'aio auth login -f', 'after']);
+    });
+
+    it('is not read for a normal sign-in', async () => {
+        const { deps, execute } = buildDeps();
+        const { watch } = watched();
+        deps.watchForcedSignIn = watch;
+        execute.mockResolvedValue(createSuccessResult(VALID_TOKEN));
+
+        await expect(runAdobeLogin(deps, false)).resolves.toBe(true);
+
+        expect(watch).not.toHaveBeenCalled();
+    });
+
+    it('does not read the after-check when the forced sign-in fails', async () => {
+        const { deps, execute } = buildDeps();
+        const { watch, after } = watched();
+        deps.watchForcedSignIn = watch;
+        execute.mockResolvedValue(createFailureResult('user closed the browser'));
+
+        await expect(runAdobeLogin(deps, true)).resolves.toBe(false);
+
+        expect(watch).toHaveBeenCalledTimes(1);
+        expect(after).not.toHaveBeenCalled();
+    });
+
+    it('never costs the SC the sign-in when the watch fails, before or after', async () => {
+        const { deps, execute } = buildDeps();
+        execute.mockResolvedValue(createSuccessResult(VALID_TOKEN));
+
+        deps.watchForcedSignIn = jest.fn(async () => {
+            throw new Error('keychain locked');
+        });
+        await expect(runAdobeLogin(deps, true)).resolves.toBe(true);
+
+        deps.watchForcedSignIn = jest.fn(async () => async () => {
+            throw new Error('IMS exploded');
+        });
+        await expect(runAdobeLogin(deps, true)).resolves.toBe(true);
+        expect(deps.debugLogger.warn).toHaveBeenCalledTimes(2);
+    });
+});

@@ -267,14 +267,9 @@ describe('handleStartStorefrontSetup - Pre-flight Auth Checks', () => {
         // When
         const result = await handleStartStorefrontSetup(context, createValidPayload());
 
-        // Then: ensureDaLiveAuth should have been called WITH the target org,
-        // so the guard's server probe can catch a locally-valid-but-refused
-        // token before the pipeline starts (the 2026-08-16 evidence run).
-        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(
-            context,
-            '[Storefront Setup]',
-            'test-org'
-        );
+        // Then: the guard ran before the pipeline. It asks IMS itself, so it needs
+        // no org to catch a locally-valid token IMS no longer accepts.
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(context, '[Storefront Setup]');
 
         // And: Should proceed
         expect(result.success).toBe(true);

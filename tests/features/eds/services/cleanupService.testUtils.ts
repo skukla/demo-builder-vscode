@@ -17,7 +17,7 @@
  * @see tests/sop/test-family-setup.test.ts
  */
 
-import { CleanupService } from '@/features/eds/services/cleanupService';
+import { CleanupService, type CodeRemovalWiring } from '@/features/eds/services/cleanupService';
 import type { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import type { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { GitHubRepoLifecycle } from '@/features/eds/services/github/githubRepoLifecycle';
@@ -32,6 +32,12 @@ export interface CleanupHarness {
     daLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
     toolManager: jest.Mocked<Partial<ToolManager>>;
     configurationService: jest.Mocked<Partial<ConfigurationService>>;
+    /**
+     * How a deleted repository's code would be removed (EDS-67). Its file list is empty,
+     * so the repository reads as no storefront and no code is touched: the code removal's
+     * own spec is `cleanupService-siteCode.test.ts`.
+     */
+    codeRemoval: CodeRemovalWiring;
     /** Names of the collaborators called, in call order. */
     operationOrder: string[];
     /** The subject built WITHOUT a ConfigurationService. */
@@ -85,7 +91,10 @@ export function setupCleanupHarness(): CleanupHarness {
         }),
     };
 
+    const codeRemoval: CodeRemovalWiring = { files: { listRepoFiles: jest.fn(async () => []) } };
+
     const harness: CleanupHarness = {
+        codeRemoval,
         githubRepoOps,
         daLiveOrgOps,
         toolManager,
@@ -103,6 +112,7 @@ export function setupCleanupHarness(): CleanupHarness {
             githubRepoOps as unknown as GitHubRepoLifecycle,
             daLiveOrgOps as unknown as DaLiveOrgOperations,
             toolManager as unknown as ToolManager,
+            codeRemoval,
             undefined,
             injected,
         );

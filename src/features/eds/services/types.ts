@@ -721,4 +721,9 @@ export interface EdsCleanupResult {
     daLive: CleanupOperationResult;
     /** GitHub repository deletion/archive result */
     github: CleanupOperationResult;
+    /**
+     * The site's code on aem.live after a repository DELETE (EDS-67); skipped for an
+     * archive, a failed delete, or a repository that was not a storefront.
+     */
+    siteCode: CleanupOperationResult;
 }

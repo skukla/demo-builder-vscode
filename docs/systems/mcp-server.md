@@ -533,13 +533,22 @@ and `cleanup_dalive_site` (`org/site`).
 `delete_project` (with `deleteDaLiveSite`) run the storefront teardown. It unpublishes
 what Helix lists as published, not only what DA.live still holds, then checks the live
 host. `stillPublished` is false only when that check found the pages gone;
-`publishState` (`down`, `still-live`, `unknown`) and `publishSummary` say which, in words,
-including "could not tell" (EDS-33). `delete_project` carries `publishSummary` under
-`daLiveSite`. When the check finds pages still live (`still-live`), the teardown stops
-there: the DA.live content, the site settings and, for `delete_project`, the repository
-and the project are kept, `stopped` says why, and `delete_project` answers
-`deleted: false` (EDS-65). Deleting them would leave a live site with nothing to take it
-down by.
+`publishState` (`down`, `still-live`, `sign-in-refused`, `unknown`) and `publishSummary`
+say which, in words, including "could not tell" (EDS-33). `delete_project` carries
+`publishSummary` under `daLiveSite`. When the check finds pages still live (`still-live`),
+or AEM answers 401/403 to the listing of what is published or to the product pages
+(`sign-in-refused`), the teardown stops there: the DA.live content, the site settings
+and, for `delete_project`, the repository and the project are kept, `stopped` says why,
+and `delete_project` answers `deleted: false` (EDS-65). Deleting them would leave a live
+site with nothing to take it down by. `unknown` (could not tell) does not stop it.
+
+**A storefront's repository needs a working DA.live sign-in to go.** Its code on
+aem.live is removed file by file after the repository is deleted, and the files can only
+be listed while the repository exists (EDS-67). So `delete_github_repo` and
+`delete_project` first ask IMS whether the DA.live sign-in still works; with none, or
+one IMS refuses or cannot be asked about, the repository is kept (`kept: true` /
+`stopped` with the sentence to sign in to DA.live and delete again), and `delete_project`
+keeps the project too.
 
 `delete_page` deliberately uses the plain `confirm: true` gate instead — it removes
 one page from the current project's own storefront, not a whole repository or site.
@@ -827,6 +836,14 @@ extension-side in `agentOperationNotifier.ts`:
   (observed live 2026-08-23 as a silent 60s timeout). Generated AGENTS.md
   (v20) tells agents to front-load `get_auth_status` so the one human touch
   happens at flow start, not as a mid-pipeline stall.
+- **DA.live status means "works now".** `get_auth_status`'s `dalive` entry asks IMS
+  (`validate_token`) about the stored token, the same reader the wizard's indicator and
+  the session guard use (`DaLiveAuthService.checkSignIn`). `authenticated` is `'unknown'`
+  when IMS cannot be reached: neither signed in nor out.
+- **A forced Adobe sign-in signs out of DA.live** (measured 2026-10-28). When an agent's
+  `sign_in(provider:"adobe")` falls back to the forced sign-in and that ends a working
+  DA.live sign-in, the result carries `notices` and `next` instead of a dialog; any other
+  agent call that forces one says it in the narration (`daLiveSignedOutNotice`).
 
 ### `get_current_project` answers with the project's STATE
 

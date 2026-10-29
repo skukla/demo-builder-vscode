@@ -7,19 +7,114 @@
  * - Fetches ALL repositories from GitHub API (not filtered by Demo Builder projects)
  * - Shows linkage info for repos connected to Demo Builder projects
  * - Multi-select QuickPick for batch operations
- * - Batch deletion with confirmation
+ * - Batch deletion with confirmation; a storefront's code on aem.live goes with its
+ *   repository (EDS-67, `deleteStorefrontRepository`)
  * - GitHub authentication with proper scopes
  */
 
 import * as vscode from 'vscode';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
+import {
+    deleteStorefrontRepository,
+    type StorefrontRepoDeletion,
+} from '../services/storefront/storefrontCodeRemoval';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging/debugLogger';
 import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
+import type { Logger } from '@/types/logger';
 
 interface RepoQuickPickItem extends vscode.QuickPickItem {
     repoFullName: string;
     linkedProject?: string;
+}
+
+/** What a batch delete did. */
+export interface RepoBatchOutcome {
+    deleted: string[];
+    failed: Array<{ repo: string; error: string }>;
+    /** Deleted storefronts whose code may still be on aem.live, each with the SC's sentence (EDS-67). */
+    codeLeft: Array<{ repo: string; summary: string }>;
+    /**
+     * Storefronts NOT deleted, because there was no working DA.live sign-in to remove their
+     * code with (owner, 2026-10-28), each with the SC's sentence.
+     */
+    kept: Array<{ repo: string; reason: string }>;
+}
+
+export interface RepoBatchDeps {
+    logger: Logger;
+    /** Delete one repository and, for a storefront, its code on aem.live after it. */
+    deleteRepository: (owner: string, repo: string) => Promise<StorefrontRepoDeletion>;
+    /** Each repository as it starts. */
+    onRepo?: (repo: string) => void;
+}
+
+/**
+ * Delete each repository in turn. One failure never stops the rest; each is recorded.
+ *
+ * @param repos - `owner/repo` names
+ * @param deps - the delete, and where to log and report
+ */
+export async function deleteGitHubRepos(repos: string[], deps: RepoBatchDeps): Promise<RepoBatchOutcome> {
+    const outcome: RepoBatchOutcome = { deleted: [], failed: [], codeLeft: [], kept: [] };
+    for (const repo of repos) {
+        deps.onRepo?.(repo);
+        try {
+            const [owner, repoName] = repo.split('/');
+            if (!owner || !repoName) {
+                throw new Error(`Invalid repository format: ${repo}`);
+            }
+            const { code, kept } = await deps.deleteRepository(owner, repoName);
+            if (kept) {
+                outcome.kept.push({ repo, reason: kept });
+                deps.logger.warn(`[GitHub Manage] Kept: ${repo} - ${kept}`);
+                continue;
+            }
+            outcome.deleted.push(repo);
+            if (code?.summary) outcome.codeLeft.push({ repo, summary: code.summary });
+            deps.logger.info(`[GitHub Manage] ✓ Deleted: ${repo}`);
+        } catch (error) {
+            const errorMsg = (error as Error).message;
+            outcome.failed.push({ repo, error: errorMsg });
+            deps.logger.error(`[GitHub Manage] ✗ Failed: ${repo} - ${errorMsg}`);
+        }
+    }
+    return outcome;
+}
+
+/**
+ * What the SC is told: a success only when everything went, code included, so a
+ * storefront whose code still answers is never reported as cleanly deleted.
+ */
+export function describeRepoOutcome(outcome: RepoBatchOutcome): {
+    level: 'success' | 'warning' | 'error';
+    message: string;
+} {
+    const { deleted, failed, codeLeft, kept } = outcome;
+    if (kept.length > 0) {
+        // One sentence for the lot: the reason is the same, and it says what to do.
+        const names = kept.map((k) => k.repo).join(', ');
+        const done = deleted.length > 0 ? `Deleted ${deleted.length}. ` : '';
+        const broken = failed.length > 0 ? ` Failed: ${failed.map((f) => f.repo).join(', ')}.` : '';
+        return { level: 'warning', message: `${done}Kept ${names}. ${kept[0].reason}${broken}` };
+    }
+    if (deleted.length === 0) {
+        return {
+            level: 'error',
+            message: `Failed to delete all ${failed.length} repositories. Check Debug Logs for details.`,
+        };
+    }
+    if (failed.length > 0) {
+        return {
+            level: 'warning',
+            message: `Deleted ${deleted.length}, failed ${failed.length}: ${failed.map((f) => f.repo).join(', ')}`,
+        };
+    }
+    const count = `Deleted ${deleted.length} repositor${deleted.length !== 1 ? 'ies' : 'y'}`;
+    if (codeLeft.length > 0) {
+        return { level: 'warning', message: `${count}. ${codeLeft.map((c) => `${c.repo}: ${c.summary}`).join(' ')}` };
+    }
+    return { level: 'success', message: count };
 }
 
 export async function manageGitHubReposCommand(context: vscode.ExtensionContext): Promise<void> {
@@ -27,11 +122,11 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
 
     try {
         // Step 1: Check GitHub authentication
-        const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
+        const { getGitHubServices, tryCreateDaLiveTokenProvider } = await import('@/features/eds/handlers/edsHelpers');
 
         // getGitHubServices' parameter is narrowed to the one field it reads,
         // so a command without a full HandlerContext calls it without a cast.
-        const { tokenService, repoOperations, repoLifecycle } = getGitHubServices(context.secrets);
+        const { tokenService, repoOperations, repoLifecycle, fileOperations } = getGitHubServices(context.secrets);
 
         // Check if we have a valid token
         let token = await tokenService.getToken();
@@ -160,6 +255,7 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
         const confirmDetail =
             'WARNING: This will permanently delete the selected repositories from GitHub. ' +
             'All code, issues, pull requests, and releases will be lost. ' +
+            "A storefront's code on aem.live is removed with its repository. " +
             'This action cannot be undone.';
 
         const confirmed = await vscode.window.showWarningMessage(
@@ -172,61 +268,43 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
             return; // User cancelled
         }
 
-        // Step 6: Delete selected repositories
-        const deleted: string[] = [];
-        const failed: Array<{ repo: string; error: string }> = [];
-
-        await vscode.window.withProgress(
+        // Step 6: Delete selected repositories, and a storefront's code on aem.live
+        // after each (EDS-67): the DA.live session, read without asking, removes it.
+        const tokenProvider = tryCreateDaLiveTokenProvider(context);
+        const outcome = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
                 title: 'Deleting repositories',
                 cancellable: false,
             },
-            async (progress) => {
-                for (let i = 0; i < reposToDelete.length; i++) {
-                    const repo = reposToDelete[i];
-                    progress.report({
-                        // Which repository; how many is a count, never a position (handbook, progress).
-                        message: repo,
-                        increment: 100 / reposToDelete.length,
-                    });
-
-                    try {
-                        const [owner, repoName] = repo.split('/');
-                        if (!owner || !repoName) {
-                            throw new Error(`Invalid repository format: ${repo}`);
-                        }
-
-                        await repoLifecycle.deleteRepository(owner, repoName);
-                        deleted.push(repo);
-                        logger.info(`[GitHub Manage] ✓ Deleted: ${repo}`);
-                    } catch (error) {
-                        const errorMsg = (error as Error).message;
-                        failed.push({ repo, error: errorMsg });
-                        logger.error(`[GitHub Manage] ✗ Failed: ${repo} - ${errorMsg}`);
-                    }
-                }
-            },
+            (progress) =>
+                deleteGitHubRepos(reposToDelete, {
+                    logger,
+                    deleteRepository: (owner, repo) =>
+                        deleteStorefrontRepository(
+                            { owner, repo },
+                            {
+                                files: fileOperations,
+                                deleteRepository: (o, r) => repoLifecycle.deleteRepository(o, r),
+                                tokenProvider,
+                                logger,
+                            },
+                        ),
+                    // Which repository; how many is a count, never a position (handbook, progress).
+                    onRepo: (repo) => progress.report({ message: repo, increment: 100 / reposToDelete.length }),
+                }),
         );
 
-        // Step 7: Show results
-        if (deleted.length > 0 && failed.length === 0) {
-            // A success says so as every success does: a ✅ line that goes by itself
-            // (owner, 2026-10-15). The failure branches below stay messages that wait.
-            showSuccessInStatusBar(`Deleted ${deleted.length} repositor${deleted.length !== 1 ? 'ies' : 'y'}`);
-        } else if (deleted.length > 0 && failed.length > 0) {
-            const failedList = failed.map((f) => f.repo).join(', ');
-            vscode.window.showWarningMessage(
-                `Deleted ${deleted.length}, failed ${failed.length}: ${failedList}`,
-            );
-        } else {
-            vscode.window.showErrorMessage(
-                `Failed to delete all ${failed.length} repositories. Check Debug Logs for details.`,
-            );
-        }
+        // Step 7: Show results. A success says so as every success does: a ✅ line that
+        // goes by itself (owner, 2026-10-15). The other outcomes stay messages that wait.
+        const told = describeRepoOutcome(outcome);
+        if (told.level === 'success') showSuccessInStatusBar(told.message);
+        else if (told.level === 'warning') vscode.window.showWarningMessage(told.message);
+        else vscode.window.showErrorMessage(told.message);
 
         logger.info(
-            `[GitHub Manage] Complete - Deleted: ${deleted.length}, Failed: ${failed.length}`,
+            `[GitHub Manage] Complete - Deleted: ${outcome.deleted.length}, Failed: ${outcome.failed.length}, ` +
+                `kept: ${outcome.kept.length}, code left on aem.live: ${outcome.codeLeft.length}`,
         );
     } catch (error) {
         logger.error('[GitHub Manage Command] Error:', error as Error);

@@ -15,6 +15,7 @@
 import {
     deleteProject,
     mockCheckLiveStatus,
+    mockDaLiveAccessToken,
     mockDefaultDeleteAdminApiKey,
     mockDefaultListAllPages,
     mockDefaultListPublishedPaths,
@@ -27,6 +28,7 @@ import {
     mockGetSession,
     mockGetToken,
     mockHelixInitKeyStore,
+    mockListRepoFiles,
     mockProgressReport,
     mockRemoveSitePermissions,
     mockRm,
@@ -41,6 +43,8 @@ import {
     context,
     edsProject,
     mockDeleteAdminApiKey,
+    mockCheckDaLiveSignIn,
+    mockDeleteCode,
     mockListAllPages,
     mockListPublishedPaths,
     mockUnpublishPages,
@@ -89,6 +93,10 @@ beforeEach(() => {
     mockDefaultDeleteAdminApiKey.mockResolvedValue({ success: true });
     mockHelixInitKeyStore.mockResolvedValue(undefined);
     mockCheckLiveStatus.mockImplementation(async () => 404);
+    mockListRepoFiles.mockResolvedValue([{ path: 'scripts/aem.js' }, { path: 'head.html' }]);
+    mockDeleteCode.mockResolvedValue(undefined);
+    mockCheckDaLiveSignIn.mockResolvedValue('valid');
+    mockDaLiveAccessToken.mockResolvedValue('token');
 });
 
 describe('the CDN unpublish step', () => {
@@ -498,6 +506,97 @@ describe('the GitHub repository cleanup', () => {
                 },
             ]);
         });
+    });
+});
+
+// EDS-67: deleting the repository left AEM's copy of its code serving on aem.live.
+describe("the site's code on aem.live, after the repository", () => {
+    const codeRows = (results: CleanupResultItem[]) => results.filter((r) => r.name.startsWith('site code'));
+
+    it('lists the repository before deleting it, then removes each file from the same site', async () => {
+        armQuickPick('accept', ['github']);
+
+        await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(mockListRepoFiles).toHaveBeenCalledWith('skukla', 'demo-storefront', 'main');
+        expect(mockDeleteCode.mock.calls).toEqual(
+            expect.arrayContaining([
+                ['skukla', 'demo-storefront', '/scripts/aem.js', 'main'],
+                ['skukla', 'demo-storefront', '/head.html', 'main'],
+            ]),
+        );
+        const [listed] = mockListRepoFiles.mock.invocationCallOrder;
+        const [deleted] = mockDeleteRepository.mock.invocationCallOrder;
+        expect(listed).toBeLessThan(deleted);
+        expect(Math.min(...mockDeleteCode.mock.invocationCallOrder)).toBeGreaterThan(deleted);
+    });
+
+    it('records the code as cleaned up when aem.live no longer serves it', async () => {
+        armQuickPick('accept', ['github']);
+
+        const result = await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(mockCheckLiveStatus).toHaveBeenCalledWith(
+            expect.stringMatching(/^https:\/\/main--demo-storefront--skukla\.aem\.live\/scripts\/aem\.js\?/),
+        );
+        expect(codeRows(resultsOf(result))).toStrictEqual([
+            { type: 'helix', name: 'site code, skukla/demo-storefront', success: true },
+        ]);
+    });
+
+    it('never says cleaned up over code aem.live still serves', async () => {
+        armQuickPick('accept', ['github']);
+        mockCheckLiveStatus.mockImplementation(async () => 200);
+
+        const result = await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(codeRows(resultsOf(result))).toStrictEqual([
+            {
+                type: 'helix',
+                name: 'site code, skukla/demo-storefront',
+                success: false,
+                error: expect.stringContaining('still serves'),
+            },
+        ]);
+    });
+
+    // Owner, 2026-10-28: once the repository is gone its code can never be listed for
+    // removal, so with no working DA.live sign-in the repository AND the project stay.
+    it.each([
+        ['no DA.live session', () => mockDaLiveAccessToken.mockResolvedValue(null)],
+        ['a DA.live sign-in IMS no longer accepts', () => mockCheckDaLiveSignIn.mockResolvedValue('refused')],
+    ])('keeps the repository and the project with %s, and says why', async (_name, arrange) => {
+        armQuickPick('accept', ['github']);
+        arrange();
+
+        const result = await deleteProject(context(), edsProject(), SERVICES);
+
+        const kept = 'The repository was kept so its site code can still be removed. Sign in to DA.live and delete again.';
+        expect(mockDeleteRepository).not.toHaveBeenCalled();
+        expect(mockDeleteCode).not.toHaveBeenCalled();
+        expect(mockRm).not.toHaveBeenCalled();
+        expect(result.data).toMatchObject({ success: false, error: kept });
+        expect(of(resultsOf(result), 'github')).toStrictEqual([
+            { type: 'github', name: 'skukla/demo-storefront', success: false, error: kept },
+        ]);
+    });
+
+    it('asks IMS about the DA.live token the code would be removed with', async () => {
+        armQuickPick('accept', ['github']);
+
+        await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(mockCheckDaLiveSignIn).toHaveBeenCalledWith('token');
+    });
+
+    it('removes no code when the repository delete fails, the repository being still there', async () => {
+        armQuickPick('accept', ['github']);
+        mockDeleteRepository.mockRejectedValue(new Error('403 from GitHub'));
+
+        const result = await deleteProject(context(), edsProject(), SERVICES);
+
+        expect(mockDeleteCode).not.toHaveBeenCalled();
+        expect(codeRows(resultsOf(result))).toStrictEqual([]);
     });
 });
 

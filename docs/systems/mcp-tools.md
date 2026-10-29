@@ -112,7 +112,7 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `get_auth_status` |  | Report Adobe / GitHub / DA.live authentication status, with the GitHub user + orgs a repo can be created in, and the pinned DA.live namespace. No side effects. |
+| `get_auth_status` |  | Report Adobe / GitHub / DA.live authentication status, with the GitHub user + orgs a repo can be created in, and the pinned DA.live namespace. dalive.authenticated is "unknown" when Adobe could not be |
 | `sign_in` | **confirm** | Open an interactive sign-in to refresh an expired session (opens a browser). |
 
 ## `src/features/ai/server/cloudResourceTools.ts`
@@ -121,7 +121,7 @@ server IS — transport, lifecycle, scoping, security — is in
 |---|---|---|
 | `cleanup_dalive_site` | **confirm** | Delete all content for a DA.live site, and take its pages (product pages included; see productPages in the result) off the CDN when the GitHub repo is given (irreversible). The pages to unpublish are |
 | `create_github_repo` |  | Create a GitHub repo from a template (the EDS storefront path). Returns the repo and whether its content has finished materialising. |
-| `delete_github_repo` | **confirm** | Permanently delete a GitHub repository (irreversible). Requires confirm:true and confirmName="owner/repo". |
+| `delete_github_repo` | **confirm** | Permanently delete a GitHub repository (irreversible), and for a storefront its code on aem.live. A storefront is kept (kept:true, deleted:false) when there is no working DA.live sign-in, because its |
 | `list_dalive_sites` |  | List DA.live sites in an organization (paginated summary) |
 | `list_github_repos` |  | List GitHub repositories you can push to (paginated summary) |
 

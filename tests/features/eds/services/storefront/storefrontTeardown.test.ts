@@ -11,7 +11,9 @@
 
 import type { UnpublishPagesResult } from '@/features/eds/services/helix/helixPageDeletion';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import {
+    STOPPED_SIGN_IN_REFUSED,
     STOPPED_STILL_LIVE,
     tearDownStorefront,
     teardownSteps,
@@ -176,6 +178,67 @@ describe('with a repo to unpublish against', () => {
         });
     });
 
+    // 2026-10-28: a forced Adobe sign-in cancelled the DA.live token mid-delete. The
+    // product-page step said "30 of 49 removed" and the delete carried on; a second run had
+    // its listing refused with 403, read it as "could not tell", and deleted the content.
+    describe('when AEM refuses the sign-in', () => {
+        const refused = () => new DaLiveAuthError('Helix refused to list the published pages (HTTP 403)');
+
+        function expectStoppedBeforeTheSource(
+            result: Awaited<ReturnType<typeof tearDownStorefront>>,
+            content: ReturnType<typeof contentFake>,
+            helix: HelixFake,
+        ) {
+            expect(content.deleteAllSiteContent).not.toHaveBeenCalled();
+            expect(helix.deleteAdminApiKey).not.toHaveBeenCalled();
+            expect(removeSitePermissions).not.toHaveBeenCalled();
+            expect(deleteSiteConfig).not.toHaveBeenCalled();
+            expect(result).toMatchObject({
+                contentDeleted: false,
+                stopped: STOPPED_SIGN_IN_REFUSED,
+                error: STOPPED_SIGN_IN_REFUSED,
+            });
+        }
+
+        it('stops on a refused listing, and calls it a refused sign-in, not "could not tell"', async () => {
+            const helix = helixFake({ listPublishedPaths: jest.fn().mockRejectedValue(refused()) });
+            const { deps, content } = depsWith(helix);
+
+            const result = await tearDownStorefront(SITE, deps);
+
+            expect(result).toMatchObject({ publishState: 'sign-in-refused', stillPublished: true });
+            expect(result.publishSummary).toContain('AEM refused the DA.live sign-in');
+            expectStoppedBeforeTheSource(result, content, helix);
+        });
+
+        it('stops the second run too: content already gone, listing refused, home page 404', async () => {
+            const helix = helixFake({
+                listAllPages: jest.fn().mockResolvedValue([]),
+                listPublishedPaths: jest.fn().mockRejectedValue(refused()),
+            });
+            const { deps, content } = depsWith(helix);
+
+            const result = await tearDownStorefront(SITE, deps);
+
+            expect(result.publishState).toBe('sign-in-refused');
+            expectStoppedBeforeTheSource(result, content, helix);
+        });
+
+        it('stops when the product pages could not all be removed (every failed removal is a 401/403)', async () => {
+            const helix = helixFake();
+            helix.unpublishPages
+                .mockResolvedValueOnce({ success: true, count: 2, total: 2, liveFailed: 0, previewFailed: 0 })
+                .mockResolvedValueOnce({ success: true, count: 1, total: 2, liveFailed: 1, previewFailed: 1 });
+            const { deps, content } = depsWith(helix);
+
+            const result = await tearDownStorefront(SITE, deps);
+
+            expect(result.publishState).toBe('down');
+            expect(result.productPages).toMatchObject({ status: 'incomplete', signInRefused: true });
+            expectStoppedBeforeTheSource(result, content, helix);
+        });
+    });
+
     // Could not tell is not "still live": it is also the answer for a site whose content
     // is already gone, and stopping there would leave the delete impossible to finish.
     it('carries on when it could not tell whether the site is down', async () => {
@@ -302,8 +365,8 @@ describe('the product pages the overlay published', () => {
         expect(result.productPages?.summary).toContain('"Other Demo" also publishes to acme/storefront');
     });
 
-    it('a listing Helix refuses does not stop the teardown, and is not reported as clean', async () => {
-        const helix = helixFake({ listPublishedPaths: jest.fn().mockRejectedValue(new Error('HTTP 401')) });
+    it('a listing that fails for another reason does not stop the teardown, and is not reported as clean', async () => {
+        const helix = helixFake({ listPublishedPaths: jest.fn().mockRejectedValue(new Error('HTTP 500')) });
         const { deps, content } = depsWith(helix);
 
         const result = await tearDownStorefront(SITE, deps);

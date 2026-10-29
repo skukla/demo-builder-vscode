@@ -24,7 +24,16 @@
  * still answers, and at least one check came back 404. Anything short of that is
  * `still-live` or `unknown`, said in a sentence. Never a clean "down" without a check.
  *
- * Never throws: a failure becomes `unknown` with the reason.
+ * ## A refused sign-in is not "could not tell"
+ *
+ * When AEM refuses the sign-in (a 401 or 403 on the listing, which `listPublishedPaths`
+ * throws as a `DaLiveAuthError`), the answer is `sign-in-refused`. Measured 2026-10-28:
+ * a forced Adobe sign-in had cancelled the DA.live token, the listing answered 403, this
+ * said `unknown`, and the delete carried on to remove the DA.live content and config.
+ * `unknown` stays for a genuine can't-tell, such as a site whose content is already gone
+ * and whose home page answers 404.
+ *
+ * Never throws: a failure becomes `unknown` (or `sign-in-refused`) with the reason.
  *
  * @module features/eds/services/storefront/storefrontUnpublish
  */
@@ -32,10 +41,15 @@
 import { isGeneratedProductPage } from './productPageRemoval';
 import { aemLiveBaseUrl } from './storefrontProbe';
 import type { UnpublishPagesResult } from '@/features/eds/services/helix/helixPageDeletion';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 
-/** `down`: checked and gone. `still-live`: something still answers or was not removed. `unknown`: could not tell. */
-export type PublishState = 'down' | 'still-live' | 'unknown';
+/**
+ * `down`: checked and gone. `still-live`: something still answers or was not removed.
+ * `sign-in-refused`: AEM refused the sign-in, so what is published could not be read.
+ * `unknown`: could not tell.
+ */
+export type PublishState = 'down' | 'still-live' | 'sign-in-refused' | 'unknown';
 
 /** The Helix calls the unpublish makes. `HelixService` satisfies it. */
 export interface UnpublishHelix {
@@ -71,6 +85,8 @@ interface Listing {
     paths: string[];
     /** Set when Helix could not say what is published; the reason. */
     helixUnreadable?: string;
+    /** Set when that was because AEM refused the sign-in (401/403). */
+    signInRefused?: boolean;
 }
 
 /** Helix's record of what is published, joined to DA.live's list, minus generated product pages. */
@@ -83,15 +99,17 @@ async function listWhatIsPublished(
 ): Promise<Listing> {
     let fromHelix: string[] = [];
     let helixUnreadable: string | undefined;
+    let signInRefused = false;
     try {
         fromHelix = await helix.listPublishedPaths(owner, repo, BRANCH, WHOLE_SITE);
     } catch (error) {
         helixUnreadable = rawOf(error);
+        signInRefused = error instanceof DaLiveAuthError;
         logger.warn(`[Teardown] Helix could not list what ${owner}/${repo} has published: ${helixUnreadable}`);
     }
     const authored = new Set(daLivePages.map((path) => path.toLowerCase()));
     const union = [...new Set([...daLivePages, ...fromHelix])];
-    return { paths: union.filter((path) => !isGeneratedProductPage(path, authored)), helixUnreadable };
+    return { paths: union.filter((path) => !isGeneratedProductPage(path, authored)), helixUnreadable, signInRefused };
 }
 
 interface Verdict {
@@ -99,8 +117,14 @@ interface Verdict {
     listed: number;
     liveFailed: number;
     helixUnreadable?: string;
+    signInRefused?: boolean;
     checks: Array<{ path: string; status: number }>;
 }
+
+/** What a refused sign-in says. */
+const refusedSummary = (host: string, reason: string): string =>
+    `AEM refused the DA.live sign-in (${reason}), so what ${host} still publishes could not be read. ` +
+    'Its pages may still be live.';
 
 const answers = (status: number): boolean => status >= 200 && status < 300;
 
@@ -117,6 +141,9 @@ function judge(v: Verdict): Pick<StorefrontUnpublishResult, 'publishState' | 'pu
                 `${answering.length} of ${pagesWord(v.checks.length)} checked on ${v.host} still answer ` +
                 `(${answering.join(', ')}).${helixNote}`,
         };
+    }
+    if (v.signInRefused) {
+        return { publishState: 'sign-in-refused', publishSummary: refusedSummary(v.host, v.helixUnreadable ?? 'refused') };
     }
     if (v.liveFailed > 0) {
         return {
@@ -181,6 +208,7 @@ export async function unpublishStorefront(
             listed: listing.paths.length,
             liveFailed: unpublished.liveFailed,
             helixUnreadable: listing.helixUnreadable,
+            signInRefused: listing.signInRefused,
             checks,
         });
         deps.logger.info(`[Teardown] ${verdict.publishSummary}`);
@@ -188,6 +216,9 @@ export async function unpublishStorefront(
     } catch (error) {
         const reason = rawOf(error);
         deps.logger.warn(`[Teardown] CDN unpublish failed for ${owner}/${repo}: ${reason}`);
+        if (error instanceof DaLiveAuthError) {
+            return { unpublishedPages: 0, publishState: 'sign-in-refused', publishSummary: refusedSummary(host, reason) };
+        }
         return {
             unpublishedPages: 0,
             publishState: 'unknown',

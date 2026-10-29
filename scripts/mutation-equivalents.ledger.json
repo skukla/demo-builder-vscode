@@ -5186,7 +5186,7 @@
             "anchors": [
                 "if (failures.length > 0) {"
             ],
-            "line": 396,
+            "line": 400,
             "mutants": 5,
             "category": "branch",
             "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision \u2014 but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5199,7 +5199,7 @@
             "anchors": [
                 "return { success: false, error: failures.join('; ') };"
             ],
-            "line": 397,
+            "line": 401,
             "mutants": 2,
             "category": "other",
             "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5212,7 +5212,7 @@
             "anchors": [
                 "return { success: true };"
             ],
-            "line": 400,
+            "line": 404,
             "mutants": 2,
             "category": "other",
             "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5225,7 +5225,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 401,
+            "line": 405,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line \u2014 so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5238,7 +5238,7 @@
             "anchors": [
                 "return { success: false, error: (error as Error).message };"
             ],
-            "line": 402,
+            "line": 406,
             "mutants": 2,
             "category": "other",
             "reason": "The failure verdict for an exception thrown anywhere in the helper \u2014 including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",
@@ -6218,10 +6218,10 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 153,
+            "line": 156,
             "mutants": 1,
             "category": "block",
-            "reason": "This catch body is a single logger.warn. Storing the adopted token in SecretStorage is best-effort by design, and the function returns the helper token immediately afterwards whether the store threw or not - which the fallback suite pins with a secrets.store that rejects. Emptying the block changes only whether one warn line prints. (Re-anchored 2026-10-09, EDS-35: the token moved from globalState to SecretStorage.) Re-anchored 2026-10-20 (152 -> 153): unchanged code, moved one line by an added import.",
+            "reason": "This catch body is a single logger.warn. Storing the adopted token in SecretStorage is best-effort by design, and the function returns the helper token immediately afterwards whether the store threw or not - which the fallback suite pins with a secrets.store that rejects. Emptying the block changes only whether one warn line prints. (Re-anchored 2026-10-09, EDS-35: the token moved from globalState to SecretStorage.) Re-anchored 2026-10-20 (152 -> 153): unchanged code, moved one line by an added import. Re-anchored 2026-10-28 (153 -> 156): unchanged code, moved when the DA.live sign-in reader asks IMS (EDS-68).",
             "decision": "none - equivalent; the behaviour it guards is already asserted, and only the log line differs.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
@@ -6231,10 +6231,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 232,
+            "line": 241,
             "mutants": 1,
             "category": "block",
-            "reason": "The else branch of the response.ok check contains only a logger.warn. Both the taken and the untaken path fall through to the same return null at the end of fetchUserEmail, which the refused-response test asserts. Re-anchored 2026-10-19 (242 -> 231): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54). Re-anchored 2026-10-20 (231 -> 232): unchanged code, moved one line by an added import.",
+            "reason": "The else branch of the response.ok check contains only a logger.warn. Both the taken and the untaken path fall through to the same return null at the end of fetchUserEmail, which the refused-response test asserts. Re-anchored 2026-10-19 (242 -> 231): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54). Re-anchored 2026-10-20 (231 -> 232): unchanged code, moved one line by an added import. Re-anchored 2026-10-28 (232 -> 241): unchanged code, moved when the DA.live sign-in reader asks IMS (EDS-68).",
             "decision": "none - equivalent; only the presence of one warn line differs.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
@@ -6244,10 +6244,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 235,
+            "line": 244,
             "mutants": 1,
             "category": "block",
-            "reason": "This catch body is a single logger.warn, and control falls through to the same return null either way - pinned by the test that makes fetch reject and asserts null. Emptying it changes only the log. Re-anchored 2026-10-19 (245 -> 234): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54). Re-anchored 2026-10-20 (234 -> 235): unchanged code, moved one line by an added import.",
+            "reason": "This catch body is a single logger.warn, and control falls through to the same return null either way - pinned by the test that makes fetch reject and asserts null. Emptying it changes only the log. Re-anchored 2026-10-19 (245 -> 234): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54). Re-anchored 2026-10-20 (234 -> 235): unchanged code, moved one line by an added import. Re-anchored 2026-10-28 (235 -> 244): unchanged code, moved when the DA.live sign-in reader asks IMS (EDS-68).",
             "decision": "none - equivalent; only the presence of one warn line differs.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
@@ -7953,10 +7953,10 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 832,
+            "line": 837,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation. Re-anchored 2026-10-19 (840 -> 841): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (841 -> 846): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (846 -> 848): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (850 -> 832): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61).",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation. Re-anchored 2026-10-19 (840 -> 841): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (841 -> 846): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (846 -> 848): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (850 -> 832): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (832 -> 837): unchanged code, moved when the forced-sign-in watch was wired (PL-84).",
             "decision": "none \u2014 log-only.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -7978,10 +7978,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 563,
+            "line": 568,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest. Re-anchored 2026-10-19 (574 -> 576): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (576 -> 579): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (580 -> 563): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61).",
+            "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest. Re-anchored 2026-10-19 (574 -> 576): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (576 -> 579): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (580 -> 563): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (563 -> 568): unchanged code, moved when the forced-sign-in watch was wired (PL-84).",
             "decision": "none \u2014 the remaining difference is message wording.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -7991,10 +7991,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 939,
+            "line": 944,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep. Re-anchored 2026-10-19 (947 -> 948): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (948 -> 953): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (953 -> 955): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (957 -> 939): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61).",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep. Re-anchored 2026-10-19 (947 -> 948): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (948 -> 953): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (953 -> 955): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (957 -> 939): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (939 -> 944): unchanged code, moved when the forced-sign-in watch was wired (PL-84).",
             "decision": "none \u2014 log-only.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -9389,7 +9389,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 37,
+            "line": 43,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch makes githubAuthed return undefined instead of false, and its single call site is 'if (!(await githubAuthed(ctx)))' - which takes the same branch for both, returning the needsAuth handoff. The function's return type is boolean, so no caller can distinguish them either; the test that a throwing token validation is treated as unauthenticated already covers the path and passes under both.",
@@ -9428,7 +9428,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 236,
+            "line": 242,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "delete_github_repo reads args?.owner and args?.repo above this line and returns early unless both are non-empty, so by the time the confirmation gate runs, args is known to be an object carrying them. Dropping either optional chain here cannot throw on any input that reaches the line. The chains on the owner and repo reads ARE killed, by the no-arguments test - which is where a missing argument object actually arrives.",
@@ -9441,10 +9441,10 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 329,
+            "line": 344,
             "mutants": 2,
             "category": "optionalChain",
-            "reason": "cleanup_dalive_site's copy of the same situation: args?.org and args?.site are read above and the tool returns early unless both are non-empty strings, so args is an object by the time this gate runs and the optional chains cannot fire. Both halves of the gate - confirm:true and the confirmName echo - are killed by their own tests, including one that supplies a correct echo without confirm.",
+            "reason": "cleanup_dalive_site's copy of the same situation: args?.org and args?.site are read above and the tool returns early unless both are non-empty strings, so args is an object by the time this gate runs and the optional chains cannot fire. Both halves of the gate - confirm:true and the confirmName echo - are killed by their own tests, including one that supplies a correct echo without confirm. Re-anchored 2026-10-28 (342 -> 344): unchanged code, moved when delete_github_repo keeps a storefront with no working DA.live sign-in (EDS-67).",
             "decision": "Recorded as equivalent, for the same reason as the delete_github_repo gate.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -9454,10 +9454,10 @@
             "anchors": [
                 "const offset = Math.max(0, Math.trunc(args?.offset ?? 0));"
             ],
-            "line": 284,
+            "line": 299,
             "mutants": 1,
             "category": "optionalChain",
-            "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all.",
+            "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all. Re-anchored 2026-10-28 (297 -> 299): unchanged code, moved when delete_github_repo keeps a storefront with no working DA.live sign-in (EDS-67).",
             "decision": "Recorded as equivalent. The chain is redundant behind the org guard; its unguarded twin is covered.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -9467,10 +9467,10 @@
             "anchors": [
                 "const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));"
             ],
-            "line": 285,
+            "line": 300,
             "mutants": 1,
             "category": "optionalChain",
-            "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all.",
+            "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all. Re-anchored 2026-10-28 (298 -> 300): unchanged code, moved when delete_github_repo keeps a storefront with no working DA.live sign-in (EDS-67).",
             "decision": "Recorded as equivalent. The chain is redundant behind the org guard; its unguarded twin is covered.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
@@ -15357,10 +15357,10 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 177,
+            "line": 178,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (debugLogger.warn that the agent-trace file sink is unavailable). That the catch EXISTS is tested: extension-activationSeams 'degrades to channel-only when the storage path cannot be created' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (181 -> 183): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (183 -> 181): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (182 -> 177): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61).",
+            "reason": "The catch body is a single logger call (debugLogger.warn that the agent-trace file sink is unavailable). That the catch EXISTS is tested: extension-activationSeams 'degrades to channel-only when the storage path cannot be created' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (181 -> 183): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (183 -> 181): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (182 -> 177): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (177 -> 178): unchanged code, moved when the forced-sign-in watch was wired (PL-84).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15370,10 +15370,10 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 288,
+            "line": 289,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.error that seeding the default AI prompts failed). That the catch EXISTS is tested: extension-activationSeams 'does not abort activation when seeding fails' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (292 -> 294): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (294 -> 292): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (293 -> 288): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61).",
+            "reason": "The catch body is a single logger call (logger.error that seeding the default AI prompts failed). That the catch EXISTS is tested: extension-activationSeams 'does not abort activation when seeding fails' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (292 -> 294): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (294 -> 292): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (293 -> 288): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (288 -> 289): unchanged code, moved when the forced-sign-in watch was wired (PL-84).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15383,10 +15383,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 599,
+            "line": 604,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.warn that the global MCP entry could not be refreshed). That the catch EXISTS is tested: extension-mcpAndHome 'does not abort activation when the repair throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (610 -> 612): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (612 -> 615): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (616 -> 599): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61).",
+            "reason": "The catch body is a single logger call (logger.warn that the global MCP entry could not be refreshed). That the catch EXISTS is tested: extension-mcpAndHome 'does not abort activation when the repair throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (610 -> 612): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (612 -> 615): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (616 -> 599): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (599 -> 604): unchanged code, moved when the forced-sign-in watch was wired (PL-84).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15396,10 +15396,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 878,
+            "line": 883,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.debug that the secret sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed secret sweep stop the sweeps after it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (886 -> 887): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (887 -> 892): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (892 -> 894): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (896 -> 878): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61).",
+            "reason": "The catch body is a single logger call (logger.debug that the secret sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed secret sweep stop the sweeps after it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (886 -> 887): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (887 -> 892): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (892 -> 894): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (896 -> 878): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (878 -> 883): unchanged code, moved when the forced-sign-in watch was wired (PL-84).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15409,10 +15409,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 893,
+            "line": 898,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.debug that the DA.live token move was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed DA.live token move take activation down' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (901 -> 902): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (902 -> 907): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (907 -> 909): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (911 -> 893): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61).",
+            "reason": "The catch body is a single logger call (logger.debug that the DA.live token move was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failed DA.live token move take activation down' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (901 -> 902): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (902 -> 907): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (907 -> 909): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (911 -> 893): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (893 -> 898): unchanged code, moved when the forced-sign-in watch was wired (PL-84).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15422,10 +15422,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 915,
+            "line": 920,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.debug that the publish-key renewal sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failing sweep take activation down with it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (923 -> 924): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (924 -> 929): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (929 -> 931): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (933 -> 915): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61).",
+            "reason": "The catch body is a single logger call (logger.debug that the publish-key renewal sweep was skipped). That the catch EXISTS is tested: extension-activationSweeps 'does not let a failing sweep take activation down with it' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (923 -> 924): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (924 -> 929): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (929 -> 931): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (933 -> 915): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (915 -> 920): unchanged code, moved when the forced-sign-in watch was wired (PL-84).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"
@@ -15435,10 +15435,10 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 989,
+            "line": 994,
             "mutants": 1,
             "category": "block",
-            "reason": "The catch body is a single logger call (logger.debug that the Node sweep was skipped). That the catch EXISTS is tested: extension-nodeSweep 'shows nothing, and does not fail activation, when the sweep throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (997 -> 998): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (998 -> 1003): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (1003 -> 1005): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (1007 -> 989): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61).",
+            "reason": "The catch body is a single logger call (logger.debug that the Node sweep was skipped). That the catch EXISTS is tested: extension-nodeSweep 'shows nothing, and does not fail activation, when the sweep throws' drives the failure and asserts activation carries on. Emptying the body changes only whether a line reaches a log channel, and a test may not pin a logger call's arguments. Verified by planting on 2026-10-10: this body and the six other log-only catch bodies in the file were emptied together and all 106 tests in the nine extension suites still passed. Re-anchored 2026-10-19 (997 -> 998): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-19 (998 -> 1003): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-10-20 (1003 -> 1005): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (1007 -> 989): unchanged code; the new-category watcher and the category page tools above it were removed (EDS-61). Re-anchored 2026-10-28 (989 -> 994): unchanged code, moved when the forced-sign-in watch was wired (PL-84).",
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-07"

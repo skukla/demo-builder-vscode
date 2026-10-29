@@ -12,8 +12,9 @@
  * One read: `GET /list/{org}/{site}/` with the SC's own DA.live token. Read-only
  * by construction; nothing is written anywhere.
  *
- * Status mapping follows `DaLiveAuthService.isServerAccepted`: 401 indicts the
- * CREDENTIAL (sign in again), 403 is a permission fact (no grant). The EDS-22
+ * Status mapping: 401 indicts the CREDENTIAL (sign in again), 403 is read as a
+ * permission fact (no grant). A 403 can also be a sign-in IMS has cancelled (measured
+ * 2026-10-28, `daLiveSignInCheck`), which this one read cannot tell apart. The EDS-22
  * item's reading of the DA.live permissions docs (2026-09-30) is that an org with
  * no permissions rows restricts nobody; if so, a 200 there is real access too.
  * Which status DA.live gives an ungranted reader is a live check still to run.

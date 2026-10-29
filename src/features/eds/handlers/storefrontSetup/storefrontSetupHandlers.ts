@@ -240,10 +240,10 @@ export async function handleStartStorefrontSetup(
         context.logger.info('[Storefront Setup] No mesh selected — skipping Adobe I/O auth check');
     }
 
-    // Pre-flight: Check DA.live authentication (with inline re-auth). The org
-    // arms the guard's server probe — a locally-valid token the server refuses
-    // is caught here rather than as "missing permission" 403s mid-pipeline.
-    const daLiveResult = await ensureDaLiveAuth(context, '[Storefront Setup]', edsConfig.daLiveOrg);
+    // Pre-flight: Check DA.live authentication (with inline re-auth). The guard asks
+    // IMS, so a locally-valid token IMS no longer accepts is caught here rather than
+    // as "missing permission" 403s mid-pipeline.
+    const daLiveResult = await ensureDaLiveAuth(context, '[Storefront Setup]');
     if (!daLiveResult.authenticated) {
         await context.sendMessage('storefront-setup-error', {
             message: 'DA.live authentication expired',
@@ -392,6 +392,10 @@ async function cleanupStorefrontSetupResources(
         if (!result.daLive.success && !result.daLive.skipped) {
             failures.push(`DA.live: ${result.daLive.error}`);
         }
+        // The repository went, and its code on aem.live may not have (EDS-67).
+        if (!result.siteCode.success && !result.siteCode.skipped) {
+            failures.push(`Site code: ${result.siteCode.error}`);
+        }
 
         if (failures.length > 0) {
             return { success: false, error: failures.join('; ') };
@@ -419,7 +423,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     // Both come from the cache — it builds the repo operations FROM the same
     // token service, so building them here produced a second pair with a cold
     // validation cache (D-2).
-    const { repoLifecycle: githubRepoOps } = getGitHubServices(context.context.secrets);
+    const { repoLifecycle: githubRepoOps, fileOperations } = getGitHubServices(context.context.secrets);
 
     // Create TokenProvider adapter from AuthenticationService if available
     const tokenProvider = createDaLiveTokenProvider(context.authManager);
@@ -437,6 +441,9 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
         githubRepoOps,
         daLiveOrgOps,
         toolManager,
+        // A deleted repository's code on aem.live goes after it (EDS-67): the files are
+        // read first, and the DA.live IMS token is the one the code bus DELETE accepts.
+        { files: fileOperations, tokenProvider: daLiveTokenProvider },
         context.logger,
         configurationService,
     );

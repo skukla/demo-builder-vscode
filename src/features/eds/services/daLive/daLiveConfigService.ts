@@ -29,7 +29,7 @@ import type {
 } from './daLiveConfigTypes';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
 import { DaLiveContentReaders } from './daLiveContentReaders';
-import { serverVerdict } from './daLiveOrgOperations';
+import { askImsAboutDaLiveToken } from './daLiveSignInCheck';
 import { DaLiveSiteAccess } from './daLiveSiteAccess';
 import type { Logger } from '@/types/logger';
 
@@ -177,7 +177,7 @@ export class DaLiveConfigService {
                 this.logger.debug(`[DaLiveConfig] No config exists for ${target.missing}`);
                 return null;
             }
-            if (response.status === 401) await this.refuseExpiredSignIn(target.org, token);
+            if (response.status === 401) await this.refuseExpiredSignIn(token);
 
             if (!response.ok) {
                 const errorText = await response.text().catch(() => '');
@@ -221,7 +221,7 @@ export class DaLiveConfigService {
                 };
             });
 
-            if (response.status === 401) await this.refuseExpiredSignIn(target.org, token);
+            if (response.status === 401) await this.refuseExpiredSignIn(token);
             if (!response.ok) {
                 const errorText = await response.text().catch(() => '');
                 throw new Error(
@@ -238,13 +238,13 @@ export class DaLiveConfigService {
 
     /**
      * A config 401 alone cannot say why: an expired sign-in, or an identity that does not
-     * own the org (`contentAccessManagerHeadless` reads that one as "not authorized"). One
-     * probe tells them apart. A refused sign-in throws the error every other DA.live call
-     * raises on a 401, so the run stops with the sign-in message (EDS-54); anything else
-     * returns, and the caller reports the 401 as it always has.
+     * own the org (`contentAccessManagerHeadless` reads that one as "not authorized"). IMS
+     * tells them apart (`daLiveSignInCheck`). A refused sign-in throws the error every other
+     * DA.live call raises on a 401, so the run stops with the sign-in message (EDS-54);
+     * anything else returns, and the caller reports the 401 as it always has.
      */
-    private async refuseExpiredSignIn(org: string, token: string): Promise<void> {
-        if ((await serverVerdict(org, token)) === 'refused') {
+    private async refuseExpiredSignIn(token: string): Promise<void> {
+        if ((await askImsAboutDaLiveToken(token)) === 'refused') {
             throw new DaLiveAuthError('Authentication expired. Please log in again.');
         }
     }

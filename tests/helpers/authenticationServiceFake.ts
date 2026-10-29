@@ -100,6 +100,7 @@ export function createMockAuthenticationService(
         loginAndRestoreProjectContext: jest.fn().mockResolvedValue(undefined),
         logout: jest.fn().mockResolvedValue(undefined),
         onDidSignIn: jest.fn().mockReturnValue({ dispose: jest.fn() }),
+        watchForcedSignIns: jest.fn().mockReturnValue({ dispose: jest.fn() }),
         getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true }),
         testDeveloperPermissions: jest.fn().mockResolvedValue(true),
 

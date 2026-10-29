@@ -19,6 +19,7 @@ jest.mock('@/core/utils/sleep', () => ({
 
 import type { HelixAdminAuth } from '@/features/eds/services/helix/helixAdminAuth';
 import { listPublishedPaths } from '@/features/eds/services/helix/helixPublishedPaths';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 function response(status: number, body?: unknown) {
@@ -138,6 +139,32 @@ describe('listPublishedPaths', () => {
         fetchMock.mockResolvedValueOnce(response(401));
 
         await expect(run()).rejects.toThrow('Helix refused to list the published pages (HTTP 401)');
+    });
+
+    // 2026-10-28: after a forced Adobe sign-in cancelled the DA.live token, this listing
+    // answered 403 and the delete carried on as if it simply could not tell.
+    it.each([401, 403])('a %s on the listing is a refused SIGN-IN, not a plain failure', async (status) => {
+        fetchMock.mockResolvedValueOnce(response(status));
+
+        const failure = await run().catch((error: unknown) => error);
+
+        expect(failure).toBeInstanceOf(DaLiveAuthError);
+        expect((failure as Error).message).toBe(`Helix refused to list the published pages (HTTP ${status})`);
+    });
+
+    it("a 403 on the job's results is a refused sign-in too", async () => {
+        fetchMock.mockResolvedValueOnce(JOB_ACCEPTED).mockResolvedValueOnce(response(403));
+
+        await expect(run()).rejects.toBeInstanceOf(DaLiveAuthError);
+    });
+
+    it('CONTROL: any other refusal stays a plain error', async () => {
+        fetchMock.mockResolvedValueOnce(response(500));
+
+        const failure = await run().catch((error: unknown) => error);
+
+        expect(failure).toBeInstanceOf(Error);
+        expect(failure).not.toBeInstanceOf(DaLiveAuthError);
     });
 
     it('an accepted request with no job to follow is a failure', async () => {

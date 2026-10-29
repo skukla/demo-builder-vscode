@@ -29,8 +29,8 @@ import type { HandlerContext } from '@/types/handlers';
 
 /** The DA.live auth service's methods, shared by every suite in the family. */
 export const mockStoreToken = jest.fn();
-export const mockIsAuthenticated = jest.fn();
-export const mockGetStoredToken = jest.fn();
+/** The one sign-in reader: `{ state: 'none' }`, or IMS's verdict on the stored token. */
+export const mockCheckSignIn = jest.fn();
 export const mockGetOrgName = jest.fn();
 export const mockIsSetupComplete = jest.fn();
 export const mockLogout = jest.fn();
@@ -41,8 +41,7 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
         ...actual,
         DaLiveAuthService: jest.fn().mockImplementation(() => ({
             storeToken: mockStoreToken,
-            isAuthenticated: mockIsAuthenticated,
-            getStoredToken: mockGetStoredToken,
+            checkSignIn: mockCheckSignIn,
             getOrgName: mockGetOrgName,
             isSetupComplete: mockIsSetupComplete,
             logout: mockLogout,
@@ -99,6 +98,11 @@ export function createDaLiveAuthContext(): HandlerContext {
     });
 }
 
+/** A stored sign-in as the reader answers it, with IMS's verdict. */
+export function signedIn(state: 'valid' | 'refused' | 'unknown', email?: string) {
+    return { state, token: { accessToken: 'stored', expiresAt: Date.now() + 3_600_000, email } };
+}
+
 /**
  * Put every auth-service fake back to a signed-in, set-up default.
  *
@@ -107,8 +111,7 @@ export function createDaLiveAuthContext(): HandlerContext {
  */
 export function resetAuthServiceFakes(): void {
     mockStoreToken.mockReset().mockResolvedValue(undefined);
-    mockIsAuthenticated.mockReset().mockResolvedValue(true);
-    mockGetStoredToken.mockReset().mockResolvedValue({ email: 'user@example.com' });
+    mockCheckSignIn.mockReset().mockResolvedValue(signedIn('valid', 'user@example.com'));
     mockGetOrgName.mockReset().mockReturnValue(undefined);
     mockIsSetupComplete.mockReset().mockReturnValue(true);
     mockLogout.mockReset().mockResolvedValue(undefined);

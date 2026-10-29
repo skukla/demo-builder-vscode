@@ -22,6 +22,10 @@ import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { firstUsableDaLiveToken } from '@/features/eds/services/daLive/daLiveTokenChain';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { otherProjectsPublishingTo } from '@/features/eds/services/storefront/sharedRepoProjects';
+import {
+    deleteStorefrontRepository,
+    type CodeRemovalResult,
+} from '@/features/eds/services/storefront/storefrontCodeRemoval';
 import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -40,6 +44,28 @@ export interface CloudCleanupChoice {
     refusedBySetting?: string;
 }
 
+/**
+ * What happened to AEM's copy of a deleted repository's code (EDS-67), for an agent:
+ * counts rather than every path, and the SC's sentence whenever anything may be left.
+ */
+export interface AgentSiteCode {
+    removed: number;
+    notRemoved: number;
+    /** False only when aem.live was asked and no longer serves the code. */
+    stillServing: boolean | 'unknown';
+    summary?: string;
+}
+
+/** The agent's view of a code removal; shared by `delete_project` and `delete_github_repo`. */
+export function agentSiteCode(code: CodeRemovalResult): AgentSiteCode {
+    return {
+        removed: code.removed,
+        notRemoved: code.failed.length,
+        stillServing: code.stillServing,
+        ...(code.summary ? { summary: code.summary } : {}),
+    };
+}
+
 /** What actually happened out there. */
 export interface CloudCleanupOutcome {
     /**
@@ -48,7 +74,8 @@ export interface CloudCleanupOutcome {
      * pages down (EDS-65).
      */
     stopped?: string;
-    githubRepo?: { name: string; deleted: boolean; error?: string };
+    /** `siteCode` is set for a storefront's repository: what happened to its code on aem.live. */
+    githubRepo?: { name: string; deleted: boolean; error?: string; siteCode?: AgentSiteCode };
     daLiveSite?: {
         name: string;
         contentDeleted: boolean;
@@ -181,13 +208,36 @@ export async function cleanUpProjectCloud(
         reportPhase(OPERATION_STAGES.deletingRepository.label);
         const [owner, repo] = metadata.githubRepo.split('/');
         try {
-            const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-            const { repoLifecycle } = getGitHubServices(context.context.secrets);
+            const { getGitHubServices, tryCreateDaLiveTokenProvider } = await import(
+                '@/features/eds/handlers/edsHelpers'
+            );
+            const { repoLifecycle, fileOperations } = getGitHubServices(context.context.secrets);
             if (!owner || !repo) {
                 throw new Error(`"${metadata.githubRepo}" is not an owner/repo pair`);
             }
-            await repoLifecycle.deleteRepository(owner, repo);
-            outcome.githubRepo = { name: metadata.githubRepo, deleted: true };
+            // The button's own path: the files listed first, then the repository, then
+            // AEM's copy of the code, on the DA.live session (EDS-67).
+            const { code, kept } = await deleteStorefrontRepository(
+                { owner, repo },
+                {
+                    files: fileOperations,
+                    deleteRepository: (o, r) => repoLifecycle.deleteRepository(o, r),
+                    tokenProvider: tryCreateDaLiveTokenProvider(context.context),
+                    logger: context.logger,
+                    onStep: (step) => reportPhase(step),
+                },
+            );
+            if (kept) {
+                // No working DA.live sign-in to remove the site code with: the repository
+                // stays, and the project with it, so "delete again" can finish (EDS-67).
+                outcome.githubRepo = { name: metadata.githubRepo, deleted: false, error: kept };
+                return { ...outcome, stopped: kept };
+            }
+            outcome.githubRepo = {
+                name: metadata.githubRepo,
+                deleted: true,
+                ...(code ? { siteCode: agentSiteCode(code) } : {}),
+            };
         } catch (error) {
             outcome.githubRepo = {
                 name: metadata.githubRepo,

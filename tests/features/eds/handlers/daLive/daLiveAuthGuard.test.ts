@@ -80,10 +80,11 @@ jest.mock(
 
 // Mock core logging (prevents "Logger not initialized" error)
 
-// Mock DaLiveAuthService - used by both ensureDaLiveAuth (isAuthenticated)
+// Mock DaLiveAuthService - used by both ensureDaLiveAuth (checkSignIn)
 // and showDaLiveAuthQuickPick (getOrgName, storeToken)
-const mockIsAuthenticated = jest.fn().mockResolvedValue(false);
-const mockIsServerAccepted = jest.fn().mockResolvedValue('accepted');
+const NOT_SIGNED_IN = { state: 'none' };
+const SIGNED_IN = { state: 'valid', token: { accessToken: 'stored', expiresAt: Date.now() + 3_600_000 } };
+const mockCheckSignIn = jest.fn().mockResolvedValue(NOT_SIGNED_IN);
 const mockStoreToken = jest.fn().mockResolvedValue(undefined);
 // A pinned namespace, so these tests exercise the expiry path: the org step is
 // skipped and the flow goes straight to the token.
@@ -94,8 +95,7 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
     return {
         ...actual,
         DaLiveAuthService: jest.fn().mockImplementation(() => ({
-            isAuthenticated: mockIsAuthenticated,
-            isServerAccepted: mockIsServerAccepted,
+            checkSignIn: mockCheckSignIn,
             storeToken: mockStoreToken,
             getOrgName: mockGetOrgName,
             dispose: mockDispose,
@@ -144,7 +144,7 @@ function resetMockState(): void {
     showInputBoxIndex = 0;
     showInfoMessageResponse = undefined;
     showWarningMessageResponse = undefined;
-    mockIsAuthenticated.mockReset().mockResolvedValue(false);
+    mockCheckSignIn.mockReset().mockResolvedValue(NOT_SIGNED_IN);
     mockStoreToken.mockReset().mockResolvedValue(undefined);
 }
 
@@ -168,7 +168,7 @@ describe('ensureDaLiveAuth', () => {
 
     it('should return authenticated true when already authenticated', async () => {
         // Given: DA.live token is valid
-        mockIsAuthenticated.mockResolvedValue(true);
+        mockCheckSignIn.mockResolvedValue(SIGNED_IN);
 
         // When: ensureDaLiveAuth is called
         const result: DaLiveGuardResult = await ensureDaLiveAuth(mockContext);
@@ -184,7 +184,7 @@ describe('ensureDaLiveAuth', () => {
 
     it('should return authenticated true when sign-in via QuickPick succeeds', async () => {
         // Given: Token expired, user clicks "Sign In", QuickPick succeeds
-        mockIsAuthenticated.mockResolvedValue(false);
+        mockCheckSignIn.mockResolvedValue(NOT_SIGNED_IN);
         showWarningMessageResponse = 'Sign In';
 
         // Set up flow mocks: info message → token → verify. The org step does
@@ -213,7 +213,7 @@ describe('ensureDaLiveAuth', () => {
 
     it('should return authenticated false with error when QuickPick fails', async () => {
         // Given: Token expired, user clicks "Sign In", but token is invalid
-        mockIsAuthenticated.mockResolvedValue(false);
+        mockCheckSignIn.mockResolvedValue(NOT_SIGNED_IN);
         showWarningMessageResponse = 'Sign In';
 
         // Token-first flow: info message → invalid token
@@ -234,7 +234,7 @@ describe('ensureDaLiveAuth', () => {
         // Cancelling produces no error text of its own, and the guard's caller still
         // needs something to show. Without the fallback the caller reports a failure
         // with an empty reason.
-        mockIsAuthenticated.mockResolvedValue(false);
+        mockCheckSignIn.mockResolvedValue(NOT_SIGNED_IN);
         showWarningMessageResponse = 'Sign In';
         showInfoMessageResponse = undefined; // dismissed
 
@@ -246,7 +246,7 @@ describe('ensureDaLiveAuth', () => {
 
     it('should return cancelled when QuickPick is cancelled', async () => {
         // Given: Token expired, user clicks "Sign In", then dismisses info message
-        mockIsAuthenticated.mockResolvedValue(false);
+        mockCheckSignIn.mockResolvedValue(NOT_SIGNED_IN);
         showWarningMessageResponse = 'Sign In';
 
         // Token-first flow: user dismisses the info message
@@ -266,7 +266,7 @@ describe('ensureDaLiveAuth', () => {
 
     it('should return cancelled when user dismisses the warning dialog', async () => {
         // Given: Token expired, user dismisses dialog (undefined response)
-        mockIsAuthenticated.mockResolvedValue(false);
+        mockCheckSignIn.mockResolvedValue(NOT_SIGNED_IN);
         showWarningMessageResponse = undefined;
 
         // When: ensureDaLiveAuth is called
@@ -282,7 +282,7 @@ describe('ensureDaLiveAuth', () => {
 
     it('should warn once when the token is expired', async () => {
         // Given: Token expired
-        mockIsAuthenticated.mockResolvedValue(false);
+        mockCheckSignIn.mockResolvedValue(NOT_SIGNED_IN);
         showWarningMessageResponse = undefined;
 
         // When: ensureDaLiveAuth is called
@@ -298,13 +298,13 @@ describe('ensureDaLiveAuth', () => {
 
     it('should check authentication via DaLiveAuthService', async () => {
         // Given: Token is valid
-        mockIsAuthenticated.mockResolvedValue(true);
+        mockCheckSignIn.mockResolvedValue(SIGNED_IN);
 
         // When: ensureDaLiveAuth is called
         await ensureDaLiveAuth(mockContext);
 
-        // Then: isAuthenticated should be called on the service
-        expect(mockIsAuthenticated).toHaveBeenCalled();
+        // Then: the one sign-in reader answered
+        expect(mockCheckSignIn).toHaveBeenCalled();
     });
 
     // =========================================================================
@@ -313,7 +313,7 @@ describe('ensureDaLiveAuth', () => {
 
     it('should call showDaLiveAuthQuickPick when user clicks Sign In', async () => {
         // Given: Token expired, user clicks "Sign In"
-        mockIsAuthenticated.mockResolvedValue(false);
+        mockCheckSignIn.mockResolvedValue(NOT_SIGNED_IN);
         showWarningMessageResponse = 'Sign In';
 
         // Token-first flow: user dismisses info message (cancels)
@@ -334,15 +334,14 @@ describe('ensureDaLiveAuth', () => {
 });
 
 // =============================================================================
-// Server probe (probeOrg) — the locally-valid-but-server-refused gap.
+// IMS's verdict — the locally-valid-but-cancelled gap.
 //
-// The 2026-08-16 evidence: a token can pass the local expiry check and still be
-// refused by the DA.live admin plane, and every downstream 403 then reads as a
-// missing PERMISSION. With a probeOrg, the guard asks the server one cheap
-// question before letting a pipeline start.
+// A token can pass the local expiry check and still be cancelled: on 2026-10-28 a
+// forced Adobe sign-in did that to one with 23 hours left. The reader asks IMS, so
+// the guard needs no org to catch it.
 // =============================================================================
 
-describe('ensureDaLiveAuth — server probe', () => {
+describe('ensureDaLiveAuth — IMS verdict', () => {
     let mockContext: HandlerContext;
 
     beforeEach(() => {
@@ -350,32 +349,30 @@ describe('ensureDaLiveAuth — server probe', () => {
         clearServiceCache();
         resetMockState();
         mockContext = createAuthPromptContext();
-        mockIsAuthenticated.mockResolvedValue(true);
     });
 
-    it('prompts re-auth when the server refuses a locally-valid token', async () => {
-        mockIsServerAccepted.mockResolvedValue('refused');
+    it('prompts re-auth when IMS no longer accepts a locally-valid token', async () => {
+        mockCheckSignIn.mockResolvedValue({ ...SIGNED_IN, state: 'refused' });
         showWarningMessageResponse = undefined; // user dismisses the prompt
 
-        const result = await ensureDaLiveAuth(mockContext, '[Test]', 'acme');
+        const result = await ensureDaLiveAuth(mockContext, '[Test]');
 
-        expect(mockIsServerAccepted).toHaveBeenCalledWith('acme');
         expect(result).toMatchObject({ authenticated: false, cancelled: true });
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            expect.stringContaining('refused'),
+            'Adobe no longer accepts your DA.live sign-in. Sign in to keep going.',
             'Sign In'
         );
     });
 
-    it('says EXPIRED, not refused, when the local check is what failed', async () => {
+    it('says EXPIRED, not refused, when nothing usable is stored', async () => {
         // The two causes send the SC to different places: an expiry means fetch
-        // a fresh token, a refusal means the namespace does not accept this
-        // identity. Defaulting to the refusal copy tells everyone whose token
-        // simply ran out to go check the wrong thing.
-        mockIsAuthenticated.mockResolvedValue(false);
+        // a fresh token, a refusal means the sign-in was ended elsewhere.
+        // Defaulting to the refusal copy tells everyone whose token simply ran
+        // out to go check the wrong thing.
+        mockCheckSignIn.mockResolvedValue(NOT_SIGNED_IN);
         showWarningMessageResponse = undefined;
 
-        await ensureDaLiveAuth(mockContext, '[Test]', 'acme');
+        await ensureDaLiveAuth(mockContext, '[Test]');
 
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
             'Your DA.live session has expired. Sign in to keep going.',
@@ -383,29 +380,22 @@ describe('ensureDaLiveAuth — server probe', () => {
         );
     });
 
-    it('passes without any UI when the server accepts the token', async () => {
-        mockIsServerAccepted.mockResolvedValue('accepted');
+    it('passes without any UI when IMS accepts the token', async () => {
+        mockCheckSignIn.mockResolvedValue(SIGNED_IN);
 
-        const result = await ensureDaLiveAuth(mockContext, '[Test]', 'acme');
-
-        expect(result).toEqual({ authenticated: true });
-        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
-    });
-
-    it('fails open when the probe cannot answer (network trouble is not a refusal)', async () => {
-        mockIsServerAccepted.mockResolvedValue('unknown');
-
-        const result = await ensureDaLiveAuth(mockContext, '[Test]', 'acme');
-
-        expect(result).toEqual({ authenticated: true });
-        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
-    });
-
-    it('does not probe at all when no probeOrg is given (existing callers unchanged)', async () => {
         const result = await ensureDaLiveAuth(mockContext, '[Test]');
 
-        expect(mockIsServerAccepted).not.toHaveBeenCalled();
         expect(result).toEqual({ authenticated: true });
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it('carries on when IMS cannot answer (network trouble is not a refusal)', async () => {
+        mockCheckSignIn.mockResolvedValue({ ...SIGNED_IN, state: 'unknown' });
+
+        const result = await ensureDaLiveAuth(mockContext, '[Test]');
+
+        expect(result).toEqual({ authenticated: true });
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 });
 

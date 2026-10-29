@@ -42,6 +42,7 @@
 
 import { andList } from '@/core/utils/andList';
 import { formatHelixError } from '@/features/eds/services/errorFormatters';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 
 /** The Helix site, by the key Helix uses. */
@@ -89,6 +90,14 @@ export interface ProductPageRemovalResult {
     previewRemoved: number;
     /** One plain sentence (or two) for the progress line, the log and the agent. */
     summary: string;
+    /**
+     * Set when AEM refused the sign-in: the listing answered 401/403 (`listPublishedPaths`
+     * throws that as a `DaLiveAuthError`), or a live copy could not be removed. Every
+     * failed removal IS a 401/403: `deleteResource` (`helixPageDeletion.ts`) answers
+     * `success: false` for those alone and throws on any other status. A teardown stops on
+     * it (2026-10-28: "30 of 49 removed", and the delete carried on).
+     */
+    signInRefused?: true;
 }
 
 /** The same result, for category pages. */
@@ -180,7 +189,8 @@ function describe(
     const { liveFailed, previewFailed } = failed;
     const liveRemoved = found - liveFailed;
     const previewRemoved = found - previewFailed;
-    const counts = { found, liveRemoved, previewRemoved };
+    const refused = liveFailed > 0 ? { signInRefused: true as const } : {};
+    const counts = { found, liveRemoved, previewRemoved, ...refused };
     if (liveFailed === 0 && previewFailed === 0) {
         return { status: 'removed', ...counts, summary: `Removed ${pages(found)} from ${site}, live and preview.` };
     }
@@ -243,7 +253,8 @@ async function removeOverlayPages(
         paths = (await findPaths()).filter((path) => path !== kind.template);
     } catch (error) {
         deps.logger.warn(`${kind.tag} Listing failed for ${name}: ${rawOf(error)}`);
-        return none('failed', notRemoved(name, `list the ${kind.noun} pages published`, error));
+        const failed = none('failed', notRemoved(name, `list the ${kind.noun} pages published`, error));
+        return error instanceof DaLiveAuthError ? { ...failed, signInRefused: true } : failed;
     }
     if (paths.length === 0) return none('nothing', `Helix lists no ${kind.noun} pages published on ${name}.`);
 

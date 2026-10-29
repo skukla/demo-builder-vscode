@@ -55,6 +55,15 @@ export const mockDeleteDaLiveSite = jest.fn();
 export const mockGetToken = jest.fn();
 export const mockStoreToken = jest.fn();
 export const mockEnsureDaLiveAuth = jest.fn();
+/**
+ * The repository's files, listed BEFORE it is deleted so AEM's copy of its code can be
+ * removed after (EDS-67). A storefront's tree by default: `scripts/aem.js` is what marks
+ * a repository as one.
+ */
+export const mockListRepoFiles = jest.fn(async (_owner: string, _repo: string, _branch?: string) => [
+    { path: 'scripts/aem.js' },
+    { path: 'head.html' },
+]);
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: () => ({
@@ -63,11 +72,16 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             storeToken: (...a: unknown[]) => mockStoreToken(...a),
         },
         repoLifecycle: { deleteRepository: (...a: unknown[]) => mockDeleteRepository(...a) },
+        fileOperations: {
+            listRepoFiles: (owner: string, repo: string, branch?: string) => mockListRepoFiles(owner, repo, branch),
+        },
     }),
     // `{ authenticated }` — read from edsHelpers, not guessed. The first draft
     // wrote `{ success, authService }` and the DA.live cleanup silently skipped.
     ensureDaLiveAuth: (...a: unknown[]) => mockEnsureDaLiveAuth(...a),
     getDaLiveAuthService: jest.fn().mockReturnValue({}),
+    // The DA.live session the code removal reads without asking (EDS-67).
+    tryCreateDaLiveTokenProvider: () => ({ getAccessToken: () => mockDaLiveAccessToken() }),
 }));
 
 // requireActual keeps `extractEdsMetadata` REAL — it decides
@@ -98,8 +112,14 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
         };
     },
 }));
+/**
+ * The DA.live session's token, as the provider hands it over. The provider is an OBJECT
+ * with `getAccessToken` (daLiveTokenProviders.ts); this mock returned a bare function
+ * until EDS-67, which nothing noticed because nothing it reached called it.
+ */
+export const mockDaLiveAccessToken = jest.fn(async (): Promise<string | null> => 'token');
 jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
-    createDaLiveServiceTokenProvider: () => async () => 'token',
+    createDaLiveServiceTokenProvider: () => ({ getAccessToken: () => mockDaLiveAccessToken() }),
 }));
 
 /**
@@ -130,6 +150,7 @@ export const mockDefaultListAllPages = jest.fn();
 export const mockDefaultUnpublishPages = jest.fn();
 export const mockDefaultDeleteAdminApiKey = jest.fn();
 export const mockDefaultListPublishedPaths = jest.fn();
+export const mockDefaultDeleteCode = jest.fn();
 jest.mock('@/features/eds/services/helix/helixService', () => ({
     HelixService: Object.assign(
         class {
@@ -144,6 +165,9 @@ jest.mock('@/features/eds/services/helix/helixService', () => ({
             }
             listPublishedPaths(...a: unknown[]) {
                 return mockDefaultListPublishedPaths(...a);
+            }
+            deleteCode(...a: unknown[]) {
+                return mockDefaultDeleteCode(...a);
             }
         },
         { initKeyStore: (...a: unknown[]) => mockHelixInitKeyStore(...a) },

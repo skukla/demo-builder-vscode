@@ -17,12 +17,12 @@ import {
     handleCheckDaLiveAuth,
     handleClearDaLiveAuth,
     handleOpenDaLiveLogin,
+    mockCheckSignIn,
     mockGetOrgName,
-    mockGetStoredToken,
-    mockIsAuthenticated,
     mockIsSetupComplete,
     mockLogout,
     resetAuthServiceFakes,
+    signedIn,
 } from './edsDaLiveAuthHandlers.testUtils';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -40,8 +40,7 @@ describe('handleCheckDaLiveAuth', () => {
 
     it('should report the signed-in email, setup flag and cached namespace', async () => {
         // Given: A live session with a cached namespace
-        mockIsAuthenticated.mockResolvedValue(true);
-        mockGetStoredToken.mockResolvedValue({ email: 'sc@example.com' });
+        mockCheckSignIn.mockResolvedValue(signedIn('valid', 'sc@example.com'));
         mockIsSetupComplete.mockReturnValue(true);
         mockGetOrgName.mockReturnValue('acme');
 
@@ -59,16 +58,16 @@ describe('handleCheckDaLiveAuth', () => {
         expect(result).toEqual({ success: true });
     });
 
-    it('should report no email when the session has no stored token to read', async () => {
-        // Given: isAuthenticated says yes but the token record is gone
-        mockIsAuthenticated.mockResolvedValue(true);
-        mockGetStoredToken.mockResolvedValue(undefined);
+    it('shows signed in when IMS could not be reached to check the stored token', async () => {
+        // Given: a stored token with no email, and IMS gave no clear answer
+        mockCheckSignIn.mockResolvedValue(signedIn('unknown'));
         mockGetOrgName.mockReturnValue('acme');
 
         // When: Checking auth status
         const result = await handleCheckDaLiveAuth(context);
 
-        // Then: Still an authenticated push, with no email — not a thrown TypeError
+        // Then: signed in, so a network blip never puts the sign-in form in front of
+        // the SC; a real refusal still stops the first DA.live call that meets it
         expect(context.sendMessage).toHaveBeenCalledWith('dalive-auth-status', {
             isAuthenticated: true,
             email: undefined,
@@ -79,9 +78,24 @@ describe('handleCheckDaLiveAuth', () => {
         expect(result).toEqual({ success: true });
     });
 
+    it('shows signed out when IMS no longer accepts the stored token', async () => {
+        // A forced Adobe sign-in cancelled a DA.live token with 23 hours left (2026-10-28).
+        mockCheckSignIn.mockResolvedValue(signedIn('refused', 'sc@example.com'));
+        mockGetOrgName.mockReturnValue('acme');
+
+        await handleCheckDaLiveAuth(context);
+
+        expect(context.sendMessage).toHaveBeenCalledWith('dalive-auth-status', {
+            isAuthenticated: false,
+            setupComplete: true,
+            orgName: 'acme',
+            bookmarkletUrl,
+        });
+    });
+
     it('should drop an empty cached namespace rather than pushing an empty string', async () => {
         // Given: Not signed in, setup never completed, no namespace remembered
-        mockIsAuthenticated.mockResolvedValue(false);
+        mockCheckSignIn.mockResolvedValue({ state: 'none' });
         mockIsSetupComplete.mockReturnValue(false);
         mockGetOrgName.mockReturnValue('');
 
@@ -95,13 +109,12 @@ describe('handleCheckDaLiveAuth', () => {
             orgName: undefined,
             bookmarkletUrl,
         });
-        expect(mockGetStoredToken).not.toHaveBeenCalled();
         expect(result).toEqual({ success: true });
     });
 
     it('should keep a remembered namespace when not signed in', async () => {
         // Given: Not signed in, but a previous session pinned a namespace
-        mockIsAuthenticated.mockResolvedValue(false);
+        mockCheckSignIn.mockResolvedValue({ state: 'none' });
         mockIsSetupComplete.mockReturnValue(true);
         mockGetOrgName.mockReturnValue('acme');
 
@@ -119,7 +132,7 @@ describe('handleCheckDaLiveAuth', () => {
 
     it('should push a failed status and return the error when the check throws', async () => {
         // Given: The secret store is unreadable
-        mockIsAuthenticated.mockRejectedValue(new Error('vault locked'));
+        mockCheckSignIn.mockRejectedValue(new Error('vault locked'));
 
         // When: Checking auth status
         const result = await handleCheckDaLiveAuth(context);

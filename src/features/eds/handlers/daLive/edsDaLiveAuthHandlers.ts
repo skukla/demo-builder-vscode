@@ -60,14 +60,16 @@ export async function handleCheckDaLiveAuth(
         // setting — the demo's namespace now comes from the wizard's picker.
         const cachedOrgName = authService.getOrgName();
 
-        const isAuth = await authService.isAuthenticated();
+        // The one sign-in reader, so this agrees with get_auth_status and the session
+        // guard. IMS not answering (`unknown`) shows as signed in: the stored token's own
+        // expiry is fine, and a refusal still stops the first DA.live call that meets it.
+        const signIn = await authService.checkSignIn();
 
-        if (isAuth) {
-            const tokenInfo = await authService.getStoredToken();
-            context.logger.debug('[EDS] DA.live auth valid for:', tokenInfo?.email);
+        if (signIn.state === 'valid' || signIn.state === 'unknown') {
+            context.logger.debug('[EDS] DA.live auth valid for:', signIn.token.email);
             await context.sendMessage('dalive-auth-status', {
                 isAuthenticated: true,
-                email: tokenInfo?.email,
+                email: signIn.token.email,
                 setupComplete,
                 orgName: cachedOrgName,
                 bookmarkletUrl,

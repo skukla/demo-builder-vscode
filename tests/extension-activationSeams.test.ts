@@ -20,6 +20,7 @@ import {
     mockMcpServerCtor,
     mockOnDidSignIn,
     mockAdobeOnDidSignIn,
+    mockWatchForcedSignIns,
     mockGetAccessToken,
     mockGetGitHubToken,
     mockRegisterEwListener,
@@ -154,6 +155,21 @@ describe('the seams activate() hands away', () => {
             );
             expect(refresh).toHaveBeenCalledTimes(1);
             refresh.mockRestore();
+        });
+    });
+
+    // 2026-10-28: a forced Adobe sign-in also ends the DA.live sign-in, so every forced
+    // sign-in is watched for it from activation on.
+    describe('the forced Adobe sign-in watch', () => {
+        it('is registered once, and released with the extension', async () => {
+            const context = createActivationContext();
+            await activate(context);
+            await settle();
+
+            expect(mockWatchForcedSignIns).toHaveBeenCalledTimes(1);
+            expect(typeof mockWatchForcedSignIns.mock.calls[0][0]).toBe('function');
+            const handle = mockWatchForcedSignIns.mock.results[0].value;
+            expect(context.subscriptions).toContain(handle);
         });
     });
 

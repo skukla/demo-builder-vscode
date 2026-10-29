@@ -37,6 +37,14 @@
  * also the answer for a site whose content is already gone and whose home page no
  * longer answers, and stopping there would leave the delete impossible to finish.
  *
+ * **It stops when AEM refuses the sign-in, too.** A 401/403 on the listing of what is
+ * published (`sign-in-refused`) or on the product pages (`signInRefused`) is a refused
+ * sign-in, not "could not tell". On 2026-10-28 a forced Adobe sign-in cancelled the
+ * DA.live token mid-delete: the product-page step reported "30 of 49 removed", a second
+ * run had its listing refused with 403, read that as `unknown`, and deleted the DA.live
+ * content and config anyway. Now both stop where `still-live` stops, and say to sign in
+ * to DA.live again and delete again.
+ *
  * Without a repo there is nothing to unpublish against: the teardown says so in
  * `stillPublished` rather than reporting a clean finish, because "the source is
  * gone" and "the site is down" are different claims. `stillPublished` is false
@@ -142,7 +150,10 @@ export interface StorefrontTeardownResult {
      * reading this is lying to an SC about whether the site is down.
      */
     stillPublished: boolean;
-    /** `down`, `still-live`, or `unknown` (could not tell); `publishSummary` says which in words. */
+    /**
+     * `down`, `still-live`, `sign-in-refused` (AEM refused the sign-in), or `unknown` (could
+     * not tell); `publishSummary` says which in words.
+     */
     publishState: PublishState;
     /** What happened to the published pages, in one or two sentences for the SC and the agent. */
     publishSummary: string;
@@ -153,8 +164,8 @@ export interface StorefrontTeardownResult {
      */
     productPages?: ProductPageRemovalResult;
     /**
-     * Set when the teardown stopped because pages are still live: why, and what to do,
-     * for the SC. Nothing after the unpublish ran, and the caller must keep the
+     * Set when the teardown stopped because pages are still live or AEM refused the
+     * sign-in: why, and what to do, for the SC. Nothing after the unpublish ran, and the caller must keep the
      * repository and the project too, so a second try can still take the pages down.
      */
     stopped?: string;
@@ -169,6 +180,18 @@ export interface StorefrontTeardownResult {
 export const STOPPED_STILL_LIVE =
     'The pages could not be taken off the live site, so nothing else was deleted. ' +
     'Sign in to DA.live again, then try again.';
+
+/** What a teardown stopped by a refused sign-in says. */
+export const STOPPED_SIGN_IN_REFUSED =
+    'AEM refused the DA.live sign-in, so nothing else was deleted. ' +
+    'Sign in to DA.live again, then delete again.';
+
+/** Why the teardown must stop after the CDN steps, or undefined to carry on. */
+function stopReason(state: PublishState, productPages: ProductPageRemovalResult): string | undefined {
+    if (state === 'still-live') return STOPPED_STILL_LIVE;
+    if (state === 'sign-in-refused' || productPages.signInRefused) return STOPPED_SIGN_IN_REFUSED;
+    return undefined;
+}
 
 /** Whether there is a repository to take the pages off the CDN by. */
 function repoOf(target: StorefrontTeardownTarget): { owner: string; repo: string } | undefined {
@@ -192,9 +215,9 @@ export function teardownSteps(target: StorefrontTeardownTarget): string[] {
  * Take the storefront down: CDN first, then the source, then its config.
  *
  * Never throws: each step reports and the next still runs, because a half-torn
- * storefront is worse than a fully torn one, with one exception: pages found still
- * live stop it (`stopped`), since deleting the rest would strand them. The result
- * says what happened.
+ * storefront is worse than a fully torn one, with two exceptions: pages found still
+ * live, and AEM refusing the sign-in, stop it (`stopped`), since deleting the rest would
+ * strand the pages. The result says what happened.
  */
 export async function tearDownStorefront(
     target: StorefrontTeardownTarget,
@@ -245,9 +268,10 @@ export async function tearDownStorefront(
                 },
             );
 
-            if (unpublished.publishState === 'still-live') {
-                logger.warn(`[Teardown] ${daLiveOrg}/${daLiveSite} is still live; stopping before anything else is deleted`);
-                return { ...result, stopped: STOPPED_STILL_LIVE, error: STOPPED_STILL_LIVE };
+            const stopped = stopReason(unpublished.publishState, result.productPages);
+            if (stopped) {
+                logger.warn(`[Teardown] ${daLiveOrg}/${daLiveSite}: ${stopped}`);
+                return { ...result, stopped, error: stopped };
             }
 
             const keyDeleted = await helix.deleteAdminApiKey(daLiveOrg, daLiveSite);

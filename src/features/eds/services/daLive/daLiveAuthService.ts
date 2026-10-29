@@ -16,7 +16,7 @@
 
 import * as vscode from 'vscode';
 import { readDaAuthHelperToken, writeDaAuthHelperToken } from '../daAuthHelperToken';
-import { serverVerdict } from './daLiveOrgOperations';
+import { askImsAboutDaLiveToken, type ImsTokenVerdict } from './daLiveSignInCheck';
 import { createDaLiveTokenHome, type DaLiveTokenHome } from './daLiveTokenHome';
 import { DA_LIVE_TOKEN_MARGIN_MS } from './daLiveTokenValidation';
 import { getLogger } from '@/core/logging/debugLogger';
@@ -43,6 +43,9 @@ export interface DaLiveTokenInfo {
     expiresAt: number;
     email?: string;
 }
+
+/** The stored sign-in and whether IMS accepts it now (`DaLiveAuthService.checkSignIn`). */
+export type DaLiveSignIn = { state: 'none' } | { state: ImsTokenVerdict; token: DaLiveTokenInfo };
 
 // ==========================================================
 // DA.live Authentication Service
@@ -177,25 +180,31 @@ export class DaLiveAuthService {
     }
 
     /**
-     * Ask the DA.live admin plane whether it accepts the stored token RIGHT NOW.
+     * Is the stored DA.live sign-in usable RIGHT NOW? The one reader every "am I signed
+     * in to DA.live" answer comes from: `get_auth_status`, the wizard's DA.live indicator
+     * (`handleCheckDaLiveAuth`), the session guard (`ensureDaLiveAuth`), and the check
+     * around a forced Adobe sign-in (`daLiveForcedSignInWatch`).
      *
-     * `isAuthenticated()` is a local expiry check and cannot see a
-     * server-refused token — the 2026-08-16 evidence run passed it and then
-     * failed 52 authenticated calls, each 403 misread as a missing permission.
-     * One `HEAD /list/{org}/` settles it before a pipeline starts.
+     * `isAuthenticated()` is a local expiry check and cannot see a token IMS has
+     * cancelled: on 2026-10-28 a forced Adobe sign-in cancelled one with 23 hours left
+     * on it. So a locally valid token is put to IMS (`daLiveSignInCheck`); nothing
+     * stored, or a token past its own expiry, is `none` with no network call.
      *
-     * Verdict mapping: 401 → `refused` (the CREDENTIAL was rejected — the only
-     * status that indicts the token); 403 → `accepted` (the ORG refused access
-     * to a credential the server honoured — a permission fact, not an auth
-     * one); anything else that returns → `accepted`; a transport failure →
-     * `unknown`, because a flaky network must never read as a refusal.
+     * What each caller does when IMS gives no clear answer (`unknown`):
+     * - `get_auth_status` says `authenticated: 'unknown'`: neither signed in nor out;
+     * - the wizard's indicator and `ensureDaLiveAuth` carry on as signed in, so a flaky
+     *   network never blocks work the token can still do; a real refusal still stops the
+     *   first DA.live call that meets it;
+     * - the forced-sign-in check tells the SC nothing, since nothing was shown lost.
+     *
+     * @returns `none`, or the stored token with IMS's verdict on it
      */
-    async isServerAccepted(orgName: string): Promise<'accepted' | 'refused' | 'unknown'> {
-        const token = await this.getAccessToken();
+    async checkSignIn(): Promise<DaLiveSignIn> {
+        const token = await this.getStoredToken();
         if (!token) {
-            return 'refused';
+            return { state: 'none' };
         }
-        return serverVerdict(orgName, token);
+        return { state: await askImsAboutDaLiveToken(token.accessToken), token };
     }
 
     /**

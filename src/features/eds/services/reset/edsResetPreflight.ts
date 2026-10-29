@@ -14,7 +14,6 @@
 
 import type { GitHubAppService } from '../github/githubAppService';
 import type { EdsResetResult } from './edsResetParams';
-import { COMPONENT_IDS } from '@/core/constants';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { Project, ProjectStatus } from '@/types/base';
@@ -31,12 +30,10 @@ export async function checkDaLiveAuth(
     logPrefix: string,
 ): Promise<EdsResetResult | null> {
     const { ensureDaLiveAuth } = await import('../../handlers/edsHelpers');
-    // The org hands the guard its server probe target: a locally-valid token
-    // the server refuses is caught HERE, before the three-minute pipeline,
-    // instead of surfacing as 52 "missing permission" 403s mid-reset.
-    const probeOrg = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata
-        ?.daLiveOrg as string | undefined;
-    const result = await ensureDaLiveAuth(context, logPrefix, probeOrg);
+    // The guard asks IMS: a locally-valid token IMS no longer accepts is caught
+    // HERE, before the three-minute pipeline, instead of surfacing as 52 "missing
+    // permission" 403s mid-reset.
+    const result = await ensureDaLiveAuth(context, logPrefix);
 
     if (result.authenticated) return null;
 

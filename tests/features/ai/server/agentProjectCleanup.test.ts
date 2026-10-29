@@ -36,6 +36,14 @@ const mockDaLiveSessionToken = jest.fn();
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: () => ({ getAccessToken: () => mockDaLiveSessionToken() }),
     getGitHubServices: jest.fn(),
+    tryCreateDaLiveTokenProvider: () => ({ getAccessToken: () => mockDaLiveSessionToken() }),
+}));
+
+// The repository delete and the code removal after it (EDS-67). Mocked, so these assert
+// what it was HANDED; the order inside it is `storefrontCodeRemoval.test.ts`'s.
+const mockDeleteStorefrontRepository = jest.fn();
+jest.mock('@/features/eds/services/storefront/storefrontCodeRemoval', () => ({
+    deleteStorefrontRepository: (...args: unknown[]) => mockDeleteStorefrontRepository(...args),
 }));
 
 const mockInspectToken = jest.fn();
@@ -202,5 +210,100 @@ describe('when the teardown stops because the pages are still live', () => {
         expect(outcome.githubRepo).toBeUndefined();
         expect(outcome.stopped).toBe(STOPPED);
         expect(outcome.daLiveSite).toMatchObject({ contentDeleted: false, stillPublished: true, error: STOPPED });
+    });
+});
+
+// EDS-67: the repository went and AEM's copy of its code stayed on aem.live.
+describe("an agent's repository delete, and the site's code after it", () => {
+    const repoLifecycle = { deleteRepository: jest.fn() };
+    const fileOperations = { listRepoFiles: jest.fn() };
+
+    beforeEach(() => {
+        const { getGitHubServices } = jest.requireMock('@/features/eds/handlers/edsHelpers') as {
+            getGitHubServices: jest.Mock;
+        };
+        getGitHubServices.mockReturnValue({ repoLifecycle, fileOperations });
+        repoLifecycle.deleteRepository.mockResolvedValue(undefined);
+        mockDeleteStorefrontRepository.mockResolvedValue({
+            code: { removed: 12, failed: [], stillServing: false },
+        });
+    });
+
+    it('deletes THE repository through the code removal, which lists its files first', async () => {
+        mockDaLiveSessionToken.mockResolvedValue(DA_LIVE_TOKEN);
+
+        await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
+            deleteDaLiveSite: false,
+            deleteGithubRepo: true,
+        });
+
+        expect(mockDeleteStorefrontRepository).toHaveBeenCalledTimes(1);
+        const [target, deps] = mockDeleteStorefrontRepository.mock.calls[0] as [
+            unknown,
+            {
+                files: unknown;
+                deleteRepository: (o: string, r: string) => Promise<void>;
+                tokenProvider: { getAccessToken(): Promise<string | null> };
+            },
+        ];
+        expect(target).toStrictEqual({ owner: 'acme', repo: 'site' });
+        expect(deps.files).toBe(fileOperations);
+        await deps.deleteRepository('acme', 'site');
+        expect(repoLifecycle.deleteRepository).toHaveBeenCalledWith('acme', 'site');
+        // The DA.live session: the one credential the code bus DELETE was measured with.
+        expect(await deps.tokenProvider.getAccessToken()).toBe(DA_LIVE_TOKEN);
+    });
+
+    it('says the code is gone only when aem.live no longer serves it', async () => {
+        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
+            deleteDaLiveSite: false,
+            deleteGithubRepo: true,
+        });
+
+        expect(outcome.githubRepo).toStrictEqual({
+            name: 'acme/site',
+            deleted: true,
+            siteCode: { removed: 12, notRemoved: 0, stillServing: false },
+        });
+    });
+
+    it("carries the sentence when the code is left, so a 'deleted' is never said over it", async () => {
+        const summary = "The site's code was removed from aem.live, but aem.live still serves its scripts/aem.js.";
+        mockDeleteStorefrontRepository.mockResolvedValue({
+            code: { removed: 0, failed: [], stillServing: true, summary },
+        });
+
+        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
+            deleteDaLiveSite: false,
+            deleteGithubRepo: true,
+        });
+
+        expect(outcome.githubRepo?.siteCode).toStrictEqual({ removed: 0, notRemoved: 0, stillServing: true, summary });
+    });
+
+    // Owner, 2026-10-28: with no working DA.live sign-in the repository is kept, and the
+    // project with it, so "delete again" can still remove the site code.
+    it('keeps the repository and stops the delete when there is no working DA.live sign-in', async () => {
+        const kept = 'The repository was kept so its site code can still be removed. Sign in to DA.live and delete again.';
+        mockDeleteStorefrontRepository.mockResolvedValue({ kept });
+
+        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
+            deleteDaLiveSite: false,
+            deleteGithubRepo: true,
+        });
+
+        expect(outcome.githubRepo).toStrictEqual({ name: 'acme/site', deleted: false, error: kept });
+        expect(outcome.stopped).toBe(kept);
+    });
+
+    it('reports a refused repository delete, with no code outcome', async () => {
+        mockDeleteStorefrontRepository.mockRejectedValue(new Error('403 from GitHub'));
+
+        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
+            deleteDaLiveSite: false,
+            deleteGithubRepo: true,
+        });
+
+        expect(outcome.githubRepo).toStrictEqual({ name: 'acme/site', deleted: false, error: '403 from GitHub' });
     });
 });

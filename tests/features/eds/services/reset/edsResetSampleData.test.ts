@@ -197,19 +197,14 @@ describe('resetEdsProjectWithUI — sample data', () => {
         expect(mockedRemove).not.toHaveBeenCalled();
     });
 
-    it('hands the DA.live guard the target org, so its server probe can run', async () => {
-        // The locally-valid-but-server-refused gap: without the org, the guard
-        // falls back to the local expiry check that let the 2026-08-16 run
-        // start a three-minute pipeline on a refused token.
+    it('runs the DA.live guard before the reset', async () => {
+        // The guard asks IMS, so a locally-valid token IMS no longer accepts stops
+        // here rather than three minutes into the pipeline (2026-08-16, 2026-10-28).
         answers(RESET);
 
         await run(createProject());
 
-        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.any(String),
-            'test-org'
-        );
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(expect.anything(), expect.any(String));
     });
 
     it('asks, and names the pack, when one was recorded', async () => {

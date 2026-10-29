@@ -10,6 +10,7 @@ import { mockCreateQuickPick } from './projectDeletionService.testUtils';
 import type { DeletionServices } from './projectDeletionService.testUtils';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
+import type { ImsTokenVerdict } from '@/features/eds/services/daLive/daLiveSignInCheck';
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
 
@@ -70,6 +71,10 @@ export const mockUnpublishPages = jest.fn();
 export const mockDeleteAdminApiKey = jest.fn();
 /** What Helix lists as published under /products — where overlay-made pages are found (EDS-26). */
 export const mockListPublishedPaths = jest.fn();
+/** Removes one file from AEM's copy of the site's code, after the repository is gone (EDS-67). */
+export const mockDeleteCode = jest.fn();
+/** IMS's verdict on the DA.live sign-in; a storefront's repository is kept unless `valid`. */
+export const mockCheckDaLiveSignIn = jest.fn(async (_token: string): Promise<ImsTokenVerdict> => 'valid');
 export const SERVICES: DeletionServices = {
     initKeyStore: mockInitKeyStore,
     makeHelix: () => ({
@@ -77,7 +82,10 @@ export const SERVICES: DeletionServices = {
         unpublishPages: mockUnpublishPages,
         deleteAdminApiKey: mockDeleteAdminApiKey,
         listPublishedPaths: mockListPublishedPaths,
+        deleteCode: mockDeleteCode,
     }),
+    /** IMS's verdict on the DA.live token before a storefront's repository goes (EDS-67). */
+    checkDaLiveSignIn: mockCheckDaLiveSignIn,
 };
 
 /**

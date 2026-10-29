@@ -60,13 +60,16 @@ describe('DaLiveAuthService', () => {
         return `${header}.${payloadBase64}.${signature}`;
     };
 
-    describe('isServerAccepted', () => {
-        // The locally-valid-but-server-refused gap (2026-08-16): expiry says
-        // nothing about whether the DA.live admin plane will honour the token.
-        // One HEAD against /list/{org}/ answers it. 401 = the CREDENTIAL was
-        // refused; 403 = the ORG refused access to a credential it honoured;
-        // network trouble is not evidence either way.
+    describe('checkSignIn', () => {
+        // A locally valid token can be cancelled by IMS long before its expiry: on
+        // 2026-10-28 a forced Adobe sign-in did exactly that, and DA.live answered the
+        // cancelled token 403, which the old HEAD probe read as accepted (EDS-30). The
+        // answer comes from IMS's own validate_token.
         const realFetch = global.fetch;
+        const IMS_URL =
+            'https://ims-na1.adobelogin.com/ims/validate_token/v1?client_id=darkalley&type=access_token';
+        const imsSays = (body: unknown, status = 200) =>
+            jest.fn().mockResolvedValue({ status, json: async () => body });
 
         beforeEach(() => {
             keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'live-token');
@@ -77,45 +80,49 @@ describe('DaLiveAuthService', () => {
             global.fetch = realFetch;
         });
 
-        it('sends one HEAD with the stored Bearer token to the org listing', async () => {
-            global.fetch = jest.fn().mockResolvedValue({ status: 200 });
+        it('asks IMS validate_token with the stored Bearer token', async () => {
+            global.fetch = imsSays({ valid: true, expires_at: 1 });
 
-            await service.isServerAccepted('acme');
+            await service.checkSignIn();
 
             expect(global.fetch).toHaveBeenCalledWith(
-                'https://admin.da.live/list/acme/',
-                expect.objectContaining({
-                    method: 'HEAD',
-                    headers: { Authorization: 'Bearer live-token' },
-                })
+                IMS_URL,
+                expect.objectContaining({ method: 'GET', headers: { Authorization: 'Bearer live-token' } }),
             );
         });
 
-        it('returns accepted on 200', async () => {
-            global.fetch = jest.fn().mockResolvedValue({ status: 200 });
-            expect(await service.isServerAccepted('acme')).toBe('accepted');
+        it('is valid when IMS says valid, and hands back the token', async () => {
+            global.fetch = imsSays({ valid: true, expires_at: 1 });
+            const result = await service.checkSignIn();
+            expect(result.state).toBe('valid');
+            expect(result).toMatchObject({ token: { accessToken: 'live-token' } });
         });
 
-        it('returns refused on 401 — the credential itself was rejected', async () => {
-            global.fetch = jest.fn().mockResolvedValue({ status: 401 });
-            expect(await service.isServerAccepted('acme')).toBe('refused');
+        it('is refused when IMS answers 200 with valid:false (a cancelled token)', async () => {
+            global.fetch = imsSays({ valid: false, reason: 'invalid', expires_at: 1 });
+            expect((await service.checkSignIn()).state).toBe('refused');
         });
 
-        it('returns accepted on 403 — the org refused a credential it honoured', async () => {
-            global.fetch = jest.fn().mockResolvedValue({ status: 403 });
-            expect(await service.isServerAccepted('acme')).toBe('accepted');
-        });
-
-        it('returns unknown on network failure (fail open, never block on a flaky probe)', async () => {
+        it('is unknown when IMS cannot be reached, never refused', async () => {
             global.fetch = jest.fn().mockRejectedValue(new Error('ECONNRESET'));
-            expect(await service.isServerAccepted('acme')).toBe('unknown');
+            expect((await service.checkSignIn()).state).toBe('unknown');
         });
 
-        it('returns refused when no token is stored — nothing to accept', async () => {
+        it('is unknown when IMS answers something other than 200', async () => {
+            global.fetch = imsSays({}, 503);
+            expect((await service.checkSignIn()).state).toBe('unknown');
+        });
+
+        it('is unknown when the answer carries no valid field', async () => {
+            global.fetch = imsSays({ error: 'odd' });
+            expect((await service.checkSignIn()).state).toBe('unknown');
+        });
+
+        it('is none, with no network call, when no token is stored', async () => {
             keychain.clear();
             globalStateStore.clear();
             global.fetch = jest.fn();
-            expect(await service.isServerAccepted('acme')).toBe('refused');
+            expect(await service.checkSignIn()).toStrictEqual({ state: 'none' });
             expect(global.fetch).not.toHaveBeenCalled();
         });
     });

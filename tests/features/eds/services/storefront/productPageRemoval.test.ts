@@ -18,6 +18,7 @@ import {
     removeProductPages,
     type ProductPageRemovalDeps,
 } from '@/features/eds/services/storefront/productPageRemoval';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const TARGET = { repoOwner: 'skukla', repoName: 'kukla-justrite' };
@@ -195,6 +196,30 @@ describe('removeProductPages', () => {
                 'removed and may still be live. Helix refused to remove the preview copy of 1 of them, so ' +
                 'those preview copies remain.',
         );
+    });
+
+    // 2026-10-28: "30 of 49 removed" after a forced Adobe sign-in cancelled the DA.live
+    // token. A teardown stops on this flag.
+    it('flags a refused live removal as a refused sign-in', async () => {
+        const { deps } = setUp({}, { liveFailed: 1 });
+        expect(await removeProductPages(TARGET, deps)).toMatchObject({ status: 'incomplete', signInRefused: true });
+    });
+
+    it('flags a listing AEM refused the sign-in for (401/403)', async () => {
+        const { deps } = setUp();
+        (deps.helix.listPublishedPaths as jest.Mock).mockRejectedValue(
+            new DaLiveAuthError('Helix refused to list the published pages (HTTP 403)'),
+        );
+
+        expect(await removeProductPages(TARGET, deps)).toMatchObject({ status: 'failed', signInRefused: true });
+    });
+
+    it('CONTROL: a clean removal, a preview-only refusal and any other listing failure are not flagged', async () => {
+        expect((await removeProductPages(TARGET, setUp().deps)).signInRefused).toBeUndefined();
+        expect((await removeProductPages(TARGET, setUp({}, { previewFailed: 2 }).deps)).signInRefused).toBeUndefined();
+        const { deps } = setUp();
+        (deps.helix.listPublishedPaths as jest.Mock).mockRejectedValue(new Error('HTTP 500'));
+        expect((await removeProductPages(TARGET, deps)).signInRefused).toBeUndefined();
     });
 
     it('never throws: a remover that fails comes back as a failure sentence', async () => {

@@ -3,8 +3,9 @@
  *
  * Two resources, in this order: the DA.live site (through the shared storefront
  * teardown, which also takes the pages off the CDN and retires the site's Admin
- * API key), then the GitHub repository. Each asks for its own sign-in only when
- * it actually runs, and each records what happened on the cleanup results rather
+ * API key), then the GitHub repository, with AEM's copy of its code after it
+ * (`storefrontCodeRemoval`, EDS-67). Each asks for its own sign-in only when it
+ * actually runs, and each records what happened on the cleanup results rather
  * than throwing, so one failure never stops the local delete.
  *
  * Split from `projectDeletionService.ts` on 2026-10-09 (EDS-8). Its sign-in checks
@@ -19,11 +20,16 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
+import type { ImsTokenVerdict } from '@/features/eds/services/daLive/daLiveSignInCheck';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { CleanupResultItem, EdsProjectMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import type { ProductPageRemovalResult } from '@/features/eds/services/storefront/productPageRemoval';
 import { otherProjectsPublishingTo } from '@/features/eds/services/storefront/sharedRepoProjects';
+import {
+    deleteStorefrontRepository,
+    type CodeRemovalResult,
+} from '@/features/eds/services/storefront/storefrontCodeRemoval';
 import {
     tearDownStorefront,
     teardownSteps,
@@ -33,7 +39,8 @@ import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
 /**
- * The four Helix calls the CDN-unpublish step makes, out of a class with dozens.
+ * The Helix calls the delete makes, out of a class with dozens: four for the CDN
+ * unpublish, and `deleteCode` for the site's code once the repository is gone.
  */
 export interface DeletionHelix {
     listAllPages(org: string, site: string, path?: string): Promise<string[]>;
@@ -51,6 +58,7 @@ export interface DeletionHelix {
     }>;
     deleteAdminApiKey(org: string, site: string): Promise<{ success: boolean; error?: string }>;
     listPublishedPaths(org: string, site: string, branch: string, pattern: string): Promise<string[]>;
+    deleteCode(org: string, site: string, path: string, branch?: string): Promise<void>;
 }
 
 /**
@@ -79,6 +87,8 @@ export interface DeletionServices {
         logger: Logger,
         daLiveTokenProvider: { getAccessToken: () => Promise<string | null> },
     ) => DeletionHelix;
+    /** Whether IMS accepts the DA.live token, before a storefront's repository goes (EDS-67). */
+    checkDaLiveSignIn?: (token: string) => Promise<ImsTokenVerdict>;
 }
 
 /**
@@ -103,13 +113,16 @@ function repoToDelete(edsMetadata: EdsProjectMetadata, options: CleanupOptions):
 
 /**
  * The steps {@link performEdsCleanup} will report, in order, so the delete can number
- * them before any runs: the DA.live sign-in, the storefront's teardown, the repository.
+ * them before any runs: the DA.live sign-in, the storefront's teardown, the repository
+ * and then its code on aem.live.
  */
 export function edsCleanupSteps(edsMetadata: EdsProjectMetadata, options: CleanupOptions): string[] {
     const site = daLiveTarget(edsMetadata, options);
     return [
         ...(site ? [OPERATION_STAGES.checkingRequirements.label, ...teardownSteps(site)] : []),
-        ...(repoToDelete(edsMetadata, options) ? [OPERATION_STAGES.deletingRepository.label] : []),
+        ...(repoToDelete(edsMetadata, options)
+            ? [OPERATION_STAGES.deletingRepository.label, OPERATION_STAGES.removingSiteCode.label]
+            : []),
     ];
 }
 
@@ -248,39 +261,79 @@ function reportProductPages(
 }
 
 /**
- * Delete GitHub repository with authentication handling
+ * Put what happened to the site's code on the cleanup results (EDS-67). Nothing left is
+ * a success row; anything else carries its sentence, so "deleted" is never said over
+ * code that still answers.
+ */
+function reportSiteCode(code: CodeRemovalResult | undefined, githubRepo: string, results: CleanupResultItem[]): void {
+    if (!code) return;
+    results.push({
+        type: 'helix',
+        name: `site code, ${githubRepo}`,
+        success: code.summary === undefined,
+        ...(code.summary ? { error: code.summary } : {}),
+    });
+}
+
+/**
+ * Delete the GitHub repository with authentication handling, then the site's code on
+ * aem.live (`deleteStorefrontRepository`: the files are listed before the repository goes).
+ *
+ * @returns why the delete must stop, when the repository was kept because there was no
+ *   working DA.live sign-in to remove its site code with (EDS-67); undefined otherwise
  */
 async function performGitHubCleanup(
     context: HandlerContext,
     githubRepo: string,
     results: CleanupResultItem[],
     report: CleanupStepReport,
-): Promise<void> {
+    services?: DeletionServices,
+): Promise<string | undefined> {
     report(OPERATION_STAGES.deletingRepository.label);
 
     try {
-        const { getGitHubServices } = await import('@/features/eds/handlers/edsHelpers');
-        const { tokenService, repoLifecycle } = getGitHubServices(context.context.secrets);
+        const { getGitHubServices, tryCreateDaLiveTokenProvider } = await import('@/features/eds/handlers/edsHelpers');
+        const { tokenService, repoLifecycle, fileOperations } = getGitHubServices(context.context.secrets);
 
         const existingToken = await tokenService.getToken();
         if (!existingToken) {
             const authenticated = await promptGitHubAuth(tokenService, githubRepo, results);
-            if (!authenticated) return;
+            if (!authenticated) return undefined;
         }
 
         const [owner, repo] = githubRepo.split('/');
         if (!owner || !repo) {
             results.push({ type: 'github', name: githubRepo, success: false, error: 'Invalid repository name format' });
-            return;
+            return undefined;
         }
 
-        await repoLifecycle.deleteRepository(owner, repo);
+        const deletion = await deleteStorefrontRepository(
+            { owner, repo },
+            {
+                files: fileOperations,
+                deleteRepository: (o, r) => repoLifecycle.deleteRepository(o, r),
+                // The DA.live session, read without asking: the DA.live cleanup before
+                // this has asked already when it ran.
+                tokenProvider: tryCreateDaLiveTokenProvider(context.context),
+                logger: context.logger,
+                makeHelix: services?.makeHelix,
+                checkSignIn: services?.checkDaLiveSignIn,
+                onStep: (step) => report(step),
+            },
+        );
+        if (deletion.kept) {
+            // The project is kept with it, so "delete again" has something to start from.
+            results.push({ type: 'github', name: githubRepo, success: false, error: deletion.kept });
+            return deletion.kept;
+        }
         results.push({ type: 'github', name: githubRepo, success: true });
         context.logger.info(`[Delete Project] Deleted GitHub repository: ${githubRepo}`);
+        reportSiteCode(deletion.code, githubRepo, results);
     } catch (error) {
         context.logger.error('[Delete Project] GitHub cleanup failed', error as Error);
         results.push({ type: 'github', name: githubRepo, success: false, error: (error as Error).message });
     }
+    return undefined;
 }
 
 /**
@@ -317,8 +370,9 @@ async function promptGitHubAuth(
  * Perform EDS external resource cleanup, reporting each step in the order
  * {@link edsCleanupSteps} lists them.
  *
- * @returns why the delete must stop, when the storefront's pages are still live: the
- *   repository is then kept, and the caller keeps the project (EDS-65)
+ * @returns why the delete must stop, when the storefront's pages are still live or AEM
+ *   refused the sign-in (EDS-65), or when the repository was kept for want of a working
+ *   DA.live sign-in (EDS-67): the repository is then kept, and the caller keeps the project
  */
 export async function performEdsCleanup(
     context: HandlerContext,
@@ -335,7 +389,7 @@ export async function performEdsCleanup(
     // 2. Delete GitHub repository
     const repo = repoToDelete(edsMetadata, options);
     if (repo) {
-        await performGitHubCleanup(context, repo, results, report);
+        return performGitHubCleanup(context, repo, results, report, services);
     }
     return undefined;
 }

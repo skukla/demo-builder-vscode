@@ -11,7 +11,7 @@
  *     The sign-in suite queues several replies, records the `showInputBox`
  *     options it was called with, and serves clipboard text. Same module, two
  *     different scripts for two different scenarios.
- *   `daLiveAuthService` — the guard suite needs `isServerAccepted` and `dispose`;
+ *   `daLiveAuthService` — the guard suite needs `checkSignIn` and `dispose`;
  *     the sign-in suite needs neither and pins `isAuthenticated` true.
  *
  * A shared factory for either would have to be the union, and each suite would

@@ -2,9 +2,9 @@
  * Helix operations on a site's CODE and CDN cache — the GitHub side, no DA.live content.
  *
  * `previewCode` syncs a file from GitHub to the CDN (config.json after an
- * update); `purgeCacheAll` invalidates every cached page. Neither reads authored
- * content, so both authenticate with the GitHub token plus the optional admin
- * Bearer a protected site requires — never the content-source credential.
+ * update); `purgeCacheAll` invalidates every cached page; `deleteCode` removes one
+ * file from AEM's copy of the code once the repository is gone (EDS-67). None reads
+ * authored content, so none sends the content-source credential.
  *
  * Extracted from `helixService.ts` on 2026-10-03 (EDS-8, its fourth cut). The
  * facade keeps both methods with their signatures and delegates here.
@@ -187,4 +187,58 @@ export async function previewCode(
         logger.debug(`[Helix] Successfully previewed code: ${cleanPath}`);
         return;
     }
+}
+
+/**
+ * Delete one file from AEM's copy of a site's code (the "code bus"), which also
+ * purges it from the live CDN.
+ *
+ * Deleting the GitHub repository does not clear that copy: after skukla/scratch-1022-b
+ * was deleted, its `scripts/aem.js` still answered 200 on aem.live while every page
+ * answered 404 (EDS-67). The Admin API documents no wildcard for this DELETE, so a
+ * caller removes the files one by one (`storefrontCodeRemoval.ts`).
+ *
+ * The DA.live IMS Bearer alone: measured 2026-10-28, AFTER the repository was gone,
+ * it answered 204 and the live URL then answered 404. No GitHub token is sent, since
+ * by then there is no repository for it to prove access to.
+ *
+ * @param deps - credential seam and logger
+ * @param org - GitHub owner
+ * @param site - GitHub repository name
+ * @param path - the file's repository path (`/scripts/aem.js`)
+ * @param branch - Branch name
+ * @throws Error on a 401 (the admin-API refusal) and on any other failure, with its
+ *   status and `x-error`; a 404 is success, the file being gone already
+ */
+export async function deleteCode(
+    deps: CodeOperationDeps,
+    org: string,
+    site: string,
+    path: string,
+    branch: string,
+): Promise<void> {
+    const cleanPath = normalizeHelixPath(path);
+    const url = buildPartitionUrl('code', org, site, branch, cleanPath);
+
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: await deps.auth.tryAdminBearer(),
+        signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+    });
+
+    if (response.status === 404) {
+        deps.logger.debug(`[Helix] Code already gone: ${cleanPath}`);
+        return;
+    }
+    if (response.status === 401) {
+        throw new Error(ADMIN_API_401_MESSAGE);
+    }
+    if (!response.ok) {
+        const reason = getXError(response);
+        throw new Error(
+            `Failed to delete code ${cleanPath}: ${response.status} ${response.statusText}` +
+                (reason ? ` — ${reason}` : ''),
+        );
+    }
+    deps.logger.debug(`[Helix] Deleted code: ${cleanPath}`);
 }

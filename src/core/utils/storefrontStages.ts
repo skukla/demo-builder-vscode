@@ -171,6 +171,15 @@ export const STOREFRONT_STAGES = {
         expectation: 'Usually a few seconds',
         detail: "The storefront's GitHub repository",
     },
+    // AEM's own copy of the code, one file at a time once the repository is gone
+    // (EDS-67, `storefrontCodeRemoval.ts`). NOT measured yet: no delete has run with
+    // this step. Four requests at once over a template's couple of hundred files is
+    // the estimate behind the expectation; replace it from the Debug Logs.
+    removingSiteCode: {
+        label: "Removing the site's code",
+        expectation: 'Usually under a minute',
+        detail: 'Its copy of the code on aem.live',
+    },
     removingProjectFiles: {
         label: 'Removing project files',
         expectation: 'Usually a few seconds',

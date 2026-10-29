@@ -31,6 +31,44 @@ export interface AdobeSignInDeps {
     debugLogger: DebugLogger;
     /** The service's lazily created StepLogger. */
     stepLogger: () => Promise<StepLogger>;
+    /**
+     * What a FORCED sign-in can end elsewhere (`ForcedSignInWatch`). Read just before
+     * `aio auth login -f`, every time it runs, including the retry a normal sign-in falls
+     * back to. Optional: nothing is watched without one.
+     */
+    watchForcedSignIn?: ForcedSignInWatch;
+}
+
+/**
+ * A check made around a forced sign-in. Measured 2026-10-28: `aio auth login -f` sends
+ * the browser through Adobe's logout first, which also ends the DA.live sign-in (an IMS
+ * token of its own). Called just before the forced sign-in; the function it resolves to
+ * is called once that sign-in has succeeded, and says whatever was lost itself.
+ */
+export type ForcedSignInWatch = () => Promise<() => Promise<void>>;
+
+/** The error's own words, for the Debug Logs. */
+const rawOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+
+/** Start the watch, or nothing. A watch that fails never costs the SC the sign-in. */
+async function startWatch(deps: AdobeSignInDeps): Promise<(() => Promise<void>) | undefined> {
+    if (!deps.watchForcedSignIn) return undefined;
+    try {
+        return await deps.watchForcedSignIn();
+    } catch (error) {
+        deps.debugLogger.warn(`[Auth] The check before a forced sign-in failed: ${rawOf(error)}`);
+        return undefined;
+    }
+}
+
+/** Finish the watch the forced sign-in started. Never throws, for the same reason. */
+async function finishWatch(deps: AdobeSignInDeps, afterForced: (() => Promise<void>) | undefined): Promise<void> {
+    if (!afterForced) return;
+    try {
+        await afterForced();
+    } catch (error) {
+        deps.debugLogger.warn(`[Auth] The check after a forced sign-in failed: ${rawOf(error)}`);
+    }
 }
 
 /**
@@ -94,6 +132,7 @@ export async function runAdobeLogin(deps: AdobeSignInDeps, force: boolean): Prom
             }
 
             const loginCommand = force ? 'aio auth login -f' : 'aio auth login';
+            const afterForced = force ? await startWatch(deps) : undefined;
 
             debugLogger.debug('[Auth] Executing login command, browser should open');
             stepLogger.logTemplate('adobe-auth', 'statuses.browser-opened', {});
@@ -133,6 +172,7 @@ export async function runAdobeLogin(deps: AdobeSignInDeps, force: boolean): Prom
                         '[Auth] Cleared the SDK client and auth caches so the new token is read afresh',
                     );
 
+                    await finishWatch(deps, afterForced);
                     return true;
                 } else {
                     debugLogger.warn('[Auth] Command succeeded but no valid token in output');

@@ -22,50 +22,41 @@ export interface DaLiveGuardResult {
 }
 
 /**
- * Ensure DA.live authentication, prompting sign-in if expired.
+ * Ensure DA.live authentication, prompting sign-in if expired or refused.
  *
  * Shared pause-and-prompt guard used by:
  * - EDS project reset (edsResetPreflight.ts)
  * - Storefront setup pre-flight (storefrontSetupHandlers.ts)
  * - Storefront setup mid-pipeline recovery (storefrontSetupPhases.ts)
+ *
+ * Asks IMS, through the one sign-in reader (`DaLiveAuthService.checkSignIn`), whether
+ * the stored token still works: a local expiry check cannot see a token IMS has
+ * cancelled, and on 2026-10-28 a forced Adobe sign-in cancelled one with 23 hours
+ * left. `unknown` (IMS did not answer) carries on as signed in: a flaky network must
+ * never block work the token can still do, and a real refusal stops the first DA.live
+ * call that meets it.
  */
 export async function ensureDaLiveAuth(
     context: DaLiveAuthContext,
     logPrefix = '[Auth]',
-    probeOrg?: string,
 ): Promise<DaLiveGuardResult> {
-    const daLiveAuthService = getDaLiveAuthService(context.context);
+    const signIn = await getDaLiveAuthService(context.context).checkSignIn();
+    if (signIn.state === 'valid' || signIn.state === 'unknown') {
+        return { authenticated: true };
+    }
 
     // A server refusal and a local expiry get different prompt copy — telling
     // a user their session "expired" when the server just refused a live-dated
     // token sends them to check the wrong thing.
-    let refusedByServer = false;
-
-    if (await daLiveAuthService.isAuthenticated()) {
-        // Local pass. When the caller told us which org the coming operation
-        // targets, ask the SERVER too — the local check reads the token's own
-        // expiry and cannot see a server-refused credential (the 2026-08-16
-        // evidence run passed it and then failed 52 authenticated calls, each
-        // 403 misread as a missing permission). One HEAD; `unknown` (network
-        // trouble) fails open — a flaky probe must never block a pipeline the
-        // credential could serve.
-        if (!probeOrg) {
-            return { authenticated: true };
-        }
-        const verdict = await daLiveAuthService.isServerAccepted(probeOrg);
-        if (verdict !== 'refused') {
-            return { authenticated: true };
-        }
-        refusedByServer = true;
-        context.logger.warn(
-            `${logPrefix} DA.live token is locally valid but the server refused it — re-authentication required`,
-        );
-    } else {
-        context.logger.warn(`${logPrefix} DA.live token expired or missing`);
-    }
+    const refusedByServer = signIn.state === 'refused';
+    context.logger.warn(
+        refusedByServer
+            ? `${logPrefix} DA.live token is locally valid but IMS no longer accepts it — re-authentication required`
+            : `${logPrefix} DA.live token expired or missing`,
+    );
 
     const expiry = refusedByServer
-        ? 'Your DA.live session was refused by the server.'
+        ? 'Adobe no longer accepts your DA.live sign-in.'
         : 'Your DA.live session has expired.';
 
     // In a modal the expiry line heads the sign-in FORM: a Sign In button in front
