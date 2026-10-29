@@ -28,6 +28,19 @@
 
 jest.mock('@/core/utils/sleep');
 
+// PollingService allows ten checks a second and, over that, waits with `sleep` and
+// checks again. With `sleep` instant here, a test polling more than ten times inside
+// one real second spun that wait-and-recheck until the second passed, and on a busy
+// machine ran the worker out of memory (found 2026-10-29, failing the pre-push gate
+// one run in three). Rate limiting is not what this suite tests.
+jest.mock('@/core/shell/rateLimiter', () => ({
+    RateLimiter: class {
+        async checkRateLimit(): Promise<void> {
+            // never waits
+        }
+    },
+}));
+
 // `PollingService` reaches for the global logger at construction
 // (`private logger = getLogger()`), which throws in a bare node test. Same stub
 // shape `fileWatcher`'s suite uses.
