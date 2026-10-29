@@ -10,8 +10,7 @@
  * @module features/app-builder/services/storePreparation/fixContract
  */
 
-import type { CommerceSend } from '../commerceBulk';
-import type { CommerceGet } from '../erpFillReaders';
+import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { StorePreparationStepRecord } from '@/types/storePreparation';
 
 /** What a fix is handed: the signed Commerce client and the project's store. */

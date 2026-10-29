@@ -15,10 +15,10 @@
  * @module features/app-builder/services/storePreparation/warehouseFix
  */
 
-import type { CommerceGet } from '../erpFillReaders';
 import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
 import { andList } from '@/core/utils/andList';
 import type {
+    CommerceGet,
     CommerceInventorySource,
     CommerceInventorySourceList,
     CommerceInventoryStock,
@@ -44,20 +44,21 @@ export function warehouseFor(erpName: string): { code: string; name: string } {
     return { code: `${slug}_warehouse`, name: `${short} Warehouse` };
 }
 
-interface Inventory {
+export interface Inventory {
     sources: CommerceInventorySource[];
     stocks: CommerceInventoryStock[];
     links: CommerceStockSourceLink[];
 }
 
-async function readInventory(get: CommerceGet): Promise<Inventory> {
+/** The store's sources, stocks and their links. Shared with the datapack engine (DI-5). */
+export async function readInventory(get: CommerceGet): Promise<Inventory> {
     const sources = ((await get(SOURCES_PATH)) as CommerceInventorySourceList | null)?.items ?? [];
     const stocks = ((await get(STOCKS_PATH)) as CommerceInventoryStockList | null)?.items ?? [];
     const links = ((await get(LINKS_PATH)) as CommerceStockSourceLinkList | null)?.items ?? [];
     return { sources, stocks, links };
 }
 
-const sellsTo = (stock: CommerceInventoryStock, websiteCode: string): boolean =>
+export const sellsTo = (stock: CommerceInventoryStock, websiteCode: string): boolean =>
     (stock.extension_attributes?.sales_channels ?? []).some((channel) => channel.type === 'website' && channel.code === websiteCode);
 
 interface Plan {
@@ -190,9 +191,8 @@ export const warehouseFix: StepFix = {
         }
         for (const code of [...record.createdSources, ...(record.enabledSources ?? [])]) {
             try {
-                const row = (await get(`inventory/sources/${code}`)) as CommerceInventorySource | null;
-                await send('PUT', `inventory/sources/${code}`, { source: { ...(row ?? { source_code: code, name: code, ...SOURCE_ADDRESS }), enabled: false } });
-                changes.push(`Switched off ${row?.name ?? sourceName(code)} (Commerce can't delete a warehouse)`);
+                const name = await setSourceEnabled(deps.commerce, code, false);
+                changes.push(`Switched off ${name ?? sourceName(code)} (Commerce can't delete a warehouse)`);
             } catch (error) {
                 rejected.push(`Switch off ${sourceName(code)}: ${errorText(error)}`);
             }
@@ -208,14 +208,29 @@ interface Outcome {
     nameOf: (code: string) => string;
 }
 
+/**
+ * Switch a source on or off. Commerce saves a source whole, so the row is read and sent back
+ * with only `enabled` changed. Shared with the datapack engine (DI-5).
+ *
+ * @returns the source's name, as the store has it
+ */
+export async function setSourceEnabled(
+    commerce: { get: CommerceGet; send: FixDeps['commerce']['send'] },
+    code: string,
+    enabled: boolean,
+): Promise<string | undefined> {
+    const row = (await commerce.get(`inventory/sources/${encodeURIComponent(code)}`)) as CommerceInventorySource | null;
+    await commerce.send('PUT', `inventory/sources/${encodeURIComponent(code)}`, {
+        source: { ...(row ?? { source_code: code, name: code, ...SOURCE_ADDRESS }), enabled },
+    });
+    return row?.name;
+}
+
 /** Switch back on the ERP warehouses an undo switched off, and record them so the undo can again. */
 async function enableSources(deps: FixDeps, plan: Plan, record: WarehouseStepRecord, outcome: Outcome): Promise<void> {
     for (const code of plan.toEnable) {
         try {
-            const row = (await deps.commerce.get(`inventory/sources/${code}`)) as CommerceInventorySource | null;
-            await deps.commerce.send('PUT', `inventory/sources/${code}`, {
-                source: { ...(row ?? { source_code: code, name: code, ...SOURCE_ADDRESS }), enabled: true },
-            });
+            await setSourceEnabled(deps.commerce, code, true);
             record.enabledSources = [...(record.enabledSources ?? []), code];
             outcome.changes.push(`Switched ${outcome.nameOf(code)} back on`);
         } catch (error) {

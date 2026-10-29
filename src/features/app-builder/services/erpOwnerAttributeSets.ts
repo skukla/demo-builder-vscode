@@ -21,13 +21,13 @@
  * @module features/app-builder/services/erpOwnerAttributeSets
  */
 
-import type { CommerceSend } from './commerceBulk';
-import type { CommerceGet } from './erpFillReaders';
 import { andList } from '@/core/utils/andList';
 import type {
     CommerceAttributeGroupList,
     CommerceAttributeSetList,
+    CommerceGet,
     CommerceProductSetPage,
+    CommerceSend,
     CommerceSetAttribute,
 } from '@/types/commerceWire';
 import type { AttributeSetWithoutOwner } from '@/types/erpAssign';
@@ -123,17 +123,29 @@ export function missingSetsNote(sets: readonly AttributeSetWithoutOwner[]): stri
     return `erp_owner is missing from ${setWords} ${productWords}. An ERP tag on ${those} is dropped. Demo Builder can add it.`;
 }
 
-/** The group a new attribute goes in: Product Details, else General, else the set's first. */
-export async function groupFor(get: CommerceGet, setId: number): Promise<number> {
+type AttributeGroup = NonNullable<CommerceAttributeGroupList['items']>[number];
+
+/** Every attribute group in one set. Shared with the datapack engine's assignments (DI-5). */
+export async function readSetGroups(get: CommerceGet, setId: number): Promise<AttributeGroup[]> {
     const filter =
         'searchCriteria[filter_groups][0][filters][0][field]=attribute_set_id' +
         `&searchCriteria[filter_groups][0][filters][0][value]=${setId}`;
     const answer = (await get(`products/attribute-sets/groups/list?${filter}`)) as CommerceAttributeGroupList | null;
-    const groups = answer?.items ?? [];
-    const pick =
+    return answer?.items ?? [];
+}
+
+/** The group a new attribute goes in: Product Details, else General, else the set's first. */
+export function pickAttributeGroup(groups: readonly AttributeGroup[]): AttributeGroup | undefined {
+    return (
         groups.find((group) => group.extension_attributes?.attribute_group_code === 'product-details') ??
         groups.find((group) => group.attribute_group_name === 'General') ??
-        [...groups].sort((a, b) => Number(a.extension_attributes?.sort_order ?? 0) - Number(b.extension_attributes?.sort_order ?? 0))[0];
+        [...groups].sort((a, b) => Number(a.extension_attributes?.sort_order ?? 0) - Number(b.extension_attributes?.sort_order ?? 0))[0]
+    );
+}
+
+/** The group a new attribute goes in, by {@link pickAttributeGroup}. */
+export async function groupFor(get: CommerceGet, setId: number): Promise<number> {
+    const pick = pickAttributeGroup(await readSetGroups(get, setId));
     if (!pick) throw new Error(`Attribute set ${setId} has no attribute group to put erp_owner in.`);
     return Number(pick.attribute_group_id);
 }

@@ -14,11 +14,21 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
 }));
 
+// These suites drive the SERVICE engine. Demo Builder's own is the default since 2026-10-28,
+// so they say which one they mean rather than lean on the default. A jest.fn, so a suite that
+// needs the other engine can still choose it.
+jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
+    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
+    selectedDatapackEngine: jest.fn(() => 'service'),
+}));
+
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import type { HandlerContext } from '@/types/handlers';
 import type { DataTypeStatus } from '@/features/data-installer/types';
-import { importHarness } from './sampleDataInstallDeps.testUtils';
+import { importHarness, ACCS_PROJECT } from './sampleDataInstallDeps.testUtils';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+
+const PROJECT = ACCS_PROJECT;
 
 function makeImportHarness(): HandlerContext {
     return importHarness({
@@ -78,7 +88,7 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     it('passes a client that can report job status', async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: ['categories'] });
 
@@ -89,11 +99,12 @@ describe('buildSampleDataDeps — watch', () => {
 
     /**
      * CONTROL. The assertion above must be sensitive to WHICH client answers — a
-     * write client has neither method, which is exactly the bug: the poll must
-     * reach the read client `resolveDataInstallerAccess` supplies.
+     * write client has neither method, which is exactly the bug. Since DI-5 the
+     * poller is handed the ENGINE, and the service engine must answer from the
+     * read client `resolveDataInstallerAccess` supplies: the poll reaches it.
      */
     it('CONTROL — the polls reach the access client, not some other one', async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: ['categories'] });
         await watchImportJob.mock.calls[0][0].client.getJobStatus('act-1');
@@ -106,7 +117,7 @@ describe('buildSampleDataDeps — watch', () => {
     // The poller names the job from this; a removal labelled `import` is what the
     // 2026-08-17 log said while deleting.
     it('labels the job with the operation it was given', async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: [], operation: 'reset' });
 
@@ -114,7 +125,7 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     it('defaults the label to import when none is given', async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), jest.fn());
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
         await deps.watch({ activationId: 'act-1', requestedTypes: [] });
 
@@ -122,7 +133,7 @@ describe('buildSampleDataDeps — watch', () => {
     });
 
     it("defaults to 'reset' when the deps were built for a removal", async () => {
-        const deps = buildSampleDataDeps(makeImportHarness(), jest.fn(), 'remove');
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn(), 'remove');
 
         await deps.watch({ activationId: 'act-1', requestedTypes: [] });
 
@@ -148,7 +159,7 @@ describe('buildSampleDataDeps — progress wording', () => {
 
     it('counts finished types, not pending ones', () => {
         const report = jest.fn();
-        buildSampleDataDeps(makeImportHarness(), report, 'remove').onProgress?.(perType);
+        buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'remove').onProgress?.(perType);
 
         expect(report).toHaveBeenCalledWith(expect.objectContaining({ done: 1, total: 2 }));
     });
@@ -159,7 +170,7 @@ describe('buildSampleDataDeps — progress wording', () => {
             categories: 'success',
             customer_groups: 'processing',
         };
-        buildSampleDataDeps(makeImportHarness(), report, 'install').onProgress?.(live);
+        buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'install').onProgress?.(live);
 
         expect(report).toHaveBeenCalledWith(
             expect.objectContaining({ processing: ['Customer groups'] })

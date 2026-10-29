@@ -22,20 +22,23 @@
  * @module features/data-installer/handlers/importHandlers
  */
 
-import {
-    DataInstallerWriteClient,
-    type ImportRequest,
-    type ImportTarget,
-} from '../services/dataInstallerWriteClient';
+import { buildDatapackEngine, engineThatInstalled } from '../services/buildDatapackEngine';
+import { selectedDatapackEngine } from '../services/dataInstallerConfig';
+import type { ImportRequest, ImportTarget } from '../services/dataInstallerWriteClient';
+import type { DatapackEngine } from '../services/datapackEngine';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
-import type { ImportJobRecord } from '../types';
-import { resolveDatapackWriteAccess } from './datapackWriteGate';
+import type { DatapackId, DatapackStoreName, ImportJobRecord } from '../types';
+import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { datapackLibraryHandlers } from './datapackLibraryHandlers';
+import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
+import { datapackZipHandlers } from './datapackZipHandlers';
 import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { handleBackgroundOperation } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
+import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -53,6 +56,8 @@ interface StartImportPayload {
     storeCode?: string;
     /** Reset only: must be true. Nothing removes data by default. */
     confirm?: boolean;
+    /** Which store holds the pack: `installer` (absent) or `library` (DI-5). */
+    source?: string;
 }
 
 export const importHandlers = defineHandlers({
@@ -67,6 +72,10 @@ export const importHandlers = defineHandlers({
     // the same way (2026-10-08).
     ...exportHandlers,
     ...importTargetHandlers,
+    // Datapack files (save a pack to a zip, load one back), same reason.
+    ...datapackZipHandlers,
+    // Library pack actions: remove your own, copy one into the Data Installer.
+    ...datapackLibraryHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,
@@ -75,13 +84,13 @@ export const importHandlers = defineHandlers({
         if ('response' in prepared) {
             return prepared.response;
         }
-        const { writeClient, request } = prepared;
+        const { engine, request } = prepared;
 
         // The sync twin is the only thing that will tell us this request is
         // malformed. A 202 from the async entry point would not.
-        return runAndWatch(context, writeClient, request, {
+        return runAndWatch(context, engine, request, {
             operation: 'import',
-            begin: () => writeClient.startImport(request),
+            begin: () => engine.startImport(request),
             rejected: 'The Data Installer rejected this import request.',
             failed: 'The import could not be started.',
         });
@@ -111,7 +120,7 @@ export const importHandlers = defineHandlers({
             // the request is well-formed is not the answer anyone needs — and
             // `get-websites-and-stores` answers it without going near
             // process-datapack, so it cannot start work by accident.
-            const access = await prepared.writeClient.checkCredentials(prepared.request);
+            const access = await prepared.engine.checkCredentials(prepared.request);
             if (!access.usable) {
                 return {
                     success: true,
@@ -123,7 +132,7 @@ export const importHandlers = defineHandlers({
             }
             return {
                 success: true,
-                data: await prepared.writeClient.validateImport(prepared.request),
+                data: await prepared.engine.validateImport(prepared.request),
             };
         } catch (error) {
             return {
@@ -157,15 +166,15 @@ export const importHandlers = defineHandlers({
             };
         }
 
-        const prepared = await prepareImport(context, payload);
+        const prepared = await prepareImport(context, payload, 'remove');
         if ('response' in prepared) {
             return prepared.response;
         }
-        const { writeClient, request } = prepared;
+        const { engine, request } = prepared;
 
-        return runAndWatch(context, writeClient, request, {
+        return runAndWatch(context, engine, request, {
             operation: 'reset',
-            begin: () => writeClient.startDelete(request),
+            begin: () => engine.startDelete(request),
             rejected: 'The Data Installer rejected this reset request.',
             failed: 'The reset could not be started.',
         });
@@ -189,8 +198,11 @@ export const importHandlers = defineHandlers({
 async function prepareImport(
     context: HandlerContext,
     payload: StartImportPayload | undefined,
+    // A removal goes through the engine that installed the pack; anything else through the
+    // one the setting chooses (DI-5).
+    write: 'install' | 'remove' = 'install',
 ): Promise<
-    { writeClient: DataInstallerWriteClient; request: ImportRequest } | { response: HandlerResponse }
+    { engine: DatapackEngine; request: ImportRequest } | { response: HandlerResponse }
 > {
     const input = readInput(payload);
     if ('error' in input) {
@@ -202,17 +214,16 @@ async function prepareImport(
         return gate;
     }
 
+    const pack = { name: input.datapackName, version: input.version };
+    const engine = await engineFor(context, gate, { pack, write, source: input.source });
+    if ('response' in engine) {
+        return engine;
+    }
     return {
-        writeClient: new DataInstallerWriteClient({
-            baseUrl: gate.baseUrl,
-            getToken: gate.getToken,
-            orgCode: gate.orgCode,
-            // One line per service call in Debug Logs. The first live dry run
-            // refused with an EMPTY channel — undebuggable for the user and us.
-            log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
-        }),
+        engine: engine.engine,
         request: {
-            id: { name: input.datapackName, version: input.version },
+            id: pack,
+            source: input.source,
             commerceInstance: input.commerceInstance,
             dataTypes: input.dataTypes,
             // A caller that names a scope means it. One that names NONE gets the
@@ -232,6 +243,56 @@ async function prepareImport(
 }
 
 
+/**
+ * The engine for one write: for a removal the one that installed the pack, otherwise the one
+ * the setting chooses (DI-5). The service installs only from its own catalog, so a library pack
+ * with the service chosen is refused with what to do instead.
+ */
+async function engineFor(
+    context: HandlerContext,
+    gate: DatapackWriteAccess,
+    write: { pack: DatapackId; write: 'install' | 'remove'; source: DatapackStoreName },
+): Promise<{ engine: DatapackEngine } | { response: HandlerResponse }> {
+    const engineId =
+        write.write === 'remove' ? await engineThatInstalled(gate.project.path, write.pack) : selectedDatapackEngine();
+    // Demo Builder's engine writes into the project's own store with the project's credential, so
+    // the sign-in must be in the org that owns that store. Checked before anything is written, with
+    // the extension's one org guard (adobe-org-context): a mismatch says "Switch IMS Org" rather
+    // than failing half way through with Commerce's refusal (owner, 2026-10-28).
+    if (engineId === 'demo-builder' && context.authManager) {
+        const orgFailure = await orgGuard(context, gate.project, context.authManager);
+        if (orgFailure) {
+            return { response: { success: false, error: orgFailure.error, code: ErrorCode.ORG_MISMATCH } };
+        }
+    }
+    if (engineId === 'service' && write.source === 'library') {
+        return {
+            response: {
+                success: false,
+                error:
+                    'The Data Installer service installs only packs in its own catalog. Copy this one to the Data Installer first, ' +
+                    'or set demoBuilder.dataInstaller.engine to demo-builder.',
+            },
+        };
+    }
+    return {
+        engine: buildDatapackEngine(
+            engineId,
+            {
+                ...gate,
+                authManager: context.authManager,
+                secrets: context.context?.secrets,
+                libraryCatalog: async () => {
+                    const library = await resolveDataInstallerAccess(context, 'library');
+                    if (!library.ok) throw new Error('The datapack library is not reachable.');
+                    return library.client;
+                },
+            },
+            (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
+        ),
+    };
+}
+
 /** Validate the payload, returning either usable input or the reason it is not. */
 function readInput(
     payload: StartImportPayload | undefined,
@@ -242,6 +303,7 @@ function readInput(
           commerceInstance: string;
           dataTypes: string[];
           target: ImportTarget | undefined;
+          source: DatapackStoreName;
       }
     | { error: string } {
     const datapackName = payload?.datapackName;
@@ -264,7 +326,11 @@ function readInput(
     if ('error' in target) {
         return target;
     }
-    return { datapackName, version, commerceInstance, dataTypes, target: target.target };
+    const source = payload?.source ?? 'installer';
+    if (source !== 'installer' && source !== 'library') {
+        return { error: `There is no datapack store called ${source}: it is installer or library.` };
+    }
+    return { datapackName, version, commerceInstance, dataTypes, target: target.target, source };
 }
 
 /**

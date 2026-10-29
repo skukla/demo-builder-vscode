@@ -130,6 +130,7 @@ export async function removeProjectSampleData(
             project,
             buildSampleDataDeps(
                 context,
+                project,
                 // The count of types is the line under the step, never its position.
                 (sd) => report(OPERATION_STAGES.removingDatapack.label, typesLine(sd.done, sd.total, sd.processing)),
                 'remove',

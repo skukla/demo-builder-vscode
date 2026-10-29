@@ -77,3 +77,4 @@ They were not removed in the same change because existing projects hold values i
 ## Shipped so far
 
 - 2026-10-28  fix(data-installer): stop gathering Commerce secrets; remove the shared-credential broker (`ff7c67be1`)
+- 2026-10-28  fix(data-installer): stop gathering Commerce secrets; remove the shared-credential broker (`dedcf8c7d`)

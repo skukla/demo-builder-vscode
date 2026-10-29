@@ -11,10 +11,9 @@
  * @module features/app-builder/services/storePreparation/configFix
  */
 
-import type { CommerceGet } from '../erpFillReaders';
 import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
 import type { SetupConfigFix, SetupConfigFixItem } from '@/types/appBuilderComponents';
-import type { CommerceSystemConfigList, CommerceSystemConfigPutAnswer, CommerceSystemConfigWrite } from '@/types/commerceWire';
+import type { CommerceSystemConfigList, CommerceSystemConfigPutAnswer, CommerceSystemConfigWrite, CommerceGet } from '@/types/commerceWire';
 import type { CommerceConfigPrevious, StorePreparationStepRecord } from '@/types/storePreparation';
 
 /** What Commerce holds for a Yes/No or a choice nothing has set. */

@@ -1406,5 +1406,24 @@
         ],
         "cwd": "project",
         "why": "Added 2026-10-21 with finish_storefront_update (EDS-57): the Updates window's Fix with AI keeps a clashing update in the project's local storefront copy and the agent finishes it. The tool is the one path that checks the fix, sends it to GitHub and records the version, so an agent must reach for it rather than for git itself. Confirm-gated, so what this judges is findability."
+    },
+    {
+        "id": "t2-datapack-zip-roundtrip",
+        "prompt": "Save the Data Installer's citisignal datapack, version main, as a file in this project. Tell me what is in the file, load it into our datapack library, then delete it from the library again.",
+        "expect": [
+            "save_datapack_zip",
+            "open_datapack_zip",
+            "load_datapack_zip",
+            "delete_library_datapack"
+        ],
+        "why": "Datapack files (owner, 2026-10-01: an optional export to zip from either store, import the same way). Neither store has a file form, so without these tools an agent pages every data type over curl and hand-builds a zip. Tier 2: it writes a local file and a private pack into the team library. The ask contains its own undo (delete_library_datapack), so the journey ends at zero."
+    },
+    {
+        "id": "t3-copy-library-pack-to-installer",
+        "prompt": "Our datapack library has my justrite pack, version v1. Make it installable by copying it into the Data Installer.",
+        "expect": [
+            "copy_library_datapack_to_installer"
+        ],
+        "why": "Datapack store step 05 (owner, 2026-10-01): install runs through the Data Installer, so a library pack is copied there first. Tier 3: it writes into the catalog other teams share and the extension cannot remove it again, so it never runs unattended; represented by datapackLibraryHandlers.test and the consent gate. Listed so the tool is judged, not grandfathered."
     }
 ]

@@ -7,6 +7,8 @@
  * fingerprint helper is pinned as a pure function.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import * as vscode from 'vscode';
 
 import {
@@ -15,13 +17,15 @@ import {
     fingerprintUrl,
     isDataInstallerConfigured,
     isDataInstallerEnabled,
+    selectedDatapackEngine,
     resolveDataInstallerBaseUrl,
+    resolveDatapackStoreBaseUrl,
 } from '@/features/data-installer/services/dataInstallerConfig';
 
 const STAGE_URL = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
 
 /** Stub `getConfiguration` so both reads in the module see the given values. */
-function setupConfig(values: { apiBaseUrl?: unknown; enabled?: unknown }): void {
+function setupConfig(values: { apiBaseUrl?: unknown; enabled?: unknown; engine?: unknown }): void {
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
         get: jest.fn((key: string, fallback?: unknown) => {
             if (key === 'apiBaseUrl') {
@@ -29,6 +33,9 @@ function setupConfig(values: { apiBaseUrl?: unknown; enabled?: unknown }): void 
             }
             if (key === 'enabled') {
                 return 'enabled' in values ? values.enabled : fallback;
+            }
+            if (key === 'engine') {
+                return 'engine' in values ? values.engine : fallback;
             }
             return fallback;
         }),
@@ -55,6 +62,36 @@ describe('dataInstallerConfig', () => {
             // Corrupted settings.json — VS Code's typed get can hand back anything.
             setupConfig({ enabled: 'yes' });
             expect(isDataInstallerEnabled()).toBe(true);
+        });
+    });
+
+    describe('selectedDatapackEngine', () => {
+        /**
+         * Demo Builder's own by default (owner, 2026-10-28): the service still answers the
+         * catalog, but since 2026-10-27 it ignores the Commerce credentials a caller sends, so
+         * it installs nothing for us. Choosing the service again is one setting.
+         */
+        it("is Demo Builder's own until the SC chooses otherwise", () => {
+            setupConfig({});
+            expect(selectedDatapackEngine()).toBe('demo-builder');
+        });
+
+        it('is the service when chosen', () => {
+            setupConfig({ engine: 'service' });
+            expect(selectedDatapackEngine()).toBe('service');
+        });
+
+        it('reads anything else as the default rather than guessing', () => {
+            setupConfig({ engine: 'mystery' });
+            expect(selectedDatapackEngine()).toBe('demo-builder');
+        });
+
+        it('is declared in package.json with the same two values and the same default', () => {
+            const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../../package.json'), 'utf8')) as {
+                contributes: { configuration: Array<{ properties?: Record<string, { enum?: string[]; default?: unknown }> }> };
+            };
+            const setting = pkg.contributes.configuration.map((c) => c.properties?.['demoBuilder.dataInstaller.engine']).find(Boolean);
+            expect(setting).toMatchObject({ enum: ['service', 'demo-builder'], default: 'demo-builder' });
         });
     });
 
@@ -263,5 +300,22 @@ describe('isDataInstallerConfigured', () => {
         setupConfig({ enabled: true, apiBaseUrl: 'http://insecure.example.com' });
 
         expect(isDataInstallerConfigured()).toBe(false);
+    });
+
+    describe('resolveDatapackStoreBaseUrl', () => {
+        it('reads the library section, not the Data Installer one', () => {
+            setupConfig({ apiBaseUrl: `${STAGE_URL}/` });
+
+            expect(resolveDatapackStoreBaseUrl()).toEqual({ ok: true, baseUrl: STAGE_URL });
+            expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith('demoBuilder.datapackStore');
+        });
+
+        it('applies the same rule as the Data Installer URL: http is refused, empty is not configured', () => {
+            setupConfig({ apiBaseUrl: 'http://insecure.example.test' });
+            expect(resolveDatapackStoreBaseUrl()).toMatchObject({ ok: false, reason: 'invalid-url' });
+
+            setupConfig({ apiBaseUrl: '  ' });
+            expect(resolveDatapackStoreBaseUrl()).toEqual({ ok: false, reason: 'not-configured' });
+        });
     });
 });

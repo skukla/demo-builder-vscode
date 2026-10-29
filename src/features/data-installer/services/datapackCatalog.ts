@@ -20,14 +20,23 @@
  * @module features/data-installer/services/datapackCatalog
  */
 
-import type { DatapackSummary } from '../types';
+import type { DatapackStoreName, DatapackSummary } from '../types';
 
 /** Every version of one datapack, ready to render as a single card. */
 export interface DatapackGroup {
+    /**
+     * Unique across the grid: the store and the name. Two stores may hold a pack of
+     * the same name, and they are different packs — one card each, never merged.
+     */
+    key: string;
     name: string;
     displayName: string;
+    /** Which catalog holds it. */
+    store: DatapackStoreName;
     /** True when ANY version is shared — curation is a property of the pack. */
     shared: boolean;
+    /** True when the signed-in SC owns ANY version. Only library packs can be. */
+    mine: boolean;
     /** Ordered by {@link orderVersions}: live first, archived last. */
     versions: DatapackSummary[];
 }
@@ -47,16 +56,22 @@ export function groupDatapacks(items: DatapackSummary[]): DatapackGroup[] {
     const byName = new Map<string, DatapackGroup>();
 
     for (const item of items) {
-        const existing = byName.get(item.id.name);
+        const store = item.store ?? 'installer';
+        const key = `${store}:${item.id.name}`;
+        const existing = byName.get(key);
         if (existing) {
             existing.versions.push(item);
             existing.shared = existing.shared || item.shared;
+            existing.mine = existing.mine || item.mine === true;
             continue;
         }
-        byName.set(item.id.name, {
+        byName.set(key, {
+            key,
             name: item.id.name,
             displayName: item.displayName || item.id.name,
+            store,
             shared: item.shared,
+            mine: item.mine === true,
             versions: [item],
         });
     }

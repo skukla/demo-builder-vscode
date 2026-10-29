@@ -14,12 +14,13 @@ import { commerceGetForProject } from './erpFillForProject';
 import { listedErpNames, readErpRules, type ListedErpName } from './erpRules';
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AppManagementAuth } from '@/features/app-builder/services/appManagementClient';
-import { listProducts, listWebsites, type CommerceGet } from '@/features/app-builder/services/erpFillReaders';
+import { listProducts, listWebsites } from '@/features/app-builder/services/erpFillReaders';
 import { ownedRowOf } from '@/features/app-builder/services/erpFillRows';
 import { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
 import { ownsSettingsOf } from '@/features/app-builder/services/erpOwnership';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { Project } from '@/types/base';
+import type { CommerceGet } from '@/types/commerceWire';
 import type { ErpOwnershipOptions, ErpOwnsEntry } from '@/types/erpOwnership';
 
 /** The attribute every ERP's default rule reads; always carried on the product rows. */

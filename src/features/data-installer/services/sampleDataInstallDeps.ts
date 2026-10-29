@@ -12,10 +12,14 @@
 
 import { resolveDataInstallerAccess } from '../handlers/dataInstallerHandlers';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
-import { DataInstallerWriteClient } from './dataInstallerWriteClient';
+import { buildDatapackEngine, engineThatInstalled } from './buildDatapackEngine';
+import { selectedDatapackEngine } from './dataInstallerConfig';
+import type { DatapackEngine } from './datapackEngine';
 import { watchImportJob } from './importJobRunner';
 import type { SampleDataDeps } from './sampleDataInstall';
 import { PollingService } from '@/core/shell/pollingService';
+import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 /** What this deps set is being built for. */
@@ -49,9 +53,14 @@ export interface SampleDataProgress {
 
 export function buildSampleDataDeps(
     context: HandlerContext,
+    project: Project,
     report: (progress: SampleDataProgress) => void,
     mode: SampleDataMode = 'install',
 ): SampleDataDeps {
+    // One engine for the whole job: Demo Builder's keeps its jobs in memory, so the engine
+    // that starts one has to be the engine that is asked how it is going.
+    let built: Promise<DatapackEngine> | undefined;
+    const engineOnce = (): Promise<DatapackEngine> => (built ??= engine(context, project, mode));
     return {
         // What the service HOLDS, which is the detail plus a batch item lookup —
         // the same pairing `get-datapack-detail` does. A pack can DECLARE a type
@@ -70,19 +79,14 @@ export function buildSampleDataDeps(
             return inventory.present;
         },
 
-        startImport: async (request) => {
-            const client = await writeClient(context);
-            return client.startImport(request);
-        },
+        startImport: async (request) => (await engineOnce()).startImport(request),
 
-        // The Reset workflow's half. Same request, same client, different verb.
-        startDelete: async (request) => {
-            const client = await writeClient(context);
-            return client.startDelete(request);
-        },
+        // The Reset workflow's half. Same request, same engine, different verb.
+        startDelete: async (request) => (await engineOnce()).startDelete(request),
 
         /**
-         * Polls with the READ client, which is the only one that can answer.
+         * Polls through the engine. For the service engine that is the READ client,
+         * the only one that can answer.
          *
          * `watchImportJob` needs a `JobStatusSource` — `getJobStatus` and
          * `getJobFailureReason` — and those live on `DataInstallerClient`. This
@@ -95,12 +99,8 @@ export function buildSampleDataDeps(
          * the same call, made the same way. Another cast, another silent mismatch.
          */
         watch: async ({ activationId, requestedTypes, operation, onProgress }) => {
-            const access = await resolveDataInstallerAccess(context);
-            if (!access.ok) {
-                throw new Error('The Data Installer is not reachable for this project.');
-            }
             const result = await watchImportJob({
-                client: access.client,
+                client: await engineOnce(),
                 activationId,
                 requestedTypes,
                 polling: new PollingService(),
@@ -125,18 +125,24 @@ export function buildSampleDataDeps(
     };
 }
 
-/** The write client, built the way the import handlers build it. */
-async function writeClient(context: HandlerContext): Promise<DataInstallerWriteClient> {
+/** The engine the setting chooses, built the way the import handlers build it (`buildDatapackEngine`). */
+async function engine(context: HandlerContext, project: Project, mode: SampleDataMode): Promise<DatapackEngine> {
     const access = await resolveDataInstallerAccess(context);
     if (!access.ok) {
         throw new Error('The Data Installer is not reachable for this project.');
     }
-    return new DataInstallerWriteClient({
-        baseUrl: access.baseUrl,
-        getToken: access.getToken,
-        orgCode: access.orgCode,
-        // One line per service call in Debug Logs — the first live dry run
-        // refused with an EMPTY channel, undebuggable for the user and for us.
-        log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
-    });
+    // A removal goes through the engine that installed the project's pack (DI-5).
+    const engineId =
+        mode === 'remove' && project.datapack ? await engineThatInstalled(project.path, project.datapack) : selectedDatapackEngine();
+    // The org that owns the store is the org the sign-in must be in, as the screen's import
+    // checks (`importHandlers`, `orgGuard`).
+    if (engineId === 'demo-builder' && context.authManager) {
+        const orgFailure = await orgGuard(context, project, context.authManager);
+        if (orgFailure) throw new Error(orgFailure.error);
+    }
+    return buildDatapackEngine(
+        engineId,
+        { ...access, jobs: access.client, catalog: access.client, project, authManager: context.authManager, secrets: context.context?.secrets },
+        (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
+    );
 }

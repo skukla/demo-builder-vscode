@@ -56,6 +56,8 @@ function renderPanel(over: Partial<React.ComponentProps<typeof DatapackDetailPan
             onClose={onClose}
             onRetry={jest.fn()}
             onImport={jest.fn()}
+            onRemoved={jest.fn()}
+            installsFromLibrary={false}
             {...over}
         />
     );
@@ -353,5 +355,57 @@ describe('DatapackDetailPanel', () => {
 
             expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();
         });
+    });
+});
+
+describe('DatapackDetailPanel — a library pack', () => {
+    const LIBRARY = makeDetail({ store: 'library', shared: false });
+
+    it('offers Copy to the Data Installer instead of Import, warns it is shared, and saves from the library', () => {
+        renderPanel({ detail: LIBRARY });
+
+        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Copy to the Data Installer' })
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText(/Other teams will see bodea in the Data Installer/)
+        ).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save as file' })).toBeInTheDocument();
+        expect(screen.getByText('Library, only you')).toBeInTheDocument();
+    });
+
+    it('offers Remove only when the pack is the SC own', () => {
+        const { unmount } = renderPanel({ detail: LIBRARY });
+        expect(
+            screen.queryByRole('button', { name: 'Remove it from the library' })
+        ).not.toBeInTheDocument();
+        unmount();
+
+        renderPanel({ detail: { ...LIBRARY, mine: true } });
+        expect(
+            screen.getByRole('button', { name: 'Remove it from the library' })
+        ).toBeInTheDocument();
+    });
+
+    // DI-5: Demo Builder's engine reads the library itself, so with it chosen a library pack is
+    // imported where it is, and there is nothing to copy first.
+    it("offers Import in place of Copy when Demo Builder's engine is chosen", () => {
+        const onImport = jest.fn();
+        renderPanel({ detail: LIBRARY, installsFromLibrary: true, onImport });
+
+        expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+        expect(onImport).toHaveBeenCalledWith(LIBRARY.id);
+        expect(screen.getByRole('button', { name: 'Save as file' })).toBeInTheDocument();
+    });
+
+    it('a Data Installer pack keeps Import and never offers Remove — the control', () => {
+        renderPanel({ detail: makeDetail({ mine: true }) });
+
+        expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: 'Remove it from the library' })
+        ).not.toBeInTheDocument();
     });
 });

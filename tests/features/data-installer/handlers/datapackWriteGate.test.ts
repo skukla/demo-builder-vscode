@@ -102,6 +102,9 @@ describe('resolveDatapackWriteAccess — when every check passes', () => {
         expect(gate).toEqual({
             baseUrl: BASE_URL,
             getToken,
+            jobs: READ_CLIENT,
+            // The same read client: Demo Builder's engine reads a pack's rows through it (DI-5).
+            catalog: READ_CLIENT,
             project,
             backend,
         });

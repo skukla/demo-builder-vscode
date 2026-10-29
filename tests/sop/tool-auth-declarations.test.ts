@@ -73,7 +73,9 @@ const EXPECTED: Record<string, number> = {
     // Commerce with the workspace credential and read the ERPs' rules through the sign-in (AB-74).
     // 62 -> 65 on 2026-10-10: prepare_commerce_store, undo_commerce_store_preparation and
     // set_commerce_config read and write Commerce with the workspace credential (AB-77).
-    adobe: 65,
+    // 65 -> 69 on 2026-10-27, merging feature/datapack-zip: save_datapack_zip, load_datapack_zip,
+    // delete_library_datapack and copy_library_datapack_to_installer (built 2026-10-01).
+    adobe: 69,
     // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
     // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
     // 23 -> 24 on 2026-10-03: create_project_from_file, the same creation as create_project.
@@ -115,7 +117,8 @@ const EXPECTED: Record<string, number> = {
     // 52 -> 54 on 2026-09-24: run_erp_rest and write_erp_rest declare like get_erp_status.
     // 54 -> 56 on 2026-09-25: get_setup_checklist and set_setup_step touch saved state only.
     // 56 -> 57 on 2026-09-29: get_erp_settings declares no sign-in like get_erp_status (AB-16j).
-    none: 57,
+    // 57 -> 58 on 2026-10-27, the same merge: open_datapack_zip reads a local file.
+    none: 58,
 };
 
 /**
@@ -130,7 +133,7 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-const EXPECTED_TOOLS = 165; // 166 -> 165 on 2026-10-23: sync_content removed, its job now republish's (EDS-63). 168 -> 166 on 2026-10-22: check_category_pages and add_category_pages removed (EDS-61). 167 -> 168 on 2026-10-21: finish_storefront_update (EDS-57). 165 -> 167 on 2026-10-18: save_app_to_github and delete_app_github_repo (AB-1c). 162 -> 165 on 2026-10-10: the three AB-77 store-preparation tools. 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+const EXPECTED_TOOLS = 170; // 165 -> 170 on 2026-10-27: the five datapack file and library tools, merged from feature/datapack-zip (built 2026-10-01). 166 -> 165 on 2026-10-23: sync_content removed, its job now republish's (EDS-63). 168 -> 166 on 2026-10-22: check_category_pages and add_category_pages removed (EDS-61). 167 -> 168 on 2026-10-21: finish_storefront_update (EDS-57). 165 -> 167 on 2026-10-18: save_app_to_github and delete_app_github_repo (AB-1c). 162 -> 165 on 2026-10-10: the three AB-77 store-preparation tools. 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
 // 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
 // 142 -> 143 on 2026-09-27: load_erp_demo_data.
 // 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).
@@ -145,6 +148,9 @@ const EXPECTED_TOOLS = 165; // 166 -> 165 on 2026-10-23: sync_content removed, i
 // 158 -> 156 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed (EDS-24:
 // the category pages are written by storefront setup, reset and republish, not a button).
 // 156 -> 158 on 2026-10-05: check_category_pages and add_category_pages (EDS-27).
+// 146 -> 149 on 2026-10-01: save_datapack_zip, open_datapack_zip, load_datapack_zip.
+// 149 -> 150 the same day: delete_library_datapack.
+// 150 -> 151 the same day: copy_library_datapack_to_installer.
 
 interface Declaration {
     name: string;

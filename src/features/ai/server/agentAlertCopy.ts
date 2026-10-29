@@ -440,6 +440,27 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'version', 'commerceInstance'],
         sessionGrant: false,
     },
+    copy_library_datapack_to_installer: {
+        action: 'Copy a library datapack into the Data Installer',
+        consequence:
+            "Adds this pack to the Data Installer's shared catalogue so it can be installed. Other teams will see it, and the extension cannot remove it again.",
+        target: ['datapackName', 'version'],
+        sessionGrant: false,
+    },
+    delete_library_datapack: {
+        action: 'Delete a library datapack',
+        consequence:
+            'Removes this pack and all its data from the datapack library. It cannot be brought back except by loading its file again.',
+        target: ['datapackName', 'version'],
+        sessionGrant: false,
+    },
+    load_datapack_zip: {
+        action: 'Load a datapack file into a store',
+        consequence:
+            'Adds the pack in this file to the datapack library, or to the Data Installer catalogue other teams share.',
+        target: ['path', 'target'],
+        sessionGrant: false,
+    },
 };
 
 /** Authored copy for a tool, or undefined when nobody has written it yet. */

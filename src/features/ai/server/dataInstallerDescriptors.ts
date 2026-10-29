@@ -91,7 +91,9 @@ const IMPORT_TARGET = {
         .describe(
             'Store VIEW code, from list_datapack_import_scopes. Omit to use the project’s; ' +
                 'send with websiteCode to override',
-        ),
+        ),    // Which store holds the pack (DI-5). The service installs only from its own catalog; Demo
+    // Builder's engine reads either, so a library pack is installed without copying it first.
+    source: z.enum(['installer', 'library']).optional().describe('Which store holds the pack: installer (default) or library. A library pack needs the demo-builder engine'),
 };
 
 /**
@@ -266,5 +268,97 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                           `datapack catalog. To proceed, call again with confirmName:"${String(args.datapackName)}".`,
                       sharedCatalog: true,
                   },
+    },
+
+    // ── datapack files ──────────────────────────────────────────────────────
+    // Neither store has a file form, so the zip is built and read in the
+    // extension and works the same for both (`datapackZipHandlers`).
+    {
+        tool: 'save_datapack_zip',
+        needsAuth: ['adobe'],
+        // Writes a local file and nothing else: the store is only read.
+        readOnly: false,
+        description:
+            'Save a datapack from the Data Installer or the datapack library as a zip file in the ' +
+            'project — one file to keep, send, or load into a store later.',
+        map: importHandlers,
+        type: 'save-datapack-zip',
+        inputSchema: {
+            ...DATAPACK_ID,
+            source: z.enum(['installer', 'library']).optional().describe('Which store to read it from (default installer)'),
+            path: z
+                .string()
+                .describe('Where to write the file, inside the project. A folder gets <name>-<version>.datapack.zip'),
+        },
+    },
+    {
+        tool: 'open_datapack_zip',
+        needsAuth: [],
+        readOnly: true,
+        description:
+            'Say what a datapack zip file holds — name, version, data types — without writing anything. ' +
+            'Run before load_datapack_zip.',
+        map: importHandlers,
+        type: 'open-datapack-zip',
+        inputSchema: { path: z.string().describe('The datapack file, inside the project') },
+    },
+    {
+        tool: 'load_datapack_zip',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Write the pack in a datapack zip file into the datapack library (default) or the Data Installer. ' +
+            'Into the Data Installer, which other teams share, it needs confirmName equal to the pack ' +
+            'name and never updates an existing pack. This does not install anything into Commerce.',
+        map: importHandlers,
+        type: 'load-datapack-zip',
+        confirm: true,
+        inputSchema: {
+            path: z.string().describe('The datapack file, inside the project'),
+            target: z.enum(['installer', 'library']).optional().describe('Which store to write it into (default library)'),
+            update: z
+                .boolean()
+                .optional()
+                .describe('Library only: replace the data types this file carries in a pack that already exists'),
+            confirmName: z
+                .string()
+                .optional()
+                .describe('Data Installer only: must equal the pack name (open_datapack_zip reports it)'),
+        },
+    },
+    {
+        tool: 'delete_library_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Delete one of your own packs from the datapack library — the undo of ' +
+            "load_datapack_zip. Cannot be undone. The library only lets a pack's owner delete " +
+            "it; the Data Installer's shared catalog is never touched.",
+        map: importHandlers,
+        type: 'delete-library-datapack',
+        // Gated twice, as reset_datapack is: the row refuses before dispatch, and the
+        // same flag satisfies the handler's own confirm check.
+        confirm: true,
+        inputSchema: { ...DATAPACK_ID },
+    },
+    {
+        tool: 'copy_library_datapack_to_installer',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Make a datapack library pack installable: copy it into the Data Installer, then ' +
+            'install it with start_datapack_import. **Writes into the SHARED catalog** — needs ' +
+            'confirm:true and confirmName equal to the pack name, never overwrites an existing ' +
+            'pack, and cannot be undone from the extension.',
+        map: importHandlers,
+        type: 'copy-library-datapack-to-installer',
+        confirm: true,
+        inputSchema: {
+            ...DATAPACK_ID,
+            confirmName: z
+                .string()
+                .optional()
+                .describe('Must equal datapackName — guards a write to the shared catalog'),
+        },
     },
 ];

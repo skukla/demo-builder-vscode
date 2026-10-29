@@ -15,12 +15,14 @@
  */
 
 import * as vscode from 'vscode';
+import type { DatapackEngineId } from '../types';
 import { validateURL } from '@/core/validation/URLValidator';
 
 /** Longest base URL we will accept from settings. */
 export const DATA_INSTALLER_MAX_URL_LENGTH = 2048;
 
 const SETTINGS_SECTION = 'demoBuilder.dataInstaller';
+const STORE_SETTINGS_SECTION = 'demoBuilder.datapackStore';
 
 /**
  * Whether the Data Installer feature is switched on.
@@ -32,6 +34,18 @@ const SETTINGS_SECTION = 'demoBuilder.dataInstaller';
 export function isDataInstallerEnabled(): boolean {
     const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<boolean>('enabled', true);
     return typeof raw === 'boolean' ? raw : true;
+}
+
+/**
+ * Which engine installs and removes datapacks (`demoBuilder.dataInstaller.engine`, DI-5).
+ * Demo Builder's own unless the SC chooses the service (owner, 2026-10-28): the service still
+ * answers the catalog, but since 2026-10-27 it ignores the Commerce credentials a caller sends,
+ * so it installs nothing for us. Anything unrecognised reads as the default. A pack already
+ * installed is removed by whichever engine installed it, whatever this says.
+ */
+export function selectedDatapackEngine(): DatapackEngineId {
+    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('engine', 'demo-builder');
+    return raw === 'service' ? 'service' : 'demo-builder';
 }
 
 /**
@@ -72,8 +86,22 @@ export type BaseUrlResolution =
  * @returns The validated base URL with any trailing slash removed, or why not
  */
 export function resolveDataInstallerBaseUrl(): BaseUrlResolution {
-    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('apiBaseUrl', '');
+    return resolveHttpsBaseUrl(vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('apiBaseUrl', ''));
+}
 
+/**
+ * Read and validate the datapack store's base URL (`demoBuilder.datapackStore.apiBaseUrl`).
+ *
+ * Our own store, which answers the Data Installer's catalog routes. Unlike the
+ * Data Installer's setting it has a default — the team's deployment, a public
+ * action URL — so it resolves on a fresh install.
+ */
+export function resolveDatapackStoreBaseUrl(): BaseUrlResolution {
+    return resolveHttpsBaseUrl(vscode.workspace.getConfiguration(STORE_SETTINGS_SECTION).get<string>('apiBaseUrl', ''));
+}
+
+/** The shared rule for both base URLs: present, not absurdly long, https. */
+function resolveHttpsBaseUrl(raw: unknown): BaseUrlResolution {
     // VS Code's typed `get` returns the default on type mismatch, but be
     // defensive about a hand-edited settings.json.
     if (typeof raw !== 'string') {

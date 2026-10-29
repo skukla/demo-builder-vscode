@@ -26,7 +26,6 @@
  * @module features/dashboard/handlers/integrationUpdateHandlers
  */
 
-import { orgGuard } from './appBuilderComponentGuards';
 import {
     guardOrBlock,
     postComponentsSnapshot,
@@ -45,6 +44,7 @@ import {
 import { checkIntegrationUpdates, type IntegrationUpdateCheck } from '@/features/app-builder/services/integrationUpdateCheck';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { OrgAwareAuthManager } from '@/features/authentication/services/detectProjectOrgMismatch';
+import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     sendAppBuilderComponentStatusUpdate,

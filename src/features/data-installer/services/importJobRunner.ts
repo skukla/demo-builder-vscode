@@ -9,9 +9,11 @@
  * | Finished job | correct | **lies: `in_progress`** — the record ages out |
  * | Never started | **`200` + empty map** | correct: the validation error |
  *
- * So the durable one decides success or failure, and the echo is consulted ONCE —
- * only to explain a map that stayed empty past the grace window. It is never
- * polled, because for a job that finished hours ago it reports `in_progress`.
+ * So the durable one decides success or failure, and the echo is consulted ONCE,
+ * at the end: to explain a map that stayed empty past the grace window, or a run
+ * that did not all succeed (Demo Builder's engine answers with what failed; the
+ * service's echo, for a job that ran, answers nothing). It is never polled,
+ * because for a job that finished hours ago it reports `in_progress`.
  *
  * **The covering-set rule is the one most easily got wrong.** Terminal means the
  * map covers every REQUESTED type and all of them are terminal. Checking only
@@ -70,13 +72,16 @@ export interface ImportJobResult {
     outcome: ImportOutcome;
     /** Last known per-type statuses. Empty when nothing was ever registered. */
     perType: Record<string, DataTypeStatus>;
-    /** Why nothing happened. Only for `never-registered`, from the echo. */
+    /**
+     * Why it did not all succeed: for `never-registered`, from the service's echo; for `error`
+     * and `partial`, what the engine says (Demo Builder's names the object and the cause).
+     */
     reason?: string;
     processingTimeMs?: number;
 }
 
 /** The read-client methods this needs. Narrowed so tests need no client. */
-interface JobStatusSource {
+export interface JobStatusSource {
     getJobStatus: (activationId: string) => Promise<JobStatusSnapshot>;
     getJobFailureReason: (activationId: string) => Promise<JobFailureReason | undefined>;
 }
@@ -181,9 +186,14 @@ export async function watchImportJob(args: {
     }
 
     const perType = latest?.perType ?? {};
+    const outcome = classify(perType, requestedTypes);
+    // Demo Builder's engine knows why a kind failed; the service's echo, for a job that ran,
+    // has nothing to say and answers no reason. Either way the screen shows what it gets.
+    const reason = outcome === 'success' ? undefined : await readFailureReason(client, activationId);
     return {
-        outcome: classify(perType, requestedTypes),
+        outcome,
         perType,
+        ...(reason ? { reason } : {}),
         ...(latest?.processingTimeMs !== undefined
             ? { processingTimeMs: latest.processingTimeMs }
             : {}),

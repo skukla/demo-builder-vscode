@@ -22,6 +22,14 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
 }));
 
+// These suites drive the SERVICE engine. Demo Builder's own is the default since 2026-10-28,
+// so they say which one they mean rather than lean on the default. A jest.fn, so a suite that
+// needs the other engine can still choose it.
+jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
+    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
+    selectedDatapackEngine: jest.fn(() => 'service'),
+}));
+
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
@@ -29,6 +37,7 @@ import { watchImportJob } from '@/features/data-installer/services/importJobRunn
 import type { DataTypeStatus } from '@/features/data-installer/types';
 import {
     importHarness,
+    ACCS_PROJECT,
     NOT_REACHABLE,
 } from './sampleDataInstallDeps.testUtils';
 
@@ -38,6 +47,7 @@ const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<
 const MockedWriteClient = DataInstallerWriteClient as unknown as jest.Mock;
 const mockedWatch = watchImportJob as unknown as jest.Mock;
 
+const PROJECT = ACCS_PROJECT;
 const PACK = { name: 'citisignal', version: '1.2.0' };
 
 /** The read client, with the two catalog calls `inventory` makes. */
@@ -67,7 +77,7 @@ function unreachable(): void {
 }
 
 function deps(mode: 'install' | 'remove' = 'install') {
-    return buildSampleDataDeps(importHarness(), jest.fn(), mode);
+    return buildSampleDataDeps(importHarness(), PROJECT, jest.fn(), mode);
 }
 
 beforeEach(() => {
@@ -178,6 +188,21 @@ describe('watch', () => {
         expect(mockedWatch.mock.calls[0][0].onProgress).toBe(onProgress);
     });
 
+    // Demo Builder's engine keeps its jobs in memory, so the job is watched through the engine
+    // that started it. Building a second one would answer "no such job" (DI-5).
+    it('watches through the same engine that started the job', async () => {
+        reachable(readClient());
+        const d = deps();
+
+        await d.startImport({ datapack: PACK, dataTypes: ['categories'] } as unknown as Parameters<typeof d.startImport>[0]);
+        await d.watch({ activationId: 'imp-1', requestedTypes: ['categories'] });
+        await d.watch({ activationId: 'imp-1', requestedTypes: ['categories'] });
+
+        expect(mockedAccess).toHaveBeenCalledTimes(1);
+        expect(MockedWriteClient).toHaveBeenCalledTimes(1);
+        expect(mockedWatch.mock.calls[0][0].client).toBe(mockedWatch.mock.calls[1][0].client);
+    });
+
     it('refuses when the service is unreachable, rather than polling nothing', async () => {
         unreachable();
 
@@ -198,7 +223,7 @@ describe('watch', () => {
 describe('onProgress counting', () => {
     function reported(perType: Record<string, DataTypeStatus>) {
         const report = jest.fn();
-        buildSampleDataDeps(importHarness(), report).onProgress?.(perType);
+        buildSampleDataDeps(importHarness(), PROJECT, report).onProgress?.(perType);
         return report.mock.calls[0][0];
     }
 

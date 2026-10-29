@@ -40,7 +40,7 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
-import type { DatapackId, ImportJobRecord } from '../../types';
+import type { DatapackId, DatapackStoreName, ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportScopes } from '../hooks/useImportScopes';
 import { deselectType, selectType, type TypeSelection } from '../importDependencies';
@@ -72,6 +72,8 @@ export interface ImportDatapackModalProps {
     displayName: string;
     /** Types this datapack actually stores — from the detail inventory. */
     availableTypes: string[];
+    /** Which store holds the pack; a library pack is installed by Demo Builder's engine (DI-5). */
+    source?: DatapackStoreName;
     onClose: () => void;
 }
 
@@ -79,6 +81,7 @@ export function ImportDatapackModal({
     id,
     displayName,
     availableTypes,
+    source,
     onClose,
 }: ImportDatapackModalProps): React.JSX.Element {
     // One state, not two: the provenance record only means anything alongside
@@ -192,8 +195,10 @@ export function ImportDatapackModal({
             dataTypes: selected,
             // Spread: an unchosen target contributes NO keys. See useImportScopes.
             ...scope.targetFields(),
+            // Only a library pack names its store; the handler reads absent as the Data Installer.
+            ...(source === 'library' ? { source } : {}),
         }),
-        [id, commerceInstance, selected, scope],
+        [id, commerceInstance, selected, scope, source],
     );
 
     const act = useCallback((action: LastAction): void => {

@@ -430,11 +430,15 @@ describe('what the finished watch records', () => {
 });
 
 describe('the feature turned off mid-import', () => {
-    it('records that the watch could not run, and says why', async () => {
-        // resolveDataInstallerAccess runs twice: once to prepare the request and
-        // once inside the detached watch. Turning the feature off between them is
-        // the only way the second can refuse after the first allowed — and the
-        // record must not sit at "watching" forever.
+    /**
+     * Until DI-5 the detached watch looked the Data Installer up again, so turning the
+     * feature off between the start and the watch left a job "unwatchable" that was
+     * running all the same. The watch now asks the ENGINE that started the job, which
+     * already has everything it needs: the job is watched to its real end. (Every
+     * failure inside the watch still records why: the record never sits at
+     * "watching".)
+     */
+    it('keeps watching the job the engine started', async () => {
         let enabledReads = 0;
         (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
             get: jest.fn((key: string) => {
@@ -445,22 +449,17 @@ describe('the feature turned off mid-import', () => {
                 return enabledReads === 1;
             }),
         });
-        const { context, stores } = makeImportHarness();
+        const { context } = makeImportHarness();
         happyClient();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
         await new Promise((resolve) => setImmediate(resolve));
 
-        // The import itself was accepted — this reports a lost WATCH, not a
-        // failed import.
         expect(result.success).toBe(true);
-        expect(stores.peek('dataInstaller.import.current')).toMatchObject({
-            outcome: 'unwatchable',
-            reason: 'The Data Installer could not be reached to watch this job.',
-        });
-        expect(mockedWatch).not.toHaveBeenCalled();
+        expect(mockedWatch).toHaveBeenCalledWith(expect.objectContaining({ activationId: 'act-1' }));
     });
 });
+
 
 describe('a start the service refuses', () => {
     it('reports the service reason and records no job', async () => {

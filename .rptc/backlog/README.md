@@ -318,12 +318,12 @@ each item's own file; what has already landed against an item is in its
 | `EDS-64` | fix | [The Storefront Report is readable, and its fixes are offered honestly](2026-10-23-storefront-report-readable-and-fixes-honest.md) | — | med | active |
 | `EDS-65` | fix | [A storefront delete goes on deleting while its pages are still live](2026-10-25-delete-stops-while-pages-stay-live.md) | — | high | active |
 | `EDS-66` | fix | [A new storefront's template code reaches the site, or setup says it did not](2026-10-27-template-code-reaches-the-site.md) | — | med | active |
-| `EDS-67` | fix | [Deleting a storefront leaves its code on aem.live](2026-10-28-delete-leaves-site-code.md) | — | low | backlog |
+| `EDS-67` | fix | [Deleting a storefront leaves its code on aem.live](2026-10-28-delete-leaves-site-code.md) | — | low | active |
 | `EDS-68` | fix | [The DA.live status still says signed in when IMS has cancelled the sign-in](2026-10-28-dalive-status-says-yes-for-a-cancelled-sign-in.md) | — | high | active |
 | `EDS-69` | fix | [A storefront delete carries on when AEM refuses the sign-in](2026-10-28-delete-carries-on-when-aem-refuses-the-sign-in.md) | — | high | active |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (126)
+### app-builder  (127)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -452,15 +452,17 @@ each item's own file; what has already landed against an item is in its
 | `AB-80` | fix | [An add into a workspace it just made skips the leftover-code check](2026-10-17-add-skips-leftover-check-on-fresh-workspace.md) | — | low | built |
 | `AB-81` | fix | [An order paid on account leaves the buyer short by its shipping](2026-10-22-erp-invoice-carries-no-shipping.md) | — | med | backlog |
 | `AB-82` | feature | [One place for store setup](2026-10-26-one-place-for-store-setup.md) | — | med | active |
+| `AB-83` | fix | [Undo leaves what changed since](2026-10-27-undo-leaves-what-changed-since.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
-### data-installer  (5)
+### data-installer  (6)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
 | `DI-1` | feature | [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) | — | med | active |
 | `DI-2` | feature | [Instance wipe option — remove as much data as the service allows](2026-08-22-instance-wipe-option.md) | — | med | backlog |
 | `DI-4` | question | [Has the Data Installer superseded the ACO data ingestion tool?](2026-10-07-aco-ingestion-tool-vs-data-installer.md) | — | low | superseded |
+| `DI-5` | feature | [Demo Builder installs datapacks itself, beside the service](2026-10-27-demo-builder-installs-datapacks.md) | — | high | active |
 | `DI-6` | chore | [The Commerce secrets gathered for the Data Installer service are no longer needed](2026-10-28-datapack-credential-gathering-removed.md) | — | med | active |
 | `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | superseded |
 
@@ -714,7 +716,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*314 item(s) sit outside the A–G chain.*
+*316 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

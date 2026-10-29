@@ -41,6 +41,8 @@ const BASE = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-insta
 /** PaaS so credentials resolve from declared config, with no broker involved. */
 const PAAS_PROJECT = (): Partial<Project> => ({
     name: 'demo-a',
+    // Every project has one; a removal looks beside it for Demo Builder's install record (DI-5).
+    path: '/nonexistent/projects/demo-a',
     componentSelections: { backend: 'adobe-commerce-paas' },
     componentConfigs: {
         'adobe-commerce-paas': {

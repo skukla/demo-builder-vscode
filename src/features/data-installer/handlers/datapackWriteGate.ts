@@ -18,6 +18,8 @@
  */
 
 import { commerceBackendOf, type CommerceBackend } from '../services/commerceBackend';
+import type { DataInstallerClient } from '../services/dataInstallerClient';
+import type { JobStatusSource } from '../services/importJobRunner';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -32,6 +34,10 @@ export interface DatapackWriteAccess {
     getToken: () => Promise<string>;
     /** The SC's IMS org code, for the gateway (`dataInstallerSignIn`). */
     orgCode?: string;
+    /** The service's job reads, for the service engine (`datapackEngine`). */
+    jobs: JobStatusSource;
+    /** The service catalog's reads, where Demo Builder's engine reads a pack's rows from. */
+    catalog: Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'>;
     project: Project;
     /** The project's Commerce backend: what an export's scope header is chosen by. */
     backend: CommerceBackend;
@@ -81,6 +87,8 @@ export async function resolveDatapackWriteAccess(
         baseUrl: access.baseUrl,
         getToken: access.getToken,
         orgCode: access.orgCode,
+        jobs: access.client,
+        catalog: access.client,
         project,
         backend,
     };

@@ -35,7 +35,7 @@
  * @module features/data-installer/services/dataInstallerWriteClient
  */
 
-import type { DatapackId, ImportStart, ValidationResult } from '../types';
+import type { DatapackId, DatapackStoreName, ImportStart, ValidationResult } from '../types';
 import { actionUrl } from './dataInstallerConfig';
 import { DataInstallerApiError, DataInstallerInputError } from './dataInstallerErrors';
 import { parseImportStart, parseValidation } from './dataInstallerParsers';
@@ -56,6 +56,13 @@ export interface ImportRequest {
      * without the other, and validates that the store belongs to the website.
      */
     target?: ImportTarget;
+    /**
+     * Which store holds the pack: the service's catalog (absent, as before) or the datapack
+     * library. Never sent to the service, whose body is built field by field
+     * (`buildBody`): it installs only from its own catalog, so a library pack goes through
+     * Demo Builder's engine (DI-5).
+     */
+    source?: DatapackStoreName;
 }
 
 /**
