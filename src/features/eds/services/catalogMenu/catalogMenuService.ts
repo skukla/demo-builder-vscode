@@ -251,6 +251,11 @@ export async function applyCatalogMenu(
     const authored = await authoredAddresses(deps.pages, planned, previous.legacyPages);
     const ownPageOf = (urlPath: string): string | undefined =>
         typed.get(normaliseUrlPath(urlPath)) ?? found.get(urlPath);
+    // The menu links these categories to the SC's page at another address, so a page at
+    // their own address would be one nobody reaches (Bodea's /products/racks beside /racks).
+    const elsewhere = new Set(
+        plan.pages.filter((p) => ![undefined, p.path].includes(ownPageOf(p.urlPath))).map((p) => p.path),
+    );
 
     // The old model's unedited pages first, so the overlay serves their addresses next.
     const legacy = await removeLegacyPages(deps.pages, previous.legacyPages);
@@ -261,6 +266,7 @@ export async function applyCatalogMenu(
         planned,
         authored,
         previous.categoryPaths ?? [],
+        elsewhere,
     );
 
     // Our rows: the pages we found. A row the SC typed is theirs, and stays as typed.

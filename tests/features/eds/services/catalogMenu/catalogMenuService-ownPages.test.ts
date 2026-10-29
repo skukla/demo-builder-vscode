@@ -52,6 +52,68 @@ describe('applyCatalogMenu — a category that already has a page of its own', (
         expect(report.record.links).toEqual([{ urlPath: 'signs', path: '/safety-signage' }]);
     });
 
+    // Found on Bodea, 2026-10-28: the menu linked "Servers and Racks" to the SC's /racks, and
+    // every republish still tried a generated page at /products/racks, which failed and was
+    // reported as "couldn't be published; republish to try again".
+    describe('publishes no generated page for it', () => {
+        it('when its own page is elsewhere on the site', async () => {
+            const site = fakeStorefront({ '/nav': NAV, '/safety-signage': handBuilt('signs') });
+            const helix = fakeCategoryHelix();
+
+            await applyCatalogMenu({ ...deps(site), categoryPages: helix.host });
+
+            expect(helix.published).toEqual(['/apparel']);
+        });
+
+        it('when the SC typed a row pointing it at a page', async () => {
+            const typed = NAV.replace(
+                '</main>',
+                `<div><div class="catalog-menu">${linkRow('apparel', '/clothing')}</div></div></main>`,
+            );
+            const helix = fakeCategoryHelix();
+
+            await applyCatalogMenu({ ...deps(fakeStorefront({ '/nav': typed })), categoryPages: helix.host });
+
+            expect(helix.published).toEqual(['/signs']);
+        });
+
+        it('when it sits under a "products" category, as Bodea\'s do', async () => {
+            const categories: CatalogCategory[] = [
+                { id: '107', name: 'Products', urlPath: 'products' },
+                { id: '112', name: 'Servers and Racks', urlPath: 'products/racks' },
+            ];
+            const site = fakeStorefront({ '/nav': NAV, '/racks': handBuilt('products/racks') });
+            const helix = fakeCategoryHelix();
+
+            await applyCatalogMenu({ ...deps(site, categories), categoryPages: helix.host });
+
+            expect(helix.published).toEqual(['/products']);
+        });
+
+        it("but still lists a hand-built page at the category's own address, so the overlay leaves it alone", async () => {
+            const site = fakeStorefront({ '/nav': NAV, '/signs': handBuilt('signs'), '/safety-signage': handBuilt('signs') });
+            const helix = fakeCategoryHelix();
+
+            await applyCatalogMenu({ ...deps(site), categoryPages: helix.host });
+
+            expect(helix.sheet).toEqual(['/signs']);
+            expect(site.pages.get('/signs')).toBe(handBuilt('signs'));
+        });
+
+        it('and leaves a generated page it published on an earlier run where it is', async () => {
+            const site = fakeStorefront({ '/nav': NAV, '/safety-signage': handBuilt('signs') });
+            const helix = fakeCategoryHelix({ live: ['/signs'] });
+
+            const report = await applyCatalogMenu(
+                { ...deps(site), categoryPages: helix.host },
+                { legacyPages: [], links: [], navSwitch: false, categoryPaths: ['/signs'] },
+            );
+
+            expect(helix.events.some((e) => e.startsWith('remove'))).toBe(false);
+            expect(report.record.categoryPaths).toContain('/signs');
+        });
+    });
+
     it("needs no row for a page at the category's own address: the sheet keeps it, the menu links there", async () => {
         const site = fakeStorefront({ '/nav': NAV, '/apparel': handBuilt('apparel') });
         const helix = fakeCategoryHelix();
@@ -133,7 +195,8 @@ describe('removeCatalogMenu — with category → page rows', () => {
 
         expect(site.pages.get('/nav')).toBe(NAV);
         expect([...site.pages.keys()].sort()).toEqual(['/nav', '/safety-signage']);
-        expect(report.record).toEqual({ legacyPages: [], links: [], navSwitch: false, categoryPaths: ['/signs', '/apparel'], authoredSheet: true });
+        // No /signs: the menu links Signs to their page, so none was generated at /signs.
+        expect(report.record).toEqual({ legacyPages: [], links: [], navSwitch: false, categoryPaths: ['/apparel'], authoredSheet: true });
     });
 
     it('keeps a row the SC typed, and the table that holds it', async () => {

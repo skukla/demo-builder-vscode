@@ -293,7 +293,11 @@ describe('a category that already has a hand-built page at another address', () 
         expect(s.pages.get('/nav')).toBe(NAV);
         expect([...s.pages.keys()].sort()).toEqual(['/nav', '/safety-signage']);
         expect(s.pages.get('/safety-signage')).toBe(SAFETY_SIGNAGE);
-        expect(readCatalogMenuRecord(project)).toEqual({ ...EMPTY, categoryPaths: PAGES });
+        // No /signs: the menu links Signs to their page, so none was generated at /signs.
+        expect(readCatalogMenuRecord(project)).toEqual({
+            ...EMPTY,
+            categoryPaths: PAGES.filter((path) => path !== '/signs'),
+        });
         // Reset takes the sheet out before the content is published again, and setup writes it first.
         expect(helix.sheet).toBeNull();
     });

@@ -111,6 +111,9 @@ export async function unpublishCategoryPages(
  * @param planned - every category's page address, from the store's categories now
  * @param authored - the planned addresses DA.live holds a document for
  * @param previous - the overlay pages Demo Builder had published before this run
+ * @param ownPageElsewhere - planned addresses whose category the menu links to the SC's own
+ *   page at another address: no page is generated for them, though they stay planned, so an
+ *   authored page there is still listed and one published earlier is left where it is
  */
 export async function publishCategoryPages(
     host: CategoryPageHost,
@@ -118,6 +121,7 @@ export async function publishCategoryPages(
     planned: string[],
     authored: ReadonlySet<string>,
     previous: string[],
+    ownPageElsewhere: ReadonlySet<string> = new Set(),
 ): Promise<CategoryPublishOutcome> {
     const authoredList = planned.filter((path) => authored.has(path));
     try {
@@ -127,14 +131,20 @@ export async function publishCategoryPages(
         return { sheet, authored: authoredList, published: [], failed: [], categoryPaths: previous };
     }
 
-    const overlay = planned.filter((path) => !authored.has(path));
+    const overlay = planned.filter((path) => !authored.has(path) && !ownPageElsewhere.has(path));
     const toPublish = [...(host.publishAtSetup ? overlay : []), ...authoredList];
     const { done, failed } = await publishAll(host, toPublish);
 
     const gone = previous.filter((path) => !planned.includes(path));
     const { result: pruned, remaining } = await unpublishCategoryPages(host, pages, gone);
+    // What Demo Builder has published, so a later run or a reset can take it down: a page
+    // it no longer generates but published before stays on the record while it is live.
     const categoryPaths = [
-        ...overlay.filter((path) => done.includes(path) || previous.includes(path)),
+        ...planned.filter((path) =>
+            overlay.includes(path)
+                ? done.includes(path) || previous.includes(path)
+                : ownPageElsewhere.has(path) && previous.includes(path),
+        ),
         ...remaining,
     ];
     return {
