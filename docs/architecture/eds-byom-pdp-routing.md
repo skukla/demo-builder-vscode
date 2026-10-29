@@ -136,7 +136,12 @@ The two repos coordinate via three URL strings — the `render-pdp` overlay URL,
       → Helix promotes preview to live
    d. Returns 200 to the browser
 5. Smart-404 JS: location.replace('/products/orchard-2/orchard2?pdpRetry=1')
-6. Browser navigates to lowercase URL → Helix serves the cached template → 200
+   (the tab reads "Loading…" meanwhile). A 409 from the action means the page
+   is already live and this 404 came from a cache: it reloads once with
+   ?pdpRetry=1&pdpFresh=<time>, which no cache has seen.
+6. Browser navigates to lowercase URL → Helix serves the cached template → 200.
+   head.html's eager script takes pdpRetry/pdpFresh back out of the address
+   (history.replaceState, no reload), keeping every other parameter.
 7. Drop-in runs, reads SKU=orchard2 from URL, queries Catalog Service
    → Catalog Service returns the canonical Orchard2 product (case-insensitive lookup)
 8. Page populates with product data. Total time: ~2-3 seconds for cold path.
@@ -168,7 +173,7 @@ The cold path runs once per SKU across all visitors to a storefront. Every subse
 | `prepublish-pdp` trigger action | `accs-discovery-service`, deployed | Validates the PDP path, resolves the product (`lib/pdp-product.js`, fail-open — a confirmed-absent product → 404, no publish), relays Helix admin preview/publish for the product's **canonical** path, and returns that path so the snippet redirects there |
 | Configuration Service registration with overlay URL | This repo (`ConfigurationService.registerSite` / `updateSiteConfig` with `byomOverlayUrl`) | Wires the overlay into the site config with `{ url, type: "markup", suffix: ".html" }` — shape matches canonical `aem-commerce-prerender` setup wizard |
 | **Catalog pre-warming at create/reset** | This repo (`catalogPrewarmService.ts` + pipeline step) | Enumerates the Commerce catalog via Catalog Service GraphQL and pre-publishes every SKU's PDP URL via batches of 5 to `prepublish-pdp`. Equivalent to one cycle of the canonical scheduled poller. v1 supports ACCS storefronts; PaaS follow-up tracked separately. |
-| Smart-404 snippet install step | This repo (`bringStorefrontUpToDate`, with `pdp404HandlerPublisher.ts` and `pdp404Page.ts`) | Vendors two scripts into the storefront: (1) the eager mixed-case → lowercase product redirect plus the cold-path `<main>` hide, in `head.html` and in `404.html`'s `<head>`; (2) the cold-path action call + spinner, for product and category addresses, inline at the end of `404.html`'s body. Each is a marked block, rewritten in place when it changes. A storefront still carrying the old copy in `scripts/delayed.js` loses it once `404.html` has the new one |
+| Smart-404 snippet install step | This repo (`bringStorefrontUpToDate`, with `pdp404HandlerPublisher.ts`, `pdp404Page.ts` and `storefrontCodeBlocks.ts`) | Vendors two scripts into the storefront: (1) the eager mixed-case → lowercase product redirect plus the cold-path `<main>` hide, in `head.html` and in `404.html`'s `<head>`; (2) the cold-path action call + spinner, for product and category addresses, inline at the end of `404.html`'s body. Each is a marked block, rewritten in place when it changes. A storefront still carrying the old copy in `scripts/delayed.js` loses it once `404.html` has the new one |
 | `demoBuilder.byom.enabled` setting | This repo | Master toggle; when off, no overlay registers and no 404 publishes |
 | `demoBuilder.byom.overlayUrl` setting | This repo | Override for non-default deployments. Defaults to the team's shared deployment. |
 
@@ -369,7 +374,7 @@ If Phase 1's behavior diverges from this in production, those four probes locali
 | Site-registration protocol (409→update, 401→re-auth, 403→propagation retry) | `src/features/eds/services/configService/siteConfigRegistrar.ts` (`registerSiteConfig`), shared by the wizard, the reset path and the repair command |
 | Standalone retry after a refused registration | `src/features/eds/services/configService/repairSiteConfigHeadless.ts` + `src/commands/repairSiteConfiguration.ts` (`demoBuilder.repairSiteConfiguration`) |
 | Configuration Service registration with overlay (incl. `suffix: ".html"`) | `src/features/eds/services/configService/configurationService.ts` (`registerSite`, `updateSiteConfig`); the overlay body and `buildSiteConfigParams` in `siteConfigParams.ts` (`buildRegistrationBody`) |
-| Smart-404 snippet generation + install (head.html, 404.html) | `src/features/eds/services/pdp/pdp404Snippet.ts` (the scripts), `pdp404Page.ts` (where they sit), `pdp404HandlerPublisher.ts` (head.html, retiring the delayed.js copy) |
+| Smart-404 snippet generation + install (head.html, 404.html) | `src/features/eds/services/pdp/pdp404Snippet.ts` (the scripts), `pdp404Page.ts` (where they sit), `pdp404HandlerPublisher.ts` (one storefront's script), `storefront/storefrontCodeBlocks.ts` (head.html, taking the old delayed.js copy out) |
 | **Catalog pre-warming (enumerate + bulk pre-publish)** | `src/features/eds/services/catalogPrewarmService.ts` (publish), `catalogEnumeration.ts` (enumerate) |
 | Pipeline integration (smart-404 install + pre-warming) | `src/features/eds/services/edsPipeline.ts`, `src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts` (create / edit), `src/features/eds/services/reset/edsResetRepoHelper.ts` (reset) |
 | **Product page removal on reset and delete (EDS-26)** | `src/features/eds/services/storefront/productPageRemoval.ts` (the rules), `helix/helixPublishedPaths.ts` (the listing), `reset/edsResetProductPages.ts`, `storefront/storefrontTeardown.ts`, `storefront/sharedRepoProjects.ts` |

@@ -16,7 +16,7 @@
  * old copy out of a storefront that still has it, so the script never runs twice.
  *
  * Writing the files is not done here: `bringStorefrontUpToDate` writes `404.html` once with
- * every change it needs, and the publisher writes `head.html` and `delayed.js`.
+ * every change it needs, and `storefrontCodeBlocks.ts` writes `head.html` and `delayed.js`.
  */
 
 import {

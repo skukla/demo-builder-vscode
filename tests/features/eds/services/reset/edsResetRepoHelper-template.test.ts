@@ -232,41 +232,40 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
     });
 
     it('surfaces a skipped smart-404 install through report when BYOM is on', async () => {
-        mocks.prepareSmart404Handler.mockResolvedValue({ handler: '\n// handler\n' });
-
-        const { report, githubFileOps, context } = await runReset(
+        // No 404.html in this storefront: the script has nowhere to go.
+        const { report } = await runReset(
             buildParams({ byomOverlayUrl: 'https://overlay.example.test/render-pdp' }),
         );
 
-        expect(mocks.prepareSmart404Handler).toHaveBeenCalledWith(
-            githubFileOps,
-            'me',
-            'shop',
-            'https://overlay.example.test/render-pdp',
-            context.logger,
-            'acme',
-            'shop',
-        );
         expect(report).toHaveBeenCalledWith(1, SMART_404_WARNING);
     });
 
     it('says nothing when the smart-404 handler installed', async () => {
-        mocks.prepareSmart404Handler.mockResolvedValue({ handler: '\n// handler\n' });
         const notFound = '<html><head><script nonce="aem">window.isErrorPage = true;</script></head><body></body></html>';
+        const head = '<script nonce="aem" src="/scripts/aem.js" type="module"></script>\n';
 
-        const { report } = await runReset(
+        const { report, githubFileOps } = await runReset(
             buildParams({ byomOverlayUrl: 'https://overlay.example.test/render-pdp' }),
             undefined,
             undefined,
-            { '404.html': notFound },
+            { '404.html': notFound, 'head.html': head },
         );
 
         expect(report).not.toHaveBeenCalledWith(1, SMART_404_WARNING);
+        // Against the configured overlay and the project's DA.live site, and, since reset has
+        // just installed inspector tagging, with the Inspector loader in head.html.
+        expect(githubFileOps.createOrUpdateFile).toHaveBeenCalledWith(
+            'me', 'shop', '404.html',
+            expect.stringContaining('https://overlay.example.test/prepublish-pdp?org=acme&site=shop&path='),
+            expect.any(String), '404.html-sha',
+        );
+        expect(githubFileOps.createOrUpdateFile).toHaveBeenCalledWith(
+            'me', 'shop', 'head.html', expect.stringContaining('Demo Inspector loader (Demo Builder)'),
+            expect.any(String), 'head.html-sha',
+        );
     });
 
     it('says nothing about smart-404 when BYOM is off', async () => {
-        mocks.prepareSmart404Handler.mockResolvedValue({ installed: false, reason: 'BYOM disabled' });
-
         const { report } = await runReset(buildParams());
 
         expect(report).not.toHaveBeenCalledWith(1, SMART_404_WARNING);

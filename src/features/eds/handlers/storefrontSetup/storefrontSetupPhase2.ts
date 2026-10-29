@@ -170,6 +170,8 @@ export async function executePhaseHelixConfig(
         logger,
         edsConfig.daLiveOrg,
         edsConfig.daLiveSite,
+        // Inspector tagging went in above; its loader goes in head.html here.
+        { inspectorInstalled: true },
     );
     // Recorded on the project by creation: a storefront whose fixes did not all land reads
     // "Needs reset" (`storefrontChanges.ts`).

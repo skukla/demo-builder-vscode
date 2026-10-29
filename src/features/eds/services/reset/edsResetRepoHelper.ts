@@ -350,9 +350,8 @@ export async function resetRepoToTemplate(
         report,
     );
 
-    // Bring the storefront up to Demo Builder's current fixes (EDS-62), the smart
-    // 404 handler in 404.html included — the same step creation and a
-    // tested-boilerplate update run.
+    // Bring the storefront up to Demo Builder's current fixes (EDS-62) and scripts — the
+    // same step creation and a tested-boilerplate update run.
     // The code publish after it can miss these last commits (AEM's copy of the
     // repository lags a push), so the reset checks the site afterwards (`codeServed.ts`).
     //
@@ -369,6 +368,7 @@ export async function resetRepoToTemplate(
         context.logger,
         daLiveOrg,
         daLiveSite,
+        { inspectorInstalled: true }, // installed with the block libraries above; loader → head.html
     );
     if (!smart404.installed && params.byomOverlayUrl) {
         context.logger.warn(

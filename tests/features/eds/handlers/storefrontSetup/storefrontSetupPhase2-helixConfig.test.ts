@@ -17,7 +17,6 @@ import {
     makeFileOps,
     makePhaseContext,
     makeRepoInfo,
-    pdp404Publisher,
     progressPushes,
     quickEditPublisher,
     resetPhase2Mocks,
@@ -105,32 +104,40 @@ describe('executePhaseHelixConfig — fstab.yaml', () => {
 
 describe('executePhaseHelixConfig — the smart-404 handler', () => {
     it('installs it into 404.html against the configured overlay and the DA.live target', async () => {
-        pdp404Publisher.prepareSmart404Handler.mockResolvedValue({ handler: '\n// handler\n' });
         const notFound = '<html><head><script nonce="aem">window.isErrorPage = true;</script></head><body><main></main></body></html>';
+        const head = '<script nonce="aem" src="/scripts/aem.js" type="module"></script>\n';
+        const files: Record<string, string> = { '404.html': notFound, 'head.html': head };
         const pageOps = makeFileOps({
             getFileContent: jest.fn(async (_o: string, _r: string, path: string, _ref?: string) =>
-                (path === '404.html' ? { content: notFound, sha: '404-sha', path, encoding: 'utf-8' } : null)),
+                (files[path] === undefined ? null : { content: files[path], sha: `${path}-sha`, path, encoding: 'utf-8' })),
         });
         const { promise, fileOps, repoInfo } = runPhase({ edsConfig: OVERLAY_CONFIG, fileOps: pageOps });
         await promise;
 
         expect(fileOps.createOrUpdateFile).toHaveBeenCalledWith(
-            'me', 'shop', '404.html', expect.stringContaining('// handler'), expect.any(String), '404-sha',
-        );
-        expect(pdp404Publisher.prepareSmart404Handler).toHaveBeenCalledWith(
-            fileOps,
-            'me',
-            'shop',
-            'https://overlay.example.test/render-pdp',
-            expect.anything(),
-            'acme',
-            'shop',
+            'me', 'shop', '404.html',
+            expect.stringContaining('https://overlay.example.test/prepublish-pdp?org=acme&site=shop&path='),
+            expect.any(String), '404.html-sha',
         );
         expect(repoInfo.pdpCaveats).toBeUndefined();
     });
 
+    it('loads the Demo Inspector from head.html: creation has just installed it', async () => {
+        const head = '<script nonce="aem" src="/scripts/aem.js" type="module"></script>\n';
+        const pageOps = makeFileOps({
+            getFileContent: jest.fn(async (_o: string, _r: string, path: string, _ref?: string) =>
+                (path === 'head.html' ? { content: head, sha: 'head-sha', path, encoding: 'utf-8' } : null)),
+        });
+        const { promise, fileOps } = runPhase({ fileOps: pageOps });
+        await promise;
+
+        expect(fileOps.createOrUpdateFile).toHaveBeenCalledWith(
+            'me', 'shop', 'head.html', expect.stringContaining('Demo Inspector loader (Demo Builder)'),
+            expect.any(String), 'head-sha',
+        );
+    });
+
     it('records a user-facing caveat when an overlay was configured and it was skipped', async () => {
-        pdp404Publisher.prepareSmart404Handler.mockResolvedValue({ handler: '\n// handler\n' });
         const { promise, repoInfo } = runPhase({ edsConfig: OVERLAY_CONFIG });
         await promise;
 
@@ -141,10 +148,6 @@ describe('executePhaseHelixConfig — the smart-404 handler', () => {
     });
 
     it('stays quiet when no overlay was configured — phase 3 raises that one', async () => {
-        pdp404Publisher.prepareSmart404Handler.mockResolvedValue({
-            installed: false,
-            reason: 'BYOM disabled',
-        });
         const { promise, repoInfo } = runPhase();
         await promise;
 

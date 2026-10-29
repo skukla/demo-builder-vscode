@@ -5,9 +5,11 @@
  * It runs the storefront repairs (`storefrontRepairs.ts`) against the repository's files on
  * GitHub, and, when BYOM is on, puts the smart 404 scripts in the same 404.html content: the
  * eager script in `<head>` and the recovery script at the end of the body (`pdp404Page.ts`).
- * Two writes to one file in a row race on its sha, so every change to it goes in one. Only
- * once that write has landed does Demo Builder's old copy of the recovery script come out of
- * `scripts/delayed.js`, so a storefront is never without it and never runs it twice.
+ * head.html gets its Demo Builder blocks (the eager script, the Demo Inspector loader) in one
+ * write too (`storefrontCodeBlocks.ts`). Two writes to one file in a row race on its sha, so
+ * every change to a file goes in one. Only once those writes have landed do Demo Builder's
+ * old copies come out of `scripts/delayed.js`, so a storefront is never without the scripts
+ * and never runs them twice.
  *
  * Each path has just made a tree commit, and the Contents API can serve a file from before it,
  * so each file is written against the sha it was read at and a stale read is refused rather
@@ -17,12 +19,9 @@
  */
 
 import { readShippedPatches } from '../patches/shippedPatchLedger';
-import {
-    prepareSmart404Handler,
-    retireDelayedJsHandler,
-    type Pdp404InstallResult,
-} from '../pdp/pdp404HandlerPublisher';
+import { prepareSmart404Handler, type Pdp404InstallResult } from '../pdp/pdp404HandlerPublisher';
 import { type BlockOutcome, withEagerRedirect, withRecoveryHandler } from '../pdp/pdp404Page';
+import { cleanDelayedJs, writeHeadBlocks } from './storefrontCodeBlocks';
 import { runStorefrontRepairs, type StorefrontRepair, type StorefrontRepairFiles } from './storefrontRepairs';
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { Logger } from '@/types/logger';
@@ -141,14 +140,28 @@ function smart404After(outcome: BlockOutcome | undefined, failed: Set<string>): 
     return { installed: true };
 }
 
+/** What the caller knows that the repository may not show yet. */
+export interface StorefrontUpToDateOptions {
+    /**
+     * This run has just installed inspector tagging (creation, reset). Otherwise whether it
+     * is installed is read off the repository (`scripts/demo-inspector-init.js`): the
+     * Contents API can serve a file from before the tree commit that just added it.
+     */
+    inspectorInstalled?: boolean;
+}
+
+const INSPECTOR_INIT = 'scripts/demo-inspector-init.js';
+
 /**
  * Everything creation, reset and a tested-boilerplate update do to leave a storefront current:
- * every storefront repair it needs and, when BYOM is on, the smart 404 scripts (head.html, and
- * both in 404.html), then the old recovery script out of delayed.js. Never throws.
+ * Demo Builder's blocks in head.html (the eager 404 script when BYOM is on, the Demo Inspector
+ * loader when inspector tagging is installed) in one write; every storefront repair, with the
+ * smart 404 scripts in 404.html; then, only for what is now in place, the old copies out of
+ * delayed.js. Never throws.
  *
  * @returns the smart 404 result, which the callers report from, and `current`: true when the
  *   storefront needed nothing or every write landed; false when the storefront or a patch
- *   ledger could not be read, a write was refused, or the old copy is still in delayed.js.
+ *   ledger could not be read, a write was refused, or an old copy is still in delayed.js.
  *   Creation and reset record a storefront that is not current as needing a reset
  *   (`storefrontChanges.ts`).
  */
@@ -160,14 +173,16 @@ export async function bringStorefrontUpToDate(
     logger: Logger,
     daLiveOrg: string,
     daLiveSite: string,
+    options: StorefrontUpToDateOptions = {},
 ): Promise<{ smart404: Pdp404InstallResult; current: boolean }> {
-    const prepared = await prepareSmart404Handler(
-        githubFileOps, repoOwner, repoName, overlayUrl, logger, daLiveOrg, daLiveSite,
-    );
+    const prepared = prepareSmart404Handler(overlayUrl, logger, daLiveOrg, daLiveSite);
     const handler = 'handler' in prepared ? prepared.handler : undefined;
     const skipped = 'handler' in prepared ? undefined : prepared;
     const target = { owner: repoOwner, repo: repoName };
     try {
+        const inspector = options.inspectorInstalled
+            ?? Boolean((await githubFileOps.getFileContent(repoOwner, repoName, INSPECTOR_INIT))?.content);
+        const head = await writeHeadBlocks(githubFileOps, target, { eager: handler !== undefined, inspector }, logger);
         const { live: known, retired, complete } = await readShippedPatches(logger);
         const plan = await planStorefrontRepairs(githubFileOps, target, {
             retired, known, smart404Handler: handler, logger,
@@ -179,9 +194,9 @@ export async function bringStorefrontUpToDate(
         if (plan.changed.size === 0 && complete) logger.info('[Storefront Repair] The storefront is already current');
         const failed = await writeGuarded(githubFileOps, target, plan, logger);
         const smart404 = skipped ?? smart404After(plan.smart404, failed);
-        // Only once 404.html has the script: a storefront is never left without one.
-        const retiredOk = smart404.installed ? await retireDelayedJsHandler(githubFileOps, repoOwner, repoName, logger) : true;
-        return { smart404, current: failed.size === 0 && complete && retiredOk };
+        // Only what is now in place elsewhere: a storefront is never left without either.
+        const cleaned = await cleanDelayedJs(githubFileOps, target, { smart404: smart404.installed, inspector: head.inspector }, logger);
+        return { smart404, current: head.written && failed.size === 0 && complete && cleaned };
     } catch (error) {
         logger.warn(`[Storefront Repair] The storefront was not checked: ${(error as Error).message ?? 'unknown'}`);
         const smart404 = skipped ?? { installed: false, reason: 'the storefront could not be read' };

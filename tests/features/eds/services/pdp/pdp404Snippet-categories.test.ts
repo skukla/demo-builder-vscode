@@ -130,6 +130,51 @@ describe('the smart-404 script on a category address', () => {
     });
 });
 
+/**
+ * Measured live on scratch-1028 (2026-10-29, headless Chrome): a SECOND visit to an address
+ * published a moment earlier got a cached 404; the action answered 409 ("Address already
+ * has a live page") and the shopper stayed on "Page Not Found". A 409 means the page IS
+ * live: reload once, past the cache.
+ */
+describe('the smart-404 script when the page is already live (409)', () => {
+    const FRESH = /^\/signs\/fire\?pdpRetry=1&pdpFresh=\d+$/;
+
+    it('reloads once into the page, with a value no cache has seen', async () => {
+        const v = await refused('/signs/fire', 409);
+
+        expect(v.requests).toEqual([post('/signs/fire')]);
+        expect(v.redirects).toHaveLength(1);
+        expect(v.redirects[0]).toMatch(FRESH);
+    });
+
+    it('does the same for a product address', async () => {
+        const v = await refused('/products/drum-cabinet/dc-100', 409);
+
+        expect(v.redirects[0]).toMatch(/^\/products\/drum-cabinet\/dc-100\?pdpRetry=1&pdpFresh=\d+$/);
+    });
+
+    it('leaves the 404 page alone when that reload still 404s: the retry flag stops a loop', async () => {
+        const v = await visitSmart404('/signs/fire', { ok: false, status: 409 }, SITE, '?pdpRetry=1&pdpFresh=1');
+
+        expect({ requests: v.requests, redirects: v.redirects, shown: v.shown }).toStrictEqual({ requests: [], redirects: [], shown: [] });
+    });
+});
+
+describe('the tab title while the script works', () => {
+    it('says "Loading…" while the action is asked, not "Page not found"', async () => {
+        for (const path of ['/signs/fire', '/products/drum-cabinet/dc-100']) {
+            const v = await published(path, path);
+            expect({ path, whileLoading: v.title.whileLoading }).toEqual({ path, whileLoading: 'Loading…' });
+        }
+    });
+
+    it("puts the page's own title back with its own 404", async () => {
+        const v = await refused('/made-up', 404);
+
+        expect(v.title).toEqual({ whileLoading: 'Loading…', after: 'Page not found' });
+    });
+});
+
 describe('the smart-404 script on a product address', () => {
     it('publishes a cold product page through the action and reloads it, captioned "Loading product…"', async () => {
         const v = await published('/products/drum-cabinet/dc-100', '/products/drum-cabinet/dc-100');
@@ -174,10 +219,11 @@ describe('the smart-404 script on a product address', () => {
  * before the loading state. That is now a category address as well as a product one.
  */
 describe('the eager head script', () => {
-    interface HeadRun { redirects: string[]; hidden: boolean }
+    interface HeadRun { redirects: string[]; hidden: boolean; tidied: string[] }
 
-    function runHead(pathname: string, isErrorPage = true): HeadRun {
+    function runHead(pathname: string, isErrorPage = true, search = ''): HeadRun {
         const redirects: string[] = [];
+        const tidied: string[] = [];
         const appended: Array<{ id?: string }> = [];
         const code = SMART_404_HEAD_SNIPPET_TEMPLATE.replace(/^[\s\S]*?<script[^>]*>/, '').replace(/<\/script>[\s\S]*$/, '');
         const document = {
@@ -185,25 +231,43 @@ describe('the eager head script', () => {
             createElement: () => ({}),
             head: { appendChild: (el: { id?: string }) => appended.push(el) },
         };
-        const location = { pathname, search: '', replace: (to: string) => redirects.push(to) };
-        new Function('window', 'document', 'location', code)({ isErrorPage }, document, location);
-        return { redirects, hidden: appended.some((el) => el.id === 'smart-404-cold-hide') };
+        const location = { pathname, search, hash: '', replace: (to: string) => redirects.push(to) };
+        const history = { state: null, replaceState: (_s: unknown, _t: string, url: string) => tidied.push(url) };
+        new Function('window', 'document', 'location', 'history', code)({ isErrorPage }, document, location, history);
+        return { redirects, hidden: appended.some((el) => el.id === 'smart-404-cold-hide'), tidied };
     }
 
     it('hides <main> on a cold category 404 as on a cold product 404', () => {
-        expect(runHead('/signs/fire')).toEqual({ redirects: [], hidden: true });
-        expect(runHead('/products/a/b')).toEqual({ redirects: [], hidden: true });
+        expect(runHead('/signs/fire')).toEqual({ redirects: [], hidden: true, tidied: [] });
+        expect(runHead('/products/a/b')).toEqual({ redirects: [], hidden: true, tidied: [] });
+    });
+
+    it("tidies the published page's address: only our parameters go, and nothing reloads", () => {
+        // After the reload the address ended "?pdpRetry=1&...". The product list adds its own
+        // page/sort/filter parameters; those stay.
+        expect(runHead('/signs/fire', false, '?pdpRetry=1&pdpFresh=123&page=2&sort=price')).toEqual({
+            redirects: [], hidden: false, tidied: ['/signs/fire?page=2&sort=price'],
+        });
+        expect(runHead('/products/a/b', false, '?pdpRetry=1').tidied).toEqual(['/products/a/b']);
+    });
+
+    it("leaves the address alone on the 404 page, where the retry flag is the script's loop guard", () => {
+        expect(runHead('/signs/fire', true, '?pdpRetry=1&pdpFresh=1').tidied).toStrictEqual([]);
+    });
+
+    it('touches an address without our parameters not at all', () => {
+        expect(runHead('/signs/fire', false, '?page=2').tidied).toStrictEqual([]);
     });
 
     it('still lowercases a mixed-case product address, and only a product address', () => {
         expect(runHead('/products/Foo/BAR').redirects).toEqual(['/products/foo/bar']);
-        expect(runHead('/Signs/Fire')).toEqual({ redirects: [], hidden: false });
+        expect(runHead('/Signs/Fire')).toEqual({ redirects: [], hidden: false, tidied: [] });
     });
 
     it('leaves alone every path the delayed script leaves alone, and every page that is not a 404', () => {
         for (const path of ['/404', '/categories/default', '/products/default', '/signs.html', '/a_b', '/']) {
-            expect({ path, ...runHead(path) }).toEqual({ path, redirects: [], hidden: false });
+            expect({ path, ...runHead(path) }).toEqual({ path, redirects: [], hidden: false, tidied: [] });
         }
-        expect(runHead('/signs/fire', false)).toEqual({ redirects: [], hidden: false });
+        expect(runHead('/signs/fire', false)).toEqual({ redirects: [], hidden: false, tidied: [] });
     });
 });

@@ -32,11 +32,10 @@ export const SMART_404_HEAD_MARKER_END = '<!-- === end Smart 404 PDP eager redir
  * a mixed-case product URL — which would otherwise wait for the recovery
  * script at the end of the page's body before anything could redirect.
  *
- * Pure URL manipulation: no org/site/triggerUrl templating needed. The
- * `__NONCE__` placeholder gets substituted with the storefront's actual
- * CSP nonce at vendor time — we read it from an existing nonced script
- * in head.html rather than hardcoding it, so future nonce rotations or
- * template changes don't silently block the snippet.
+ * No org/site/triggerUrl templating. `__NONCE__` becomes the CSP nonce read
+ * from the page's own nonced scripts, so a rotated nonce cannot block it.
+ * It also tidies the address of a published page the recovery script
+ * reloaded into (`pdpRetry`, `pdpFresh` out, every other parameter kept).
  *
  * `document.prerendering` guard: head.html declares speculation rules
  * that pre-render PDP URLs on hover. Running `location.replace()` inside
@@ -61,6 +60,19 @@ ${SMART_404_HEAD_MARKER_START}
   (function () {
     if (document.prerendering) return;
     var p = location.pathname;
+    // A published page reached by the recovery script's reload: take our
+    // parameters (pdpRetry, pdpFresh) back out of the address, keeping every
+    // other one as it is (the product list adds page/sort/filter itself), and
+    // without reloading. Never on the 404 page, where pdpRetry is the
+    // recovery script's loop guard.
+    var parts = location.search ? location.search.slice(1).split('&') : [];
+    var kept = parts.filter(function (kv) {
+      var k = kv.split('=')[0];
+      return k !== 'pdpRetry' && k !== 'pdpFresh';
+    });
+    if (!window.isErrorPage && kept.length !== parts.length) {
+      history.replaceState(history.state, '', p + (kept.length ? '?' + kept.join('&') : '') + location.hash);
+    }
     var m = p.match(/^\\/products\\/([^/]+)\\/([^/]+)$/);
     if (m) {
       var lc = '/products/' + m[1].toLowerCase() + '/' + m[2].toLowerCase();
@@ -184,6 +196,9 @@ ${SMART_404_MARKER_START}
   // CSS-only rotating ring (no images, no assets to load), so it renders the
   // moment it is painted.
   const caption = isProduct ? 'Loading product…' : 'Loading…';
+  // The tab says what is happening, not "Page not found"; put back with the 404.
+  const ownTitle = document.title;
+  document.title = 'Loading…';
   const WRAP = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;padding:var(--spacing-large,40px) var(--spacing-medium,20px);gap:var(--spacing-medium,20px);';
   const SPIN = 'width:48px;height:48px;border:4px solid var(--color-neutral-200,#f0f0f0);border-top-color:var(--color-brand-500,#454545);border-radius:50%;animation:smart404Spin 0.8s linear infinite;';
   const TEXT = 'font:var(--type-body-1-default-font,1.25rem/1.5 sans-serif);color:var(--color-brand-500,#454545);';
@@ -196,6 +211,7 @@ ${SMART_404_MARKER_START}
   // No such category: the storefront's own 404, where the shopper is. Taking
   // our elements away is all it needs; <main> was never touched.
   function showOwn404() {
+    document.title = ownTitle;
     loading.remove();
     hide.remove();
     const eagerHide = document.getElementById('smart-404-cold-hide');
@@ -249,6 +265,13 @@ ${SMART_404_MARKER_START}
         }
       } catch (_) { /* keep the requested path */ }
       window.location.replace(\`\${target}?\${RETRY_FLAG}=1\`);
+      return;
+    }
+    // 409: the address already has a live page, and this 404 came from a
+    // cache. Reload once with a value no cache has seen (the retry flag still
+    // stops a loop: if that reload 404s too, its 404 page is left alone).
+    if (r && r.status === 409) {
+      window.location.replace(\`\${lc}?\${RETRY_FLAG}=1&pdpFresh=\${Date.now()}\`);
       return;
     }
     // 503: the store could not be asked, so this may still be a category.

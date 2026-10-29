@@ -27,6 +27,8 @@ export interface Smart404Visit {
     shown: string[];
     /** Whether anything of the script's is still on the page: its loading state, its hide. */
     left: { loading: boolean; mainHidden: boolean };
+    /** The tab title when the action was asked, and once the script has finished. */
+    title: { whileLoading?: string; after: string };
 }
 
 /** What the action answers: its status (200 when `ok`, else 404 unless given), and its body. */
@@ -50,6 +52,7 @@ class StubElement {
 
 /** The page at the end of `404.html`'s body, before the storefront's scripts decorate it. */
 class StubPage {
+    title = 'Page not found';
     readonly main = { className: 'error', innerHTML: OWN_404_BODY, before: (el: StubElement) => this.attach(el) };
     readonly elements: StubElement[] = [];
     readonly head = { appendChild: (el: StubElement) => this.attach(el) };
@@ -88,24 +91,28 @@ async function settle(): Promise<void> {
  * @param pathname - the address the shopper opened
  * @param answer - what the action answers
  * @param site - the storefront the script is built for
+ * @param search - the address's query (`?pdpRetry=1` on the visit after a reload)
  */
 export async function visitSmart404(
     pathname: string,
     answer: Smart404Answer,
     site: { org: string; site: string } = { org: 'skukla', site: 'kukla-justrite' },
+    search = '',
 ): Promise<Smart404Visit> {
     const requests: Smart404Visit['requests'] = [];
     const redirects: string[] = [];
     const page = new StubPage();
     const status = answer.status ?? (answer.ok ? 200 : 404);
+    let whileLoading: string | undefined;
     const fetchStub = async (url: string, init?: { method?: string }) => {
         requests.push({ url, method: init?.method });
+        if (init?.method === 'POST') whileLoading = page.title;
         if (init?.method === 'HEAD') return { ok: false, status: 404 };
         return { ok: answer.ok, status, json: async () => answer.body ?? {} };
     };
     const window = {
         isErrorPage: true,
-        location: { pathname, search: '', replace: (to: string) => redirects.push(to) },
+        location: { pathname, search, replace: (to: string) => redirects.push(to) },
     };
     const now = (callback: () => void) => callback();
     const snippet = buildSmart404Snippet(TRIGGER_URL, site.org, site.site);
@@ -117,5 +124,6 @@ export async function visitSmart404(
         main: { className: page.main.className, innerHTML: page.main.innerHTML },
         shown: page.shown,
         left: page.left,
+        title: { whileLoading, after: page.title },
     };
 }

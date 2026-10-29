@@ -45,11 +45,6 @@ jest.mock('@/features/eds/services/inspectorHelpers', () => ({
     installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
 }));
 
-jest.mock('@/features/eds/services/pdp/pdp404HandlerPublisher', () => ({
-    prepareSmart404Handler: jest.fn().mockResolvedValue({ installed: false, reason: 'no-overlay' }),
-    retireDelayedJsHandler: jest.fn().mockResolvedValue(true),
-}));
-
 jest.mock('@/features/eds/services/patches/shippedPatchLedger', () => ({
     readShippedPatches: jest.fn().mockResolvedValue({ live: [], retired: [], complete: true }),
 }));

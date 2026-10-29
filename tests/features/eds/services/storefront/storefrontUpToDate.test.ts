@@ -2,10 +2,10 @@
  * The one step that leaves a storefront current: creation, reset and a tested-boilerplate
  * update run it.
  *
- * GitHub is a map of files; the smart 404 publisher (its own suite's: building the script,
- * head.html, retiring the old delayed.js copy) and the retired-patch ledger (a network read)
- * are the fakes. Where the script goes in 404.html is real (`pdp404Page.ts`). Asserted: what is read, what is written, against which
- * sha, in how many writes.
+ * GitHub is a map of files; the retired-patch ledger (a network read) is the one fake. The
+ * smart 404 script, where it goes in 404.html (`pdp404Page.ts`), head.html's blocks and the
+ * delayed.js cleanup (`storefrontCodeBlocks.ts`) are real. Asserted: what is read, what is
+ * written, in which order, against which sha.
  */
 
 import {
@@ -14,8 +14,9 @@ import {
     STOREFRONT_REPAIR_COMMIT,
 } from '@/features/eds/services/storefront/storefrontUpToDate';
 import { alignNotFoundImportMap } from '@/features/eds/services/storefront/notFoundPage';
-import { SMART_404_PAGE_MARKER_START, withRecoveryHandler } from '@/features/eds/services/pdp/pdp404Page';
+import { SMART_404_PAGE_MARKER_START } from '@/features/eds/services/pdp/pdp404Page';
 import { buildSmart404Snippet, SMART_404_HEAD_MARKER_START } from '@/features/eds/services/pdp/pdp404Snippet';
+import { INSPECTOR_DELAYED_SNIPPET, INSPECTOR_LOADER_MARKER_START } from '@/features/eds/services/inspectorLoader';
 import { createMockGithub, type GithubFake } from '../../../../helpers/githubFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { HEAD, importsOf, NOT_FOUND } from '../../../../helpers/notFoundPageFixtures';
@@ -26,20 +27,19 @@ import {
 } from '../../../../helpers/retiredPatchFixtures';
 import { HEADER_JS, HEADER_NAV_TOOLS, KNOWN_PATCHES, TEASER_JS } from '../../../../helpers/knownPatchFixtures';
 
-const mockPrepare404 = jest.fn();
-const mockRetire = jest.fn();
-jest.mock('@/features/eds/services/pdp/pdp404HandlerPublisher', () => ({
-    ...jest.requireActual('@/features/eds/services/pdp/pdp404HandlerPublisher'),
-    prepareSmart404Handler: (...a: unknown[]) => mockPrepare404(...a),
-    retireDelayedJsHandler: (...a: unknown[]) => mockRetire(...a),
-}));
 const mockReadShipped = jest.fn();
 jest.mock('@/features/eds/services/patches/shippedPatchLedger', () => ({
     readShippedPatches: (...a: unknown[]) => mockReadShipped(...a),
 }));
 
 const COMMERCE = 'scripts/commerce.js';
-const HANDLER = buildSmart404Snippet('https://example.test/prepublish-pdp', 'org', 'site');
+const OVERLAY = 'https://x.test/api/v1/web/accs-discovery/render-pdp';
+const HANDLER = buildSmart404Snippet('https://x.test/api/v1/web/accs-discovery/prepublish-pdp', 'org', 'site');
+const DELAYED = '// add delayed functionality here\n';
+const OLD_404 = buildSmart404Snippet('https://old.test/prepublish-pdp', 'kmanns', 'justrite');
+/** JustRite's delayed.js on 2026-10-29: both old copies. */
+const OLD_DELAYED = DELAYED + INSPECTOR_DELAYED_SNIPPET + OLD_404;
+const INIT = 'scripts/demo-inspector-init.js';
 const TARGET = { owner: 'me', repo: 'store' };
 
 function github(files: Record<string, string | undefined>): GithubFake {
@@ -61,8 +61,6 @@ function writes(gh: GithubFake): Array<[string, string, string, string]> {
 const OLD = { 'head.html': HEAD, '404.html': NOT_FOUND, [COMMERCE]: COMMERCE_JS_RETIRED_APPLIED };
 
 beforeEach(() => {
-    mockPrepare404.mockReset().mockResolvedValue({ installed: false, reason: 'BYOM disabled' });
-    mockRetire.mockReset().mockResolvedValue(true);
     mockReadShipped.mockReset().mockResolvedValue({ live: [], retired: RETIRED_PATCHES, complete: true });
 });
 
@@ -124,71 +122,96 @@ describe('bringStorefrontUpToDate', () => {
         expect(result.current).toBe(true);
     });
 
-    it("installs the recovery script in 404.html in one write, then takes delayed.js's old copy out", async () => {
-        mockPrepare404.mockResolvedValue({ handler: HANDLER });
-        const order: string[] = [];
-        mockRetire.mockImplementation(async () => { order.push('retire'); return true; });
-        const gh = github({ '404.html': alignNotFoundImportMap(HEAD, NOT_FOUND)!, 'head.html': HEAD });
-        gh.createOrUpdateFile.mockImplementation(async (_o: string, _r: string, path: string) => { order.push(path); return {}; });
+    it('puts every script in place, one write per file, and only then takes the old delayed.js copies out', async () => {
+        const gh = github({ 'head.html': HEAD, '404.html': alignNotFoundImportMap(HEAD, NOT_FOUND)!, 'scripts/delayed.js': OLD_DELAYED, [INIT]: 'x' });
 
-        const result = await bringStorefrontUpToDate(gh, 'me', 'store', 'https://overlay', createMockLogger(), 'org', 'site');
+        const result = await bringStorefrontUpToDate(gh, 'me', 'store', OVERLAY, createMockLogger(), 'org', 'site');
 
-        expect(writes(gh)).toHaveLength(1);
-        expect(writes(gh)[0][1]).toContain(SMART_404_HEAD_MARKER_START);
-        expect(writes(gh)[0][1]).toContain(HANDLER.trim());
-        expect(order).toEqual(['404.html', 'retire']);
-        expect(mockRetire).toHaveBeenCalledWith(gh, 'me', 'store', expect.anything());
+        expect(writes(gh).map(([path]) => path)).toEqual(['head.html', '404.html', 'scripts/delayed.js']);
+        const [head, page, delayed] = writes(gh);
+        expect(head[1]).toContain(SMART_404_HEAD_MARKER_START);
+        expect(head[1]).toContain(INSPECTOR_LOADER_MARKER_START);
+        expect(page[1]).toContain(SMART_404_HEAD_MARKER_START);
+        expect(page[1]).toContain(HANDLER.trim());
+        expect(delayed[1]).toBe(DELAYED);
         expect(result).toEqual({ smart404: { installed: true }, current: true });
     });
 
-    it('writes nothing to a 404.html that already has the current script, and still retires the old copy', async () => {
-        mockPrepare404.mockResolvedValue({ handler: HANDLER });
-        const done = await planStorefrontRepairs(github({ '404.html': NOT_FOUND, 'head.html': HEAD }), TARGET, {
-            retired: [], known: [], smart404Handler: HANDLER, logger: createMockLogger(),
+    it("leaves a B2B storefront's missing delayed.js alone: nothing to take out", async () => {
+        const gh = github({ 'head.html': HEAD, '404.html': alignNotFoundImportMap(HEAD, NOT_FOUND)!, [INIT]: 'x' });
+
+        const result = await bringStorefrontUpToDate(gh, 'me', 'store', OVERLAY, createMockLogger(), 'org', 'site');
+
+        expect(writes(gh).map(([path]) => path)).toEqual(['head.html', '404.html']);
+        expect(result).toEqual({ smart404: { installed: true }, current: true });
+    });
+
+    it('writes nothing to files that already have the current scripts, and still takes the old copies out', async () => {
+        const first = github({ 'head.html': HEAD, '404.html': alignNotFoundImportMap(HEAD, NOT_FOUND)!, [INIT]: 'x' });
+        await bringStorefrontUpToDate(first, 'me', 'store', OVERLAY, createMockLogger(), 'org', 'site');
+        const [head, page] = writes(first);
+        const gh = github({ 'head.html': head[1], '404.html': page[1], 'scripts/delayed.js': OLD_DELAYED, [INIT]: 'x' });
+
+        const result = await bringStorefrontUpToDate(gh, 'me', 'store', OVERLAY, createMockLogger(), 'org', 'site');
+
+        expect(writes(gh).map(([path, content]) => [path, content])).toEqual([['scripts/delayed.js', DELAYED]]);
+        expect(result).toEqual({ smart404: { installed: true }, current: true });
+    });
+
+    it('keeps the old recovery copy, and says why, when the 404.html write is refused', async () => {
+        const gh = github({ 'head.html': HEAD, '404.html': NOT_FOUND, 'scripts/delayed.js': OLD_DELAYED, [INIT]: 'x' });
+        gh.createOrUpdateFile.mockImplementation(async (_o: string, _r: string, path: string) => {
+            if (path === '404.html') throw new Error('409 conflict');
+            return {};
         });
-        const gh = github({ '404.html': done.changed.get('404.html')!, 'head.html': HEAD });
 
-        const result = await bringStorefrontUpToDate(gh, 'me', 'store', 'https://overlay', createMockLogger(), 'org', 'site');
-
-        expect(gh.createOrUpdateFile).not.toHaveBeenCalled();
-        expect(mockRetire).toHaveBeenCalledTimes(1);
-        expect(result).toEqual({ smart404: { installed: true }, current: true });
-    });
-
-    it('keeps the old copy, and says why, when the 404.html write is refused', async () => {
-        mockPrepare404.mockResolvedValue({ handler: HANDLER });
-        const gh = github({ '404.html': NOT_FOUND, 'head.html': HEAD });
-        gh.createOrUpdateFile.mockRejectedValue(new Error('409 conflict'));
-
-        const result = await bringStorefrontUpToDate(gh, 'me', 'store', 'https://overlay', createMockLogger(), 'org', 'site');
+        const result = await bringStorefrontUpToDate(gh, 'me', 'store', OVERLAY, createMockLogger(), 'org', 'site');
 
         expect(result).toEqual({ smart404: { installed: false, reason: '404.html was not written' }, current: false });
-        expect(mockRetire).not.toHaveBeenCalled();
+        // The Inspector loader did land in head.html, so its old copy goes; the 404 copy stays.
+        expect(writes(gh).find(([path]) => path === 'scripts/delayed.js')?.[1]).toBe(DELAYED + OLD_404);
     });
 
     it('says the script has nowhere to go on a storefront with no 404.html, or none it can run in', async () => {
-        mockPrepare404.mockResolvedValue({ handler: HANDLER });
         const noNonce = '<!DOCTYPE html><html><head></head><body><main></main></body></html>';
         for (const [files, reason] of [
-            [{}, '404.html missing'],
-            [{ '404.html': noNonce }, '404.html has no nonced script tag'],
+            [{ 'scripts/delayed.js': OLD_DELAYED }, '404.html missing'],
+            [{ '404.html': noNonce, 'scripts/delayed.js': OLD_DELAYED }, '404.html has no nonced script tag'],
         ] as const) {
-            const result = await bringStorefrontUpToDate(github(files), 'me', 'store', 'https://overlay', createMockLogger(), 'o', 's');
+            const gh = github(files);
+            const result = await bringStorefrontUpToDate(gh, 'me', 'store', OVERLAY, createMockLogger(), 'o', 's');
             expect(result.smart404).toEqual({ installed: false, reason });
+            expect(gh.createOrUpdateFile).not.toHaveBeenCalled();
         }
-        expect(mockRetire).not.toHaveBeenCalled();
     });
 
-    it('is not current while the old copy could not be taken out of delayed.js', async () => {
-        mockPrepare404.mockResolvedValue({ handler: HANDLER });
-        mockRetire.mockResolvedValue(false);
-        const page = withRecoveryHandler(NOT_FOUND, HANDLER);
-        const gh = github({ '404.html': page.kind === 'changed' ? page.html : '', 'head.html': HEAD });
+    it('is not current while an old copy could not be taken out of delayed.js', async () => {
+        const gh = github({ 'head.html': HEAD, '404.html': NOT_FOUND, 'scripts/delayed.js': OLD_DELAYED, [INIT]: 'x' });
+        gh.createOrUpdateFile.mockImplementation(async (_o: string, _r: string, path: string) => {
+            if (path === 'scripts/delayed.js') throw new Error('Resource not accessible by integration');
+            return {};
+        });
 
-        const result = await bringStorefrontUpToDate(gh, 'me', 'store', 'https://overlay', createMockLogger(), 'o', 's');
+        const result = await bringStorefrontUpToDate(gh, 'me', 'store', OVERLAY, createMockLogger(), 'o', 's');
 
-        expect(result.smart404).toEqual({ installed: true });
-        expect(result.current).toBe(false);
+        expect(result).toEqual({ smart404: { installed: true }, current: false });
+    });
+
+    it('loads the Inspector from head.html only where inspector tagging is installed', async () => {
+        // No init script, and the caller did not just install it: no loader, and the old
+        // delayed.js loader (if any) is left running.
+        const bare = github({ 'head.html': HEAD, 'scripts/delayed.js': DELAYED + INSPECTOR_DELAYED_SNIPPET });
+        await bringStorefrontUpToDate(bare, 'me', 'store', undefined, createMockLogger(), 'o', 's');
+        expect(bare.createOrUpdateFile).not.toHaveBeenCalled();
+
+        // Creation and reset have just installed it, in a commit the Contents API may not
+        // serve yet: they say so rather than have the file read.
+        const fresh = github({ 'head.html': HEAD, 'scripts/delayed.js': DELAYED + INSPECTOR_DELAYED_SNIPPET });
+        await bringStorefrontUpToDate(fresh, 'me', 'store', undefined, createMockLogger(), 'o', 's', { inspectorInstalled: true });
+        expect(writes(fresh).map(([path]) => path)).toEqual(['head.html', 'scripts/delayed.js']);
+        expect(writes(fresh)[0][1]).toContain(INSPECTOR_LOADER_MARKER_START);
+        expect(writes(fresh)[0][1]).not.toContain(SMART_404_HEAD_MARKER_START);
+        expect(writes(fresh)[1][1]).toBe(DELAYED);
     });
 
     it('writes nothing when the storefront is already current', async () => {

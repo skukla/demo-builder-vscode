@@ -6554,10 +6554,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 259,
+            "line": 261,
             "mutants": 1,
             "category": "block",
-            "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload. Re-anchored 2026-10-16 (234 -> 237): unchanged code; the progress line above it now names the libraries in the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-18 (237 -> 249): unchanged code; EDS-53 added the template-label-file removal after the stub commit above it. Re-anchored 2026-10-22 (249 -> 256): unchanged code; the template's own label files are now read before the stub commit above it, so their labels are kept. Re-anchored 2026-10-23 (256 -> 257): unchanged code; the comment above the smart 404 install now says it is followed by bringing the storefront up to Demo Builder's current fixes (EDS-62). Re-anchored 2026-10-29 (260 -> 259): unchanged code; the comment above the storefront-current step lost a line when the smart 404 script moved from delayed.js to 404.html (EDS-61).",
+            "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload. Re-anchored 2026-10-16 (234 -> 237): unchanged code; the progress line above it now names the libraries in the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-18 (237 -> 249): unchanged code; EDS-53 added the template-label-file removal after the stub commit above it. Re-anchored 2026-10-22 (249 -> 256): unchanged code; the template's own label files are now read before the stub commit above it, so their labels are kept. Re-anchored 2026-10-23 (256 -> 257): unchanged code; the comment above the smart 404 install now says it is followed by bringing the storefront up to Demo Builder's current fixes (EDS-62). Re-anchored 2026-10-29 (260 -> 259): unchanged code; the comment above the storefront-current step lost a line when the smart 404 script moved from delayed.js to 404.html (EDS-61). Re-anchored 2026-10-29 (259 -> 261): unchanged code; the call that brings the storefront current now says creation has just installed inspector tagging, so its loader goes in head.html (EDS-61).",
             "decision": "none \u2014 a log-only else",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"
@@ -6567,10 +6567,10 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 420,
+            "line": 422,
             "mutants": 1,
             "category": "block",
-            "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log. Re-anchored 2026-10-16 (355 -> 361): unchanged code; the progress lines above it are reworded (progress vocabulary slice 4). Re-anchored 2026-10-18 (398 -> 410): unchanged code; EDS-53 added the template-label-file removal after the stub commit above it. Re-anchored 2026-10-22 (410 -> 417): unchanged code; the template's own label files are now read before the stub commit above it, so their labels are kept. Re-anchored 2026-10-23 (417 -> 418): unchanged code; the comment above the smart 404 install now says it is followed by bringing the storefront up to Demo Builder's current fixes (EDS-62). Re-anchored 2026-10-29 (421 -> 420): unchanged code; the comment above the storefront-current step lost a line when the smart 404 script moved from delayed.js to 404.html (EDS-61).",
+            "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log. Re-anchored 2026-10-16 (355 -> 361): unchanged code; the progress lines above it are reworded (progress vocabulary slice 4). Re-anchored 2026-10-18 (398 -> 410): unchanged code; EDS-53 added the template-label-file removal after the stub commit above it. Re-anchored 2026-10-22 (410 -> 417): unchanged code; the template's own label files are now read before the stub commit above it, so their labels are kept. Re-anchored 2026-10-23 (417 -> 418): unchanged code; the comment above the smart 404 install now says it is followed by bringing the storefront up to Demo Builder's current fixes (EDS-62). Re-anchored 2026-10-29 (421 -> 420): unchanged code; the comment above the storefront-current step lost a line when the smart 404 script moved from delayed.js to 404.html (EDS-61). Re-anchored 2026-10-29 (420 -> 422): unchanged code; the call that brings the storefront current now says creation has just installed inspector tagging, so its loader goes in head.html (EDS-61).",
             "decision": "none \u2014 a log-only else",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"
@@ -11905,32 +11905,6 @@
             "decision": "Recorded, not killed: no snippet exists that carries a marker and would otherwise pass the line allowlist, so nothing can distinguish the guard from its absence.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
-        },
-        {
-            "module": "src/features/eds/services/pdp/pdp404HandlerPublisher.ts",
-            "anchors": [
-                "const reason = (error as Error).message ?? 'unknown';"
-            ],
-            "line": 115,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "`reason` is read by the logger.warn on the next line and by nothing else, so swapping ?? for && only changes the words in a log message. Pinning it would mean asserting logger wording, which an enforcer refuses. Verified by planting && in both eager-redirect catches, 64 tests green, against the control of forcing the 404.html marker check to false, which fails one test. Re-anchored 2026-10-23 (293 -> 294): unchanged code; a doc comment above it was rewrapped when 404.html's writer became bringStorefrontUpToDate (EDS-62). Re-anchored 2026-10-29 (294 -> 115): unchanged code; the recovery script moved from delayed.js to 404.html (EDS-61), so the publisher lost its delayed.js vendoring and this head.html catch is now its first.",
-            "decision": "Recorded, not killed: the mutated code feeds only a log message on a path whose outcome the caller intentionally discards.",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-06"
-        },
-        {
-            "module": "src/features/eds/services/pdp/pdp404HandlerPublisher.ts",
-            "anchors": [
-                "} catch (error) {"
-            ],
-            "line": 114,
-            "mutants": 1,
-            "category": "block",
-            "reason": "This catch is the whole failure handling for the head.html eager-redirect commit: its body is a logger.warn and nothing else, and the caller ignores the outcome so a failed head.html commit still reports installed:true. Emptying the body changes nothing observable. Verified by planting it \u2014 both eager-redirect catch bodies emptied, 64 tests green \u2014 against the control of forcing the 404.html marker check to false, which fails one test. Re-anchored 2026-10-23 (292 -> 293): unchanged code; a doc comment above it was rewrapped when 404.html's writer became bringStorefrontUpToDate (EDS-62). Re-anchored 2026-10-29 (293 -> 114): unchanged code; the recovery script moved from delayed.js to 404.html (EDS-61), so the publisher lost its delayed.js vendoring and this head.html catch is now its first.",
-            "decision": "Recorded, not killed: the mutated code feeds only a log message on a path whose outcome the caller intentionally discards.",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-06"
         },
         {
             "module": "src/features/ai/server/agentTraceSink.ts",
