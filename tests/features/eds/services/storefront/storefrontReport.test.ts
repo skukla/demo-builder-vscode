@@ -9,7 +9,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
-import { SMART_404_MARKER_START } from '@/features/eds/services/pdp/pdp404Snippet';
+import { SMART_404_PAGE_MARKER_START } from '@/features/eds/services/pdp/pdp404Page';
 import {
     readStorefrontReport,
     storefrontReportLines,
@@ -48,7 +48,7 @@ const CATALOG = [
 /** The SC's copy of Jen's storefront. */
 const OWN_FILES: Record<string, string | Error> = {
     'package.json': '{"name":"@adobe/aem-boilerplate-commerce","version":"4.0.1"}',
-    'scripts/delayed.js': `${SMART_404_MARKER_START}\n// snippet`,
+    '404.html': `<html><body>${SMART_404_PAGE_MARKER_START}\n<script>/* handler */</script></body></html>`,
     'fstab.yaml': 'mountpoints: {}',
     'config.json': '{}',
 };
@@ -152,7 +152,7 @@ describe('readStorefrontReport — a colleague’s storefront', () => {
     });
 
     it('says it could not read, never that a thing is not there, when a read fails', async () => {
-        const failing = { ...OWN_FILES, 'package.json': new Error('502'), 'scripts/delayed.js': new Error('502') };
+        const failing = { ...OWN_FILES, 'package.json': new Error('502'), '404.html': new Error('502') };
         const d = deps(failing, {
             repoOps: { getRepository: jest.fn(async () => { throw new Error('rate limited'); }) },
             readLkg: jest.fn(async () => undefined),

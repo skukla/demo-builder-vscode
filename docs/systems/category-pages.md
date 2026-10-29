@@ -252,7 +252,7 @@ its sentence as `categoryPages`. See `docs/systems/mcp-server.md`.
   a category. A path with a dot, an underscore or a capital costs nothing.
 - **A storefront gets a changed smart-404 script at its next reset, or its next update to
   Demo Builder's tested boilerplate**: both run `bringStorefrontUpToDate`, which rewrites
-  the marked blocks in `scripts/delayed.js`, `head.html` and `404.html` in place. Republish
-  does not touch code.
+  the marked blocks in `head.html` and `404.html` in place, and takes the old copy out of
+  `scripts/delayed.js` where one is left. Republish does not touch code.
 - **Order of release.** The service that reads the sheet must be deployed first: an
   extension publishing category paths before the overlay answers them publishes 404s.

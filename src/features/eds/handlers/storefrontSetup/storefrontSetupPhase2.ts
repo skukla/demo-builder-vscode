@@ -153,14 +153,13 @@ export async function executePhaseHelixConfig(
         logger,
     );
 
-    // Install the smart 404 PDP handler into the storefront's
-    // scripts/delayed.js, then bring the storefront up to Demo Builder's current
-    // fixes (the 404 page's import map, retired fixes taken out: EDS-62) — the
-    // same step reset and a tested-boilerplate update run. The surrounding
+    // Bring the storefront up to Demo Builder's current fixes (the 404 page's
+    // import map and the smart 404 handler in it, retired fixes taken out:
+    // EDS-62) — the same step reset and a tested-boilerplate update run. The surrounding
     // pipeline's bulk Helix code preview picks up the committed change.
     //
     // Still non-fatal — that is deliberate. What changed on 2026-08-10 is that
-    // the result is no longer DISCARDED: a skip (no delayed.js, unparseable
+    // the result is no longer DISCARDED: a skip (no 404.html, unparseable
     // overlay URL, failed commit) used to reach the debug log and nowhere else
     // while the run reported Complete.
     const { smart404, current } = await bringStorefrontUpToDate(

@@ -103,8 +103,8 @@ A complete example:
 Demo Builder reads four files from the repository's default branch:
 
 - **`package.json`.** A `next` dependency makes it a headless (Next.js) demo. Otherwise it
-  is an Edge Delivery demo when `head.html`, `scripts/scripts.js` and `scripts/delayed.js`
-  are present; a repository with none of them is not a storefront and is refused, naming
+  is an Edge Delivery demo when `head.html`, `scripts/scripts.js` and `404.html`
+  are present (not `scripts/delayed.js`, which Adobe's B2B template does not have); a repository with none of them is not a storefront and is refused, naming
   what is missing.
 - **`fstab.yaml`.** The DA.live site, as above.
 - **`config.json`.** The store codes from the `headers.cs` block, and whether company (B2B)
@@ -121,7 +121,7 @@ ask; they treat it as off and say so.
 Into every project built from your demo, Demo Builder writes what connects it to that
 project: `fstab.yaml` pointing at the project's own content site, `config.json` and
 `demo-config.json` with the project's own store and endpoint, the product-page fallback
-(the smart-404 snippet in `scripts/delayed.js`), the block library, the inspector tagging,
+(the smart-404 snippet in `404.html`), the block library, the inspector tagging,
 the quick-edit hooks and the description file. Your files are the starting point; those are
 the ones the project owns afterwards.
 

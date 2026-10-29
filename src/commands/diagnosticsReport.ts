@@ -273,7 +273,7 @@ function storefrontLines(probe: StorefrontProbeResult, scope?: StorefrontScopeRe
         lines.push(`  Site: unreachable${probe.site.status ? ` (HTTP ${probe.site.status})` : ''}`);
     } else {
         lines.push('  Site: reachable');
-        lines.push(`  Smart 404 handler (delayed.js): ${mark(probe.smart404Snippet)}`);
+        lines.push(`  Smart 404 handler (404.html): ${mark(probe.smart404Snippet)}`);
         lines.push(`  Eager redirect (404.html): ${mark(probe.eagerRedirect)}`);
         if (probe.pdp) {
             // The SKU is printed so the reader can repeat the request by hand —

@@ -847,10 +847,11 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: pipelineCheckMissingPages,
     },
     // (Smart 404 plumbing lives entirely in storefront code now:
-    //  - scripts/delayed.js — cold-path action call + Loading state
+    //  - 404.html — cold-path action call + Loading state, inline at the end
+    //    of the body (scripts/delayed.js until 2026-10-29), and the eager
+    //    redirect for Helix-served 404s
     //  - head.html — eager mixed-case → lowercase redirect on 200s
-    //  - 404.html — same eager redirect for Helix-served 404s
-    //  All three are installed by installSmart404Handler from
+    //  All are installed by bringStorefrontUpToDate from
     //  storefrontSetupPhase2 (create/edit) and edsResetRepoHelper (reset). The
     //  DA.live /404 page publish path that briefly lived here didn't help —
     //  Helix uses the static 404.html file, not authored content, on 404s.)

@@ -143,8 +143,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // removed category-page tools and the autoAdd setting (EDS-61).
     // v44: the skills name `republish`, which took `sync_content`'s job (EDS-63).
     // v45: header-nav-footer names the "Commerce: All" catalog line, not "Shop the catalog".
-    it('is 45 (header-nav-footer names the Commerce catalog line)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(45);
+    // v46: AGENTS.md says the smart-404 recovery script lives in 404.html, not delayed.js.
+    it('is 46 (AGENTS.md says the smart-404 script lives in 404.html)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(46);
     });
 });
 

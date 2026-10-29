@@ -232,16 +232,13 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
     });
 
     it('surfaces a skipped smart-404 install through report when BYOM is on', async () => {
-        mocks.installSmart404Handler.mockResolvedValue({
-            installed: false,
-            reason: 'scripts/delayed.js not found',
-        });
+        mocks.prepareSmart404Handler.mockResolvedValue({ handler: '\n// handler\n' });
 
         const { report, githubFileOps, context } = await runReset(
             buildParams({ byomOverlayUrl: 'https://overlay.example.test/render-pdp' }),
         );
 
-        expect(mocks.installSmart404Handler).toHaveBeenCalledWith(
+        expect(mocks.prepareSmart404Handler).toHaveBeenCalledWith(
             githubFileOps,
             'me',
             'shop',
@@ -254,17 +251,21 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
     });
 
     it('says nothing when the smart-404 handler installed', async () => {
-        mocks.installSmart404Handler.mockResolvedValue({ installed: true });
+        mocks.prepareSmart404Handler.mockResolvedValue({ handler: '\n// handler\n' });
+        const notFound = '<html><head><script nonce="aem">window.isErrorPage = true;</script></head><body></body></html>';
 
         const { report } = await runReset(
             buildParams({ byomOverlayUrl: 'https://overlay.example.test/render-pdp' }),
+            undefined,
+            undefined,
+            { '404.html': notFound },
         );
 
         expect(report).not.toHaveBeenCalledWith(1, SMART_404_WARNING);
     });
 
     it('says nothing about smart-404 when BYOM is off', async () => {
-        mocks.installSmart404Handler.mockResolvedValue({ installed: false, reason: 'BYOM disabled' });
+        mocks.prepareSmart404Handler.mockResolvedValue({ installed: false, reason: 'BYOM disabled' });
 
         const { report } = await runReset(buildParams());
 

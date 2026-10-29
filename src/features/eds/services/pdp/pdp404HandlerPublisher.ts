@@ -1,126 +1,52 @@
 /**
- * Smart 404 PDP handler installation — vendors the snippet into a storefront repo.
+ * Smart 404 handler installation — the writes outside `404.html`.
  *
- * Writes `scripts/delayed.js` (the recovery handler) plus the eager redirect in
- * `head.html` and `404.html`, through the GitHub Contents API. The snippet text
- * itself is authored in `./pdp404Snippet`, which has no I/O.
+ * The recovery script lives inline in the storefront code's `404.html` (since
+ * 2026-10-29; `pdp404Page.ts` says why and places it), and `bringStorefrontUpToDate`
+ * writes that file once with everything it needs. This module does the rest, through
+ * the GitHub Contents API:
+ *  - builds the storefront's script and keeps the eager script in `head.html` current
+ *    (`prepareSmart404Handler`);
+ *  - takes Demo Builder's old copy out of `scripts/delayed.js` once the one in
+ *    `404.html` is in place (`retireDelayedJsHandler`).
  *
- * Re-exports the authoring helpers so existing consumers and tests keep their
- * import path.
+ * The script text is authored in `./pdp404Snippet`, which has no I/O.
  */
 
 import { GitHubFileOperations, isStaleShaFailure } from '../github/githubFileOperations';
-import {
-    buildSmart404Snippet,
-    derivePrepublishUrl,
-    extractCspNonce,
-    replaceMarkedBlock,
-    SMART_404_HEAD_MARKER_END,
-    SMART_404_HEAD_MARKER_START,
-    SMART_404_HEAD_SNIPPET_TEMPLATE,
-    SMART_404_MARKER_END,
-    SMART_404_MARKER_START,
-} from './pdp404Snippet';
+import { eagerBlock, withCurrentBlock, withoutDelayedJsHandler } from './pdp404Page';
+import { buildSmart404Snippet, derivePrepublishUrl } from './pdp404Snippet';
 import type { Logger } from '@/types/logger';
 
-export {
-    buildSmart404Snippet,
-    derivePrepublishUrl,
-    extractCspNonce,
-} from './pdp404Snippet';
+export { derivePrepublishUrl } from './pdp404Snippet';
 
 /**
- * Outcome of a single install attempt. Surfaces in the pipeline log
- * and is asserted by the tests.
+ * Whether a storefront has the recovery script after an install. Surfaces in the
+ * pipeline log and the setup/reset reports.
  */
 export interface Pdp404InstallResult {
     installed: boolean;
-    /** Set when installed=false to explain why the step was skipped. */
+    /** Set when installed=false to explain why. */
     reason?: string;
 }
 
-/**
- * Write the snippet into `scripts/delayed.js`, re-reading once on a stale SHA.
- *
- * Inspector Tagging contributes `scripts/delayed.js` to the bulk **Git Tree**
- * commit during block installation; this publisher reads it back through the
- * **Contents** API, which serves from a different path and can lag behind a
- * tree commit. A live run lost that race 18 seconds after the tree commit, and
- * because the step is non-fatal the storefront finished with no smart-404
- * handling and still reported Complete.
- *
- * Re-read and retry exactly once — enough for staleness and for a genuine
- * interleaving, while a second rejection stays a real failure rather than
- * becoming a poll loop inside storefront setup.
- *
- * Only SHA mismatches retry. Permission and missing-file failures are certain,
- * and retrying them just doubles the latency of a known outcome.
- *
- * Safe to repeat: the caller's `SMART_404_MARKER_START` check makes the snippet
- * idempotent, and the retry re-derives content from the freshly read file.
- */
-async function writeDelayedJsWithStaleShaRetry(
-    githubFileOps: GitHubFileOperations,
-    repoOwner: string,
-    repoName: string,
-    sha: string | undefined,
-    initialContent: string,
-    snippet: string,
-    logger: Logger,
-): Promise<void> {
-    const commit = (content: string, withSha: string | undefined) =>
-        githubFileOps.createOrUpdateFile(
-            repoOwner,
-            repoName,
-            'scripts/delayed.js',
-            content,
-            'chore(demo-builder): vendor smart 404 PDP handler into delayed.js',
-            withSha,
-        );
+/** The recovery script for one storefront, or why it has none. */
+export type Smart404Handler = { handler: string } | { installed: false; reason: string };
 
-    try {
-        await commit(initialContent, sha);
-    } catch (error) {
-        if (!isStaleShaFailure(error)) throw error;
-
-        logger.info(
-            '[PDP404] delayed.js changed under us (stale SHA) — re-reading and retrying once',
-        );
-        const fresh = await githubFileOps.getFileContent(repoOwner, repoName, 'scripts/delayed.js');
-        if (!fresh?.content) throw error;
-        if (fresh.content.includes(SMART_404_MARKER_START)) return;
-        await commit(fresh.content + snippet, fresh.sha);
-    }
-}
+const DELAYED_JS = 'scripts/delayed.js';
 
 /**
- * Install the smart 404 handler for one storefront.
+ * Build the storefront's recovery script, and keep the eager script in `head.html`
+ * current. Writing the script into `404.html` is `bringStorefrontUpToDate`'s job.
  *
- * Called from the two places that modify the storefront's GitHub repo
- * — `storefrontSetupPhase2.ts` (create/edit) and `edsResetRepoHelper.ts`
- * (reset) — alongside `installInspectorTagging`. Both operations share
- * the same shape: vendor a small JS file into the storefront's code.
- * Both run before the surrounding pipeline's bulk Helix code preview,
- * which picks up the committed change and makes it live.
+ * Called from the one step creation, reset and a tested-boilerplate update share
+ * (`bringStorefrontUpToDate`). Non-fatal: a storefront without the script still works,
+ * and a visitor to a cold page gets the plain 404.
  *
- * Non-fatal at every step: any genuine failure is logged and the function
- * returns `{ installed: false, reason }`. An ALREADY-installed handler is a
- * success and returns `{ installed: true, reason: 'already installed' }`. The
- * storefront still works
- * without the smart 404 — visitors hitting cold PDPs just get the
- * default Helix 404 page. We never want this step to break a create,
- * edit, or reset.
- *
- * Skip cases:
- *   - BYOM disabled (`overlayUrl` is `undefined`): nothing to install.
- *   - Overlay URL doesn't parse or doesn't have the expected shape:
- *     can't derive the trigger URL.
- *   - `scripts/delayed.js` doesn't exist in the storefront: log warning,
- *     skip (the storefront isn't an EDS storefront we recognize).
- *   - Snippet marker already present: idempotent skip (already installed).
- *   - GitHub commit fails (network, auth): log and skip.
+ * No script when BYOM is off (no `overlayUrl`) or the overlay URL does not name a
+ * `render-pdp` action to derive `prepublish-pdp` from.
  */
-export async function installSmart404Handler(
+export async function prepareSmart404Handler(
     githubFileOps: GitHubFileOperations,
     repoOwner: string,
     repoName: string,
@@ -128,7 +54,7 @@ export async function installSmart404Handler(
     logger: Logger,
     daLiveOrg: string,
     daLiveSite: string,
-): Promise<Pdp404InstallResult> {
+): Promise<Smart404Handler> {
     if (!overlayUrl) {
         logger.info('[PDP404] BYOM disabled (no overlayUrl) — skipping smart 404 install');
         return { installed: false, reason: 'BYOM disabled' };
@@ -142,130 +68,18 @@ export async function installSmart404Handler(
         return { installed: false, reason: 'invalid overlay URL' };
     }
 
-    // Read the storefront's existing `scripts/delayed.js`. If absent, the
-    // storefront doesn't have the EDS delayed-load module and we have
-    // nowhere to vendor into — skip with a warning rather than create the
-    // file ourselves (we don't know the right surrounding boilerplate).
-    const existing = await githubFileOps.getFileContent(repoOwner, repoName, 'scripts/delayed.js');
-    if (!existing?.content) {
-        logger.warn('[PDP404] scripts/delayed.js not found — skipping smart 404 install');
-        return { installed: false, reason: 'delayed.js missing' };
-    }
-
-    const snippet = buildSmart404Snippet(triggerUrl, daLiveOrg, daLiveSite);
-
-    // Vendor the snippet. When a prior block is already present, RE-VENDOR it
-    // in place (replace between the markers) instead of skipping — so snippet
-    // behavior changes (e.g. the missing-SKU → native /404 redirect) reach
-    // existing storefronts on their next reset. The commit is skipped only when
-    // the rebuilt block is byte-identical, keeping no-op resets churn-free.
-    let newContent: string;
-    if (existing.content.includes(SMART_404_MARKER_START)) {
-        const replaced = replaceMarkedBlock(
-            existing.content,
-            SMART_404_MARKER_START,
-            SMART_404_MARKER_END,
-            snippet,
-        );
-        if (replaced === null || replaced === existing.content) {
-            logger.info('[PDP404] Smart 404 snippet already current in delayed.js — skipping');
-            // installed: TRUE. The flag means "the handler is in place after this
-            // call", not "I wrote it this run" — every consumer gates on
-            // `!installed` to decide whether the storefront is MISSING recovery.
-            // Reporting false here made a healthy storefront print "the smart-404
-            // handler was not installed (already installed)" and a clean run
-            // finish WITH ERRORS (observed 2026-08-14 on skukla/demo-builder-test).
-            // The reason is kept so a caller can still tell the two ways of being
-            // installed apart.
-            return { installed: true, reason: 'already installed' };
-        }
-        newContent = replaced;
-        logger.info('[PDP404] Re-vendoring updated smart 404 snippet into delayed.js');
-    } else {
-        newContent = existing.content + snippet;
-    }
-
-    try {
-        await writeDelayedJsWithStaleShaRetry(
-            githubFileOps, repoOwner, repoName, existing.sha, newContent, snippet, logger,
-        );
-        logger.info(
-            `[PDP404] Vendored smart 404 snippet into scripts/delayed.js (${repoOwner}/${repoName})`,
-        );
-    } catch (error) {
-        const reason = (error as Error).message ?? 'unknown';
-        logger.warn(`[PDP404] GitHub commit failed: ${reason} — skipping smart 404 install`);
-        return { installed: false, reason: `GitHub commit failed: ${reason}` };
-    }
-
-    // Vendor the eager mixed-case redirect into head.html. Non-fatal at
-    // every step: a failure here means the user still gets the slower
-    // path (delayed.js handles it after ~1-2s) but the storefront still
-    // works. We log and continue rather than report install failure for
-    // the whole handler.
+    // Non-fatal at every step: without it a mixed-case product link waits for the
+    // recovery script instead of redirecting before paint.
     await installSmart404HeadRedirect(githubFileOps, repoOwner, repoName, logger);
 
-    // 404.html is NOT written here: `bringStorefrontUpToDate` owns every write to it, so its
-    // import map and this redirect land in one write (EDS-45). It adds the redirect when
-    // this returns installed.
-
-    return { installed: true };
-}
-
-/**
- * The page with its eager block made current: the block added (before `</head>`, or
- * appended when there is none) where there is no marker, or swapped in place where an
- * older one is, so a changed script reaches a storefront that already has one (EDS-61
- * taught it category addresses). Null when there is nothing to do or nothing safe to do:
- * the block is already current, the block is half-marked (where it ends is a guess), or
- * the page has no nonced script to take the CSP nonce from (the script would be blocked).
- *
- * @param html - the page as read (`head.html` or `404.html`)
- * @param file - the page's name, for the log
- * @param logger - says why it skipped
- */
-function withCurrentEagerBlock(html: string, file: string, logger: Logger): string | null {
-    const nonce = extractCspNonce(html);
-    if (!nonce) {
-        logger.warn(
-            `[PDP404] ${file} has no nonced script tag — skipping eager redirect (delayed.js fallback still active)`,
-        );
-        return null;
-    }
-    const snippet = SMART_404_HEAD_SNIPPET_TEMPLATE.replace(/__NONCE__/g, nonce);
-    if (html.includes(SMART_404_HEAD_MARKER_START)) {
-        const replaced = replaceMarkedBlock(html, SMART_404_HEAD_MARKER_START, SMART_404_HEAD_MARKER_END, snippet);
-        if (replaced === null || replaced === html) {
-            logger.info(`[PDP404] Eager redirect already current in ${file} — skipping`);
-            return null;
-        }
-        return replaced;
-    }
-    const headClose = html.lastIndexOf('</head>');
-    return headClose >= 0 ? html.slice(0, headClose) + snippet + html.slice(headClose) : html + snippet;
-}
-
-/**
- * The eager redirect, made current in a 404.html's text. Helix serves this file on 404
- * responses for unknown paths, bypassing `head.html`, so the snippet head.html carries
- * has to be here too. Inserted before `</head>` so it runs during head parsing, before
- * body paint; appended when there is no `</head>`; an older copy is swapped in place.
- *
- * Pure: `planStorefrontRepairs` reads the file and `bringStorefrontUpToDate` writes it.
- *
- * @param html - the 404.html as read
- * @param logger - says why it skipped
- * @returns the page with the current redirect, or null when there is nothing to write
- */
-export function withEagerRedirect(html: string, logger: Logger): string | null {
-    return withCurrentEagerBlock(html, '404.html', logger);
+    return { handler: buildSmart404Snippet(triggerUrl, daLiveOrg, daLiveSite) };
 }
 
 /**
  * Make the eager script in `head.html` current: read, add or swap the block, commit.
  *
- * Non-fatal at every step. Failures degrade the UX (visible 404 flash
- * persists until `delayed.js` fires) but never break the storefront.
+ * Non-fatal at every step. Failures degrade the UX (a mixed-case product link is
+ * lowercased later) but never break the storefront.
  */
 async function installSmart404HeadRedirect(
     githubFileOps: GitHubFileOperations,
@@ -278,14 +92,21 @@ async function installSmart404HeadRedirect(
         logger.warn('[PDP404] head.html not found — skipping eager redirect install');
         return;
     }
-    const content = withCurrentEagerBlock(existing.content, 'head.html', logger);
-    if (content === null) return;
+    const outcome = withCurrentBlock(existing.content, eagerBlock('head.html'));
+    if (outcome.kind === 'current') {
+        logger.info('[PDP404] Eager redirect already current in head.html — skipping');
+        return;
+    }
+    if (outcome.kind === 'skipped') {
+        logger.warn(`[PDP404] Eager redirect not added to head.html: ${outcome.reason}`);
+        return;
+    }
     try {
         await githubFileOps.createOrUpdateFile(
             repoOwner,
             repoName,
             'head.html',
-            content,
+            outcome.html,
             'chore(demo-builder): vendor smart 404 eager redirect into head.html',
             existing.sha,
         );
@@ -293,7 +114,83 @@ async function installSmart404HeadRedirect(
     } catch (error) {
         const reason = (error as Error).message ?? 'unknown';
         logger.warn(
-            `[PDP404] head.html commit failed: ${reason} — eager redirect not installed (delayed.js fallback still active)`,
+            `[PDP404] head.html commit failed: ${reason} — eager redirect not installed (the recovery script still runs)`,
         );
+    }
+}
+
+/**
+ * Take Demo Builder's old copy of the recovery script out of `scripts/delayed.js`, so it
+ * never runs beside the one in `404.html`. Call it only once that one is in place.
+ *
+ * Nothing to do where there is no `delayed.js` (Adobe's B2B template removed it on
+ * 2026-07-30) or no copy in it. A copy with no end marker is left alone and logged:
+ * where it ends would be a guess. Never throws.
+ *
+ * @returns false when the copy is still there and should not be: the file could not be
+ *   read, or the write was refused
+ */
+export async function retireDelayedJsHandler(
+    githubFileOps: GitHubFileOperations,
+    repoOwner: string,
+    repoName: string,
+    logger: Logger,
+): Promise<boolean> {
+    try {
+        const existing = await githubFileOps.getFileContent(repoOwner, repoName, DELAYED_JS);
+        if (!existing?.content) return true;
+        const outcome = withoutDelayedJsHandler(existing.content);
+        if (outcome.kind === 'half-marked') {
+            logger.warn(
+                '[PDP404] scripts/delayed.js has the old smart 404 block with no end marker — left as it is; take it out by hand',
+            );
+        }
+        if (outcome.kind !== 'removed') return true;
+        await writeDelayedJsWithStaleShaRetry(githubFileOps, repoOwner, repoName, existing.sha, outcome.content);
+        logger.info(`[PDP404] Took the old smart 404 copy out of scripts/delayed.js (${repoOwner}/${repoName})`);
+        return true;
+    } catch (error) {
+        logger.warn(
+            `[PDP404] The old smart 404 copy in scripts/delayed.js was not taken out: ${(error as Error).message ?? 'unknown'}`,
+        );
+        return false;
+    }
+}
+
+/**
+ * Write delayed.js without the copy, re-reading once on a stale SHA.
+ *
+ * Inspector Tagging writes `scripts/delayed.js` in the block install's **Git Tree**
+ * commit just before this runs; the **Contents** API, which this reads through, can
+ * serve the file from before that commit. A live run lost that race 18 seconds after
+ * the tree commit (2026-08). Re-read and retry exactly once — enough for staleness
+ * and for a genuine interleaving, while a second rejection stays a real failure.
+ * Only SHA mismatches retry: permission and missing-file failures are certain.
+ */
+async function writeDelayedJsWithStaleShaRetry(
+    githubFileOps: GitHubFileOperations,
+    repoOwner: string,
+    repoName: string,
+    sha: string | undefined,
+    content: string,
+): Promise<void> {
+    const commit = (body: string, withSha: string | undefined) =>
+        githubFileOps.createOrUpdateFile(
+            repoOwner,
+            repoName,
+            DELAYED_JS,
+            body,
+            'chore(demo-builder): move the smart 404 handler from delayed.js to 404.html',
+            withSha,
+        );
+    try {
+        await commit(content, sha);
+    } catch (error) {
+        if (!isStaleShaFailure(error)) throw error;
+        const fresh = await githubFileOps.getFileContent(repoOwner, repoName, DELAYED_JS);
+        if (!fresh?.content) throw error;
+        const outcome = withoutDelayedJsHandler(fresh.content);
+        if (outcome.kind !== 'removed') return;
+        await commit(outcome.content, fresh.sha);
     }
 }

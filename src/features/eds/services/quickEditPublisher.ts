@@ -69,7 +69,7 @@ export interface QuickEditInstallResult {
  *
  * Called from the two places that modify the storefront's GitHub repo —
  * `storefrontSetupPhase2.ts` (create/edit) and `edsResetRepoHelper.ts`
- * (reset) — alongside `installSmart404Handler`. Brand-agnostic: no overlay
+ * (reset) — alongside `bringStorefrontUpToDate`. Brand-agnostic: no overlay
  * or IMS inputs needed.
  *
  * Two sinks:

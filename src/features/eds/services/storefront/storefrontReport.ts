@@ -22,7 +22,7 @@
 import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import type { LkgSource } from '../patches/lkgReader';
-import { SMART_404_MARKER_START } from '../pdp/pdp404Snippet';
+import { SMART_404_PAGE_MARKER_START } from '../pdp/pdp404Page';
 import { readBrokenLinks } from './brokenLinksRecord';
 import { NEEDS_RESET_LABEL, NEEDS_RESET_LINE, storefrontNeedsReset } from './storefrontChanges';
 import { readRepoBoilerplate, type ReadOutcome } from './storefrontOrigin';
@@ -231,7 +231,7 @@ async function writtenPieces(repository: RepositoryRef, deps: StorefrontReportDe
         }
     };
     const [smart404, fstab, config, description] = await Promise.all([
-        presence('scripts/delayed.js', SMART_404_MARKER_START),
+        presence('404.html', SMART_404_PAGE_MARKER_START),
         presence('fstab.yaml'),
         presence('config.json'),
         presence(SHARED_DEMO_FILE_NAME),

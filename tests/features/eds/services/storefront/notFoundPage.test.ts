@@ -7,7 +7,7 @@
  * The fixtures (`notFoundPageFixtures`) are the template's real import maps, trimmed.
  */
 
-import { withEagerRedirect } from '@/features/eds/services/pdp/pdp404HandlerPublisher';
+import { withEagerRedirect } from '@/features/eds/services/pdp/pdp404Page';
 import { SMART_404_HEAD_MARKER_END, SMART_404_HEAD_MARKER_START } from '@/features/eds/services/pdp/pdp404Snippet';
 import { alignNotFoundImportMap } from '@/features/eds/services/storefront/notFoundPage';
 import { createMockLogger } from '../../../../helpers/loggerFake';

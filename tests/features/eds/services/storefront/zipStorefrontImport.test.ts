@@ -187,13 +187,15 @@ describe('classifyZipStorefront', () => {
     const logger = createMockLogger();
 
     it('is a storefront when the canonical files are there, and names what is missing when not', async () => {
-        const good = readStorefrontZip(zipWith(STOREFRONT));
+        // Every template has a 404.html; Adobe's B2B template has no scripts/delayed.js.
+        const { 'scripts/delayed.js': _delayed, ...b2b } = STOREFRONT;
+        const good = readStorefrontZip(zipWith({ ...b2b, '404.html': '<html></html>' }));
         expect(await classifyZipStorefront(good.files, logger)).toEqual({ kind: 'storefront' });
 
         const bad = readStorefrontZip(zipWith({ 'README.md': 'hi', 'index.html': '<p>' }));
         expect(await classifyZipStorefront(bad.files, logger)).toEqual({
             kind: 'not-a-storefront',
-            missing: ['scripts/scripts.js', 'scripts/delayed.js', 'head.html'],
+            missing: ['scripts/scripts.js', '404.html', 'head.html'],
         });
     });
 });

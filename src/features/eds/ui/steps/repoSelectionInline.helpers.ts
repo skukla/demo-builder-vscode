@@ -59,7 +59,7 @@ export function computeRepoValid(
     // See `.rptc/backlog/2026-08-20-storefront-branch-is-hardcoded-main.md`.
 
     // A populated repo that is not a storefront cannot complete setup: the
-    // steps that need scripts/scripts.js and scripts/delayed.js skip
+    // steps that need scripts/scripts.js and 404.html skip
     // themselves, and the run still reports Complete. Reset is the remedy, so
     // it is required rather than offered.
     //

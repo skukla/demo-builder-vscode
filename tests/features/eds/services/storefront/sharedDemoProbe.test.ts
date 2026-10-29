@@ -253,7 +253,7 @@ describe('probeSharedDemo', () => {
 
         assertOutcome(result, 'read');
         expect(result.kind).toBe('not-a-storefront');
-        expect(result.missing).toEqual(['scripts/scripts.js', 'scripts/delayed.js']);
+        expect(result.missing).toEqual(['scripts/scripts.js', '404.html']);
     });
 
     it('says an empty repository is empty', async () => {
@@ -336,7 +336,7 @@ describe('probeSharedDemo', () => {
         const flaky: FakeRepo = {
             repo: 'skukla/kukla-bodea',
             files: edsFiles(),
-            throwOn: ['scripts/delayed.js'],
+            throwOn: ['404.html'],
         };
         const result = await probeSharedDemo(deps(flaky), 'skukla', 'kukla-bodea', logger);
 

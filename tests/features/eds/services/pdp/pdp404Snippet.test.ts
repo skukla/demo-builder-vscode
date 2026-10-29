@@ -11,10 +11,11 @@
  * The publisher keeps its own two suites — `.install` and `.eagerRedirect`,
  * 29 tests — so nothing it relies on moved.
  *
- * Phase 1 v2 contract (post-2026-06-09): the smart 404 handler is vendored into
- * `scripts/delayed.js` rather than published as a DA.live `/404.html` page. EDS
- * strips `<script>` tags from authored content, which silently broke the v1
- * page-publish approach. These tests pin the delayed-vendor contract.
+ * The smart 404 handler is committed into the storefront's code, never published as
+ * a DA.live page: EDS strips `<script>` tags from authored content, which silently
+ * broke the v1 page-publish approach. It lived in `scripts/delayed.js` until
+ * 2026-10-29 and now sits inline in the code's `404.html` (Adobe's B2B template has
+ * no `delayed.js`); see `pdp404Page.ts`.
  */
 
 import {
@@ -137,8 +138,8 @@ describe('buildSmart404Snippet', () => {
     });
 
     it('gates on window.isErrorPage so the snippet is inert on non-404 pages', () => {
-        // Critical: the snippet rides delayed.js, which runs on every page.
-        // Without this gate it would try to redirect on the home page.
+        // It lives in 404.html now, which only a missing page serves; the gate stays so a
+        // copy in a script every page loads (delayed.js, before 2026-10-29) stays inert.
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
         expect(snippet).toContain('window.isErrorPage');
     });
@@ -160,7 +161,7 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('pdpRetry');
     });
 
-    it('produces a delayed.js snippet (NOT an HTML document)', () => {
+    it('produces a script (NOT an HTML document): pdp404Page.ts wraps it for 404.html', () => {
         // Regression guard: the v1 implementation built a full <!DOCTYPE
         // html> page for DA.live publication. EDS stripped the <script>
         // tag inside it. We must never go back to that shape.
@@ -234,21 +235,16 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('=== end Smart 404 PDP rebuild ===');
     });
 
-    it('removes the eager-script hide style and clears main.className before showing loading state', () => {
-        // Two regressions this test pins:
-        // 1. The eager script in 404.html injects #smart-404-cold-hide
-        //    to suppress the visible 404 chrome during the cold-path
-        //    window. delayed.js must remove it before painting the
-        //    loading state, otherwise the user sees nothing.
-        // 2. The boilerplate's 404.html ships <main class="error"> with
-        //    its own flex layout (align-items:center, max-width, etc.)
-        //    that fought our flex-centered loading div and pushed it
-        //    off-center. Clearing className strips .error so our
-        //    centering wins.
+    it('shows its loading state beside <main> and hides <main>, never writing into it', () => {
+        // The script runs inline at the end of 404.html, BEFORE the storefront's own scripts
+        // decorate <main>. Written into <main>, the loading state would be decorated as a
+        // section of the page. Beside it, nothing the storefront does reaches it, and
+        // putting the 404 back is removing our two elements. The eager script's hide
+        // (#smart-404-cold-hide) goes with them.
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        expect(snippet).toContain('mainEl.before(loading)');
+        expect(snippet).not.toContain('mainEl.innerHTML');
         expect(snippet).toContain("getElementById('smart-404-cold-hide')");
-        expect(snippet).toContain('hideStyle.remove()');
-        expect(snippet).toContain("mainEl.className = ''");
     });
 
     it('shows a spinner + "Loading product…" caption during the cold-publish window', () => {

@@ -151,4 +151,4 @@ export const BODEA_CONFIG_JSON = JSON.stringify({
 });
 
 /** The canonical EDS files, present on both EDS repos and absent on the Next.js one. */
-export const EDS_CANONICAL = ['scripts/scripts.js', 'scripts/delayed.js', 'head.html'];
+export const EDS_CANONICAL = ['scripts/scripts.js', '404.html', 'head.html'];

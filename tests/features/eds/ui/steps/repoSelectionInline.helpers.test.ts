@@ -228,7 +228,7 @@ describe('describeResetOption', () => {
     it('names the missing files and says setup cannot complete', () => {
         expect(
             describeResetOption(
-                { kind: 'not-a-storefront', missing: ['scripts/scripts.js', 'scripts/delayed.js'] },
+                { kind: 'not-a-storefront', missing: ['scripts/scripts.js', '404.html'] },
                 false,
                 false,
             )
@@ -237,7 +237,7 @@ describe('describeResetOption', () => {
             locked: false,
             tone: 'warn',
             message:
-                'Missing scripts/scripts.js, scripts/delayed.js. Setup cannot complete without a reset.',
+                'Missing scripts/scripts.js, 404.html. Setup cannot complete without a reset.',
         });
     });
 

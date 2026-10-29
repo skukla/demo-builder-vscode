@@ -38,8 +38,8 @@
  *   - `derivePrepublishUrl(overlayUrl)` — validates the overlay URL
  *
  * Non-fatal at every step. Failures log a warning and the pipeline
- * continues; the smart-404 fallback we vendored into delayed.js,
- * head.html, and 404.html handles any URL pre-warming missed.
+ * continues; the smart-404 fallback we vendored into head.html and
+ * 404.html handles any URL pre-warming missed.
  *
  * @module features/eds/services/catalogPrewarmService
  */

@@ -1,17 +1,18 @@
 /**
- * Smart 404 handler installer — eager-redirect vendoring.
+ * Smart 404 handler installer — the eager script in `head.html`.
  *
  * Helix serves the static `404.html` on unknown-path 404s, bypassing
  * `head.html`, so the eager redirect has to be vendored into BOTH to eliminate
  * the visible 404 flash. Every failure here is non-fatal by design: the
- * `delayed.js` handler still recovers the page ~1-2s later, so a storefront
+ * recovery script at the end of `404.html` still recovers the page, so a storefront
  * that cannot take the eager redirect is degraded, not broken.
  *
- * The `delayed.js` core path lives in the sibling
- * `pdp404HandlerPublisher.install.test.ts`.
+ * Building the recovery script and retiring its old `delayed.js` copy live in the
+ * sibling `pdp404HandlerPublisher.install.test.ts`; where both blocks sit in
+ * `404.html` in `pdp404Page.test.ts`.
  */
 
-import { installSmart404Handler } from '@/features/eds/services/pdp/pdp404HandlerPublisher';
+import { prepareSmart404Handler } from '@/features/eds/services/pdp/pdp404HandlerPublisher';
 import {
     SMART_404_HEAD_MARKER_END,
     SMART_404_HEAD_MARKER_START,
@@ -29,7 +30,7 @@ import {
     type GithubFake,
 } from './pdp404HandlerPublisher.testUtils';
 
-describe('installSmart404Handler — eager redirect vendoring', () => {
+describe('prepareSmart404Handler — eager redirect vendoring', () => {
     let mockGithub: GithubFake;
 
     beforeEach(() => {
@@ -40,10 +41,10 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
     it('also vendors the eager redirect into head.html (eliminates the visible 404 flash)', async () => {
         // The head.html vendor handles the most common case — a PLP
         // click against a mixed-case product URL. Without this, every
-        // PDP visit waits ~2 seconds for delayed.js to fire the
+        // PDP visit waits for the recovery script to fire the
         // redirect. With it, the redirect happens synchronously
         // before any 404 paint.
-        await installSmart404Handler(
+        await prepareSmart404Handler(
             mockGithub,
             repoOwner,
             repoName,
@@ -73,9 +74,9 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         // across browsers.
         expect(headContent).toContain('document.prerendering');
         // Cold-path main hide: when isErrorPage is true and the URL is
-        // already lowercase (cold case where delayed.js will fire), the
+        // already lowercase (cold case where the recovery script will fire), the
         // eager script injects #smart-404-cold-hide to suppress the
-        // visible 404 chrome until delayed.js paints our loading state.
+        // visible 404 chrome until the recovery script paints its loading state.
         // The selector is `main` (NOT `body`) so the storefront's
         // header and footer — populated by scripts.js — stay visible
         // while we wait. Body-level hide was too aggressive and made
@@ -102,7 +103,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             });
         });
 
-        await installSmart404Handler(
+        await prepareSmart404Handler(
             mockGithub,
             repoOwner,
             repoName,
@@ -121,7 +122,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
     // this redirect into ONE commit; the redirect's own cases live with it
     // (tests/features/eds/services/storefront/notFoundPage.test.ts).
     it('leaves 404.html to bringStorefrontUpToDate: it neither reads nor writes it', async () => {
-        await installSmart404Handler(
+        await prepareSmart404Handler(
             mockGithub,
             repoOwner,
             repoName,
@@ -138,7 +139,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
     it('skips head.html vendor when no nonced script tag exists (eager redirect would be silently blocked)', async () => {
         // No nonce = our inline script would likely be blocked by CSP.
         // Better to skip the install cleanly than ship dead code.
-        // delayed.js fallback still applies.
+        // The recovery script in 404.html still applies.
         mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
             if (path === 'head.html') {
                 return Promise.resolve({
@@ -152,7 +153,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             });
         });
 
-        const result = await installSmart404Handler(
+        const result = await prepareSmart404Handler(
             mockGithub,
             repoOwner,
             repoName,
@@ -162,7 +163,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             daLiveSite
         );
 
-        expect(result).toEqual({ installed: true });
+        expect(result).toHaveProperty('handler');
         const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(
             (c) => c[2] === 'head.html'
         );
@@ -189,7 +190,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             });
         });
 
-        await installSmart404Handler(
+        await prepareSmart404Handler(
             mockGithub,
             repoOwner,
             repoName,
@@ -214,7 +215,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
                 ? { content: before, sha: 'head-sha' }
                 : { content: '// delayed.js\n', sha: 'delayed-sha' }));
 
-        await installSmart404Handler(mockGithub, repoOwner, repoName, overlayUrl, mockLogger, daLiveOrg, daLiveSite);
+        await prepareSmart404Handler(mockGithub, repoOwner, repoName, overlayUrl, mockLogger, daLiveOrg, daLiveSite);
 
         const headCall = mockGithub.createOrUpdateFile.mock.calls.find((c) => c[2] === 'head.html');
         const after = headCall![3] as string;
@@ -232,14 +233,14 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
                 ? { content: `<script nonce="aem" type="importmap">{}</script>${current}`, sha: 'head-sha' }
                 : { content: '// delayed.js\n', sha: 'delayed-sha' }));
 
-        await installSmart404Handler(mockGithub, repoOwner, repoName, overlayUrl, mockLogger, daLiveOrg, daLiveSite);
+        await prepareSmart404Handler(mockGithub, repoOwner, repoName, overlayUrl, mockLogger, daLiveOrg, daLiveSite);
 
         expect(mockGithub.createOrUpdateFile.mock.calls.filter((c) => c[2] === 'head.html')).toHaveLength(0);
     });
 
-    it('head.html vendor failure is non-fatal: installed=true still, delayed.js fallback active', async () => {
+    it('head.html vendor failure is non-fatal: the recovery script is still built', async () => {
         // If head.html commit fails (network, conflict), the user gets
-        // the slower delayed.js path. We never want to report install
+        // the slower path. We never want to report install
         // failure for the whole handler just because the UX polish step
         // failed.
         mockGithub.createOrUpdateFile.mockImplementation((_o, _r, path) => {
@@ -249,7 +250,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             return Promise.resolve({ sha: 'new-sha', commitSha: 'commit-sha' });
         });
 
-        const result = await installSmart404Handler(
+        const result = await prepareSmart404Handler(
             mockGithub,
             repoOwner,
             repoName,
@@ -259,7 +260,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             daLiveSite
         );
 
-        expect(result).toEqual({ installed: true });
+        expect(result).toHaveProperty('handler');
     });
     it('skips head.html vendor when the file is missing (degrades gracefully)', async () => {
         mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
@@ -270,7 +271,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             });
         });
 
-        const result = await installSmart404Handler(
+        const result = await prepareSmart404Handler(
             mockGithub,
             repoOwner,
             repoName,
@@ -280,8 +281,8 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             daLiveSite
         );
 
-        // delayed.js install still succeeds → installed=true
-        expect(result).toEqual({ installed: true });
+        // The recovery script is still built
+        expect(result).toHaveProperty('handler');
         const headCommits = mockGithub.createOrUpdateFile.mock.calls.filter(
             (c) => c[2] === 'head.html'
         );

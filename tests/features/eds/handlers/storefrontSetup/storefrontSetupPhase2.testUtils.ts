@@ -52,7 +52,7 @@ export const inspectorHelpers = jest.requireMock('@/features/eds/services/inspec
 };
 export const pdp404Publisher = jest.requireMock(
     '@/features/eds/services/pdp/pdp404HandlerPublisher',
-) as { installSmart404Handler: jest.Mock };
+) as { prepareSmart404Handler: jest.Mock; retireDelayedJsHandler: jest.Mock };
 export const quickEditPublisher = jest.requireMock(
     '@/features/eds/services/quickEditPublisher',
 ) as { installQuickEdit: jest.Mock };
@@ -121,8 +121,9 @@ export function resetPhase2Mocks(): void {
     fstabGenerator.generateFstabContent.mockReset().mockReturnValue('mock-fstab');
     inspectorHelpers.generateInspectorTreeEntries.mockReset().mockResolvedValue([]);
     inspectorHelpers.installInspectorTagging.mockReset().mockResolvedValue({ success: true });
-    pdp404Publisher.installSmart404Handler
+    pdp404Publisher.prepareSmart404Handler
         .mockReset()
         .mockResolvedValue({ installed: false, reason: 'BYOM disabled' });
+    pdp404Publisher.retireDelayedJsHandler.mockReset().mockResolvedValue(true);
     quickEditPublisher.installQuickEdit.mockReset().mockResolvedValue({ installed: true });
 }

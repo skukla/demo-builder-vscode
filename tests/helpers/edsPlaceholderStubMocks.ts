@@ -46,7 +46,8 @@ jest.mock('@/features/eds/services/inspectorHelpers', () => ({
 }));
 
 jest.mock('@/features/eds/services/pdp/pdp404HandlerPublisher', () => ({
-    installSmart404Handler: jest.fn().mockResolvedValue({ installed: false, reason: 'no-overlay' }),
+    prepareSmart404Handler: jest.fn().mockResolvedValue({ installed: false, reason: 'no-overlay' }),
+    retireDelayedJsHandler: jest.fn().mockResolvedValue(true),
 }));
 
 jest.mock('@/features/eds/services/patches/shippedPatchLedger', () => ({

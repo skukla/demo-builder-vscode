@@ -218,9 +218,10 @@ export function addPdpCaveat(target: { pdpCaveats?: string[] }, caveat: string):
 /**
  * Explain a skipped smart-404 install.
  *
- * `installSmart404Handler` is non-fatal by design and returns `{installed,
- * reason}`. Both call sites discarded that value, so a storefront could ship
- * without the client-side PDP recovery and still report Complete.
+ * `bringStorefrontUpToDate` is non-fatal by design and returns the smart 404
+ * result as `{installed, reason}`. Both call sites discarded that value, so a
+ * storefront could ship without the client-side PDP recovery and still report
+ * Complete.
  *
  * @param reason - the publisher's own reason string, when it gave one
  */

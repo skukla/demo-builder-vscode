@@ -50,7 +50,7 @@ Demo Builder serves Adobe Solutions Consultants prepping demos. Two requirements
 | **SSR template** — `render-pdp` action returns SC's authored `/products/default` | Phase 2 LIVE 2026-06-09; fetches `https://main--{site}--{org}.aem.live/products/default` with browser User-Agent, caches per org/site, generic shell fallback | **Aligned with canonical** (line-for-line equivalent of `actions/pdp-renderer/render.js`) |
 | **Multi-tenant hosting** of the action | One shared `accs-discovery-service` workspace; `?org=&site=` query params on the registered overlay URL route per-tenant | **Innovation #1** — canonical is single-tenant per workspace |
 | **Catalog publishing** — pre-warming at create/reset | Enumerate Catalog Service, fire `prepublish-pdp` for each SKU in batches of 5 | **Aligned with canonical** — same operation as one poller cycle, run synchronously |
-| **Catalog-churn recovery** — smart-404 client-side trigger | Vendored into `head.html`, `404.html`, `delayed.js`; on cold-visit, POSTs to `prepublish-pdp` to publish on demand | **Innovation #2** — closes the gap Adobe acknowledges in issue #262 |
+| **Catalog-churn recovery** — smart-404 client-side trigger | Vendored into `head.html` and `404.html` (`delayed.js` until 2026-10-29: Adobe's B2B template has none); on cold-visit, POSTs to `prepublish-pdp` to publish on demand | **Innovation #2** — closes the gap Adobe acknowledges in issue #262 |
 | **Server-side SSR injection** — JSON-LD, per-SKU og:image, Merchant Center metadata | Not built | **Deliberately omitted** — Tier 3 from canonical; not required for demo audiences |
 
 ### What this means

@@ -47,7 +47,7 @@ const treeCommits = {};
 
 const STOREFRONT = new Map<string, Buffer>([
     ['scripts/scripts.js', Buffer.from('x')],
-    ['scripts/delayed.js', Buffer.from('x')],
+    ['404.html', Buffer.from('x')],
     ['head.html', Buffer.from('x')],
 ]);
 
@@ -140,7 +140,7 @@ describe('handleImportStorefrontZip', () => {
     it('refuses a zip that is not a storefront, naming what is missing, before creating anything', async () => {
         mockRead.mockReturnValue({ files: new Map([['README.md', Buffer.from('hi')]]), rootName: 'notes', dropped: 0 });
         const result = await handleImportStorefrontZip(ctx(), { zipPath: '/tmp/notes.zip' });
-        expect(result).toEqual({ success: false, error: 'This zip is not an Edge Delivery storefront: it has no scripts/scripts.js, scripts/delayed.js, head.html.' });
+        expect(result).toEqual({ success: false, error: 'This zip is not an Edge Delivery storefront: it has no scripts/scripts.js, 404.html, head.html.' });
         expect(repoLifecycle.createEmptyRepository).not.toHaveBeenCalled();
     });
 

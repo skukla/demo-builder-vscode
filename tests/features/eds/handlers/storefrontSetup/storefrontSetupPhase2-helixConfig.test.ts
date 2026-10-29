@@ -104,12 +104,20 @@ describe('executePhaseHelixConfig — fstab.yaml', () => {
 });
 
 describe('executePhaseHelixConfig — the smart-404 handler', () => {
-    it('installs it against the configured overlay and the DA.live target', async () => {
-        pdp404Publisher.installSmart404Handler.mockResolvedValue({ installed: true });
-        const { promise, fileOps, repoInfo } = runPhase({ edsConfig: OVERLAY_CONFIG });
+    it('installs it into 404.html against the configured overlay and the DA.live target', async () => {
+        pdp404Publisher.prepareSmart404Handler.mockResolvedValue({ handler: '\n// handler\n' });
+        const notFound = '<html><head><script nonce="aem">window.isErrorPage = true;</script></head><body><main></main></body></html>';
+        const pageOps = makeFileOps({
+            getFileContent: jest.fn(async (_o: string, _r: string, path: string, _ref?: string) =>
+                (path === '404.html' ? { content: notFound, sha: '404-sha', path, encoding: 'utf-8' } : null)),
+        });
+        const { promise, fileOps, repoInfo } = runPhase({ edsConfig: OVERLAY_CONFIG, fileOps: pageOps });
         await promise;
 
-        expect(pdp404Publisher.installSmart404Handler).toHaveBeenCalledWith(
+        expect(fileOps.createOrUpdateFile).toHaveBeenCalledWith(
+            'me', 'shop', '404.html', expect.stringContaining('// handler'), expect.any(String), '404-sha',
+        );
+        expect(pdp404Publisher.prepareSmart404Handler).toHaveBeenCalledWith(
             fileOps,
             'me',
             'shop',
@@ -122,21 +130,18 @@ describe('executePhaseHelixConfig — the smart-404 handler', () => {
     });
 
     it('records a user-facing caveat when an overlay was configured and it was skipped', async () => {
-        pdp404Publisher.installSmart404Handler.mockResolvedValue({
-            installed: false,
-            reason: 'no delayed.js',
-        });
+        pdp404Publisher.prepareSmart404Handler.mockResolvedValue({ handler: '\n// handler\n' });
         const { promise, repoInfo } = runPhase({ edsConfig: OVERLAY_CONFIG });
         await promise;
 
         expect(repoInfo.pdpCaveats).toEqual([
             'Product detail pages may not recover on first visit: the smart-404 handler ' +
-                'was not installed (no delayed.js). Reset the storefront to reinstall it.',
+                'was not installed (404.html missing). Reset the storefront to reinstall it.',
         ]);
     });
 
     it('stays quiet when no overlay was configured — phase 3 raises that one', async () => {
-        pdp404Publisher.installSmart404Handler.mockResolvedValue({
+        pdp404Publisher.prepareSmart404Handler.mockResolvedValue({
             installed: false,
             reason: 'BYOM disabled',
         });

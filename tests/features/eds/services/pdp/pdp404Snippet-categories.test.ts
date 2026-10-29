@@ -12,7 +12,11 @@
  * So the script, on a category-shaped path: shows "Loading…" ("Loading product…" on a
  * product-shaped one), asks, and on 200 reloads into the page; on 503 sends the shopper to a
  * search filtered to that category (the menu block's own fallback shape); on anything else
- * puts the storefront's own 404 back where it was. A path of neither shape is not touched.
+ * puts the storefront's own 404 back where it was. A product-shaped path that is refused goes
+ * to `/404`. A path of neither shape is not touched.
+ *
+ * The script lives in `404.html` (since 2026-10-29: Adobe's B2B template has no
+ * `scripts/delayed.js`), inline at the end of the body.
  *
  * These tests RUN the built snippets against stub pages and assert what they asked and
  * where they sent the shopper. The product half is run too, so the change cannot break it.
@@ -45,6 +49,16 @@ describe('the smart-404 script on a category address', () => {
         expect(v.shown[0]).not.toContain('Loading product');
     });
 
+    it('never touches <main>: the storefront decorates it on its own schedule', async () => {
+        // The script runs inline at the end of 404.html, before the storefront's scripts
+        // decorate <main>. Its loading state is its own element beside <main>, which stays
+        // hidden while the action works.
+        const v = await published('/signs/danger-signs', '/signs/danger-signs');
+
+        expect(v.main).toEqual({ className: 'error', innerHTML: OWN_404_BODY });
+        expect(v.left).toEqual({ loading: true, mainHidden: true });
+    });
+
     it('goes where the action says it published the page', async () => {
         const v = await published('/signs/fire', '/signs/fire-safety');
 
@@ -64,6 +78,7 @@ describe('the smart-404 script on a category address', () => {
         expect(v.requests).toEqual([post('/made-up')]);
         expect(v.redirects).toStrictEqual([]);
         expect(v.main).toEqual({ className: 'error', innerHTML: OWN_404_BODY });
+        expect(v.left).toEqual({ loading: false, mainHidden: false });
     });
 
     it("puts the storefront's own 404 back on a 400 too: only a 503 means the store was not asked", async () => {
@@ -71,6 +86,7 @@ describe('the smart-404 script on a category address', () => {
 
         expect(v.redirects).toStrictEqual([]);
         expect(v.main).toEqual({ className: 'error', innerHTML: OWN_404_BODY });
+        expect(v.left).toEqual({ loading: false, mainHidden: false });
     });
 
     it('sends the shopper to a search filtered to the category when the store could not be asked (503)', async () => {
@@ -88,6 +104,7 @@ describe('the smart-404 script on a category address', () => {
 
         expect(v.redirects).toStrictEqual([]);
         expect(v.main).toEqual({ className: 'error', innerHTML: OWN_404_BODY });
+        expect(v.left).toEqual({ loading: false, mainHidden: false });
     });
 
     it('asks nothing and shows nothing on a path that is neither a category nor a product address', async () => {
@@ -106,8 +123,8 @@ describe('the smart-404 script on a category address', () => {
         ];
         for (const path of paths) {
             const v = await published(path, '/x');
-            expect({ path, requests: v.requests, redirects: v.redirects, shown: v.shown }).toEqual({
-                path, requests: [], redirects: [], shown: [],
+            expect({ path, requests: v.requests, redirects: v.redirects, shown: v.shown, left: v.left }).toEqual({
+                path, requests: [], redirects: [], shown: [], left: { loading: false, mainHidden: false },
             });
         }
     });

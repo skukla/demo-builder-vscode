@@ -35,7 +35,11 @@ import {
 } from '@/features/eds/services/inspectorHelpers';
 import { applyCanonicalCodePatches } from '@/features/eds/services/patches/codePatchPipelineHelpers';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
-import { installSmart404Handler } from '@/features/eds/services/pdp/pdp404HandlerPublisher';
+import { readShippedPatches } from '@/features/eds/services/patches/shippedPatchLedger';
+import {
+    prepareSmart404Handler,
+    retireDelayedJsHandler,
+} from '@/features/eds/services/pdp/pdp404HandlerPublisher';
 import { installQuickEdit } from '@/features/eds/services/quickEditPublisher';
 import {
     getBlockLibrarySource,
@@ -72,9 +76,13 @@ export const mocks = {
         typeof applyCanonicalCodePatches
     >,
     readLkgSha: readLkgSha as jest.MockedFunction<typeof readLkgSha>,
-    installSmart404Handler: installSmart404Handler as jest.MockedFunction<
-        typeof installSmart404Handler
+    prepareSmart404Handler: prepareSmart404Handler as jest.MockedFunction<
+        typeof prepareSmart404Handler
     >,
+    retireDelayedJsHandler: retireDelayedJsHandler as jest.MockedFunction<
+        typeof retireDelayedJsHandler
+    >,
+    readShippedPatches: readShippedPatches as jest.MockedFunction<typeof readShippedPatches>,
     installQuickEdit: installQuickEdit as jest.MockedFunction<typeof installQuickEdit>,
     getBlockLibrarySource: getBlockLibrarySource as jest.MockedFunction<
         typeof getBlockLibrarySource
@@ -122,7 +130,11 @@ export function installDefaults(): void {
     });
     mocks.applyCanonicalCodePatches.mockResolvedValue([]);
     mocks.readLkgSha.mockResolvedValue(undefined);
-    mocks.installSmart404Handler.mockResolvedValue({ installed: false, reason: 'BYOM disabled' });
+    mocks.prepareSmart404Handler.mockResolvedValue({ installed: false, reason: 'BYOM disabled' });
+    // The smart 404 script goes into 404.html in the same run as the storefront repairs, so
+    // the ledger read they share answers as it does live: it reports, it does not throw.
+    mocks.readShippedPatches.mockResolvedValue({ live: [], retired: [], complete: true });
+    mocks.retireDelayedJsHandler.mockResolvedValue(true);
     mocks.installQuickEdit.mockResolvedValue({ installed: true });
     mocks.isBlockLibraryAvailableForPackage.mockReturnValue(true);
     mocks.getBlockLibrarySource.mockReturnValue(undefined);
@@ -150,14 +162,19 @@ export async function runReset(
     context: HandlerContext = createMockHandlerContext({ logger: createMockLogger() }),
     /** What GitHub answers for the description file; absent by default. */
     descriptionFile?: { content: string; sha: string },
+    /** Files GitHub answers by path, before the description file. */
+    files: Record<string, string> = {},
 ) {
     const resetMock = jest.fn().mockResolvedValue(RESET_RESULT);
     // The calls the reset makes (the description-file read only for a saved
-    // package); the class holds private Octokit state.
-    const getFileContent = jest.fn().mockResolvedValue(descriptionFile ?? null);
+    // package, and the storefront's files bringStorefrontUpToDate reads and
+    // writes); the class holds private Octokit state.
+    const getFileContent = jest.fn(async (_o: string, _r: string, path: string) =>
+        (files[path] !== undefined ? { content: files[path], sha: `${path}-sha` } : descriptionFile ?? null));
     const githubFileOps = {
         resetRepoToTemplate: resetMock,
         getFileContent,
+        createOrUpdateFile: jest.fn().mockResolvedValue({}),
         getLatestCommitSha: mockGetLatestCommitSha,
     } as unknown as GitHubFileOperations;
     const report = jest.fn<void, [number, string]>();

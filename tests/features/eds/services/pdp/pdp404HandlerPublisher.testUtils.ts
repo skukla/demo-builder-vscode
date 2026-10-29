@@ -1,10 +1,10 @@
 /**
  * Shared fixtures for the smart-404 installer suites.
  *
- * Two suites drive `installSmart404Handler` from the same starting state:
- * `pdp404HandlerPublisher.install.test.ts` (vendoring into `scripts/delayed.js`,
- * plus the stale-SHA retry) and `pdp404HandlerPublisher.eagerRedirect.test.ts`
- * (vendoring into `head.html` and `404.html`). The setup is identical and
+ * Two suites drive the publisher from the same starting state:
+ * `pdp404HandlerPublisher.install.test.ts` (building the script, and retiring its
+ * old copy in `scripts/delayed.js` with the stale-SHA retry) and
+ * `pdp404HandlerPublisher.eagerRedirect.test.ts` (the eager script in `head.html`). The setup is identical and
  * load-bearing — the nonced `<script>` tags below match the convention in
  * aem-boilerplate-commerce, and a suite that quietly drifted from them would
  * pass while testing a storefront shape that does not exist.
@@ -22,7 +22,7 @@ export const overlayUrl =
 
 /**
  * Default storefront: `head.html` and `404.html` both carry a nonced
- * `<script>`; anything else resolves as an existing `delayed.js`. Suites that
+ * `<script>`; anything else resolves as a `delayed.js` without Demo Builder's copy. Suites that
  * exercise the "no nonce" / "file missing" paths override per-test.
  */
 export function makePdp404Github(): GithubFake {

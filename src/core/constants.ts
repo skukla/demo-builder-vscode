@@ -311,7 +311,10 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // v45 (2026-10-25): the nav's catalog line is "Commerce: All" / "Commerce: <category>",
 // not "Shop the catalog". header-nav-footer says so; existing projects would keep telling
 // the agent to type the old line.
-export const AI_CONTEXT_VERSION = 45;
+// v46 (2026-10-29, EDS-61): AGENTS.md's storefront routing section says the smart-404 recovery
+// script runs inline in 404.html, not scripts/delayed.js (Adobe's B2B template has none), and
+// covers category pages. Existing projects would keep sending an agent to delayed.js.
+export const AI_CONTEXT_VERSION = 46;
 
 /**
  * Component IDs for standardized component instance access

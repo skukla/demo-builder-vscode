@@ -36,7 +36,8 @@
  * @module features/eds/services/storefront/storefrontProbe
  */
 
-import { SMART_404_HEAD_MARKER_START, SMART_404_MARKER_START } from '../pdp/pdp404Snippet';
+import { SMART_404_PAGE_MARKER_START } from '../pdp/pdp404Page';
+import { SMART_404_HEAD_MARKER_START } from '../pdp/pdp404Snippet';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -51,7 +52,7 @@ export interface StorefrontProbeResult {
     baseUrl: string;
     /** Whether the site answers at all. Later legs are skipped when it does not. */
     site: { reachable: boolean; status?: number; error?: string };
-    /** `scripts/delayed.js` — the client-side smart-404 handler. */
+    /** `404.html` — the client-side smart-404 recovery script, at the end of the body. */
     smart404Snippet?: MarkerLeg;
     /** `404.html` — the eager redirect that runs before the handler. */
     eagerRedirect?: MarkerLeg;
@@ -209,7 +210,7 @@ function verdictFor(result: StorefrontProbeResult): string {
         //
         // Confirming the SKU exists removes one ambiguity (it is not a typo or a
         // deleted product) but not the other. Cold-path recovery is CLIENT-side:
-        // `delayed.js` runs in a browser and calls prepublish-pdp. A fetch never
+        // the 404 page's script runs in a browser and calls prepublish-pdp. A fetch never
         // triggers it, so any SKU that pre-warming did not cover and no visitor
         // has opened returns 404 on a perfectly healthy storefront.
         //
@@ -281,8 +282,8 @@ export async function probeStorefrontDelivery(
     if (result.site.reachable) {
         result.smart404Snippet = await markerLeg(
             baseUrl,
-            '/scripts/delayed.js',
-            SMART_404_MARKER_START,
+            '/404.html',
+            SMART_404_PAGE_MARKER_START,
         );
         result.eagerRedirect = await markerLeg(baseUrl, '/404.html', SMART_404_HEAD_MARKER_START);
 
