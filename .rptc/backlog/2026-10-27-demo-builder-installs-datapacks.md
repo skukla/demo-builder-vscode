@@ -60,3 +60,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-28  docs(plan): the datapack hybrid, settings layers, and publishing to the Data Installer (DI-5) (`45abdfc72`)
 - 2026-10-28  merge: Demo Builder's own datapack engine into the release candidate (DI-5) (`ac48e6512`)
 - 2026-10-29  fix(data-installer): a layout the store does not offer stays at its default (`ae8942af4`)
+- 2026-10-29  fix(data-installer): library packs install directly; a save path without .zip is a folder (`cd7cdc0f2`)
