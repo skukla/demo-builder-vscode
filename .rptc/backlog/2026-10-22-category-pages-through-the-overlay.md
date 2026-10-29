@@ -55,3 +55,4 @@ becomes unnecessary; what the agent surface says.
 ## Shipped so far
 
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
+- 2026-10-29  fix(eds): no generated category page where the SC's own page is used (`719652e5c`)
