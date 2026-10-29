@@ -239,11 +239,11 @@ export function DatapackCatalogView(): React.JSX.Element {
     // leaves `data` null, so it shows the loader again; a refresh after success
     // keeps `data`, so content stays put and `isRefreshing` carries the hint.
     if (!settled) {
-        // Centered in the full viewport — IntegrationsScreen's exact gate shape
-        // (its comment records why not CenteredFeedbackContainer: that takes a
-        // FIXED DimensionValue and cannot express "fill this screen").
+        // Centred in the content column, under the header and tabs already drawn
+        // there; centred across the whole window it sat far to their right
+        // (2026-10-29).
         return (
-            <FullScreenLoading message="Loading datapacks" />
+            <FullScreenLoading message="Loading datapacks" withinContentColumn />
         );
     }
 

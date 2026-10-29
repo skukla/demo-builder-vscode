@@ -7,6 +7,11 @@
  * bar at the top left instead (EDS-41). Not `CenteredFeedbackContainer`: that takes
  * a FIXED height for in-panel feedback and cannot express "fill this screen".
  *
+ * A surface that has already drawn its header and tabs in the left-aligned content
+ * column (`.page-container-padded`, 960px) passes `withinContentColumn`, so the
+ * spinner is centred under them rather than across the whole window (the Data
+ * Installer, 2026-10-29).
+ *
  * @module core/ui/components/feedback/FullScreenLoading
  */
 
@@ -19,18 +24,27 @@ export interface FullScreenLoadingProps {
     message: string;
     /** The surface's own page colour, when it sets one, so the gate does not flash. */
     backgroundColor?: 'gray-50';
+    /** Centre in the page's content column, under a header and tabs already drawn there. */
+    withinContentColumn?: boolean;
 }
 
 /**
  * @param props - {@link FullScreenLoadingProps}
  * @returns the centred, window-filling loading view
  */
-export function FullScreenLoading({ message, backgroundColor }: FullScreenLoadingProps): React.JSX.Element {
+export function FullScreenLoading({
+    message,
+    backgroundColor,
+    withinContentColumn,
+}: FullScreenLoadingProps): React.JSX.Element {
+    const spinner = (
+        <Flex justifyContent="center" alignItems="center" height="100%">
+            <LoadingDisplay size="L" message={message} />
+        </Flex>
+    );
     return (
         <View height="100vh" backgroundColor={backgroundColor}>
-            <Flex justifyContent="center" alignItems="center" height="100%">
-                <LoadingDisplay size="L" message={message} />
-            </Flex>
+            {withinContentColumn ? <div className="page-container-padded h-full">{spinner}</div> : spinner}
         </View>
     );
 }

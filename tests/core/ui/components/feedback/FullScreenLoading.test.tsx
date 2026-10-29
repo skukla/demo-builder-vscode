@@ -24,5 +24,17 @@ describe('FullScreenLoading', () => {
 
         const outer = container.querySelector('div[style*="100vh"]');
         expect(outer).not.toBeNull();
+        expect(container.querySelector('.page-container-padded')).toBeNull();
+    });
+
+    // Found 2026-10-29 on the Data Installer: it shows the loader BELOW its header and
+    // tabs, which sit in the left-aligned content column, so a window-centred spinner
+    // landed far to the right of everything around it.
+    it('centres in the content column instead, when asked', () => {
+        const { container } = renderWithProviders(<FullScreenLoading message="Loading" withinContentColumn />);
+
+        const column = container.querySelector('.page-container-padded');
+        expect(column).not.toBeNull();
+        expect(column?.textContent).toContain('Loading');
     });
 });

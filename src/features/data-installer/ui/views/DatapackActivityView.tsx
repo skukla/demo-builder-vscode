@@ -168,11 +168,10 @@ export function DatapackActivityView(): React.JSX.Element {
     // activity yet" for the length of the target lookup — a false empty, and the
     // exact failure mode this feature exists to remove.
     if ((loading || !targetSettled) && !hasLoaded) {
-        // Centered in the full viewport — IntegrationsScreen's exact gate shape
-        // (its comment records why not CenteredFeedbackContainer: that takes a
-        // FIXED DimensionValue and cannot express "fill this screen").
+        // Centred in the content column, under the header and tabs already drawn
+        // there, as the catalog's is (2026-10-29).
         return (
-            <FullScreenLoading message="Loading activity" />
+            <FullScreenLoading message="Loading activity" withinContentColumn />
         );
     }
 
