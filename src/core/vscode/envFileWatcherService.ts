@@ -28,12 +28,12 @@
  * ```
  */
 
-import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { WorkspaceWatcherManager } from './workspaceWatcherManager';
 import { DisposableStore } from '@/core/utils/disposableStore';
+import { sha256 } from '@/core/utils/sha256';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -229,7 +229,7 @@ export class EnvFileWatcherService implements vscode.Disposable {
     private async getFileHash(filePath: string): Promise<string | null> {
         try {
             const content = await fs.promises.readFile(filePath, 'utf-8');
-            return crypto.createHash('sha256').update(content).digest('hex');
+            return sha256(content);
         } catch {
             this.logger.debug(`[Env Watcher] Could not read file ${filePath}`);
             return null;

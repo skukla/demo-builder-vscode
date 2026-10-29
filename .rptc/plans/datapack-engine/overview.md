@@ -96,7 +96,7 @@ layer is stored as ordinary pack rows, and when a pack carries settings itself, 
 | 01 | [The engine seam, no behaviour change](step-01-engine-seam.md) | done |
 | 02 | [The install record and the catalog kinds](step-02-catalog-kinds.md) | done, not yet live |
 | 03 | [Wire the engine together](step-03-wire-engine.md), then make it the default | in progress |
-| 04 | [One rule for "is this still as we left it?"](step-04-still-as-we-left-it.md) | to do |
+| 04 | [One rule for "is this still as we left it?"](step-04-still-as-we-left-it.md) | done |
 | 05 | [Capture and repeat installs](step-05-capture-and-repeat-installs.md) | to do |
 | 06 | [The setup guide's undos keep what changed since](step-06-setup-guide-undos.md) (AB-83) | to do |
 | 07 | [Each demo has its own pack, shared by reference](step-07-demo-packs.md) | to do |

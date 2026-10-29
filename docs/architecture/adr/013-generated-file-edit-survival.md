@@ -1,6 +1,6 @@
 # ADR-013: Generated AI Files — Hash-and-Skip Edit Survival
 
-**Status**: Accepted — implemented 2026-08-14 (`feature/tiered-ai-refresh`) — `generatedFileWriter.ts` is the seam; hashes live in the manifest's `aiFileHashes`; the activation sweep (`aiBundleActivationRefresh.ts`) is the silent driver
+**Status**: Accepted — implemented 2026-08-14 (`feature/tiered-ai-refresh`) — `generatedFileWriter.ts` is the seam; hashes live in the manifest's `aiFileHashes`; the activation sweep (`aiBundleActivationRefresh.ts`) is the silent driver. Since 2026-10-29 the write and removal decisions are one shared rule, `decideOwnedChange` (`src/core/utils/ownedChange.ts`), which DA.live pages (`ownedPages.ts`) and, next, datapack objects use too; the hash is `src/core/utils/sha256.ts`
 **Date**: 2026-08-14
 **Decision Maker**: Project Owner
 **Implementer**: Implemented on `feature/tiered-ai-refresh` (steps 1-8, TDD)

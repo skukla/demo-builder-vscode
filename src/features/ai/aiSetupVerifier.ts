@@ -16,13 +16,13 @@
  * Pure fs/promises — no VS Code imports, easily unit-tested.
  */
 
-import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { inspectAllServers } from './mcpInspector';
 import { detectSessionMcps } from './sessionMcpDetector';
 import { inspectSkills } from './skillInspector';
+import { sha256 } from '@/core/utils/sha256';
 import type { AiInventory } from '@/types/ai';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -136,8 +136,7 @@ async function detectEditedFiles(
                     return null;
                 }
                 const content = await fsPromises.readFile(absolute, 'utf-8');
-                const current = createHash('sha256').update(content, 'utf-8').digest('hex');
-                return current !== recorded ? relPath : null;
+                return sha256(content) !== recorded ? relPath : null;
             } catch {
                 return null; // absent/unreadable = not edited
             }
