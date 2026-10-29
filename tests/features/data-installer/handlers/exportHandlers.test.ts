@@ -17,6 +17,7 @@
 import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { DataInstallerExportClient } from '@/features/data-installer/services/dataInstallerExportClient';
+import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -31,6 +32,12 @@ import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/features/data-installer/services/dataInstallerExportClient');
+// Export is the Data Installer service's; this suite is about that path, so the service
+// engine is chosen. The one test for Demo Builder's engine says so itself.
+jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
+    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
+    selectedDatapackEngine: jest.fn(() => 'service'),
+}));
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
@@ -153,6 +160,19 @@ describe('list-datapack-export-items', () => {
 });
 
 describe('start-datapack-export', () => {
+    // 2026-10-29: export is the service's, which has not saved what it reads since
+    // August and ignores the credentials it is sent. With Demo Builder's engine (the
+    // default) it refuses before anything reaches the shared catalog.
+    it("refuses with Demo Builder's engine chosen, writing nothing", async () => {
+        (selectedDatapackEngine as jest.Mock).mockReturnValueOnce('demo-builder');
+
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
+        expect(result.error).toMatch(/Demo Builder's engine/);
+        expect(startExport).not.toHaveBeenCalled();
+    });
+
     /**
      * The catalog is shared infrastructure. A pack written under a name someone
      * else owns is not something the service will stop, so this does.

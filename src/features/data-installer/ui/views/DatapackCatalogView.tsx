@@ -283,7 +283,10 @@ export function DatapackCatalogView(): React.JSX.Element {
                                     Include community datapacks
                                 </Switch>
                                 {/* Export from this instance, and Load from file. */}
-                                <CatalogHeaderActions onCatalogChanged={refresh} />
+                                <CatalogHeaderActions
+                                    onCatalogChanged={refresh}
+                                    canExport={value?.engine === 'service'}
+                                />
                             </Flex>
                         }
                     />

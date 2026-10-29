@@ -26,6 +26,7 @@
  * @module features/data-installer/handlers/exportHandlers
  */
 
+import { selectedDatapackEngine } from '../services/dataInstallerConfig';
 import {
     DataInstallerExportClient,
     type ExportRequest,
@@ -36,6 +37,10 @@ import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
+
+const EXPORT_NEEDS_SERVICE =
+    "Exporting a store into a datapack is not available with Demo Builder's engine yet. " +
+    'To export with the Data Installer service, set demoBuilder.dataInstaller.engine to "service".';
 
 export const exportHandlers = defineHandlers({
     /**
@@ -86,6 +91,12 @@ export const exportHandlers = defineHandlers({
         context: HandlerContext,
         payload?: ExportPayload,
     ): Promise<HandlerResponse> => {
+        // The service's export, which has not saved what it reads since August, into a
+        // catalog other teams share. With Demo Builder's engine it does not run at all
+        // (2026-10-29); the screen hides its link for the same reason.
+        if (selectedDatapackEngine() !== 'service') {
+            return { success: false, error: EXPORT_NEEDS_SERVICE, code: ErrorCode.INVALID_OPERATION };
+        }
         const prepared = await prepareExport(context, payload);
         if ('response' in prepared) {
             return prepared.response;
