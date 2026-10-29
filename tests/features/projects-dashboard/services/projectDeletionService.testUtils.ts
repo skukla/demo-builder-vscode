@@ -187,6 +187,16 @@ jest.mock('@/features/eds/services/storefront/liveStatusCheck', () => ({
 export const mockSleep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));
 
+/**
+ * Deleting the project's own library pack ("Also delete its pack", step 07). Its real module
+ * reaches the datapack library; every delete suite asserts only whether, and with what, it is
+ * called.
+ */
+export const mockDeleteProjectDemoPack = jest.fn();
+jest.mock('@/features/projects-dashboard/services/demoPackDeletion', () => ({
+    deleteProjectDemoPack: (...a: unknown[]) => mockDeleteProjectDemoPack(...a),
+}));
+
 // Below the mocks on purpose — see the note above about hoisting.
 export { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 export { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';

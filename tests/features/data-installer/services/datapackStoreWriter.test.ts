@@ -179,6 +179,31 @@ describe('deleteDatapack', () => {
 });
 
 /**
+ * Rename (step 07): the library's `update-datapack-metadata` is a PUT naming the pack and the
+ * one field it changes, the display name. The pack's name is immutable there. Read from the
+ * library's own action (accs-discovery-service `actions/update-datapack-metadata`), not captured
+ * from a live response.
+ */
+describe('updateDisplayName', () => {
+    it('sends PUT update-datapack-metadata with the identity and the new display name', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
+
+        await expect(writer(fetchImpl).updateDisplayName({ name: 'acme-1a2b3c', version: '20261029-183005' }, 'Acme Q4')).resolves.toBe('updated');
+
+        const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe(`${BASE}/update-datapack-metadata`);
+        expect(init.method).toBe('PUT');
+        expect(JSON.parse(String(init.body))).toEqual({ datapack_name: 'acme-1a2b3c', version: '20261029-183005', display_name: 'Acme Q4' });
+    });
+
+    it('answers not-found on the 404 the library gives for a pack that is not the caller\'s', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue(reply(404, { success: false, error: 'not found' }));
+
+        await expect(writer(fetchImpl).updateDisplayName({ name: 'x', version: '1' }, 'Y')).resolves.toBe('not-found');
+    });
+});
+
+/**
  * With Adobe's gateway check on for the store's actions, a request that names no org is refused,
  * so every write names the caller's org as every read already does (DI-5).
  */

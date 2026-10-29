@@ -58,7 +58,7 @@ describe('SampleDataStep', () => {
 
         await waitFor(() =>
             expect(updateState).toHaveBeenCalledWith({
-                datapack: { name: 'bodea', version: 'main' },
+                datapack: { name: 'bodea', version: 'main', store: 'installer' },
             })
         );
     });

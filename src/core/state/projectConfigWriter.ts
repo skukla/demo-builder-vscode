@@ -26,6 +26,9 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     if (project.datapack !== undefined) {
         manifest.datapack = project.datapack;
     }
+    if (project.ownDatapack) {
+        manifest.ownDatapack = project.ownDatapack;
+    }
     if (project.selectedPackage !== undefined) {
         manifest.selectedPackage = project.selectedPackage;
     }
@@ -100,6 +103,28 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     }
     if (project.pinned) {
         manifest.pinned = true;
+    }
+    addRecordsOfWhatWasDone(manifest, project);
+}
+
+/**
+ * Records a later call reads back to undo, prove or compare against.
+ *
+ * `getCurrentProject` reads the manifest on every call, so a record kept only in
+ * memory is gone by the next one. All three were, until 2026-10-29:
+ * `set_commerce_config`'s undo found nothing to undo, a Share save lost its proof
+ * of authorship (so Remove left the file), and "restart to apply" never showed.
+ */
+function addRecordsOfWhatWasDone(manifest: Record<string, unknown>, project: Project): void {
+    if (project.commerceConfigChange) {
+        manifest.commerceConfigChange = project.commerceConfigChange;
+    }
+    if (project.demoPackage) {
+        manifest.demoPackage = project.demoPackage;
+    }
+    // Cleared by Stop, so it is on disk only while the demo runs.
+    if (project.frontendEnvState) {
+        manifest.frontendEnvState = project.frontendEnvState;
     }
 }
 

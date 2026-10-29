@@ -38,7 +38,10 @@ import { storeScopeSchema } from './storeScope';
 import { ACCS_GRAPHQL_ENDPOINT, SECRET_ENV_KEYS } from '@/core/config/envVarKeys';
 import { readProjectFile, type ReadProjectFileResult } from '@/core/state/projectFileReader';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
+import { packReadsFor } from '@/features/data-installer/handlers/recordedPackHandlers';
+import { checkRecordedPack } from '@/features/data-installer/services/recordedPack';
 import { integrationStateFromSettings } from '@/features/project-creation/ui/wizard/integrationStateFromSettings';
+import { recordableDatapack, storeOf, type ProjectDatapack } from '@/types/datapack';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectFile } from '@/types/projectFile';
 
@@ -77,8 +80,9 @@ function seedFrom(file: ProjectFile): CreationSeed {
         customBlockLibraries: file.customBlockLibraries,
         ...integrationStateFromSettings(file),
         // Creation records a datapack by name AND version; a file naming no
-        // version is reported as not applied rather than guessed at.
-        datapack: datapack?.version ? { name: datapack.name, version: datapack.version } : undefined,
+        // version is reported as not applied rather than guessed at. The store and the
+        // pack it was made from are kept: they say where to install it from.
+        datapack: recordableDatapack(datapack),
         storeDiscoveryData: file.commerceStoreStructure,
     };
 }
@@ -203,6 +207,22 @@ function wouldCreate(file: ProjectFile, seed: CreationSeed, origin: ProjectFileO
 }
 
 /**
+ * What creation will do with the file's datapack, said plainly when it is not simply "install
+ * it" (step 07): the same check the build's own settle step runs (`settleArrivingPack`), so the
+ * answer and the build agree. Nothing when the pack installs as named, or a store could not be
+ * asked.
+ */
+async function datapackNote(ctx: HandlerContext, pack: ProjectDatapack | undefined): Promise<{ datapackNote?: string }> {
+    if (!pack) return {};
+    const check = await checkRecordedPack(packReadsFor(ctx), pack);
+    if (check.verdict === 'fallback' || check.verdict === 'none') return { datapackNote: check.note };
+    if (check.verdict === 'readable' && storeOf(pack) === 'library' && !check.mine && !check.shared) {
+        return { datapackNote: `Copies ${check.displayName} into your datapack library as this demo's own pack, then installs it from there.` };
+    }
+    return {};
+}
+
+/**
  * Create a project from a project file already read through `readProjectFile`.
  * The second half of `create_project_from_file`, and all of `copy_project` after it
  * has found the source: one checking, consent and creation path for both.
@@ -230,13 +250,16 @@ export async function createFromProjectFile(
     const scope = parseStoreScope(file.selectedStack, args?.storeScope);
     if ('error' in scope) return asText(scope);
     const seed = seedFrom(file);
+    const ctx = ctxFactory();
+    const note = await datapackNote(ctx, seed.datapack);
     if (args?.confirm !== true) {
         return asText({
             error: `${origin.toolName} requires confirm:true — it installs dependencies, deploys the integrations the project names and, for EDS, creates a real GitHub repo + DA.live content. Ask the user to confirm.`,
             wouldCreate: wouldCreate(file, seed, origin),
+            ...note,
         });
     }
-    return runProjectCreation(ctxFactory(), {
+    return runProjectCreation(ctx, {
         projectName: String(args.projectName).trim(),
         pkgId: file.selectedPackage,
         stackId: file.selectedStack,
@@ -259,6 +282,7 @@ export async function createFromProjectFile(
                     : {}),
                 applied: appliedFrom(file, seed),
                 notApplied: notAppliedFrom(file, seed),
+                ...note,
             },
             stillNeeded: {
                 credentials: credentialsNeeded(file.selectedStack, seed),
@@ -287,9 +311,11 @@ export function registerCreateProjectFromFileTool(
             description:
                 'Create a new project from an exported project file (what export_project_settings writes). ' +
                 'The file decides the package, stack, addons, ' +
-                'settings, integrations and mesh; sign-ins, the Adobe workspace and credentials are ' +
+                'settings, integrations, mesh and datapack; sign-ins, the Adobe workspace and credentials are ' +
                 "always yours, and the answer lists what is still needed. An Edge Delivery file also " +
-                'needs your own repoName, daLiveOrg and daLiveSite. Requires confirm:true',
+                'needs your own repoName, daLiveOrg and daLiveSite. The datapack is installed from the store the file ' +
+                "names; when it can't be read, the pack it was made from (or none) is installed instead, a colleague's " +
+                "own demo pack is first copied into your datapack library, and datapackNote says which. Requires confirm:true",
             inputSchema: {
                 filePath: z.string().describe('Absolute path to the exported project file'),
                 ...NEW_PROJECT_FIELDS,

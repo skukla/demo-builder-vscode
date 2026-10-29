@@ -16,6 +16,9 @@ import { type StoreChangesDeps, previewChanges, saveStoreChanges } from '@/featu
 import { packedFingerprint } from '@/features/data-installer/services/demoBuilderEngine/storeCopies';
 import { NOW, PACK, PROJECT, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';
 
+/** The demo's own pack a save writes into (step 07). */
+const SAVE_AS = { id: { name: 'acme-demo-1a2b3c', version: '20261029-183000' }, displayName: 'Acme Demo' };
+
 const STORE = {
     'store/websites': [{ id: 1, code: 'base', name: 'Main Website', default_group_id: 1 }],
     'store/storeGroups': [{ id: 1, root_category_id: 2 }],
@@ -88,16 +91,17 @@ describe('previewChanges', () => {
 });
 
 describe('saveStoreChanges', () => {
-    it('writes the store\'s copy as a new version, with what the pack is called and says', async () => {
+    // Step 07: a save goes into the demo's own pack, never a new version of the pack installed.
+    it("writes the store's copy into the demo's own pack, saying what the installed pack says", async () => {
         const { d, written, write } = await deps();
 
-        const result = await saveStoreChanges(d, { pack: PACK }, write);
+        const result = await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write);
 
-        expect(result.saved).toEqual({ name: 'bodea-main', version: '1.2.0-saved-20261029-1830' });
+        expect(result.saved).toEqual(SAVE_AS.id);
         expect(written).toHaveLength(1);
         expect(written[0]).toMatchObject({
-            id: { name: 'bodea-main', version: '1.2.0-saved-20261029-1830' },
-            displayName: 'Bodea',
+            id: SAVE_AS.id,
+            displayName: 'Acme Demo',
             description: 'Bodea main',
             source: 'library',
             exportedAt: '2026-10-29T18:30:00.000Z',
@@ -105,23 +109,31 @@ describe('saveStoreChanges', () => {
         expect(written[0].items).toEqual([
             { dataType: 'categories', records: { categories: [{ category: expect.objectContaining({ name: 'Server Racks', path: 'Default Category' }) }] } },
         ]);
-        expect(result.sentence).toBe('Bodea now matches this store. What it held before is kept.');
+        expect(result.sentence).toBe('Saved to the Acme Demo pack. Bodea is unchanged.');
+    });
+
+    it("says only where it saved when the pack installed is already the demo's own", async () => {
+        const { d, write } = await deps();
+
+        const result = await saveStoreChanges(d, { pack: PACK, saveAs: { id: { name: PACK.name, version: 'next' }, displayName: 'Acme Demo' } }, write);
+
+        expect(result.sentence).toBe('Saved to the Acme Demo pack.');
     });
 
     it('moves the install record onto the new version, so the store and it start out the same', async () => {
         const { d, files, write } = await deps();
 
-        await saveStoreChanges(d, { pack: PACK }, write);
+        await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write);
 
         expect(await readInstallRecord(files, PROJECT, PACK)).toBeUndefined();
-        const moved = await readInstallRecord(files, PROJECT, { name: 'bodea-main', version: '1.2.0-saved-20261029-1830' });
+        const moved = await readInstallRecord(files, PROJECT, SAVE_AS.id);
         expect(moved?.created).toEqual([expect.objectContaining({ kind: 'categories', id: '41', key: 'Server Racks' })]);
     });
 
     it('refuses, writing nothing, when Demo Builder did not install the pack here', async () => {
         const { d, written, write } = await deps(false);
 
-        await expect(saveStoreChanges(d, { pack: PACK }, write)).rejects.toThrow(/did not install bodea-main@1\.2\.0 in this project/);
+        await expect(saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write)).rejects.toThrow(/did not install bodea-main@1\.2\.0 in this project/);
         expect(written).toStrictEqual([]);
     });
 
@@ -129,7 +141,7 @@ describe('saveStoreChanges', () => {
         const { d, files } = await deps();
         const refused = async (): Promise<PackWriteOutcome> => ({ pack: 'created', stored: [], failed: [{ dataType: 'categories', reason: 'too large' }] });
 
-        await expect(saveStoreChanges(d, { pack: PACK }, refused)).rejects.toThrow(/categories: too large/);
+        await expect(saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, refused)).rejects.toThrow(/categories: too large/);
         expect(await readInstallRecord(files, PROJECT, PACK)).toBeDefined();
     });
 
@@ -137,7 +149,7 @@ describe('saveStoreChanges', () => {
         const { d, write } = await deps();
         const stages: string[] = [];
 
-        await saveStoreChanges(d, { pack: PACK }, write, (stage) => stages.push(stage));
+        await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write, (stage) => stages.push(stage));
 
         expect(stages).toEqual(['Reading the store', 'Saving to the library']);
     });
@@ -233,7 +245,7 @@ describe('saveStoreChanges, with the installed version\'s own rows', () => {
             { ...ITEMS, products: [THEIRS] },
         );
 
-        await saveStoreChanges(d, { pack: PACK, source: 'library' }, write);
+        await saveStoreChanges(d, { pack: PACK, source: 'library', saveAs: SAVE_AS }, write);
 
         expect(d.readPack).toHaveBeenCalledWith(PACK, 'library');
         const products = written[0].items.find((i) => i.dataType === 'products')?.records as Array<{ product: { sku: string; name: string } }>;
@@ -244,7 +256,7 @@ describe('saveStoreChanges, with the installed version\'s own rows', () => {
         const { d, write } = await deps();
         (d.readPack as jest.Mock).mockRejectedValueOnce(new Error('not in the library'));
 
-        await saveStoreChanges(d, { pack: PACK }, write);
+        await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write);
 
         expect((d.readPack as jest.Mock).mock.calls.map((c) => c[1])).toEqual(['library', 'installer']);
     });
@@ -253,7 +265,7 @@ describe('saveStoreChanges, with the installed version\'s own rows', () => {
         const { d, written, write } = await deps();
         (d.readPack as jest.Mock).mockRejectedValue(new Error('gone'));
 
-        await expect(saveStoreChanges(d, { pack: PACK }, write)).rejects.toThrow(/cannot be read from the library or the Data Installer/);
+        await expect(saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write)).rejects.toThrow(/cannot be read from the library or the Data Installer/);
         expect(written).toStrictEqual([]);
     });
 });

@@ -115,14 +115,15 @@ beforeEach(() => {
 });
 
 describe('an accepted import records the datapack on the project', () => {
-    it('writes name and version, and saves', async () => {
+    it('writes name, version and the store it came from, and saves', async () => {
         happyClient();
         const project = PAAS_PROJECT();
         const { context, saveProject } = makeImportHarness(project);
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
-        expect(project.datapack).toEqual({ name: 'bodea', version: 'main' });
+        // The store is recorded so a copy or an exported file installs from the same one.
+        expect(project.datapack).toEqual({ name: 'bodea', version: 'main', store: 'installer' });
         expect(saveProject).toHaveBeenCalled();
     });
 

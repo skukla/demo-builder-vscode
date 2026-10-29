@@ -113,7 +113,14 @@ describe('preview-datapack-changes', () => {
 });
 
 describe('save-store-changes-to-pack', () => {
-    const SAVED = { saved: { name: 'bodea', version: 'main-saved-20261029-1830' }, counts: { products: 2 }, sentence: 'Bodea now matches this store. What it held before is kept.' };
+    const OWN_NAME = /^acme-[0-9a-f]{6}$/u;
+    const VERSION = /^\d{8}-\d{6}$/u;
+    const SAVED = {
+        saved: { name: 'acme-1a2b3c', version: '20261029-183000' },
+        counts: { products: 2 },
+        readFrom: 'installer' as const,
+        sentence: 'Saved to the acme pack. Bodea is unchanged.',
+    };
 
     it('needs confirm, and asks nothing of the store without it', async () => {
         const result = await storeChangesHandlers['save-store-changes-to-pack'](harness(), ID);
@@ -130,8 +137,12 @@ describe('save-store-changes-to-pack', () => {
 
         const [deps, target, write] = mockedSave.mock.calls[0];
         expect(deps).toMatchObject({ projectPath: '/nonexistent/projects/acme', target: { websiteCode: 'acme', storeCode: 'acme_en' } });
-        // No store named: the service reads the installed version from the library, then the Data Installer.
-        expect(target).toEqual({ pack: { name: 'bodea', version: 'main' } });
+        // No store named: the service reads the installed version from the library, then the Data
+        // Installer. It writes into the demo's own pack, named for the project (step 07).
+        expect(target).toEqual({
+            pack: { name: 'bodea', version: 'main' },
+            saveAs: { id: { name: expect.stringMatching(OWN_NAME), version: expect.stringMatching(VERSION) }, displayName: 'acme' },
+        });
         const file: DatapackFile = { id: SAVED.saved, displayName: 'Bodea', items: [] };
         await write(file);
         expect(MockedWriter).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: LIBRARY, orgCode: 'ORG@AdobeOrg' }));
@@ -143,22 +154,49 @@ describe('save-store-changes-to-pack', () => {
 
         await storeChangesHandlers['save-store-changes-to-pack'](harness(), { ...ID, source: 'library', confirm: true });
 
-        expect(mockedSave.mock.calls[0][1]).toEqual({ pack: { name: 'bodea', version: 'main' }, source: 'library' });
+        expect(mockedSave.mock.calls[0][1]).toMatchObject({ pack: { name: 'bodea', version: 'main' }, source: 'library' });
     });
 
-    it('records the new version on the project and answers the one sentence', async () => {
-        mockedSave.mockResolvedValue(SAVED);
+    it("records the new version as the demo's own pack, made from the one installed, and answers the one sentence", async () => {
+        mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id }));
         const context = harness();
 
         const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, confirm: true });
 
-        expect(context.stateManager.saveProject).toHaveBeenCalledWith(expect.objectContaining({ datapack: SAVED.saved }));
+        const { saveAs } = mockedSave.mock.calls[0][1];
+        const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
+        expect(saved.datapack).toEqual({
+            ...saveAs.id,
+            store: 'library',
+            // The store the rows were actually read from.
+            origin: { name: 'bodea', version: 'main', store: 'installer' },
+        });
+        expect(saved.ownDatapack).toEqual({ name: saveAs.id.name, displayName: 'acme' });
         expect(result).toEqual({
             success: true,
             // The same sentence ends the progress window, which reads `note`.
             note: SAVED.sentence,
-            data: { datapackName: 'bodea', version: 'main-saved-20261029-1830', previousVersion: 'main', counts: { products: 2 }, message: SAVED.sentence },
+            data: {
+                datapackName: saveAs.id.name,
+                version: saveAs.id.version,
+                displayName: 'acme',
+                previous: { name: 'bodea', version: 'main' },
+                counts: { products: 2 },
+                message: SAVED.sentence,
+            },
         });
+    });
+
+    it("saves into the demo's own pack it already has, keeping the pack it was first made from", async () => {
+        const own = { name: 'acme-1a2b3c', version: '20261028-090000', store: 'library' as const, origin: { name: 'bodea', version: 'main' } };
+        const { context } = makeImportHarness({ ...PROJECT, datapack: own, ownDatapack: { name: 'acme-1a2b3c', displayName: 'acme' } });
+        mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id, readFrom: 'library' }));
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+        expect(mockedSave.mock.calls[0][1].saveAs.id.name).toBe('acme-1a2b3c');
+        const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
+        expect(saved.datapack?.origin).toEqual({ name: 'bodea', version: 'main' });
     });
 
     it('tells the screen\'s progress window each stage, and ends it on the one sentence', async () => {

@@ -21,8 +21,8 @@ import type { HandlerResponse } from '@/types/handlers';
 
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
 
-// Fifteen since datapack-engine step 05 added preview_datapack_changes and save_store_changes_to_pack.
-it('registers the fifteen tools, and only those', () => {
+// Sixteen since datapack-engine step 07 added rename_datapack (fifteen since step 05).
+it('registers the sixteen tools, and only those', () => {
     expect(DATA_INSTALLER_DESCRIPTORS.map((d) => d.tool).sort()).toEqual([
         'copy_library_datapack_to_installer',
         'delete_library_datapack',
@@ -33,6 +33,7 @@ it('registers the fifteen tools, and only those', () => {
         'load_datapack_zip',
         'open_datapack_zip',
         'preview_datapack_changes',
+        'rename_datapack',
         'reset_datapack',
         'save_datapack_zip',
         'save_store_changes_to_pack',
@@ -53,12 +54,13 @@ it('every row dispatches to a handler that actually exists', () => {
 
 describe('gates', () => {
     // Saving a file into the project is not gated: it changes no store and no instance.
-    it('gates exactly the seven writes that reach a store or an instance', () => {
+    it('gates exactly the eight writes that reach a store or an instance', () => {
         const gated = DATA_INSTALLER_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
             'copy_library_datapack_to_installer',
             'delete_library_datapack',
             'load_datapack_zip',
+            'rename_datapack',
             'reset_datapack',
             'save_store_changes_to_pack',
             'start_datapack_export',
@@ -181,7 +183,7 @@ describe('what each row declares', () => {
 
     // readOnly is what the write-gating machinery reads. The dry run is a read;
     // the three that touch a live instance or the shared catalog are not.
-    it('exposes seven reads and eight writes', () => {
+    it('exposes seven reads and nine writes', () => {
         const byFlag = (readOnly: boolean) =>
             DATA_INSTALLER_DESCRIPTORS.filter((d) => d.readOnly === readOnly)
                 .map((d) => d.tool)
@@ -200,6 +202,7 @@ describe('what each row declares', () => {
             'copy_library_datapack_to_installer',
             'delete_library_datapack',
             'load_datapack_zip',
+            'rename_datapack',
             'reset_datapack',
             'save_datapack_zip',
             'save_store_changes_to_pack',

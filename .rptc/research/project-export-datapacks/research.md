@@ -159,6 +159,12 @@ bundle need the same "never a credential" rule, applied to rows, before customer
 
 **Recommendation: (a) for every door, plus (c) as an optional "sample data" part of the bundle.**
 
+> **Built 2026-10-29** (datapack-engine step 07, `step-07-demo-packs.md` "What was built"): items
+> 1, 2 and 3 below, the false comments, the one type, and step 07's origin pack and copy on
+> arrival. Not built: (c) the bundle part, a copy onto the same store skipping its install, the
+> delete confirmation offering to remove sample data, an install that creates nothing writing a
+> record, and item 5 (the library's "unlisted", a service deploy).
+
 For beta.153, in this order:
 1. **(a) minimum.** Add `store` to the reference. Record it wherever `project.datapack` is written
    (`importJobWatch.ts:236`, `storeChangesHandlers.ts:124`, `SampleDataStep.tsx`,

@@ -42,7 +42,10 @@ const SOURCE: Project = createMockProject({
             [CATALOG_API_KEY]: 'fake-test-pw-not-a-secret',
         },
     },
-    datapack: { name: 'citisignal', version: '1.2.0' },
+    // A demo's own pack in the library: the copy starts from it, store and origin included.
+    datapack: { name: 'acme-demo-1a2b3c', version: '20261029-183000', store: 'library' as const, origin: { name: 'citisignal', version: '1.2.0', store: 'installer' as const } },
+    // Never travels: the copy makes its own pack at its first save (step 07).
+    ownDatapack: { name: 'acme-demo-1a2b3c', displayName: 'Bodea' },
     componentInstances: {
         'eds-storefront': {
             ...edsStorefrontInstance(),
@@ -163,8 +166,9 @@ describe('copy_project — the copy reaches creation whole, minus what never tra
             selectedPackage: 'citisignal',
             selectedStack: 'eds-accs',
             selectedBlockLibraries: ['isle5'],
-            datapack: { name: 'citisignal', version: '1.2.0' },
+            datapack: { name: 'acme-demo-1a2b3c', version: '20261029-183000', store: 'library' as const, origin: { name: 'citisignal', version: '1.2.0', store: 'installer' as const } },
         });
+        expect(state).not.toHaveProperty('ownDatapack');
         expect(state.componentConfigs).toEqual({
             'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://accs.example/graphql' },
         });

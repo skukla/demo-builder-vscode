@@ -208,7 +208,7 @@ export const handleExportProjectSettings: MessageHandler<{
         '@/features/projects-dashboard/services/settingsTransferService'
     );
     try {
-        const result = await exportProjectSettingsToFile(project, { path: data?.path });
+        const result = await exportProjectSettingsToFile(project, { path: data?.path, globalState: context.context.globalState });
         return { success: true, data: result };
     } catch (error) {
         context.logger.error(

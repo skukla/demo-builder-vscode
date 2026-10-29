@@ -29,15 +29,17 @@
 import { ActionButton, Button } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
-import type { DataItemInventory, DatapackDetail, DatapackId } from '../../types';
+import type { DataItemInventory, DatapackDetail } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
+import { DatapackPanelTitle } from './DatapackPanelTitle';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
+import type { DatapackId } from '@/types/datapack';
 
 export interface DatapackDetailPanelProps {
     /** The pack whose detail is showing; undefined closes the drawer. */
@@ -77,6 +79,13 @@ export interface DatapackDetailPanelProps {
      * exactly when it is. The catalog hosts the progress window, as it hosts the import modal.
      */
     onSaveStoreChanges?: (id: DatapackId) => void;
+    /**
+     * Rename the SC's own library pack (datapack-engine step 07), through the house
+     * `InlineRenameField`: resolve null on success, or the reason to show inline.
+     */
+    onRename?: (id: DatapackId, displayName: string) => Promise<string | null>;
+    /** The warning a delete carries when this SC shared the pack in a project file. */
+    sharedInFile?: string;
 }
 
 export function DatapackDetailPanel({
@@ -91,6 +100,8 @@ export function DatapackDetailPanel({
     onRemoved,
     installsFromLibrary,
     onSaveStoreChanges,
+    onRename,
+    sharedInFile,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selected?.name ?? 'Datapack';
 
@@ -106,7 +117,9 @@ export function DatapackDetailPanel({
             {selected ? (
                 <>
                     <div className="db-drawer-head">
-                        <div className="datapack-panel-title">{title}</div>
+                        <div className="datapack-panel-title">
+                            <DatapackPanelTitle title={title} detail={loading || failure ? null : detail} onRename={onRename} />
+                        </div>
                         <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
                             <Close size="S" />
                         </ActionButton>
@@ -120,6 +133,7 @@ export function DatapackDetailPanel({
                                 onRemoved={onRemoved}
                                 installsFromLibrary={installsFromLibrary}
                                 onSaveStoreChanges={onSaveStoreChanges}
+                                sharedInFile={sharedInFile}
                             />
                         ) : null}
                     </div>
@@ -171,12 +185,14 @@ function PanelActions({
     onRemoved,
     installsFromLibrary,
     onSaveStoreChanges,
+    sharedInFile,
 }: {
     detail: DatapackDetail;
     onImport: (id: DatapackId) => void;
     onRemoved: () => void;
     installsFromLibrary: boolean;
     onSaveStoreChanges?: (id: DatapackId) => void;
+    sharedInFile?: string;
 }): React.JSX.Element {
     const saveStoreChanges = onSaveStoreChanges ? (
         <Button variant="secondary" onPress={() => onSaveStoreChanges(detail.id)}>
@@ -206,7 +222,7 @@ function PanelActions({
                 <SaveDatapackFileButton id={detail.id} source="library" />
                 {saveStoreChanges}
                 {detail.mine ? (
-                    <RemoveFromLibraryButton id={detail.id} onRemoved={onRemoved} />
+                    <RemoveFromLibraryButton id={detail.id} onRemoved={onRemoved} warning={sharedInFile} />
                 ) : null}
             </div>
         </>

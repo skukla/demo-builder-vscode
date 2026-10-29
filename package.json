@@ -240,7 +240,7 @@
                             "Only delete local project, skip external resources"
                         ],
                         "default": "ask",
-                        "description": "How to handle external EDS resources (GitHub repo, DA.live site) when deleting a project."
+                        "description": "How to handle external EDS resources (GitHub repo, DA.live site) when deleting a project. A project's own datapack is never deleted by this setting: tick \"Also delete its pack\" to delete it."
                     }
                 }
             },

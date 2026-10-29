@@ -49,7 +49,7 @@ export interface EdsProjectInfo {
  */
 export interface CleanupResultItem {
     /** Resource type */
-    type: 'github' | 'daLive' | 'helix' | 'backend';
+    type: 'github' | 'daLive' | 'helix' | 'backend' | 'datapack';
     /** Resource name/identifier */
     name: string;
     /** Whether operation succeeded */
@@ -188,6 +188,8 @@ function formatResourceName(type: CleanupResultItem['type'], name: string): stri
             return `Helix CDN (${name})`;
         case 'backend':
             return `Backend data (${name})`;
+        case 'datapack':
+            return `Datapack (${name})`;
         default:
             return name;
     }

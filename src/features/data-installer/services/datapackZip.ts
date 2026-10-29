@@ -17,7 +17,7 @@
  */
 
 import AdmZip from 'adm-zip';
-import type { DatapackId, DatapackStoreName } from '../types';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 export const DATAPACK_ZIP_FORMAT = 'demo-builder-datapack';
 export const DATAPACK_ZIP_FORMAT_VERSION = 1;

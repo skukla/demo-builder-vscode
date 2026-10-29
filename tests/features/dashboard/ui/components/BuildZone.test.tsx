@@ -168,6 +168,12 @@ describe('BuildZone', () => {
 
             expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
         });
+
+        it("names this demo's own pack on its line when there is one", () => {
+            render(<BuildZone {...props({ ownDatapackName: 'Acme Demo' })} />);
+
+            expect(screen.getByText('This demo\u2019s pack: Acme Demo').closest('button')).toBe(buttonFor('Datapacks'));
+        });
     });
 
     it('opens AEM Assets, and says where it goes', () => {

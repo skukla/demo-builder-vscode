@@ -235,14 +235,3 @@ export async function capturePack(ctx: KindContext, created: readonly CreatedObj
     return { items, counts };
 }
 
-/** A saved version's stamp, dropped before a new one is added so stamps never pile up. */
-const SAVED_STAMP = /-saved-\d{8}-\d{4}$/u;
-
-/**
- * The version a capture saves as: the installed one's, stamped with when (UTC). The previous
- * version is never written over, so saving is undone by deleting the new one.
- */
-export function nextVersion(installed: string, at: Date): string {
-    const stamp = at.toISOString().replace(/[-:]/gu, '').replace('T', '-').slice(0, 13);
-    return `${installed.replace(SAVED_STAMP, '')}-saved-${stamp}`;
-}

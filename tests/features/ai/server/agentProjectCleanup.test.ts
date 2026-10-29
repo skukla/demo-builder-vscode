@@ -126,6 +126,27 @@ describe('"localOnly"', () => {
     });
 });
 
+// The demo's own library pack (step 07): deleted only when the call asks, under any setting
+// but localOnly. deleteAll never ticks it, as the button never deletes it without a tick.
+describe('the demo\'s own pack', () => {
+    it.each(['ask', 'deleteAll'])('under %s, is deleted only when the call asks', (setting) => {
+        behavior(setting);
+
+        expect(resolveCloudCleanup({ deletePack: true }).deletePack).toBe(true);
+        expect(resolveCloudCleanup({}).deletePack).toBeUndefined();
+        expect(resolveCloudCleanup({ deletePack: false }).deletePack).toBeUndefined();
+    });
+
+    it('is refused under localOnly, saying why', () => {
+        behavior('localOnly');
+
+        const choice = resolveCloudCleanup({ deletePack: true });
+
+        expect(choice.deletePack).toBeUndefined();
+        expect(choice.refusedBySetting).toContain('localOnly');
+    });
+});
+
 const DA_LIVE_TOKEN = 'da-live-session-token';
 const ADOBE_TOKEN = 'adobe-console-token';
 

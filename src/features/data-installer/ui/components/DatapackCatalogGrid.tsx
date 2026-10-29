@@ -11,9 +11,9 @@
 
 import React from 'react';
 import { type DatapackGroup, pickDefaultVersion } from '../../services/datapackCatalog';
-import type { DatapackId, DatapackStoreName } from '../../types';
 import { DatapackCard } from './DatapackCard';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /**
  * Whether a card wears the installed check. Installed means the Data Installer put it

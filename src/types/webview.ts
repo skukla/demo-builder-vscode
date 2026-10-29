@@ -3,6 +3,7 @@
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs } from './components';
+import type { ProjectDatapack } from './datapack';
 import type { ErrorCode } from './errorCodes';
 import type { AddedDemo } from './projectFile';
 import type { OperationPosition, PrerequisitePluginState, GitHubUser } from './webviewPayloads';
@@ -130,13 +131,15 @@ export interface WizardState {
     storefrontRepoValid?: boolean; // Storefront repo selection reported valid (RepoSelectionInline repository phase)
     activeBuildArea?: BuildAreaId; // Area currently focused within the build-your-project step
     /**
-     * Which datapack this project should be seeded with, if any.
+     * Which datapack this project should be seeded with, if any, and the store that
+     * holds it.
      *
-     * RECORDED here, IMPORTED from the dashboard afterwards: an import needs a
-     * reachable instance with working credentials and runs for minutes, so it
-     * does not belong inside the creation path. Optional throughout.
+     * Recorded by the Datapacks step (or seeded from an imported or copied project),
+     * then installed by creation itself, after Connection and Business Structure
+     * have settled the instance and the scope (`executeSampleDataPhase`). The step
+     * itself never imports. Optional throughout.
      */
-    datapack?: { name: string; version: string };
+    datapack?: ProjectDatapack;
     activeCommerceStep?: CommerceSectionId; // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
     committedCommerceSteps?: CommerceSectionId[]; // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
     activeStorefrontStep?: StorefrontSectionId; // Active Storefront sub-step within the build step (same footer-driven walk as Commerce)

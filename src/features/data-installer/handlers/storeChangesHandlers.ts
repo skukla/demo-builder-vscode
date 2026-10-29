@@ -6,9 +6,10 @@
  *   take out, and keep because the SC changed it. Counts and a few names by kind, never rows.
  *   Writes nothing.
  * - `save-store-changes-to-pack`: "Save store changes to this pack". The store's copy of the
- *   pack is written into the datapack LIBRARY as a new version, the version installed is kept,
- *   and the project records the new one. Confirm-gated; its progress goes to the screen's
- *   progress window when started from one. Undone by deleting the new version from the library
+ *   pack is written into the datapack LIBRARY as a new version of the demo's OWN pack (step 07,
+ *   `demoPack.ts`, made at the first save), the pack installed is left as it is, and the project
+ *   records the new version. Confirm-gated; its progress goes to the screen's progress window
+ *   when started from one. Undone by deleting the new version from the library
  *   (`delete-library-datapack`).
  *
  * Both open as every datapack write does (`resolveDatapackWriteAccess`), then check the sign-in
@@ -22,14 +23,17 @@ import { projectCommerce, readPackItems } from '../services/buildDatapackEngine'
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { writePackToStore } from '../services/datapackTransfer';
 import { type StoreChangesDeps, StoreChangesError, previewChanges, saveStoreChanges } from '../services/demoBuilderEngine/storeChanges';
+import { type DemoPackSave, demoPackSaveFor, recordDemoPackSave } from '../services/demoPack';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
-import type { DatapackId, DatapackStoreName } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
+import { libraryReads } from './libraryReads';
 import { DATAPACK_SAVE_OPERATION_ID } from '@/core/utils/operationIds';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { type OperationOutcome, withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
+import type { Project } from '@/types/base';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import type { SaveStoreChangesRequest, SaveStoreChangesResult } from '@/types/webviewRequests';
@@ -51,6 +55,7 @@ export interface StoreChangesPayload extends Partial<Omit<SaveStoreChangesReques
 }
 
 interface OpenedStore {
+    project: Project;
     deps: StoreChangesDeps;
     pack: DatapackId;
     /** The store the caller named, if it named one. */
@@ -95,11 +100,7 @@ async function openStoreChanges(context: HandlerContext, payload: StoreChangesPa
         const mismatch = await orgGuard(context, gate.project, context.authManager);
         if (mismatch) return { response: { success: false, error: mismatch.error, code: ErrorCode.ORG_MISMATCH } };
     }
-    const libraryCatalog = async () => {
-        const library = await resolveDataInstallerAccess(context, 'library');
-        if (!library.ok) throw new Error('The datapack library is not reachable.');
-        return library.client;
-    };
+    const libraryCatalog = libraryReads(context);
     const deps: StoreChangesDeps = {
         commerce: projectCommerce({ project: gate.project, authManager: context.authManager, secrets: context.context?.secrets }),
         readPack: (id, source) => readPackItems({ catalog: gate.catalog, libraryCatalog }, id, source),
@@ -108,7 +109,7 @@ async function openStoreChanges(context: HandlerContext, payload: StoreChangesPa
         target: resolveInstallTarget(gate.project) ?? undefined,
         log: (line) => context.debugLogger.debug(`${LOG_PREFIX} ${line}`),
     };
-    return { deps, ...input };
+    return { project: gate.project, deps, ...input };
 }
 
 function failure(context: HandlerContext, error: unknown, fallback: string): HandlerResponse {
@@ -117,11 +118,11 @@ function failure(context: HandlerContext, error: unknown, fallback: string): Han
     return { success: false, error: `${fallback} Details are in Debug Logs.`, code: ErrorCode.UNKNOWN };
 }
 
-/** Record on the project which pack its store now matches, as an import does. */
-async function recordOnProject(context: HandlerContext, saved: DatapackId): Promise<void> {
+/** Record on the project that its store now matches the new version of its own pack. */
+async function recordOnProject(context: HandlerContext, save: DemoPackSave): Promise<void> {
     const project = await context.stateManager.getCurrentProject();
     if (!project) return;
-    project.datapack = { name: saved.name, version: saved.version };
+    recordDemoPackSave(project, save);
     await context.stateManager.saveProject(project);
 }
 
@@ -137,14 +138,19 @@ async function save(context: HandlerContext, opened: OpenedStore, report: (stage
     });
     try {
         // No `update`: the version saved is always new, so nothing in the library is written over.
-        const target = { pack: opened.pack, ...(opened.source ? { source: opened.source } : {}) };
+        const at = new Date();
+        const plan = demoPackSaveFor(opened.project, opened.pack, at);
+        const saveAs = { id: plan.id, displayName: plan.displayName };
+        const target = { pack: opened.pack, saveAs, ...(opened.source ? { source: opened.source } : {}) };
         const result = await saveStoreChanges(opened.deps, target, (file) => writePackToStore(writer, file), report);
-        await recordOnProject(context, result.saved);
-        context.logger.info(`${LOG_PREFIX} Saved the store's copy of ${opened.pack.name}@${opened.pack.version} as ${result.saved.version} in the datapack library`);
+        // The pack it was made from names the store its rows were actually read from.
+        await recordOnProject(context, demoPackSaveFor(opened.project, { ...opened.pack, store: result.readFrom }, at));
+        context.logger.info(`${LOG_PREFIX} Saved the store's copy of ${opened.pack.name}@${opened.pack.version} as ${result.saved.name}@${result.saved.version} in the datapack library`);
         const data: SaveStoreChangesResult = {
             datapackName: result.saved.name,
             version: result.saved.version,
-            previousVersion: opened.pack.version,
+            displayName: plan.displayName,
+            previous: opened.pack,
             counts: result.counts,
             message: result.sentence,
         };

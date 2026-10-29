@@ -35,12 +35,13 @@
  * @module features/data-installer/services/dataInstallerWriteClient
  */
 
-import type { DatapackId, DatapackStoreName, ImportStart, ValidationResult } from '../types';
+import type { ImportStart, ValidationResult } from '../types';
 import { actionUrl } from './dataInstallerConfig';
 import { DataInstallerApiError, DataInstallerInputError } from './dataInstallerErrors';
 import { parseImportStart, parseValidation } from './dataInstallerParsers';
 import { signInHeaders, type DataInstallerSignIn } from './dataInstallerSignIn';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** Everything one import needs. */
 export interface ImportRequest {

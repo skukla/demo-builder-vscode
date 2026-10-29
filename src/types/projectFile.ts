@@ -27,11 +27,11 @@
 
 import type { AiPrompt, Project } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import type { DatapackReference } from '@/types/datapack';
 import type {
     CodePatchSource,
     CustomIntegrationSource,
     DaLiveContentSource,
-    DatapackReference,
     DemoPackage,
 } from '@/types/demoPackages';
 import type {

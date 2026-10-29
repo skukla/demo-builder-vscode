@@ -78,4 +78,22 @@ describe('DataInstallerTile', () => {
         expect(posted.postMessage).not.toHaveBeenCalledWith('openIntegrations');
         expect(posted.postMessage).toHaveBeenCalledTimes(1);
     });
+
+    // Step 07: a demo with its own pack says so on the tile, which opens where it is managed.
+    describe("this demo's own pack", () => {
+        it('names it on the line under the label, and the press opens the Data Installer', () => {
+            render(<DataInstallerTile ownPackName="Acme Demo" />);
+
+            const line = screen.getByText('This demo\u2019s pack: Acme Demo');
+            fireEvent.click(line.closest('button')!);
+
+            expect(posted.postMessage).toHaveBeenCalledWith('openDataInstaller');
+        });
+
+        it('shows no line for a demo with no pack of its own', () => {
+            render(<DataInstallerTile />);
+
+            expect(screen.queryByText(/This demo\u2019s pack/)).not.toBeInTheDocument();
+        });
+    });
 });

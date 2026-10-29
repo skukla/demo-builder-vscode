@@ -196,6 +196,7 @@ describe('every named form says what it acts on, from the argument that names it
         ['reset_datapack', { datapackName: 'Bodea B2B' }, 'Resetting Bodea B2B'],
         ['delete_library_datapack', { datapackName: 'Bodea B2B' }, 'Deleting Bodea B2B'],
         ['copy_library_datapack_to_installer', { datapackName: 'Bodea B2B' }, 'Copying Bodea B2B'],
+        ['rename_datapack', { datapackName: 'acme-demo-1a2b3c' }, 'Renaming the acme-demo-1a2b3c pack'],
         ['start_datapack_import', { datapackName: 'Bodea B2B' }, 'Importing Bodea B2B'],
         ['start_datapack_export', { datapackName: 'Bodea B2B' }, 'Exporting Bodea B2B'],
         ['remove_block_from_library', { blockId: 'hero-banner' }, 'Removing the hero-banner block'],

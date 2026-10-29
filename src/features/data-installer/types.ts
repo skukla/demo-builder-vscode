@@ -13,17 +13,8 @@
  * @module features/data-installer/types
  */
 
-/** Identity of a datapack. The service keys on the pair, so we do too. */
-export interface DatapackId {
-    name: string;
-    version: string;
-}
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
-/**
- * Which datapack catalog: the Data Installer service, or the team's own datapack
- * library, which answers the same routes at its own address.
- */
-export type DatapackStoreName = 'installer' | 'library';
 
 /** Cover and thumbnail art, either of which may be absent. */
 export interface DatapackArt {

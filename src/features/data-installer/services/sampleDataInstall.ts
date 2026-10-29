@@ -30,6 +30,7 @@ import type { DataTypeStatus } from '../types';
 import type { ImportRequest } from './dataInstallerWriteClient';
 import { deriveImportInstance } from './importInstance';
 import type { ComponentConfigs } from '@/types/components';
+import type { DatapackLocation, ProjectDatapack } from '@/types/datapack';
 
 /** The scope an import writes into, as the wizard recorded it. */
 export interface InstallTarget {
@@ -59,7 +60,7 @@ const SCOPE_KEYS: Record<string, { website: string; store: string }> = {
 };
 
 interface ProjectLike {
-    datapack?: { name: string; version: string };
+    datapack?: ProjectDatapack;
     componentSelections?: { backend?: string };
     componentConfigs?: ComponentConfigs;
 }
@@ -114,8 +115,8 @@ export function typesToInstall(declared: string[], stored: string[]): string[] {
 
 /** What the phase needs, injected so every branch is testable without a service. */
 export interface SampleDataDeps {
-    /** The types the service actually stores for this pack. */
-    inventory: (id: { name: string; version: string }) => Promise<string[]>;
+    /** The types the store that holds this pack actually stores for it. */
+    inventory: (pack: DatapackLocation) => Promise<string[]>;
     /**
      * Typed with the write client's OWN request shape, so the literal built
      * below is checked against it. This boundary shipped a wrong-shape request
@@ -173,8 +174,8 @@ async function runSampleDataJob(
     deps: SampleDataDeps,
     mode: 'install' | 'remove',
 ): Promise<SampleDataResult> {
-    const id = project.datapack;
-    if (!id) {
+    const recorded = project.datapack;
+    if (!recorded) {
         return { ran: false, skipped: true, reason: 'This project chose no sample data.' };
     }
 
@@ -198,8 +199,12 @@ async function runSampleDataJob(
         };
     }
 
+    // The identity alone, and the store beside it: the request's `id` is a pair, and a
+    // recorded pack may also name the pack it was made from, which is not the one to install.
+    const id = { name: recorded.name, version: recorded.version };
+    const source = recorded.store;
     try {
-        const stored = await deps.inventory(id);
+        const stored = await deps.inventory({ ...id, ...(source ? { store: source } : {}) });
         const dataTypes = typesToInstall(stored, stored);
         if (dataTypes.length === 0) {
             return {
@@ -212,11 +217,13 @@ async function runSampleDataJob(
         // The REAL request shape: `target` is nested. An earlier version flattened
         // websiteCode/storeCode to the top level — a shape the client does not
         // accept, which the test agreed with because the test invented it too.
-        const request = {
+        const request: ImportRequest = {
             id,
             commerceInstance,
             dataTypes,
             target,
+            // Absent for the Data Installer, as every request before the store was recorded.
+            ...(source === 'library' ? { source } : {}),
         };
         const start = mode === 'remove' ? deps.startDelete : deps.startImport;
         if (!start) {

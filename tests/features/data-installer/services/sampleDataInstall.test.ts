@@ -184,6 +184,33 @@ describe('installSampleData', () => {
         );
     });
 
+    // The store travels with the pack (research project-export-datapacks, 2026-10-29): a
+    // library pack asked of the service was read as missing, and the install failed.
+    it('installs a library pack from the library, and reads its inventory there', async () => {
+        const d = deps();
+        const recorded = { name: 'acme-demo-1a2b3c', version: '20261029-1000', store: 'library' as const, origin: { name: 'bodea', version: 'main' } };
+
+        await installSampleData(project({ datapack: recorded }), d);
+
+        expect(d.inventory).toHaveBeenCalledWith({ name: 'acme-demo-1a2b3c', version: '20261029-1000', store: 'library' });
+        expect(d.startImport).toHaveBeenCalledWith({
+            id: { name: 'acme-demo-1a2b3c', version: '20261029-1000' },
+            commerceInstance: 'TENANT123',
+            dataTypes: ['categories', 'products'],
+            target: { websiteCode: 'base', storeCode: 'default' },
+            source: 'library',
+        });
+    });
+
+    it('reads a pack recorded with no store from the Data Installer, as before', async () => {
+        const d = deps();
+
+        await installSampleData(project(), d);
+
+        expect(d.inventory).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
+        expect(d.startImport.mock.calls[0][0]).not.toHaveProperty('source');
+    });
+
     /** Shared with the modal's derivation, so both resolve the same instance. */
     it('skips a project that names no Commerce instance', async () => {
         const d = deps();

@@ -9,6 +9,8 @@
  * - EDS storefronts have explicit contentSource for DA.live content
  */
 
+import type { DatapackReference } from './datapack';
+
 /**
  * GitOptions - Git clone options for storefront source
  */
@@ -222,12 +224,6 @@ export type AddonConfig = 'required' | 'optional' | 'excluded';
  * Value: availability string ('required' | 'optional' | 'excluded')
  */
 export type Addons = Record<string, AddonConfig>;
-
-/** A datapack a demo expects (D26). `version` absent means the catalog's default rule. */
-export interface DatapackReference {
-    name: string;
-    version?: string;
-}
 
 /** A custom App Builder app by GitHub coordinates, the `appBuilderComponentSources` shape. */
 export interface CustomIntegrationSource {

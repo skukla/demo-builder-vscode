@@ -34,12 +34,19 @@ import type { HandlerContext } from '@/types/handlers';
 export interface CloudCleanupRequest {
     deleteGithubRepo?: boolean;
     deleteDaLiveSite?: boolean;
+    /** Also delete the project's own library pack (step 07). */
+    deletePack?: boolean;
 }
 
 /** What the two boxes end up at, and why, so a tool can answer honestly. */
 export interface CloudCleanupChoice {
     deleteGithubRepo: boolean;
     deleteDaLiveSite: boolean;
+    /**
+     * Set only when the call asked for it and the setting allows it. `deleteAll` never
+     * ticks it: the button never deletes a pack without the SC ticking it either.
+     */
+    deletePack?: true;
     /** Set when `cleanupBehavior` overrode what was asked for. */
     refusedBySetting?: string;
 }
@@ -105,7 +112,7 @@ export function resolveCloudCleanup(request: CloudCleanupRequest): CloudCleanupC
         .get<string>('cleanupBehavior', 'ask');
 
     if (behavior === 'localOnly') {
-        const asked = request.deleteGithubRepo || request.deleteDaLiveSite;
+        const asked = request.deleteGithubRepo || request.deleteDaLiveSite || request.deletePack;
         return {
             deleteGithubRepo: false,
             deleteDaLiveSite: false,
@@ -115,16 +122,19 @@ export function resolveCloudCleanup(request: CloudCleanupRequest): CloudCleanupC
         };
     }
 
+    const pack = request.deletePack === true ? { deletePack: true as const } : {};
     if (behavior === 'deleteAll') {
         return {
             deleteGithubRepo: request.deleteGithubRepo ?? true,
             deleteDaLiveSite: request.deleteDaLiveSite ?? true,
+            ...pack,
         };
     }
 
     return {
         deleteGithubRepo: request.deleteGithubRepo === true,
         deleteDaLiveSite: request.deleteDaLiveSite === true,
+        ...pack,
     };
 }
 

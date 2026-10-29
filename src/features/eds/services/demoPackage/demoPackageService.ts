@@ -34,6 +34,7 @@ import { lookupComponentConfigValue } from '@/features/components/services/envVa
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import { readBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import type { Project } from '@/types/base';
+import type { DatapackAvailability, DatapackLocation } from '@/types/datapack';
 import type { DaLiveContentSource, DemoIntegrations, DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 import { SHARED_DEMO_FILE_VERSION, type SharedDemoBuiltWith, type SharedDemoDescription } from '@/types/projectFile';
@@ -156,7 +157,9 @@ export function describeProject(
         ...(configDefaults ? { configDefaults } : {}),
         ...(pkg?.configFlags && Object.keys(pkg.configFlags).length ? { configFlags: pkg.configFlags } : {}),
         ...(requiresMesh !== undefined ? { requiresMesh } : {}),
-        ...(project.datapack ? { datapack: { name: project.datapack.name, version: project.datapack.version } } : {}),
+        // Whole: the store says where a colleague's creation reads it, and the pack it was made
+        // from is what they get if they cannot read this one (step 07).
+        ...(project.datapack ? { datapack: project.datapack } : {}),
         ...(integrations ? { integrations } : {}),
         ...(blockLibraries?.length ? { blockLibraries } : {}),
         contentSource,
@@ -226,8 +229,11 @@ export interface PackageCheck {
 export interface PackageCheckDeps {
     repoOps: Pick<GitHubRepoOperations, 'getRepository'>;
     fetchImpl?: typeof fetch;
-    /** Is this datapack in the datapack service? Undefined when the service cannot be asked. */
-    datapackExists?: (name: string) => Promise<boolean | undefined>;
+    /**
+     * Where a colleague would find this datapack, asked of both stores by name AND version.
+     * Undefined when a store could not be asked.
+     */
+    datapackAvailability?: (pack: DatapackLocation) => Promise<DatapackAvailability | undefined>;
     logger: Logger;
 }
 
@@ -246,6 +252,22 @@ export async function resolveOwnContentSource(
         indexFound: index.found,
         ...(index.pageCount !== undefined ? { pageCount: index.pageCount } : {}),
     };
+}
+
+/** What colleagues get of the sample data, by where the pack is; nothing when it could not be asked. */
+function datapackCheckFor(name: string, where: DatapackAvailability | undefined): PackageCheck | undefined {
+    if (where === undefined) return undefined;
+    if (where === 'installer' || where === 'library-shared') {
+        return { id: 'datapack', ok: true, message: `Colleagues can install the same sample data (${name}).` };
+    }
+    if (where === 'library-yours-only') {
+        return {
+            id: 'datapack',
+            ok: false,
+            message: `The sample data this demo uses (${name}) is in your datapack library, where colleagues can't read it yet.`,
+        };
+    }
+    return { id: 'datapack', ok: false, message: `The sample data this demo uses (${name}) isn't available to colleagues yet.` };
 }
 
 /**
@@ -286,22 +308,10 @@ export async function packageChecks(
                   action: 'republish',
               },
     );
-    if (project.datapack && deps.datapackExists) {
-        const exists = await deps.datapackExists(project.datapack.name);
-        if (exists === false) {
-            checks.push({
-                id: 'datapack',
-                ok: false,
-                message: `The sample data this demo uses (${project.datapack.name}) isn't available to colleagues yet.`,
-            });
-        } else if (exists === true) {
-            checks.push({
-                id: 'datapack',
-                ok: true,
-                message: `Colleagues can install the same sample data (${project.datapack.name}).`,
-            });
-        }
-    }
+    const datapackCheck = project.datapack && deps.datapackAvailability
+        ? datapackCheckFor(project.datapack.name, await deps.datapackAvailability(project.datapack))
+        : undefined;
+    if (datapackCheck) checks.push(datapackCheck);
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
         if (state.kind !== 'integration' || getAppBuilderComponentEntry(id) || !state.source) continue;
         const fullName = `${state.source.owner}/${state.source.repo}`;

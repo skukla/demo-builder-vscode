@@ -19,6 +19,7 @@ import { showWebviewQuickPick } from '@/core/utils/quickPickUtils';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
 import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
+import { recordSharedInFile, type SharedInFilesMemento } from '@/features/data-installer/services/sharedInFiles';
 import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -300,6 +301,8 @@ export async function exportProjectSettings(
         await vscode.workspace.fs.writeFile(saveUri, Buffer.from(content, 'utf8'));
 
         context.logger.info(`Exported settings to: ${saveUri.fsPath}`);
+        // The file carries a library pack by reference: deleting it later warns (step 07).
+        await recordSharedInFile(context.context.globalState, project);
 
         // A plain message, not a progress bar with a sleep in it: nothing is in
         // progress, and the SC dismisses it when they have read it.
@@ -340,11 +343,12 @@ export interface ExportSettingsToFileResult {
  *
  * The target must resolve INSIDE the project directory; traversal or writes to an
  * arbitrary location are rejected by {@link assertPathInsideSync}. Default target:
- * `<project>/<name>.project.demo-builder.json`.
+ * `<project>/<name>.project.demo-builder.json`. Given VS Code's global state, it
+ * remembers a library pack went out in the file (step 07, `sharedInFiles.ts`).
  */
 export async function exportProjectSettingsToFile(
     project: Project,
-    opts: { path?: string } = {},
+    opts: { path?: string; globalState?: SharedInFilesMemento } = {},
 ): Promise<ExportSettingsToFileResult> {
     const extension = vscode.extensions.getExtension('AdobeDemoSystem.adobe-demo-builder');
     const extensionVersion = extension?.packageJSON?.version || 'unknown';
@@ -352,6 +356,7 @@ export async function exportProjectSettingsToFile(
 
     const target = resolveExportTarget(project, opts.path);
     await writeFileAtomic(target, JSON.stringify(settings, null, 2));
+    if (opts.globalState) await recordSharedInFile(opts.globalState, project);
 
     return {
         path: target,

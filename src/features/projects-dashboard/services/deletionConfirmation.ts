@@ -2,10 +2,12 @@
  * The question a project delete asks before anything is removed.
  *
  * A plain project gets one modal. An EDS project is asked which of the things it
- * created online (the GitHub repository, the DA.live site) should go too — in the
- * screen's progress modal when a screen started the delete, else a QuickPick with
- * checkboxes. The `demoBuilder.cleanupBehavior` setting can answer for the SC
- * (`deleteAll`) or narrow it to the plain modal (`localOnly`).
+ * created online (the GitHub repository, the DA.live site) should go too, and a project
+ * with its own library pack (step 07) whether the pack goes — in the screen's progress
+ * modal when a screen started the delete, else a QuickPick with checkboxes. The
+ * `demoBuilder.cleanupBehavior` setting can answer for the SC (`deleteAll`) or narrow it
+ * to the plain modal (`localOnly`); neither deletes a pack, because keeping a pack is
+ * reversible and deleting one is not.
  *
  * Split from `projectDeletionService.ts` on 2026-10-09 (EDS-8). Nothing here
  * deletes anything: the answer is handed back, and the caller acts on it.
@@ -22,6 +24,8 @@ import type { Project } from '@/types/base';
 export interface CleanupOptions {
     deleteGitHubRepo: boolean;
     deleteDaLiveSite: boolean;
+    /** Also delete every version of the project's own library pack. Absent means keep it. */
+    deleteDatapack?: boolean;
     /** The project being deleted: it does not count as "another project on the repository". */
     projectPath?: string;
 }
@@ -55,11 +59,19 @@ async function confirmLocalOnly(project: Project): Promise<CleanupOptions | null
     return { deleteGitHubRepo: false, deleteDaLiveSite: false };
 }
 
+/** The things the SC may delete alongside the project. */
+type CleanupItemId = 'github' | 'daLive' | 'datapack';
+
 /**
  * One external resource the SC may delete alongside the project.
  */
 interface CleanupQuickPickItem extends vscode.QuickPickItem {
-    id: 'github' | 'daLive';
+    id: CleanupItemId;
+}
+
+/** The answer, from the rows the SC left ticked. */
+function answerFrom(ticked: (id: CleanupItemId) => boolean): CleanupOptions {
+    return { deleteGitHubRepo: ticked('github'), deleteDaLiveSite: ticked('daLive'), deleteDatapack: ticked('datapack') };
 }
 
 /**
@@ -70,9 +82,10 @@ async function askCleanupInModal(
     project: Project,
     items: CleanupQuickPickItem[],
 ): Promise<CleanupOptions | null> {
-    const labels: Record<CleanupQuickPickItem['id'], string> = {
+    const labels: Record<CleanupItemId, string> = {
         github: 'Also delete the GitHub repository',
         daLive: 'Also delete the DA.live site',
+        datapack: 'Also delete its pack',
     };
     const asked = await askForDetailsDuringOperation({
         message: `Delete "${project.name}"? Its files are removed from this machine. You can also delete what it created online.`,
@@ -86,10 +99,44 @@ async function askCleanupInModal(
         actions: ['Delete'],
     });
     if (asked.action !== 'Delete') return null;
-    return {
-        deleteGitHubRepo: asked.values.github === 'true',
-        deleteDaLiveSite: asked.values.daLive === 'true',
-    };
+    return answerFrom((id) => asked.values[id] === 'true');
+}
+
+/**
+ * One row per thing the project has that can go with it, all unticked: the repository,
+ * the DA.live site, then the demo's own pack.
+ */
+function cleanupItems(project: Project, edsMetadata: ReturnType<typeof extractEdsMetadata>): CleanupQuickPickItem[] {
+    const items: CleanupQuickPickItem[] = [];
+    if (edsMetadata?.githubRepo) {
+        items.push({
+            id: 'github',
+            label: '$(github) Delete Repository',
+            description: edsMetadata.githubRepo,
+            detail: '$(key) Sign-in required',
+            picked: false,
+        });
+    }
+    // DA.live site option (includes Helix unpublish)
+    if (edsMetadata?.daLiveOrg && edsMetadata?.daLiveSite) {
+        items.push({
+            id: 'daLive',
+            label: '$(file-text) Delete DA.live Site',
+            description: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
+            detail: '$(key) Sign-in required',
+            picked: false,
+        });
+    }
+    if (project.ownDatapack) {
+        items.push({
+            id: 'datapack',
+            label: '$(package) Delete Its Pack',
+            description: project.ownDatapack.displayName ?? project.ownDatapack.name,
+            detail: "Every version of this demo's pack in the datapack library",
+            picked: false,
+        });
+    }
+    return items;
 }
 
 /**
@@ -112,6 +159,11 @@ export async function showCleanupConfirmation(
     const config = vscode.workspace.getConfiguration('demoBuilder');
     const behavior = config.get<string>('cleanupBehavior', 'ask');
 
+    // deleteAll answers for what the project put ONLINE. A project with nothing there is
+    // still asked, and a pack is never deleted without the SC ticking it.
+    if (behavior === 'deleteAll' && !edsMetadata) {
+        return confirmLocalOnly(project);
+    }
     if (behavior === 'deleteAll') {
         // Auto-delete all available resources (auth is checked lazily during cleanup)
         return {
@@ -125,29 +177,7 @@ export async function showCleanupConfirmation(
         return confirmLocalOnly(project);
     }
 
-    const items: CleanupQuickPickItem[] = [];
-
-    // GitHub repository option
-    if (edsMetadata?.githubRepo) {
-        items.push({
-            id: 'github',
-            label: '$(github) Delete Repository',
-            description: edsMetadata.githubRepo,
-            detail: '$(key) Sign-in required',
-            picked: false,
-        });
-    }
-
-    // DA.live site option (includes Helix unpublish)
-    if (edsMetadata?.daLiveOrg && edsMetadata?.daLiveSite) {
-        items.push({
-            id: 'daLive',
-            label: '$(file-text) Delete DA.live Site',
-            description: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
-            detail: '$(key) Sign-in required',
-            picked: false,
-        });
-    }
+    const items = cleanupItems(project, edsMetadata);
 
     // If no external resources, skip the dialog and show standard confirmation
     if (items.length === 0) {
@@ -191,10 +221,7 @@ export async function showCleanupConfirmation(
             resolved = true;
             const selected = quickPick.selectedItems;
             quickPick.hide();
-            resolve({
-                deleteGitHubRepo: selected.some(i => i.id === 'github'),
-                deleteDaLiveSite: selected.some(i => i.id === 'daLive'),
-            });
+            resolve(answerFrom((id) => selected.some(i => i.id === id)));
         });
 
         // Escape = Cancel entirely (no deletion)

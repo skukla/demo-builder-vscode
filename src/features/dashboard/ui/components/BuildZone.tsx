@@ -67,6 +67,7 @@ export function BuildZone({
     canEdit,
     isMeshActionDisabled,
     dataInstallerAvailable,
+    ownDatapackName,
     handleEditProject,
     handleConfigure,
     handleOpenAemAssets,
@@ -77,6 +78,8 @@ export function BuildZone({
     canEdit: boolean;
     isMeshActionDisabled: boolean;
     dataInstallerAvailable?: boolean;
+    /** This demo's own pack, as the SC sees it named (step 07); absent when it has none. */
+    ownDatapackName?: string;
     handleOpenAemAssets: () => void;
     handleEditProject?: () => void;
     handleConfigure: () => void;
@@ -97,7 +100,7 @@ export function BuildZone({
             />
 
             {/* Datapacks — the global catalog, opened beside the dashboard. */}
-            {dataInstallerAvailable && <DataInstallerTile />}
+            {dataInstallerAvailable && <DataInstallerTile ownPackName={ownDatapackName} />}
 
             {/* AEM Assets (EDS-21) — where the SC gives the demo's products their
                 images. Every project type: the bound AEM is a Demo Builder

@@ -14,6 +14,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
+import { recordSharedInFile } from '@/features/data-installer/services/sharedInFiles';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { buildDemoBundle, defaultBundleName, type DemoBundleParts } from '@/features/eds/services/demoPackage/demoBundle';
 import {
@@ -68,7 +69,7 @@ function extensionVersion(): string {
 /** The setup part on its own is the settings file the projects list imports today. */
 async function setupOnly(context: HandlerContext, project: Project, providedPath: string | undefined): Promise<HandlerResponse> {
     if (!providedPath && context.panel) return exportProjectSettings(context, project);
-    const written = await exportProjectSettingsToFile(project, { path: providedPath });
+    const written = await exportProjectSettingsToFile(project, { path: providedPath, globalState: context.context.globalState });
     return { success: true, data: { path: written.path, fileCount: 1, parts: ['setup'] } satisfies ExportDemoBundleResult };
 }
 
@@ -113,6 +114,8 @@ export const handleExportDemoBundle: MessageHandler<ExportDemoBundleRequest> = a
         };
         const bundle = buildDemoBundle(bundleBaseName(project), parts);
         await fs.promises.writeFile(target, bundle.bytes);
+        // The setup part carries a library pack by reference, as the plain file does (step 07).
+        if (wantSetup) await recordSharedInFile(context.context.globalState, project);
         context.logger.info(`[Export] ${project.name}: bundle with ${bundle.parts.join(' + ')} (${bundle.fileCount} files) saved as ${target}`);
         return {
             success: true,

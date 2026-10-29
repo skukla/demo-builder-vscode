@@ -18,4 +18,11 @@ export const DATAPACK_STAGES = {
         expectation: 'Usually a few seconds',
         detail: 'The pack, as the store has it now',
     },
+    // "Also delete its pack" on a project delete (step 07): one library delete per version.
+    // FIRST ESTIMATE, NOT MEASURED.
+    deletingOwnPack: {
+        label: 'Deleting its pack',
+        expectation: 'Usually a few seconds',
+        detail: "This demo's pack in the library",
+    },
 } as const;

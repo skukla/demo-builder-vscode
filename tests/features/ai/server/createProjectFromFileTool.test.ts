@@ -32,6 +32,14 @@ import {
     storefrontSetup,
 } from './createProjectTool.testUtils';
 
+jest.mock('@/features/data-installer/services/recordedPack', () => ({
+    ...jest.requireActual('@/features/data-installer/services/recordedPack'),
+    checkRecordedPack: jest.fn(),
+}));
+import { checkRecordedPack } from '@/features/data-installer/services/recordedPack';
+
+const mockedCheck = checkRecordedPack as jest.MockedFunction<typeof checkRecordedPack>;
+
 const TOOL = 'create_project_from_file';
 
 /** What Export writes today: version 1, no `kind`. */
@@ -73,7 +81,7 @@ const V2_EDS: ProjectFile = {
     configs: {
         'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://accs.example/graphql' },
     },
-    datapack: { name: 'citisignal', version: '1.2.0' },
+    datapack: { name: 'acme-demo-1a2b3c', version: '20261029-183000', store: 'library' as const, origin: { name: 'citisignal', version: '1.2.0', store: 'installer' as const } },
 };
 
 let dir: string;
@@ -92,6 +100,7 @@ function toolServer() {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockedCheck.mockResolvedValue({ verdict: 'unknown' });
     defaultStorefrontSetup();
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-file-'));
 });
@@ -297,7 +306,8 @@ describe('create_project_from_file — an Edge Delivery file', () => {
         const state = capturedWizardState();
         expect(state.selectedBlockLibraries).toEqual(['isle5']);
         expect(state.customBlockLibraries).toEqual(V2_EDS.customBlockLibraries);
-        expect(state.datapack).toEqual({ name: 'citisignal', version: '1.2.0' });
+        // Whole: a library pack read back as a Data Installer one could not be installed.
+        expect(state.datapack).toEqual({ name: 'acme-demo-1a2b3c', version: '20261029-183000', store: 'library' as const, origin: { name: 'citisignal', version: '1.2.0', store: 'installer' as const } });
         expect(state.componentConfigs).toEqual(V2_EDS.configs);
     });
 
@@ -335,5 +345,39 @@ describe('create_project_from_file — the registered schema', () => {
 
         expect(def.needsAuth).toEqual(['github', 'dalive']);
         expect(def.annotations).toEqual({ readOnlyHint: false, destructiveHint: false });
+    });
+});
+
+// Step 07: the answer says plainly what happens to a pack that can't be read, before and after
+// confirm, from the same check the build acts on.
+describe('create_project_from_file — the datapack, said plainly', () => {
+    const FALLBACK_NOTE = "The acme-demo-1a2b3c pack this project uses can't be read: its owner has deleted it or not shared it. You can continue with CitiSignal, the pack it was made from; their changes won't be included.";
+
+    beforeEach(() => {
+        mockedCheck.mockResolvedValue({
+            verdict: 'fallback',
+            pack: { name: 'citisignal', version: '1.2.0', store: 'installer' },
+            displayName: 'CitiSignal',
+            note: FALLBACK_NOTE,
+        });
+    });
+
+    it('says it before confirm, having asked about the pack the file names', async () => {
+        const filePath = write('storefront.project.demo-builder.json', V2_EDS);
+
+        const res = await toolServer().call({ projectName: 'new-storefront', filePath, repoName: 'r', daLiveOrg: 'o', daLiveSite: 's' });
+
+        expect(mockedCheck).toHaveBeenCalledWith(expect.anything(), V2_EDS.datapack);
+        expect(res.datapackNote).toBe(FALLBACK_NOTE);
+        expect(executeProjectCreation).not.toHaveBeenCalled();
+    });
+
+    it("says nothing when the file names no datapack, and asks nothing", async () => {
+        const filePath = write('demo.json', V1_HEADLESS);
+
+        const res = await toolServer().call({ projectName: 'new-demo', filePath });
+
+        expect(res).not.toHaveProperty('datapackNote');
+        expect(mockedCheck).not.toHaveBeenCalled();
     });
 });

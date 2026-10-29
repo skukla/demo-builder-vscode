@@ -39,6 +39,13 @@ jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () =>
     generateAIContextFiles: (...args: unknown[]) => mockGenerateAIContextFiles(...args),
 }));
 
+// The demo's own pack follows a rename (step 07); its own suite is demoPackRename.test.ts,
+// and it reaches the datapack library, so every rename suite holds it here.
+export const mockFollowRenameIntoPack = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/projects-dashboard/services/demoPackRename', () => ({
+    followRenameIntoPack: (...args: unknown[]) => mockFollowRenameIntoPack(...args),
+}));
+
 // Below the factories on purpose: they hoist above it, so the subject binds to
 // the mocked modules. `import/first` is NOT a registered rule in
 // eslint.config.mjs — do not add a disable comment for it, that itself errors.
@@ -95,4 +102,5 @@ export function resetRenameMocks(): void {
     mockRename.mockReset().mockResolvedValue(undefined);
     mockValidateName.mockImplementation(() => undefined);
     mockGenerateAIContextFiles.mockReset().mockResolvedValue({ skills: [] });
+    mockFollowRenameIntoPack.mockReset().mockResolvedValue(undefined);
 }

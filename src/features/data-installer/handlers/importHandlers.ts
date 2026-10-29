@@ -27,19 +27,20 @@ import { selectedDatapackEngine } from '../services/dataInstallerConfig';
 import type { ImportRequest, ImportTarget } from '../services/dataInstallerWriteClient';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
-import type { DatapackId, DatapackStoreName, ImportJobRecord } from '../types';
-import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import type { ImportJobRecord } from '../types';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
 import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
 import { datapackZipHandlers } from './datapackZipHandlers';
 import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
+import { SERVICE_INSTALLS_ONLY_ITS_OWN, libraryReads } from './libraryReads';
 import { storeChangesHandlers } from './storeChangesHandlers';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { handleBackgroundOperation } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -272,9 +273,7 @@ async function engineFor(
         return {
             response: {
                 success: false,
-                error:
-                    'The Data Installer service installs only packs in its own catalog. Copy this one to the Data Installer first, ' +
-                    'or set demoBuilder.dataInstaller.engine to demo-builder.',
+                error: SERVICE_INSTALLS_ONLY_ITS_OWN,
             },
         };
     }
@@ -285,11 +284,7 @@ async function engineFor(
                 ...gate,
                 authManager: context.authManager,
                 secrets: context.context?.secrets,
-                libraryCatalog: async () => {
-                    const library = await resolveDataInstallerAccess(context, 'library');
-                    if (!library.ok) throw new Error('The datapack library is not reachable.');
-                    return library.client;
-                },
+                libraryCatalog: libraryReads(context),
             },
             (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
         ),

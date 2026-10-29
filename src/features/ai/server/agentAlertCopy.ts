@@ -108,8 +108,8 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_project: {
         action: 'Delete this project',
         consequence:
-            "Removes the project from this machine, and its GitHub repository and DA.live site if the agent asked or your cleanup setting deletes everything. This can't be undone.",
-        target: ['name'],
+            "Removes the project from this machine, its GitHub repository and DA.live site if the agent asked or your cleanup setting deletes everything, and its own pack in the datapack library only if the agent asked (Delete Pack below). This can't be undone.",
+        target: ['name', 'deletePack'],
         sessionGrant: false,
     },
     delete_github_repo: {
@@ -450,7 +450,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     save_store_changes_to_pack: {
         action: "Save the store's changes to a datapack",
         consequence:
-            "Saves this pack as the project's store now holds it, as a new version in the datapack library; the version installed is kept, and nothing in Commerce changes.",
+            "Saves this pack as the project's store now holds it, as a new version of this demo's own pack in the datapack library; the pack installed is kept as it is, and nothing in Commerce changes.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
@@ -459,6 +459,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         consequence:
             'Removes this pack and all its data from the datapack library. It cannot be brought back except by loading its file again.',
         target: ['datapackName', 'version'],
+        sessionGrant: false,
+    },
+    rename_datapack: {
+        action: 'Rename a library datapack',
+        consequence:
+            'Changes the name everyone sees for every version of this pack in the datapack library; its data is untouched.',
+        target: ['datapackName', 'displayName'],
         sessionGrant: false,
     },
     load_datapack_zip: {

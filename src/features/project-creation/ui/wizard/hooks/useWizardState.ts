@@ -10,6 +10,7 @@ import {
     getFirstEnabledStep,
 } from '../wizardHelpers';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import { recordableDatapack } from '@/types/datapack';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
 import type { GetComponentsDataResponse } from '@/types/webviewRequests';
@@ -123,10 +124,6 @@ function buildEditModeEdsConfig(
     };
 }
 
-/** A datapack creation can record: it records a name AND a version, so a file naming no version seeds none. */
-function recordableDatapack(datapack: ImportedSettings['datapack']): WizardState['datapack'] {
-    return datapack?.version ? { name: datapack.name, version: datapack.version } : undefined;
-}
 
 /**
  * The project's choices, seeded the same from every door that starts from saved

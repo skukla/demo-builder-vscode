@@ -20,7 +20,8 @@
  * @module features/data-installer/services/datapackCatalog
  */
 
-import type { DatapackStoreName, DatapackSummary } from '../types';
+import type { DatapackSummary } from '../types';
+import type { DatapackStoreName } from '@/types/datapack';
 
 /** Every version of one datapack, ready to render as a single card. */
 export interface DatapackGroup {

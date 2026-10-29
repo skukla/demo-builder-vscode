@@ -21,12 +21,12 @@
 
 import { Checkbox, DialogContainer, Radio, RadioGroup } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
-import type { DatapackStoreName } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import type { DatapackStoreName } from '@/types/datapack';
 
 /** What `open-datapack-zip` says about a file. */
 interface OpenedFile {

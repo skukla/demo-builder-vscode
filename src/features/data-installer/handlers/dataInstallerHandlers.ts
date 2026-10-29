@@ -24,15 +24,10 @@ import {
 } from '../services/dataInstallerConfig';
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
 import { orgNumberOf } from '../services/dataInstallerSignIn';
-import type {
-    CatalogPage,
-    DatapackId,
-    DatapackStoreName,
-    DatapackSummary,
-    OperationMode,
-    Page,
-} from '../types';
+import { sharedInFile, sharedInFileWarning } from '../services/sharedInFiles';
+import type { CatalogPage, DatapackSummary, OperationMode, Page } from '../types';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -420,7 +415,10 @@ export const dataInstallerHandlers = defineHandlers({
                           missingCount: 0,
                           requestedCount: 0,
                       };
-            return { detail, inventory };
+            // A library pack this SC shared in a project file: Remove says what deleting it does
+            // to anyone who has not created that project yet (step 07).
+            const shared = store === 'library' ? sharedInFile(context.context.globalState, id) : undefined;
+            return { detail, inventory, ...(shared ? { sharedInFile: sharedInFileWarning(shared) } : {}) };
         }, store);
     },
 

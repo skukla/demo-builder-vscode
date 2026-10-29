@@ -192,19 +192,12 @@
           "description": "The storefront row for a project built on an added demo (D2): the demo's description and its repository. Read before the catalog by `resolveStorefrontForProject`; absent for a project on a shipped brand."
         },
         "datapack": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "version": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "name",
-            "version"
-          ]
+          "$ref": "#/definitions/ProjectDatapack",
+          "description": "The datapack this demo's store holds, and the store that holds the pack.\n\nChosen on the wizard's Datapacks step and installed by creation itself (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data Installer screen and by \"Save store changes\", and cleared by a reset. `configure_project` records it without installing."
+        },
+        "ownDatapack": {
+          "$ref": "#/definitions/OwnDatapack",
+          "description": "This demo's own library pack, once its first save made one (step 07)."
         },
         "selectedStack": {
           "type": "string"
@@ -253,6 +246,32 @@
         },
         "pinned": {
           "type": "boolean"
+        },
+        "commerceConfigChange": {
+          "$ref": "#/definitions/CommerceConfigChangeRecord",
+          "description": "The values the settings held before `set_commerce_config`'s last write (AB-77), so the same tool can put them back (`undo: true`). Replaced by each write."
+        },
+        "demoPackage": {
+          "$ref": "#/definitions/SavedDemoPackage",
+          "description": "Share Demo's link save wrote the description file into this project's storefront repository: the blob sha GitHub answered (the proof the file is ours, so a hand edit is never clobbered and Remove takes out only what we wrote). Absent when the storefront is not a demo package."
+        },
+        "frontendEnvState": {
+          "type": "object",
+          "properties": {
+            "envVars": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "capturedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "envVars",
+            "capturedAt"
+          ]
         }
       }
     },
@@ -1428,12 +1447,45 @@
         },
         "version": {
           "type": "string"
+        },
+        "store": {
+          "$ref": "#/definitions/DatapackStoreName"
+        },
+        "origin": {
+          "$ref": "#/definitions/DatapackLocation"
         }
       },
       "required": [
         "name"
       ],
-      "description": "A datapack a demo expects (D26). `version` absent means the catalog's default rule."
+      "description": "The datapack a project, a project file or a shared demo names.\n\n`version` absent is the demo package's \"the catalog's default\" (D26); a project always records one (`ProjectDatapack`). `origin` is the pack this one was made from (step 07): a demo's own pack names the library pack it started as, so a colleague whose copy cannot read the demo's pack can carry on with that one."
+    },
+    "DatapackStoreName": {
+      "type": "string",
+      "enum": [
+        "installer",
+        "library"
+      ],
+      "description": "Which store holds a pack: the Data Installer service's catalog, or the team's datapack library, which answers the same routes at its own address."
+    },
+    "DatapackLocation": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "store": {
+          "$ref": "#/definitions/DatapackStoreName"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "description": "A pack and the store that holds it.\n\n`store` absent means the Data Installer: every reference written before the store was recorded is one of its packs or a library version nobody can tell apart, and the service is what those readers always asked (rule 3, no migration)."
     },
     "DemoIntegrations": {
       "type": "object",
@@ -1618,6 +1670,49 @@
       },
       "description": "Where a storefront's repository came from, as GitHub records it (EDS-13f decision 1). Both absent is the common case: a repository created empty and pushed, or reset onto a source, carries no record."
     },
+    "ProjectDatapack": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "store": {
+          "$ref": "#/definitions/DatapackStoreName"
+        },
+        "origin": {
+          "$ref": "#/definitions/DatapackLocation"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "description": "The pack a project holds: a reference whose version is known."
+    },
+    "OwnDatapack": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The pack's name in the library. Immutable there."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "What the SC sees it called, as last saved or renamed."
+        },
+        "renamed": {
+          "type": "boolean",
+          "description": "True once the SC renamed the pack themselves; until then its display name follows the project's."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "description": "This demo's own pack (step 07): the library pack every save from this project goes into, made at the first save. Never in a project file, so a copy or an import starts from the original's pack and makes its own at its first save."
+    },
     "CustomBlockLibrary": {
       "type": "object",
       "properties": {
@@ -1787,6 +1882,43 @@
         "prompt"
       ],
       "description": "AiPrompt - A user-saved AI prompt\n\nStorage is scope-routed by the `pinned` field. Pinned prompts persist in VS Code globalState under `demoBuilder.ai.globalPrompts` and appear in every project. Unpinned prompts persist in the current project's `.demo-builder.json` manifest under `Project.aiPrompts` and stay project-specific. Toggling pin moves the prompt across stores.\n\nLegacy data: prompts pinned before the global-pin feature shipped remain in their project's manifest until the user manually unpins then re-pins them — no automatic migration.\n\nArray order within either store is preserved; render-time pinned-first sort happens in the UI layer."
+    },
+    "CommerceConfigChangeRecord": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "string"
+        },
+        "previous": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CommerceConfigPrevious"
+          }
+        }
+      },
+      "required": [
+        "at",
+        "previous"
+      ],
+      "description": "What `set_commerce_config` recorded on the project (AB-77): the values the settings held before its last write. Replaced by the next write; removed by `undo: true`."
+    },
+    "SavedDemoPackage": {
+      "type": "object",
+      "properties": {
+        "fileSha": {
+          "type": "string",
+          "description": "Blob sha of the description file as we last wrote it."
+        },
+        "savedAt": {
+          "type": "string",
+          "description": "ISO date of the last save."
+        }
+      },
+      "required": [
+        "fileSha",
+        "savedAt"
+      ],
+      "description": "What Share Demo's link save left behind, so it can be undone exactly."
     }
   }
 }

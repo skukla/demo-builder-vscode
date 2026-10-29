@@ -14,11 +14,11 @@
  * @module features/data-installer/services/datapackStoreWriter
  */
 
-import type { DatapackId } from '../types';
 import { actionUrl } from './dataInstallerConfig';
 import { DataInstallerApiError } from './dataInstallerErrors';
 import { type DataInstallerSignIn, signInHeaders } from './dataInstallerSignIn';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { DatapackId } from '@/types/datapack';
 
 /**
  * The store's address and the caller's sign-in. The sign-in carries the org, sent as
@@ -123,9 +123,29 @@ export class DatapackStoreWriter {
         return 'deleted';
     }
 
-    private async post(route: string, body: Record<string, unknown>): Promise<Response> {
+    /**
+     * Change one version's display name: the name an SC sees. The pack's `datapack_name` is
+     * immutable in the library, so this is what renaming a pack changes.
+     *
+     * Library only: its `update-datapack-metadata` lets only the pack's owner change it.
+     *
+     * @returns `updated`, or `not-found` when the store holds no pack of the caller's by that id
+     * @throws DataInstallerApiError for any other refusal
+     */
+    async updateDisplayName(id: DatapackId, displayName: string): Promise<'updated' | 'not-found'> {
+        const response = await this.post(
+            'update-datapack-metadata',
+            { datapack_name: id.name, version: id.version, display_name: displayName },
+            'PUT',
+        );
+        if (response.status === 404) return 'not-found';
+        await this.check(response, 'update-datapack-metadata');
+        return 'updated';
+    }
+
+    private async post(route: string, body: Record<string, unknown>, method: 'POST' | 'PUT' = 'POST'): Promise<Response> {
         const response = await this.fetchImpl(actionUrl(this.deps.baseUrl, route), {
-            method: 'POST',
+            method,
             headers: {
                 ...(await signInHeaders(this.deps)),
                 'Content-Type': 'application/json',

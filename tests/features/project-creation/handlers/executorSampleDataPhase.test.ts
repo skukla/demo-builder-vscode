@@ -46,8 +46,11 @@ jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
     ...jest.requireActual('@/features/data-installer/services/sampleDataInstall'),
     installSampleData: jest.fn(),
 }));
+jest.mock('@/features/data-installer/services/arrivingPack', () => ({ settleArrivingPack: jest.fn() }));
+import { settleArrivingPack } from '@/features/data-installer/services/arrivingPack';
 
 const mockedInstall = installSampleData as jest.MockedFunction<typeof installSampleData>;
+const mockedSettle = settleArrivingPack as jest.MockedFunction<typeof settleArrivingPack>;
 
 function makeContext() {
     return createMockHandlerContext({
@@ -79,6 +82,48 @@ function makeProject(): Project {
 beforeEach(() => {
     jest.clearAllMocks();
     mockedInstall.mockResolvedValue({ ran: true, outcome: 'success', perType: {} });
+    mockedSettle.mockResolvedValue({ changed: false });
+});
+
+// Step 07: before installing, a pack that cannot be read is replaced by the pack it was made
+// from, or by none, and a colleague's own pack is copied in; the build says which and saves it.
+describe('executeSampleDataPhase — the recorded pack, settled first', () => {
+    it('installs the pack the settle step chose, saying why, and saves the project', async () => {
+        mockedSettle.mockImplementation(async (project) => {
+            project.datapack = { name: 'bodea', version: '1.0.0', store: 'installer' };
+            return { changed: true, note: 'The acme pack this project uses can\'t be read.' };
+        });
+        const context = makeContext();
+        const project = makeProject();
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(context, project, progress);
+
+        expect(progress).toHaveBeenNthCalledWith(1, OPERATION_STAGES.installingDatapack.label, 92, 'The acme pack this project uses can\'t be read.');
+        expect(context.stateManager.saveProject).toHaveBeenCalledWith(expect.objectContaining({ datapack: { name: 'bodea', version: '1.0.0', store: 'installer' } }));
+        expect(mockedInstall).toHaveBeenCalledWith(expect.objectContaining({ datapack: { name: 'bodea', version: '1.0.0', store: 'installer' } }), expect.any(Object));
+    });
+
+    it('installs nothing when the settle step found nothing to install', async () => {
+        mockedSettle.mockImplementation(async (project) => {
+            project.datapack = undefined;
+            return { changed: true, note: 'Created without sample data.' };
+        });
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenCalledWith(OPERATION_STAGES.installingDatapack.label, 92, 'Created without sample data.');
+        expect(mockedInstall).not.toHaveBeenCalled();
+    });
+
+    it('carries on to the install when the settle step itself blows up', async () => {
+        mockedSettle.mockRejectedValue(new Error('unexpected'));
+
+        await executeSampleDataPhase(makeContext(), makeProject(), jest.fn());
+
+        expect(mockedInstall).toHaveBeenCalled();
+    });
 });
 
 describe('executeSampleDataPhase', () => {

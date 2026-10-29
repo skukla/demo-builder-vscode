@@ -145,17 +145,18 @@ describe('handleGetDemoPackagePreview', () => {
         expect(preview.draft.name).toBe('Bodea');
     });
 
+    // By name AND version, in the store the project records (the Data Installer here): the
+    // version's own detail is what is read, never a list by name.
     it('confirms the datapack when the service can be asked, without a panel', async () => {
-        mockAccess.mockResolvedValue({
-            ok: true,
-            client: { findDatapacks: jest.fn().mockResolvedValue({ items: [{ id: { name: 'bodea', version: '1' } }] }) },
-        });
+        const getDatapackDetail = jest.fn().mockResolvedValue({ id: { name: 'bodea', version: '1' }, displayName: 'Bodea', shared: true, dataTypes: [], art: {} });
+        mockAccess.mockResolvedValue({ ok: true, client: { getDatapackDetail } });
         const { context } = contextFor(edsProject({ datapack: { name: 'bodea', version: '1' } }));
         const preview = (await handleGetDemoPackagePreview(context)).data as DemoPackagePreview;
+        expect(getDatapackDetail).toHaveBeenCalledWith({ name: 'bodea', version: '1' });
         expect(preview.checks.find((c) => c.id === 'datapack')).toMatchObject({ ok: true });
         expect(preview.onList).toBe(false);
         // Asked with no panel: a preview may never prompt for a sign-in.
-        expect(mockAccess).toHaveBeenCalledWith(expect.objectContaining({ panel: undefined }));
+        expect(mockAccess).toHaveBeenCalledWith(expect.objectContaining({ panel: undefined }), 'installer');
     });
 });
 

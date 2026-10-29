@@ -9,11 +9,11 @@
  * @module features/data-installer/services/datapackTransfer
  */
 
-import type { DatapackId, DatapackStoreName } from '../types';
 import type { DataInstallerClient } from './dataInstallerClient';
 import { DataInstallerApiError } from './dataInstallerErrors';
 import type { DatapackStoreWriter } from './datapackStoreWriter';
 import type { DatapackFile } from './datapackZip';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** A pack that cannot be saved as it stands, in words an SC can act on. */
 export class DatapackTransferError extends Error {

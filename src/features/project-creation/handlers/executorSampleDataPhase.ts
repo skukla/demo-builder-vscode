@@ -30,12 +30,21 @@ import type { HandlerContext } from '@/types/handlers';
  *
  * Silence would be the worse failure — the user asked for a pack and has no
  * other way to learn it did not land — so every outcome says something.
+ *
+ * **The recorded pack is settled first** (step 07, `settleArrivingPack`): a pack an
+ * imported or copied project names that cannot be read is replaced by the pack it was
+ * made from, or by none, and a colleague's own demo pack is copied into this SC's
+ * library; the line says which, and the project records the change.
  */
 export async function executeSampleDataPhase(
     context: HandlerContext,
     project: import('@/types/base').Project,
     progressTracker: ProgressTracker,
 ): Promise<void> {
+    if (!project.datapack) {
+        return;
+    }
+    await settleRecordedPack(context, project, progressTracker);
     const chosen = project.datapack;
     if (!chosen) {
         return;
@@ -81,6 +90,26 @@ export async function executeSampleDataPhase(
             96,
             `Datapack could not be installed \u2014 ${reason}`,
         );
+    }
+}
+
+/** Settle the recorded pack before the install. Never throws: the install then runs as recorded. */
+async function settleRecordedPack(
+    context: HandlerContext,
+    project: import('@/types/base').Project,
+    progressTracker: ProgressTracker,
+): Promise<void> {
+    try {
+        const { settleArrivingPack } = await import('@/features/data-installer/services/arrivingPack');
+        const { arrivalDepsFor } = await import('@/features/data-installer/handlers/recordedPackHandlers');
+        const arrival = await settleArrivingPack(project, arrivalDepsFor(context));
+        if (arrival.note) {
+            context.logger.info(`[Sample Data] ${arrival.note}`);
+            progressTracker(OPERATION_STAGES.installingDatapack.label, 92, arrival.note);
+        }
+        if (arrival.changed) await context.stateManager.saveProject(project);
+    } catch (error) {
+        context.logger.warn(`[Sample Data] The recorded pack could not be checked, installing it as recorded: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 

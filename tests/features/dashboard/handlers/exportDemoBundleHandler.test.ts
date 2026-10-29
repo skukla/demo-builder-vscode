@@ -12,6 +12,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import { handleExportDemoBundle, NO_STOREFRONT_TO_BUNDLE, NOTHING_TICKED } from '@/features/dashboard/handlers/exportDemoBundleHandler';
+import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { exportProjectSettings, exportProjectSettingsToFile } from '@/features/projects-dashboard/services/settingsTransferService';
 import type { Project } from '@/types/base';
@@ -91,8 +92,9 @@ describe('handleExportDemoBundle', () => {
         expect(mockSettingsDialog).toHaveBeenCalledTimes(1);
         expect(fromDialog).toMatchObject({ success: true });
 
-        const headless = await handleExportDemoBundle(contextFor(edsProject(dir), false), { setup: true, storefront: false, path: 'out.json' });
-        expect(mockSettingsFile).toHaveBeenCalledWith(expect.anything(), { path: 'out.json' });
+        const agent = contextFor(edsProject(dir), false);
+        const headless = await handleExportDemoBundle(agent, { setup: true, storefront: false, path: 'out.json' });
+        expect(mockSettingsFile).toHaveBeenCalledWith(expect.anything(), { path: 'out.json', globalState: agent.context.globalState });
         expect(headless).toEqual({ success: true, data: { path: '/p/kukla-bodea.project.demo-builder.json', fileCount: 1, parts: ['setup'] } });
     });
 
@@ -119,6 +121,20 @@ describe('handleExportDemoBundle', () => {
         expect(JSON.stringify(setup)).not.toContain('fake-test-pw-not-a-secret');
         const description = JSON.parse(written.readAsText('kukla-bodea-demo-bundle/storefront/demo.demo-builder.json'));
         expect(description).toMatchObject({ kind: 'demo', name: 'Bodea', contentSource: { org: 'skukla', site: 'kukla-bodea' } });
+    });
+
+    // Step 07: the bundle's setup part carries a library pack by reference, as the plain file does.
+    it('remembers a library pack went out in the bundle, and not when the setup part was left out', async () => {
+        const pack = { name: 'acme-1a2b3c', version: '20261029-183005', store: 'library' as const };
+        const withSetup = contextFor(edsProject(dir, { datapack: pack }), false);
+        await handleExportDemoBundle(withSetup, undefined);
+        expect(withSetup.context.globalState.update).toHaveBeenCalledWith(SHARED_IN_FILES_KEY, {
+            'acme-1a2b3c@20261029-183005': { at: expect.any(String) },
+        });
+
+        const storefrontOnly = contextFor(edsProject(dir, { datapack: pack }), false);
+        await handleExportDemoBundle(storefrontOnly, { setup: false });
+        expect(storefrontOnly.context.globalState.update).not.toHaveBeenCalled();
     });
 
     it('with no panel writes <project>-demo-bundle.zip inside the project directory, and keeps a given path inside it', async () => {

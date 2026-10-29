@@ -13,7 +13,6 @@
  * @module features/data-installer/services/demoBuilderEngine/runPack
  */
 
-import type { DatapackId } from '../../types';
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
 import { installAttributes, parseAttributeRows } from './attributesKind';
 import { installCategories, parseCategoryPack } from './categoriesKind';
@@ -38,6 +37,7 @@ import {
     parseStockSourceLinks,
     parseStocks,
 } from './stockKinds';
+import type { DatapackId } from '@/types/datapack';
 
 /** A pack's rows, by data kind, as its items hold them. */
 export type PackItems = Record<string, unknown>;

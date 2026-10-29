@@ -117,7 +117,7 @@ export interface ArmedQuickPick {
 export function armQuickPick(
     gesture: Gesture,
     /** Which resource rows the user leaves ticked when they press Enter. */
-    keep: Array<'github' | 'daLive'> = ['github', 'daLive']
+    keep: Array<'github' | 'daLive' | 'datapack'> = ['github', 'daLive']
 ): ArmedQuickPick {
     const handlers: Record<string, () => void> = {};
     let selectedAtShow: Array<{ id: string }> = [];
@@ -142,7 +142,7 @@ export function armQuickPick(
                 // Untick whatever `keep` leaves out — the production code reads
                 // `selectedItems`, so this IS the user's choice.
                 pick.selectedItems = pick.items.filter((i) =>
-                    keep.includes(i.id as 'github' | 'daLive')
+                    keep.includes(i.id as 'github' | 'daLive' | 'datapack')
                 );
                 handlers.accept?.();
                 // VS Code hides the dialog after an accept. A second settle here

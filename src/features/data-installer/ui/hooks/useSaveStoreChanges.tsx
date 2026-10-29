@@ -12,10 +12,10 @@
  */
 
 import React, { useCallback } from 'react';
-import type { DatapackId, DatapackStoreName } from '../../types';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { DATAPACK_SAVE_OPERATION_ID } from '@/core/utils/operationIds';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import type { SaveStoreChangesRequest } from '@/types/webviewRequests';
 
 /** The save's start, and the window to mount. */

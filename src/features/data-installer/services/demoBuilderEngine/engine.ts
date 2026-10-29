@@ -16,7 +16,7 @@
  */
 
 import * as crypto from 'crypto';
-import type { DataTypeStatus, DatapackId, DatapackStoreName, ImportStart, ValidationResult } from '../../types';
+import type { DataTypeStatus, ImportStart, ValidationResult } from '../../types';
 import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient';
 import type { DatapackEngine } from '../datapackEngine';
 import { type RecordFiles, nodeRecordFiles, openInstallRecord } from './installRecord';
@@ -26,6 +26,7 @@ import { keptLine } from './repeatInstall';
 import { type PackItems, installPack, removePack, unsupportedKinds } from './runPack';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** What this engine needs from the project it installs into. */
 export interface DemoBuilderEngineDeps {

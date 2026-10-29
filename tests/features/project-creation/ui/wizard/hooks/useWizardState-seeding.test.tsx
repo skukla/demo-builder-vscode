@@ -448,3 +448,22 @@ describe('a saved project the build cannot resolve still reaches the config buil
         expect(warn).not.toHaveBeenCalled();
     });
 });
+
+// A copied or imported project's pack is seeded whole: the store it lives in and the pack it
+// was made from say where creation installs it from (research project-export-datapacks).
+describe('the datapack an imported or copied project seeds', () => {
+    const LIBRARY_PACK = {
+        name: 'acme-demo-1a2b3c',
+        version: '20261029-183000',
+        store: 'library' as const,
+        origin: { name: 'bodea', version: 'main' },
+    };
+
+    it('keeps the store and the origin', () => {
+        expect(stateFor({ importedSettings: { datapack: LIBRARY_PACK } }).datapack).toEqual(LIBRARY_PACK);
+    });
+
+    it('seeds none for a pack with no version, rather than guess one', () => {
+        expect(stateFor({ importedSettings: { datapack: { name: 'bodea' } } }).datapack).toBeUndefined();
+    });
+});

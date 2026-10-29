@@ -15,6 +15,7 @@
 import {
     renameHandlerContext,
     mockAccess,
+    mockFollowRenameIntoPack,
     mockGenerateAIContextFiles,
     mockRename,
     mockValidateName,
@@ -30,6 +31,28 @@ beforeEach(() => {
 });
 
 describe('renameProjectCore', () => {
+    // Step 07: the demo's own pack takes the project's new name, after the rename is saved.
+    it("hands the renamed project to the pack's rename once the rename is saved", async () => {
+        const project = projectToRename({ ownDatapack: { name: 'old-name-1a2b3c', displayName: 'old-name' } });
+        const context = renameHandlerContext();
+
+        await renameProjectCore(context, project, 'Acme Q4');
+
+        expect(mockFollowRenameIntoPack).toHaveBeenCalledWith(context, project);
+        expect(mockFollowRenameIntoPack.mock.calls[0][1].title).toBe('Acme Q4');
+        expect((context.stateManager.saveProject as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+            mockFollowRenameIntoPack.mock.invocationCallOrder[0],
+        );
+    });
+
+    it('does not touch the pack when the rename is refused', async () => {
+        const context = renameHandlerContext();
+
+        await renameProjectCore(context, projectToRename(), '   ');
+
+        expect(mockFollowRenameIntoPack).not.toHaveBeenCalled();
+    });
+
     // The message matters: whitespace also normalises to an empty slug, so both
     // guards refuse the same input and only the wording says which one fired.
     it('should reject an empty name', async () => {

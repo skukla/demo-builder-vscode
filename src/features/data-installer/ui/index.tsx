@@ -37,6 +37,8 @@ import '@/core/ui/styles/step-scaffold.css';
 import '@/core/ui/styles/shared-ui.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
+// .inline-rename-* — the pack flyout renames the SC's own library pack in place (step 07).
+import '@/core/ui/styles/inline-controls.css';
 // .work-row-* and .checkbox-row-* — the house progress window's rows, which "Save store changes
 // to this pack" opens (datapack-engine step 05).
 import '@/core/ui/styles/checkbox-row.css';

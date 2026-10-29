@@ -4,10 +4,10 @@
  * - **What installing again would change** (`previewChanges`): for each kind, how many things
  *   this engine made would be brought up to the pack, taken out, or kept because the SC changed
  *   them, and how many rows are new, with a few names each. Reads only.
- * - **Save store changes to this pack** (`saveStoreChanges`): the store's copy of the pack
- *   (`capture.ts`: what the install record lists, and what the installed version's own rows name)
- *   written into the library as a NEW version; the version installed is never
- *   written over, so the save is undone by deleting the new one. The install record then moves
+ * - **Save store changes** (`saveStoreChanges`): the store's copy of the pack (`capture.ts`:
+ *   what the install record lists, and what the installed version's own rows name) written
+ *   into the library as a new version of the demo's OWN pack (step 07, `demoPack.ts`); the pack
+ *   installed is never written over, so the save is undone by deleting the new version. The install record then moves
  *   onto the new version, hashed afresh, so the store and it start out as one another.
  *
  * Both open the same read access the engine installs with: the project's own signed Commerce
@@ -16,11 +16,10 @@
  * @module features/data-installer/services/demoBuilderEngine/storeChanges
  */
 
-import type { DatapackId, DatapackStoreName } from '../../types';
 import type { PackWriteOutcome } from '../datapackTransfer';
 import type { DatapackFile } from '../datapackZip';
 import { loadStoreSets } from './attributeSetsKind';
-import { capturePack, nextVersion } from './capture';
+import { capturePack } from './capture';
 import {
     type CreatedObject,
     type RecordFiles,
@@ -41,6 +40,7 @@ import { onceInventory, readProducts } from './storeCopies';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { Inventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** What both actions need: the project's store, where its packs are read, and its path. */
 export interface StoreChangesDeps {
@@ -199,11 +199,14 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
  * Installer. A save that cannot read them stops, rather than save a version missing the pack's
  * products the store already had.
  */
-async function readInstalled(deps: StoreChangesDeps, target: { pack: DatapackId; source?: DatapackStoreName }): Promise<Record<string, unknown>> {
+async function readInstalled(
+    deps: StoreChangesDeps,
+    target: { pack: DatapackId; source?: DatapackStoreName },
+): Promise<{ rows: Record<string, unknown>; source: DatapackStoreName }> {
     const stores: DatapackStoreName[] = target.source ? [target.source] : ['library', 'installer'];
     for (const source of stores) {
         try {
-            return await deps.readPack(target.pack, source);
+            return { rows: await deps.readPack(target.pack, source), source };
         } catch (error) {
             deps.log(`could not read ${labelPack(target.pack)} from the ${source}: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -213,12 +216,20 @@ async function readInstalled(deps: StoreChangesDeps, target: { pack: DatapackId;
     );
 }
 
+/** Where a save writes: the demo's own pack, at a new version, and what the SC sees it called. */
+export interface SaveAs {
+    id: DatapackId;
+    displayName: string;
+}
+
 /** What a save did. */
 export interface SaveResult {
     /** The new version, now in the library and on the install record. */
     saved: DatapackId;
     /** How many of each kind it holds. */
     counts: Record<string, number>;
+    /** The store the installed version's own rows were read from. */
+    readFrom: DatapackStoreName;
     /** The one sentence the SC reads. */
     sentence: string;
 }
@@ -233,7 +244,7 @@ export interface SaveResult {
  */
 export async function saveStoreChanges(
     deps: StoreChangesDeps,
-    target: { pack: DatapackId; source?: DatapackStoreName },
+    target: { pack: DatapackId; source?: DatapackStoreName; saveAs: SaveAs },
     write: (file: DatapackFile) => Promise<PackWriteOutcome>,
     report: (stage: string) => void = () => undefined,
 ): Promise<SaveResult> {
@@ -244,15 +255,15 @@ export async function saveStoreChanges(
     report(OPERATION_STAGES.readingStoreChanges.label);
     const installed = await readInstalled(deps, target);
     const ctx = await openStore(deps, pack);
-    const captured = await capturePack(ctx, record.created, installed);
+    const captured = await capturePack(ctx, record.created, installed.rows);
     if (Object.keys(captured.items).length === 0) throw new StoreChangesError(`The store no longer holds anything ${labelPack(pack)} made, so there is nothing to save.`);
     const now = (deps.now ?? (() => new Date()))();
-    const saved = { name: pack.name, version: nextVersion(pack.version, now) };
+    const saved = target.saveAs.id;
     const about = await deps.describe(pack);
     report(OPERATION_STAGES.savingToLibrary.label);
     const outcome = await write({
         id: saved,
-        displayName: about.displayName,
+        displayName: target.saveAs.displayName,
         ...(about.description ? { description: about.description } : {}),
         items: Object.entries(captured.items).map(([dataType, records]) => ({ dataType, records })),
         source: 'library',
@@ -265,5 +276,16 @@ export async function saveStoreChanges(
     const created = await rebaseRecord(ctx, record.created, captured.items);
     await writeInstallRecord(files, deps.projectPath, { ...record, pack: saved, created });
     await forgetInstallRecord(files, deps.projectPath, pack);
-    return { saved, counts: captured.counts, sentence: `${about.displayName} now matches this store. What it held before is kept.` };
+    return {
+        saved,
+        counts: captured.counts,
+        readFrom: installed.source,
+        sentence: savedSentence(target.saveAs, pack, about.displayName),
+    };
+}
+
+/** "Saved to the Acme Demo pack.", and that the pack it came from is unchanged when it is another. */
+function savedSentence(saveAs: SaveAs, installed: DatapackId, installedName: string): string {
+    const where = `Saved to the ${saveAs.displayName} pack.`;
+    return saveAs.id.name === installed.name ? where : `${where} ${installedName} is unchanged.`;
 }

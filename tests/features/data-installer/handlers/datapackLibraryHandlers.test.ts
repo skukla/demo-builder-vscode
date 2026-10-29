@@ -4,23 +4,16 @@
  * guard hands back per-store fakes so a test can see WHICH store each call reached.
  */
 
-import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
-import { datapackLibraryHandlers } from '@/features/data-installer/handlers/datapackLibraryHandlers';
+// The shared wall first: it owns the access-guard mock and the subject's import.
+import { STORE, datapackLibraryHandlers, mockAccess } from './datapackLibraryHandlers.testUtils';
 import { installerEchoRefusal } from '@/features/data-installer/handlers/datapackZipHandlers';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
 import type { DatapackDetail } from '@/features/data-installer/types';
 import type { Project } from '@/types/base';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
-    ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
-    resolveDataInstallerAccess: jest.fn(),
-}));
-
-const mockAccess = resolveDataInstallerAccess as jest.Mock;
-
-const STORE = 'https://library.example.test/api/v1/web/datapack-store';
 const INSTALLER = 'https://installer.example.test/api/v1/web/data-installer-api';
 const ID = { name: 'justrite', version: 'v1' };
 const DETAIL: DatapackDetail = {
@@ -143,6 +136,39 @@ describe('delete-library-datapack', () => {
             success: false,
         });
         expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    // Step 07: a pack shared in a project file is read by reference, so deleting it leaves
+    // anyone who has not yet created that project with the pack it was made from.
+    describe('a pack shared in a project file', () => {
+        const WARNING =
+            "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get bodea instead.";
+
+        function sharedContext() {
+            const context = contextFor(null, false);
+            (context.context.globalState.get as jest.Mock).mockImplementation((key: string) =>
+                key === SHARED_IN_FILES_KEY ? { 'justrite@v1': { at: '2026-10-27T15:00:00.000Z', originName: 'bodea' } } : undefined,
+            );
+            return context;
+        }
+
+        it('says so in the refusal without confirm, so the confirmation can show it', async () => {
+            const result = await remove(sharedContext(), { datapackName: 'justrite', version: 'v1' });
+
+            expect(result).toMatchObject({ success: false, data: { sharedInFile: WARNING } });
+            expect(fetchMock).not.toHaveBeenCalled();
+        });
+
+        it('deletes as before with confirm, and the answer carries the warning', async () => {
+            fetchMock.mockResolvedValue({ ok: true, status: 200, text: async () => '{"success":true}' });
+
+            const result = await remove(sharedContext(), { datapackName: 'justrite', version: 'v1', confirm: true });
+
+            expect(result).toEqual({
+                success: true,
+                data: { datapackName: 'justrite', version: 'v1', deleted: true, warning: WARNING },
+            });
+        });
     });
 });
 

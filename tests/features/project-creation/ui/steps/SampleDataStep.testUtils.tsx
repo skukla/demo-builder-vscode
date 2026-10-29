@@ -7,11 +7,10 @@
  *
  * SampleDataStep — the Commerce sub-step that records a datapack choice.
  *
- * The contract worth pinning is what it does NOT do: it must never start an
- * import. An import needs a reachable instance with working credentials and
- * runs for minutes; a failure inside project creation would leave a
- * half-populated instance the wizard has no story for. So it writes the choice
- * to wizard state and the dashboard installs it later.
+ * The contract worth pinning is what it does NOT do: the step never starts an
+ * import. It writes the choice (and the store that holds it) to wizard state,
+ * and creation installs it once Connection and Business Structure have settled
+ * the instance and the scope (`executeSampleDataPhase`, since 8ab56b934).
  *
  * **It shows the panel's own grid.** A pack is a demo — brand art, a version, a
  * count of what it carries — and the Data Installer already presents it that
@@ -43,9 +42,22 @@ let mockState: { loading: boolean; error: Error | null; data: unknown } = {
 jest.mock('@/core/ui/hooks/useVSCodeRequest', () => ({
     useVSCodeRequest: (type: string) => {
         mockTypes.push(type);
-        return { execute: mockExecute, reset: jest.fn(), ...mockState };
+        const own = mockByType[type];
+        return own ? { reset: jest.fn(), ...own } : { execute: mockExecute, reset: jest.fn(), ...mockState };
     },
 }));
+
+/**
+ * A request type that answers on its own, apart from the catalog's shared state: the
+ * step's second read (`check-recorded-datapack`, step 07). Its `execute` is its own too.
+ */
+const mockByType: Record<string, { execute: jest.Mock; loading: boolean; error: Error | null; data: unknown }> = {};
+
+export function answerFor(type: string, state: { loading: boolean; error: Error | null; data: unknown }): jest.Mock {
+    const execute = jest.fn().mockResolvedValue(undefined);
+    mockByType[type] = { execute, ...state };
+    return execute;
+}
 
 export const mockPostMessage = jest.fn();
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
@@ -173,5 +185,6 @@ export function resetDataInstallerMocks(): void {
     // the thing it stands in for.
     mockExecute.mockResolvedValue(undefined);
     mockTypes.length = 0;
+    for (const type of Object.keys(mockByType)) delete mockByType[type];
     mockState = envelope(CATALOG);
 }

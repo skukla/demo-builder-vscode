@@ -83,12 +83,45 @@
         },
         "version": {
           "type": "string"
+        },
+        "store": {
+          "$ref": "#/definitions/DatapackStoreName"
+        },
+        "origin": {
+          "$ref": "#/definitions/DatapackLocation"
         }
       },
       "required": [
         "name"
       ],
-      "description": "A datapack a demo expects (D26). `version` absent means the catalog's default rule."
+      "description": "The datapack a project, a project file or a shared demo names.\n\n`version` absent is the demo package's \"the catalog's default\" (D26); a project always records one (`ProjectDatapack`). `origin` is the pack this one was made from (step 07): a demo's own pack names the library pack it started as, so a colleague whose copy cannot read the demo's pack can carry on with that one."
+    },
+    "DatapackStoreName": {
+      "type": "string",
+      "enum": [
+        "installer",
+        "library"
+      ],
+      "description": "Which store holds a pack: the Data Installer service's catalog, or the team's datapack library, which answers the same routes at its own address."
+    },
+    "DatapackLocation": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "store": {
+          "$ref": "#/definitions/DatapackStoreName"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "description": "A pack and the store that holds it.\n\n`store` absent means the Data Installer: every reference written before the store was recorded is one of its packs or a library version nobody can tell apart, and the service is what those readers always asked (rule 3, no migration)."
     },
     "DemoIntegrations": {
       "type": "object",

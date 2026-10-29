@@ -88,7 +88,7 @@ describe('packageDraftFor', () => {
 describe('describeProject', () => {
     it('writes the codes under both key families, the flags, the mesh posture (storefront over package), the datapack, the libraries and the site', () => {
         const project = edsProject({
-            datapack: { name: 'bodea', version: '2026.09' },
+            datapack: { name: 'bodea', version: '2026.09', store: 'library', origin: { name: 'bodea', version: 'main' } },
             selectedBlockLibraries: ['isle5', ''],
             appBuilderComponents: {
                 'app-builder-shell': { kind: 'integration', status: 'deployed', source: { owner: 'adobe', repo: 'app-builder-shell' } },
@@ -117,7 +117,8 @@ describe('describeProject', () => {
             },
             configFlags: { 'commerce-b2b-enabled': true },
             requiresMesh: 'optional',
-            datapack: { name: 'bodea', version: '2026.09' },
+            // Whole: the store and the pack it was made from travel to the colleague.
+            datapack: { name: 'bodea', version: '2026.09', store: 'library', origin: { name: 'bodea', version: 'main' } },
             integrations: { catalog: ['app-builder-shell'], custom: { 'erp-sync': { owner: 'jen', repo: 'erp-sync', branch: 'main', name: 'ERP Sync' } } },
             blockLibraries: ['isle5'],
             contentSource: CONTENT,
@@ -288,7 +289,7 @@ describe('packageChecks', () => {
         const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
         const checks = await packageChecks(edsProject({ datapack: { name: 'bodea', version: 'main' } }), OWN, { indexFound: true, pageCount: 157 }, {
             repoOps,
-            datapackExists: async () => true,
+            datapackAvailability: async () => 'installer',
             logger,
         });
         // Owner, 2026-09-14: every line says what a COLLEAGUE gets, in plain words.
@@ -311,7 +312,7 @@ describe('packageChecks', () => {
             appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'jen', repo: 'erp-sync' } } },
         });
 
-        const checks = await packageChecks(project, OWN, { indexFound: false }, { repoOps, datapackExists: async () => false, logger });
+        const checks = await packageChecks(project, OWN, { indexFound: false }, { repoOps, datapackAvailability: async () => 'missing', logger });
 
         expect(checks).toEqual([
             { id: 'repository', ok: false, message: "This storefront's code is private. Colleagues will need access to it, or make it public." },
@@ -321,11 +322,38 @@ describe('packageChecks', () => {
         ]);
     });
 
+    // Asked of both stores by name AND version (research project-export-datapacks, item 3).
+    it('asks for the pack the project records, version and store included', async () => {
+        const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
+        const datapackAvailability = jest.fn(async () => 'library-shared' as const);
+        const pack = { name: 'acme-1a2b3c', version: '20261029-183000', store: 'library' as const };
+
+        const checks = await packageChecks(edsProject({ datapack: pack }), OWN, { indexFound: true }, { repoOps, datapackAvailability, logger });
+
+        expect(datapackAvailability).toHaveBeenCalledWith(pack);
+        expect(checks).toContainEqual({ id: 'datapack', ok: true, message: 'Colleagues can install the same sample data (acme-1a2b3c).' });
+    });
+
+    it("warns when the pack is in the SC's library where colleagues can't read it", async () => {
+        const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
+        const checks = await packageChecks(edsProject({ datapack: { name: 'acme', version: '1', store: 'library' } }), OWN, { indexFound: true }, {
+            repoOps,
+            datapackAvailability: async () => 'library-yours-only',
+            logger,
+        });
+
+        expect(checks).toContainEqual({
+            id: 'datapack',
+            ok: false,
+            message: "The sample data this demo uses (acme) is in your datapack library, where colleagues can't read it yet.",
+        });
+    });
+
     it("says nothing about the datapack when the service cannot be asked, and says the repository can't be read when GitHub refuses", async () => {
         const repoOps = { getRepository: jest.fn().mockRejectedValue(new Error('404')) };
         const checks = await packageChecks(edsProject({ datapack: { name: 'bodea', version: 'main' } }), OWN, { indexFound: true, pageCount: 1 }, {
             repoOps,
-            datapackExists: async () => undefined,
+            datapackAvailability: async () => undefined,
             logger,
         });
         expect(checks.map((c) => c.id)).toEqual(['repository', 'index']);

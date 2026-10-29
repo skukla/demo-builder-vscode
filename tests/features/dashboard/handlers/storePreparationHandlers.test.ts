@@ -5,9 +5,15 @@
  * without `confirm` changes nothing.
  */
 
+import * as fsp from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
-import { makeStateManager } from '../../../helpers/stateManagerFake';
+import { createMockStateManager, makeStateManager } from '../../../helpers/stateManagerFake';
+import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
+import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
@@ -329,6 +335,31 @@ describe('setCommerceConfig', () => {
         expect(mockConfigFix.undo).toHaveBeenCalledWith(expect.objectContaining({ commerce: COMMERCE }), { kind: 'config', previous: PREVIOUS });
         expect(recorded.saved()).not.toHaveProperty('commerceConfigChange');
         expect(result).toMatchObject({ success: true, data: { confirmed: true, undone: true } });
+    });
+
+    // Every call reads the project from disk (`getCurrentProject`), so the record has to be
+    // ON disk: kept only in memory, every undo after a write answered "no settings change to
+    // undo" (2026-10-10 to 2026-10-29). Real writer and loader over a temp folder.
+    it('undo works on a later call, after the project is read back from disk', async () => {
+        const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'commerce-config-undo-'));
+        try {
+            const logger = createMockLogger();
+            const stateManager = createMockStateManager({
+                getCurrentProject: jest.fn(async () => (await new ProjectFileLoader(logger).loadProject(dir, () => [])) ?? undefined),
+                saveProject: jest.fn(async (project: Project) => new ProjectConfigWriter(logger).saveProjectConfig(project, dir)),
+            });
+            await stateManager.saveProject(createMockProject({ name: 'acme', path: dir, created: new Date('2026-10-29T00:00:00Z') }));
+            const context = createMockHandlerContext({ stateManager });
+
+            await handleSetCommerceConfig(context, { items: ITEMS, confirm: true });
+            const result = await handleSetCommerceConfig(context, { undo: true, confirm: true });
+
+            expect(mockConfigFix.undo).toHaveBeenCalledWith(expect.objectContaining({ commerce: COMMERCE }), { kind: 'config', previous: PREVIOUS });
+            expect(result).toMatchObject({ success: true, data: { confirmed: true, undone: true } });
+            expect((await stateManager.getCurrentProject())?.commerceConfigChange).toBeUndefined();
+        } finally {
+            await fsp.rm(dir, { recursive: true, force: true });
+        }
     });
 
     it('undo: true without confirm previews the undo as it would run, keeping what changed since', async () => {

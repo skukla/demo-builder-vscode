@@ -1,13 +1,17 @@
 /**
- * Sample Data — the Commerce sub-step that RECORDS a datapack choice.
+ * Sample Data — the Commerce sub-step that RECORDS a datapack choice, shown as
+ * "Datapacks".
  *
- * **It does not import.** An import needs a Commerce instance that is reachable
- * with working credentials, and a full pack runs for minutes (measured
- * 2026-08-14: 74s for five types, 470s for a six-type reset). Neither fits
- * inside project creation, and a failure mid-wizard would leave a
- * half-populated instance the wizard has no story for. So this stores the choice
- * on the project and the dashboard installs it afterwards, through the import
- * modal that is already verified end to end.
+ * **The step itself does not import; creation does.** Since 8ab56b934 (2026-08-15)
+ * the build installs the recorded pack after Connection has proven the instance and
+ * Business Structure has chosen the scope (`executeSampleDataPhase`), and a failure
+ * there is reported and never fails the build. This step only records the choice,
+ * and the store that holds it.
+ *
+ * **A recorded pack it cannot list is said out loud** (step 07). An imported or
+ * copied project arrives with a pack already recorded; when the catalog does not
+ * list it, the step asks `check-recorded-datapack` and shows what creation will do
+ * instead (the pack it was made from, or none), with one action to choose it now.
  *
  * **It is a Commerce sub-step, not an area.** A pack seeds the Commerce backend,
  * so it belongs beside the backend it targets. As an area it held one radio list
@@ -30,8 +34,10 @@
 
 import { SearchField } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { RecordedPackNotice, isListed, isPack } from './RecordedPackNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { cn } from '@/core/ui/utils/classNames';
@@ -45,6 +51,7 @@ import type { DatapackSummary, Page } from '@/features/data-installer/types';
 import { DatapackCard } from '@/features/data-installer/ui/components/DatapackCard';
 import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataInstallerFailure';
 import { useDataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
+import { type ProjectDatapack, storeOf } from '@/types/datapack';
 import type { BaseStepProps } from '@/types/wizard';
 
 /**
@@ -68,17 +75,23 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
     // The pack an added demo asks for (D26): the catalog is fetched with the
     // community half included, because a colleague's pack is rarely curated.
     const asked = state.demo?.datapack;
-    const includeCommunity = Boolean(asked);
+    // The pack the step OPENED with (an imported, copied or edited project's). Held
+    // once: a pack the SC presses later must not refetch the catalog.
+    const [arrived] = useState<ProjectDatapack | undefined>(() => state.datapack);
+    const includeCommunity = Boolean(asked) || Boolean(arrived);
+    const includeLibrary = [arrived, asked].some((pack) => pack !== undefined && storeOf(pack) === 'library');
     useEffect(() => {
-        // Curated only, unless a demo asks for a pack: the community half of the
-        // catalog is developer scratch, and this is a first-run choice, not a
-        // browsing surface.
-        load({ includeCommunity });
-    }, [load, includeCommunity]);
+        // Curated only, unless a demo asks for a pack or the project arrived with
+        // one: the community half of the catalog is developer scratch, and this is a
+        // first-run choice, not a browsing surface. The library's packs only when the
+        // project's own pack is one, so it can be found and shown chosen.
+        load({ includeCommunity, ...(includeLibrary ? { includeLibrary } : {}) });
+    }, [load, includeCommunity, includeLibrary]);
 
     const groups = useMemo(() => groupDatapacks(value?.items ?? []), [value]);
+    const arrivedListed = useMemo(() => arrived !== undefined && isListed(groups, arrived), [groups, arrived]);
     const askedGroup = useMemo(
-        () => (asked ? groups.find((group) => group.name === asked.name) : undefined),
+        () => (asked ? groups.find((group) => group.name === asked.name && group.store === storeOf(asked)) : undefined),
         [groups, asked],
     );
 
@@ -97,7 +110,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
             askedVersion && askedGroup.versions.some((v) => v.id.version === askedVersion)
                 ? askedVersion
                 : pickDefaultVersion(askedGroup);
-        if (version) updateState({ datapack: { name: askedGroup.name, version } });
+        if (version) updateState({ datapack: { name: askedGroup.name, version, store: askedGroup.store } });
     }, [editing, settled, askedGroup, askedName, askedVersion, chosenName, updateState]);
 
     /** Opens VS Code settings at the section the refusal names. */
@@ -118,6 +131,10 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
         [groups, query],
     );
     const chosen = state.datapack;
+    const isChosen = useCallback((group: DatapackGroup): boolean => isPack(group, chosen), [chosen]);
+    // Only while the project still holds the pack it arrived with: once the SC
+    // chooses another, the note about the old one is no longer true of anything.
+    const stillArrived = arrived !== undefined && chosen?.name === arrived.name && chosen.version === arrived.version;
 
     /**
      * Which version each card shows, for packs the user has not chosen.
@@ -130,33 +147,36 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
 
     const versionShown = useCallback(
         (group: DatapackGroup): string => {
-            if (chosen?.name === group.name) {
+            if (chosen && isChosen(group)) {
                 return chosen.version;
             }
-            return browsing[group.name] ?? pickDefaultVersion(group) ?? '';
+            return browsing[group.key] ?? pickDefaultVersion(group) ?? '';
         },
-        [chosen, browsing],
+        [chosen, isChosen, browsing],
     );
 
+    // The store is recorded with the pack: creation installs from it, and a copy or
+    // an exported file of this project names it too.
     const chooseGroup = useCallback(
         (group: DatapackGroup): void => {
             const version = versionShown(group);
-            updateState(version ? { datapack: { name: group.name, version } } : { datapack: undefined });
+            updateState(version ? { datapack: { name: group.name, version, store: group.store } } : { datapack: undefined });
         },
         [updateState, versionShown],
     );
 
     const pickVersion = useCallback(
         (group: DatapackGroup, version: string): void => {
-            setBrowsing((current) => ({ ...current, [group.name]: version }));
+            setBrowsing((current) => ({ ...current, [group.key]: version }));
             // Re-record when this pack is the chosen one, so the recorded version
             // is always the one on show rather than the one chosen first.
-            if (chosen?.name === group.name) {
-                updateState({ datapack: { name: group.name, version } });
+            if (isChosen(group)) {
+                updateState({ datapack: { name: group.name, version, store: group.store } });
             }
         },
-        [chosen, updateState],
+        [isChosen, updateState],
     );
+    const useInstead = useCallback((pack: ProjectDatapack): void => updateState({ datapack: pack }), [updateState]);
 
     const clear = useCallback((): void => updateState({ datapack: undefined }), [updateState]);
 
@@ -205,6 +225,10 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                 </CenteredFeedbackContainer>
             ) : (
                 <>
+                    <LeadText>Your changes to this data are kept in this demo&apos;s own pack.</LeadText>
+                    {arrived && stillArrived && !arrivedListed ? (
+                        <RecordedPackNotice recorded={arrived} onUse={useInstead} />
+                    ) : null}
                     <SearchField
                         aria-label="Filter datapacks"
                         placeholder="Filter datapacks"
@@ -233,7 +257,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
                             // The press CHOOSES here; the panel's flyout is not
                             // reachable from the wizard by design.
                             onOpen={() => chooseGroup(group)}
-                            selected={chosen?.name === group.name}
+                            selected={isChosen(group)}
                         />
                     ))}
                     </div>

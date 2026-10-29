@@ -327,6 +327,20 @@ describe('configure_project — how it is declared', () => {
         expect(() => datapack.parse({ version: '1.0' })).toThrow();
     });
 
+    // The store travels with the pack, so creation and a copy install from the right one.
+    it('the datapack schema takes the store that holds the pack, and only the two there are', () => {
+        const datapack = schema().shape.datapack;
+
+        expect(datapack.parse({ name: 'acme', version: '1', store: 'library' })).toEqual({ name: 'acme', version: '1', store: 'library' });
+        expect(() => datapack.parse({ name: 'acme', version: '1', store: 'elsewhere' })).toThrow();
+    });
+
+    it('records the store with the pack', async () => {
+        await serve()({ datapack: { name: 'acme', version: '1', store: 'library' } });
+
+        expect(saveProject.mock.calls[0][0].datapack).toEqual({ name: 'acme', version: '1', store: 'library' });
+    });
+
     // Env values arrive from JSON, where a flag is a boolean and a port is a
     // number — accepting only strings would force the agent to stringify them.
     it('env values accept a string, a boolean or a number, and nothing else', () => {

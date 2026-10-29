@@ -21,6 +21,7 @@ import {
     resetDataInstallerHandlerMocks,
     resolveDataInstallerAccess,
 } from './dataInstallerHandlers.testUtils';
+import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
 import { ErrorCode } from '@/types/errorCodes';
 
 beforeEach(() => {
@@ -126,6 +127,27 @@ describe('the library store', () => {
 
         expect(MockedClient).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: LIBRARY }));
         expect(res).toMatchObject({ success: true, data: { detail: { store: 'library' } } });
+    });
+
+    // Step 07: the flyout shows, beside Remove, that this SC shared the pack in a project file.
+    it('get-datapack-detail says when a library pack was shared in a project file', async () => {
+        setupLibrary(LIBRARY);
+        MockedClient.prototype.getDatapackDetail = jest
+            .fn()
+            .mockResolvedValue({ id: { name: 'mine', version: 'v1' }, dataTypes: [] });
+        const context = makeHeadlessContext();
+        (context.context.globalState.get as jest.Mock).mockImplementation((key: string) =>
+            key === SHARED_IN_FILES_KEY ? { 'mine@v1': { at: '2026-10-27T15:00:00.000Z', originName: 'bodea' } } : undefined,
+        );
+
+        const shared = await dataInstallerHandlers['get-datapack-detail'](context, { datapackName: 'mine', version: 'v1', store: 'library' });
+        const installer = await dataInstallerHandlers['get-datapack-detail'](context, { datapackName: 'mine', version: 'v1' });
+
+        expect(shared).toMatchObject({
+            success: true,
+            data: { sharedInFile: "You shared this pack in a project file on 27 October. Anyone who hasn't created that project yet will get bodea instead." },
+        });
+        expect((installer.data as Record<string, unknown>).sharedInFile).toBeUndefined();
     });
 
     describe('the combined catalog the panel shows', () => {

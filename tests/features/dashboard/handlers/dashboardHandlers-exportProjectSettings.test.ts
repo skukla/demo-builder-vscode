@@ -53,11 +53,13 @@ describe('handleExportProjectSettings', () => {
             verify: 'Confirmed',
         });
 
-        const result = await handleExportProjectSettings(makeContext(PROJECT), {
+        const context = makeContext(PROJECT);
+        const result = await handleExportProjectSettings(context, {
             path: 'backup.json',
         });
 
-        expect(mockExportToFile).toHaveBeenCalledWith(PROJECT, { path: 'backup.json' });
+        // The global state rides along so a library pack in the file is remembered (step 07).
+        expect(mockExportToFile).toHaveBeenCalledWith(PROJECT, { path: 'backup.json', globalState: context.context.globalState });
         expect(result).toEqual({
             success: true,
             data: { path: '/projects/my-demo/my-demo.project.demo-builder.json', verify: 'Confirmed' },
@@ -68,9 +70,10 @@ describe('handleExportProjectSettings', () => {
         mockExportToFile.mockResolvedValue({ path: '/p', verify: 'Confirmed' });
         const stale: { path?: string } = JSON.parse('{"path":"backup.json","includeSecrets":true}');
 
-        await handleExportProjectSettings(makeContext(PROJECT), stale);
+        const context = makeContext(PROJECT);
+        await handleExportProjectSettings(context, stale);
 
-        expect(mockExportToFile).toHaveBeenCalledWith(PROJECT, { path: 'backup.json' });
+        expect(mockExportToFile).toHaveBeenCalledWith(PROJECT, { path: 'backup.json', globalState: context.context.globalState });
     });
 
     it('surfaces a containment/validation failure as an error', async () => {

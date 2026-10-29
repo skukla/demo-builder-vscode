@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Undo leaves what changed since
@@ -59,3 +59,7 @@ changed?"; each undo decides what to do with a change, by who owns the thing:
 
 Done on `feature/datapack-engine` (the setup-guide undos, after the shared rule) and in the ERP
 repo (detach). Closes when both have landed.
+
+## Shipped so far
+
+- 2026-10-29  feat(app-builder): setup-guide undos keep what the SC changed since (datapack step 06) (`4cadd9184`)

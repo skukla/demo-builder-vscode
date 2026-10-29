@@ -41,15 +41,7 @@
 import { Flex, Switch } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { groupDatapacks, type DatapackGroup } from '../../services/datapackCatalog';
-import type {
-    CatalogPage,
-    DataItemInventory,
-    DatapackDetail,
-    DatapackId,
-    DatapackStoreName,
-    InstalledDatapack,
-    Page,
-} from '../../types';
+import type { CatalogPage, DataItemInventory, DatapackDetail, InstalledDatapack, Page } from '../../types';
 import { CatalogHeaderActions } from '../components/CatalogHeaderActions';
 import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
@@ -62,6 +54,7 @@ import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
 /** Fields a query is matched against — the id and the label, nothing else. */
 const SEARCH_FIELDS: ReadonlyArray<keyof DatapackGroup> = ['name', 'displayName'];
@@ -79,6 +72,25 @@ const SEARCH_THRESHOLD = 0;
 interface DatapackDetailResponse {
     detail: DatapackDetail;
     inventory: DataItemInventory;
+    /** The warning a delete carries when this SC shared the pack in a project file (step 07). */
+    sharedInFile?: string;
+}
+
+/**
+ * Rename the SC's own library pack (step 07), the inline field's contract: null on success,
+ * the reason otherwise. The field is the confirmation, so it is sent confirmed.
+ */
+async function requestDatapackRename(id: DatapackId, displayName: string): Promise<string | null> {
+    try {
+        const response = await webviewClient.request<{ success: boolean; error?: string }>('rename-library-datapack', {
+            datapackName: id.name,
+            displayName,
+            confirm: true,
+        });
+        return response?.success ? null : (response?.error ?? 'Rename failed');
+    } catch (error) {
+        return error instanceof Error ? error.message : 'Rename failed';
+    }
 }
 
 export function DatapackCatalogView(): React.JSX.Element {
@@ -243,6 +255,19 @@ export function DatapackCatalogView(): React.JSX.Element {
         }
     }, [loadDetail, selected, selectedStore]);
 
+    // A rename shows on the card and in the flyout: both are read again once it lands.
+    const renamePack = useCallback(
+        async (id: DatapackId, name: string): Promise<string | null> => {
+            const refused = await requestDatapackRename(id, name);
+            if (refused === null) {
+                refresh();
+                retryDetail();
+            }
+            return refused;
+        },
+        [refresh, retryDetail],
+    );
+
     // `!settled`, not `loading`. `loading` starts FALSE and the fetch is kicked
     // off from a useEffect, which React runs AFTER the first paint -- so frame 1
     // renders with nothing loading and nothing loaded, falls straight past this
@@ -336,6 +361,8 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onRemoved={removedFromLibrary}
                 installsFromLibrary={value?.engine === 'demo-builder'}
                 onSaveStoreChanges={holdsSelected && value?.engine === 'demo-builder' ? offerSave : undefined}
+                onRename={renamePack}
+                sharedInFile={detail.value?.sharedInFile}
             />
             {storeChanges.progressWindow}
 
@@ -360,7 +387,7 @@ interface ProjectSampleData {
     projectName?: string;
     /** The Commerce instance this project writes to — scopes the installed list. */
     instance?: string;
-    datapack?: { name: string; version: string };
+    datapack?: ProjectDatapack;
 }
 
 /*

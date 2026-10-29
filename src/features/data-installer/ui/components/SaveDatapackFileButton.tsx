@@ -13,8 +13,8 @@
 
 import { Button } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
-import type { DatapackId, DatapackStoreName } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** What `save-datapack-zip` answers. */
 interface SaveResult {

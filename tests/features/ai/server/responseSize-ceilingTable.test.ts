@@ -163,11 +163,13 @@ describe('the ceiling table tracks the tool surface', () => {
         // preview_datapack_changes and save_store_changes_to_pack (datapack-engine step 05): the
         // preview's size is the number of kinds a pack holds, at most three names each, and the
         // plan sets its ceiling from Frescopa and Bodea measured live; neither has run live yet.
+        // rename_datapack (datapack-engine step 07): three fixed fields; not yet run live.
         const PENDING_LIVE_MEASUREMENT = new Set<string>([
             'list_runtime_packages',
             'assign_erp_products',
             'preview_datapack_changes',
             'save_store_changes_to_pack',
+            'rename_datapack',
         ]);
 
         const missing = descriptorTools.filter(

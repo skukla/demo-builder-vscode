@@ -12,7 +12,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { capturePack, nextVersion } from '@/features/data-installer/services/demoBuilderEngine/capture';
+import { capturePack } from '@/features/data-installer/services/demoBuilderEngine/capture';
 import type { CreatedObject } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { StoreAttribute, StoreCategory } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
@@ -128,17 +128,5 @@ describe('capturePack', () => {
         const { result } = await capture();
 
         expect(result.counts).toMatchObject({ products: 1, categories: 2, attribute_sets: 1, product_attributes: 1, source_items: 1 });
-    });
-});
-
-describe('nextVersion', () => {
-    const at = new Date('2026-10-29T18:30:00Z');
-
-    it('makes a new version beside the one installed, stamped with when it was saved', () => {
-        expect(nextVersion('main', at)).toBe('main-saved-20261029-1830');
-    });
-
-    it('does not pile up stamps when a saved version is saved again', () => {
-        expect(nextVersion('main-saved-20261029-1830', new Date('2026-10-30T09:05:00Z'))).toBe('main-saved-20261030-0905');
     });
 });

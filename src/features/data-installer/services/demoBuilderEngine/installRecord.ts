@@ -21,8 +21,8 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { z } from 'zod';
-import type { DatapackId } from '../../types';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
+import type { DatapackId } from '@/types/datapack';
 
 /** One object an install created: its pack data kind and the id Commerce knows it by. */
 export interface CreatedObject {

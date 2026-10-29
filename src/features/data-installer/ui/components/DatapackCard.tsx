@@ -28,10 +28,11 @@
 import { Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
 import type { DatapackGroup } from '../../services/datapackCatalog';
-import type { DatapackArt, DatapackId, DatapackStoreName, DatapackSummary } from '../../types';
+import type { DatapackArt, DatapackSummary } from '../../types';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 export interface DatapackCardProps {
     /** Every version of one datapack, already ordered by the catalog service. */

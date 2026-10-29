@@ -11,6 +11,7 @@
  */
 
 import { resolveDataInstallerAccess } from '../handlers/dataInstallerHandlers';
+import { SERVICE_INSTALLS_ONLY_ITS_OWN, libraryReads } from '../handlers/libraryReads';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
 import { buildDatapackEngine, engineThatInstalled } from './buildDatapackEngine';
 import { selectedDatapackEngine } from './dataInstallerConfig';
@@ -66,8 +67,10 @@ export function buildSampleDataDeps(
         // the same pairing `get-datapack-detail` does. A pack can DECLARE a type
         // the service stores no item for, and asking for it imports nothing while
         // reporting a failure that is not one.
-        inventory: async (id) => {
-            const access = await resolveDataInstallerAccess(context);
+        // Asked of the store that holds the pack: the Data Installer unless the project
+        // recorded the library.
+        inventory: async ({ store, ...id }) => {
+            const access = await resolveDataInstallerAccess(context, store ?? 'installer');
             if (!access.ok) {
                 return [];
             }
@@ -79,7 +82,14 @@ export function buildSampleDataDeps(
             return inventory.present;
         },
 
-        startImport: async (request) => (await engineOnce()).startImport(request),
+        startImport: async (request) => {
+            // The service installs only from its own catalog: say so, rather than send it a
+            // pack it reads as missing.
+            if (request.source === 'library' && mode === 'install' && selectedDatapackEngine() === 'service') {
+                throw new Error(SERVICE_INSTALLS_ONLY_ITS_OWN);
+            }
+            return (await engineOnce()).startImport(request);
+        },
 
         // The Reset workflow's half. Same request, same engine, different verb.
         startDelete: async (request) => (await engineOnce()).startDelete(request),
@@ -142,7 +152,15 @@ async function engine(context: HandlerContext, project: Project, mode: SampleDat
     }
     return buildDatapackEngine(
         engineId,
-        { ...access, jobs: access.client, catalog: access.client, project, authManager: context.authManager, secrets: context.context?.secrets },
+        {
+            ...access,
+            jobs: access.client,
+            catalog: access.client,
+            libraryCatalog: libraryReads(context),
+            project,
+            authManager: context.authManager,
+            secrets: context.context?.secrets,
+        },
         (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
     );
 }

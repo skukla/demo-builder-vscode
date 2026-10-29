@@ -40,7 +40,7 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
-import type { DatapackId, DatapackStoreName, ImportJobRecord } from '../../types';
+import type { ImportJobRecord } from '../../types';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useImportScopes } from '../hooks/useImportScopes';
 import { deselectType, selectType, type TypeSelection } from '../importDependencies';
@@ -50,6 +50,7 @@ import { resolveResult, type LastAction } from './importResult';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** How often to re-read the recorded job while one is in flight. */
 const STATUS_POLL_MS = 2000;

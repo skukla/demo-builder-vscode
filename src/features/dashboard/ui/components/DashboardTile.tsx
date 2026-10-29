@@ -46,7 +46,10 @@ export interface DashboardTileProps {
     label: string;
     icon: React.ReactNode;
     onPress: () => void;
-    /** One short line under the label saying where the tile goes. Open-row cards only. */
+    /**
+     * One short line under the label: where an Open-row card goes, or, on the Datapacks row,
+     * which pack is this demo's own (step 07).
+     */
     description?: string;
     /** Shown when there is no status dot. Omit for a tile with no tooltip. */
     tooltip?: string;

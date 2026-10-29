@@ -13,9 +13,9 @@
 
 import { Button } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
-import type { DatapackId } from '../../types';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
+import type { DatapackId } from '@/types/datapack';
 
 /** What `copy-library-datapack-to-installer` did. */
 interface CopyOutcome {

@@ -18,21 +18,7 @@
  * @module features/data-installer/services/dataInstallerClient
  */
 
-import type {
-    ActivityEntry,
-    DataItem,
-    DataItemInventory,
-    DataTypeInfo,
-    DatapackDetail,
-    DatapackId,
-    DatapackSummary,
-    InstalledDatapack,
-    JobFailureReason,
-    JobStatusSnapshot,
-    OperationMode,
-    Page,
-    ServiceHealth,
-} from '../types';
+import type { ActivityEntry, DataItem, DataItemInventory, DataTypeInfo, DatapackDetail, DatapackSummary, InstalledDatapack, JobFailureReason, JobStatusSnapshot, OperationMode, Page, ServiceHealth } from '../types';
 import { DataInstallerApiError, DataInstallerInputError } from './dataInstallerErrors';
 import {
     parseActivityLog,
@@ -48,6 +34,7 @@ import {
     parseProcessorOrder,
 } from './dataInstallerParsers';
 import { DataInstallerTransport, type DataInstallerTransportDeps } from './dataInstallerTransport';
+import type { DatapackId } from '@/types/datapack';
 
 /** Filters for the catalog listing. */
 export interface DatapackQuery {

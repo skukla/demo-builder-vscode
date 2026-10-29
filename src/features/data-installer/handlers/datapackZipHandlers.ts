@@ -41,9 +41,9 @@ import {
     DatapackZipError,
     readDatapackZip,
 } from '../services/datapackZip';
-import type { DatapackStoreName } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
+import type { DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 

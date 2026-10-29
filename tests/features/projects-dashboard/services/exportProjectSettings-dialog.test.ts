@@ -31,9 +31,13 @@ jest.mock(
     { virtual: true },
 );
 
+import * as fs from 'fs';
 import * as os from 'os';
+import * as path from 'path';
+import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
 import {
     exportProjectSettings,
+    exportProjectSettingsToFile,
     OPEN_EXPORT,
     revealLabel,
 } from '@/features/projects-dashboard/services/settingsTransferService';
@@ -49,6 +53,25 @@ const PROJECT = createMockProject({
             ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
         },
     },
+});
+
+const LIBRARY_PACK = { name: 'acme-1a2b3c', version: '20261029-183005', store: 'library' as const, origin: { name: 'bodea', version: 'main' } };
+
+describe('exportProjectSettingsToFile (the agent door)', () => {
+    it('remembers a library pack went out in a file, given the global state', async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'export-shared-'));
+        try {
+            const globalState = { get: jest.fn(), update: jest.fn().mockResolvedValue(undefined) };
+
+            await exportProjectSettingsToFile({ ...PROJECT, path: dir, datapack: LIBRARY_PACK }, { globalState });
+
+            expect(globalState.update).toHaveBeenCalledWith(SHARED_IN_FILES_KEY, {
+                'acme-1a2b3c@20261029-183005': { at: expect.any(String), originName: 'bodea' },
+            });
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 describe('exportProjectSettings (save dialog)', () => {
@@ -91,10 +114,24 @@ describe('exportProjectSettings (save dialog)', () => {
     it('writes nothing when the dialog is dismissed', async () => {
         mockShowSaveDialog.mockResolvedValue(undefined);
 
-        const result = await exportProjectSettings(createMockHandlerContext(), PROJECT);
+        const context = createMockHandlerContext();
+        const result = await exportProjectSettings(context, { ...PROJECT, datapack: LIBRARY_PACK });
 
         expect(result).toEqual({ success: true, data: { success: false, error: 'cancelled' } });
         expect(mockWriteFile).not.toHaveBeenCalled();
+        expect(context.context.globalState.update).not.toHaveBeenCalled();
+    });
+
+    // Step 07: the file carries a library pack by reference, so the export remembers it,
+    // and deleting that pack later warns.
+    it('remembers a library pack went out in a file', async () => {
+        const context = createMockHandlerContext();
+
+        await exportProjectSettings(context, { ...PROJECT, datapack: LIBRARY_PACK });
+
+        expect(context.context.globalState.update).toHaveBeenCalledWith(SHARED_IN_FILES_KEY, {
+            'acme-1a2b3c@20261029-183005': { at: expect.any(String), originName: 'bodea' },
+        });
     });
 
     describe('the confirmation', () => {

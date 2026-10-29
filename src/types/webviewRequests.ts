@@ -18,6 +18,7 @@ import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure, StoreViewCodes, StoreViewProducts } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
+import type { ProjectDatapack } from './datapack';
 import type { DaLiveContentSource } from './demoPackages';
 import type { ErpProductSelection } from './erpAssign';
 import type { ErpOwnsRule } from './erpOwnership';
@@ -386,7 +387,7 @@ export interface ProjectCreationConfig {
     selectedPackage?: string;
     /** The storefront row when the project is built on an added demo (D2); persisted with the project. */
     demo?: AddedDemo;
-    datapack?: { name: string; version: string };
+    datapack?: ProjectDatapack;
     selectedStack?: string;
     // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
     selectedAppBuilderComponents?: string[];
@@ -913,13 +914,20 @@ export interface SaveStoreChangesRequest {
     progress?: 'modal';
 }
 
-/** What a save answers on success: the new version, the one it was saved from, and one sentence. */
+/**
+ * What a save answers on success: the new version of the demo's own pack (step 07), the pack it
+ * was saved from, and one sentence.
+ */
 export interface SaveStoreChangesResult {
+    /** The demo's own pack, in the library. */
     datapackName: string;
     version: string;
-    previousVersion: string;
+    /** What the SC sees the demo's pack called. */
+    displayName: string;
+    /** The pack installed before the save, which the save left as it was. */
+    previous: { name: string; version: string };
     /** How many of each data kind the new version holds. */
     counts: Record<string, number>;
-    /** The one sentence the SC reads: "Bodea now matches this store. What it held before is kept." */
+    /** The one sentence the SC reads: "Saved to the Acme Demo pack. Bodea is unchanged." */
     message: string;
 }

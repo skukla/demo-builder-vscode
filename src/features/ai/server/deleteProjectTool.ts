@@ -12,6 +12,10 @@
  * a plain call deletes only the local footprint; under `deleteAll` it deletes the
  * repository and site too. Until 2026-10-19 a left-out argument was read as `false`
  * before the setting was consulted, so `deleteAll` never applied to an agent (AI-71).
+ *
+ * `deletePack` is the button's third box, "Also delete its pack" (datapack-engine step 07):
+ * every version of the project's own library pack, after the local files. Off unless asked,
+ * and no setting turns it on, because keeping a pack is reversible and deleting one is not.
  */
 
 import { z } from 'zod';
@@ -20,7 +24,9 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { deleteProjectDemoPack } from '@/features/projects-dashboard/services/demoPackDeletion';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -39,7 +45,7 @@ export function registerDeleteProjectTool(
             needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Permanently delete a project: its local files, and optionally its GitHub repo and DA.live site (which also unpublishes the storefront and removes its product pages; productPages in the result says what happened to them; daLiveSite.publishSummary says whether the pages are gone, checked on the live host, or that it could not tell). When the pages are still live it stops: nothing else is deleted, the project is kept, and stopped says why. Irreversible. Requires confirm:true and confirmName="<project name>".',
+                'Permanently delete a project: its local files, optionally (deletePack:true) every version of its own pack in the datapack library, which datapack.deleted reports, and optionally its GitHub repo and DA.live site (which also unpublishes the storefront and removes its product pages; productPages in the result says what happened to them; daLiveSite.publishSummary says whether the pages are gone, checked on the live host, or that it could not tell). When the pages are still live it stops: nothing else is deleted, the project is kept, and stopped says why. Irreversible. Requires confirm:true and confirmName="<project name>".',
             inputSchema: {
                 name: z.string().describe('Name of the project to delete'),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
@@ -58,6 +64,12 @@ export function registerDeleteProjectTool(
                     .optional()
                     .describe(
                         "Also delete the project's DA.live site and take its pages off the CDN (default: false, or true when the cleanupBehavior setting is deleteAll)",
+                    ),
+                deletePack: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "Also delete every version of the project's own pack in the datapack library, after its files (default: false under every cleanupBehavior; refused under localOnly)",
                     ),
             },
         },
@@ -93,6 +105,7 @@ export function registerDeleteProjectTool(
             const choice = resolveCloudCleanup({
                 deleteGithubRepo: tickOf(args?.deleteGithubRepo),
                 deleteDaLiveSite: tickOf(args?.deleteDaLiveSite),
+                deletePack: tickOf(args?.deletePack),
             });
             const cloud = await cleanUpProjectCloud(ctx, project, choice);
             // Pages still live: the project is how a second try finds them (EDS-65).
@@ -104,10 +117,12 @@ export function registerDeleteProjectTool(
                 // The button's own words for the step it runs (PL-59 slice 7).
                 reportPhase(OPERATION_STAGES.removingProjectFiles.label);
                 await deleteProjectFiles(ctx, project);
+                const datapack = choice.deletePack ? await deleteOwnPack(ctx, project) : undefined;
                 return asText({
                     deleted: true,
                     name,
                     ...cloud,
+                    ...(datapack ? { datapack } : {}),
                     ...(choice.refusedBySetting ? { note: choice.refusedBySetting } : {}),
                 });
             } catch (err) {
@@ -120,6 +135,21 @@ export function registerDeleteProjectTool(
             }
         },
     );
+}
+
+/** What deleting the project's own pack did, for the agent. */
+interface PackAnswer {
+    name?: string;
+    deleted: boolean;
+    error?: string;
+}
+
+/** The project's own pack, deleted last, as the button deletes it (step 07). Never throws. */
+async function deleteOwnPack(ctx: HandlerContext, project: Project): Promise<PackAnswer> {
+    if (!project.ownDatapack) return { deleted: false, error: 'This project has no pack of its own.' };
+    reportPhase(OPERATION_STAGES.deletingOwnPack.label);
+    const result = await deleteProjectDemoPack(ctx, project.ownDatapack);
+    return { name: result.name, deleted: result.success && !result.skipped, ...(result.error ? { error: result.error } : {}) };
 }
 
 /** A checkbox argument: a boolean as given, anything else left for the setting to decide. */

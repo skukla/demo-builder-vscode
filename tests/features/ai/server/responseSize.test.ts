@@ -434,6 +434,9 @@ describe('rows with no output safety net are classified', () => {
         // counts, message}`: fixed fields, never rows.
         'preview_datapack_changes',
         'save_store_changes_to_pack',
+        // HANDLER RETURNS DATA (datapack-engine step 07, read in datapackLibraryHandlers.ts):
+        // `{datapackName, displayName, versions}`, three fixed fields.
+        'rename_datapack',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {

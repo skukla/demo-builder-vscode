@@ -16,7 +16,8 @@
  * @module features/dashboard/handlers/demoPackageHandlers
  */
 
-import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
+import { packReadsFor } from '@/features/data-installer/handlers/recordedPackHandlers';
+import { availabilityOf } from '@/features/data-installer/services/recordedPack';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
     describeProject,
@@ -109,29 +110,24 @@ async function candidate(
 }
 
 /**
- * Is the datapack in the service? Asked only when the Data Installer is
- * configured and the Adobe sign-in is silently valid; never a prompt from a
- * preview (the context is handed over without its panel, which is the
- * headless branch). `undefined` means "could not ask", and the check says nothing.
+ * Where would a colleague find the project's datapack? Asked of both stores by name AND
+ * version (`availabilityOf`): by name alone, a saved library version of a Data Installer
+ * pack read as "colleagues can install it" when they could not. Never a prompt from a
+ * preview: the context is handed over without its panel, which is the headless branch.
+ * `undefined` means "could not ask", and the check says nothing.
  */
-function datapackLookup(context: HandlerContext): PackageCheckDeps['datapackExists'] {
-    return async (name) => {
-        try {
-            const access = await resolveDataInstallerAccess({ ...context, panel: undefined });
-            if (!access.ok) return undefined;
-            const page = await access.client.findDatapacks({ datapackName: name, limit: 1 });
-            return page.items.some((pack) => pack.id.name === name);
-        } catch (error) {
-            context.logger.debug(`[Demo package] datapack lookup failed: ${(error as Error).message}`);
-            return undefined;
-        }
+function datapackLookup(context: HandlerContext): PackageCheckDeps['datapackAvailability'] {
+    return async (pack) => {
+        const where = await availabilityOf(packReadsFor({ ...context, panel: undefined }), pack);
+        if (where === undefined) context.logger.debug(`[Demo package] datapack lookup could not ask a store for ${pack.name}@${pack.version}`);
+        return where;
     };
 }
 
 function checkDeps(context: HandlerContext): PackageCheckDeps {
     return {
         repoOps: getGitHubServices(context.context.secrets).repoOperations,
-        datapackExists: datapackLookup(context),
+        datapackAvailability: datapackLookup(context),
         logger: context.logger,
     };
 }

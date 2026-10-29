@@ -62,6 +62,7 @@ export function ProjectDashboardScreen({
     initialEdsStorefrontStatus,
     hasAdobeContext,
     dataInstallerAvailable,
+    ownDatapackName,
     appBuilderComponents,
     demo,
 }: ProjectDashboardScreenProps) {
@@ -257,6 +258,7 @@ export function ProjectDashboardScreen({
                                     demoStatus={demoStatusDisplay}
                                     handleRestartDemo={handleRestartDemo}
                                     dataInstallerAvailable={dataInstallerAvailable}
+                                    ownDatapackName={ownDatapackName}
                                     appBuilderComponents={appBuilderComponents}
                                     hasMesh={hasMesh}
                                     meshStatus={meshStatus}

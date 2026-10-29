@@ -2083,7 +2083,7 @@
             "anchors": [
                 "hasSelections: !!editSettings.selections,"
             ],
-            "line": 192,
+            "line": 189,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.selections itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2096,7 +2096,7 @@
             "anchors": [
                 "hasAdobe: !!editSettings.adobe,"
             ],
-            "line": 193,
+            "line": 190,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.adobe itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2109,7 +2109,7 @@
             "anchors": [
                 "hasConfigs: !!editSettings.configs,"
             ],
-            "line": 194,
+            "line": 191,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.configs itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2122,7 +2122,7 @@
             "anchors": [
                 "hasEdsConfig: !!editSettings.edsConfig,"
             ],
-            "line": 195,
+            "line": 192,
             "mutants": 2,
             "category": "branch",
             "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.edsConfig itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
@@ -2135,7 +2135,7 @@
             "anchors": [
                 "if (editSettings.edsConfig) {"
             ],
-            "line": 198,
+            "line": 195,
             "mutants": 2,
             "category": "branch",
             "reason": "Both arms of this if are a single log call \u2014 an info listing the stored EDS fields, or a warn that none were found. The state actually built from editSettings.edsConfig is decided much further down, on its own separate check at the end of buildEditModeState, so forcing this condition false or emptying its block moves only what is printed in development.",
@@ -2148,7 +2148,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 205,
+            "line": 202,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this else-block removes the warn that fires when a project stored no EDS config. Execution continues to the adobeContext build on the next line either way, and the returned state's edsConfig is computed from its own check lower down. No returned field, no collaborator call and no render differs.",
@@ -2161,7 +2161,7 @@
             "anchors": [
                 "if (importedSettings) {"
             ],
-            "line": 266,
+            "line": 263,
             "mutants": 2,
             "category": "branch",
             "reason": "The body of this if is one log.info and nothing more. Every value it reports \u2014 the selections, the Adobe block, the configs, the generated name \u2014 was computed on the four lines above it and is returned from computeInitialState regardless of whether this branch runs. Forcing it false or emptying it changes only development output.",
@@ -2174,7 +2174,7 @@
             "anchors": [
                 "hasSelections: !!importedSettings.selections,"
             ],
-            "line": 268,
+            "line": 265,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.selections directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2187,7 +2187,7 @@
             "anchors": [
                 "hasAdobe: !!importedSettings.adobe,"
             ],
-            "line": 269,
+            "line": 266,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.adobe directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2200,7 +2200,7 @@
             "anchors": [
                 "hasConfigs: !!importedSettings.configs,"
             ],
-            "line": 270,
+            "line": 267,
             "mutants": 2,
             "category": "branch",
             "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.configs directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
@@ -2213,7 +2213,7 @@
             "anchors": [
                 "configKeys: importedSettings.configs ? Object.keys(importedSettings.configs) : [],"
             ],
-            "line": 271,
+            "line": 268,
             "mutants": 1,
             "category": "other",
             "reason": "The empty fallback here is the else arm of a field inside the log.info payload; it is reached only when the import carried no configs, and it is printed rather than used. componentConfigs on the returned state comes from importedSettings?.configs || {} further down, which this expression cannot reach. Any test able to see the difference would be asserting log content.",
@@ -2226,7 +2226,7 @@
             "anchors": [
                 "existingProjectNames || [],"
             ],
-            "line": 323,
+            "line": 320,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when the caller passes no existing-names list, and the array goes straight to initializeProjectName, which uses it for one thing: existingNames.includes(baseName) inside generateUniqueProjectName. A list holding Stryker's placeholder string answers that check identically to an empty list for every project name a wizard can be opened with.",
@@ -2239,7 +2239,7 @@
             "anchors": [
                 "const originalStep = wizardSteps?.find((ws) => ws.id === step.id);"
             ],
-            "line": 347,
+            "line": 344,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing the optional call would throw only if this map body ran with wizardSteps undefined, and it cannot: enabledSteps is getEnabledWizardSteps(wizardSteps), which returns an empty array for a missing or empty configuration, so the map never executes a single iteration. There is no input that reaches this line with wizardSteps absent.",
@@ -2252,7 +2252,7 @@
             "anchors": [
                 "condition: originalStep?.condition,"
             ],
-            "line": 352,
+            "line": 349,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "originalStep is the result of finding step.id in wizardSteps, and step came from getEnabledWizardSteps(wizardSteps) \u2014 every id being searched for was taken from that same array, so the find always hits. Removing the optional read can never dereference undefined, whatever step configuration is handed in.",
@@ -2265,7 +2265,7 @@
             "anchors": [
                 "if (currentOrgId) {"
             ],
-            "line": 425,
+            "line": 422,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true sets hasSeenOrgRef when the org is absent, but the flag can only change an outcome once orgActuallyChanged is evaluated with prevOrgId defined \u2014 and prevOrgId is assigned currentOrgId at the end of a previous run, so a defined prevOrgId means that run had a defined currentOrgId and already set the flag unmutated. The two therefore agree on every sequence of org values.",
@@ -2278,7 +2278,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 454,
+            "line": 451,
             "mutants": 1,
             "category": "other",
             "reason": "This is the useCallback dependency list for updateState. Replacing the empty array with one holding a constant string leaves the memo equally stable \u2014 the value never changes between renders, so the callback identity never invalidates either way, and the test asserting updateState keeps the same reference across a state change passes under both.",
@@ -4055,11 +4055,11 @@
         {
             "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
             "anchors": [
-                "}, [load, includeCommunity]);"
+                "}, [load, includeCommunity, includeLibrary]);"
             ],
             "mutants": 1,
             "category": "other",
-            "reason": "The effect fetches once per mount, and emptying its dependency list keeps that true: load is a useCallback inside useDataInstallerRequest keyed on the execute function useVSCodeRequest memoises, so it never changes identity for a given request type. A test could only tell the two apart by making load change identity, which would mean the hook had started re-fetching on every render \u2014 a defect that hook is what prevents. (Re-anchored 2026-09-12: the effect now also depends on whether an added demo asks for a pack.)",
+            "reason": "The effect fetches once per mount, and emptying its dependency list keeps that true: load is a useCallback inside useDataInstallerRequest keyed on the execute function useVSCodeRequest memoises, so it never changes identity for a given request type. A test could only tell the two apart by making load change identity, which would mean the hook had started re-fetching on every render \u2014 a defect that hook is what prevents. (Re-anchored 2026-09-12: the effect now also depends on whether an added demo asks for a pack.) (Re-anchored 2026-10-29: and on whether the project arrived with a library pack, which is held once per mount, so it does not vary either.)",
             "decision": "none \u2014 the dependency is declared because exhaustive-deps requires it, not because it varies",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-02"
@@ -4069,7 +4069,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 106,
+            "line": 119,
             "mutants": 1,
             "category": "other",
             "reason": "openDataInstallerSettings posts a fixed message and closes over nothing at all. The Stryker replacement is a constant literal that compares equal on every render, so useCallback returns the same function either way, and the message it posts is identical. There is no render, click or payload a test could read that differs.",
@@ -4080,11 +4080,11 @@
         {
             "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
             "anchors": [
-                "updateState(version ? { datapack: { name: group.name, version } } : { datapack: undefined });"
+                "updateState(version ? { datapack: { name: group.name, version, store: group.store } } : { datapack: undefined });"
             ],
             "mutants": 1,
             "category": "other",
-            "reason": "This arm runs only when versionShown returned the empty string, which needs pickDefaultVersion to return undefined with no browsed version recorded. pickDefaultVersion reads the first entry of the group version list, and groupDatapacks builds a group only from catalog rows, so every group it can produce carries at least one version. No catalog response reaches this arm, and a fixture that forced it would be asserting against a group shape the grouping function cannot emit.",
+            "reason": "This arm runs only when versionShown returned the empty string, which needs pickDefaultVersion to return undefined with no browsed version recorded. pickDefaultVersion reads the first entry of the group version list, and groupDatapacks builds a group only from catalog rows, so every group it can produce carries at least one version. No catalog response reaches this arm, and a fixture that forced it would be asserting against a group shape the grouping function cannot emit. (Re-anchored 2026-10-29: the line now records the store too.)",
             "decision": "none \u2014 the empty-version fallback guards a group the catalog cannot produce",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-02"
@@ -7250,7 +7250,7 @@
             "anchors": [
                 "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
             ],
-            "line": 319,
+            "line": 323,
             "mutants": 1,
             "category": "branch",
             "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
@@ -7548,7 +7548,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 202,
+            "line": 229,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
@@ -7561,23 +7561,11 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 203,
+            "line": 230,
             "mutants": 1,
             "category": "branch",
             "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
             "decision": "none \u2014 equivalent.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "if (edsMetadata && cleanupOptions) {"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The LogicalOperator swap is unobservable because the operands are derived in sequence: edsMetadata is null for a project with no Edge Delivery storefront component, and for one that has it, a cancelled cleanup dialog returns before this line, so cleanupOptions is set whenever edsMetadata is. No input makes && and || disagree. Forcing the WHOLE condition true is unobservable too (measured 2026-10-09): on a plain project cleanupOptions is null, the spread hands performEdsCleanup '{ projectPath }' alone, and with deleteDaLiveSite and deleteGitHubRepo both undefined neither cleanup starts, so nothing is called and nothing is reported. Re-anchored 2026-10-13: the isEds flag in front of both was removed, since extractEdsMetadata already answers the same question.",
-            "decision": "none \u2014 equivalent, both mutants on this line; the plain-project path is pinned by the CRITERION 1 tests, which see no remote call either way.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
@@ -7903,7 +7891,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 242,
+            "line": 245,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08).",
@@ -9712,7 +9700,7 @@
             "anchors": [
                 "const [selection, setSelection] = useState<TypeSelection>({ selected: [], auto: [] });"
             ],
-            "line": 90,
+            "line": 91,
             "mutants": 1,
             "category": "other",
             "reason": "The 'auto' provenance set is only ever consulted as auto.has(t) for a type that is already in 'selected' and is a declared dependency of the type being unticked. A seeded entry that is not a real data type therefore matches nothing, and deselectType's final filter (auto kept only where it appears in the surviving selection) removes it on the first untick. Nothing rendered or sent reads 'auto' at all.",
@@ -9725,7 +9713,7 @@
             "anchors": [
                 "allSelected ? { selected: [], auto: [] } : { selected: [...availableTypes], auto: [] },"
             ],
-            "line": 184,
+            "line": 185,
             "mutants": 2,
             "category": "other",
             "reason": "Both survivors seed the 'auto' provenance set rather than the selection. 'auto' is read only as auto.has(t) while unticking, and only for types that are both currently selected and declared dependencies of the departing type, so an entry that is not a real data type can never match. The checkboxes, the Start guard and the request body all read 'selected'; none of them reads 'auto'.",
@@ -9750,7 +9738,7 @@
             "anchors": [
                 "}, [loadStatus]);"
             ],
-            "line": 114,
+            "line": 115,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9763,7 +9751,7 @@
             "anchors": [
                 "}, [loadTarget]);"
             ],
-            "line": 119,
+            "line": 120,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
@@ -9776,7 +9764,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 207,
+            "line": 208,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves.",
@@ -9789,7 +9777,7 @@
             "anchors": [
                 "const goBack = useCallback((): void => setDismissed(true), []);"
             ],
-            "line": 229,
+            "line": 230,
             "mutants": 1,
             "category": "other",
             "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function. goBack closes over nothing but a setState function, which React guarantees is stable.",
@@ -9802,7 +9790,7 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 223,
+            "line": 224,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false. watching only becomes false through the Stop watching button, which buildActions renders solely for the 'watching' view; that view requires a running record, and turning the watch off also stops the poll that could retire it. So while watching is false the modal offers no Remove data affordance to arm, and this call can only ever re-assert a value that is already true.",
@@ -9815,7 +9803,7 @@
             "anchors": [
                 "setWatching(true);"
             ],
-            "line": 216,
+            "line": 217,
             "mutants": 1,
             "category": "branch",
             "reason": "Unreachable with watching already false, for the same reason as the removal's call: watching only turns false through Stop watching, which buildActions renders solely for the 'watching' view, and that view needs a running record whose poll the same press stops. So while watching is false the modal shows no Start import button, and this call can only re-assert a value that is already true.",
@@ -11270,7 +11258,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 267,
+            "line": 272,
             "mutants": 1,
             "category": "block",
             "reason": "The else branch contains a single logger.warn and nothing else \u2014 no state change, no return, no call the caller can observe. Emptying it leaves the rename result, the project object and every collaborator call identical.",
@@ -11283,7 +11271,7 @@
             "anchors": [
                 "} catch (rollbackError) {"
             ],
-            "line": 323,
+            "line": 328,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch drops a logger.error and a 'return false'; falling off the end returns undefined instead, and the caller's guard is 'if (!undone)' \u2014 falsy either way. Same branch, same message, same result.",
@@ -11387,7 +11375,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 273,
+            "line": 278,
             "mutants": 1,
             "category": "block",
             "reason": "The remote-sync catch body is a single logger.warn. Emptying it still swallows the Console failure, still leaves the local rename successful and its result unchanged, and still leaves adobe.projectTitle recording the title that was never applied \u2014 the only difference is whether a line reaches the log channel.",
@@ -11412,7 +11400,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 182,
+            "line": 212,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11425,7 +11413,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 183,
+            "line": 213,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11438,7 +11426,7 @@
             "anchors": [
                 "if (resolved) return;"
             ],
-            "line": 190,
+            "line": 220,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -11451,7 +11439,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 191,
+            "line": 221,
             "mutants": 1,
             "category": "branch",
             "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row.",
@@ -15193,11 +15181,11 @@
         {
             "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
             "anchors": [
-                "if (version) updateState({ datapack: { name: askedGroup.name, version } });"
+                "if (version) updateState({ datapack: { name: askedGroup.name, version, store: askedGroup.store } });"
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "Forcing the guard true changes something only when 'version' is empty. It is 'askedVersion' on the arm that already tested askedVersion truthy, and otherwise pickDefaultVersion(askedGroup), which returns the first of the group's ordered versions. groupDatapacks builds a group only from catalog rows, so every group carries at least one version and the default is never undefined. The same unreachable group shape as the chooseGroup row above.",
+            "reason": "Forcing the guard true changes something only when 'version' is empty. It is 'askedVersion' on the arm that already tested askedVersion truthy, and otherwise pickDefaultVersion(askedGroup), which returns the first of the group's ordered versions. groupDatapacks builds a group only from catalog rows, so every group carries at least one version and the default is never undefined. The same unreachable group shape as the chooseGroup row above. (Re-anchored 2026-10-29: the line now records the store too.)",
             "decision": "none \u2014 the guard protects against a group with no versions, which the grouping function cannot emit",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-03"
@@ -15205,11 +15193,11 @@
         {
             "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
             "anchors": [
-                "return browsing[group.name] ?? pickDefaultVersion(group) ?? '';"
+                "return browsing[group.key] ?? pickDefaultVersion(group) ?? '';"
             ],
             "mutants": 1,
             "category": "other",
-            "reason": "The final '' is read only when the user has browsed no version AND pickDefaultVersion returns undefined, which needs a group with no versions. groupDatapacks builds a group only from catalog rows, so each has at least one. No test reaches the literal because no catalog can; Stryker reports it uncovered, not survived.",
+            "reason": "The final '' is read only when the user has browsed no version AND pickDefaultVersion returns undefined, which needs a group with no versions. groupDatapacks builds a group only from catalog rows, so each has at least one. No test reaches the literal because no catalog can; Stryker reports it uncovered, not survived. (Re-anchored 2026-10-29: the line now records the store too.)",
             "decision": "none \u2014 the empty-string fallback is for a group the catalog cannot produce",
             "recorded": "2026-10-10",
             "source": "PL-70 batch MUT-03"
@@ -15641,7 +15629,7 @@
             "anchors": [
                 "deleteGithubRepo: tickOf(args?.deleteGithubRepo),"
             ],
-            "line": 94,
+            "line": 106,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green. Re-anchored 2026-10-19 (89 -> 94): the line now hands the value to tickOf (AI-71) instead of comparing it to true; the chain is the same read of args, behind the same name guard.",
@@ -15654,7 +15642,7 @@
             "anchors": [
                 "deleteDaLiveSite: tickOf(args?.deleteDaLiveSite),"
             ],
-            "line": 95,
+            "line": 107,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green. Re-anchored 2026-10-19 (90 -> 95): the line now hands the value to tickOf (AI-71) instead of comparing it to true; the chain is the same read of args, behind the same name guard.",

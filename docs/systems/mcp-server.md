@@ -553,6 +553,14 @@ one IMS refuses or cannot be asked about, the repository is kept (`kept: true` /
 `stopped` with the sentence to sign in to DA.live and delete again), and `delete_project`
 keeps the project too.
 
+**A project's own datapack goes only when asked.** `delete_project` takes `deletePack`, the
+button's "Also delete its pack" box (datapack-engine step 07): every version of the project's
+own pack in the datapack library, deleted after the project's files. It is off unless the call
+asks, `deleteAll` never turns it on (keeping a pack can be undone, deleting it cannot), and
+`localOnly` refuses it with a `note`. `datapack` in the answer names the pack and says whether
+every version went (`deleted`), and which did not (`error`); a project with no pack of its own
+answers `datapack.deleted: false` and deletes nothing from the library.
+
 `delete_page` deliberately uses the plain `confirm: true` gate instead — it removes
 one page from the current project's own storefront, not a whole repository or site.
 That proportionality holds only because the page path is confined to the current
@@ -721,14 +729,32 @@ carries one line, `note` ("Kept 2 things you had changed in the Admin."). The st
 answers only the job's id, so that line arrives with the outcome, not with the start.
 `preview_datapack_changes` (a read) says beforehand what an install would do: counts per data kind
 and at most three names per count, never rows. `save_store_changes_to_pack` (confirm-gated) saves
-the store's copy of the pack as a new version in the datapack library (what the install record
-lists and the installed version's own products, attributes and sets, read from the store), keeps
-the version installed, moves the project onto the new version, and changes nothing in Commerce; it
-is undone by `delete_library_datapack` on the new version. Every removal path, `reset_datapack`
+the store's copy of the pack as a new version of this demo's OWN pack in the datapack library (step
+07: made at the first save, named for the project; what the install record lists and the installed
+version's own products, attributes and sets, read from the store), leaves the pack installed as it
+was, moves the project onto the new version (recording the store and the pack it was made from),
+and changes nothing in Commerce; it is undone by `delete_library_datapack` on the new version.
+A project's datapack records the store that holds it (`installer` or `library`): creation, a copy
+and a project file install from that store, `configure_project` takes it as `datapack.store`, and
+`create_project_from_file` answers `datapackNote` when the pack named can't be read (the pack it
+was made from, or none, is installed instead) or a colleague's own pack is copied into your library first. Every removal path, `reset_datapack`
 included, keeps a category or set the pack made that holds something it did not, and the
 outcome's `note` says so ("Kept the set Racks: it holds 2 products you added."). Both read the store with the project's own
 credential, behind the same org guard as the import. Plan:
 `.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
+
+### Renaming a library pack, and a pack shared in a file (datapack-engine step 07, 2026-10-29)
+
+`rename_datapack` (confirm-gated) gives every version of one of the SC's own library packs a new
+display name through the library's `update-datapack-metadata`; the pack's `datapackName` never
+changes. On this demo's own pack the project records that the SC named it, so its name stops
+following the project's. It answers `{datapackName, displayName, versions}`. The Data Installer
+screen's pack flyout offers the same Rename. Exporting a project whose pack is in the library
+(the save dialog, `export_project_settings`, or a demo bundle with its setup part) remembers that
+it went out in a file, on this machine; `delete_library_datapack` then carries one sentence, as
+`sharedInFile` without confirm and as `warning` with it: "You shared this pack in a project file
+on 27 October. Anyone who hasn't created that project yet will get bodea instead." Plan:
+`.rptc/plans/datapack-engine/step-07-demo-packs.md`.
 
 ### Integrations live in Adobe workspaces of their own (AB-23)
 

@@ -26,23 +26,8 @@
  * @module features/data-installer/services/dataInstallerParsers
  */
 
-import type {
-    ActivityEntry,
-    DataItem,
-    DataItemInventory,
-    DataTypeInfo,
-    DataTypeStatus,
-    DatapackDetail,
-    DatapackId,
-    DatapackSummary,
-    ImportStart,
-    InstalledDatapack,
-    JobFailureReason,
-    JobStatusSnapshot,
-    Page,
-    ServiceHealth,
-    ValidationResult,
-} from '../types';
+import type { ActivityEntry, DataItem, DataItemInventory, DataTypeInfo, DataTypeStatus, DatapackDetail, DatapackSummary, ImportStart, InstalledDatapack, JobFailureReason, JobStatusSnapshot, Page, ServiceHealth, ValidationResult } from '../types';
+import type { DatapackId } from '@/types/datapack';
 
 const TERMINAL_STATUSES: readonly string[] = ['pending', 'processing', 'success', 'error'];
 

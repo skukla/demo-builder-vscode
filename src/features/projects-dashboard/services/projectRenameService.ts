@@ -15,6 +15,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { normalizeProjectName } from '@/core/validation/normalizers';
 import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
+import { followRenameIntoPack } from '@/features/projects-dashboard/services/demoPackRename';
 import { moveProjectSecrets } from '@/features/projects-dashboard/services/projectSecretCleanup';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -197,6 +198,10 @@ export async function renameProjectCore(
         // a user-selected shared Console project must never be renamed by a
         // demo rename).
         await syncRemoteProjectTitle(context, project, oldTitle ?? oldName, newTitle);
+
+        // The demo's own pack takes the new name too, unless the SC renamed the pack (step 07).
+        // Best effort, like the Console title above: never undoes the rename.
+        await followRenameIntoPack(context, project);
 
         context.logger.info(`Renamed project: "${oldName}" → "${newName}"`);
 

@@ -13,7 +13,6 @@
  * @module features/data-installer/services/dataInstallerExportClient
  */
 
-import type { DatapackId } from '../types';
 import type { CommerceBackend } from './commerceBackend';
 import { actionUrl } from './dataInstallerConfig';
 import { DataInstallerApiError } from './dataInstallerErrors';
@@ -25,6 +24,7 @@ import {
     safeParse,
 } from './dataInstallerWriteClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { DatapackId } from '@/types/datapack';
 
 /**
  * Everything one EXPORT needs — capturing a pack FROM an instance.

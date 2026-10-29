@@ -124,6 +124,8 @@ export interface ActionGridProps {
      * to prevent.
      */
     dataInstallerAvailable?: boolean;
+    /** This demo's own pack, as the SC sees it named (step 07); absent when it has none. */
+    ownDatapackName?: string;
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     hasMesh?: boolean;
     meshStatus?: MeshStatus;
@@ -223,6 +225,7 @@ export function ActionGrid({
     demoStatus,
     handleRestartDemo,
     dataInstallerAvailable,
+    ownDatapackName,
     appBuilderComponents,
     hasMesh,
     meshStatus,
@@ -301,6 +304,7 @@ export function ActionGrid({
                 canEdit={canEdit}
                 isMeshActionDisabled={isMeshActionDisabled}
                 dataInstallerAvailable={dataInstallerAvailable}
+                ownDatapackName={ownDatapackName}
                 handleEditProject={handleEditProject}
                 handleConfigure={handleConfigure}
                 handleOpenAemAssets={handleOpenAemAssets}

@@ -233,8 +233,11 @@ async function recordDatapackOnProject(
         if (!project) {
             return;
         }
+        // The store travels with the pack, so a copy or an exported file installs from it too.
         project.datapack =
-            operation === 'reset' ? undefined : { name: request.id.name, version: request.id.version };
+            operation === 'reset'
+                ? undefined
+                : { name: request.id.name, version: request.id.version, store: request.source ?? 'installer' };
         await context.stateManager.saveProject(project);
         context.debugLogger.debug(
             `[Data Installer] project datapack ${operation === 'reset' ? 'cleared' : `recorded as ${request.id.name}@${request.id.version}`}`,

@@ -94,7 +94,8 @@ export interface ProjectManifest {
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
     demo?: Project['demo'];
-    datapack?: { name: string; version: string };
+    datapack?: Project['datapack'];
+    ownDatapack?: Project['ownDatapack'];
     selectedStack?: string;
     selectedAddons?: string[];
     selectedBlockLibraries?: string[];
@@ -105,6 +106,9 @@ export interface ProjectManifest {
     aiFileHashes?: Record<string, string>;
     publishKeyRegisteredAt?: string;
     pinned?: boolean;
+    commerceConfigChange?: Project['commerceConfigChange'];
+    demoPackage?: Project['demoPackage'];
+    frontendEnvState?: Project['frontendEnvState'];
 }
 
 export class ProjectFileLoader {
@@ -194,6 +198,7 @@ export class ProjectFileLoader {
                 selectedPackage: normalizePackageId(manifest.selectedPackage),
                 demo: manifest.demo,
                 datapack: manifest.datapack,
+                ownDatapack: manifest.ownDatapack,
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
@@ -210,6 +215,9 @@ export class ProjectFileLoader {
                 aiFileHashes: manifest.aiFileHashes,
                 publishKeyRegisteredAt: manifest.publishKeyRegisteredAt,
                 pinned: manifest.pinned,
+                commerceConfigChange: manifest.commerceConfigChange,
+                demoPackage: manifest.demoPackage,
+                frontendEnvState: manifest.frontendEnvState,
             };
 
             // Keyed appBuilderComponents (ADR-011 D3 Step 01): prefer the persisted

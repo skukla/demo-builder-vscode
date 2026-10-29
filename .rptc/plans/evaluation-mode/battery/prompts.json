@@ -1453,5 +1453,22 @@
         ],
         "cwd": "project",
         "why": "Datapack-engine step 05: the store changes and the pack follows. The tool saves the store's copy as a new version in the library and keeps the old one; without it an agent would try start_datapack_export, which writes into the shared catalog and has failed to save since August. Confirm-gated, so what this judges is findability."
+    },
+    {
+        "id": "rename-demo-pack",
+        "prompt": "Rename my demo's pack to Acme Q4.",
+        "expect": [
+            "rename_datapack"
+        ],
+        "cwd": "project",
+        "why": "Datapack-engine step 07: each demo saves into its own library pack, named for the project until the SC renames it. The agent reads the pack's name from find_datapacks (mine) and renames every version; without the tool it would delete and reload the pack, losing its versions. Confirm-gated, so what this judges is findability and that it reaches the tool without detours."
+    },
+    {
+        "id": "create-from-colleagues-file",
+        "prompt": "Create a project from the file Priya sent me (~/Downloads/acme.project.demo-builder.json). Her demo's datapack has been deleted.",
+        "expect": [
+            "create_project_from_file"
+        ],
+        "why": "Datapack-engine step 07: a project file names its datapack by reference. When the pack it names can't be read, creation carries on with the pack it was made from (or none), and the answer's datapackNote says which before confirm. What this judges is that the agent reads datapackNote back to the user in plain words instead of stopping or guessing; confirm-gated, so the battery stops at the preview."
     }
 ]

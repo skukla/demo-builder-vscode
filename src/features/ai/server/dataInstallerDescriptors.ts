@@ -239,10 +239,11 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Save the store\'s copy of a datapack Demo Builder installed in this project as a NEW version of it in ' +
-            'the datapack library, with the categories, set, attributes and quantities its products need. The ' +
-            'version installed is kept; undo by deleting the new one with delete_library_datapack. Answers the ' +
-            'new version. Nothing in Commerce changes.',
+            'Save the store\'s copy of a datapack Demo Builder installed in this project as a NEW version of this ' +
+            'demo\'s own pack in the datapack library (made at the first save and named for the project), with the ' +
+            'categories, set, attributes and quantities its products need. The pack installed is never changed; undo ' +
+            'by deleting the new version with delete_library_datapack. Answers the demo\'s pack and its new version. ' +
+            'Nothing in Commerce changes.',
         map: importHandlers,
         type: 'save-store-changes-to-pack',
         // Gated twice, as reset_datapack is: the row refuses before dispatch, and the same flag
@@ -385,13 +386,33 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'Delete one of your own packs from the datapack library — the undo of ' +
             "load_datapack_zip. Cannot be undone. The library only lets a pack's owner delete " +
-            "it; the Data Installer's shared catalog is never touched.",
+            "it; the Data Installer's shared catalog is never touched. When you shared the pack " +
+            'in a project file, the answer carries `warning` (without confirm, `sharedInFile`): ' +
+            "anyone who has not created that project yet gets the pack it was made from instead.",
         map: importHandlers,
         type: 'delete-library-datapack',
         // Gated twice, as reset_datapack is: the row refuses before dispatch, and the
         // same flag satisfies the handler's own confirm check.
         confirm: true,
         inputSchema: { ...DATAPACK_ID },
+    },
+    {
+        tool: 'rename_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Rename one of your own datapack library packs: every version takes the new display ' +
+            "name (its datapackName, from find_datapacks, never changes). On this demo's own pack, " +
+            "its name stops following the project's. Answers how many versions were renamed.",
+        map: importHandlers,
+        type: 'rename-library-datapack',
+        // Gated twice, as delete_library_datapack is: the row refuses before dispatch, and the
+        // same flag satisfies the handler's own confirm check.
+        confirm: true,
+        inputSchema: {
+            datapackName: z.string().describe('The library pack name from find_datapacks'),
+            displayName: z.string().describe('The new name everyone sees for the pack'),
+        },
     },
     {
         tool: 'copy_library_datapack_to_installer',

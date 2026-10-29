@@ -6,11 +6,13 @@
  *
  * The question lives in `deletionConfirmation.ts`, the online removal (GitHub
  * repository, DA.live site, the CDN unpublish) in `edsExternalCleanup.ts`, and
- * the local removal with its retry in `projectFilesDeletion.ts`.
+ * the local removal with its retry in `projectFilesDeletion.ts`, and the demo's own
+ * library pack, when the SC ticked it, in `demoPackDeletion.ts`.
  */
 
 import * as vscode from 'vscode';
 import { confirmPlainDelete, showCleanupConfirmation, type CleanupOptions } from './deletionConfirmation';
+import { deleteProjectDemoPack } from './demoPackDeletion';
 import { edsCleanupSteps, performEdsCleanup, type DeletionServices } from './edsExternalCleanup';
 import { deleteProjectFiles } from './projectFilesDeletion';
 import { numberedSteps } from '@/core/utils/numberedSteps';
@@ -34,6 +36,28 @@ export interface DeleteProgressOptions {
 }
 
 /**
+ * Ask before deleting: the cleanup question when the project has something beyond its
+ * files (an EDS storefront online, or its own library pack), else the plain modal.
+ *
+ * @returns what to delete beside the files, or null when the SC cancelled
+ */
+async function askBeforeDelete(
+    project: Project,
+    edsMetadata: ReturnType<typeof extractEdsMetadata>,
+    options?: DeleteProgressOptions,
+): Promise<CleanupOptions | null> {
+    if (edsMetadata || project.ownDatapack) {
+        // Auth is checked lazily in performEdsCleanup when user selects an option
+        return showCleanupConfirmation(
+            project,
+            edsMetadata,
+            options?.progress === 'modal' ? (options.operationId ?? deleteOperationId(project.name)) : undefined,
+        );
+    }
+    return (await confirmPlainDelete(project)) ? { deleteGitHubRepo: false, deleteDaLiveSite: false } : null;
+}
+
+/**
  * Delete a project with confirmation and cleanup
  *
  * Shows confirmation dialog, stops demo if running, deletes files,
@@ -51,34 +75,13 @@ export async function deleteProject(
     // Null unless the project has an Edge Delivery storefront component to clean up.
     const edsMetadata = extractEdsMetadata(project);
 
-    // For EDS projects, offer cleanup options
     // Auth is checked lazily in performEdsCleanup when user actually selects an option
     // This avoids slow auth checks before showing the confirmation dialog
-    let cleanupOptions: CleanupOptions | null = null;
-    if (edsMetadata) {
-        // Auth is checked lazily in performEdsCleanup when user selects an option
-        cleanupOptions = await showCleanupConfirmation(
-            project,
-            edsMetadata,
-            options?.progress === 'modal' ? (options.operationId ?? deleteOperationId(project.name)) : undefined,
-        );
-
-        // User cancelled the cleanup dialog
-        if (cleanupOptions === null) {
-            return {
-                success: true,
-                data: { success: false, error: 'cancelled' },
-            };
-        }
-    } else {
-        // Non-EDS project: show standard confirmation
-        if (!(await confirmPlainDelete(project))) {
-            return {
-                success: true,
-                data: { success: false, error: 'cancelled' },
-            };
-        }
+    const cleanupOptions = await askBeforeDelete(project, edsMetadata, options);
+    if (cleanupOptions === null) {
+        return { success: true, data: { success: false, error: 'cancelled' } };
     }
+    const ownPack = cleanupOptions.deleteDatapack ? project.ownDatapack : undefined;
 
     // Collect cleanup results for EDS projects
     const cleanupResults: CleanupResultItem[] = [];
@@ -95,14 +98,15 @@ export async function deleteProject(
             inModal: options?.progress === 'modal',
         },
         async (report) => {
-            const online = edsMetadata && cleanupOptions ? edsCleanupSteps(edsMetadata, cleanupOptions) : [];
+            const online = edsMetadata ? edsCleanupSteps(edsMetadata, cleanupOptions) : [];
             // Numbered "(n of N)": the list is known once the SC has said what to remove
             // (progress vocabulary slice 2, owner 2026-10-16). A step that is skipped (a
             // sign-in declined) leaves its number unused and the count moves on.
-            const step = numberedSteps([...online, OPERATION_STAGES.removingProjectFiles.label], report);
+            const packStep = ownPack ? [OPERATION_STAGES.deletingOwnPack.label] : [];
+            const step = numberedSteps([...online, OPERATION_STAGES.removingProjectFiles.label, ...packStep], report);
 
             // EDS cleanup: Perform external resource cleanup first
-            if (edsMetadata && cleanupOptions) {
+            if (edsMetadata) {
                 const stopped = await performEdsCleanup(
                     context,
                     edsMetadata,
@@ -122,6 +126,12 @@ export async function deleteProject(
 
             // Local deletion (stop demo, remove files, drop from recent, clear current).
             await deleteProjectFiles(context, project);
+
+            // The demo's own pack, last, and never a reason the delete fails (step 07).
+            if (ownPack) {
+                step(OPERATION_STAGES.deletingOwnPack.label);
+                cleanupResults.push(await deleteProjectDemoPack(context, ownPack));
+            }
 
             // No "deleted" line on a timer: the modal closes itself and a
             // background run ends with "— done" (PL-59 R6).

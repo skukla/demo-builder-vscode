@@ -262,6 +262,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     open_datapack_zip: 'Reading the datapack file',
     load_datapack_zip: 'Loading a datapack file',
     delete_library_datapack: 'Deleting a library datapack',
+    rename_datapack: 'Renaming the datapack',
     copy_library_datapack_to_installer: 'Copying a pack to the installer',
     // "Save the store's copy ... as a NEW version of it in the datapack library".
     save_store_changes_to_pack: 'Saving store changes to the pack',
@@ -345,6 +346,7 @@ const NAMED_NARRATION: Readonly<Record<string, NamedForm>> = {
     start_datapack_import: naming(['datapackName'], (name) => `Importing ${name}`),
     start_datapack_export: naming(['datapackName'], (name) => `Exporting ${name}`),
     delete_library_datapack: naming(['datapackName'], (name) => `Deleting ${name}`),
+    rename_datapack: naming(['datapackName'], (name) => `Renaming the ${name} pack`),
     copy_library_datapack_to_installer: naming(['datapackName'], (name) => `Copying ${name}`),
     remove_block_from_library: naming(['blockId'], (block) => `Removing the ${block} block`),
     set_site_admin: naming(['email'], (email) => `Changing ${email}'s access`),

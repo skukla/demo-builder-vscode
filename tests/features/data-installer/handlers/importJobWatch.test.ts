@@ -549,7 +549,7 @@ describe('recording the datapack on the project', () => {
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(
-            expect.objectContaining({ datapack: { name: 'bodea', version: 'main' } }),
+            expect.objectContaining({ datapack: { name: 'bodea', version: 'main', store: 'installer' } }),
         );
     });
 

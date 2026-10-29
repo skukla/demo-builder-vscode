@@ -9,14 +9,12 @@
  * - `service`: the Data Installer service does the work (`buildServiceEngine`, unchanged).
  * - `demo-builder`: Demo Builder does it, over the project's own signed Commerce access (the
  *   client the ERP work opens, `commerceClientForProject`), reading the pack's rows from the
- *   service's catalog through the reader the datapack file and library tools use
- *   (`readPackFromStore`). Reading from the library and from a file comes with step 03's
- *   item 6.
+ *   store that holds it (the service's catalog or the datapack library, `readPackItems`)
+ *   through the reader the datapack file and library tools use (`readPackFromStore`).
  *
  * @module features/data-installer/services/buildDatapackEngine
  */
 
-import type { DatapackId, DatapackStoreName } from '../types';
 import type { DataInstallerClient } from './dataInstallerClient';
 import { type DatapackEngine, type DatapackEngineId, type ServiceEngineAccess, buildServiceEngine } from './datapackEngine';
 import { readPackFromStore } from './datapackTransfer';
@@ -27,6 +25,7 @@ import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { commerceClientForProject } from '@/features/project-creation/services/erpFillForProject';
 import type { Project } from '@/types/base';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** What either engine needs: the service's access, and the project Demo Builder's writes into. */
 export interface DatapackEngineAccess extends ServiceEngineAccess {

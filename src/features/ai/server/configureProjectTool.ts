@@ -296,9 +296,16 @@ export function registerConfigureProjectTool(
             inputSchema: z
                 .object({
                     datapack: z
-                        .object({ name: z.string(), version: z.string() })
+                        .object({
+                            name: z.string(),
+                            version: z.string(),
+                            store: z
+                                .enum(['installer', 'library'])
+                                .optional()
+                                .describe('Which store holds the pack, as find_datapacks lists it; the Data Installer when absent'),
+                        })
                         .optional()
-                        .describe('Datapack that seeds this project (recorded, not imported)'),
+                        .describe('Datapack that seeds this project, and the store that holds it (recorded, not imported)'),
                     addons: z
                         .array(z.string())
                         .optional()
