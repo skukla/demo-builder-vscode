@@ -14,6 +14,11 @@ node_modules/**
 # Development tool caches — never part of the extension
 .serena/**
 .playwright-mcp/**
+# Added 2026-10-29, found by comparing beta.152's file list with beta.151's: a log of
+# the docs pages an agent looked up, and the repo's Node pin (the extension reads its
+# generated copy, node-version.generated.json, not this file).
+.tce-fetch-log
+.node-version
 # Added 2026-08-15: jest's transform cache moved in-repo on 2026-08-13
 # (`cacheDirectory: '<rootDir>/.jest-cache/...'`) and nothing here excluded it, so
 # beta.129 packaged 5,027 cache files — 58.6 MB, 98% of the VSIX by file count.
