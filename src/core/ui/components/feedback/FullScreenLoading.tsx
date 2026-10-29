@@ -24,7 +24,10 @@ export interface FullScreenLoadingProps {
     message: string;
     /** The surface's own page colour, when it sets one, so the gate does not flash. */
     backgroundColor?: 'gray-50';
-    /** Centre in the page's content column, under a header and tabs already drawn there. */
+    /**
+     * Centre in the page's content column, in the space left under a header and tabs
+     * already drawn there. The parent must be a filling column (`flex flex-column h-full`).
+     */
     withinContentColumn?: boolean;
 }
 
@@ -42,9 +45,14 @@ export function FullScreenLoading({
             <LoadingDisplay size="L" message={message} />
         </Flex>
     );
+    if (withinContentColumn) {
+        // Takes the space left under the surface's header and tabs (its parent is a
+        // filling column), rather than a window's height that starts below them.
+        return <div className="page-container-padded flex-1">{spinner}</div>;
+    }
     return (
         <View height="100vh" backgroundColor={backgroundColor}>
-            {withinContentColumn ? <div className="page-container-padded h-full">{spinner}</div> : spinner}
+            {spinner}
         </View>
     );
 }

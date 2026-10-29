@@ -36,5 +36,8 @@ describe('FullScreenLoading', () => {
         const column = container.querySelector('.page-container-padded');
         expect(column).not.toBeNull();
         expect(column?.textContent).toContain('Loading');
+        // The space left under the tabs, not a window's height that starts below them.
+        expect(column?.classList.contains('flex-1')).toBe(true);
+        expect(container.querySelector('div[style*="100vh"]')).toBeNull();
     });
 });

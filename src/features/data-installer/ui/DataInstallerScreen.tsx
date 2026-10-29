@@ -74,15 +74,20 @@ export function DataInstallerScreen(_props: DataInstallerScreenProps): React.JSX
             }
             backgroundColor="var(--spectrum-global-color-gray-50)"
         >
-            {/* Constrained like every other band on the page. */}
-            <div className="page-container-padded">
-                <ViewSwitcher views={VIEWS} activeId={activeView} onSelect={setActiveView} />
+            {/* A column filling the space under the header, so a view's first-load
+                spinner can take what is left under the tabs and centre in it; a
+                window-high spinner below the tabs sat ~165px low (2026-10-29). */}
+            <div className="flex flex-column h-full">
+                {/* Constrained like every other band on the page. */}
+                <div className="page-container-padded">
+                    <ViewSwitcher views={VIEWS} activeId={activeView} onSelect={setActiveView} />
+                </div>
+                {/* Mounted one at a time on purpose: each view owns its own request,
+                    so keeping the others mounted would spend round trips on screens
+                    nobody is looking at. The cost is a re-fetch when you switch back,
+                    which is the cheaper of the two. */}
+                {renderView(activeView)}
             </div>
-            {/* Mounted one at a time on purpose: each view owns its own request,
-                so keeping the others mounted would spend round trips on screens
-                nobody is looking at. The cost is a re-fetch when you switch back,
-                which is the cheaper of the two. */}
-            {renderView(activeView)}
         </PageLayout>
     );
 }
