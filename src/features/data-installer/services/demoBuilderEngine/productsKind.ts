@@ -27,6 +27,17 @@ export const PRODUCT_KIND = 'products';
 /** Inputs whose values a pack writes as option labels. */
 const OPTION_INPUTS = new Set(['select', 'multiselect']);
 
+/**
+ * Fields only Commerce's own storefront reads, never an Edge Delivery or headless one. A value
+ * the store does not offer is left out, so the product keeps the store's default, rather than
+ * stopping the install: every Frescopa product names Page Builder's "product-full-width", which
+ * an ACCS store has no option for (first live install, 2026-10-29).
+ */
+const LAYOUT_FIELDS = new Set(['page_layout', 'custom_layout', 'custom_design']);
+
+/** Told once per layout value the store does not offer. */
+type LeftAtDefault = (code: string, value: string) => void;
+
 const productSchema = z
     .object({
         sku: z.string().min(1),
@@ -58,8 +69,15 @@ export function parseProductRows(records: unknown): ProductRow[] {
 const labels = (value: unknown): string[] =>
     (Array.isArray(value) ? value : String(value).split(',')).map((v) => String(v).trim()).filter(Boolean);
 
-/** A custom attribute's value with labels and url keys turned into this store's ids. */
-async function customAttribute(lk: ProductLookups, attr: CustomAttribute): Promise<CustomAttribute> {
+/**
+ * A custom attribute's value with labels and url keys turned into this store's ids, or null
+ * for a layout field whose value the store does not offer.
+ */
+async function customAttribute(
+    lk: ProductLookups,
+    attr: CustomAttribute,
+    leftAtDefault: LeftAtDefault,
+): Promise<CustomAttribute | null> {
     const { attribute_code: code, value } = attr;
     if (code === 'category_ids') {
         return { attribute_code: code, value: await Promise.all(labels(value).map((key) => (isNumeric(key) ? key : lk.categoryId(key)))) };
@@ -67,8 +85,14 @@ async function customAttribute(lk: ProductLookups, attr: CustomAttribute): Promi
     if (value === null || value === undefined || isNumeric(value) || typeof value === 'boolean') return attr;
     const input = (await lk.attribute(code)).frontend_input ?? '';
     if (!OPTION_INPUTS.has(input)) return attr;
-    const ids = await Promise.all(labels(value).map((label) => (isNumeric(label) ? label : lk.optionId(code, label))));
-    return { attribute_code: code, value: ids.join(',') };
+    try {
+        const ids = await Promise.all(labels(value).map((label) => (isNumeric(label) ? label : lk.optionId(code, label))));
+        return { attribute_code: code, value: ids.join(',') };
+    } catch (error) {
+        if (!LAYOUT_FIELDS.has(code)) throw error;
+        leftAtDefault(code, String(value));
+        return null;
+    }
 }
 
 interface ConfigurableOption {
@@ -114,7 +138,12 @@ async function extensionAttributes(lk: ProductLookups, ext: Record<string, unkno
 }
 
 /** The body Commerce is sent for one row. */
-export async function toCommerceProduct(lk: ProductLookups, row: ProductRow, websiteId: number): Promise<{ product: unknown }> {
+export async function toCommerceProduct(
+    lk: ProductLookups,
+    row: ProductRow,
+    websiteId: number,
+    leftAtDefault: LeftAtDefault = () => undefined,
+): Promise<{ product: unknown }> {
     const setName = String(row.attribute_set_id);
     const tiers = await Promise.all(
         (row.tier_prices ?? []).map(async (tier) => ({
@@ -127,7 +156,9 @@ export async function toCommerceProduct(lk: ProductLookups, row: ProductRow, web
         product: {
             ...row,
             attribute_set_id: isNumeric(setName) ? Number(setName) : await lk.setId(setName),
-            custom_attributes: await Promise.all((row.custom_attributes ?? []).map((a) => customAttribute(lk, a))),
+            custom_attributes: (
+                await Promise.all((row.custom_attributes ?? []).map((a) => customAttribute(lk, a, leftAtDefault)))
+            ).filter((a): a is CustomAttribute => a !== null),
             extension_attributes: await extensionAttributes(lk, row.extension_attributes ?? {}, websiteId),
             tier_prices: tiers,
         },
@@ -139,13 +170,20 @@ export async function installProducts(ctx: KindContext, rows: readonly ProductRo
     const websiteId = ctx.session.websiteId;
     if (websiteId === undefined) throw new Error('The install target names no website, so the pack\'s products have nowhere to be sold.');
     const lk = productLookups(ctx);
+    const told = new Set<string>();
+    const leftAtDefault: LeftAtDefault = (code, value) => {
+        const key = `${code}=${value}`;
+        if (told.has(key)) return;
+        told.add(key);
+        ctx.log(`left ${code} "${value}" at the store's default: the store does not offer it`);
+    };
     for (const row of rows) {
         if (ctx.recorder.has(PRODUCT_KIND, row.sku)) continue;
         if (await readOrNull(ctx.get, `products/${encodeURIComponent(row.sku)}`)) {
             ctx.log(`left ${row.sku} alone: the store already has it`);
             continue;
         }
-        await ctx.send('POST', 'products', await toCommerceProduct(lk, row, websiteId));
+        await ctx.send('POST', 'products', await toCommerceProduct(lk, row, websiteId, leftAtDefault));
         await ctx.recorder.record({ kind: PRODUCT_KIND, id: row.sku });
         ctx.log(`created product ${row.sku}`);
     }

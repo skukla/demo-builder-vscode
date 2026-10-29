@@ -192,6 +192,59 @@ describe('installProducts', () => {
         expect(ctx.sent).toStrictEqual([]);
     });
 
+    // Found on the first live install, 2026-10-29: every Frescopa product names Page Builder's
+    // "product-full-width", which an ACCS store does not offer. A layout is read only by
+    // Commerce's own storefront, never by an Edge Delivery or headless one, so the product
+    // keeps the store's default and only the Debug Logs say so, once per value.
+    describe('a layout field', () => {
+        const LAYOUTS = {
+            'products/attributes/page_layout': {
+                attribute_id: 99,
+                frontend_input: 'select',
+                options: [
+                    { label: 'No layout updates', value: '' },
+                    { label: '1 column', value: '1column' },
+                ],
+            },
+        };
+        const withLayout = (sku: string, layout: string) => ({
+            product: {
+                ...VR_RACK.product,
+                sku,
+                tier_prices: [],
+                custom_attributes: [
+                    { attribute_code: 'url_key', value: sku },
+                    { attribute_code: 'page_layout', value: layout },
+                ],
+            },
+        });
+
+        it('is left out when the store does not offer its value, and said once, in the log only', async () => {
+            const ctx = await storeContext(LAYOUTS);
+
+            await installProducts(
+                ctx,
+                parseProductRows([withLayout('mug', 'product-full-width'), withLayout('cup', 'product-full-width')]),
+            );
+
+            expect(posted(ctx).map((p) => p.custom_attributes)).toEqual([
+                [{ attribute_code: 'url_key', value: 'mug' }],
+                [{ attribute_code: 'url_key', value: 'cup' }],
+            ]);
+            expect(ctx.logged.filter((line) => line.includes('product-full-width'))).toEqual([
+                'left page_layout "product-full-width" at the store\'s default: the store does not offer it',
+            ]);
+        });
+
+        it('keeps a value the store offers, matched by its code', async () => {
+            const ctx = await storeContext(LAYOUTS);
+
+            await installProducts(ctx, parseProductRows([withLayout('mug', '1column')]));
+
+            expect(posted(ctx)[0].custom_attributes).toContainEqual({ attribute_code: 'page_layout', value: '1column' });
+        });
+    });
+
     it('stops at a customer group the store does not have', async () => {
         const ctx = await storeContext({ [page('customerGroups/search', by('customer_group_code', 'Platinum Buyer'))]: { items: [], total_count: 0 } });
 

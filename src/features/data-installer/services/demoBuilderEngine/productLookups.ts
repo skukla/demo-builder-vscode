@@ -83,7 +83,10 @@ export function productLookups(ctx: KindContext): ProductLookups {
         }),
         attribute,
         optionId: async (code, label) => {
-            const option = (await attribute(code)).options?.find((o) => equalLabel(o.label, label));
+            // By label first; then by the option's own code, which is what a layout field
+            // stores and a pack sends (`1column`, never "1 column").
+            const options = (await attribute(code)).options ?? [];
+            const option = options.find((o) => equalLabel(o.label, label)) ?? options.find((o) => o.value === label);
             if (!option?.value) throw new Error(`The attribute ${code} has no option "${label}".`);
             return option.value;
         },
