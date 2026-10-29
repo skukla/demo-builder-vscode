@@ -21,23 +21,6 @@ function envSetupStatics(): { telemetryConfigured: boolean; checkingTelemetry: b
 export const mockLogger = createMockLogger();
 
 /**
- * Setup all Jest mocks for EnvironmentSetup tests
- */
-export function setupMocks() {
-    jest.mock('fs');
-    jest.mock('os', () => ({
-        homedir: jest.fn(() => '/mock/home'),
-        platform: jest.fn(() => process.platform),
-    }));
-    jest.mock('child_process', () => ({
-        execSync: jest.fn(),
-    }));
-    jest.mock('@/core/logging/debugLogger', () => ({
-        getLogger: () => mockLogger,
-    }));
-}
-
-/**
  * Create a fresh EnvironmentSetup instance with reset state
  */
 export function createEnvironmentSetup(mockHomeDir: string = '/mock/home'): EnvironmentSetup {

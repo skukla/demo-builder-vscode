@@ -23,12 +23,13 @@
  * @module features/data-installer/ui/views/DatapackActivityView
  */
 
-import { Button, Flex, Item, Picker, View } from '@adobe/react-spectrum';
+import { Button, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { ActivityEntry, OperationMode, Page } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
+import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 
@@ -167,15 +168,10 @@ export function DatapackActivityView(): React.JSX.Element {
     // activity yet" for the length of the target lookup — a false empty, and the
     // exact failure mode this feature exists to remove.
     if ((loading || !targetSettled) && !hasLoaded) {
-        // Centered in the full viewport — IntegrationsScreen's exact gate shape
-        // (its comment records why not CenteredFeedbackContainer: that takes a
-        // FIXED DimensionValue and cannot express "fill this screen").
+        // Centred in the content column, under the header and tabs already drawn
+        // there, as the catalog's is (2026-10-29).
         return (
-            <View height="100vh">
-                <Flex justifyContent="center" alignItems="center" height="100%">
-                    <LoadingDisplay size="L" message="Loading activity" />
-                </Flex>
-            </View>
+            <FullScreenLoading message="Loading activity" withinContentColumn />
         );
     }
 

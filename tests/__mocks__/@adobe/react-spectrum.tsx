@@ -292,6 +292,7 @@ export const Checkbox: React.FC<any> = ({
     children,
     isSelected,
     isDisabled,
+    isIndeterminate,
     onChange,
     ...props
 }) => (
@@ -300,6 +301,7 @@ export const Checkbox: React.FC<any> = ({
             type="checkbox"
             checked={isSelected || false}
             disabled={isDisabled}
+            aria-checked={isIndeterminate ? 'mixed' : undefined}
             onChange={(e) => onChange?.(e.target.checked)}
         />
         {children}
@@ -308,11 +310,17 @@ export const Checkbox: React.FC<any> = ({
 
 // Button mock - handles both onPress (Spectrum) and onClick (DOM)
 // Uses forwardRef to support buttonRef.current.focus()
+// `variant` is surfaced as `data-variant` (as StatusLight and Badge do): which
+// button is the accent one is a decision, and filtering it made it unobservable.
+// Spectrum's `style` is "fill" or "outline", not a CSS object: surfaced as data-style rather
+// than handed to the DOM, which throws on a string style.
 export const Button = React.forwardRef<HTMLButtonElement, any>(
-    ({ children, onPress, onClick, isDisabled, ...props }, ref) => (
+    ({ children, onPress, onClick, isDisabled, variant, style, ...props }, ref) => (
         <button
             ref={ref}
             data-testid="spectrum-button"
+            data-variant={variant}
+            data-style={typeof style === 'string' ? style : undefined}
             tabIndex={0}
             onClick={(e) => {
                 onClick?.(e);
@@ -475,19 +483,44 @@ export const IllustratedMessage: React.FC<any> = ({ children, ...props }) => (
     </div>
 );
 
-// Link mock
-export const Link: React.FC<any> = ({ children, onPress, ...props }) => (
-    <a data-testid="spectrum-link" onClick={onPress} {...filterSpectrumProps(props)}>
+/**
+ * Link mock — WITH the real component's one-child rule.
+ *
+ * Spectrum's Link renders `React.Children.only(children)` when it is given no
+ * `href`, so `<Link>Open {name}</Link>` (a string AND an expression) throws at
+ * render. On 2026-09-16 that crash blanked the whole integrations surface in a
+ * live window while every suite stayed green, because this mock accepted any
+ * children. A mock that is laxer than the thing it stands in for cannot fail
+ * for the reason production fails.
+ */
+export const Link: React.FC<any> = ({ children, onPress, ...props }) => {
+    // The real component's order: a plain string is wrapped in a span, anything
+    // else must be exactly one element (aio's Link, read from the shipped bundle
+    // 2026-09-16). Checking `only` first would reject every string label.
+    if (props.href === undefined && typeof children !== 'string') {
+        React.Children.only(children);
+    }
+    return (
+        <a data-testid="spectrum-link" onClick={onPress} {...filterSpectrumProps(props)}>
+            {children}
+        </a>
+    );
+};
+
+// Badge mock — a type label on a card face (the system card's "ERP").
+export const Badge: React.FC<any> = ({ children, variant, ...props }) => (
+    <span data-testid="spectrum-badge" data-variant={variant} {...filterSpectrumProps(props)}>
         {children}
-    </a>
+    </span>
 );
 
 // SearchField mock
-export const SearchField: React.FC<any> = ({ value, onChange, autoFocus, ...props }) => (
+export const SearchField: React.FC<any> = ({ value, onChange, autoFocus, isDisabled, ...props }) => (
     <input
         data-testid="spectrum-searchfield"
         type="search"
         value={value || ''}
+        disabled={isDisabled}
         onChange={(e) => onChange?.(e.target.value)}
         // Surfaced, not enacted — same reason as TextField's. Whether the search
         // field opens focused is a real decision (SearchableList suppresses it once
@@ -671,7 +704,9 @@ export const Switch: React.FC<any> = ({ children, isSelected, onChange, ...props
 );
 
 // Radio and RadioGroup mocks
-export const RadioGroup: React.FC<any> = ({ children, value, onChange, label, ...props }) => (
+// `description` is drawn under the choices, as Spectrum does; dropping it hid a group's
+// help line from every test (2026-10-18, Add another ERP).
+export const RadioGroup: React.FC<any> = ({ children, value, onChange, label, description, ...props }) => (
     <div
         data-testid="spectrum-radiogroup"
         role="radiogroup"
@@ -682,6 +717,7 @@ export const RadioGroup: React.FC<any> = ({ children, value, onChange, label, ..
         {React.Children.map(children, (child: any) =>
             React.cloneElement(child, { selectedValue: value, onSelect: onChange })
         )}
+        {description ? <span data-testid="spectrum-radiogroup-description">{description}</span> : null}
     </div>
 );
 
@@ -772,6 +808,15 @@ export const ListView: React.FC<any> = ({
 
     // disabledKeys may arrive as an array or an Iterable (Spectrum accepts both).
     const disabledKeySet = new Set<any>(disabledKeys ?? []);
+    // A click selects that row alone, as single selection does; in multiple selection it
+    // toggles the row and keeps the rest, as Spectrum's checkbox rows do (Assign products).
+    const clicked = (key: any): Set<React.Key> => {
+        if (_selectionMode !== 'multiple') return new Set([key]);
+        const next = new Set(selectedSet);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+    };
     const rowProps = (key: any) => {
         const isDisabled = disabledKeySet.has(key);
         return {
@@ -779,7 +824,7 @@ export const ListView: React.FC<any> = ({
             'data-key': key,
             'aria-selected': selectedSet.has(key) || undefined,
             'aria-disabled': isDisabled ? true : undefined,
-            onClick: isDisabled ? undefined : () => onSelectionChange?.(new Set([key])),
+            onClick: isDisabled ? undefined : () => onSelectionChange?.(clicked(key)),
         };
     };
 
@@ -828,6 +873,123 @@ export const ListView: React.FC<any> = ({
         >
             {content}
         </ul>
+    );
+};
+
+// TableView mock: a <table role="grid">. The header, column, body, row and cell parts are
+// markers the table reads, as Spectrum's collection components are. A row carries data-key,
+// aria-selected and aria-disabled like ListView's; a click toggles it in multiple selection and
+// a disabled row ignores it. The heading checkbox answers 'all', or an empty Set when every
+// open row is already selected (Spectrum's select-all and deselect-all). A sortable column's
+// heading toggles its direction through onSortChange. With no rows, renderEmptyState's content
+// is drawn in the body, as Spectrum does.
+export const TableHeader: React.FC<any> = () => null;
+export const TableBody: React.FC<any> = () => null;
+export const Column: React.FC<any> = () => null;
+export const Row: React.FC<any> = () => null;
+export const Cell: React.FC<any> = ({ children }) => <>{children}</>;
+
+/** The valid element children of a node, keys untouched (toArray would prefix them). */
+function elementsOf(node: React.ReactNode): React.ReactElement<any>[] {
+    const out: React.ReactElement<any>[] = [];
+    React.Children.forEach(node, (child) => {
+        if (React.isValidElement(child)) out.push(child);
+    });
+    return out;
+}
+
+export const TableView: React.FC<any> = ({
+    children,
+    selectionMode,
+    selectedKeys,
+    disabledKeys,
+    onSelectionChange,
+    sortDescriptor,
+    onSortChange,
+    renderEmptyState,
+    'aria-label': ariaLabel,
+    density: _density,
+    overflowMode: _overflowMode,
+    ...props
+}) => {
+    const parts = elementsOf(children);
+    const header = parts.find((part) => part.type === TableHeader);
+    const body = parts.find((part) => part.type === TableBody);
+    const columns = elementsOf(header?.props.children);
+    const render = body?.props.children;
+    const rows: React.ReactElement<any>[] =
+        typeof render === 'function' ? (body?.props.items ?? []).map(render) : elementsOf(render);
+    const selected = new Set<React.Key>(Array.isArray(selectedKeys) ? selectedKeys : []);
+    const disabled = new Set<React.Key>(disabledKeys ?? []);
+    const multiple = selectionMode === 'multiple';
+    const open = rows.map((row) => row.key as React.Key).filter((key) => !disabled.has(key));
+    const allOn = open.length > 0 && open.every((key) => selected.has(key));
+    const toggle = (key: React.Key): Set<React.Key> => {
+        if (!multiple) return new Set([key]);
+        const next = new Set(selected);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+    };
+    const sortBy = (key: React.Key): void => {
+        const again = sortDescriptor?.column === key && sortDescriptor?.direction === 'ascending';
+        onSortChange?.({ column: key, direction: again ? 'descending' : 'ascending' });
+    };
+    return (
+        <table data-testid="spectrum-tableview" role="grid" aria-label={ariaLabel} {...filterSpectrumProps(props)}>
+            <thead>
+                <tr>
+                    {multiple && (
+                        <th role="columnheader">
+                            <input
+                                type="checkbox"
+                                aria-label="Select All"
+                                checked={allOn}
+                                onChange={() => onSelectionChange?.(allOn ? new Set() : 'all')}
+                            />
+                        </th>
+                    )}
+                    {columns.map((column) => (
+                        <th
+                            key={column.key}
+                            role="columnheader"
+                            data-key={column.key}
+                            aria-sort={sortDescriptor?.column === column.key ? sortDescriptor.direction : undefined}
+                            onClick={column.props.allowsSorting ? () => sortBy(column.key as React.Key) : undefined}
+                        >
+                            {column.props.children}
+                        </th>
+                    ))}
+                </tr>
+            </thead>
+            <tbody>
+                {rows.length === 0 && renderEmptyState && (
+                    <tr>
+                        <td>{renderEmptyState()}</td>
+                    </tr>
+                )}
+                {rows.map((row) => {
+                    const key = row.key as React.Key;
+                    const isDisabled = disabled.has(key);
+                    return (
+                        <tr
+                            key={key}
+                            data-key={key}
+                            aria-selected={selected.has(key) || undefined}
+                            aria-disabled={isDisabled || undefined}
+                            onClick={isDisabled ? undefined : () => onSelectionChange?.(toggle(key))}
+                        >
+                            {multiple && <td />}
+                            {elementsOf(row.props.children).map((cell, index) => (
+                                <td key={cell.key ?? index} role="gridcell">
+                                    {cell.props.children}
+                                </td>
+                            ))}
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
     );
 };
 

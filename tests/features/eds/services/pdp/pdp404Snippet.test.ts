@@ -11,10 +11,11 @@
  * The publisher keeps its own two suites — `.install` and `.eagerRedirect`,
  * 29 tests — so nothing it relies on moved.
  *
- * Phase 1 v2 contract (post-2026-06-09): the smart 404 handler is vendored into
- * `scripts/delayed.js` rather than published as a DA.live `/404.html` page. EDS
- * strips `<script>` tags from authored content, which silently broke the v1
- * page-publish approach. These tests pin the delayed-vendor contract.
+ * The smart 404 handler is committed into the storefront's code, never published as
+ * a DA.live page: EDS strips `<script>` tags from authored content, which silently
+ * broke the v1 page-publish approach. It lived in `scripts/delayed.js` until
+ * 2026-10-29 and now sits inline in the code's `404.html` (Adobe's B2B template has
+ * no `delayed.js`); see `pdp404Page.ts`.
  */
 
 import {
@@ -27,6 +28,7 @@ import {
     extractCspNonce,
     replaceMarkedBlock,
 } from '@/features/eds/services/pdp/pdp404Snippet';
+import { TRIGGER_URL, visitSmart404 } from './pdp404Snippet.testUtils';
 
 describe('derivePrepublishUrl', () => {
     it('rewrites /render-pdp to /prepublish-pdp at the end of the path', () => {
@@ -120,8 +122,7 @@ describe('deriveRegisterKeyUrl', () => {
 });
 
 describe('buildSmart404Snippet', () => {
-    const triggerUrl =
-        'https://example.adobeioruntime.net/api/v1/web/accs-discovery/prepublish-pdp';
+    const triggerUrl = TRIGGER_URL;
 
     it('substitutes the trigger URL, org, and site into the template', () => {
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
@@ -137,8 +138,8 @@ describe('buildSmart404Snippet', () => {
     });
 
     it('gates on window.isErrorPage so the snippet is inert on non-404 pages', () => {
-        // Critical: the snippet rides delayed.js, which runs on every page.
-        // Without this gate it would try to redirect on the home page.
+        // It lives in 404.html now, which only a missing page serves; the gate stays so a
+        // copy in a script every page loads (delayed.js, before 2026-10-29) stays inert.
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
         expect(snippet).toContain('window.isErrorPage');
     });
@@ -148,17 +149,11 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('/products/');
     });
 
-    it('keeps a permissive SKU matcher so _HH-encoded paths still match (ADR-007)', () => {
-        // The SKU segment is reversibly encoded into [a-z0-9_-] (encodeSkuForUrl);
-        // an underscore-encoded SKU like yale_20unoplus must match. The matcher
-        // must stay `([^/]+)` — narrowing it (e.g. to [a-z0-9-]+) would drop the
-        // `_` and silently break the cold-path redirect for prose SKUs.
+    it('keeps a permissive SKU matcher, so an old or uncleaned link still reaches the action', () => {
+        // The action, not the snippet, decides where the product lives. A link
+        // from before ADR-024 (`_5f` escapes) must still match and be redirected.
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
         expect(snippet).toContain('([^/]+)');
-        const m = '/products/cmlodestar/yale_20unoplus-series_20a'.match(
-            /^\/products\/([^/]+)\/([^/]+)$/
-        );
-        expect(m?.[2]).toBe('yale_20unoplus-series_20a');
     });
 
     it('embeds the infinite-loop guard using the pdpRetry sentinel', () => {
@@ -166,7 +161,7 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('pdpRetry');
     });
 
-    it('produces a delayed.js snippet (NOT an HTML document)', () => {
+    it('produces a script (NOT an HTML document): pdp404Page.ts wraps it for 404.html', () => {
         // Regression guard: the v1 implementation built a full <!DOCTYPE
         // html> page for DA.live publication. EDS stripped the <script>
         // tag inside it. We must never go back to that shape.
@@ -205,9 +200,10 @@ describe('buildSmart404Snippet', () => {
         // Spot-check the obvious construction points. A future
         // contributor reaching for `'a' + b + 'c'` will trip this and
         // get redirected to template literals.
-        expect(snippet).toContain('`/products/${urlKey.toLowerCase()}/${sku.toLowerCase()}`');
-        expect(snippet).toContain('encodeURIComponent(lc)');
-        expect(snippet).toContain('${lc}${sep}${RETRY_FLAG}=1');
+        // (The lowercased path is `pathname.toLowerCase()` since category pages joined
+        // it, EDS-61: there is no longer a path to build.)
+        expect(snippet).toContain('&path=${encodeURIComponent(lc)}`');
+        expect(snippet).toContain('${target}?${RETRY_FLAG}=1');
     });
 
     it('outer function IIFE uses inside-parens style (wrap-iife)', () => {
@@ -239,21 +235,16 @@ describe('buildSmart404Snippet', () => {
         expect(snippet).toContain('=== end Smart 404 PDP rebuild ===');
     });
 
-    it('removes the eager-script hide style and clears main.className before showing loading state', () => {
-        // Two regressions this test pins:
-        // 1. The eager script in 404.html injects #smart-404-cold-hide
-        //    to suppress the visible 404 chrome during the cold-path
-        //    window. delayed.js must remove it before painting the
-        //    loading state, otherwise the user sees nothing.
-        // 2. The boilerplate's 404.html ships <main class="error"> with
-        //    its own flex layout (align-items:center, max-width, etc.)
-        //    that fought our flex-centered loading div and pushed it
-        //    off-center. Clearing className strips .error so our
-        //    centering wins.
+    it('shows its loading state beside <main> and hides <main>, never writing into it', () => {
+        // The script runs inline at the end of 404.html, BEFORE the storefront's own scripts
+        // decorate <main>. Written into <main>, the loading state would be decorated as a
+        // section of the page. Beside it, nothing the storefront does reaches it, and
+        // putting the 404 back is removing our two elements. The eager script's hide
+        // (#smart-404-cold-hide) goes with them.
         const snippet = buildSmart404Snippet(triggerUrl, 'skukla', 'citisignal-b2b');
+        expect(snippet).toContain('mainEl.before(loading)');
+        expect(snippet).not.toContain('mainEl.innerHTML');
         expect(snippet).toContain("getElementById('smart-404-cold-hide')");
-        expect(snippet).toContain('hideStyle.remove()');
-        expect(snippet).toContain("mainEl.className = ''");
     });
 
     it('shows a spinner + "Loading product…" caption during the cold-publish window', () => {
@@ -450,5 +441,46 @@ describe('SMART_404_HEAD_SNIPPET_TEMPLATE', () => {
         expect(SMART_404_HEAD_SNIPPET_TEMPLATE).toContain(
             "s.textContent = 'main { visibility: hidden; }';"
         );
+    });
+});
+
+/**
+ * The snippet RUN, not read: where a shopper is sent after a cold publish.
+ *
+ * Under ADR-007 the snippet redirected to the path it asked to publish. Helix had
+ * stored the page under a cleaned path, so the redirect went nowhere and every SKU
+ * with `_` 404'd. The action now publishes at the canonical path and names it;
+ * these pin that the snippet follows the action's answer, and only a PDP answer.
+ */
+describe('buildSmart404Snippet — cold-publish redirect (executed)', () => {
+    async function runSnippet(pathname: string, actionBody: unknown, ok = true): Promise<string[]> {
+        return (await visitSmart404(pathname, { ok, body: actionBody })).redirects;
+    }
+
+    it('sends the shopper to the path the action says it published', async () => {
+        const replaced = await runSnippet('/products/sign/rre-805_5fwhite', {
+            success: true,
+            path: '/products/sign/rre-805-white',
+        });
+
+        expect(replaced).toStrictEqual(['/products/sign/rre-805-white?pdpRetry=1']);
+    });
+
+    it('falls back to the requested path when the action names none', async () => {
+        const replaced = await runSnippet('/products/sign/rre-805-white', { success: true });
+
+        expect(replaced).toStrictEqual(['/products/sign/rre-805-white?pdpRetry=1']);
+    });
+
+    it('ignores an answer that is not a product path', async () => {
+        const replaced = await runSnippet('/products/sign/rre-805-white', { success: true, path: 'https://elsewhere.example/x' });
+
+        expect(replaced).toStrictEqual(['/products/sign/rre-805-white?pdpRetry=1']);
+    });
+
+    it('sends the shopper to the native /404 when the action refuses', async () => {
+        const replaced = await runSnippet('/products/gone/gone-1', { success: false }, false);
+
+        expect(replaced).toStrictEqual(['/404']);
     });
 });

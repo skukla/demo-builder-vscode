@@ -19,6 +19,7 @@ import {
 } from '@/features/dashboard/handlers/dashboardHandlers';
 import { sendDemoStatusUpdate } from '@/features/dashboard/handlers/meshStatusHelpers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { hasActivePhaseSinks } from '@/core/utils/agentPhaseChannel';
 
 // Only the deferred refresh is faked; the rest of the module stays real so the
 // other suites' view of it is unchanged.
@@ -70,7 +71,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStartDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo', '/path/to/project');
         });
 
         it('should return success even with stopped project', async () => {
@@ -79,7 +80,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStartDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo', '/path/to/project');
         });
     });
 
@@ -117,6 +118,30 @@ describe('Dashboard Lifecycle Handlers', () => {
             expect(result.error).toContain('sync_storefront');
         });
 
+        it.each([
+            ['start', handleStartDemo],
+            ['stop', handleStopDemo],
+            ['restart', handleRestartDemo],
+        ])('names the verb it refused: %s', async (verb, handler) => {
+            const { mockContext } = setupMocks(eds);
+
+            const result = await handler(mockContext);
+
+            expect(result.error).toContain(`no local server to ${verb} —`);
+        });
+
+        // No project is not an EDS project: the refusal has nothing to say, and the
+        // command owns what happens when there is nothing to start.
+        it('does not refuse when there is no current project', async () => {
+            const { mockContext } = setupMocks();
+            (mockContext.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
+
+            const result = await handleStartDemo(mockContext);
+
+            expect(result).toStrictEqual({ success: true });
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo', undefined);
+        });
+
         it('leaves non-EDS projects alone', async () => {
             // The guard must not cost every other project its lifecycle.
             const { mockContext } = setupMocks({ selectedStack: 'headless-accs' });
@@ -124,7 +149,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStartDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.startDemo', '/path/to/project');
         });
     });
 
@@ -160,6 +185,30 @@ describe('Dashboard Lifecycle Handlers', () => {
         });
     });
 
+    /**
+     * The tile already shows the transition, so the command runs with its own
+     * notification suppressed (PL-59 R5): a phase sink is active for exactly the
+     * duration of the command, which is what the command reads to stay quiet.
+     */
+    describe('the command runs with its own notification suppressed', () => {
+        it.each([
+            ['start', handleStartDemo],
+            ['stop', handleStopDemo],
+            ['restart', handleRestartDemo],
+        ])('%s', async (_verb, handler) => {
+            const { mockContext } = setupMocks();
+            const sinksDuringCommand: boolean[] = [];
+            mockExecuteCommand.mockImplementationOnce(async () => {
+                sinksDuringCommand.push(hasActivePhaseSinks());
+            });
+
+            await handler(mockContext);
+
+            expect(sinksDuringCommand).toStrictEqual([true]);
+            expect(hasActivePhaseSinks()).toBe(false);
+        });
+    });
+
     describe('handleStopDemo', () => {
         it('should execute stopDemo command', async () => {
             const { mockContext } = setupMocks();
@@ -167,7 +216,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStopDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.stopDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.stopDemo', '/path/to/project');
         });
 
         it('should return success even with running project', async () => {
@@ -176,7 +225,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleStopDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.stopDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.stopDemo', '/path/to/project');
         });
     });
 
@@ -196,7 +245,7 @@ describe('Dashboard Lifecycle Handlers', () => {
             const result = await handleRestartDemo(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.restartDemo');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.restartDemo', '/path/to/project');
             expect(mockExecuteCommand).toHaveBeenCalledTimes(1);
         });
 
@@ -207,8 +256,9 @@ describe('Dashboard Lifecycle Handlers', () => {
 
             await handleRestartDemo(mockContext);
 
-            expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.stopDemo');
-            expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.startDemo');
+            const commandsRun = mockExecuteCommand.mock.calls.map(([id]) => id);
+            expect(commandsRun).not.toContain('demoBuilder.stopDemo');
+            expect(commandsRun).not.toContain('demoBuilder.startDemo');
         });
     });
 });

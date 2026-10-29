@@ -25,6 +25,7 @@ jest.mock('vscode', () => ({ window: {}, workspace: { getConfiguration: () => ({
 
 import {
     publishLibraryPaths,
+    publishSheetPaths,
     verifyLibraryPreviewed,
 } from '@/features/eds/handlers/blockLibraryPublish';
 import type { HelixService } from '@/features/eds/services/helix/helixService';
@@ -43,6 +44,13 @@ function makeHelix() {
         publishAllContent: jest.Mock;
         previewAndPublishPage: jest.Mock;
     };
+}
+
+/** Make one path fail on every attempt, retry included; every other path publishes. */
+function failAlways(helix: ReturnType<typeof makeHelix>, failing: string, reason: string) {
+    helix.previewAndPublishPage.mockImplementation((_owner: string, _repo: string, path: string) =>
+        path === failing ? Promise.reject(new Error(reason)) : Promise.resolve(undefined),
+    );
 }
 
 beforeEach(() => jest.clearAllMocks());
@@ -96,15 +104,14 @@ describe('publishLibraryPaths', () => {
         // A single missing doc page must not cost the other 77 blocks their
         // preview — the palette degrades block by block.
         const helix = makeHelix();
-        helix.previewAndPublishPage
-            .mockRejectedValueOnce(new Error('404'))
-            .mockResolvedValue(undefined);
+        failAlways(helix, '/a', '404');
 
         const result = await publishLibraryPaths(
             helix, 'owner', 'repo', ['/a', '/b', '/c'], logger,
         );
 
-        expect(helix.previewAndPublishPage).toHaveBeenCalledTimes(3);
+        // /a twice (its one retry), /b and /c once each.
+        expect(helix.previewAndPublishPage).toHaveBeenCalledTimes(4);
         expect(result).toEqual({ published: 2, failed: 1 });
     });
 
@@ -138,6 +145,76 @@ describe('publishLibraryPaths', () => {
         await publishLibraryPaths(helix, 'owner', 'repo', ['/a', '/b'], logger);
 
         expect(logger.warn).not.toHaveBeenCalled();
+    });
+});
+
+describe('publishSheetPaths', () => {
+    // Copied sheets take the same single-page route: the whole-site publish
+    // lists .html documents only, so a sheet is published by its .json path.
+    it('previews and publishes each sheet at its .json path, one at a time', async () => {
+        const helix = makeHelix();
+
+        const result = await publishSheetPaths(
+            helix, 'owner', 'repo', ['/metadata.json', '/placeholders/cart.json'], logger,
+        );
+
+        expect(helix.previewAndPublishPage.mock.calls).toStrictEqual([
+            ['owner', 'repo', '/metadata.json'],
+            ['owner', 'repo', '/placeholders/cart.json'],
+        ]);
+        expect(helix.previewAllContent).not.toHaveBeenCalled();
+        expect(result).toStrictEqual({ published: 2, failed: 0 });
+    });
+
+    it('counts a sheet that failed without abandoning the rest', async () => {
+        const helix = makeHelix();
+        failAlways(helix, '/metadata.json', '404');
+
+        const result = await publishSheetPaths(
+            helix, 'owner', 'repo', ['/metadata.json', '/redirects.json'], logger,
+        );
+
+        expect(result).toStrictEqual({ published: 1, failed: 1 });
+    });
+
+    /**
+     * One sheet in 15 failed a reset's publish with a bare "400 Bad Request" and
+     * was fine on the site afterwards (release row 3.17, 2026-10-17). A one-off
+     * refusal is cleared by asking again, and the first answer's reason is logged
+     * either way, so the next one can be explained rather than guessed at.
+     */
+    it('retries a failed sheet once, and counts it published when the retry works', async () => {
+        const helix = makeHelix();
+        helix.previewAndPublishPage
+            .mockRejectedValueOnce(new Error('Failed to preview page: 400 Bad Request (busy)'))
+            .mockResolvedValue(undefined);
+
+        const result = await publishSheetPaths(
+            helix, 'owner', 'repo', ['/placeholders/checkout.json'], logger,
+        );
+
+        expect(helix.previewAndPublishPage.mock.calls).toStrictEqual([
+            ['owner', 'repo', '/placeholders/checkout.json'],
+            ['owner', 'repo', '/placeholders/checkout.json'],
+        ]);
+        expect(result).toStrictEqual({ published: 1, failed: 0 });
+        // A recovered page is not a failure: no warning, one info line for the record.
+        expect(logger.warn).not.toHaveBeenCalled();
+        expect(logger.info).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries only once, and names the reason when the retry fails too', async () => {
+        const helix = makeHelix();
+        failAlways(helix, '/placeholders/checkout.json', '400 Bad Request (bad sheet)');
+
+        const result = await publishSheetPaths(
+            helix, 'owner', 'repo', ['/placeholders/checkout.json'], logger,
+        );
+
+        expect(helix.previewAndPublishPage).toHaveBeenCalledTimes(2);
+        expect(result).toStrictEqual({ published: 0, failed: 1 });
+        expect(logger.warn).toHaveBeenCalledTimes(1);
+        expect(logger.info).not.toHaveBeenCalled();
     });
 });
 

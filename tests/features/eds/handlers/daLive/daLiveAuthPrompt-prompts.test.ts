@@ -127,7 +127,8 @@ describe('the post-browser "Continue" gate', () => {
 
         const result = await showDaLiveAuthQuickPick(createAuthPromptContext());
 
-        expect(vscode.env.openExternal).toHaveBeenCalled();
+        // da.live itself, where the bookmarklet runs.
+        expect(vscode.env.openExternal).toHaveBeenCalledWith({ url: 'https://da.live' });
         expect(result).toEqual({ success: false, cancelled: true });
         expect(vscode.env.clipboard.readText).not.toHaveBeenCalled();
     });

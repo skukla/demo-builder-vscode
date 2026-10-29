@@ -1,0 +1,334 @@
+/**
+ * setupChecklistHandlers — an integration's demo setup checklist (AB-26x): read it, mark a
+ * step, run the checks. The catalog is the real bundled one (the ERP integration's steps);
+ * the Commerce REST client is mocked and asserted by the path it is sent.
+ */
+
+const mockSendRest = jest.fn();
+const mockResolveRestTarget = jest.fn();
+jest.mock('@/features/ai/server/commerceRestClient', () => ({
+    ...jest.requireActual('@/features/ai/server/commerceRestClient'),
+    resolveRestTarget: (...a: unknown[]) => mockResolveRestTarget(...a),
+    // The checks read UNCUT through requestRest (AB-77 fix); the fake answers the text as a 200.
+    requestRest: async (...a: unknown[]) => ({ ok: true, status: 200, text: String(await mockSendRest(...a)) }),
+}));
+const mockScope = jest.fn((): { websiteCode?: string } => ({}));
+jest.mock('@/features/ai/server/commerceEndpointsTool', () => ({
+    ...jest.requireActual('@/features/ai/server/commerceEndpointsTool'),
+    buildCommerceEndpoints: () => ({ scope: mockScope() }),
+}));
+const mockSnapshot = jest.fn();
+jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
+    ...jest.requireActual('@/features/dashboard/handlers/appBuilderComponentHandlers'),
+    postComponentsSnapshot: (...a: unknown[]) => mockSnapshot(...a),
+}));
+
+import {
+    handleCheckSetupSteps,
+    handlePrepareSetupChecks,
+    handleGetSetupChecklist,
+    handleSetSetupStep,
+} from '@/features/dashboard/handlers/setupChecklistHandlers';
+import type { Project, SetupStepRecord } from '@/types/base';
+import { ErrorCode } from '@/types/errorCodes';
+import type { HandlerContext } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
+import { makeStateManager } from '../../../helpers/stateManagerFake';
+
+const TARGET = { base: 'https://tenant.example', token: 't', clientId: 'c', imsOrgCode: 'o' };
+
+function setup(setupSteps?: Record<string, SetupStepRecord>) {
+    const project = createMockProject({
+        appBuilderComponents: {
+            'erp-integration': {
+                kind: 'integration',
+                status: 'deployed',
+                source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                ...(setupSteps ? { setupSteps } : {}),
+            },
+        },
+    });
+    const stateManager = makeStateManager(project);
+    const context = createMockHandlerContext({ stateManager }) as HandlerContext;
+    const saved = () =>
+        (stateManager.saveProject as jest.Mock).mock.calls.at(-1)?.[0] as Project | undefined;
+    return { context, saved, project };
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    mockScope.mockReturnValue({});
+    mockResolveRestTarget.mockResolvedValue(TARGET);
+});
+
+describe('getSetupChecklist', () => {
+    it('answers the steps as saved, running no check', async () => {
+        const { context } = setup();
+        const result = await handleGetSetupChecklist(context, { id: 'erp-integration' });
+        expect(result.success).toBe(true);
+        expect((result.data as { items: { id: string }[] }).items.map((item) => item.id)).toEqual([
+            'confirmed-status',
+            'company-catalogs',
+            'price-scope-website',
+            'second-source',
+            'erp-attributes',
+            'partially-held-status',
+            'payment-on-account',
+            'storefront-returns',
+            'card-payments',
+            'app-management-listing',
+        ]);
+        expect(mockSendRest).not.toHaveBeenCalled();
+    });
+
+    // AB-11: the step names what the SC picks in App Management — the project, and the
+    // integration's own workspace when it has one, else the project's.
+    it("names the integration's Adobe project and workspace in the App Management step", async () => {
+        const { context, project } = setup();
+        project.adobe = { ...project.adobe, projectTitle: 'Kukla Justrite', workspaceTitle: 'Production' };
+        const listing = async () => {
+            const result = await handleGetSetupChecklist(context, { id: 'erp-integration' });
+            const items = (result.data as { items: Array<{ id: string; enter?: string[] }> }).items;
+            return items.find((item) => item.id === 'app-management-listing')?.enter;
+        };
+        expect(await listing()).toStrictEqual(['Kukla Justrite', 'Production']);
+
+        const component = project.appBuilderComponents?.['erp-integration'];
+        if (component) component.workspace = { id: '1', name: 'JustriteERP1', title: 'Justrite ERP' };
+        expect(await listing()).toStrictEqual(['Kukla Justrite', 'Justrite ERP']);
+    });
+});
+
+describe('setSetupStep', () => {
+    it('marks a step done, saves it on the component, and pushes the snapshot', async () => {
+        const { context, saved } = setup();
+        const result = await handleSetSetupStep(context, {
+            id: 'erp-integration',
+            stepId: 'confirmed-status',
+            state: 'done',
+        });
+        expect(result.success).toBe(true);
+        expect(saved()?.appBuilderComponents?.['erp-integration'].setupSteps).toEqual({
+            'confirmed-status': { state: 'done' },
+        });
+        expect(mockSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    it('reopening drops the state and keeps the last check note', async () => {
+        const { context, saved } = setup({
+            'company-catalogs': { state: 'done', note: 'fine', checkedAt: 'x' },
+        });
+        await handleSetSetupStep(context, {
+            id: 'erp-integration',
+            stepId: 'company-catalogs',
+            state: 'open',
+        });
+        expect(saved()?.appBuilderComponents?.['erp-integration'].setupSteps).toEqual({
+            'company-catalogs': { note: 'fine', checkedAt: 'x' },
+        });
+    });
+
+    it('refuses a step the entry does not declare, and a state that is not one', async () => {
+        const { context } = setup();
+        expect(
+            await handleSetSetupStep(context, {
+                id: 'erp-integration',
+                stepId: 'nope',
+                state: 'done',
+            })
+        ).toMatchObject({
+            success: false,
+            code: ErrorCode.CONFIG_INVALID,
+        });
+        expect(
+            await handleSetSetupStep(context, {
+                id: 'erp-integration',
+                stepId: 'confirmed-status',
+                state: 'maybe',
+            })
+        ).toMatchObject({
+            success: false,
+            code: ErrorCode.CONFIG_INVALID,
+        });
+    });
+});
+
+describe('checkSetupSteps', () => {
+    /** Commerce as the check reads it: companies on one path, shared catalogs on the other. */
+    const answerByPath = (companies: object[], catalogs: object[]) =>
+        mockSendRest.mockImplementation(async (_method: string, _target: unknown, path: string) =>
+            JSON.stringify({ items: path.startsWith('company/') ? companies : catalogs })
+        );
+
+    it('reads the companies through the signed client and marks the step done when each has its own catalog', async () => {
+        answerByPath(
+            [{ id: 1, company_name: 'Acme', customer_group_id: 4 }],
+            [{ id: 7, name: 'Acme', customer_group_id: 4, type: 0 }]
+        );
+        const { context, saved } = setup();
+        await handleCheckSetupSteps(context, { id: 'erp-integration' });
+        expect(mockSendRest).toHaveBeenCalledWith(
+            'GET',
+            TARGET,
+            'company/?searchCriteria[pageSize]=200&fields=items[id,company_name,customer_group_id]',
+            undefined,
+            expect.any(Function)
+        );
+        const step =
+            saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs'];
+        expect(step).toMatchObject({
+            state: 'done',
+            note: 'Acme has its own shared catalog.',
+        });
+        expect(step?.checkedAt).toEqual(expect.any(String));
+    });
+
+    it('opens a step again when the check finds a company in no shared catalog', async () => {
+        answerByPath(
+            [
+                { id: 1, company_name: 'Acme', customer_group_id: 1 },
+                { id: 2, company_name: 'Globex', customer_group_id: 18 },
+            ],
+            [{ id: 1, name: 'Default (General)', customer_group_id: 1, type: 1 }]
+        );
+        const { context, saved } = setup({ 'company-catalogs': { state: 'done' } });
+        await handleCheckSetupSteps(context, { id: 'erp-integration' });
+        const step =
+            saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs'];
+        expect(step?.state).toBeUndefined();
+        expect(step?.note).toBe('Globex is in no shared catalog (customer group 18 has none).');
+    });
+
+    it('leaves the state alone when Adobe sign-in is missing, and says why', async () => {
+        mockResolveRestTarget.mockResolvedValue({ refusal: 'Error: Adobe sign-in required.' });
+        const { context, saved } = setup({ 'company-catalogs': { state: 'done' } });
+        await handleCheckSetupSteps(context, { id: 'erp-integration' });
+        expect(mockSendRest).not.toHaveBeenCalled();
+        expect(
+            saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs']
+        ).toMatchObject({
+            state: 'done',
+            note: 'Could not check: Adobe sign-in required.',
+        });
+    });
+
+    it('skips a dismissed step, and still runs the others', async () => {
+        answerByPath([], []);
+        const { context } = setup({ 'company-catalogs': { state: 'dismissed' } });
+        await handleCheckSetupSteps(context, { id: 'erp-integration' });
+        const paths = mockSendRest.mock.calls.map((call) => call[2]);
+        expect(paths.some((path) => String(path).startsWith('company/'))).toBe(false);
+        expect(paths).toContain('inventory/sources?searchCriteria[pageSize]=200');
+    });
+
+    it("hands the project's website to the check that reads one website's setting", async () => {
+        mockScope.mockReturnValue({ websiteCode: 'acme' });
+        mockSendRest.mockResolvedValue(JSON.stringify({ items: [] }));
+        const { context } = setup();
+        await handleCheckSetupSteps(context, { id: 'erp-integration' });
+        const paths = mockSendRest.mock.calls.map((call) => call[2] as string);
+        expect(paths).toContain(
+            'system/config?scope=website&scopeCode=acme&searchCriteria[filterGroups][0][filters][0][field]=path' +
+                '&searchCriteria[filterGroups][0][filters][0][value]=payment/companycredit/active',
+        );
+    });
+
+    it('saves what each check concluded beside its note', async () => {
+        answerByPath([{ id: 1, company_name: 'Acme', customer_group_id: 4 }], [{ id: 7, name: 'Acme', customer_group_id: 4, type: 0 }]);
+        const { context, saved } = setup();
+        await handleCheckSetupSteps(context, { id: 'erp-integration', stepId: 'company-catalogs' });
+        expect(saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['company-catalogs']).toMatchObject({
+            state: 'done',
+            lastCheck: 'passed',
+        });
+    });
+
+    it('checks only the step asked for, which is how the setup guide asks', async () => {
+        answerByPath([{ id: 1, company_name: 'Acme', customer_group_id: 4 }], []);
+        const { context, saved } = setup();
+        await handleCheckSetupSteps(context, { id: 'erp-integration', stepId: 'company-catalogs' });
+        const paths = mockSendRest.mock.calls.map((call) => call[2] as string);
+        expect(paths.every((path) => path.startsWith('company/') || path.startsWith('sharedCatalog/'))).toBe(true);
+        const steps = saved()?.appBuilderComponents?.['erp-integration'].setupSteps ?? {};
+        expect(Object.keys(steps)).toStrictEqual(['company-catalogs']);
+    });
+
+    // The flyout said "All done" on Justrite with Test ERP just added and no warehouse of its
+    // own (2026-10-26): the check was told no ERPs, so any sold warehouse passed.
+    it("checks the warehouse step for each of the integration's ERPs", async () => {
+        mockSendRest.mockImplementation(async (_method: string, _target: unknown, path: string) => {
+            if (path.startsWith('inventory/sources')) {
+                return JSON.stringify({ items: [{ source_code: 'justrite', name: 'Justrite Warehouse', enabled: true }] });
+            }
+            if (path.startsWith('inventory/stock-source-links')) {
+                return JSON.stringify({ items: [{ stock_id: 3, source_code: 'justrite' }] });
+            }
+            if (path.startsWith('inventory/stocks')) {
+                return JSON.stringify({
+                    items: [{ stock_id: 3, name: 'Justrite Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'acme' }] } }],
+                });
+            }
+            return JSON.stringify([]);
+        });
+        mockScope.mockReturnValue({ websiteCode: 'acme' });
+        const { context, saved, project } = setup({ 'second-source': { state: 'done' } });
+        project.appBuilderComponents = {
+            ...project.appBuilderComponents,
+            'erp-integration': { ...project.appBuilderComponents!['erp-integration'], systems: ['justrite-erp', 'test-erp'] },
+            'justrite-erp': { kind: 'system', status: 'deployed', name: 'Justrite ERP', source: { owner: 'o', repo: 'r' } },
+            'test-erp': { kind: 'system', status: 'deployed', name: 'Test ERP', source: { owner: 'o', repo: 'r' } },
+        };
+        await handleCheckSetupSteps(context, { id: 'erp-integration', stepId: 'second-source' });
+        const step = saved()?.appBuilderComponents?.['erp-integration'].setupSteps?.['second-source'];
+        expect(step?.state).toBeUndefined();
+        expect(step?.note).toBe('Test ERP has no warehouse yet.');
+    });
+
+    it('refuses a step that does not exist or has no check, reading nothing', async () => {
+        const { context } = setup();
+        const result = await handleCheckSetupSteps(context, { id: 'erp-integration', stepId: 'no-such-step' });
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'There is no setup step "no-such-step" Demo Builder can check.',
+            code: ErrorCode.CONFIG_INVALID,
+        });
+        expect(mockSendRest).not.toHaveBeenCalled();
+    });
+
+    it('checks nothing once every checkable step is dismissed', async () => {
+        const { context } = setup({
+            'confirmed-status': { state: 'dismissed' },
+            'company-catalogs': { state: 'dismissed' },
+            'price-scope-website': { state: 'dismissed' },
+            'second-source': { state: 'dismissed' },
+            'erp-attributes': { state: 'dismissed' },
+            'partially-held-status': { state: 'dismissed' },
+            'payment-on-account': { state: 'dismissed' },
+            'storefront-returns': { state: 'dismissed' },
+            'card-payments': { state: 'dismissed' },
+        });
+        await handleCheckSetupSteps(context, { id: 'erp-integration' });
+        expect(mockSendRest).not.toHaveBeenCalled();
+    });
+});
+
+describe('prepareSetupChecks', () => {
+    it('signs in to Commerce ahead of a check, reading and saving nothing', async () => {
+        const { context, saved } = setup();
+        const result = await handlePrepareSetupChecks(context, { id: 'erp-integration' });
+        expect(result).toStrictEqual({ success: true, data: { ready: true } });
+        expect(mockResolveRestTarget).toHaveBeenCalledTimes(1);
+        expect(mockSendRest).not.toHaveBeenCalled();
+        expect(saved()).toBeUndefined();
+    });
+
+    it('says not ready when the sign-in is refused, without failing', async () => {
+        mockResolveRestTarget.mockResolvedValue({ refusal: 'Error: Adobe sign-in required.' });
+        const { context } = setup();
+        expect(await handlePrepareSetupChecks(context, { id: 'erp-integration' })).toStrictEqual({
+            success: true,
+            data: { ready: false },
+        });
+    });
+});

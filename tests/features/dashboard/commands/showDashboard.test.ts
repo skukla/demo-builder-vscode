@@ -8,7 +8,6 @@
 
 import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
-import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
@@ -160,46 +159,6 @@ describe('ProjectDashboardWebviewCommand - getInitialData (keyed-only project)',
         expect(data.appBuilderComponents).toEqual(keyed);
         // The singular app-card seed retired with the AppBuilderCard (D3 Step 08).
         expect(data.initialApp).toBeUndefined();
-    });
-});
-
-describe('ProjectDashboardWebviewCommand - sendAuthoringExperienceUpdate', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        jest.restoreAllMocks();
-    });
-
-    it('posts an authoringExperienceUpdate message carrying just the new DA URL', async () => {
-        // Given: An active dashboard panel
-        const mockPostMessage = jest.fn().mockResolvedValue(true);
-        jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue({
-            webview: { postMessage: mockPostMessage },
-        } as unknown as vscode.WebviewPanel);
-
-        // When: An authoring-experience flip pushes its update (the tile label
-        // is static — only the live DA URL rides on the message now)
-        await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
-            'https://da.live/canvas#/my-org/my-site/index',
-        );
-
-        // Then: The exact message shape is posted to the active panel
-        expect(BaseWebviewCommand.getActivePanel).toHaveBeenCalledWith('demoBuilder.projectDashboard');
-        expect(mockPostMessage).toHaveBeenCalledWith({
-            type: 'authoringExperienceUpdate',
-            payload: {
-                edsDaLiveUrl: 'https://da.live/canvas#/my-org/my-site/index',
-            },
-        });
-    });
-
-    it('does nothing when there is no active panel', async () => {
-        // Given: No active dashboard panel
-        jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue(undefined);
-
-        // When/Then: Sending does not throw
-        await expect(
-            ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate('https://da.live/x'),
-        ).resolves.toBeUndefined();
     });
 });
 

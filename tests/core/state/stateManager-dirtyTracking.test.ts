@@ -5,12 +5,8 @@
  * to mark fields as changed without triggering immediate saves.
  */
 
-import * as fs from 'fs/promises';
 import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
-
-// Re-declare mocks to ensure proper typing and hoisting
-jest.mock('fs/promises');
-jest.mock('os');
+import * as fs from 'fs/promises';
 
 describe('StateManager - Dirty Tracking', () => {
     let testMocks: TestMocks;

@@ -317,7 +317,7 @@ describe('toolHandlers.getProject', () => {
      * read the project put a working Commerce credential into its transcript.
      *
      * The convention it breaks was already written down and already enforced one
-     * door over — `export_project_settings` returns `{path, includesSecrets}` and
+     * door over — `export_project_settings` returned a path and a flag and
      * never the values, and `stripSecretValues` exists for exactly this. Only this
      * tool was not using it.
      *

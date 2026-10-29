@@ -11,6 +11,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import React from 'react';
 import { AiCapabilitiesModal } from '@/features/dashboard/ui/components/AiCapabilitiesModal';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { SkillInventoryEntry, McpInventoryEntry } from '@/types/ai';
 import '@testing-library/jest-dom';
 
@@ -143,15 +144,38 @@ describe('AiCapabilitiesModal', () => {
         expect(screen.getAllByTestId('ai-integration-heading').length).toBeGreaterThan(0);
     });
 
-    it('counts both halves of a pair the same way', () => {
-        // One section said "Skills · N installed" and the other just "MCP
-        // servers", so two parallel lists were labelled by different rules.
-        // Inside a pair the rule is one rule: name · count.
+    it('says each half of a pair in one plain line, with no middle dot', () => {
+        // Owner, 2026-10-22: "Demo Builder MCP · 168 tools" over "Demo Builder
+        // skills · 16" was noise. The server is one line saying what the number
+        // means; the skills are a "Skills (N)" heading over their names.
         renderModal({ skills: SKILLS, mcps: MCPS });
 
         const section = screen.getByTestId('ai-integration-demo-builder');
-        expect(section).toHaveTextContent('Demo Builder MCP · 2 tools');
-        expect(section).toHaveTextContent('Demo Builder skills · 2');
+        expect(section).toHaveTextContent('Demo Builder MCP: 2 tools your AI can call');
+        expect(within(section).getByTestId('ai-skills-group-demo-builder')).toHaveTextContent(
+            /^Skills \(2\)$/
+        );
+    });
+
+    it('prints no middle dot anywhere in the sectioned body', () => {
+        renderModal({
+            skills: SKILLS,
+            mcps: MCPS,
+            editedFiles: ['AGENTS.md'],
+            gatedSkills: [{ file: 'eds-publish.md', toolId: 'publish_eds', reason: 'tool-missing' }],
+        });
+
+        // Positive control: the body rendered the lists it is searched for.
+        expect(screen.getAllByTestId('ai-skill-row').length).toBeGreaterThan(0);
+        expect(screen.getByTestId('ai-capabilities-columns').textContent).not.toContain('·');
+        expect(screen.getByTestId('ai-edited-files-note').textContent).not.toContain('·');
+    });
+
+    it('prints no middle dot in the flat body either', () => {
+        renderModal({ skills: SKILLS, mcps: [] });
+
+        expect(screen.getByTestId('ai-mcps-heading')).toHaveTextContent(/^MCP servers \(0\)$/);
+        expect(screen.getByTestId('ai-capabilities-columns').textContent).not.toContain('·');
     });
 
     it('places both sections in the two-column body', () => {
@@ -218,43 +242,72 @@ describe('AiCapabilitiesModal', () => {
         expect(screen.getByTestId('ai-mcp-broken-server')).toHaveTextContent(/error|failed/i);
     });
 
-    // ─── Edited files — "kept your version" (ADR-013) ────────────────────────
-    // Hash-and-skip means user-edited bundle files survive regenerates; the
-    // modal is where that survival becomes visible instead of silent.
+    // ─── Edited files — what Regenerate keeps (ADR-013) ──────────────────────
+    // Hash-and-skip means user-edited bundle files survive regenerates. Owner,
+    // 2026-10-22: that fact matters only for Regenerate, so it is ONE quiet
+    // sentence beside that button, not a line above the "Demo Builder" heading
+    // and not a flag on each skill row. It names every edited file the verify
+    // found (skills by their title), however many.
 
-    it('shows a compact note listing non-skill edited files', () => {
+    it('says which edits Regenerate keeps, in one sentence below the lists', () => {
+        renderModal({ skills: SKILLS, mcps: MCPS, editedFiles: ['AGENTS.md'] });
+
+        const note = screen.getByTestId('ai-edited-files-note');
+        expect(note).toHaveTextContent(/^Regenerate keeps your edits to AGENTS\.md\.$/);
+        // Not at the top: outside the scrolling lists, after them.
+        expect(screen.getByTestId('ai-capabilities-columns')).not.toContainElement(note);
+        expect(
+            screen
+                .getByTestId('ai-capabilities-columns')
+                .compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
+    });
+
+    it('names several edited files in one sentence', () => {
+        renderModal({ skills: SKILLS, mcps: MCPS, editedFiles: ['.mcp.json', 'AGENTS.md'] });
+
+        expect(screen.getByTestId('ai-edited-files-note')).toHaveTextContent(
+            /^Regenerate keeps your edits to \.mcp\.json and AGENTS\.md\.$/
+        );
+    });
+
+    it('names an edited skill by its title, in the same sentence', () => {
         renderModal({
             skills: SKILLS,
             mcps: MCPS,
-            editedFiles: ['AGENTS.md', '.mcp.json'],
+            editedFiles: ['.claude/skills/add-component.md', '.mcp.json', 'AGENTS.md'],
         });
 
-        const note = screen.getByTestId('ai-edited-files-note');
-        expect(note).toHaveTextContent(/kept your version/i);
-        expect(note).toHaveTextContent('AGENTS.md');
-        expect(note).toHaveTextContent('.mcp.json');
+        expect(screen.getByTestId('ai-edited-files-note')).toHaveTextContent(
+            /^Regenerate keeps your edits to the Add a component skill, \.mcp\.json and AGENTS\.md\.$/
+        );
+        // …and no longer as a flag on the row.
+        expect(screen.queryByTestId('ai-skill-edited-flag')).not.toBeInTheDocument();
+        for (const row of screen.getAllByTestId('ai-skill-row')) {
+            expect(row).not.toHaveTextContent(/edited/i);
+        }
     });
 
-    it('omits the edited-files note entirely when nothing is edited', () => {
+    it('falls back to the path for an edited skill file no listed skill owns', () => {
+        renderModal({ skills: SKILLS, mcps: MCPS, editedFiles: ['.claude/skills/gone/SKILL.md'] });
+
+        expect(screen.getByTestId('ai-edited-files-note')).toHaveTextContent(
+            /^Regenerate keeps your edits to \.claude\/skills\/gone\/SKILL\.md\.$/
+        );
+    });
+
+    it('omits the sentence entirely when nothing is edited', () => {
         renderModal({ skills: SKILLS, mcps: MCPS, editedFiles: [] });
         expect(screen.queryByTestId('ai-edited-files-note')).not.toBeInTheDocument();
     });
 
-    it('omits the edited-files note when editedFiles is not supplied (pre-ADR project)', () => {
+    it('omits the sentence when editedFiles is not supplied (pre-ADR project)', () => {
         renderModal({ skills: SKILLS, mcps: MCPS });
         expect(screen.queryByTestId('ai-edited-files-note')).not.toBeInTheDocument();
     });
 
-    it('routes skill edits to the skills-list flags, not the note', () => {
-        renderModal({
-            skills: SKILLS,
-            mcps: MCPS,
-            editedFiles: ['.claude/skills/add-component.md'],
-        });
-
-        // Flagged in the list (the SKILLS fixture carries this path suffix)…
-        expect(screen.getByTestId('ai-skill-edited-flag')).toBeInTheDocument();
-        // …and NOT duplicated in the non-skill note.
+    it('omits the sentence while busy (the body is the loading state)', () => {
+        renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true, editedFiles: ['AGENTS.md'] });
         expect(screen.queryByTestId('ai-edited-files-note')).not.toBeInTheDocument();
     });
 
@@ -467,5 +520,41 @@ describe('AiCapabilitiesModal — a refreshed inventory', () => {
         );
 
         expect(screen.getByTestId('ai-integration-browser')).toBeInTheDocument();
+    });
+});
+
+// ─── Closing while a regenerate is still running ─────────────────────────────
+// Closing cancels nothing. A regenerate that is still running is handed to a
+// progress notification so it does not finish unseen (PL-59 R8); an idle dialog
+// has nothing to hand over.
+describe('AiCapabilitiesModal — closing', () => {
+    let postMessage: jest.SpyInstance;
+
+    beforeEach(() => {
+        postMessage = jest.spyOn(webviewClient, 'postMessage').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => postMessage.mockRestore());
+
+    it('hands a running regenerate to the background, by its operation id, then closes', () => {
+        const { onClose } = renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Run in background' }));
+
+        expect(postMessage).toHaveBeenCalledTimes(1);
+        expect(postMessage).toHaveBeenCalledWith('backgroundOperation', {
+            id: 'ai-files',
+            title: 'Regenerating AI files',
+        });
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('just closes when nothing is running — no handover is sent', () => {
+        const { onClose } = renderModal({ skills: SKILLS, mcps: MCPS });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+        expect(postMessage).not.toHaveBeenCalled();
+        expect(onClose).toHaveBeenCalledTimes(1);
     });
 });

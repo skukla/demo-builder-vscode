@@ -122,21 +122,13 @@ describe('SelectionStepContent — what it hands SearchableList', () => {
         );
     });
 
-    // Opening on a list with nothing chosen puts the cursor in the filter; opening
-    // on a list with a row already chosen must NOT, or the selection scrolls out
-    // from under the person who made it.
-    it('opens the filter focused when nothing is selected yet', () => {
-        const { container } = renderContent({ items: MANY, filteredItems: MANY });
-
-        expect(searchField(container)).toHaveAttribute('data-autofocus', 'true');
-    });
-
-    it('leaves focus alone when a row is already selected', () => {
-        const { container } = renderContent({
-            items: MANY,
-            filteredItems: MANY,
-            selectedId: 'org-3',
-        });
+    // A screen with a search filter focuses nothing on load (owner, 2026-10-01): not
+    // with nothing chosen, and not with a row already chosen.
+    it.each([
+        ['nothing is selected yet', undefined],
+        ['a row is already selected', 'org-3'],
+    ])('never opens the filter focused when %s', (_case, selectedId) => {
+        const { container } = renderContent({ items: MANY, filteredItems: MANY, selectedId });
 
         expect(searchField(container)).not.toHaveAttribute('data-autofocus');
     });

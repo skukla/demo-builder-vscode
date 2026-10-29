@@ -45,7 +45,7 @@ Any sub-step can succeed or fail independently; the push/unpublish steps never a
 
 To fully delete a block:
 
-1. Delete the source directory `components/eds-storefront/blocks/<blockId>/` and push that change (the storefront PostToolUse hook commits/pushes automatically when you use Write/Edit/Delete in the storefront, or call `sync_storefront` explicitly).
+1. Delete the source directory `components/eds-storefront/blocks/<blockId>/` and push that change: the storefront PostToolUse hook commits and pushes only after a Write or Edit in the storefront, and deleting a folder is neither, so call `sync_storefront` after deleting it.
 2. Then call `remove_block_from_library { projectName, blockId, confirm: true }` to unregister it from the library.
 
 Either order works, but the block isn't truly removed until both the source files are gone AND it's unregistered.

@@ -28,6 +28,19 @@
 
 jest.mock('@/core/utils/sleep');
 
+// PollingService allows ten checks a second and, over that, waits with `sleep` and
+// checks again. With `sleep` instant here, a test polling more than ten times inside
+// one real second spun that wait-and-recheck until the second passed, and on a busy
+// machine ran the worker out of memory (found 2026-10-29, failing the pre-push gate
+// one run in three). Rate limiting is not what this suite tests.
+jest.mock('@/core/shell/rateLimiter', () => ({
+    RateLimiter: class {
+        async checkRateLimit(): Promise<void> {
+            // never waits
+        }
+    },
+}));
+
 // `PollingService` reaches for the global logger at construction
 // (`private logger = getLogger()`), which throws in a bare node test. Same stub
 // shape `fileWatcher`'s suite uses.
@@ -263,6 +276,24 @@ describe('watchImportJob', () => {
             const { promise } = runWith([snap({ categories: 'error', products: 'error' })]);
 
             expect((await promise).outcome).toBe('error');
+        });
+
+        // Demo Builder's engine knows why a kind failed ("The attribute cable_size has no option
+        // '9 foot'"); the screen shows `reason` for an error or a partial run, so it is asked.
+        it.each([
+            ['an error', { categories: 'error', products: 'error' } as const, 'error'],
+            ['a partial run', { categories: 'success', products: 'error' } as const, 'partial'],
+        ])('carries the engine\'s reason for %s', async (_label, perType, outcome) => {
+            const { promise } = runWith([snap(perType)], { failureReason: { error: 'The store has no customer group Platinum Buyer.' } });
+
+            expect(await promise).toMatchObject({ outcome, reason: 'The store has no customer group Platinum Buyer.' });
+        });
+
+        it('asks for no reason when every kind succeeded', async () => {
+            const { promise, getJobFailureReason } = runWith([snap({ categories: 'success', products: 'success' })]);
+
+            expect((await promise).reason).toBeUndefined();
+            expect(getJobFailureReason).not.toHaveBeenCalled();
         });
 
         it('carries the processing time through when the service reports one', async () => {

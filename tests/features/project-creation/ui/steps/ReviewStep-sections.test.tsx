@@ -207,22 +207,25 @@ describe('the DA.live row', () => {
         expect(screen.queryByText('DA.live Project')).not.toBeInTheDocument();
     });
 
-    it('reads "New site" when no site mode was chosen', () => {
+    it('reads "New site" when creating a project, which makes the site', () => {
         renderReview(withEds({ daLiveSite: 'acme-site-da' }));
 
         expect(subItemsUnder('DA.live Project')).toBe('New site');
     });
 
-    it('reads "Existing site" for a site that already exists', () => {
-        renderReview(withEds({ daLiveSite: 'acme-site-da', siteMode: 'existing' }));
+    // `siteMode` was read here and set nowhere, so Edit called the project's own site
+    // "New site" (owner, 2026-10-17). In Edit the site is the one the project has.
+    // An Edit says whether the site's pages are kept or replaced (2026-10-19).
+    it('reads "Existing site, pages kept" in Edit', () => {
+        renderReview({ ...withEds({ daLiveSite: 'acme-site-da' }), wizardMode: 'edit' });
 
-        expect(subItemsUnder('DA.live Project')).toBe('Existing site');
+        expect(subItemsUnder('DA.live Project')).toBe('Existing site, pages kept');
     });
 
-    it('reads "New site" for any other site mode', () => {
-        renderReview(withEds({ daLiveSite: 'acme-site-da', siteMode: 'new' }));
+    it('reads "Existing site, pages replaced" in an Edit that resets to the template', () => {
+        renderReview({ ...withEds({ daLiveSite: 'acme-site-da', resetToTemplate: true }), wizardMode: 'edit' });
 
-        expect(subItemsUnder('DA.live Project')).toBe('New site');
+        expect(subItemsUnder('DA.live Project')).toBe('Existing site, pages replaced');
     });
 });
 

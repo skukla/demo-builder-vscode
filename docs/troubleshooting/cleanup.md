@@ -2,9 +2,9 @@
 
 ## Delete a project from the UI — not with `rm -rf`
 
-**Use the project card's kebab menu → Delete.** It is a real command
-(`demoBuilder.deleteProject`), reached from the projects grid and the project
-dashboard, and it is the only path that cleans up everything.
+**Use the project card's kebab menu → Delete.** It is reached from the projects
+grid and the project dashboard, and it is the only path that cleans up everything,
+including the secrets the project kept in VS Code's secret storage.
 
 Deleting a project by hand removes the local folder and **leaves its cloud
 resources behind**: the GitHub repository, the DA.live content, the Helix site

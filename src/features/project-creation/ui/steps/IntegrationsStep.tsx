@@ -21,7 +21,8 @@
  * button opens it in `add` mode; the destination line's Set up / Change opens it
  * in `destination` mode; a card press or its Manage APIs opens it in `api-edit`
  * mode. Rename is the card's own inline pencil (the dashboard's treatment), which
- * is why there is no rename modal here any more.
+ * is why there is no rename modal here any more. The ERP integration's ERP is
+ * named in the card's Settings ({@link PairedSystemNameDialog}).
  *
  * The destination is rendered ONCE above the list rather than on every card —
  * it is one project and one workspace for the whole build.
@@ -57,6 +58,12 @@ import type { FlowMode } from '@/features/project-creation/ui/components/integra
 import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
 import { isApiEditable, sublineFor, toIntegrationCards } from '@/features/project-creation/ui/components/integration-flow/integrationCards';
 import { resolveIntegrationRows, type IntegrationRow } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
+import {
+    PairedSystemNameDialog,
+    pairedSystemTarget,
+    type PairedSystemNameTarget,
+} from '@/features/project-creation/ui/components/integration-flow/PairedSystemNameDialog';
+import type { UnavailableEntries } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
 import type { ApiEditTarget } from '@/features/project-creation/ui/components/integration-flow/useIntegrationFlow';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -75,6 +82,10 @@ export interface IntegrationsStepProps extends BaseStepProps {
     packages?: DemoPackage[];
     /** Available stacks/architectures (catalog data; drives mesh availability). */
     stacks?: Stack[];
+    /** A line above the results: why Continue is held (AB-78), from the Build step. */
+    notice?: React.ReactNode;
+    /** Catalog entries the Add Integration modal greys out, and what to do instead. */
+    unavailable?: UnavailableEntries;
 }
 
 /** Case-insensitive, whitespace-trimmed name comparison. */
@@ -162,12 +173,15 @@ export function IntegrationsStep({
     updateState,
     packages = EMPTY_PACKAGES,
     stacks = EMPTY_STACKS,
+    notice,
+    unavailable,
 }: IntegrationsStepProps): React.ReactElement {
     const builder = useProjectBuilder(state, updateState, { packages, stacks });
     const {
         onAppBuilderComponentToggle,
         onRemoveAppBuilderComponent,
         onRenameAppBuilderComponent,
+        onRenamePairedSystem,
     } = builder;
 
     // The one modal, opened in 'add' (launchpad), 'destination' (row Set up/Change),
@@ -206,6 +220,8 @@ export function IntegrationsStep({
         [state.selectedConsoleApis],
     );
     const closeModal = useCallback((): void => setModalOpen(false), []);
+    const [settingsTarget, setSettingsTarget] = useState<PairedSystemNameTarget | null>(null);
+    const closeSettings = useCallback((): void => setSettingsTarget(null), []);
 
     const meshComponent = useMemo(
         () => meshComponentForStack(state, packages, stacks),
@@ -231,13 +247,13 @@ export function IntegrationsStep({
         () => packages.find((candidate) => candidate.id === state.selectedPackage),
         [packages, state.selectedPackage],
     );
-    // Integration-kind entries, split: the FINISHED catalog (the "Pre-built
-    // integration" gallery) vs. the blank starter app (the "Build custom"
-    // card) — the blank is NOT a pre-built integration and never shows in the
-    // gallery. From the ANNOTATED, package-scoped selection (not the raw
-    // loader): `onlyForPackages` exclusions apply to the gallery, and each
-    // entry carries its resolved requirement so a required row locks
-    // (`resolveIntegrationRows` reads it).
+    // Integration-kind entries, with the systems they bring (the ERP) riding
+    // along so a row can name what comes with it. The modal takes this list
+    // whole and narrows it itself: finished integrations to the "Pre-built
+    // integration" gallery, seeds to "Build custom". From the ANNOTATED,
+    // package-scoped selection (not the raw loader): `onlyForPackages`
+    // exclusions apply to the gallery, and each entry carries its resolved
+    // requirement so a required row locks (`resolveIntegrationRows` reads it).
     const integrationEntries = useMemo<SelectableAppBuilderComponent[]>(
         () =>
             pkg && stack
@@ -246,13 +262,9 @@ export function IntegrationsStep({
                       stack.backend,
                       stack.frontend,
                       stack.id,
-                  ).filter((entry) => entry.kind === 'integration')
+                  ).filter((entry) => entry.kind === 'integration' || entry.kind === 'system')
                 : [],
         [pkg, stack],
-    );
-    const catalog = useMemo(
-        () => integrationEntries.filter((entry) => !entry.blank),
-        [integrationEntries],
     );
     const blankComponent = useMemo(
         () => integrationEntries.find((entry) => entry.blank),
@@ -284,8 +296,7 @@ export function IntegrationsStep({
     );
 
     // Resolve rows against the FULL entry list (incl. the blank starter) so a
-    // committed "Build custom" app gets a row — `catalog` (blank-filtered) is only
-    // the modal's gallery, not the source of truth for configured integrations.
+    // committed "Build custom" app gets a row.
     const rows = useMemo(
         () => resolveIntegrationRows(state, meshComponent, integrationEntries),
         [state, meshComponent, integrationEntries],
@@ -324,9 +335,13 @@ export function IntegrationsStep({
             }
             if (action === 'manage-apis') {
                 openEditApis(row);
+                return;
+            }
+            if (action === 'settings') {
+                setSettingsTarget(pairedSystemTarget(row, integrationEntries));
             }
         },
-        [rowsById, onRemoveRow, openEditApis],
+        [rowsById, onRemoveRow, openEditApis, integrationEntries],
     );
 
     /**
@@ -336,6 +351,8 @@ export function IntegrationsStep({
      * lives here: `InlineRenameField` already cancels an empty or unchanged name
      * before calling this, so an "enter a name" branch would be unreachable.
      * Display name only — the id, its API picks, and the selection are immutable.
+     * For the ERP pair it renames the integration alone; its ERP is renamed in
+     * the card's Settings.
      */
     const commitRename = useCallback(
         async (id: string, raw: string): Promise<string | null> => {
@@ -359,6 +376,7 @@ export function IntegrationsStep({
                 areaLabel="Integrations"
                 viewClassName={rows.length === 0 ? 'int-results int-results--empty' : 'int-results'}
             >
+                {notice}
                 {cards.length === 0 && <EmptyState onAdd={openAdd} />}
                 {cards.length > 0 && (
                     <DestinationLine
@@ -387,7 +405,9 @@ export function IntegrationsStep({
                             model={card}
                             onAction={handleCardAction}
                             onRename={commitRename}
-                            subline={sublineFor(card)}
+                            subline={sublineFor(card, row?.companion).map((line) => (
+                                <span key={line}>{line}</span>
+                            ))}
                             onOpen={
                                 row && isApiEditable(row.kind)
                                     ? () => handleCardAction(card, 'manage-apis')
@@ -412,12 +432,18 @@ export function IntegrationsStep({
                 state={state}
                 updateState={updateState}
                 meshComponent={meshComponent}
-                catalog={catalog}
+                // The whole list, systems included: the modal narrows it to the
+                // gallery and the seeds itself, and its commit looks the ERP up
+                // here to keep a pair together. A list filtered to integrations
+                // hid the ERP, so naming it forked the integration under a new id.
+                catalog={integrationEntries}
+                unavailable={unavailable}
                 blankComponent={blankComponent}
                 reservedIds={reservedIds}
                 builder={builder}
                 onSignIn={signIn}
             />
+            <PairedSystemNameDialog target={settingsTarget} onClose={closeSettings} onSave={onRenamePairedSystem} />
         </>
     );
 }

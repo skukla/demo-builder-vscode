@@ -86,8 +86,8 @@ export function useServiceGroups({
         // and blank and sorted ABOVE the required field it derives from, so the
         // field a user reached for first was the computed one.
         //
-        // Same treatment the App Builder field model already gives its derivedFrom
-        // bucket (appBuilderComponentFieldModel.ts) — dropped, not rendered.
+        // Same treatment an integration's Settings give a derivedFrom var
+        // (componentSettings.ts `editableSettingsOf`) — dropped, not rendered.
         for (const [key, field] of fieldMap) {
             if (field.derivedFrom?.length) {
                 fieldMap.delete(key);

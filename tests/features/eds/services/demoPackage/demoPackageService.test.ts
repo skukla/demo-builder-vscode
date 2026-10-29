@@ -12,6 +12,7 @@ import {
     packageDraftFor,
 } from '@/features/eds/services/demoPackage/demoPackageService';
 import { COMPONENT_IDS } from '@/core/constants';
+import { writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import type { Project } from '@/types/base';
 import { makeAddedDemo, makeDemoPackage, makeStorefront } from '../../../../helpers/demoPackageFixtures';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -96,11 +97,14 @@ describe('describeProject', () => {
             },
         });
 
-        const file = describeProject(project, { name: ' Bodea by Steve ', description: ' Data center gear ' }, CONTENT, CATALOG);
+        const file = describeProject(project, { name: ' Bodea by Steve ', description: ' Data center gear ' }, CONTENT, {
+            packages: CATALOG,
+            extension: '1.0.0-beta.150',
+        });
 
         expect(file).toEqual({
             kind: 'demo',
-            version: 1,
+            version: 2,
             name: 'Bodea by Steve',
             description: 'Data center gear',
             configDefaults: {
@@ -117,17 +121,148 @@ describe('describeProject', () => {
             integrations: { catalog: ['app-builder-shell'], custom: { 'erp-sync': { owner: 'jen', repo: 'erp-sync', branch: 'main', name: 'ERP Sync' } } },
             blockLibraries: ['isle5'],
             contentSource: CONTENT,
+            builtWith: { package: 'bodea', extension: '1.0.0-beta.150' },
         });
     });
 
+    it("carries an ACCS project's Commerce endpoint, so the receiver is told which instance (EDS-22)", () => {
+        const project = edsProject({
+            componentConfigs: {
+                'adobe-commerce-accs': {
+                    ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.example/tenant/graphql',
+                    ACCS_WEBSITE_CODE: 'bodea',
+                },
+            },
+        });
+
+        const file = describeProject(project, { name: 'Bodea', description: '' }, CONTENT, { packages: CATALOG });
+
+        expect(file.configDefaults).toEqual({
+            ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.example/tenant/graphql',
+            ADOBE_COMMERCE_WEBSITE_CODE: 'bodea',
+            ACCS_WEBSITE_CODE: 'bodea',
+        });
+        // An ACCS endpoint is never offered as a PaaS one: the two are different services.
+        expect(file.configDefaults).not.toHaveProperty('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
+    });
+
     it("falls back to the project's title for an empty name and leaves out what the project does not have", () => {
-        const file = describeProject(edsProject({ componentConfigs: {} }), { name: '', description: '' }, CONTENT, CATALOG);
+        const file = describeProject(edsProject({ componentConfigs: {} }), { name: '', description: '' }, CONTENT, {
+            packages: CATALOG,
+        });
         expect(file.name).toBe('kukla-bodea');
         expect(file).not.toHaveProperty('description');
         expect(file).not.toHaveProperty('configDefaults');
         expect(file).not.toHaveProperty('datapack');
         expect(file).not.toHaveProperty('integrations');
         expect(file).not.toHaveProperty('blockLibraries');
+    });
+});
+
+describe('describeProject — builtWith (EDS-13f step 02)', () => {
+    const B2B = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
+    const LEDGER = { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b', lkgFile: 'b2b/last-known-good' };
+    const LKG = 'abcdef0123456789abcdef0123456789abcdef01';
+    const THIN_LAYER = [
+        makeDemoPackage({
+            id: 'bodea',
+            name: 'Bodea',
+            storefronts: {
+                'eds-accs': makeStorefront({
+                    templateOwner: B2B.owner,
+                    templateRepo: B2B.repo,
+                    codePatchSource: LEDGER,
+                    codePatches: ['header-nav-tools-defensive', 'pdp-empty-data-redirect'],
+                }),
+            },
+        }),
+    ];
+
+    /** The storefront record creation writes: template, pin and ledger, and the boilerplate read back. */
+    function pinnedProject(overrides: Partial<Project> = {}): Project {
+        const project = edsProject(overrides);
+        const instance = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!;
+        instance.metadata = {
+            ...instance.metadata,
+            templateOwner: B2B.owner,
+            templateRepo: B2B.repo,
+            lastSyncedCommit: LKG,
+            lkgSource: { owner: LEDGER.owner, repo: LEDGER.repo, lkgFile: LEDGER.lkgFile },
+            boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' },
+        };
+        return project;
+    }
+
+    it('records the shipped package, its template, the pin, the ledger and the boilerplate', () => {
+        const file = describeProject(pinnedProject(), { name: '', description: '' }, CONTENT, {
+            packages: THIN_LAYER,
+            extension: '1.0.0-beta.150',
+        });
+
+        expect(file.builtWith).toEqual({
+            package: 'bodea',
+            template: B2B,
+            lkg: LKG,
+            codePatchSource: LEDGER,
+            codePatches: ['header-nav-tools-defensive', 'pdp-empty-data-redirect'],
+            boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' },
+            extension: '1.0.0-beta.150',
+        });
+    });
+
+    it('records no pin when the storefront was not pinned to a last-known-good', () => {
+        const project = pinnedProject();
+        const metadata = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!;
+        delete metadata.lkgSource;
+
+        const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
+
+        expect(file.builtWith).not.toHaveProperty('lkg');
+        expect(file.builtWith?.extension).toBe('unknown');
+    });
+
+    it("carries a saved package's own record forward when the project was started from one", () => {
+        const builtWith = { template: B2B, lkg: LKG, codePatchSource: LEDGER, codePatches: ['pdp-empty-data-redirect'], extension: '1.0.0-beta.149' };
+        const project = edsProject({ demo: makeAddedDemo({ builtWith }) });
+
+        const file = describeProject(project, { name: '', description: '' }, CONTENT, {
+            packages: THIN_LAYER,
+            extension: '1.0.0-beta.150',
+        });
+
+        expect(file.builtWith).toEqual({ ...builtWith, extension: '1.0.0-beta.150' });
+    });
+
+    // EDS-56: the Adobe base the updates keep is newer than the creation record, and the next
+    // colleague should start from where this code actually is.
+    it.each([
+        ['a record carried from its package', makeAddedDemo({ builtWith: { template: B2B, lkg: LKG, extension: '1.0.0-beta.149' } })],
+        ['no record at all (JustRite)', makeAddedDemo()],
+    ])("writes a colleague's storefront's recorded Adobe base over %s", (_label, demo) => {
+        const MOVED = '48bed04d072fff094b49a46709b351bd719b287a';
+        const project = edsProject({ demo });
+        writeBoilerplateBase(project, {
+            template: B2B,
+            commit: MOVED,
+            lkgSource: { owner: LEDGER.owner, repo: LEDGER.repo, lkgFile: LEDGER.lkgFile },
+            found: 'first-commit',
+        });
+
+        const file = describeProject(project, { name: '', description: '' }, CONTENT, {
+            packages: THIN_LAYER,
+            extension: '1.0.0-beta.150',
+        });
+
+        expect(file.builtWith).toMatchObject({ template: B2B, lkg: MOVED, extension: '1.0.0-beta.150' });
+    });
+
+    it("records only the extension for a colleague's storefront that carried no record", () => {
+        const file = describeProject(edsProject({ demo: makeAddedDemo() }), { name: '', description: '' }, CONTENT, {
+            packages: THIN_LAYER,
+            extension: '1.0.0-beta.150',
+        });
+
+        expect(file.builtWith).toEqual({ extension: '1.0.0-beta.150' });
     });
 });
 

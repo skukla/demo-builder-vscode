@@ -296,9 +296,10 @@ describe('registerSiteConfig', () => {
         });
     });
 
-    it('numbers the progress messages from one', async () => {
+    it('counts the attempts from one, as a count on the line under the step', async () => {
         // The SC reads these while they wait. `attempt` is zero-based, so the
-        // +1 is what stops the first message reading "(0/3)".
+        // +1 is what stops the first message reading "0 of 3". A count of attempts
+        // is never written as a position (progress vocabulary slice 8).
         const onProgress = jest.fn();
 
         await run(
@@ -311,7 +312,7 @@ describe('registerSiteConfig', () => {
         expect(onProgress.mock.calls.map((c) => c[0])).toEqual(
             Array.from(
                 { length: n },
-                (_, i) => `Waiting for Configuration Service access (${i + 1}/${n})`
+                (_, i) => `Waiting for Configuration Service access: ${i + 1} of ${n} attempts`
             )
         );
     });

@@ -25,6 +25,7 @@ import type { AddonSource } from '@/types/demoPackages';
 import {
     createBlockFileEntries,
     setupBlockCollectionMocks,
+    type MockGithubFileOps,
 } from './blockCollectionHelpers.testUtils';
 
 const DEST_OWNER = 'dest-owner';
@@ -40,7 +41,7 @@ interface Docs {
 }
 
 describe('the filters and models merges', () => {
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     beforeEach(() => {

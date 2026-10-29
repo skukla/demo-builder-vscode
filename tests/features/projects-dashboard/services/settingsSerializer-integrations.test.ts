@@ -4,17 +4,17 @@
  * Split from settingsSerializer.test.ts to keep both files under the eslint
  * max-lines limit. Covers extractSettingsFromProject's derivation of
  * appBuilderComponentSources from the keyed `appBuilderComponents` map plus
- * additionalConsoleApis. All other serializer behavior lives in the sibling
+ * the API picks. All other serializer behavior lives in the sibling
  * settingsSerializer.test.ts.
  */
 
+import { readProjectFile } from '@/core/state/projectFileReader';
 import {
-    parseSettingsFile,
+    createExportSettings,
     extractSettingsFromProject,
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { AppBuilderComponentState, Project } from '@/types/base';
-import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
-import { assertOk } from '../../../helpers/resultAssertions';
+import { PROJECT_FILE_VERSION } from '@/types/projectFile';
 
 describe('settingsSerializer', () => {
     describe('extractSettingsFromProject - App Builder integration round-trip', () => {
@@ -54,7 +54,7 @@ describe('settingsSerializer', () => {
                 appBuilderComponents: { 'firefly-image-gen': INSTANCE_STATE },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.appBuilderComponentSources).toEqual({
                 'firefly-image-gen': {
@@ -71,7 +71,7 @@ describe('settingsSerializer', () => {
                 appBuilderComponents: { 'acme-widget': CUSTOM_IMPORT_STATE },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.appBuilderComponentSources).toEqual({
                 'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
@@ -97,7 +97,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(Object.keys(result.appBuilderComponentSources ?? {})).toEqual([
                 'firefly-image-gen',
@@ -122,7 +122,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.appBuilderComponentSources).toBeUndefined();
         });
@@ -138,7 +138,7 @@ describe('settingsSerializer', () => {
                 },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(Object.keys(result.appBuilderComponentSources ?? {})).toEqual(['acme-widget']);
         });
@@ -146,7 +146,7 @@ describe('settingsSerializer', () => {
         it('omits appBuilderComponentSources when the project has no keyed map', () => {
             const project = createProject();
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.appBuilderComponentSources).toBeUndefined();
         });
@@ -159,9 +159,9 @@ describe('settingsSerializer', () => {
                 componentApiPicks: { __existing__: ['AssetComputeSDK', 'CCAPI'] },
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
-            expect(result.additionalConsoleApis).toBeUndefined();
+            expect(result).not.toHaveProperty('additionalConsoleApis');
             expect(result.componentApiPicks).toEqual({
                 __existing__: ['AssetComputeSDK', 'CCAPI'],
             });
@@ -170,9 +170,9 @@ describe('settingsSerializer', () => {
         it('should omit additionalConsoleApis when absent', () => {
             const project = createProject();
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
-            expect(result.additionalConsoleApis).toBeUndefined();
+            expect(result).not.toHaveProperty('additionalConsoleApis');
         });
 
         /**
@@ -187,7 +187,7 @@ describe('settingsSerializer', () => {
                 additionalConsoleApis: ['CCAPI', 'AssetComputeSDK'],
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.componentApiPicks).toEqual({
                 'erp-sync': ['CCAPI'],
@@ -197,7 +197,7 @@ describe('settingsSerializer', () => {
 
         it('omits the keyed picks when there are none', () => {
             expect(
-                extractSettingsFromProject(createProject(), false).componentApiPicks
+                extractSettingsFromProject(createProject()).componentApiPicks
             ).toBeUndefined();
         });
 
@@ -207,21 +207,14 @@ describe('settingsSerializer', () => {
                 additionalConsoleApis: ['CCAPI'],
             });
 
-            const result = extractSettingsFromProject(project, false);
+            const result = extractSettingsFromProject(project);
 
             expect(result.selections).toEqual({
                 appBuilder: ['firefly-image-gen', 'acme-widget'],
             });
             expect(result.configs).toStrictEqual({});
-            expect(result.version).toBe(SETTINGS_FILE_VERSION);
+            expect(result.version).toBe(PROJECT_FILE_VERSION);
             expect(result.source.project).toBe('integrations-project');
-        });
-
-        it('should leave includeSecrets behavior unchanged with the derived fields present', () => {
-            const project = createProject({ additionalConsoleApis: ['CCAPI'] });
-
-            expect(extractSettingsFromProject(project, true).includesSecrets).toBe(true);
-            expect(extractSettingsFromProject(project, false).includesSecrets).toBe(false);
         });
 
         it('should round-trip: export then parse preserves derived sources + names + apis', () => {
@@ -237,11 +230,11 @@ describe('settingsSerializer', () => {
                 componentApiPicks: { __existing__: ['AssetComputeSDK', 'CCAPI'] },
             });
 
-            const exported = extractSettingsFromProject(project, false);
-            const parseResult = parseSettingsFile(JSON.stringify(exported));
+            const exported = createExportSettings(project, '1.0.0');
+            const read = readProjectFile(JSON.stringify(exported));
+            if (!read.ok) throw new Error(read.error);
 
-            assertOk(parseResult);
-            expect(parseResult.settings.appBuilderComponentSources).toEqual({
+            expect(read.file.appBuilderComponentSources).toEqual({
                 'firefly-image-gen': {
                     owner: 'skukla',
                     repo: 'app-builder-shell',
@@ -256,10 +249,45 @@ describe('settingsSerializer', () => {
                 },
                 'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
             });
-            expect(parseResult.settings.additionalConsoleApis).toBeUndefined();
-            expect(parseResult.settings.componentApiPicks).toEqual({
+            expect(read.file).not.toHaveProperty('additionalConsoleApis');
+            expect(read.file.componentApiPicks).toEqual({
                 __existing__: ['AssetComputeSDK', 'CCAPI'],
             });
+        });
+
+        // AB-23: a second copy of a pre-built kind (erp-integration-2) is not an
+        // imported repo. Exported as one, a new project would add it bare, without
+        // its ERP. Project creation cannot make copies yet, so it is left out.
+        it('leaves out a second copy of a pre-built kind', () => {
+            const project = createProject({
+                appBuilderComponents: {
+                    'erp-integration-2': { ...CUSTOM_IMPORT_STATE, catalogId: 'erp-integration' },
+                    'acme-widget': CUSTOM_IMPORT_STATE,
+                },
+            });
+
+            const exported = extractSettingsFromProject(project);
+
+            expect(Object.keys(exported.appBuilderComponentSources ?? {})).toEqual(['acme-widget']);
+        });
+
+        // AB-23 slice 6: a settings file starts a NEW project, and each add there
+        // makes its own workspace. Carrying this one's would point the copy's
+        // integrations at a workspace the original owns — and removing either
+        // project would then delete the other's apps with it.
+        it("never carries an integration's own workspace", () => {
+            const ownWorkspace = { id: '1000000000000000004', name: 'Northwind-ERP', title: 'Northwind ERP' };
+            const project = createProject({
+                appBuilderComponents: {
+                    'acme-widget': { ...CUSTOM_IMPORT_STATE, workspace: ownWorkspace },
+                },
+            });
+
+            const exported = JSON.stringify(extractSettingsFromProject(project));
+
+            expect(exported).toContain('"acme-widget"');
+            expect(exported).not.toContain(ownWorkspace.id);
+            expect(exported).not.toContain(ownWorkspace.name);
         });
     });
 });

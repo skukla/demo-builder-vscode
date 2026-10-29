@@ -1,8 +1,9 @@
 /**
  * AddIntegrationFlowModal — the one-modal Add Integration journey shell:
- * a {@link DialogContainer}-hosted core {@link Modal} whose body is a stage
- * switch over {@link useIntegrationFlow} and whose Back/Continue footer is
- * driven entirely by the hook's gates and labels — NO business logic here.
+ * a {@link DialogContainer}-hosted core {@link Modal} whose body is the stage
+ * switch ({@link FlowStageBody}) over {@link useIntegrationFlow} and whose
+ * Back/Continue footer is driven entirely by the hook's gates and labels — NO
+ * business logic here.
  *
  * The journey mounts ONLY while open (`{isOpen && …}` — mandatory: the Spectrum
  * test mock renders dialogs eagerly). That conditional mount is also the
@@ -23,47 +24,25 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useMemo } from 'react';
-import { isAdobeSignedIn, isMeshSelected } from '../../steps/tileStatus';
+import React from 'react';
+import { isAdobeSignedIn } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
+import { FlowStageBody } from './FlowStageBody';
 import { type FlowMode, FlowStageId } from './flowStages';
-import { ApiPickerStage } from './stages/ApiPickerStage';
-import { BlankStage } from './stages/BlankStage';
-import { CatalogStage } from './stages/CatalogStage';
-import { CustomStage } from './stages/CustomStage';
-import { DestinationStage } from './stages/DestinationStage';
-import { KindStage } from './stages/KindStage';
-import {
-    useIntegrationFlow,
-    type ApiEditTarget,
-    type UseIntegrationFlowReturn,
-} from './useIntegrationFlow';
+import type { UnavailableEntries } from './stages/CatalogStage';
+import { useIntegrationFlow, type ApiEditTarget } from './useIntegrationFlow';
+import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
-import {
-    isPrebuiltIntegration,
-    isSeedIntegration,
-} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeAuthSessionState, WizardState } from '@/types/webview';
-
-/** Stable empty selection (avoids the inline-array re-render gotcha). */
-const EMPTY_IDS: string[] = [];
 
 const TITLES: Record<FlowMode, string> = {
     add: 'Add Integration',
     destination: 'Deployment Destination',
     'api-edit': 'Edit API Access',
 };
-
-/** flow stage id → DestinationStage view, for the four destination stages. */
-const DEST_VIEWS = {
-    'dest-signin': 'signin',
-    'dest-project': 'project',
-    'dest-workspace': 'workspace',
-    'dest-summary': 'summary',
-} as const;
 
 export interface AddIntegrationFlowModalProps {
     isOpen: boolean;
@@ -86,6 +65,12 @@ export interface AddIntegrationFlowModalProps {
     meshComponent?: AppBuilderComponentCatalogEntry;
     /** The FINISHED catalog entries (kind picker count, catalog + API stages). */
     catalog: AppBuilderComponentCatalogEntry[];
+    /**
+     * Catalog entries that cannot be added here, greyed out with the reason, and the
+     * message saying what to do instead — the ERP integration when another project
+     * already runs one on this Commerce instance (AB-78).
+     */
+    unavailable?: UnavailableEntries;
     /** The blank starter app (the "Build custom" kind seeds it), if any. */
     blankComponent?: AppBuilderComponentCatalogEntry;
     /**
@@ -108,120 +93,6 @@ export interface AddIntegrationFlowModalProps {
 }
 
 type JourneyProps = Omit<AddIntegrationFlowModalProps, 'isOpen'>;
-
-/** Renders the stage body the hook's current stage asks for. */
-function StageBody({
-    flow,
-    props,
-}: {
-    flow: UseIntegrationFlowReturn;
-    props: JourneyProps;
-}): React.ReactElement {
-    const { stage, draft } = flow;
-    const { state, updateState, meshComponent, catalog, onSignIn } = props;
-
-    // The catalog prop is the stack-filtered MIXED list: derived meshes, authored
-    // integrations, the blank shell, and SEEDS. Only finished integrations belong
-    // in the Pre-built gallery — everything else has its own home (meshes on the
-    // kind picker, blank + seeds on the Build-custom naming stage), so listing
-    // them here offered the same thing twice under two names (reported
-    // 2026-08-06; the seed split is the owner's 2026-08-27 decision: the kit "is
-    // a Custom App that's built using the starter kit").
-    //
-    // Derived ONCE and used for both the tile count and the gallery, so the count
-    // can never disagree with what the gallery would show.
-    const prebuiltCatalog = useMemo(() => catalog.filter(isPrebuiltIntegration), [catalog]);
-    const seedCatalog = useMemo(() => catalog.filter(isSeedIntegration), [catalog]);
-    const selectedIds = state.selectedAppBuilderComponents ?? EMPTY_IDS;
-    if (stage === 'kind') {
-        // Availability and already-added stay SEPARATE here: the tile is hidden
-        // for a stack with no mesh, but disabled-with-a-reason once the project
-        // has one. They were collapsed into one boolean until 2026-08-04, which
-        // is why the tile could only ever vanish.
-        const meshAvailable = meshComponent !== undefined;
-        const meshAlreadyAdded = meshAvailable && isMeshSelected(state, meshComponent.id);
-        return (
-            <KindStage
-                meshAvailable={meshAvailable}
-                meshAlreadyAdded={meshAlreadyAdded}
-                catalogCount={prebuiltCatalog.length}
-                kind={draft.kind}
-                onPickKind={flow.pickKind}
-            />
-        );
-    }
-    if (stage === 'source-catalog') {
-        // The picked entry gets the same naming field the blank path uses —
-        // prefilled with the entry's name, so a kept default commits the
-        // classic catalog identity and an edited name a named instance.
-        return (
-            <CatalogStage
-                catalog={prebuiltCatalog}
-                selectedId={draft.catalogId}
-                onPick={flow.pickCatalog}
-                label={draft.label}
-                onLabelChange={flow.setLabel}
-            />
-        );
-    }
-    if (stage === 'source-custom') {
-        // A cleared/invalid URL emits undefined, which clears the draft source
-        // and re-disables Continue.
-        return (
-            <CustomStage
-                selectedIds={selectedIds}
-                source={draft.customSource}
-                onSourceChange={flow.setCustomSource}
-                label={draft.label}
-                onLabelChange={flow.setLabel}
-            />
-        );
-    }
-    if (stage === 'source-blank') {
-        // The instance-naming stage: a valid, non-colliding name emits the
-        // {id, name} instance into the draft (the stage gate); anything else
-        // clears it and re-disables Continue. Pre-built entries double as
-        // SEEDS here — starting points a custom build clones instead of the
-        // blank shell.
-        return (
-            <BlankStage
-                seeds={seedCatalog}
-                seedId={draft.seedId}
-                selectedIds={selectedIds}
-                onSeedChange={flow.setSeed}
-                label={draft.label}
-                onLabelChange={flow.setLabel}
-            />
-        );
-    }
-    if (stage === 'api-access') {
-        // Reached ONLY by custom/import apps (blank shell / imported repo): they can
-        // need ANY entitled API, and the user often knows which up front — so give
-        // them the INTERACTIVE picker (already-covered APIs come back locked). Mesh
-        // and catalog have deterministic APIs and never route here (their destination
-        // stage is terminal), so this is unconditionally the picker.
-        return (
-            <ApiPickerStage
-                onSignIn={onSignIn}
-                componentIds={selectedIds}
-                selected={draft.selectedApis ?? EMPTY_IDS}
-                onToggle={flow.toggleApi}
-            />
-        );
-    }
-    return (
-        <DestinationStage
-            state={state}
-            updateState={updateState}
-            view={DEST_VIEWS[stage]}
-            pendingProject={draft.pendingProject}
-            pendingWorkspace={draft.pendingWorkspace}
-            onPendingProject={flow.setPendingProject}
-            onPendingWorkspace={flow.setPendingWorkspace}
-            onPhaseRunningChange={flow.setPhaseRunning}
-        />
-    );
-}
 
 /** Stages that ARE the destination picker — the line would be redundant there. */
 const DEST_PICKER_STAGES: ReadonlySet<string> = new Set([
@@ -295,14 +166,21 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
                 },
             ]}
         >
+            {/* Five stages, five natural heights. The dialog jumped at every step
+                without a floor under them (owner, 2026-09-20). Pinned to the top: a
+                short stage after a tall one (the create form after the project
+                list) floated mid-window when centred (owner, 2026-10-17). Its
+                spinners centre themselves in their own containers. */}
+            <SteadyHeight align="start">
             <div className="intflow-stage-body">
                 <DestinationContext
                     state={props.state}
                     stage={flow.stage}
                     onChange={flow.changeDestination}
                 />
-                <StageBody flow={flow} props={props} />
+                <FlowStageBody flow={flow} props={props} />
             </div>
+        </SteadyHeight>
         </Modal>
     );
 }

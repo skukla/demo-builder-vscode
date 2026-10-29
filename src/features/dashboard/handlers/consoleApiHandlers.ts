@@ -28,10 +28,14 @@ import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/org
 import { resolveApiOwners } from '@/core/state/apiOwners';
 import { resolveApiRowStates } from '@/core/state/apiRowState';
 import { applyDesiredApis, resolveDesiredApis } from '@/core/state/componentApiPicks';
+import { CONSOLE_APIS_OPERATION_ID } from '@/core/utils/operationIds';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { pushOperationProgress } from '@/core/vscode/operationProgress';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import { fetchApiAccessRows } from '@/features/app-builder/services/apiAccessRows';
 import {
     computeRequiredApis,
+    entriesThatNeedApis,
     subscribeRequiredApis,
     type SubscribedApi,
 } from '@/features/app-builder/services/apiSubscriber';
@@ -50,12 +54,16 @@ import { toError } from '@/types/typeGuards';
 /** Adobe sdk codes are alphanumeric (e.g. GraphQLServiceSDK); tolerate _ and -. */
 const SDK_CODE_RE = /^[A-Za-z0-9_-]+$/;
 
-/** The project's axis-filtered catalog — the same list every reconcile uses. */
+/**
+ * The entries whose APIs this project subscribes — the same scope every reconcile
+ * uses: the stack's meshes and the integrations the project has.
+ */
 function resolveProjectCatalog(project: Project): AppBuilderComponentCatalogEntry[] {
-    return getAvailableAppBuilderComponents(
+    const catalog = getAvailableAppBuilderComponents(
         project.componentSelections?.backend ?? '',
         project.componentSelections?.frontend ?? '',
     );
+    return entriesThatNeedApis(catalog, project);
 }
 
 /**
@@ -97,7 +105,9 @@ export const handleListConsoleApis: MessageHandler<{ componentId?: string }> = a
         const rows = await fetchApiAccessRows(
             ServiceLocator.getAuthenticationService(),
             orgId,
-            new Set([...managed, ...union]),
+            // `added` too: an integration with a workspace of its own is not in the
+            // project's union, and its rows must still come back.
+            new Set([...managed, ...union, ...added]),
         );
 
         // Attribution: which integration is holding each code, and under what claim.
@@ -164,11 +174,28 @@ async function reconcileExtras(
     project: Project,
     desiredExtras: string[],
     componentId?: string,
-): Promise<{ success: boolean; error?: string; data?: { subscribed?: SubscribedApi[] } }> {
-    // Per-integration edit: `desiredExtras` is THIS component's list, not the union.
-    // The subscribe still has to send the union, or dropping a code here would
-    // unsubscribe it out from under every other integration that holds it — the one
-    // failure mode in this plan that damages a live workspace.
+): Promise<{
+    success: boolean;
+    error?: string;
+    data?: { subscribed?: SubscribedApi[]; notSubscribed?: string[] };
+}> {
+    // Does this component hold a workspace of its own (AB-23)? It decides the whole
+    // shape of the edit, because the danger the union protects against only exists
+    // in a SHARED workspace.
+    const ownWorkspace = componentId
+        ? project.appBuilderComponents?.[componentId]?.workspace
+        : undefined;
+
+    // Per-integration edit: `desiredExtras` arrives as THIS component's list.
+    //
+    // In a SHARED workspace it must be widened to the union before it is sent, or
+    // dropping a code here unsubscribes it out from under every other integration
+    // that holds it — the one failure mode in this plan that damages a live
+    // workspace. In the component's OWN workspace that cannot happen: nothing else
+    // deploys there, so widening would instead entitle its credential to APIs
+    // belonging to integrations living elsewhere, and every profile service among
+    // them is another Commerce profile attach on a credential nobody uses.
+    const previous = resolveDesiredApis(project, ownWorkspace ? componentId : undefined);
     let nextPicks: Record<string, string[]> | undefined;
     if (componentId) {
         const current = { ...(project.componentApiPicks ?? {}) };
@@ -180,27 +207,53 @@ async function reconcileExtras(
             delete current[componentId];
         }
         nextPicks = current;
-        desiredExtras = [...new Set(Object.values(current).flat())];
+        if (!ownWorkspace) {
+            desiredExtras = [...new Set(Object.values(current).flat())];
+        }
     }
-    // What this edit takes away from the project's union. The subscribe must send
-    // those credentials the full list, or the removal never reaches Adobe.
-    const removing = resolveDesiredApis(project).filter((code) => !desiredExtras.includes(code));
+    // What this edit takes away, measured against the same scope it sends: the
+    // project's union for a shared workspace, this component's own list otherwise.
+    // Scoping these two differently is how an unrelated integration's code ends up
+    // in `removing` and is stripped from a workspace this edit never mentioned.
+    const removing = previous.filter((code) => !desiredExtras.includes(code));
     const authService = ServiceLocator.getAuthenticationService();
     const client = createApiSubscriberClient(authService);
     const orgTarget = buildOrgTargetFromProjectAdobe(
         project.adobe,
-        authService.getCachedOrganization(),
+        authService.getCacheManager().getCachedOrganization(),
     );
     try {
+        // The subscribe's own lines, on the shared channel: this step reads the
+        // workspace's credentials and can wait on Adobe for a minute, and the
+        // modal showed a button that said "Applying…" and nothing else
+        // (PL-59 slice 6).
         const subscribed = await withOrgContext(orgTarget, () =>
             subscribeRequiredApis(
-                resolveProjectCatalog(project),
-                subscriberTarget(project),
+                // Only this component's entry when it has a workspace to itself —
+                // the others' `requiredApis` belong to their own workspaces.
+                ownWorkspace
+                    ? resolveProjectCatalog(project).filter((entry) => entry.id === componentId)
+                    : // The project's workspace gets only what runs in it: an integration
+                      // in a workspace of its own is subscribed there (AB-23).
+                      resolveProjectCatalog(project).filter(
+                          (entry) => !project.appBuilderComponents?.[entry.id]?.workspace,
+                      ),
+                subscriberTarget(project, ownWorkspace ? componentId : undefined),
                 client,
                 deriveAllowedDomain(project),
                 desiredExtras,
                 undefined,
                 removing,
+                {
+                    onStep: (step) =>
+                        void pushOperationProgress({
+                            id: CONSOLE_APIS_OPERATION_ID,
+                            state: 'running',
+                            stage: OPERATION_STAGES.subscribingApis.label,
+                            step,
+                        }),
+                    log: (message) => context.logger.debug(message),
+                },
             ),
         );
         // Reconciled, not replaced. This edits the UNION, and overwriting the map
@@ -209,8 +262,36 @@ async function reconcileExtras(
         // when the dashboard Add flow began recording them. The flat
         // additionalConsoleApis write was retired with step 07 (2026-08-23);
         // the keyed map is the one written form.
-        project.componentApiPicks = nextPicks ?? applyDesiredApis(project, desiredExtras);
+        // A requested code the subscribe did not take (no platform this spine can
+        // reach) is neither kept nor reported as added: the tool used to log
+        // "Added ACCS-REST-API" and persist it while Adobe had not subscribed it.
+        const taken = new Set(subscribed.map((api) => api.code));
+        const notSubscribed = desiredExtras.filter((code) => !taken.has(code));
+        const keep = (codes: string[]) => codes.filter((code) => taken.has(code));
+        // In a workspace of its own, `taken` is only what THAT workspace holds, so it
+        // can judge only this component's picks. Filtering every owner by it erased
+        // the picks of integrations in other workspaces (found 2026-09-21).
+        const judged = (owner: string, codes: string[]) =>
+            ownWorkspace && owner !== componentId ? codes : keep(codes);
+        const picks = nextPicks
+            ? Object.fromEntries(
+                  Object.entries(nextPicks)
+                      .map(([owner, codes]) => [owner, judged(owner, codes)] as const)
+                      .filter(([, codes]) => codes.length > 0),
+              )
+            : applyDesiredApis(project, keep(desiredExtras));
+        project.componentApiPicks = picks;
         await context.stateManager.saveProject(project);
+        if (notSubscribed.length > 0) {
+            return {
+                success: false,
+                error:
+                    `Adobe did not subscribe ${notSubscribed.join(', ')}: the service offers no ` +
+                    'credential type Demo Builder manages. Add it in the Adobe Developer Console ' +
+                    '(Project → Workspace → Add API).',
+                data: { subscribed, notSubscribed },
+            };
+        }
         return { success: true, data: { subscribed } };
     } catch (err) {
         return {
@@ -223,30 +304,75 @@ async function reconcileExtras(
 }
 
 /**
+ * The refusal a handler answers with when there is no project or a guard says no.
+ * A type alias, not an interface, so it satisfies HandlerResponse's index signature.
+ */
+type ConsoleApiRefusal = {
+    success: false;
+    error: string;
+    code?: ErrorCode;
+};
+
+/**
+ * The opening every mutating Console API handler shares: the current project,
+ * then the App Builder guard chain over it. Answers the project or the refusal
+ * to return. The list handler keeps its own opening because its no-org refusal
+ * sits between the load and the guards, and moving it would change which
+ * refusal a signed-out, org-less project sees.
+ */
+async function loadProjectAndGuard(
+    context: HandlerContext,
+): Promise<
+    { project: Project; refusal?: undefined } | { project?: undefined; refusal: ConsoleApiRefusal }
+> {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) {
+        return {
+            refusal: { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND },
+        };
+    }
+    const guardError = await runGuards(context, project);
+    if (guardError) {
+        return { refusal: { success: false, error: guardError.error, code: guardError.code } };
+    }
+    return { project };
+}
+
+/**
  * Handle 'addConsoleApis' — additively subscribe the given sdk codes (union with
  * the existing extras). The MCP `add_console_apis` tool path.
+ *
+ * With a `componentId` the codes are added to THAT integration's picks, and so reach
+ * its own workspace when it has one (AB-23). Without one an agent asked to give the
+ * ERP an API subscribed it on the project's workspace, where the ERP never runs.
  */
-export const handleAddConsoleApis: MessageHandler<{ apis?: string[] }> = async (
-    context,
-    payload,
-) => {
+export const handleAddConsoleApis: MessageHandler<{
+    apis?: string[];
+    componentId?: string;
+}> = async (context, payload) => {
     const apis = payload?.apis;
     const codeError = validateSdkCodes(apis, { allowEmpty: false });
     if (codeError) {
         return { success: false, error: codeError, code: ErrorCode.CONFIG_INVALID };
     }
 
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-    const guardError = await runGuards(context, project);
-    if (guardError) {
-        return { success: false, error: guardError.error, code: guardError.code };
-    }
+    const loaded = await loadProjectAndGuard(context);
+    if (loaded.refusal) return loaded.refusal;
+    const { project } = loaded;
 
-    const merged = [...new Set([...resolveDesiredApis(project), ...(apis as string[])])];
-    const result = await reconcileExtras(context, project, merged);
+    const componentId = payload?.componentId;
+    if (componentId && !project.appBuilderComponents?.[componentId]) {
+        return {
+            success: false,
+            error: `This project has no integration "${componentId}".`,
+            code: ErrorCode.CONFIG_INVALID,
+        };
+    }
+    const current = componentId
+        ? (project.componentApiPicks?.[componentId] ?? [])
+        : resolveDesiredApis(project);
+    const merged = [...new Set([...current, ...(apis as string[])])];
+    const result = await reconcileExtras(context, project, merged, componentId);
     if (result.success) {
         context.logger.info(
             `[Console APIs] Added ${(apis as string[]).join(', ')} (union now ${merged.length} extras)`,
@@ -272,14 +398,9 @@ export const handleSetConsoleApis: MessageHandler<{ apis?: string[]; componentId
         return { success: false, error: codeError, code: ErrorCode.CONFIG_INVALID };
     }
 
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-    const guardError = await runGuards(context, project);
-    if (guardError) {
-        return { success: false, error: guardError.error, code: guardError.code };
-    }
+    const loaded = await loadProjectAndGuard(context);
+    if (loaded.refusal) return loaded.refusal;
+    const { project } = loaded;
 
     const desired = [...new Set(apis as string[])];
     const result = await reconcileExtras(context, project, desired, payload?.componentId);
@@ -295,18 +416,6 @@ export const handleSetConsoleApis: MessageHandler<{ apis?: string[]; componentId
                 `(${desired.join(', ') || 'none'}); subscribed ${confirmedCodes.length}: ` +
                 `${confirmedCodes.join(', ') || 'none'}`,
         );
-
-        // A requested code missing from the confirmed set means a subscribe
-        // silently skipped it — today that happens when a service lists neither
-        // platform, so no PUT covers it. Success is still correct for everything
-        // else; this is the part that must not pass unremarked.
-        const missing = desired.filter((code) => !confirmedCodes.includes(code));
-        if (missing.length > 0) {
-            context.logger.warn(
-                `[Console APIs] Requested but NOT subscribed: ${missing.join(', ')} — ` +
-                    'the service matched no subscribe platform for this org.',
-            );
-        }
     }
     return result;
 };

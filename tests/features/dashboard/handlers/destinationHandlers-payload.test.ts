@@ -11,6 +11,7 @@
 
 // The shared mock wall FIRST: importing it is what registers the module mocks,
 // and an import of the handler above this line would load it unmocked.
+import { startModalRun } from '@/core/vscode/operationProgress';
 import {
     NEW_DESTINATION,
     makeDestinationContext,
@@ -18,7 +19,7 @@ import {
     mockBuildDefaultRunnerDeps,
     mockBuildRunnerDepsContext,
     mockMove,
-    mockPostRowStatus,
+    mockSendRowStatus,
     mockWithProgress,
     reportedSteps,
     resetDestinationMocks,
@@ -28,9 +29,6 @@ import {
     handleSetProjectDestination,
     type SetProjectDestinationPayload,
 } from '@/features/dashboard/handlers/destinationHandlers';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 beforeEach(() => {
     resetDestinationMocks();
@@ -138,19 +136,8 @@ describe('handleSetProjectDestination — what counts as unchanged', () => {
 });
 
 describe('handleSetProjectDestination — a project with no Adobe binding yet', () => {
-    /** A project carrying no `adobe` at all — makeDestinationContext's default fills one in. */
-    function withNoAdobe() {
-        const project = { name: 'demo', path: '/p/demo' };
-        const saveProject = jest.fn().mockResolvedValue(undefined);
-        const context = createMockHandlerContext({
-            logger: createMockLogger(),
-            stateManager: createMockStateManager({
-                getCurrentProject: jest.fn().mockResolvedValue(project),
-                saveProject,
-            }),
-        });
-        return { context, saveProject };
-    }
+    /** A project carrying no `adobe` at all, and nobody signed in. */
+    const withNoAdobe = () => makeDestinationContext(null);
 
     it('writes the destination and seeds the org fields it cannot know', async () => {
         // Nothing wrote `project.adobe` before this handler existed, so a project
@@ -187,20 +174,24 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
 
     const reported = reportedSteps;
 
-    it('counts one integration in the singular', async () => {
+    // One stage for the whole move, NAMING which integration is in flight: a count
+    // like "(1 of 2)" said nothing when each part is many steps (owner, 2026-09-21).
+    // These fixtures carry no display name, so the id stands in for it.
+    it('names the integration being moved', async () => {
         const { context } = withComponentIds(['erp-sync']);
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(reported()).toContain('Moving 1 integration');
+        expect(reported()).toContain('Moving the integrations · erp-sync');
     });
 
-    it('counts several in the plural', async () => {
+    it('names the first of several, not a count', async () => {
         const { context } = withComponentIds(['erp-sync', 'firefly-shell']);
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(reported()).toContain('Moving 2 integrations');
+        expect(reported()).toContain('Moving the integrations · erp-sync');
+        expect(reported().some((line: string) => / of \d\)$/.test(line))).toBe(false);
     });
 
     it('builds the runner deps against the project and the shared services', async () => {
@@ -218,22 +209,34 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
         );
     });
 
-    it('relays the deploy tails own steps into the notification', async () => {
-        // A multi-minute move reads as a stalled notification without this: the
-        // tails narrate themselves and nothing else reports while they run.
+    // A multi-minute move reads as stalled without this: the deploy tails narrate
+    // themselves and nothing else reports while they run. Their lines are the
+    // STEP under the stage, so they reach the modal's second row — a notification
+    // deliberately shows the stage alone (PL-59 R2).
+    it("relays the deploy tails own steps as the move's step line", async () => {
         const { context } = withComponentIds(['erp-sync']);
+        const screen = jest.fn(
+            async (_type: string, _payload?: unknown): Promise<void> => undefined
+        );
+        context.sendMessage = screen;
+        startModalRun('destination', screen);
 
-        await handleSetProjectDestination(context, NEW_DESTINATION);
+        await handleSetProjectDestination(context, {
+            ...NEW_DESTINATION,
+            id: 'destination',
+            progress: 'modal',
+        });
 
         const relay = mockBuildDefaultRunnerDeps.mock.calls[0][1] as (
             message: string,
             subMessage?: string
         ) => void;
         relay('Deploying erp-sync', 'building');
-        relay('Deploying erp-sync');
 
-        expect(reported()).toContain('Deploying erp-sync building');
-        expect(reported()).toContain('Deploying erp-sync');
+        const steps = screen.mock.calls
+            .filter(([type]) => type === 'operationProgress')
+            .map(([, payload]) => (payload as { step?: string }).step);
+        expect(steps).toContain('Deploying erp-sync — building');
     });
 
     it('pushes a row status for a component the map does not know', async () => {
@@ -249,7 +252,7 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
         ) => void;
         onCardStatus('gone-from-the-map', 'deploying');
 
-        expect(mockPostRowStatus).toHaveBeenCalledWith('gone-from-the-map', 'deploying', undefined);
+        expect(mockSendRowStatus).toHaveBeenCalledWith('gone-from-the-map', 'deploying', undefined);
     });
 
     it('returns the move outcome and the previous destination on success', async () => {
@@ -270,6 +273,9 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
             success: false,
             moved: ['firefly-shell'],
             failed: [{ id: 'erp-sync', error: 'boom' }],
+            // What the real move answers when a deploy in the project's workspace
+            // fails: it points the project back.
+            rolledBack: true,
         });
         const { context } = withComponentIds(['erp-sync', 'firefly-shell']);
 
@@ -293,6 +299,7 @@ describe('handleSetProjectDestination — what the move is handed and what it sa
                 { id: 'erp-sync', error: 'boom' },
                 { id: 'firefly-shell', error: 'nope' },
             ],
+            rolledBack: true,
         });
         const { context } = withComponentIds(['erp-sync', 'firefly-shell']);
 

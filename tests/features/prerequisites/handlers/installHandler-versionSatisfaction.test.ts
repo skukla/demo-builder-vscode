@@ -85,7 +85,6 @@ describe('Install Handler - Version Satisfaction', () => {
         mockContext.sharedState.currentPrerequisiteStates = states;
 
         // Mock different required versions
-        (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue(['18', '20', '24']);
         // CRITICAL: Mock mapping for all three versions (implementation needs this to filter)
         (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({
             '18': 'React App',

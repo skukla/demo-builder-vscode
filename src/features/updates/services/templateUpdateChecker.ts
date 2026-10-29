@@ -19,19 +19,9 @@ import {
 } from './githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
+import { isLkgSource } from '@/features/updates/services/thinLayerUpdate';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-
-/** Runtime shape guard for the LkgSource shape stored on EdsStorefrontMetadata.
- *  `lkgFile` is optional — present for ledgers with non-default LKG paths
- *  (e.g., b2b), absent for ledgers sharing the root `last-known-good`. */
-function isLkgSource(value: unknown): value is { owner: string; repo: string; lkgFile?: string } {
-    if (typeof value !== 'object' || value === null) return false;
-    const obj = value as { owner: unknown; repo: unknown; lkgFile?: unknown };
-    if (typeof obj.owner !== 'string' || typeof obj.repo !== 'string') return false;
-    if (obj.lkgFile !== undefined && typeof obj.lkgFile !== 'string') return false;
-    return true;
-}
 
 /**
  * Result of checking for template updates
@@ -184,19 +174,7 @@ export class TemplateUpdateChecker {
 
         // LKG advanced. Use canonical commit comparison for the
         // commits-behind count (same N-commits-behind UX as forked).
-        const comparison = await compareCommits(
-            this.secrets, templateOwner, templateRepo,
-            lastSyncedCommit, currentLkg,
-        );
-        const commitsBehind = comparison?.ahead_by ?? 0;
-        return {
-            hasUpdates: commitsBehind > 0,
-            currentCommit: lastSyncedCommit,
-            latestCommit: currentLkg,
-            commitsBehind,
-            templateOwner,
-            templateRepo,
-        };
+        return this.compareTo(templateOwner, templateRepo, lastSyncedCommit, currentLkg);
     }
 
     /**
@@ -228,15 +206,36 @@ export class TemplateUpdateChecker {
             };
         }
 
-        const comparison = await compareCommits(
-            this.secrets, templateOwner, templateRepo,
-            lastSyncedCommit, latestCommit,
-        );
-        const commitsBehind = comparison?.ahead_by ?? 0;
+        return this.compareTo(templateOwner, templateRepo, lastSyncedCommit, latestCommit);
+    }
+
+    /**
+     * How far `current` is behind `latest`, from GitHub's compare.
+     *
+     * A compare that fails is "could not check", never "0 behind": the B2B template
+     * re-makes its top commits nightly, so the commit a project recorded leaves the
+     * template's history, and if GitHub ever stops answering for it, a 0 here would
+     * tell every such project it is up to date.
+     */
+    private async compareTo(
+        templateOwner: string,
+        templateRepo: string,
+        current: string,
+        latest: string,
+    ): Promise<TemplateUpdateResult | null> {
+        const comparison = await compareCommits(this.secrets, templateOwner, templateRepo, current, latest);
+        if (!comparison) {
+            this.logger.warn(
+                `[TemplateUpdates] Could not compare ${current.slice(0, 7)} with ${latest.slice(0, 7)} `
+                    + `on ${templateOwner}/${templateRepo} — skipping update check`,
+            );
+            return null;
+        }
+        const commitsBehind = comparison.ahead_by;
         return {
             hasUpdates: commitsBehind > 0,
-            currentCommit: lastSyncedCommit,
-            latestCommit,
+            currentCommit: current,
+            latestCommit: latest,
             commitsBehind,
             templateOwner,
             templateRepo,

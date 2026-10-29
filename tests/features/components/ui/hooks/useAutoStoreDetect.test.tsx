@@ -109,6 +109,22 @@ describe('useAutoStoreDetect — when the fields are complete enough to detect',
         expect(result.current.autoDetectKey).toBe(`accs:${ACCS_ENDPOINT}`);
     });
 
+    it('names the ACCS endpoint it keyed on, for the store-view product check', () => {
+        const { result } = renderAutoDetect({ configs: ACCS_CONFIGS });
+
+        expect(result.current.accsEndpoint).toBe(ACCS_ENDPOINT);
+    });
+
+    it('names no ACCS endpoint for PaaS, or before the endpoint is a graphql one', () => {
+        const paas = renderAutoDetect({ configs: PAAS_CONFIGS });
+        const partial = renderAutoDetect({
+            configs: { accs: { [ACCS_GRAPHQL_ENDPOINT]: 'https://na1.api.commerce.adobe.com/tenant' } },
+        });
+
+        expect(paas.result.current.accsEndpoint).toBeUndefined();
+        expect(partial.result.current.accsEndpoint).toBeUndefined();
+    });
+
     it('ignores an ACCS endpoint whose path is not a graphql one', () => {
         const { result, fetchStores } = renderAutoDetect({
             configs: { accs: { [ACCS_GRAPHQL_ENDPOINT]: 'https://na1.api.commerce.adobe.com/rest' } },

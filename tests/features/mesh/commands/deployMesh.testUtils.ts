@@ -7,7 +7,8 @@
  *   fs/promises                 NEEDED — all 23 tests fail without it
  *   @/core/di/serviceLocator    NEEDED — all 23 fail
  *   showDashboard               NEEDED — 8 fail
- *   stalenessDetector           NEEDED — 4 fail
+ *   stalenessDetector           NEEDED — 4 fail (its updateMeshState is in
+ *                               meshDeployBaseline since 2026-10-09, EDS-8)
  *   ensureProjectAdobeContext   NEEDED — 8 fail
  *   vscode                      DEAD in all five
  *   meshConfig                  DEAD in all five
@@ -32,7 +33,7 @@
  * The rule this makes concrete: a shared harness can own a mock for a module the
  * SUBJECT imports, but not for one the SPEC imports.
  *
- * WHAT STAYED LOCAL, and why. `showDashboard` and `stalenessDetector` are load-bearing
+ * WHAT STAYED LOCAL, and why. `showDashboard` and `meshDeployBaseline` are load-bearing
  * AND differ per suite — two and three spellings respectively, each scripting a
  * different return for the scenario that suite drives. `ensureProjectAdobeContext` is
  * shared by only two of the five. A shared factory for any of them would be a union

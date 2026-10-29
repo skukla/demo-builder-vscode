@@ -9,7 +9,7 @@
  *   navigate          — the sidebar's internal router
  *   signInAdobe       — the already-signed-in re-login offer
  *   signInDaLive      — success, failure, and the cancel that must stay silent
- *   registerGlobalMcp — a write to ~/.claude.json, and what it says when it fails
+ *   registerGlobalMcp — a write to each agent's user config, and what it says when it fails
  *   openComponent     — four guards over a component's local files
  */
 
@@ -88,7 +88,7 @@ describe('loadProject', () => {
 
         await h.handlerFor('demoBuilder.loadProject')('/p/other');
 
-        expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.stopDemo');
+        expect((vscode.commands.executeCommand as jest.Mock).mock.calls.map(([id]) => id)).not.toContain('demoBuilder.stopDemo');
         expect(h.stateManager.loadProjectFromPath).not.toHaveBeenCalled();
     });
 
@@ -188,15 +188,14 @@ describe('navigate routes a sidebar click to its surface', () => {
 // =============================================================================
 
 describe('signInAdobe', () => {
-    it('reports success on the status bar', async () => {
+    // The success line is the sign-in's own (extension.ts, onDidSignIn), so every
+    // screen that signs in says it the same way; the command adds no second one.
+    it('leaves the success line to the sign-in, and warns about nothing', async () => {
         const h = harness();
 
         await h.handlerFor('demoBuilder.signInAdobe')();
 
-        expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
-            '$(check) Signed in to Adobe',
-            5000
-        );
+        expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 
@@ -256,15 +255,15 @@ describe('signInDaLive', () => {
         });
     });
 
-    it('reports success on the status bar', async () => {
+    // The sign-in flow names who signed in itself (daLiveSignedInMessage); the
+    // command's own line used to overwrite it with a vaguer one.
+    it('leaves the success line to the sign-in flow', async () => {
         const h = harness();
 
         await h.handlerFor('demoBuilder.signInDaLive')();
 
-        expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
-            '$(check) Signed in to DA.live',
-            5000
-        );
+        expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 
     it('reports a failure with the reason the flow gave', async () => {
@@ -305,14 +304,22 @@ describe('signInDaLive', () => {
 // =============================================================================
 
 describe('registerGlobalMcp', () => {
-    it('registers against the extension’s dist directory and confirms', async () => {
+    it('registers against the extension’s dist directory and names the files it wrote', async () => {
         const h = harness();
+        const os = require('os') as { homedir: () => string };
+        mockRegisterGlobalMcp.mockResolvedValue([
+            `${os.homedir()}/.claude.json`,
+            `${os.homedir()}/.copilot/mcp-config.json`,
+        ]);
 
         await h.handlerFor('demoBuilder.registerGlobalMcp')();
 
         expect(mockRegisterGlobalMcp).toHaveBeenCalledWith('/test/extension/path/dist');
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-            expect.stringContaining('~/.claude.json')
+        // Both agents, by the paths an SC would recognise — and no agent named, since
+        // whichever one they use is the one that just became reachable.
+        // A success: a ✅ status-bar line that goes by itself (owner, 2026-10-15).
+        expect((vscode.window.setStatusBarMessage as jest.Mock).mock.calls[0][0]).toBe(
+            '✅ Registered in ~/.claude.json and ~/.copilot/mcp-config.json'
         );
     });
 
@@ -477,16 +484,15 @@ describe('openComponent', () => {
 // =============================================================================
 
 describe('signInGitHub', () => {
-    it('signs in and names the account on the status bar', async () => {
+    it('signs in, leaving the success line to signInToGitHub', async () => {
         const h = harness();
 
         await h.handlerFor('demoBuilder.signInGitHub')();
 
-        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), { force: false });
-        expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
-            '$(check) Signed in to GitHub as sayurihanki',
-            5000
-        );
+        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+            force: false,
+        });
+        expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
         expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
     });
 
@@ -500,7 +506,24 @@ describe('signInGitHub', () => {
         expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]).toBe(
             'Already signed in to GitHub as steve.'
         );
-        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), { force: true });
+        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+            force: true,
+        });
+    });
+
+    it('makes the same offer without a name when the valid token carries no user', async () => {
+        const h = harness();
+        mockValidateGitHubToken.mockResolvedValue({ valid: true });
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Sign in again');
+
+        await h.handlerFor('demoBuilder.signInGitHub')();
+
+        expect((vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]).toBe(
+            'Already signed in to GitHub.'
+        );
+        expect(mockSignInToGitHub).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+            force: true,
+        });
     });
 
     it('does nothing when that offer is declined', async () => {
@@ -542,7 +565,10 @@ describe('signInGitHub', () => {
         );
 
         (vscode.window.showWarningMessage as jest.Mock).mockClear();
-        mockSignInToGitHub.mockResolvedValue({ error: 'Authentication cancelled', cancelled: true });
+        mockSignInToGitHub.mockResolvedValue({
+            error: 'Authentication cancelled',
+            cancelled: true,
+        });
         await h.handlerFor('demoBuilder.signInGitHub')();
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });

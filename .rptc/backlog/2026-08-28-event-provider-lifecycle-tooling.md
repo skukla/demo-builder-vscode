@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # Event-provider lifecycle tooling — so eventing round-trips to zero
@@ -50,6 +50,9 @@ at zero, with the journey scan confirming the providers are gone.
 - 2026-08-28  HEADLESS HALF SHIPPED (51b9b5db4, live-verified serving 114 tools; list_event_providers answered real workspace data): IoEventsClient create half + eventProviderLifecycle service (kit-proven idempotency: deterministic instance_id find-before-create, name-keyed registrations, registrations-first deletes, collect-dont-throw, subscribe-on-403 shared with teardown) + five project-scoped MCP tools (deletes consent-gated with authored copy). Full suite 15,205 green, whole-repo lint clean, floor/ceilings/narration/real-SDK pins all updated. REMAINING: the headful drawer surface (integrations drawer Eventing detail). Journeys A+B running now as the live measure.
 - 2026-08-28  HEADFUL HALF SHIPPED (d08dd4948): lazy workspace-scoped Eventing section on the integrations surface (providers + registrations, per-row delete behind a native confirm), same service AND same deps adapter as the MCP tools via the new shared createEventLifecycleDeps (the tools' private copy deleted). Item complete: both surfaces live.
 - 2026-09-09  refactor(app-builder): pull the event-provider surface off develop — the work is on a branch (`4a3889049`)
+- 2026-10-03  Reconciled 2026-10-03 (second pass): feature/event-providers still holds the pulled code (086bdc41c), but it is from beta.146 and this branch is 865 commits past beta.149, so restoring it is not a clean checkout. The agent half does not need AB-8's UI answer: an owner question.
+- 2026-10-03  Agent half restored 2026-10-03 without AB-8: list_event_providers (read-only, never creates or subscribes a credential) and delete_event_provider (confirm-gated, refuses any provider that is not the open project's workspace's own or whose label does not match, deletes the named registrations first), on Console teardown's own deps, access recovery and ownership filter; the create tools did not come back, and the reversibility ledger names reinstall_integration as the undo for app-installed providers; not live-probed.
+- 2026-10-03  feat(ai): agents list and remove event providers; Open in Claude Code says when Claude Code is missing; wizard warnings reach Debug Logs; checks see new files (AB-6, AI-4a, PL-65, PL-67) (`c4f3bd94a`)
 
 ## PULLED OFF develop, 2026-09-09 — the work is on a branch, not deleted
 
@@ -78,7 +81,10 @@ Removed from develop, ~1,800 lines across six modules and six suites:
 **`ioEventsClient.ts` STAYS**, and that is the load-bearing detail. Console
 project teardown and `deleteAdobeProjectHandler` both use it, so deleting an
 Adobe project still cleans up its event entities. What went is the surface for
-managing them one at a time, not the ability to tear them down.
+managing them one at a time, not the ability to tear them down. (Since
+2026-10-08, EDS-8: the client names the endpoints, `ioEventsTransport.ts` carries
+each request, and `eventProviderBinding.ts` holds the rule for which providers a
+project owns. All three stay.)
 
 Pinned counts that moved with it, all of which are the reason a removal like
 this cannot be a one-file delete: MCP tools 114 -> 109, adobe-provider tools

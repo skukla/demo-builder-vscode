@@ -53,11 +53,12 @@ describe('every content tool declares the DA.live session it needs', () => {
 describe('the read/write split each tool advertises', () => {
     // readOnlyHint governs whether a client may call a tool without asking, and
     // destructiveHint governs whether it warns first. delete_page is the only
-    // irreversible one in the module.
+    // irreversible one in the module; write_page and publish_page replace what is
+    // there (the source, the live page), so they warn too (2026-10-04).
     it.each([
         ['read_page', true, false],
-        ['write_page', false, false],
-        ['publish_page', false, false],
+        ['write_page', false, true],
+        ['publish_page', false, true],
         ['list_content', true, false],
         ['delete_page', false, true],
         ['read_published_page', true, false],
@@ -69,8 +70,8 @@ describe('the read/write split each tool advertises', () => {
 describe('the arguments each tool accepts', () => {
     it.each([
         ['read_page', ['path']],
-        ['write_page', ['path', 'content', 'publish']],
-        ['publish_page', ['path']],
+        ['write_page', ['path', 'content', 'publish', 'confirm']],
+        ['publish_page', ['path', 'confirm']],
         ['list_content', ['path', 'limit', 'skip']],
         ['delete_page', ['path', 'confirm']],
         ['read_published_page', ['path']],

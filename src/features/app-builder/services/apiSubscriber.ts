@@ -15,32 +15,36 @@
  *   `AdobeIOManagementAPISDK`; idempotent reconcile (PUT the full union — correct
  *   whether the endpoint replaces or merges). Mesh is NOT skipped.
  *
- * The credential id used to subscribe is `id_integration` (NOT `.id`). Free
- * services subscribe with `{ licenseConfigs:null, roles:null }`.
+ * The credential id used to subscribe is `id_integration` (NOT `.id`).
+ *
+ * The PUT REPLACES the credential's list, so it is built as a merge — what the
+ * credential already holds (profiles included) plus what is missing — never from
+ * the needed codes alone (`subscriptionList.ts`, 2026-09-19).
  */
 
+import {
+    partitionByPlatform,
+    resolveServiceInfos,
+    type ServiceInfo,
+} from './apiServiceResolution';
+import { catalogEntryFor } from './componentEntry';
+import { credentialsAlreadyCover, type SubscribeOptions } from './credentialCoverage';
+import { subscribeApiKeyServices, subscribeOAuthServices } from './credentialSubscribe';
+import type { RememberedProfile } from './subscriptionList';
 import { BASELINE_API } from '@/core/constants';
 import type {
     OrgServiceInfo,
     ServiceSubscriptionInfo,
+    SubscribedService,
 } from '@/features/authentication/services/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { Project } from '@/types/base';
+
+// Resolution moved to apiServiceResolution.ts; callers keep importing it from here.
+export { partitionByPlatform, resolveServiceInfos, type ServiceInfo };
 
 /** Default allowed-domain when a caller supplies none (matches setupInstructions). */
 const DEFAULT_DOMAIN = 'localhost:3000';
-/** apiKey credential metadata (a formality satisfying `domainMandatory`). */
-const APIKEY_CREDENTIAL_NAME = 'demo-builder-api-mesh';
-const APIKEY_CREDENTIAL_DESCRIPTION = 'API Mesh access (Demo Builder)';
-
-/** A resolved service: its sdkCode plus the platform metadata that picks the path. */
-export interface ServiceInfo {
-    sdkCode: string;
-    /** Human-readable service name from the org service list (e.g. "API Mesh"). */
-    name?: string;
-    platformList: string[];
-    domainMandatory: boolean;
-}
-
 /** A subscribed API as reported back to callers (code + display name when known). */
 export interface SubscribedApi {
     code: string;
@@ -71,16 +75,37 @@ export interface OrgTarget {
     orgId: string;
     projectId: string;
     workspaceId: string;
+    /**
+     * The project's configured Commerce tenant. Picks the product profile for a
+     * service that needs one (ACCS-REST-API); without it such a service is refused.
+     */
+    commerceTenant?: string;
+    /**
+     * The Commerce product profile this project already uses, for the days Adobe's
+     * catalog does not list profiles at all. Only ever applied when its tenant
+     * matches `commerceTenant` (`subscriptionList.ts`).
+     */
+    commerceProfile?: RememberedProfile;
 }
 
 /**
  * The credential + subscribe operations the orchestrator needs. Implemented by
- * an adapter over `AdobeEntityFetcher` (step 08 wiring); mocked in unit tests.
+ * an adapter over `AuthenticationService` (step 08 wiring); mocked in unit tests.
  */
 export interface ApiSubscriberClient {
-    getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]>;
+    /**
+     * The org's service catalog. `sdkCodes` narrows it to those rows — which is all
+     * a subscribe ever needs, and the difference between about a second and a 504
+     * after sixty when Adobe's side is cold (measured 2026-09-21).
+     */
+    getServicesForOrg(orgId: string, sdkCodes?: readonly string[]): Promise<OrgServiceInfo[]>;
     /** The sdk codes a credential is already subscribed to (skip-if-subscribed). */
     getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]>;
+    /**
+     * Every service a credential holds, WITH its profiles — what a subscribe carries
+     * forward. `undefined` means unknown, and then nothing is sent.
+     */
+    getSubscribedServices(orgId: string, idIntegration: string): Promise<SubscribedService[] | undefined>;
     /**
      * Every credential id the workspace already has, read only. Optional: a
      * client without it skips the already-subscribed shortcut and takes the full
@@ -135,210 +160,40 @@ export function computeRequiredApis(
 }
 
 /**
- * Services whose org-catalog row declares NO platformList but are KNOWN to
- * subscribe onto OAuth S2S credentials. The live catalog declares platforms
- * for only 25 of 98 services (measured 2026-08-27), and `partitionByPlatform`
- * rightly refuses to guess for the rest — but that silence cost the BASELINE
- * its subscription on every S2S credential the spine ever created: the union
- * PUT skipped it, the credential kept `sdkList: []`, and an App Management
- * app's event calls answered "403 — Api Key is invalid" one feature away.
- * The evidence for the override is in this repo: `consoleProjectTeardown`'s
- * subscribe-on-403 PUTs exactly this service onto S2S credentials and works.
- */
-const KNOWN_S2S_SERVICES: ReadonlySet<string> = new Set([
-    BASELINE_API,
-    // I/O Events + Adobe I/O Events for Adobe Commerce — the kit's eventing
-    // step calls api.adobe.io/events, and without these subscriptions it
-    // answers 403 with a valid key (measured live 2026-08-27). Both rows carry
-    // platformList null in the org catalog; Console's own UI adds both to
-    // OAuth S2S credentials.
-    'CloudIntegrationSDK',
-    'commerceeventing',
-]);
-
-/** Resolve API names → ServiceInfo via the org service list. Throws on unknown. */
-export function resolveServiceInfos(
-    requiredApis: string[],
-    servicesForOrg: OrgServiceInfo[],
-): ServiceInfo[] {
-    return requiredApis.map((api) => {
-        const service = servicesForOrg.find((s) => s.code === api);
-        if (!service) {
-            throw new Error(`Unknown Adobe API "${api}" — not entitled for this org.`);
-        }
-        const declared = service.platformList ?? [];
-        const platformList =
-            declared.length === 0 && KNOWN_S2S_SERVICES.has(service.code)
-                ? ['oauth_server_to_server']
-                : declared;
-        return {
-            sdkCode: service.code,
-            name: service.name,
-            platformList,
-            domainMandatory: Boolean(service.domainMandatory),
-        };
-    });
-}
-
-/**
- * Split services into apiKey vs oauth_server_to_server by `platformList`.
+ * The catalog entries whose `requiredApis` this project's subscription carries:
+ * the stack's API Mesh entries (unchanged), every integration or system the project
+ * already has, and the entries being added before the project records them.
  *
- * `unmatched` is the third outcome and the reason this returns it: a service
- * listing NEITHER platform reaches neither subscribe endpoint, so no PUT ever
- * covers it. That used to pass silently — the service still came back in
- * {@link subscribeRequiredApis}'s result and still counted toward a successful
- * "extras set to N". Naming the bucket lets the caller drop it from what it
- * CLAIMS to have subscribed, which is what makes the silence audible.
- */
-export function partitionByPlatform(services: ServiceInfo[]): {
-    apiKey: ServiceInfo[];
-    oauthS2S: ServiceInfo[];
-    unmatched: ServiceInfo[];
-} {
-    const apiKey = services.filter((s) => s.platformList.includes('apiKey'));
-    const oauthS2S = services.filter((s) => s.platformList.includes('oauth_server_to_server'));
-    const unmatched = services.filter(
-        (s) =>
-            !s.platformList.includes('apiKey') && !s.platformList.includes('oauth_server_to_server'),
-    );
-    return { apiKey, oauthS2S, unmatched };
-}
-
-/** Free-service subscription shape: `{ sdkCode, licenseConfigs:null, roles:null }`. */
-function toServiceSubscriptionInfo(service: ServiceInfo): ServiceSubscriptionInfo {
-    return { sdkCode: service.sdkCode, licenseConfigs: null, roles: null };
-}
-
-/**
- * Fire a `done` tick for every service in the group (no-op without a listener).
- * AWAITS each tick so it is flushed to the listener's channel before the subscribe
- * continues — the guarantee that makes a per-API progress stream race-proof.
- */
-async function emitProgress(
-    services: ServiceInfo[],
-    done: boolean,
-    onProgress?: SubscribeProgressListener,
-): Promise<void> {
-    if (!onProgress) return;
-    for (const service of services) {
-        await onProgress({ code: service.sdkCode, done });
-    }
-}
-
-/**
- * True when the credential already carries every required sdk code AND none of
- * the codes being removed — letting the caller skip the slow subscribe PUT (~30s,
- * sometimes minutes). Best-effort: an unknown current set (`[]`) means "not
- * sure", so we do NOT skip.
+ * Scoped because an integration's APIs belong to the projects that have it (owner,
+ * 2026-09-15). Every compatible integration used to count, so any add subscribed the
+ * ERP's database API on a project with no ERP. Safe to narrow: each reconcile still
+ * names everything the project has, and the subscribe skips its update when the
+ * credential already carries every code.
  *
- * The removal half: a removal happens only through the full-list PUT, which drops
- * what the list omits. Skipping whenever every REQUIRED code was present meant a
- * removal never reached Adobe, since after a removal every remaining code always
- * is (found reading the code, 2026-09-18). A credential still holding a removed
- * code gets the PUT; every other one keeps skipping, which also spares APIs added
- * by hand in the Developer Console.
+ * @param catalog - the project's stack-filtered catalog
+ * @param project - what the project has, keyed by component id
+ * @param adding - entries mid-add, included even when the catalog does not list them
  */
-async function alreadySubscribed(
-    services: ServiceInfo[],
-    orgId: string,
-    idIntegration: string,
-    client: ApiSubscriberClient,
-    removing: ReadonlySet<string>,
-): Promise<boolean> {
-    const current = await client.getSubscribedServiceCodes(orgId, idIntegration);
-    return services.every((s) => current.includes(s.sdkCode)) && !current.some((code) => removing.has(code));
+export function entriesThatNeedApis(
+    catalog: AppBuilderComponentCatalogEntry[],
+    project: Pick<Project, 'appBuilderComponents'>,
+    adding: AppBuilderComponentCatalogEntry[] = [],
+): AppBuilderComponentCatalogEntry[] {
+    const has = new Set(Object.keys(project.appBuilderComponents ?? {}));
+    const addingIds = new Set(adding.map((entry) => entry.id));
+    const kept = catalog.filter(
+        (entry) => entry.kind === 'mesh' || has.has(entry.id) || addingIds.has(entry.id),
+    );
+    // A second copy of a kind (`erp-integration-2`, AB-23) has no catalog row of its
+    // own: it is its catalog entry under its own id.
+    const copies = Object.entries(project.appBuilderComponents ?? {})
+        .filter(([, state]) => state.catalogId && catalog.some((entry) => entry.id === state.catalogId))
+        .map(([id]) => catalogEntryFor(project, id, catalog))
+        .filter((entry): entry is AppBuilderComponentCatalogEntry => Boolean(entry));
+    const keptIds = new Set([...kept, ...copies].map((entry) => entry.id));
+    return [...kept, ...copies, ...adding.filter((entry) => !keptIds.has(entry.id))];
 }
 
-async function subscribeOAuthServices(
-    services: ServiceInfo[],
-    target: OrgTarget,
-    client: ApiSubscriberClient,
-    removing: ReadonlySet<string>,
-    onProgress?: SubscribeProgressListener,
-): Promise<void> {
-    if (services.length === 0) {
-        return;
-    }
-    await emitProgress(services, false, onProgress);
-    const idIntegration = await client.ensureOAuthCredentialId(target);
-    if (await alreadySubscribed(services, target.orgId, idIntegration, client, removing)) {
-        await emitProgress(services, true, onProgress);
-        return;
-    }
-    await client.subscribeOAuthServerToServerIntegrationToServices(
-        target.orgId,
-        idIntegration,
-        services.map(toServiceSubscriptionInfo),
-    );
-    await emitProgress(services, true, onProgress);
-}
-
-async function subscribeApiKeyServices(
-    services: ServiceInfo[],
-    target: OrgTarget,
-    client: ApiSubscriberClient,
-    domain: string,
-    removing: ReadonlySet<string>,
-    onProgress?: SubscribeProgressListener,
-): Promise<void> {
-    if (services.length === 0) {
-        return;
-    }
-    await emitProgress(services, false, onProgress);
-    const idIntegration = await client.createAdobeIdCredential(
-        target.orgId,
-        target.projectId,
-        target.workspaceId,
-        {
-            // AdobeID credential names are unique per PROJECT, so a fixed name
-            // collides on the 2nd workspace (409 duplicate). Scope it to the
-            // workspace; still reuse the legacy fixed-name credential where it
-            // already exists so nothing provisioned earlier is duplicated.
-            name: `${APIKEY_CREDENTIAL_NAME}-${target.workspaceId}`,
-            reuseNames: [APIKEY_CREDENTIAL_NAME],
-            description: APIKEY_CREDENTIAL_DESCRIPTION,
-            platform: 'apiKey',
-            domain,
-        },
-    );
-    if (await alreadySubscribed(services, target.orgId, idIntegration, client, removing)) {
-        await emitProgress(services, true, onProgress);
-        return;
-    }
-    await client.subscribeAdobeIdIntegrationToServices(
-        target.orgId,
-        idIntegration,
-        services.map(toServiceSubscriptionInfo),
-    );
-    await emitProgress(services, true, onProgress);
-}
-
-/**
- * Whether the workspace's existing credentials, between them, already carry every
- * required API. Read only, and a cheap pair of calls, where the full path first
- * downloads the org's whole services catalog: slow in a large org, and measured
- * timing out at 60s twice in a row on Bodea's redeploys (2026-09-18) while every
- * API was already subscribed. Any doubt (no lister, no credentials, a failed
- * call) answers false, and the full path runs. So does a removal: only the full
- * path reaches the PUT that drops a code.
- */
-async function coveredAlready(
-    required: string[],
-    target: OrgTarget,
-    client: ApiSubscriberClient,
-    removing: ReadonlySet<string>,
-): Promise<boolean> {
-    if (!client.listCredentialIds || removing.size > 0) return false;
-    try {
-        const ids = await client.listCredentialIds(target);
-        if (ids.length === 0) return false;
-        const lists = await Promise.all(ids.map((id) => client.getSubscribedServiceCodes(target.orgId, id)));
-        const have = new Set(lists.flat());
-        return required.every((code) => have.has(code));
-    } catch {
-        return false;
-    }
-}
 
 /**
  * Reconcile the UNION of all appBuilderComponents' `requiredApis` (+ baseline) onto the
@@ -351,6 +206,16 @@ async function coveredAlready(
  *   A credential still holding one is sent the full list even when nothing is
  *   missing, because that PUT is the only way a removal reaches Adobe.
  */
+/** Whether a promise has already settled, without waiting on it. */
+async function answeredAlready(pending: Promise<unknown>): Promise<boolean> {
+    const settled = pending.then(
+        () => true,
+        () => true,
+    );
+    const stillWaiting = new Promise<false>((resolve) => setImmediate(() => resolve(false)));
+    return Promise.race([settled, stillWaiting]);
+}
+
 export async function subscribeRequiredApis(
     appBuilderComponents: AppBuilderComponentCatalogEntry[],
     target: OrgTarget,
@@ -359,16 +224,49 @@ export async function subscribeRequiredApis(
     extraApis: string[] = [],
     onProgress?: SubscribeProgressListener,
     removing: string[] = [],
+    observe?: SubscribeOptions,
 ): Promise<SubscribedApi[]> {
     const requiredApis = computeRequiredApis(appBuilderComponents, extraApis);
     const removed = new Set(removing.filter((code) => !requiredApis.includes(code)));
-    if (await coveredAlready(requiredApis, target, client, removed)) {
+    // Said only when it happens: an add skips the check (a new workspace holds
+    // nothing), and announcing it anyway flashed a 0ms step (2026-09-21).
+    if (!observe?.skipCoverageCheck) {
+        observe?.onStep?.('Checking its existing subscriptions');
+    }
+    // Started BEFORE the credential read, not after it: the full path always
+    // needs this catalog, and the read can spend its whole budget answering
+    // "something is missing". Run one after the other and the SC waits for the
+    // sum; run them together and only the slower one shows (2026-09-19 logs:
+    // 60s read + 32s catalog).
+    // Only the codes this subscribe needs: `requiredApis` is already known, and the
+    // whole ~99-row catalog is what runs past Adobe's gateway limit when cold.
+    const catalog = client.getServicesForOrg(target.orgId, requiredApis);
+    // Parked so a rejection while the read is still running is not unhandled;
+    // awaiting it below still sees the rejection.
+    catalog.catch(() => undefined);
+
+    if (
+        !observe?.skipCoverageCheck &&
+        (await credentialsAlreadyCover({
+            required: requiredApis,
+            target,
+            client,
+            removing: removed,
+            observe,
+        }))
+    ) {
+        observe?.onStep?.('Everything needed is already there');
         for (const code of requiredApis) {
             await onProgress?.({ code, done: true });
         }
         return requiredApis.map((code) => ({ code }));
     }
-    const servicesForOrg = await client.getServicesForOrg(target.orgId);
+    // Said only when the list is still on its way: an answer already held (the
+    // saved copy, a warm load) is not a step anyone waits on.
+    if (!(await answeredAlready(catalog))) {
+        observe?.onStep?.('Reading the Adobe service list');
+    }
+    const servicesForOrg = await catalog;
     const services = resolveServiceInfos(requiredApis, servicesForOrg);
     const { apiKey, oauthS2S, unmatched } = partitionByPlatform(services);
 
@@ -377,10 +275,19 @@ export async function subscribeRequiredApis(
     // side); serial execution doubled the wall-clock on a fresh enable. Each group
     // still awaits its own progress ticks, and Promise.all is awaited here — so
     // every tick is still delivered before this function (and the handler) returns.
+    const sending = apiKey.length + oauthS2S.length;
+    observe?.onStep?.(`Adding ${sending} service${sending === 1 ? '' : 's'} to your workspace`);
+    // The profile each group chose, kept once at the end: the callers persist it on
+    // the project so a later workspace does not depend on Adobe listing it again.
+    let chosenProfile: RememberedProfile | undefined;
+    const keepProfile = (profile: RememberedProfile): void => {
+        chosenProfile = profile;
+    };
     await Promise.all([
-        subscribeOAuthServices(oauthS2S, target, client, removed, onProgress),
-        subscribeApiKeyServices(apiKey, target, client, domain, removed, onProgress),
+        subscribeOAuthServices(oauthS2S, target, client, removed, onProgress, keepProfile),
+        subscribeApiKeyServices(apiKey, target, client, domain, removed, onProgress, keepProfile),
     ]);
+    if (chosenProfile) await observe?.onProfileResolved?.(chosenProfile);
 
     // Report only what a subscribe endpoint actually took. An unmatched service
     // was never PUT anywhere, so including it here would let the caller log it as

@@ -1,124 +1,32 @@
 /**
- * DA.live token validation and the interactive sign-in flow.
+ * The interactive DA.live sign-in: DA.live has no headless token grant, so this
+ * runs native VS Code prompts (namespace, a trip to da.live, the token from the
+ * clipboard or an input box), or one form when a progress modal is already up,
+ * and stores the token against the namespace.
  *
- * Validation and the prompt live together because the prompt validates in two
- * places — once on the clipboard, once on what was stored — and separating
- * them invites a second, drifting copy of "is this token any good".
+ * Whether a token is any good is `daLiveTokenValidation`'s question, asked here
+ * twice (on the clipboard, and on what is about to be stored). Whether to sign
+ * in at all before an operation is `daLiveAuthGuard`'s.
  *
  * @module features/eds/handlers/daLive/daLiveAuthPrompt
  */
 
 import * as vscode from 'vscode';
-import { parseJwtPayload } from '../../services/daLive/daLiveAuthService';
+import { validateDaLiveTokenStrict } from '../../services/daLive/daLiveTokenValidation';
 import { getDaLiveAuthService } from '../edsServiceCache';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
 /**
- * The two HandlerContext fields this module's whole flow reads. Narrowed so
+ * The two HandlerContext fields this module's whole flow (and the guard in front
+ * of it) reads. Narrowed so
  * headless/command callers (e.g. refreshBlockLibraryHeadless) can pass
  * `{ context, logger }` without a widening cast; full-HandlerContext callers
  * satisfy it structurally.
  */
-type DaLiveAuthContext = Pick<HandlerContext, 'context' | 'logger'>;
-
-// ==========================================================
-// Token Validation
-// ==========================================================
-
-/**
- * Result of DA.live token validation
- */
-/**
- * What the STRICT check answers.
- *
- * The narrowing is the point: strict refuses a token that states no expiry, so an
- * accepted one always has a real `expiresAt` and callers need no fallback. Both callers
- * carried `validation.expiresAt || Date.now() + 24h` before this type existed, and both
- * fallbacks were already unreachable — the compiler now says so instead of a comment.
- */
-export type StrictTokenValidation =
-    | { valid: false; error?: string }
-    | { valid: true; expiresAt: number; email?: string };
-
-export interface DaLiveTokenValidationResult {
-    /** Whether the token is valid */
-    valid: boolean;
-    /** Error message if validation failed */
-    error?: string;
-    /** Email extracted from token payload */
-    email?: string;
-    /** Token expiration timestamp (ms since epoch) */
-    expiresAt?: number;
-}
-
-/**
- * Validate a DA.live JWT token
- *
- * Checks:
- * - JWT format (starts with "eyJ")
- * - Token expiry (if created_at and expires_in are present)
- * - Client ID (must be "darkalley" if present)
- *
- * Extracts:
- * - email (or preferred_username as fallback)
- * - expiresAt timestamp
- *
- * @param token - JWT token string to validate
- * @returns Validation result with extracted info
- */
-export function validateDaLiveToken(token: string): DaLiveTokenValidationResult {
-    // Check JWT format (must start with eyJ for valid base64-encoded JSON header)
-    if (!token || !token.startsWith('eyJ')) {
-        return {
-            valid: false,
-            error: 'Invalid token format. Please copy the complete token.',
-        };
-    }
-
-    // Try to decode and validate the token
-    const payload = parseJwtPayload(token);
-    if (payload) {
-        // Extract email (prefer email field, fallback to preferred_username)
-        const email = (payload.email || payload.preferred_username) as string | undefined;
-
-        // Calculate expiry from created_at + expires_in
-        let expiresAt: number | undefined;
-        if (payload.created_at && payload.expires_in) {
-            const createdAt = parseInt(String(payload.created_at), 10);
-            const expiresIn = parseInt(String(payload.expires_in), 10);
-            expiresAt = createdAt + expiresIn;
-
-            // Check if token has expired
-            if (Date.now() > expiresAt) {
-                return {
-                    valid: false,
-                    error: 'Token has expired. Please get a fresh token from DA.live.',
-                };
-            }
-        }
-
-        // Verify it's a darkalley token (DA.live client)
-        if (payload.client_id && payload.client_id !== 'darkalley') {
-            return {
-                valid: false,
-                error: 'This token is not from DA.live. Please use the bookmarklet on da.live.',
-            };
-        }
-
-        return {
-            valid: true,
-            email,
-            expiresAt,
-        };
-    }
-
-    // Token format is valid but couldn't extract details
-    return {
-        valid: true,
-    };
-}
+export type DaLiveAuthContext = Pick<HandlerContext, 'context' | 'logger'>;
 
 // ==========================================================
 // DA.live Token-First Authentication
@@ -132,82 +40,6 @@ export interface QuickPickAuthResult {
     cancelled?: boolean;
     email?: string;
     error?: string;
-}
-
-export interface DaLiveGuardResult {
-    /** Whether the user is now authenticated */
-    authenticated: boolean;
-    /** User dismissed the dialog without signing in */
-    cancelled?: boolean;
-    /** Error message if auth failed */
-    error?: string;
-}
-
-/**
- * Ensure DA.live authentication, prompting sign-in if expired.
- *
- * Shared pause-and-prompt guard used by:
- * - EDS project reset (edsResetUI.ts)
- * - Storefront setup pre-flight (storefrontSetupHandlers.ts)
- * - Storefront setup mid-pipeline recovery (storefrontSetupPhases.ts)
- */
-export async function ensureDaLiveAuth(
-    context: DaLiveAuthContext,
-    logPrefix = '[Auth]',
-    probeOrg?: string,
-): Promise<DaLiveGuardResult> {
-    const daLiveAuthService = getDaLiveAuthService(context.context);
-
-    // A server refusal and a local expiry get different prompt copy — telling
-    // a user their session "expired" when the server just refused a live-dated
-    // token sends them to check the wrong thing.
-    let refusedByServer = false;
-
-    if (await daLiveAuthService.isAuthenticated()) {
-        // Local pass. When the caller told us which org the coming operation
-        // targets, ask the SERVER too — the local check reads the token's own
-        // expiry and cannot see a server-refused credential (the 2026-08-16
-        // evidence run passed it and then failed 52 authenticated calls, each
-        // 403 misread as a missing permission). One HEAD; `unknown` (network
-        // trouble) fails open — a flaky probe must never block a pipeline the
-        // credential could serve.
-        if (!probeOrg) {
-            return { authenticated: true };
-        }
-        const verdict = await daLiveAuthService.isServerAccepted(probeOrg);
-        if (verdict !== 'refused') {
-            return { authenticated: true };
-        }
-        refusedByServer = true;
-        context.logger.warn(
-            `${logPrefix} DA.live token is locally valid but the server refused it — re-authentication required`,
-        );
-    } else {
-        context.logger.warn(`${logPrefix} DA.live token expired or missing`);
-    }
-
-    const selection = await vscode.window.showWarningMessage(
-        refusedByServer
-            ? 'Your DA.live session was refused by the server. Please sign in again to continue.'
-            : 'Your DA.live session has expired. Please sign in to continue.',
-        'Sign In',
-    );
-
-    if (selection !== 'Sign In') {
-        return { authenticated: false, cancelled: true };
-    }
-
-    const authResult = await showDaLiveAuthQuickPick(context);
-
-    if (!authResult.cancelled && authResult.success) {
-        return { authenticated: true };
-    }
-
-    return {
-        authenticated: false,
-        cancelled: authResult.cancelled,
-        error: authResult.error || 'DA.live authentication required',
-    };
 }
 
 /**
@@ -246,57 +78,6 @@ async function readTokenFromClipboard(logger: Logger): Promise<string | undefine
 }
 
 /**
- * Validate a token, demanding proof it IS a DA.live credential rather than
- * merely absence of proof that it is not.
- *
- * {@link validateDaLiveToken} answers a weaker question, and deliberately so:
- * it passes anything starting with `eyJ` whose payload it cannot read. But
- * base64 of any JSON begins `eyJ` and carries no `.`, so `parseJwtPayload`
- * returns null for an encoded .env, a k8s secret or a config blob — and every
- * one of those was stored and sent as `Authorization: Bearer`.
- *
- * Three additional demands, each closing a measured hole:
- *
- *   - the payload must PARSE, not merely be unreadable;
- *   - it must NAME darkalley rather than fail to contradict it — a foreign JWT
- *     carrying no `client_id` passes the weak check;
- *   - it must carry a readable lifetime. Without one the callers invent
- *     `now + 24h`, and that fabricated expiry outranks a real one in the
- *     da-auth-helper cache (`writeDaAuthHelperToken` keeps the later expiry),
- *     so it evicts a working agent credential and 401s every later call.
- *
- * Used by every path that turns an untrusted string into a stored credential:
- * the clipboard read here, and both webview store-token handlers. The lenient
- * check remains for callers that only need to know whether a token is
- * plausible.
- *
- * @param token - The candidate token, already trimmed
- * @returns The lenient result when it passes, or a reason the user can act on
- */
-export function validateDaLiveTokenStrict(token: string): StrictTokenValidation {
-    const validation = validateDaLiveToken(token);
-    if (!validation.valid) {
-        // No default message: the ordinary check always states a reason, and inventing a
-        // fallback here would add a branch nothing can reach — which is what the mutation
-        // ratchet caught when this was first written that way.
-        return { valid: false, error: validation.error };
-    }
-    if (parseJwtPayload(token)?.client_id !== 'darkalley') {
-        return {
-            valid: false,
-            error: 'This does not look like a DA.live token. Use the bookmarklet on da.live to copy a fresh one.',
-        };
-    }
-    if (validation.expiresAt === undefined) {
-        return {
-            valid: false,
-            error: 'This DA.live token carries no expiry, so it cannot be stored safely. Use the bookmarklet on da.live to copy a fresh one.',
-        };
-    }
-    return { valid: true, expiresAt: validation.expiresAt, email: validation.email };
-}
-
-/**
  * Ask which DA.live namespace to sign into.
  *
  * The wizard uses a Spectrum picker populated from GitHub org memberships (see
@@ -329,7 +110,7 @@ function promptForOrgName(): Thenable<string | undefined> {
  * Ask for the token, for when the clipboard did not hold a usable one.
  *
  * The `eyJ` check here is a fast-fail for the typist, not a security control —
- * `validateDaLiveToken` re-checks everything before the token is stored.
+ * `validateDaLiveTokenStrict` re-checks everything before the token is stored.
  *
  * @returns The pasted token, or undefined when the user cancelled
  */
@@ -402,6 +183,19 @@ async function confirmTokenReady(context: DaLiveAuthContext): Promise<boolean> {
 }
 
 /**
+ * What a DA.live sign-in says when it worked, on every path that signs in. It names
+ * WHO signed in, not just where: on the clipboard path the SC never looked at the
+ * token, so this is the only place a colleague's still-valid token shows itself.
+ *
+ * @param org - the DA.live namespace the token is pinned to
+ * @param email - the token's account, when it carries one
+ * @returns the line for the status bar
+ */
+export function daLiveSignedInMessage(org: string, email?: string): string {
+    return `Signed in to DA.live (${org})` + (email ? ` as ${email}` : '');
+}
+
+/**
  * Show the DA.live authentication flow.
  *
  * Flow:
@@ -420,12 +214,20 @@ async function confirmTokenReady(context: DaLiveAuthContext): Promise<boolean> {
  * Used by both project dashboard and projects list for EDS reset operations.
  *
  * @param context - Handler context with extension context for token storage
+ * @param reason - why it is asking, shown at the head of the modal's form
  * @returns Promise with auth result (success/cancelled/error)
  */
 export async function showDaLiveAuthQuickPick(
     context: DaLiveAuthContext,
+    reason?: string,
 ): Promise<QuickPickAuthResult> {
     context.logger.info('[DA.live Auth] Starting authentication flow');
+
+    // A progress modal is already on screen for this operation, so it asks: one
+    // question, one surface, fields and all (owner, 2026-09-20).
+    if (modalIsAsking()) {
+        return signInThroughModal(context, reason);
+    }
 
     // Step 1: Org name — only when we do not already have one. The DA.live org
     // is the GitHub namespace (a personal login or a GitHub org the user
@@ -477,6 +279,97 @@ export async function showDaLiveAuthQuickPick(
 }
 
 /**
+ * Sign in inside the progress modal: one form, however many tries it takes.
+ *
+ * The input-box flow below asks four things in sequence — namespace, a trip to
+ * da.live, a Continue gate, then the token — because a VS Code input box can only
+ * ask one thing at a time. A form has no such limit, so this asks for everything at
+ * once and re-asks with what was typed when something is wrong.
+ *
+ * "Open DA.live" is an answer rather than a link: it opens the browser and asks
+ * again, carrying the values forward, so the SC comes back to the form they left.
+ *
+ * The clipboard is read only after the SC has asked for the browser trip — the same
+ * consent point the notification flow uses. Nothing before that touches it.
+ *
+ * @param context - Handler context, for token storage and logging
+ * @param reason - why it is asking, when something expired
+ * @returns The auth result
+ */
+async function signInThroughModal(
+    context: DaLiveAuthContext,
+    reason?: string,
+): Promise<QuickPickAuthResult> {
+    const service = getDaLiveAuthService(context.context);
+    let orgName = service.getOrgName() ?? '';
+    let token = '';
+    // What is wrong with each field, shown under it on the next ask.
+    let orgProblem: string | undefined;
+    let tokenProblem: string | undefined;
+
+    for (;;) {
+        const asked = await askForDetailsDuringOperation({
+            message: [
+                reason,
+                'Sign in to DA.live: run the bookmarklet on da.live to copy a token, then paste it here.',
+            ]
+                .filter(Boolean)
+                .join(' '),
+            fields: [
+                {
+                    id: 'orgName',
+                    label: 'DA.live namespace',
+                    value: orgName,
+                    placeholder: 'your GitHub username, or an org you belong to',
+                    description: orgProblem,
+                },
+                {
+                    id: 'token',
+                    label: 'Token',
+                    value: token,
+                    placeholder: 'Paste the token from the bookmarklet',
+                    secret: true,
+                    description: tokenProblem,
+                },
+            ],
+            actions: ['Sign In', 'Open DA.live'],
+        });
+
+        orgName = asked.values.orgName ?? orgName;
+        token = asked.values.token ?? token;
+
+        if (!asked.action) {
+            context.logger.info('[DA.live Auth] Cancelled in the progress modal');
+            return { success: false, cancelled: true };
+        }
+
+        if (asked.action === 'Open DA.live') {
+            context.logger.debug('[DA.live Auth] Opening DA.live in browser');
+            await vscode.env.openExternal(vscode.Uri.parse('https://da.live'));
+            // The trip is the consent to read the clipboard, exactly as in the
+            // notification flow — and coming back to a filled field is the point.
+            token = (await readTokenFromClipboard(context.logger)) ?? token;
+            orgProblem = undefined;
+            tokenProblem = undefined;
+            continue;
+        }
+
+        orgProblem = orgName.trim() ? undefined : 'Enter your DA.live namespace.';
+        tokenProblem = token.trim() ? undefined : 'Paste the token the bookmarklet copied.';
+        if (orgProblem || tokenProblem) {
+            continue;
+        }
+
+        const stored = await validateAndStoreToken(context, token, orgName);
+        if (stored.success) {
+            return stored;
+        }
+        // Wrong or expired: say so under the field and let them paste another.
+        tokenProblem = stored.error ?? 'That token was not accepted.';
+    }
+}
+
+/**
  * Validate the collected token and pin it to the namespace.
  *
  * Runs for BOTH token sources. The clipboard path already passed
@@ -511,7 +404,11 @@ async function validateAndStoreToken(
         const validation = validateDaLiveTokenStrict(trimmedToken);
         if (!validation.valid) {
             context.logger.warn(`[DA.live Auth] Token validation failed: ${validation.error}`);
-            await vscode.window.showErrorMessage(validation.error ?? 'Token validation failed');
+            // Only when nothing else is telling them: the modal shows the reason
+            // under the field it belongs to.
+            if (!modalIsAsking()) {
+                await vscode.window.showErrorMessage(validation.error ?? 'Token validation failed');
+            }
             return { success: false, error: validation.error };
         }
 
@@ -535,17 +432,15 @@ async function validateAndStoreToken(
         // never looked at the token, so this is the only place a wrong identity
         // can show itself — a colleague's still-valid token would otherwise
         // bind silently and 403 every later write.
-        vscode.window.setStatusBarMessage(
-            `✅ Connected to DA.live (${trimmedOrg})` +
-                (validation.email ? ` as ${validation.email}` : ''),
-            TIMEOUTS.STATUS_BAR_INFO,
-        );
+        showSuccessInStatusBar(daLiveSignedInMessage(trimmedOrg, validation.email));
 
         return { success: true, email: validation.email };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         context.logger.error(`[DA.live Auth] Authentication error: ${errorMessage}`);
-        await vscode.window.showErrorMessage(`Authentication failed: ${errorMessage}`);
+        if (!modalIsAsking()) {
+            await vscode.window.showErrorMessage(`Authentication failed: ${errorMessage}`);
+        }
         return { success: false, error: errorMessage };
     }
 }

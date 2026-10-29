@@ -1,43 +1,44 @@
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import type { ApiSubscriberClient } from '@/features/app-builder/services/apiSubscriber';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import {
+    createMockEntityServices,
+    type MockEntityServices,
+} from '../../../helpers/adobeAuthUnitsFake';
 
 /**
  * ApiSubscriberClientAdapter (D2 Track A, Step 02)
  *
- * A thin closure over AuthenticationService that satisfies the
- * ApiSubscriberClient interface. Forwards 3 methods verbatim, unwraps the
+ * A thin closure over AuthenticationService's entity services (org services and
+ * credentials) that satisfies the ApiSubscriberClient interface. Forwards 3 methods verbatim, unwraps the
  * OrgTarget for ensureOAuthCredentialId, and throws on undefined for the
  * non-optional createAdobeIdCredential.
  */
 
 describe('createApiSubscriberClient', () => {
-    let service: jest.Mocked<
-        Pick<
-            AuthenticationService,
-            | 'getServicesForOrg'
-            | 'getSubscribedServiceCodes'
-            | 'createAdobeIdCredential'
-            | 'subscribeAdobeIdIntegrationToServices'
-            | 'subscribeOAuthServerToServerIntegrationToServices'
-            | 'ensureOAuthCredentialId'
-        >
-    >;
+    let entities: MockEntityServices;
     let adapter: ApiSubscriberClient;
 
     beforeEach(() => {
-        service = {
-            getServicesForOrg: jest.fn().mockResolvedValue([{ code: 'X' }]),
-            getSubscribedServiceCodes: jest.fn().mockResolvedValue(['AdobeAnalytics']),
-            createAdobeIdCredential: jest.fn().mockResolvedValue('int-apikey'),
-            subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
-            subscribeOAuthServerToServerIntegrationToServices: jest
-                .fn()
-                .mockResolvedValue(undefined),
-            ensureOAuthCredentialId: jest.fn().mockResolvedValue('int-oauth'),
-        };
+        entities = createMockEntityServices({
+            orgServices: {
+                getServicesForOrg: jest.fn().mockResolvedValue([{ code: 'X' }]),
+                getSubscribedServiceCodes: jest.fn().mockResolvedValue(['AdobeAnalytics']),
+                subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                subscribeOAuthServerToServerIntegrationToServices: jest
+                    .fn()
+                    .mockResolvedValue(undefined),
+            },
+            credentials: {
+                createAdobeIdCredential: jest.fn().mockResolvedValue('int-apikey'),
+                ensureOAuthCredentialId: jest.fn().mockResolvedValue('int-oauth'),
+            },
+        });
+        const service = {
+            getEntityServices: jest.fn().mockResolvedValue(entities),
+        } as unknown as AuthenticationService;
 
-        adapter = createApiSubscriberClient(service as unknown as AuthenticationService);
+        adapter = createApiSubscriberClient(service);
     });
 
     it('should be instantiable and satisfy the ApiSubscriberClient interface', () => {
@@ -48,7 +49,7 @@ describe('createApiSubscriberClient', () => {
 
     it('should forward getServicesForOrg', async () => {
         const result = await adapter.getServicesForOrg('org1');
-        expect(service.getServicesForOrg).toHaveBeenCalledWith('org1');
+        expect(entities.orgServices.getServicesForOrg).toHaveBeenCalledWith('org1', undefined);
         expect(result).toEqual([{ code: 'X' }]);
     });
 
@@ -58,14 +59,44 @@ describe('createApiSubscriberClient', () => {
         // unsubscribed and re-PUT the whole union on each deploy.
         const codes = await adapter.getSubscribedServiceCodes('org1', 'int-1');
 
-        expect(service.getSubscribedServiceCodes).toHaveBeenCalledWith('org1', 'int-1');
+        expect(entities.orgServices.getSubscribedServiceCodes).toHaveBeenCalledWith(
+            'org1',
+            'int-1'
+        );
         expect(codes).toStrictEqual(['AdobeAnalytics']);
+    });
+
+    it('should forward getSubscribedServices with both arguments and hand back the rows', async () => {
+        // The full-union PUT is built from these rows. An adapter answering nothing
+        // here would drop every API the credential already holds.
+        const rows = [{ sdkCode: 'AdobeAnalytics', licenseConfigs: null, roles: null }];
+        (entities.orgServices.getSubscribedServices as jest.Mock).mockResolvedValue(rows);
+
+        const result = await adapter.getSubscribedServices('org1', 'int-1');
+
+        expect(entities.orgServices.getSubscribedServices).toHaveBeenCalledWith('org1', 'int-1');
+        expect(result).toBe(rows);
+    });
+
+    it('should unwrap OrgTarget for listCredentialIds and hand back the ids', async () => {
+        const ids = ['int-oauth', 'int-apikey'];
+        (entities.credentials.listCredentialIds as jest.Mock).mockResolvedValue(ids);
+
+        // Optional on the interface; this adapter always supplies it.
+        const result = await adapter.listCredentialIds?.({
+            orgId: 'o',
+            projectId: 'p',
+            workspaceId: 'w',
+        });
+
+        expect(entities.credentials.listCredentialIds).toHaveBeenCalledWith('o', 'p', 'w');
+        expect(result).toBe(ids);
     });
 
     it('should forward subscribeAdobeIdIntegrationToServices one-to-one', async () => {
         const services = [{ sdkCode: 'X', licenseConfigs: null, roles: null }];
         await adapter.subscribeAdobeIdIntegrationToServices('o', 'int-1', services);
-        expect(service.subscribeAdobeIdIntegrationToServices).toHaveBeenCalledWith(
+        expect(entities.orgServices.subscribeAdobeIdIntegrationToServices).toHaveBeenCalledWith(
             'o',
             'int-1',
             services
@@ -75,11 +106,9 @@ describe('createApiSubscriberClient', () => {
     it('should forward subscribeOAuthServerToServerIntegrationToServices one-to-one', async () => {
         const services = [{ sdkCode: 'Y', licenseConfigs: null, roles: null }];
         await adapter.subscribeOAuthServerToServerIntegrationToServices('o', 'int-2', services);
-        expect(service.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
-            'o',
-            'int-2',
-            services
-        );
+        expect(
+            entities.orgServices.subscribeOAuthServerToServerIntegrationToServices
+        ).toHaveBeenCalledWith('o', 'int-2', services);
     });
 
     it('should unwrap OrgTarget for ensureOAuthCredentialId', async () => {
@@ -88,7 +117,7 @@ describe('createApiSubscriberClient', () => {
             projectId: 'p',
             workspaceId: 'w',
         });
-        expect(service.ensureOAuthCredentialId).toHaveBeenCalledWith('o', 'p', 'w');
+        expect(entities.credentials.ensureOAuthCredentialId).toHaveBeenCalledWith('o', 'p', 'w');
         expect(id).toBe('int-oauth');
     });
 
@@ -100,12 +129,17 @@ describe('createApiSubscriberClient', () => {
             domain: 'localhost:3000',
         };
         const id = await adapter.createAdobeIdCredential('o', 'p', 'w', input);
-        expect(service.createAdobeIdCredential).toHaveBeenCalledWith('o', 'p', 'w', input);
+        expect(entities.credentials.createAdobeIdCredential).toHaveBeenCalledWith(
+            'o',
+            'p',
+            'w',
+            input
+        );
         expect(id).toBe('int-apikey');
     });
 
     it('should throw when createAdobeIdCredential returns undefined (non-optional contract)', async () => {
-        (service.createAdobeIdCredential as jest.Mock).mockResolvedValue(undefined);
+        (entities.credentials.createAdobeIdCredential as jest.Mock).mockResolvedValue(undefined);
         const input = {
             name: 'n',
             description: 'd',

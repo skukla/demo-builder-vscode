@@ -26,8 +26,10 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             getUserOrgs: jest.fn(async () => ['acme', 'skukla']),
         },
     })),
+    // `checkSignIn` answers `none` when the token is missing or within five minutes of
+    // expiry, else IMS's verdict on it (`daLiveAuthService.ts`).
     getDaLiveAuthService: jest.fn(() => ({
-        isAuthenticated: jest.fn(async () => false),
+        checkSignIn: jest.fn(async () => ({ state: 'none' })),
         getOrgName: jest.fn(() => undefined),
     })),
     // Native DA.live sign-in flow (browser → token input → org). The agent
@@ -42,6 +44,7 @@ jest.mock('@/features/eds/handlers/edsHandlers', () => ({
 }));
 
 import { z } from 'zod';
+import { reportSignInNotice } from '@/core/auth/signInNotices';
 import { registerAuthTools } from '@/features/ai/server/authTools';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { GITHUB_SCOPES } from '@/features/eds/services/types';
@@ -297,11 +300,17 @@ describe('registerAuthTools', () => {
         expect(storeToken).not.toHaveBeenCalled();
     });
 
-    it('reports the pinned DA.live namespace when one is set', async () => {
+    /** A DA.live sign-in stored until `minutes` from now, pinned to skukla, as IMS answers it. */
+    function daLiveSignedIn(minutes: number, state: 'valid' | 'refused' | 'unknown' = 'valid') {
+        const token = { accessToken: 't', expiresAt: Date.now() + minutes * 60_000 + 30_000 };
         (getDaLiveAuthService as jest.Mock).mockImplementationOnce(() => ({
-            isAuthenticated: jest.fn(async () => true),
+            checkSignIn: jest.fn(async () => ({ state, token })),
             getOrgName: jest.fn(() => 'skukla'),
         }));
+    }
+
+    it('reports the pinned DA.live namespace when one is set, and when the sign-in expires', async () => {
+        daLiveSignedIn(90);
         const server = fakeServer();
         registerAuthTools(server, makeCtxFactory(true));
 
@@ -309,8 +318,33 @@ describe('registerAuthTools', () => {
         // tells an agent to proceed while withholding what the write needs.
         expect((await server.call('get_auth_status')).dalive).toEqual({
             authenticated: true,
+            expiresInMinutes: 90,
             orgName: 'skukla',
         });
+    });
+
+    // EDS-30: a stored sign-in IMS no longer accepts read as signed in. On 2026-10-28 a
+    // forced Adobe sign-in cancelled one with 1376 minutes left, and this still said yes.
+    it('says not signed in when IMS no longer accepts the stored sign-in', async () => {
+        daLiveSignedIn(90, 'refused');
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(true));
+
+        expect((await server.call('get_auth_status')).dalive).toMatchObject({
+            authenticated: false,
+            orgName: 'skukla',
+            error: 'Adobe no longer accepts the stored DA.live sign-in: sign in to DA.live again.',
+        });
+    });
+
+    it('says neither yes nor no when IMS could not be reached', async () => {
+        daLiveSignedIn(90, 'unknown');
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(true));
+
+        const dalive = (await server.call('get_auth_status')).dalive;
+        expect(dalive).toMatchObject({ authenticated: 'unknown', expiresInMinutes: 90 });
+        expect(dalive.note).toMatch(/could not be reached/);
     });
 
     it('omits orgName rather than reporting an empty one', async () => {
@@ -436,6 +470,26 @@ describe('registerAuthTools', () => {
         const res = await server.call('sign_in', { provider: 'adobe', confirm: true });
         expect(login).toHaveBeenCalledTimes(1);
         expect(res).toEqual({ provider: 'adobe', success: true });
+    });
+
+    // A forced sign-in (the retry a normal one falls back to) also ends the DA.live
+    // sign-in (2026-10-28). Reported inside the login, it reaches this result.
+    it('sign_in adobe carries what the sign-in ended elsewhere into its result', async () => {
+        login.mockImplementationOnce(async () => {
+            reportSignInNotice('Signing in to Adobe again also signed you out of DA.live.');
+            return true;
+        });
+        const server = fakeServer();
+        registerAuthTools(server, makeCtxFactory(false));
+
+        const res = await server.call('sign_in', { provider: 'adobe', confirm: true });
+
+        expect(res).toMatchObject({
+            provider: 'adobe',
+            success: true,
+            notices: ['Signing in to Adobe again also signed you out of DA.live.'],
+        });
+        expect(res.next).toMatch(/provider "dalive"/);
     });
 
     it('sign_in adobe clears the stored MCP target (drops the prior identity)', async () => {

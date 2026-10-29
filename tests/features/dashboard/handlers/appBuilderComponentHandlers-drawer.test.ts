@@ -169,6 +169,22 @@ describe('handleRenameAppBuilderComponent — inline payload name (drawer rename
         expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
     });
 
+    // AB-23: a second copy of a pre-built integration is pre-built too — the runner
+    // resolves it from its catalog entry and would revert a rename just the same.
+    it('payload rename rejects a second copy of a pre-built integration', async () => {
+        const { mockContext } = setupPayloadRename({
+            'erp-sync-2': { ...KEYED_ENTRY, catalogId: 'erp-sync', name: 'ERP Sync 2' },
+        });
+        mockGetAppBuilderComponentEntry.mockImplementation((id: string) =>
+            id === 'erp-sync' ? ERP_ENTRY : undefined,
+        );
+
+        const result = await handleRenameAppBuilderComponent(mockContext, { id: 'erp-sync-2', name: 'New Name' });
+
+        expect(result.success).toBe(false);
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
     it('payload rename still rejects a mesh-kind entry', async () => {
         const { mockContext } = setupPayloadRename({
             'firefly-image-gen': { ...KEYED_ENTRY, kind: 'mesh' },

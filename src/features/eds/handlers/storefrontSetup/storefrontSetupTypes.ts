@@ -12,9 +12,12 @@ import type { DaLiveAuthService } from '../../services/daLive/daLiveAuthService'
 import type { DaLiveContentOperations } from '../../services/daLive/daLiveContentOperations';
 import type { GitHubAppService } from '../../services/github/githubAppService';
 import type { GitHubFileOperations } from '../../services/github/githubFileOperations';
+import type { GitHubRepoLifecycle } from '../../services/github/githubRepoLifecycle';
 import type { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import type { HelixService } from '../../services/helix/helixService';
 import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import type { InstalledBlockLibrary } from '@/types/blockLibraries';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 /**
  * Result of storefront setup phase execution
@@ -22,21 +25,19 @@ import type { TemplateSyncService } from '@/features/updates/services/templateSy
 export interface StorefrontSetupResult {
     success: boolean;
     error?: string;
-    /**
-     * The pipeline stopped because AEM Code Sync is not installed and the user
-     * is being walked through installing it. A halt with a remedy in progress —
-     * NOT a failure. Callers must not convert this into an error message: doing
-     * so replaces the install dialog with the failure screen and strands the
-     * resume handler that would have continued the run.
-     */
-    awaitingGitHubApp?: boolean;
     repoUrl?: string;
     repoOwner?: string;
     repoName?: string;
     /** See {@link RepoInfo.pdpCaveats} — spread in from the threaded repoInfo. */
     pdpCaveats?: string[];
-    /** See {@link RepoInfo.demoCaveats} — spread in from the threaded repoInfo. */
-    demoCaveats?: string[];
+    /** Links the content copy found to pages the source lacks; the project records them. */
+    brokenLinks?: StorefrontBrokenLink[];
+    /** See {@link RepoInfo.pipelineWarnings} — spread in from the threaded repoInfo. */
+    pipelineWarnings?: string[];
+    /** See {@link RepoInfo.installedBlockLibraries} — spread in from the threaded repoInfo. */
+    installedBlockLibraries?: InstalledBlockLibrary[];
+    /** See {@link RepoInfo.storefrontBuildComplete} — spread in from the threaded repoInfo. */
+    storefrontBuildComplete?: boolean;
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 
@@ -52,6 +53,8 @@ export type SetupGitHubAppService = Pick<GitHubAppService, 'getInstallUrl' | 'is
 
 export interface SetupServices {
     githubRepoOps: GitHubRepoOperations;
+    /** Creates the repository and polls until GitHub has populated it. */
+    githubRepoLifecycle: GitHubRepoLifecycle;
     /** Resets an existing repository to its template — the same reset Check for Updates runs. */
     templateSync: Pick<TemplateSyncService, 'resetRepository'>;
     githubFileOps: GitHubFileOperations;
@@ -92,9 +95,23 @@ export interface RepoInfo {
      */
     pdpCaveats?: string[];
     /**
-     * What the dry check of the load-bearing patches found on an added demo's
-     * code (D23), in SC words. Separate from {@link pdpCaveats}: those say PDPs
-     * will not load at all; these say what may not work on this demo.
+     * The content pipeline's sentences for the SC (EDS-55): pages the source has that
+     * the storefront does not serve, old pages that may still be live, an empty block
+     * palette. Shown last among the caveats. Absent when it had nothing to say.
      */
-    demoCaveats?: string[];
+    pipelineWarnings?: string[];
+    /**
+     * The block libraries phase 2 installed, one record each, spread into
+     * {@link StorefrontSetupResult} and on to project creation, which saves them onto
+     * the project it creates or edits. Setup must not save them itself: in the
+     * wizard the project does not exist yet, and `getCurrentProject()` is whatever
+     * was open before — which is where they went until 2026-10-09.
+     */
+    installedBlockLibraries?: InstalledBlockLibrary[];
+    /**
+     * Whether phase 2's build step (`bringStorefrontUpToDate`) left the storefront with all of
+     * Demo Builder's fixes. Creation records it with the storefront's "built" stamp
+     * (`storefrontChanges.ts`); for the same reason as the libraries, setup does not.
+     */
+    storefrontBuildComplete?: boolean;
 }

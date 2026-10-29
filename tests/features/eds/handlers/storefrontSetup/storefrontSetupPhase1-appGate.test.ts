@@ -43,6 +43,15 @@ jest.mock('@/features/eds/services/appInstallationResolver', () => ({
     resolveAppInstallation: jest.fn(),
 }));
 import { resolveAppInstallation } from '@/features/eds/services/appInstallationResolver';
+
+// The pause for a missing App polls every five seconds, and the poll sleeps BEFORE its
+// first look. Left real, the two tests that reach the pause each waited those five
+// seconds: inside jest's ten-second budget, so they passed, and outside the five-second
+// default the mutation runner applies, so the module could not be measured at all
+// (2026-10-10). Mocking the one sleep keeps the pause under test and drops the waiting.
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { makeContext, TEMPLATE } from './storefrontSetupPhase1.testUtils';
 
 const mockPin = pinRepoToLkg as jest.Mock;
@@ -63,6 +72,9 @@ function makeServices(): SetupServices {
         },
         githubAppService: {
             getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync'),
+            // The pause's own poll, once the gate has found the App missing: the
+            // App appears on the first look, so the run continues.
+            isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true, codeStatus: 200 }),
         },
     } as unknown as SetupServices;
 }
@@ -92,14 +104,15 @@ beforeEach(() => {
 
 async function runPhase1(
     services: SetupServices,
-    edsConfig = EXISTING_REPO_CONFIG
+    edsConfig = EXISTING_REPO_CONFIG,
+    signal: AbortSignal = new AbortController().signal
 ): ReturnType<typeof executePhaseGitHubRepo> {
     return executePhaseGitHubRepo(
         makeContext(),
         edsConfig,
         services,
         freshRepoInfo(),
-        new AbortController().signal,
+        signal,
         TEMPLATE.owner,
         TEMPLATE.repo
     );
@@ -131,21 +144,23 @@ describe('a repo being RESET cannot answer until it has been reset', () => {
         );
     });
 
-    it('still halts, and still surfaces the install dialog, when the App is genuinely missing', async () => {
+    it('pauses at the install dialog when the App is genuinely missing, then continues', async () => {
         mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
-
-        const result = await runPhase1(makeServices());
-
-        expect(result).toMatchObject({ success: false, awaitingGitHubApp: true });
+        const services = makeServices();
+        const result = await runPhase1(services);
+        expect(services.githubAppService.isAppInstalled).toHaveBeenCalled();
+        // One poll interval was waited before the first look, and only one: the App
+        // was there on the first look, so the run did not wait again.
+        expect((sleep as jest.Mock).mock.calls).toEqual([[TIMEOUTS.EDS_CODE_SYNC_POLL]]);
+        expect(result).toBeNull();
     });
 
     it('halts with the real reason, not the install dialog, when Helix declines to answer', async () => {
         mockResolve.mockResolvedValue({ kind: 'undetermined', httpStatus: 401 });
-
-        const result = await runPhase1(makeServices());
-
+        const services = makeServices();
+        const result = await runPhase1(services);
         expect(result?.success).toBe(false);
-        expect(result?.awaitingGitHubApp).toBeUndefined();
+        expect(services.githubAppService.isAppInstalled).not.toHaveBeenCalled();
     });
 });
 
@@ -169,15 +184,32 @@ describe('a repo the user chose to PRESERVE is gated before any write', () => {
         );
     });
 
-    it('writes nothing when the App is missing — Phase 2 would land in a preserved repo', async () => {
+    it('writes nothing while the App is missing — Phase 2 would land in a preserved repo', async () => {
         mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
         const services = makeServices();
-
         const result = await runPhase1(services, NO_RESET);
-
         expect(services.templateSync.resetRepository).not.toHaveBeenCalled();
         expect(mockPin).not.toHaveBeenCalled();
-        expect(result).toMatchObject({ success: false, awaitingGitHubApp: true });
+        // The gate paused for the App and the run went on once it appeared.
+        expect(services.githubAppService.isAppInstalled).toHaveBeenCalled();
+        expect(result).toBeNull();
+    });
+
+    it('stops waiting for the App the moment the run is cancelled', async () => {
+        // The gate is handed the run's cancel signal. Cancelled while the check is
+        // out, the pause must end as a cancellation and never poll: without the
+        // signal it would go on to look for the App and carry on with the setup.
+        const controller = new AbortController();
+        mockResolve.mockImplementation(async () => {
+            controller.abort();
+            return { kind: 'not-installed', codeStatus: 404 };
+        });
+        const services = makeServices();
+
+        await expect(runPhase1(services, NO_RESET, controller.signal)).rejects.toThrow(
+            'Operation cancelled'
+        );
+        expect(services.githubAppService.isAppInstalled).not.toHaveBeenCalled();
     });
 
     it('writes nothing when Helix declines to answer', async () => {

@@ -1,0 +1,315 @@
+/**
+ * write_commerce_rest — POST, PUT and DELETE against the project's Commerce REST
+ * API, gated on confirm:true and signed by the shared client. Argument-pinned,
+ * because a mocked fetch cannot see a malformed call: the method, the JSON body
+ * and its Content-Type, and DELETE sending a body only when given one.
+ */
+
+import { resetCommerceRestTokens } from '@/features/ai/server/commerceRestClient';
+import { registerCommerceRestWriteTool } from '@/features/ai/server/commerceRestWriteTool';
+import { AGENT_ALERT_COPY } from '@/features/ai/server/agentAlertCopy';
+import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
+import type { HandlerContext } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
+
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
+    getAppBuilderComponentCatalog: jest.fn(() => [
+        {
+            id: 'erp-integration',
+            kind: 'integration',
+            requiredApis: ['CloudIntegrationSDK', 'ACCS-REST-API'],
+        },
+    ]),
+}));
+
+function fakeServer() {
+    const tools = new Map<
+        string,
+        (args: any) => Promise<{ content: Array<{ text: string }>; isError?: true }>
+    >();
+    const declarations = new Map<string, McpToolSchema>();
+    return {
+        registerTool(name: string, def: McpToolSchema, handler: (args: any) => Promise<any>) {
+            tools.set(name, handler);
+            declarations.set(name, def);
+        },
+        declaration: (): McpToolSchema => declarations.get('write_commerce_rest')!,
+        call: async (args?: unknown) => tools.get('write_commerce_rest')!(args),
+        raw: async (args?: unknown): Promise<string> =>
+            (await tools.get('write_commerce_rest')!(args)).content[0].text,
+    };
+}
+
+const ACCS_PROJECT = {
+    name: 'bodea',
+    path: '/p/bodea',
+    adobe: { organization: 'org-1', projectId: 'proj-1', workspace: 'ws-project' },
+    componentSelections: { backend: 'adobe-commerce-accs' },
+    componentConfigs: {
+        'adobe-commerce-accs': {
+            ACCS_WEBSITE_CODE: 'bodea',
+            ACCS_STORE_CODE: 'bodea_store',
+            ACCS_STORE_VIEW_CODE: 'bodea_us',
+            ACCS_GRAPHQL_ENDPOINT:
+                'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql',
+        },
+    },
+    componentInstances: {},
+    appBuilderComponents: {
+        'erp-integration': {
+            kind: 'integration',
+            status: 'deployed',
+            source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+            workspace: { id: 'ws-erp', name: 'AcmeERP' },
+        },
+    },
+};
+
+const CREDENTIALS = {
+    clientId: 'client-abc',
+    clientSecret: 'fake-test-pw-not-a-secret',
+    technicalAccountId: 'ta-1',
+    technicalAccountEmail: 'ta@techacct.adobe.com',
+    imsOrgCode: 'ABC@AdobeOrg',
+};
+
+const getCurrentProject = jest.fn();
+const isAuthenticated = jest.fn();
+const getS2SDeployCredentials = jest.fn();
+const stateManager = createMockStateManager({ getCurrentProject });
+const ctx = (): HandlerContext => {
+    const context = createMockHandlerContext({ stateManager });
+    poolUnits(Object.assign(context.authManager as object, { isAuthenticated, getS2SDeployCredentials }));
+    return context;
+};
+
+function answering(restStatus: number, restBody: string) {
+    return jest
+        .fn()
+        .mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ access_token: 'minted-token', expires_in: 86399 }),
+        })
+        .mockResolvedValueOnce({
+            ok: restStatus < 300,
+            status: restStatus,
+            text: async () => restBody,
+        });
+}
+
+let fetchMock: jest.Mock;
+
+function serve() {
+    const s = fakeServer();
+    registerCommerceRestWriteTool(s, ctx, fetchMock as unknown as typeof fetch);
+    return s;
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    resetCommerceRestTokens();
+    getCurrentProject.mockResolvedValue(ACCS_PROJECT);
+    isAuthenticated.mockResolvedValue(true);
+    getS2SDeployCredentials.mockResolvedValue(CREDENTIALS);
+    fetchMock = answering(200, '{"id":12,"credit_limit":50000}');
+});
+
+describe('declaration and gate', () => {
+    it('is a destructive write that needs the Adobe sign-in and raises the consent dialog on method and path', () => {
+        const d = serve().declaration();
+        expect(d.needsAuth).toEqual(['adobe']);
+        expect(d.annotations).toEqual({ readOnlyHint: false, destructiveHint: true });
+        expect(AGENT_ALERT_COPY.write_commerce_rest.target).toEqual(['method', 'path']);
+    });
+
+    it('refuses without confirm:true, before any call, with the shared wording', async () => {
+        const result = await serve().call({ method: 'DELETE', path: 'customers/43' });
+        expect(result.content[0].text).toBe(
+            'write_commerce_rest requires confirm:true to proceed.'
+        );
+        expect(result.isError).toBe(true);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('refuses GET (and anything not POST, PUT or DELETE) and points at the read tool', async () => {
+        const out = await serve().raw({ method: 'GET', path: 'customers/43', confirm: true });
+        expect(out).toContain('run_commerce_rest');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('the signed write (args pinned)', () => {
+    it('PUTs the JSON body with Content-Type and the Store header, and answers the record', async () => {
+        const out = await serve().raw({
+            method: 'PUT',
+            path: 'companyCredits/12',
+            body: { credit: { id: 12, credit_limit: 50000 } },
+            confirm: true,
+        });
+
+        const [url, init] = fetchMock.mock.calls[1];
+        expect(url).toBe(
+            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/V1/companyCredits/12'
+        );
+        expect(init.method).toBe('PUT');
+        expect(init.headers).toEqual({
+            Authorization: 'Bearer minted-token',
+            'x-api-key': 'client-abc',
+            'x-gw-ims-org-id': 'ABC@AdobeOrg',
+            Accept: 'application/json',
+            Store: 'bodea_us',
+            'Content-Type': 'application/json',
+        });
+        expect(JSON.parse(init.body)).toEqual({ credit: { id: 12, credit_limit: 50000 } });
+        expect(JSON.parse(out)).toEqual({ id: 12, credit_limit: 50000 });
+    });
+
+    it('DELETE without a body sends none and no Content-Type, and a bare `true` answer is passed through', async () => {
+        fetchMock = answering(200, 'true');
+        const out = await serve().raw({ method: 'DELETE', path: 'customers/43', confirm: true });
+
+        const [, init] = fetchMock.mock.calls[1];
+        expect(init.method).toBe('DELETE');
+        expect(init.body).toBeUndefined();
+        expect(init.headers['Content-Type']).toBeUndefined();
+        expect(out).toBe('true');
+    });
+
+    // Commerce's DELETE /V1/returns/{id} refuses a bare delete: '"rmaDataObject" is required'
+    // (measured on the Justrite sandbox 2026-10-02). A body the caller gives is sent.
+    it('DELETE sends the body the caller gives, for a route that requires one', async () => {
+        fetchMock = answering(200, 'true');
+        await serve().raw({
+            method: 'DELETE',
+            path: 'returns/1',
+            body: { rmaDataObject: { entity_id: 1 } },
+            confirm: true,
+        });
+
+        const [, init] = fetchMock.mock.calls[1];
+        expect(init.method).toBe('DELETE');
+        expect(JSON.parse(init.body)).toEqual({ rmaDataObject: { entity_id: 1 } });
+        expect(init.headers['Content-Type']).toBe('application/json');
+    });
+
+    it('an empty 2xx body still answers something parseable', async () => {
+        fetchMock = answering(204, '');
+        const out = await serve().raw({ method: 'DELETE', path: 'customers/43', confirm: true });
+        expect(JSON.parse(out)).toEqual({ ok: true, status: 204 });
+    });
+
+    it('a Commerce 400 is answered with its own words, not thrown', async () => {
+        fetchMock = answering(
+            400,
+            '{"message":"The company credit limit must be a positive number."}'
+        );
+        const out = await serve().raw({
+            method: 'PUT',
+            path: 'companyCredits/12',
+            body: {},
+            confirm: true,
+        });
+        expect(out).toContain('HTTP 400');
+        expect(out).toContain('positive number');
+    });
+
+    it('a refusal or a Commerce error is isError, so a script cannot read it as success (AI-10)', async () => {
+        const s = serve();
+        expect((await s.call({ method: 'GET', path: 'customers/43', confirm: true })).isError).toBe(true);
+        expect(
+            (await s.call({ method: 'POST', path: 'products', bulk: true, body: {}, confirm: true })).isError
+        ).toBe(true);
+        isAuthenticated.mockResolvedValue(false);
+        expect((await serve().call({ method: 'DELETE', path: 'customers/43', confirm: true })).isError).toBe(true);
+        isAuthenticated.mockResolvedValue(true);
+        fetchMock = answering(400, '{"message":"The product was unable to be saved."}');
+        expect((await serve().call({ method: 'POST', path: 'products', body: {}, confirm: true })).isError).toBe(true);
+    });
+
+    it('a write that worked carries no isError', async () => {
+        const result = await serve().call({ method: 'PUT', path: 'companyCredits/12', body: {}, confirm: true });
+        expect(result.isError).toBeUndefined();
+    });
+
+    it('bulk:true sends the ARRAY body to the asynchronous bulk API and says to poll the uuid', async () => {
+        // Owner 2026-09-30: 96 products at 13–25 s each through the per-record path
+        // "doesn't bode well for a quick action for an end user".
+        fetchMock = answering(
+            200,
+            '{"bulk_uuid":"5a0f9bd8","request_items":[{"id":0,"data_hash":"h","status":"accepted"}],"errors":false}'
+        );
+        const body = [{ product: { sku: 'A', custom_attributes: [] } }, { product: { sku: 'B' } }];
+
+        const out = await serve().raw({
+            method: 'PUT',
+            path: 'products/bySku',
+            body,
+            bulk: true,
+            confirm: true,
+        });
+
+        const [url, init] = fetchMock.mock.calls[1];
+        expect(url).toBe(
+            // ACCS puts /async/bulk AFTER V1 (bulk-endpoints doc); PaaS puts it before.
+            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/V1/async/bulk/products/bySku'
+        );
+        expect(init.method).toBe('PUT');
+        expect(JSON.parse(init.body)).toEqual(body);
+        expect(out).toContain('bulk/<bulk_uuid>/status');
+        expect(out).toContain('"bulk_uuid":"5a0f9bd8"');
+    });
+
+    it('bulk:true refuses a single record and a DELETE, before any call', async () => {
+        const one = await serve().raw({
+            method: 'POST',
+            path: 'products',
+            body: { product: {} },
+            bulk: true,
+            confirm: true,
+        });
+        expect(one).toContain('non-empty ARRAY');
+        const del = await serve().raw({
+            method: 'DELETE',
+            path: 'products/A',
+            bulk: true,
+            confirm: true,
+        });
+        expect(del).toContain('one at a time');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("a 403 that is Commerce's ACL refusal is explained as the credential", async () => {
+        fetchMock = answering(
+            403,
+            '{"message":"The consumer isn\'t authorized to access %resources.","parameters":{"resources":"Magento_Backend::store"}}'
+        );
+        const out = await serve().raw({
+            method: 'POST',
+            path: 'products',
+            body: {},
+            confirm: true,
+        });
+        expect(out).toContain('workspace credential is not accepted');
+    });
+
+    it("a 403 with any other reason is answered in Commerce's own words, not blamed on the credential", async () => {
+        // Live 2026-09-30: the media endpoint on an instance with the AEM Assets
+        // Integration. The credential was fine; the old wording said to reinstall.
+        fetchMock = answering(
+            403,
+            '{"message":"Adding a new gallery entry has been disabled by AEM Assets Integration"}'
+        );
+        const out = await serve().raw({
+            method: 'POST',
+            path: 'products/ACC-1/media',
+            body: {},
+            confirm: true,
+        });
+        expect(out).toContain('HTTP 403');
+        expect(out).toContain('disabled by AEM Assets Integration');
+        expect(out).not.toContain('workspace credential');
+    });
+});

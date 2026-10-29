@@ -140,12 +140,132 @@ describe('Sidebar', () => {
                 />
             );
 
+            const chatTile = screen.getByRole('button', { name: /^chat$/i });
+
             fireEvent.click(screen.getByRole('menuitem', { name: /new chat/i }));
+            fireEvent.focus(chatTile);
             expect(onNewAiChat).toHaveBeenCalledTimes(1);
             expect(onOpenAiChat).not.toHaveBeenCalled();
 
             fireEvent.click(screen.getByRole('menuitem', { name: /continue chat/i }));
+            fireEvent.focus(chatTile);
             expect(onOpenAiChat).toHaveBeenCalledTimes(1);
+        });
+
+        describe('a Chat menu action runs only after the menu returns focus to the tile', () => {
+            // Each action opens the Claude terminal, which takes the keyboard.
+            // Spectrum returns focus to the Chat tile a frame after the menu
+            // closes; running first let that return win the keyboard back, so
+            // arrow keys re-opened the menu instead of reaching Claude
+            // (release testing, 2026-10-06).
+            beforeEach(() => jest.useFakeTimers());
+            afterEach(() => jest.useRealTimers());
+
+            const renderMenu = () => {
+                const onPickAiChat = jest.fn();
+                renderWithProvider(
+                    <Sidebar
+                        context={createProjectContext()}
+                        onNavigate={jest.fn()}
+                        onCreateProject={jest.fn()}
+                        onOpenAiChat={jest.fn()}
+                        onShowPrompts={jest.fn()}
+                        onNewAiChat={jest.fn()}
+                        onPickAiChat={onPickAiChat}
+                    />
+                );
+                return { onPickAiChat, chatTile: screen.getByRole('button', { name: /^chat$/i }) };
+            };
+
+            it('waits for the tile to regain focus, then runs once', () => {
+                const { onPickAiChat, chatTile } = renderMenu();
+
+                fireEvent.click(screen.getByRole('menuitem', { name: /earlier chat/i }));
+                expect(onPickAiChat).not.toHaveBeenCalled();
+
+                fireEvent.focus(chatTile);
+                expect(onPickAiChat).toHaveBeenCalledTimes(1);
+
+                jest.advanceTimersByTime(1000);
+                fireEvent.focus(chatTile);
+                expect(onPickAiChat).toHaveBeenCalledTimes(1);
+            });
+
+            it('runs anyway when no focus comes back', () => {
+                const { onPickAiChat } = renderMenu();
+
+                fireEvent.click(screen.getByRole('menuitem', { name: /earlier chat/i }));
+                jest.advanceTimersByTime(1000);
+                expect(onPickAiChat).toHaveBeenCalledTimes(1);
+            });
+
+            it('runs nothing when the tile is focused with no action pending', () => {
+                const { onPickAiChat, chatTile } = renderMenu();
+
+                fireEvent.focus(chatTile);
+                jest.advanceTimersByTime(1000);
+                expect(onPickAiChat).not.toHaveBeenCalled();
+            });
+        });
+
+        it('orders the Chat menu Continue, earlier chat, New — the two ways back together', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                    onNewAiChat={jest.fn()}
+                    onPickAiChat={jest.fn()}
+                />
+            );
+
+            expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+                'Continue chat',
+                'Pick an earlier chat',
+                'New chat',
+            ]);
+        });
+
+        it('offers a way back to an EARLIER chat when onPickAiChat is given', () => {
+            // AI-4b: a third way into the same chat, so it joins the Chat menu
+            // rather than becoming a tile (AiZone's docstring records why).
+            const onOpenAiChat = jest.fn();
+            const onNewAiChat = jest.fn();
+            const onPickAiChat = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={onOpenAiChat}
+                    onShowPrompts={jest.fn()}
+                    onNewAiChat={onNewAiChat}
+                    onPickAiChat={onPickAiChat}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('menuitem', { name: /earlier chat/i }));
+            fireEvent.focus(screen.getByRole('button', { name: /^chat$/i }));
+            expect(onPickAiChat).toHaveBeenCalledTimes(1);
+            expect(onOpenAiChat).not.toHaveBeenCalled();
+            expect(onNewAiChat).not.toHaveBeenCalled();
+        });
+
+        it('offers no earlier-chat item when onPickAiChat is absent', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenAiChat={jest.fn()}
+                    onShowPrompts={jest.fn()}
+                    onNewAiChat={jest.fn()}
+                />
+            );
+
+            expect(screen.queryByRole('menuitem', { name: /earlier chat/i })).not.toBeInTheDocument();
         });
 
         it('renders THREE AI tiles once the workbench has a callback', () => {

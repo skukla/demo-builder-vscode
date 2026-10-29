@@ -87,6 +87,28 @@ jest.mock('@/core/state/manifestFormatSweep', () => ({
 }));
 
 /**
+ * The fifth sweep in the chain (PR-1a): moving installed components onto Demo
+ * Builder's Node. Stubbed for the same reason as the four above. The jest config
+ * resets every mock between tests, so a suite that cares what the sweep answered
+ * says so in its own `beforeEach`; {@link NODE_SWEEP_NOT_NEEDED} is the quiet answer.
+ * `bareDefinition` stays real: the glue calls it, and what it builds is part of
+ * what the installer is handed.
+ */
+export const NODE_SWEEP_NOT_NEEDED: NodeSweepResult = { ran: false, moved: [], failed: [], running: [] };
+export const mockSweepOntoDemoBuilderNode = jest.fn<Promise<NodeSweepResult>, [NodeSweepDeps]>();
+jest.mock('@/features/components/services/demoBuilderNodeSweep', () => ({
+    ...jest.requireActual('@/features/components/services/demoBuilderNodeSweep'),
+    sweepOntoDemoBuilderNode: (deps: NodeSweepDeps) => mockSweepOntoDemoBuilderNode(deps),
+}));
+
+/** The dashboard push the EW-setting listener's callback makes. */
+export const mockSendAuthoringExperienceUpdate = jest.fn<Promise<void>, [string | undefined]>();
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    ...jest.requireActual('@/features/dashboard/services/projectPanelPushes'),
+    sendAuthoringExperienceUpdate: (url?: string) => mockSendAuthoringExperienceUpdate(url),
+}));
+
+/**
  * The in-extension MCP server, stubbed.
  *
  * Unmocked it binds a REAL Unix socket on every activation, and these suites
@@ -138,7 +160,12 @@ jest.mock('@/features/sidebar/providers/sidebarProvider', () => ({
 }));
 
 jest.mock('@/features/authentication/services/authenticationService', () => ({
-    AuthenticationService: jest.fn().mockImplementation(() => ({})),
+    // activate() subscribes the dashboard refresh and the success line to a
+    // successful Adobe sign-in.
+    AuthenticationService: jest.fn().mockImplementation(() => ({
+        onDidSignIn: (listener: () => void) => mockAdobeOnDidSignIn(listener),
+        watchForcedSignIns: (watch: unknown) => mockWatchForcedSignIns(watch),
+    })),
 }));
 
 jest.mock('@/commands/commandManager', () => ({
@@ -165,13 +192,6 @@ jest.mock('@/core/vscode/envFileWatcherService', () => ({
 
 jest.mock('@/core/shell/commandExecutor', () => ({
     CommandExecutor: jest.fn().mockImplementation(() => ({
-        dispose: jest.fn(),
-    })),
-}));
-
-jest.mock('@/utils/autoUpdater', () => ({
-    AutoUpdater: jest.fn().mockImplementation(() => ({
-        checkForUpdates: jest.fn().mockResolvedValue(undefined),
         dispose: jest.fn(),
     })),
 }));
@@ -216,13 +236,19 @@ jest.mock('@/features/project-creation/services/aiBundle/globalMcpRegistration',
  * activation wired it right; their own behaviour has its own suites.
  */
 export const mockOnDidSignIn = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
+/** The Adobe sign-in signal (AuthenticationService.onDidSignIn), captured like DA.live's. */
+export const mockAdobeOnDidSignIn = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
+/** The watch on every forced Adobe sign-in (AuthenticationService.watchForcedSignIns), for DA.live's sign-in. */
+export const mockWatchForcedSignIns = jest.fn((_watch: unknown) => ({ dispose: jest.fn() }));
 export const mockGetAccessToken = jest.fn();
+export const mockMigrateDaLiveToken = jest.fn(async () => undefined);
 export const mockGetGitHubToken = jest.fn();
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ...jest.requireActual('@/features/eds/handlers/edsHelpers'),
     getDaLiveAuthService: jest.fn(() => ({
         onDidSignIn: (listener: () => void) => mockOnDidSignIn(listener),
         getAccessToken: (...a: unknown[]) => mockGetAccessToken(...a),
+        migrateLegacyToken: () => mockMigrateDaLiveToken(),
         dispose: jest.fn(),
     })),
     getGitHubServices: jest.fn(() => ({
@@ -288,6 +314,7 @@ jest.mock('@/features/dashboard/services/defaultPromptsSeeder', () => ({
 // and re-exported so specs never bind the real ones.
 import * as vscode from 'vscode';
 import { createMockExtensionContext as createMockExtensionContextBase } from './helpers/extensionContextFake';
+import type { NodeSweepDeps, NodeSweepResult } from '@/features/components/services/demoBuilderNodeSweep';
 export { activate, deactivate, shouldReHomeToRoot } from '../src/extension';
 export { vscode };
 

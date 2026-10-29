@@ -6,49 +6,44 @@
  *   1. three render states chosen BEFORE layout — loading, empty, loaded
  *   2. `PageLayout` + `PageHeader` (title + subtitle only, like the dashboard's;
  *      navigation rides the right-aligned `action` slot)
- *   3. a sticky action band — `SearchHeader` (count · filter · refresh) plus the
- *      trailing nav + primary action, the way DashboardStatusHeader trails
- *      "All Projects" after its status badges
+ *   3. a sticky action band — {@link IntegrationsActionBand}
  *   4. content in `.page-container-padded pb-6`
  *
  * This screen OWNS the data (the two live push channels and the card
- * derivation) and filters it; {@link IntegrationsGrid} only renders the cards it
- * is handed — the same split as ProjectsDashboard → ProjectsGrid. That is what
- * lets the header count and the grid never disagree.
+ * derivation, `useIntegrationCards`) and filters it (`useIntegrationCardSearch`);
+ * {@link IntegrationsGrid} only renders the cards it is handed — the same split
+ * as ProjectsDashboard → ProjectsGrid. That is what lets the header count and
+ * the grid never disagree. What its controls do lives in
+ * `useIntegrationsScreenActions` (split out by EDS-8, 2026-10-08).
  *
  * @module features/dashboard/ui/integrationsSurface/IntegrationsScreen
  */
 
-import { Button, Flex, Text, View } from '@adobe/react-spectrum';
-import React, { useCallback, useMemo, useState } from 'react';
-import { ComponentOperationModal } from '../components/integrations/ComponentOperationModal';
-import {
-    buildIntegrationCards,
-    deriveMeshCard,
-    type IntegrationCardModel,
-} from '../components/integrations/integrationCardModel';
+import { Flex, Text } from '@adobe/react-spectrum';
+import React, { useCallback } from 'react';
+import { ErpAssignDialogs, useErpAssignDialogs } from '../components/integrations/ErpAssignDialogs';
 import { IntegrationsGrid } from '../components/integrations/IntegrationsGrid';
+import { PrepareOnAddDialog, usePrepareOnAdd } from '../components/integrations/PrepareOnAddDialog';
+import { SetupGuideModal } from '../components/integrations/SetupGuideModal';
+import { setupNextStep, useSetupGuide } from '../components/integrations/useSetupGuide';
 import { useComponentOperation } from '../hooks/useComponentOperation';
-import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
+import { useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
 import { useLiveDestination } from '../hooks/useLiveDestination';
-import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
 import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
-import {
-    getIdentifiedMeshAppBuilderComponent,
-    listAppBuilderComponents,
-} from '@/core/state/appBuilderComponentState';
+import { IntegrationsActionBand } from './IntegrationsActionBand';
+import { useIntegrationCards } from './useIntegrationCards';
+import { useIntegrationCardSearch } from './useIntegrationCardSearch';
+import { useIntegrationsScreenActions } from './useIntegrationsScreenActions';
 import { CtaEmptyState } from '@/core/ui/components/feedback/CtaEmptyState';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
+import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
-import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
-import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
-import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { StartableOperation } from '@/core/ui/hooks/useOperationRunner';
+import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { Project } from '@/types/base';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
 /** Module-level stable empty catalog — avoids a new array ref each render. */
@@ -60,39 +55,6 @@ const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
  */
 export type IntegrationsScreenProps = Partial<IntegrationsInitialData>;
 
-/**
- * "<project> · <workspace>", or undefined when the project has no Adobe target
- * yet. Undefined hides the destination line rather than rendering an empty one.
- */
-export function formatDestination(destination?: {
-    projectTitle?: string;
-    workspaceTitle?: string;
-}): string | undefined {
-    const parts = [destination?.projectTitle, destination?.workspaceTitle].filter(Boolean);
-    return parts.length > 0 ? parts.join(' · ') : undefined;
-}
-
-/** Case-insensitive match over the fields a user would search by. */
-/** The card fields a search query matches against. */
-const CARD_SEARCH_FIELDS = ['name', 'kindLabel', 'sourceLine'] as const;
-
-/**
- * Filter cards by a search query.
- *
- * Delegates to the shared `matchesSearchFields` predicate rather than
- * re-implementing the lowercase-contains walk a third time (this surface and
- * ProjectsDashboard had each hand-rolled it while `useSearchFilter` sat unused —
- * architecture-duplication scan, 2026-07-31). Kept as a named export because the
- * screen owns its query state and the suite tests this directly.
- *
- * No empty-query short-circuit: `matchesSearchFields` trims the query itself and
- * returns true for an empty needle (core/ui/hooks/useSearchFilter.ts), so the
- * guard that used to sit here returned the same cards the filter already did.
- */
-export function filterCards(cards: IntegrationCardModel[], query: string): IntegrationCardModel[] {
-    return cards.filter((card) => matchesSearchFields(card, CARD_SEARCH_FIELDS, query));
-}
-
 export function IntegrationsScreen({
     projectName,
     hasAdobeContext,
@@ -103,6 +65,9 @@ export function IntegrationsScreen({
     adobeWorkspaceId,
     adobeOrgId,
     commerceStoreStructure,
+    componentSettings,
+    integrationsViewMode,
+    meshNeededByDemo,
 }: IntegrationsScreenProps): React.ReactElement {
     // No props: the four values read here depend on the status pushes alone.
     // `hasAdobeContext` reaches only the hook's org-check state, which this
@@ -112,90 +77,53 @@ export function IntegrationsScreen({
     // Live, not the raw prop: the init payload seeds the header once, so without
     // this a destination change left the crumb naming the OLD target all session.
     const destination = useLiveDestination(seededDestination);
-    const overrides = useRowStatusOverrides();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [addOpen, setAddOpen] = useState(false);
-    const operations = useComponentOperation();
-    // One modal instance, two journeys — `mode` selects the stage set, so a
-    // second <AddIntegrationFlowAdapter> would just duplicate its state.
-    const [destOpen, setDestOpen] = useState(false);
-
-    const destinationLabel = formatDestination(destination);
     const catalog = appBuilderComponentCatalog ?? EMPTY_CATALOG;
-
-    const cards = useMemo((): IntegrationCardModel[] => {
-        const project = { appBuilderComponents: components } as Project;
-        // ONE lookup for id AND state. Resolving them separately let the card
-        // show one mesh while its Remove tore down another (2026-08-04, live) —
-        // the map search has a priority, and a second search that omits it picks
-        // a different component whenever a project holds more than one mesh.
-        const mesh = getIdentifiedMeshAppBuilderComponent(project);
-        // Resolved BEFORE the list so the list knows which id the mesh card
-        // covers. Without that, the mesh's own row status synthesizes a second
-        // card beside it — two cards for one mesh, seen live during a removal.
-        // Passed only when a mesh card will actually render: with none (an ADD,
-        // where the mesh does not exist yet) the synthesized card is the
-        // operation's only feedback.
-        const integrationCards = buildIntegrationCards(
-            listAppBuilderComponents(project),
-            overrides,
-            catalog,
-            meshStatusDisplay ? mesh?.id : undefined,
-        );
-        if (!meshStatusDisplay) {
-            return integrationCards;
-        }
-        const meshCard = deriveMeshCard(
-            meshStatusDisplay,
-            meshStatus,
-            // No `?? getMeshAppBuilderComponent(project)` fallback: that function
-            // IS `getIdentifiedMeshAppBuilderComponent(project)?.state`
-            // (core/state/appBuilderComponentState.ts), so it could only ever
-            // return the value already in hand.
-            mesh?.state,
-            isMeshBusy(meshStatus) || isTransitioning,
-            mesh?.id,
-            // Names the deployed codes. A pure by-code lookup, so it cannot
-            // name the wrong one and needs nothing captured at deploy time.
-            commerceStoreStructure,
-        );
-        return [meshCard, ...integrationCards];
-    }, [
+    const cards = useIntegrationCards({
         components,
-        overrides,
         catalog,
         meshStatusDisplay,
         meshStatus,
         isTransitioning,
         commerceStoreStructure,
-    ]);
-
-    const visibleCards = useMemo(() => filterCards(cards, searchQuery), [cards, searchQuery]);
-    // Named rather than inlined: a 4-operand && chain in JSX trips the
-    // complex-expression SOP scan (tests/sop/complex-expressions.test.ts).
-    const searchFoundNothing =
-        Boolean(searchQuery) && visibleCards.length === 0 && cards.length > 0;
-
-    const handleBack = useCallback((): void => {
-        webviewClient.postMessage('showProjectDashboard');
-    }, []);
-
-    const handleDeployMesh = useCallback((): void => {
-        webviewClient.postMessage('deployMesh');
-    }, []);
-
-    const handleReAuthenticate = useCallback((): void => {
-        webviewClient.postMessage('reAuthenticate');
-    }, []);
-
-    const handleRefresh = useCallback((): void => {
-        webviewClient.postMessage('requestStatus');
-    }, []);
-
-    const openAdd = useCallback((): void => setAddOpen(true), []);
-    const closeAdd = useCallback((): void => setAddOpen(false), []);
-    const openDestination = useCallback((): void => setDestOpen(true), []);
-    const closeDestination = useCallback((): void => setDestOpen(false), []);
+        meshNeededByDemo,
+        destination,
+    });
+    const search = useIntegrationCardSearch(cards);
+    const { searchQuery, visibleCards, isFiltering, searchFoundNothing } = search;
+    // Cards or rows, the projects list's toggle (owner, 2026-09-24): seeded from
+    // the init payload, kept for the session by the extension.
+    const { viewMode, choose: chooseViewMode } = useViewModePreference(
+        'integrations',
+        integrationsViewMode,
+    );
+    const operations = useComponentOperation();
+    const actions = useIntegrationsScreenActions(operations.start);
+    const { addOpen, destOpen, openAdd, closeAdd, closeDestination } = actions;
+    // The demo setup guide (AB-26x) lives here, not in the grid: the progress modal below
+    // opens it too, when an operation finishes with setup still to do.
+    const { open: openGuide, modal: guideModal, away: guideAway } = useSetupGuide(cards);
+    // "Assign products" and the attribute-set fix (AB-74): opened from a card, the setup
+    // guide, and the success view of "Add another ERP".
+    const erpAssign = useErpAssignDialogs(operations);
+    // Adding the ERP integration prepares the store: confirmed first (owner, 2026-10-22).
+    const prepareOnAdd = usePrepareOnAdd(operations.started);
+    // The guide applies its steps in place (AB-82). A run that stops on a question goes to the
+    // progress modal, which asks it; closing that comes back to the guide on the same step,
+    // with no "Open demo setup" offered for the guide the SC just left (owner, 2026-10-26).
+    // Stable: the progress modal's close feeds a timer.
+    const { close: closeOperation, show: showOperation } = operations;
+    const { comeBack, leave } = guideAway;
+    const closeProgress = useCallback(() => {
+        closeOperation();
+        comeBack();
+    }, [closeOperation, comeBack]);
+    const askFromGuide = useCallback(
+        (operation: StartableOperation, stepId: string) => {
+            leave(operation.id, stepId);
+            showOperation(operation, true);
+        },
+        [leave, showOperation],
+    );
 
     // Status has not resolved yet — the mesh card would otherwise pop in a beat
     // after the integration cards. Same LoadingDisplay as ProjectsDashboard's gate.
@@ -203,11 +131,7 @@ export function IntegrationsScreen({
     // models in-panel feedback), so it cannot express "fill this 100vh screen".
     if (hasAdobeContext && !projectStatus) {
         return (
-            <View height="100vh" backgroundColor="gray-50">
-                <Flex justifyContent="center" alignItems="center" height="100%">
-                    <LoadingDisplay size="L" message="Loading integrations" />
-                </Flex>
-            </View>
+            <FullScreenLoading message="Loading integrations" backgroundColor="gray-50" />
         );
     }
 
@@ -231,69 +155,16 @@ export function IntegrationsScreen({
         >
             <FullScreenSurface
                 header={
-                    <Flex alignItems="start" gap="size-300">
-                        <View flex>
-                            <SearchHeader
-                                searchQuery={searchQuery}
-                                onSearchQueryChange={setSearchQuery}
-                                searchPlaceholder="Filter integrations"
-                                // 0, matching the projects list: show the field
-                                // from the first item. Not a tuning knob — the
-                                // COUNT's position depends on it. SearchHeader
-                                // puts the count beside the refresh button when
-                                // there is no field, and on its own line beneath
-                                // the field when there is; a high threshold left
-                                // this screen rendering the no-search fallback.
-                                searchThreshold={0}
-                                totalCount={cards.length}
-                                filteredCount={visibleCards.length}
-                                itemNoun="integration"
-                                onRefresh={handleRefresh}
-                                refreshAriaLabel="Refresh integrations"
-                                hasLoadedOnce
-                                alwaysShowCount
-                                // The count row is space-between and its right
-                                // half is empty once a field shows. The deploy
-                                // destination goes there rather than costing the
-                                // band a row: it is the least-used fact on the
-                                // screen. NOT the page header — that is where the
-                                // LOCAL project name and the REMOTE Adobe
-                                // destination were indistinguishable.
-                                countTrailing={
-                                    destinationLabel ? (
-                                        <div
-                                            className="page-destination-row"
-                                            data-testid="page-destination"
-                                        >
-                                            <span className="page-destination-label">
-                                                Deploys to
-                                            </span>
-                                            <DestinationContext
-                                                project={destination?.projectTitle}
-                                                workspace={destination?.workspaceTitle}
-                                                onChange={openDestination}
-                                            />
-                                        </div>
-                                    ) : undefined
-                                }
-                            />
-                        </View>
-                        {/* Trailing buttons mirror DashboardStatusHeader: a
-                            secondary nav button after the flexed content, with the
-                            primary action last (as "New" is on the projects list). */}
-                        <Button variant="secondary" onPress={handleBack}>
-                            Project Dashboard
-                        </Button>
-                        {/* Withheld while empty: the empty state carries the CTA,
-                            and it is the thing the eye lands on. Two Add buttons
-                            for one action is the duplication this surface spent
-                            2026-08-04 removing everywhere else. */}
-                        {cards.length > 0 && (
-                            <Button variant="cta" onPress={openAdd}>
-                                Add integration
-                            </Button>
-                        )}
-                    </Flex>
+                    <IntegrationsActionBand
+                        cards={cards}
+                        search={search}
+                        viewMode={viewMode}
+                        onViewModeChange={chooseViewMode}
+                        onRefresh={actions.handleRefresh}
+                        destination={destination}
+                        onChangeDestination={actions.openDestination}
+                        onBack={actions.handleBack}
+                    />
                 }
             >
                 {/* The empty state renders INSIDE the page chrome, not instead of
@@ -312,20 +183,25 @@ export function IntegrationsScreen({
                 ) : (
                     <IntegrationsGrid
                         cards={visibleCards}
-                        onDeployMesh={handleDeployMesh}
-                        onReAuthenticate={handleReAuthenticate}
-                        destinationLabel={destinationLabel}
+                        viewMode={viewMode}
+                        onDeployMesh={actions.handleDeployMesh}
+                        onReAuthenticate={actions.handleReAuthenticate}
+                        componentSettings={componentSettings}
                         operations={operations}
+                        onOpenGuide={openGuide}
+                        erpAssign={erpAssign}
+                        // The add card steps aside while a filter is on: it is
+                        // not a result, and alone it would read as "add one"
+                        // rather than "nothing matched".
+                        onAdd={isFiltering ? undefined : openAdd}
                     />
                 )}
 
                 {/* No-results message, mirroring the projects list. The grid gets
                     search-FILTERED cards while the empty-state gate above reads
                     the unfiltered list, so a no-match search renders an empty
-                    grid. The dashed add tile used to sit there alone, reading as
-                    "add one" rather than "nothing matched"; with the tile gone
-                    the area would otherwise be blank, and the header's "0 of N"
-                    is a count, not an answer. */}
+                    grid (the add card is withheld while filtering), and the
+                    header's "0 of N" is a count, not an answer. */}
 
                 {searchFoundNothing && (
                     <Flex
@@ -339,8 +215,8 @@ export function IntegrationsScreen({
                     </Flex>
                 )}
 
-                {/* Hosted HERE so the header button and the grid's add tile open
-                    the same one instance. */}
+                {/* Hosted HERE so the empty state's CTA and the grid's add card
+                    open the same one instance. */}
                 <AddIntegrationFlowAdapter
                     isOpen={addOpen || destOpen}
                     mode={destOpen ? 'destination' : 'add'}
@@ -353,17 +229,23 @@ export function IntegrationsScreen({
                     adobeWorkspaceTitle={destination?.workspaceTitle}
                     adobeOrgId={adobeOrgId}
                     onAddStarted={operations.started}
+                    onConfirmAdd={prepareOnAdd.confirmAdd}
+                    onDestinationChosen={actions.handleDestinationChosen}
                 />
 
                 {/* The operation progress modal (PL-59). Here, not in the grid: the
                     first Add happens on a screen with no grid. Keyed by component id,
                     which the mesh card carries as componentId. */}
-                <ComponentOperationModal
+                <OperationProgressModal
                     operation={operations.open}
-                    status={cards.find((c) => (c.componentId ?? c.id) === operations.open?.id)}
                     onRetry={operations.retry}
-                    onClose={operations.close}
+                    onClose={closeProgress}
+                    next={guideAway.pending ? undefined : setupNextStep(cards, operations.open?.id, openGuide)}
+                    offerStep={erpAssign.offerStep}
                 />
+                <SetupGuideModal {...guideModal} onAsk={askFromGuide} />
+                <ErpAssignDialogs {...erpAssign.dialogs} />
+                <PrepareOnAddDialog {...prepareOnAdd.dialog} />
             </FullScreenSurface>
         </PageLayout>
     );

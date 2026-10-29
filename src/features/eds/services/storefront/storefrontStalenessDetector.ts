@@ -23,6 +23,7 @@ import {
     ACCS_CUSTOMER_GROUP,
 } from '@/core/config/envVarKeys';
 import { getLogger } from '@/core/logging/debugLogger';
+import { mergeComponentConfigs } from '@/features/eds/services/storefrontConfigParams';
 import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -91,24 +92,28 @@ const STOREFRONT_CONFIG_ENV_VARS = [
 // ==========================================================
 
 /**
- * Flatten every component's config into one lookup.
+ * Every component's config as ONE lookup, merged exactly as config.json is
+ * generated from it: the backend owns the Commerce store scope, so a stale copy
+ * on the mesh never wins (storefrontConfigParams mergeComponentConfigs).
  *
- * Storefront env vars cross component boundaries — a value written under the
- * backend component is read when generating the storefront's config.json — so
- * both the comparison and the recording read the merged view, never one
- * component's slice. Non-object entries are skipped: a component whose config
- * is missing or scalar contributes nothing.
+ * Until 2026-10-09 this file had its own merge, last component wins. On a project
+ * whose mesh still carried an old copy of the store scope, a website change on the
+ * backend then read as "no change" here while config.json would have shipped it,
+ * so the republish prompt never came: the 2026-08-10 empty-PDP failure, by another
+ * door. Both the comparison and the recording read this one merge.
  */
-function mergeComponentConfigs(
+function mergedForStorefront(
+    project: Project,
     componentConfigs: Record<string, unknown>,
 ): Record<string, unknown> {
-    const merged: Record<string, unknown> = {};
-    for (const config of Object.values(componentConfigs)) {
+    // A component whose config is missing or scalar contributes nothing, as before.
+    const objects: Parameters<typeof mergeComponentConfigs>[0] = {};
+    for (const [componentId, config] of Object.entries(componentConfigs)) {
         if (config && typeof config === 'object') {
-            Object.assign(merged, config as Record<string, unknown>);
+            objects[componentId] = config as Record<string, string | boolean | number | undefined>;
         }
     }
-    return merged;
+    return mergeComponentConfigs(objects, undefined, project.componentSelections?.backend);
 }
 
 /**
@@ -173,7 +178,7 @@ export function detectStorefrontChanges(
     }
 
     // Merge ALL new componentConfigs for cross-boundary values
-    const newEnvVars = getStorefrontEnvVars(mergeComponentConfigs(newComponentConfigs));
+    const newEnvVars = getStorefrontEnvVars(mergedForStorefront(project, newComponentConfigs));
 
     // Compare each storefront env var
     const changedEnvVars: string[] = [];
@@ -231,7 +236,7 @@ export function updateStorefrontState(
     publishedComponentConfigs: Record<string, unknown>,
 ): void {
     // Merge all configs for cross-boundary values
-    const envVars = getStorefrontEnvVars(mergeComponentConfigs(publishedComponentConfigs));
+    const envVars = getStorefrontEnvVars(mergedForStorefront(project, publishedComponentConfigs));
 
     project.edsStorefrontState = {
         envVars,

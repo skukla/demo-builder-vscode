@@ -13,6 +13,7 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | **Talking to the extension** | |
 | `useVSCodeMessage` | Subscribe to extension messages, unsubscribing on unmount |
 | `useVSCodeRequest` | Request/response with loading/error/data state — **see the gotcha below before using it** |
+| `useViewModePreference` | A list's cards/rows choice: `choose` switches and tells the extension (kept for the session), `adopt` takes a view the extension announced |
 | **State** | |
 | `useLoadingState` | Loading/error/data, plus `hasLoadedOnce` and `isRefreshing` |
 | `useSelection` | Single-item selection with key extraction |
@@ -38,6 +39,10 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | `useSelectableDefault` | Select-all-on-focus for fields holding a replaceable default |
 | `useVerificationMessage` | Status value → formatted `info`/`success`/`warning`/`error` message |
 | `useElapsedStage` | Advance a sub-message as a wait drags, so a slow fetch does not read as frozen |
+| `useRunClock` | How long the whole run has been going, from the start the extension stamps — the progress modal's proof that a long wait is still alive; `tookLine` says how long it took at the end |
+| `useOperationRunner` | Which long operation a screen's progress modal is showing: start it, open on the first report (VS Code asks first), reopen the running one, Retry |
+| `useOperationProgress` | Follow one long operation's progress for its modal, asking where it is when reopened mid-run (PL-59) |
+| `useShowWhenStartedElsewhere` | Open a screen's progress modal for an operation something else started (Configure's Republish, from a save's prompt): on its first step, once per run |
 
 **Choosing between the three async ones**, which is the question this list gets asked
 most: `useAsyncData` fetches data that arrives by VS Code message · `useAsyncOperation`
@@ -59,7 +64,8 @@ signed-out users "Connected" for two steps.
 
 Reach for this hook only against a handler that genuinely throws. Otherwise type the
 ENVELOPE and branch on `.success`. The full treatment — why the channel behaves this
-way, and the `GitHubAppCheckResult` pattern to copy — is in
+way, and the envelope-typing pattern to copy (`webviewClient.request<{ success; … }>`
+then branch on `.success`, as `GitHubAppInstallDialog` does) — is in
 [webview-command-handler](../../../../.claude/skills/webview-command-handler/SKILL.md),
 which is where you will be when you wire one.
 

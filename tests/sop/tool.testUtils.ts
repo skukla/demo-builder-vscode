@@ -24,9 +24,9 @@
  * @see tests/sop/tool-auth-declarations.test.ts
  */
 
-import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { workingTreeFiles } from './architectureScan';
 
 const ROOT = join(__dirname, '..', '..');
 
@@ -42,11 +42,7 @@ export interface ToolDeclaration {
 
 /** Every tool declaration in the registrars and descriptor tables. */
 export function toolDeclarations(): ToolDeclaration[] {
-    const files = execSync(
-        "git ls-files 'src/features/ai/server/*.ts' 'src/mcp-server.ts' 'src/mcp/*.ts'",
-        { encoding: 'utf8', cwd: ROOT }
-    )
-        .split('\n')
+    const files = workingTreeFiles('src/features/ai/server/*.ts', 'src/mcp-server.ts', 'src/mcp/*.ts')
         .filter(Boolean);
 
     const out: ToolDeclaration[] = [];

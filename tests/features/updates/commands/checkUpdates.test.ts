@@ -1,78 +1,279 @@
 /**
- * Unit Tests for CheckUpdatesCommand
+ * CheckUpdatesCommand (PL-80) — Check for Updates checks in a notification, says when
+ * nothing is waiting, and otherwise hands its check to the Updates modal on the projects
+ * list. The background check (sidebar opening, every four hours) checks quietly and only
+ * notifies, with Review opening the modal on that check. Nothing opens by itself, and the
+ * modal never checks again.
  *
- * Tests the check updates command with focus on message visibility delay.
- * Step 2: Add Message Visibility Delay
- *
- * Coverage areas:
- * - Progress message display
- * - 1500ms delay before GitHub API call (ensures user sees "Checking for updates" message)
- * - Message content verification
- * - Timing verification
- * - Error handling
- *
- * Total tests: 7
+ * Both forms first run the early-access off-ramp: a preview build a final release has
+ * superseded is offered a channel switch, written only on an explicit choice.
  */
 
 import * as vscode from 'vscode';
+import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { UpdateManager } from '@/features/updates/services/updateManager';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-
-// Mock UpdateManager
 jest.mock('@/features/updates/services/updateManager');
 
-// Mock ComponentUpdater and ExtensionUpdater
-jest.mock('@/features/updates/services/componentUpdater');
-jest.mock('@/features/updates/services/extensionUpdater');
+const mockFindAllUpdates = jest.fn();
+jest.mock('@/features/updates/services/allUpdates', () => ({
+    findAllUpdates: (...args: unknown[]) => mockFindAllUpdates(...args),
+}));
+jest.mock('@/features/ai/server/headlessHandlerContext', () => ({
+    createHeadlessHandlerContext: jest.fn(() => ({ marker: 'headless' })),
+}));
+jest.mock('@/features/dashboard/handlers/integrationUpdateHandlers', () => ({
+    integrationUpdateProbe: jest.fn(() => ({ marker: 'probe' })),
+}));
+const mockPresentUpdates = jest.fn();
+jest.mock('@/features/updates/handlers/updatesModalHandlers', () => ({
+    presentUpdates: (...args: unknown[]) => mockPresentUpdates(...args),
+}));
 
-describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
+const executeCommand = vscode.commands.executeCommand as jest.Mock;
+const showInformationMessage = vscode.window.showInformationMessage as jest.Mock;
+
+function command(): CheckUpdatesCommand {
+    const logger: Logger = createMockLogger();
+    return new CheckUpdatesCommand(createMockExtensionContext(), createMockStateManager(), logger);
+}
+
+const OPEN_MODAL = ['demoBuilder.showProjectsList', { showUpdates: true }];
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    mockFindAllUpdates.mockReset();
+    mockFindAllUpdates.mockResolvedValue({ count: 0 });
+    showInformationMessage.mockReset();
+    // The check's notification runs its work straight through.
+    (vscode.window.withProgress as jest.Mock).mockImplementation((_options, task) => task({ report: jest.fn() }));
+    // Not on early-access, so the off-ramp never asks.
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+        get: jest.fn((_key: string, fallback?: unknown) => fallback),
+        update: jest.fn(),
+    });
+});
+
+describe('CheckUpdatesCommand', () => {
+    describe('run by the SC', () => {
+        // The "up to date" message hides itself on a timer; run it on fake time.
+        beforeEach(() => jest.useFakeTimers());
+        afterEach(() => jest.useRealTimers());
+
+        async function runBySc(): Promise<void> {
+            const running = command().execute();
+            await jest.runAllTimersAsync();
+            await running;
+        }
+
+        it('checks in a "Checking for updates" notification, with a headless context and the integration probe', async () => {
+            await runBySc();
+
+            expect(vscode.window.withProgress).toHaveBeenCalledWith(
+                expect.objectContaining({ title: 'Checking for updates' }),
+                expect.any(Function),
+            );
+            expect(mockFindAllUpdates).toHaveBeenCalledWith({ marker: 'headless' }, { marker: 'probe' });
+        });
+
+        // The check records what it learns on each project; none may become the open one.
+        it('checks with a state view that never makes a checked project the open one', async () => {
+            const stateManager = createMockStateManager();
+            (stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ name: 'justrite', path: '/p/justrite' }));
+            const running = new CheckUpdatesCommand(createMockExtensionContext(), stateManager, createMockLogger()).execute();
+            await jest.runAllTimersAsync();
+            await running;
+            const [, view] = (createHeadlessHandlerContext as jest.Mock).mock.calls[0];
+
+            const checked = createMockProject({ name: 'bodea', path: '/p/bodea' });
+            await view.saveProject(checked);
+
+            expect(stateManager.saveProjectConfigOnly).toHaveBeenCalledWith(checked);
+            expect(stateManager.saveProject).not.toHaveBeenCalled();
+        });
+
+        it('says so when nothing is waiting, and opens nothing', async () => {
+            await runBySc();
+
+            expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+                '✅ Demo Builder is up to date (v1.0.0)',
+                expect.any(Number),
+            );
+            expect(mockPresentUpdates).not.toHaveBeenCalled();
+            expect(executeCommand).not.toHaveBeenCalledWith(...OPEN_MODAL);
+        });
+
+        it('hands what it found to the Updates modal and opens it', async () => {
+            const check = { count: 2 };
+            mockFindAllUpdates.mockResolvedValue(check);
+
+            await runBySc();
+
+            expect(mockPresentUpdates).toHaveBeenCalledWith(check);
+            expect(executeCommand).toHaveBeenCalledWith(...OPEN_MODAL);
+            expect(mockPresentUpdates.mock.invocationCallOrder[0]).toBeLessThan(executeCommand.mock.invocationCallOrder[0]);
+        });
+
+        it('joins a background check already running: the notification at once, the modal on that check, no popup', async () => {
+            let finish!: (value: { count: number }) => void;
+            const check = { count: 5 };
+            mockFindAllUpdates.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+            const background = command().execute({ background: true });
+
+            const bySc = command().execute();
+            await Promise.resolve();
+            // Shown before the check ends, not after.
+            expect(vscode.window.withProgress).toHaveBeenCalledWith(
+                expect.objectContaining({ title: 'Checking for updates' }),
+                expect.any(Function),
+            );
+            finish(check);
+            await Promise.all([background, bySc]);
+
+            expect(mockFindAllUpdates).toHaveBeenCalledTimes(1);
+            expect(mockPresentUpdates).toHaveBeenCalledWith(check);
+            expect(executeCommand).toHaveBeenCalledWith(...OPEN_MODAL);
+            expect(showInformationMessage).not.toHaveBeenCalled();
+        });
+
+        it('starts nothing more on a second click while the first is checking', async () => {
+            let finish!: (value: { count: number }) => void;
+            mockFindAllUpdates.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+
+            const first = command().execute();
+            await command().execute();
+            finish({ count: 2 });
+            await first;
+
+            expect(vscode.window.withProgress).toHaveBeenCalledTimes(1);
+            expect(executeCommand).toHaveBeenCalledTimes(1);
+        });
+
+        it('says the check failed when it throws, and opens nothing', async () => {
+            mockFindAllUpdates.mockRejectedValue(new Error('rate limited'));
+
+            await runBySc();
+
+            expect(vscode.window.showErrorMessage).toHaveBeenCalled();
+            expect(executeCommand).not.toHaveBeenCalledWith(...OPEN_MODAL);
+        });
+    });
+
+    describe('in the background', () => {
+        it('checks with a headless context and the integration probe, and says nothing when nothing waits', async () => {
+            mockFindAllUpdates.mockResolvedValue({ count: 0 });
+
+            await command().execute({ background: true });
+
+            expect(mockFindAllUpdates).toHaveBeenCalledWith({ marker: 'headless' }, { marker: 'probe' });
+            expect(showInformationMessage).not.toHaveBeenCalled();
+            expect(executeCommand).not.toHaveBeenCalled();
+        });
+
+        it('says how many are waiting, and opens the modal on that check only on Review', async () => {
+            const check = { count: 3 };
+            mockFindAllUpdates.mockResolvedValue(check);
+            showInformationMessage.mockResolvedValue('Review');
+
+            await command().execute({ background: true });
+
+            expect(vscode.window.withProgress).not.toHaveBeenCalled();
+            expect(showInformationMessage).toHaveBeenCalledWith('3 Demo Builder updates available.', 'Review');
+            expect(mockPresentUpdates).toHaveBeenCalledWith(check);
+            expect(executeCommand).toHaveBeenCalledWith(...OPEN_MODAL);
+        });
+
+        it('opens nothing when the notification is dismissed', async () => {
+            mockFindAllUpdates.mockResolvedValue({ count: 1 });
+            showInformationMessage.mockResolvedValue(undefined);
+
+            await command().execute({ background: true });
+
+            expect(showInformationMessage).toHaveBeenCalledWith('1 Demo Builder update available.', 'Review');
+            expect(executeCommand).not.toHaveBeenCalled();
+        });
+
+        it('runs one check at a time', async () => {
+            let finish!: (value: { count: number }) => void;
+            mockFindAllUpdates.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+            const cmd = command();
+
+            const first = cmd.execute({ background: true });
+            await cmd.execute({ background: true });
+            finish({ count: 0 });
+            await first;
+
+            expect(mockFindAllUpdates).toHaveBeenCalledTimes(1);
+        });
+    });
+});
+
+
+describe('CheckUpdatesCommand - Graduation Off-Ramp', () => {
     let command: CheckUpdatesCommand;
     let mockContext: any;
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: jest.Mocked<Logger>;
-    let mockProgress: any;
+    let mockConfigUpdate: jest.Mock;
+
+    function setChannel(channel: string): void {
+        mockConfigUpdate = jest.fn();
+        // Only the extension's own section answers: a read or a write aimed at any
+        // other section finds no channel and reaches no update.
+        (vscode.workspace.getConfiguration as jest.Mock).mockImplementation((section?: string) =>
+            section === 'demoBuilder'
+                ? {
+                    get: jest.fn((key: string, def?: any) => (key === 'updateChannel' ? channel : def)),
+                    update: mockConfigUpdate,
+                }
+                : { get: jest.fn((_key: string, def?: any) => def), update: jest.fn() },
+        );
+    }
+
+    function mockUpdates(opts: { installed: string; latestFinal: string | null }): void {
+        // The installed version is the extension's own (PL-80), not the update check's.
+        mockContext.extension = { packageJSON: { version: opts.installed } };
+        const mgr = UpdateManager as jest.MockedClass<typeof UpdateManager>;
+        mgr.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
+            hasUpdate: false,
+            current: opts.installed,
+            latest: opts.installed,
+        });
+        mgr.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
+        mgr.prototype.getLatestFinalVersion = jest.fn().mockResolvedValue(opts.latestFinal);
+    }
+
+    async function run(): Promise<void> {
+        const executePromise = command.execute();
+        await jest.runAllTimersAsync();
+        await executePromise;
+    }
 
     beforeEach(() => {
         jest.clearAllMocks();
         jest.useFakeTimers();
 
-        // Create mock context
         mockContext = {
             subscriptions: [],
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-            },
+            secrets: { get: jest.fn() },
+            globalState: { get: jest.fn(), update: jest.fn() },
         };
-
-        // Create mock state manager with all required methods
         mockStateManager = createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(null),
-            saveProject: jest.fn().mockResolvedValue(undefined),
             getAllProjects: jest.fn().mockResolvedValue([]),
             loadProjectFromPath: jest.fn().mockResolvedValue(null),
         });
-
-        // Create mock logger
         mockLogger = createMockLogger();
 
-        // Create mock progress reporter
-        mockProgress = {
-            report: jest.fn(),
-        };
+        (vscode.window.withProgress as jest.Mock).mockImplementation((_o, cb) => cb({ report: jest.fn() }));
 
-        // Setup vscode.window.withProgress to execute the callback
-        (vscode.window.withProgress as jest.Mock).mockImplementation((_options, callback) => {
-            return callback(mockProgress);
-        });
-
-        // Create command instance
         command = new CheckUpdatesCommand(mockContext, mockStateManager, mockLogger);
     });
 
@@ -80,226 +281,68 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
         jest.useRealTimers();
     });
 
-    describe('Happy Path', () => {
-        it('should show "Checking for updates" progress message', async () => {
-            // Arrange
-            const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
-            mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
-                hasUpdate: false,
-                current: '1.0.0',
-                latest: '1.0.0',
-            });
-            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
+    it('offers the off-ramp when a final supersedes the installed alpha', async () => {
+        setChannel('early-access');
+        mockUpdates({ installed: '2.0.0-alpha.5', latestFinal: '2.0.0' });
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Stay');
 
-            // Act
-            const executePromise = command.execute();
+        await run();
 
-            // Flush microtasks to allow promise chain to start
-            await Promise.resolve();
-
-            // Assert - progress.report should be called immediately
-            expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Checking for updates',
-            });
-
-            // Complete the test
-            await jest.runAllTimersAsync();
-            await executePromise;
-        });
-
-        it('should wait 2000ms after showing message before making GitHub API call', async () => {
-            // Arrange
-            const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
-            const checkExtensionUpdateSpy = jest.fn().mockResolvedValue({
-                hasUpdate: false,
-                current: '1.0.0',
-                latest: '1.0.0',
-            });
-            mockUpdateManager.prototype.checkExtensionUpdate = checkExtensionUpdateSpy;
-            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
-
-            // Act
-            const executePromise = command.execute();
-            await Promise.resolve(); // Flush microtasks
-
-            // Assert: Progress message shown
-            expect(mockProgress.report).toHaveBeenCalled();
-
-            // Assert: API should NOT be called yet (delay is 2000ms)
-            expect(checkExtensionUpdateSpy).not.toHaveBeenCalled();
-
-            // Advance by 1999ms - should still not be called
-            await jest.advanceTimersByTimeAsync(1999);
-            expect(checkExtensionUpdateSpy).not.toHaveBeenCalled();
-
-            // Advance by 1ms more (total 2000ms) - now should be called
-            await jest.advanceTimersByTimeAsync(1);
-            expect(checkExtensionUpdateSpy).toHaveBeenCalled();
-
-            // Complete test
-            await jest.runAllTimersAsync();
-            await executePromise;
-        });
-
-        it('should show progress result after update check completes', async () => {
-            // Arrange
-            const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
-            mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
-                hasUpdate: false,
-                current: '1.0.0',
-                latest: '1.0.0',
-            });
-            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
-
-            // Act
-            const executePromise = command.execute();
-            await Promise.resolve();
-
-            // Fast-forward through all timers
-            await jest.runAllTimersAsync();
-
-            // Assert: Should show "up to date" message
-            expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Up to date (v1.0.0)',
-            });
-
-            await executePromise;
-        });
+        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+            'A final release (v2.0.0) now supersedes your preview build (v2.0.0-alpha.5). '
+            + 'Switch off the early-access channel to keep receiving updates?',
+            'Switch to Beta',
+            'Switch to Stable',
+            'Stay',
+        );
     });
 
-    describe('Timing Verification', () => {
-        it('should ensure at least 1500ms passes between progress.report() and API call', async () => {
-            // Arrange
-            const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
-            let progressReportCalled = false;
-            let apiCallAfter1500ms = false;
+    it('switches to beta when the user chooses "Switch to Beta"', async () => {
+        setChannel('early-access');
+        mockUpdates({ installed: '2.0.0-alpha.5', latestFinal: '2.0.0' });
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Switch to Beta');
 
-            mockProgress.report = jest.fn(() => {
-                progressReportCalled = true;
-            });
+        await run();
 
-            const checkExtensionUpdateSpy = jest.fn(() => {
-                // Check if 1500ms has passed since we started
-                // We verify this by checking if progressReportCalled is true
-                // AND we've advanced timers by 1500ms
-                apiCallAfter1500ms = progressReportCalled;
-                return Promise.resolve({
-                    hasUpdate: false,
-                    current: '1.0.0',
-                    latest: '1.0.0',
-                });
-            });
-
-            mockUpdateManager.prototype.checkExtensionUpdate = checkExtensionUpdateSpy;
-            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
-
-            // Act
-            const executePromise = command.execute();
-            await Promise.resolve();
-
-            // Assert: Progress reported immediately
-            expect(progressReportCalled).toBe(true);
-
-            // Assert: API should NOT be called yet
-            expect(checkExtensionUpdateSpy).not.toHaveBeenCalled();
-
-            // Advance by 1500ms
-            await jest.advanceTimersByTimeAsync(TIMEOUTS.UPDATE_MESSAGE_DELAY);
-
-            // Assert: Now API should be called
-            expect(checkExtensionUpdateSpy).toHaveBeenCalled();
-            expect(apiCallAfter1500ms).toBe(true);
-
-            await jest.runAllTimersAsync();
-            await executePromise;
-        });
-
-        it('should ensure total duration is at least 1500ms even if API responds in <100ms', async () => {
-            // Arrange
-            const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
-            const startTime = Date.now();
-
-            // Fast API response (<100ms)
-            mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
-                hasUpdate: false,
-                current: '1.0.0',
-                latest: '1.0.0',
-            });
-            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
-
-            // Act
-            const executePromise = command.execute();
-            await Promise.resolve();
-
-            // Fast-forward all timers
-            await jest.runAllTimersAsync();
-            await executePromise;
-
-            const endTime = Date.now();
-            const totalDuration = endTime - startTime;
-
-            // Assert - should have at least 1500ms delay
-            expect(totalDuration).toBeGreaterThanOrEqual(TIMEOUTS.UPDATE_MESSAGE_DELAY);
-        });
+        expect(mockConfigUpdate).toHaveBeenCalledWith('updateChannel', 'beta', vscode.ConfigurationTarget.Global);
     });
 
-    describe('Message Content', () => {
-        it('should display correct message text "Checking for updates"', async () => {
-            // Arrange
-            const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
-            mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
-                hasUpdate: false,
-                current: '1.0.0',
-                latest: '1.0.0',
-            });
-            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
+    it('switches to stable when the user chooses "Switch to Stable"', async () => {
+        setChannel('early-access');
+        mockUpdates({ installed: '2.0.0-alpha.5', latestFinal: '2.0.0' });
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Switch to Stable');
 
-            // Act
-            const executePromise = command.execute();
-            await Promise.resolve();
+        await run();
 
-            // Assert
-            expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Checking for updates',
-            });
-
-            // Complete test
-            await jest.runAllTimersAsync();
-            await executePromise;
-        });
+        expect(mockConfigUpdate).toHaveBeenCalledWith('updateChannel', 'stable', vscode.ConfigurationTarget.Global);
     });
 
-    describe('Error Conditions', () => {
-        it('should handle GitHub API failure gracefully after delay', async () => {
-            // Arrange
-            const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
-            const apiError = new Error('GitHub API failed');
-            mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockRejectedValue(apiError);
+    it('writes nothing when the user chooses "Stay"', async () => {
+        setChannel('early-access');
+        mockUpdates({ installed: '2.0.0-alpha.5', latestFinal: '2.0.0' });
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Stay');
 
-            // Spy on command's showError method
-            // `showError` is protected on BaseCommand; name its real signature to spy on it.
-            const showErrorSpy = jest
-                .spyOn(
-                    command as unknown as { showError: (message: string, error?: Error) => Promise<void> },
-                    'showError',
-                )
-                .mockResolvedValue(undefined);
+        await run();
 
-            // Act
-            const executePromise = command.execute();
-            await Promise.resolve();
+        expect(mockConfigUpdate).not.toHaveBeenCalled();
+    });
 
-            // Assert: Progress message shown before error
-            expect(mockProgress.report).toHaveBeenCalledWith({
-                message: 'Checking for updates',
-            });
+    it('does not prompt when the user is not on early-access', async () => {
+        setChannel('beta');
+        mockUpdates({ installed: '2.0.0-alpha.5', latestFinal: '2.0.0' });
 
-            // Advance timers to trigger API call and error
-            await jest.runAllTimersAsync();
-            await executePromise;
+        await run();
 
-            // Assert: Error handled
-            expect(showErrorSpy).toHaveBeenCalledWith('Failed to check for updates', apiError);
-        });
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        expect(mockConfigUpdate).not.toHaveBeenCalled();
+    });
+
+    it('does not prompt when no final supersedes the installed alpha', async () => {
+        setChannel('early-access');
+        mockUpdates({ installed: '2.0.0-alpha.5', latestFinal: '1.9.0' });
+
+        await run();
+
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
     });
 });

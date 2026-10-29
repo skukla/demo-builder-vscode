@@ -22,7 +22,7 @@ jest.setTimeout(5000);
 const mockUpdateSiteConfig = jest.fn();
 const mockRegisterSite = jest.fn();
 
-jest.mock('@/features/eds/services/configService/configurationService', () => ({
+jest.mock('@/features/eds/services/configService/siteConfigParams', () => ({
     // Mirrors the real 4-arg shape (legacyLookupKey retired 2026-08-23):
     // lookup key AND content source both use the GitHub owner/repo.
     buildSiteConfigParams: (
@@ -55,6 +55,8 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
+    // Pass-through: the always-included libraries are tested where they are added.
+    withAlwaysIncludedBlockLibraries: (selected?: string[]) => selected ?? [],
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     getBlockLibraryContentSource: jest.fn().mockReturnValue(null),
@@ -89,13 +91,17 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/edsPipeline', () => ({
-    executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true,
-        contentFilesCopied: 3,
-        libraryPaths: [],
-    }),
-}));
+jest.mock('@/features/eds/services/edsPipeline', () => {
+    // Typed through the canonical fake (EDS-55): a factory may load a module, not import one.
+    const { createMockPipelineResult } = jest.requireActual<
+        typeof import('../../../../helpers/pipelineResultFake')
+    >('../../../../helpers/pipelineResultFake');
+    return {
+        executeEdsPipeline: jest
+            .fn()
+            .mockResolvedValue(createMockPipelineResult({ contentFilesCopied: 3 })),
+    };
+});
 
 global.fetch = jest.fn().mockResolvedValue({ ok: false });
 

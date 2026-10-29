@@ -22,6 +22,8 @@ import {
     mockStoreToken,
     resetAuthServiceFakes,
 } from './edsDaLiveAuthHandlers.testUtils';
+import * as vscode from 'vscode';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 
 jest.setTimeout(5000);
@@ -115,6 +117,27 @@ describe.each([
 
         expect(result.success).toBe(false);
         expect(mockStoreToken).not.toHaveBeenCalled();
+    });
+});
+
+describe('handleStoreDaLiveTokenWithOrg — the success line', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        resetAuthServiceFakes();
+    });
+
+    // The wizard's own form said nothing in the status bar while the palette's
+    // flow did; every sign-in now ends the same way (owner, 2026-10-15).
+    it('names the namespace it signed in to, as every DA.live sign-in does', async () => {
+        await handleStoreDaLiveTokenWithOrg(createDaLiveAuthContext(), {
+            token: goodToken,
+            orgName: 'demo-system-stores',
+        });
+
+        expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+            expect.stringMatching(/^✅ Signed in to DA\.live \(demo-system-stores\)/),
+            TIMEOUTS.STATUS_BAR_SUCCESS,
+        );
     });
 });
 

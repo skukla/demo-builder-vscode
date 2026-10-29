@@ -260,7 +260,6 @@ export function SelectionStepContent<T extends SelectableItem>({
                 onRefresh={onRefresh}
                 hasLoadedOnce={hasLoadedOnce}
                 ariaLabel={labels.ariaLabel}
-                autoFocus={!selectedId}
                 renderItem={combinedRenderItem}
                 itemNoun={labels.itemNoun}
                 itemNounPlural={labels.itemNounPlural}

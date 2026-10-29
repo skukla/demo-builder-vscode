@@ -3,10 +3,11 @@
  *
  * Two places walk a user through the same GitHub screens:
  *
- *  - {@link CodeSyncStatusView} — the wizard's Code Sync sub-step, at configure time.
- *  - {@link GitHubAppInstallDialog} — the mid-run recovery panel, shown when the
- *    setup pipeline (`storefrontSetupPhaseHelpers`, `storefrontSetupPhase3`) or
- *    project creation stops because the app is missing.
+ *  - (until 2026-09-25) the wizard's Code Sync sub-step, since removed: before setup the
+ *    App question has no answer for a new repository, so setup is the one place it is asked.
+ *  - {@link GitHubAppInstallDialog} — the mid-run panel, shown while the setup
+ *    pipeline (`storefrontSetupPhaseHelpers`, `storefrontSetupPhase3`) waits for
+ *    the app it found missing; the run resumes on its own once it is installed.
  *
  * They are different MOMENTS — one is "set this up", the other is "your run just
  * stopped" — and each keeps its own framing. What they must not have is two
@@ -14,9 +15,6 @@
  * different button names ("Install App"/"Check Again" versus "Open Installation
  * Page"/"Check Installation") for the same three GitHub screens, so a user who
  * met both was told to press buttons that do not exist on the other.
- *
- * `edsResetService` already names this failure mode for its own remedy text:
- * "Two remedy texts one line apart is the drift, not the fix for it."
  *
  * @module features/eds/ui/helpers/codeSyncInstallContent
  */

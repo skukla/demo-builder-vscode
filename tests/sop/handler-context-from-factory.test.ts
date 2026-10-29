@@ -31,8 +31,12 @@ const SRC = path.join(__dirname, '..', '..', 'src');
 /** A function whose declared return type is a HandlerContext. */
 const PRODUCES_CONTEXT = /\)\s*:\s*(?:Promise<)?HandlerContext[>\s]*\{/;
 
-/** The two factories. Everyone else calls one of them. */
-const FACTORY_CALL = /create(?:Panel|Headless)HandlerContext\s*\(/;
+/**
+ * The two factories. Everyone else calls one of them — directly, or through
+ * `BundledPanelCommand.createHandlerContext`, which calls the panel factory and is
+ * reached as `super.createHandlerContext(` by a panel that adds fields of its own.
+ */
+const FACTORY_CALL = /create(?:Panel|Headless)HandlerContext\s*\(|\bsuper\.createHandlerContext\s*\(/;
 
 /**
  * The files allowed to produce a context without calling a factory, each with
@@ -46,6 +50,9 @@ const BUILDERS: Record<string, string> = {
     // Derives a new context from one handed in — it adds no managers of its own,
     // so it cannot fall behind the factory.
     'progressCapture.ts': 'deriver',
+    // The same shape for the storefront setup: wraps the run's context so each progress
+    // push goes out as a numbered step (progress vocabulary slice 4, 2026-10-16).
+    'storefrontSetupProgress.ts': 'deriver',
 };
 
 /** Every .ts/.tsx file under src/. */
@@ -67,7 +74,9 @@ const PRODUCERS = sourceFiles(SRC).filter((file) =>
 
 describe('SOP: HandlerContext comes from a factory', () => {
     it('CONTROL: finds the context producers at all — a silent zero would pass everything', () => {
-        expect(PRODUCERS.length).toBeGreaterThanOrEqual(8);
+        // Five since PL-69 (2026-10-09): six panels' copies became one in
+        // BundledPanelCommand. The two factories, the deriver, that base, the wizard.
+        expect(PRODUCERS.length).toBeGreaterThanOrEqual(5);
     });
 
     it.each(PRODUCERS.map((f) => [path.basename(f), f]))(

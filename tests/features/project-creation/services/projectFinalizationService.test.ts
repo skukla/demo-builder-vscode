@@ -9,17 +9,18 @@ import {
     finalizeProject,
     type FinalizationContext,
 } from '@/features/project-creation/services/projectFinalizationService';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { Project } from '@/types/base';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 
 // Mock dependencies
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
+jest.mock('@/features/project-creation/helpers/componentConfigFiles', () => ({
     generateComponentConfigFiles: jest.fn(),
 }));
 
 // Import mocked functions
-import { generateComponentConfigFiles } from '@/features/project-creation/helpers/envFileGenerator';
+import { generateComponentConfigFiles } from '@/features/project-creation/helpers/componentConfigFiles';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('projectFinalizationService', () => {
@@ -263,11 +264,8 @@ describe('projectFinalizationService', () => {
 
             await generateEnvironmentFiles(context);
 
-            expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Configuring Environment',
-                85,
-                'Generating environment files'
-            );
+            // The step names nothing more: the screen shows its detail from the table.
+            expect(mockProgressTracker).toHaveBeenCalledWith(OPERATION_STAGES.writingConfigFiles.label, 85);
         });
 
         it('should log debug messages', async () => {
@@ -487,15 +485,37 @@ describe('projectFinalizationService', () => {
 
             await finalizeProject(context);
 
-            expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Finalizing Project',
-                95,
-                'Saving project state'
-            );
+            expect(mockProgressTracker).toHaveBeenCalledWith(OPERATION_STAGES.finishingProject.label, 95);
+            // No broken links recorded: no line for the success screen.
             expect(mockProgressTracker).toHaveBeenCalledWith(
                 'Project Created',
                 100,
-                'Project creation complete'
+                'Project creation complete',
+                undefined,
+                undefined,
+            );
+        });
+
+        it('hands the success screen one line when the copy carried broken links (EDS-64)', async () => {
+            const storefront = mockProject.componentInstances?.['eds-storefront'];
+            if (!storefront) throw new Error('fixture lost its storefront');
+            storefront.metadata = { ...storefront.metadata, brokenLinks: [{ link: '/fr', pages: ['/footer'] }] };
+
+            await finalizeProject({
+                setupContext: mockSetupContext,
+                projectPath: '/test/project',
+                componentDefinitions: mockComponentDefinitions,
+                progressTracker: mockProgressTracker,
+                saveProject: mockSaveProject,
+                sendMessage: mockSendMessage,
+            });
+
+            expect(mockProgressTracker).toHaveBeenCalledWith(
+                'Project Created',
+                100,
+                'Project creation complete',
+                undefined,
+                '1 link in the copied content goes to a missing page. Diagnostics lists them.',
             );
         });
 

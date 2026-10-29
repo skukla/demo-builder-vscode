@@ -22,72 +22,35 @@ import * as crypto from 'crypto';
 import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { OPERATION_STAGES } from './operationStages';
-import { aioOutputTail, extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredentials';
+import { declaresIncludeImsCredentials, listDeclaredActions } from './appConfigPackages';
+import { parseGetUrlOutput, urlPayload, urlsForDeclaredActions } from './deployedUrls';
+import { writeFailureLog } from './deployFailureLog';
+import { forgetDeployRecordOnNewTarget, rememberDeployTarget } from './deployRecord';
+import {
+    aioOutputTail,
+    extractAioErrorDetail,
+    fetchRuntimeCredentials,
+    readRuntimeCredentials,
+    type RuntimeCredentials,
+} from './runtimeCredentials';
 import type { AppDeploymentResult } from './types';
 import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import { parseJSON, toError } from '@/types/typeGuards';
+import { toError } from '@/types/typeGuards';
 
 export type { AppDeploymentResult };
 
-/**
- * Node version for App Builder app commands.
- *
- * 'auto' resolves to the Node version the Adobe `aio` CLI runs under
- * (findAdobeCLINodeVersion in CommandExecutor) — the same resolution `aio`
- * commands use by default across the codebase. This avoids hardcoding a version
- * and keeps the app on whatever Node hosts the CLI/runtime toolchain.
- *
- * DEFERRED: if an app ever needs a build under its OWN declared Node version
- * (distinct from the CLI's), resolve it from the app's configuration.nodeVersion
- * / detected `.node-version` at that point — most naturally once the curated
- * catalog (slice 2) gives app components a configured version.
- */
-const APP_NODE_VERSION = 'auto';
-
-/** The entry's declared node (e.g. '24'), falling back to the CLI default. */
+/** The entry's Node (its own, else Demo Builder's), PR-1a. */
 function resolveNodeVersion(declared?: string): string {
-    return declared || APP_NODE_VERSION;
+    return declared || demoBuilderNode();
 }
 
 type ProgressCallback = (message: string, subMessage?: string) => void;
-
-/**
- * Flatten a nested URL map into a flat { name -> url } record, keeping only
- * string-valued leaves. Tolerates any shape (returns {} for non-objects).
- */
-function flattenUrls(value: unknown, prefix = ''): Record<string, string> {
-    const result: Record<string, string> = {};
-    if (!value || typeof value !== 'object') {
-        return result;
-    }
-    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-        const name = prefix ? `${prefix}/${key}` : key;
-        if (typeof val === 'string') {
-            result[name] = val;
-        } else if (val && typeof val === 'object') {
-            Object.assign(result, flattenUrls(val, name));
-        }
-    }
-    return result;
-}
-
-/**
- * Parse `aio app get-url --json` stdout defensively into a deploy result payload.
- * Never throws: an unparseable or unexpected shape yields empty url/deployedUrls.
- */
-function parseGetUrlOutput(stdout: string | undefined): AppDeploymentResult['data'] {
-    const parsed = parseJSON<Record<string, unknown>>(stdout ?? '');
-    const deployedUrls = flattenUrls(parsed);
-    // Prefer a "web" URL as primary; otherwise fall back to the first URL.
-    const webKey = Object.keys(deployedUrls).find((k) => k.startsWith('web/'));
-    const url = webKey ? deployedUrls[webKey] : (Object.values(deployedUrls)[0] ?? '');
-    return { url, deployedUrls };
-}
 
 /**
  * Import the targeted workspace's Console configuration into an EXTENSION
@@ -105,7 +68,7 @@ async function importWorkspaceConfig(
     commandManager: CommandExecutor,
     nodeVersion: string,
     logger: Logger,
-): Promise<void> {
+): Promise<RuntimeCredentials> {
     const scratchDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'db-use-'));
     const filePath = path.join(scratchDir, `ws-${crypto.randomBytes(6).toString('hex')}.json`);
     try {
@@ -117,6 +80,8 @@ async function importWorkspaceConfig(
             const detail = extractAioErrorDetail(download.stderr) || `exit code ${download.code}`;
             throw new Error(`Could not download workspace configuration: ${detail}`);
         }
+        // The deploy's namespace and key are in this same file — read, not re-downloaded.
+        const credentials = await readRuntimeCredentials(filePath, logger);
 
         const use = await commandManager.execute(
             `aio app use "${filePath}" --overwrite --no-service-sync --no-input`,
@@ -133,6 +98,7 @@ async function importWorkspaceConfig(
             throw new Error(`Could not import workspace configuration: ${detail}`);
         }
         logger.debug('[App Builder] Workspace configuration imported for extension app');
+        return credentials;
     } finally {
         await fsPromises.rm(scratchDir, { recursive: true, force: true });
         // aio app use writes runtime credentials into the app's .env — remove
@@ -140,6 +106,11 @@ async function importWorkspaceConfig(
         await fsPromises.rm(path.join(componentPath, '.env'), { force: true });
     }
 }
+
+/** An app asks for the project credentials, and the workspace has none to give. */
+const NO_S2S_CREDENTIAL_MESSAGE =
+    "This app's actions ask Adobe for the project's credentials, but the workspace has no " +
+    'OAuth server-to-server credential. Add the app again so Demo Builder can create one.';
 
 /** Per-deploy options for {@link deployAppComponent}. */
 export interface DeployAppOptions {
@@ -170,6 +141,13 @@ export interface DeployAppOptions {
      * deploy time. May carry live secrets: per-invocation only, never logged.
      */
     extraEnv?: Record<string, string>;
+    /**
+     * Where the WHOLE `aio app deploy` output goes when the deploy fails, tokens
+     * masked. Debug Logs keep only the last lines, and on 2026-09-19 the cause of a
+     * failure (an app's package half-created in a new namespace) was in the part
+     * those lines cut off. An agent cannot read an output channel; it can read this.
+     */
+    failureLogFile?: string;
 }
 
 /**
@@ -202,9 +180,10 @@ const TOOLCHAIN_REMEDY_HINT =
     '`refreshCli: true` to do that automatically.';
 
 /**
- * Refresh the global Adobe CLI — the hand-verified fix from 2026-08-27 (same
- * CLI version, freshly resolved dependency tree). Runs under the default
- * node deliberately: that is the silo the executor's `aio` resolves from.
+ * Refresh the Adobe CLI — the hand-verified fix from 2026-08-27 (same CLI
+ * version, freshly resolved dependency tree). Under Demo Builder's Node in
+ * Demo Builder's Node folder (PR-1a), so the refreshed CLI is the one every `aio`
+ * call runs; it used to refresh the default Node's while deploys ran under 24.
  */
 async function refreshGlobalAioCli(
     commandManager: CommandExecutor,
@@ -214,6 +193,7 @@ async function refreshGlobalAioCli(
         shell: DEFAULT_SHELL,
         timeout: TIMEOUTS.VERY_LONG,
         enhancePath: true,
+        useNodeVersion: demoBuilderNode(),
     });
     if (result.code !== 0) {
         const detail =
@@ -273,9 +253,10 @@ async function deployAppComponentOnce(
     const { onProgress } = opts;
     const node = resolveNodeVersion(opts.nodeVersion);
     try {
+        let imported: RuntimeCredentials | undefined;
         if (opts.layout === 'extension') {
-            onProgress?.(OPERATION_STAGES.deployingApp.label, 'Importing workspace configuration');
-            await importWorkspaceConfig(componentPath, commandManager, node, logger);
+            onProgress?.(OPERATION_STAGES.deployingApp.label, 'Pointing the app at your workspace');
+            imported = await importWorkspaceConfig(componentPath, commandManager, node, logger);
         }
 
         await buildComponent(
@@ -291,17 +272,27 @@ async function deployAppComponentOnce(
         // or it dies with "missing Adobe I/O Runtime namespace". Fetch them
         // from the targeted workspace and inject per-invocation (execa merges
         // env, so only the two vars are passed; the auth value is never logged).
-        onProgress?.(OPERATION_STAGES.deployingApp.label, 'Resolving Runtime credentials');
-        const runtimeCreds = await fetchRuntimeCredentials(commandManager, logger, node);
+        if (!imported) onProgress?.(OPERATION_STAGES.deployingApp.label, 'Finding where the app will run');
+        const runtimeCreds = imported ?? (await fetchRuntimeCredentials(commandManager, logger, node));
+        // An action with `include-ims-credentials` makes aio require the workspace's
+        // S2S credential as IMS_OAUTH_S2S_* — what `aio app use` would have written to
+        // the .env this pipeline never keeps. Only an app that asks is handed the secret.
+        const asksForIms = await declaresIncludeImsCredentials(componentPath);
+        if (asksForIms && !runtimeCreds.imsOAuthS2SEnv) {
+            throw new Error(NO_S2S_CREDENTIAL_MESSAGE);
+        }
         const runtimeEnv = {
             // Caller-supplied extra env FIRST so the Runtime pair, which this
             // function owns, can never be overridden by it.
             ...(opts.extraEnv ?? {}),
+            ...(asksForIms ? runtimeCreds.imsOAuthS2SEnv : {}),
             AIO_RUNTIME_NAMESPACE: runtimeCreds.namespace,
             AIO_RUNTIME_AUTH: runtimeCreds.auth,
         };
 
         onProgress?.(OPERATION_STAGES.deployingApp.label, 'Running aio app deploy');
+        // The CLI skips actions its local record calls deployed — record of ANY namespace.
+        await forgetDeployRecordOnNewTarget(componentPath, runtimeCreds.namespace, logger);
 
         // `--verbose` because the CLI prints its warnings — such as a database
         // status check refused with a 403 — only in verbose mode, and without
@@ -321,6 +312,7 @@ async function deployAppComponentOnce(
             if (tail) {
                 logger.debug(`[App Builder] aio app deploy output, last lines:\n${tail}`);
             }
+            await writeFailureLog(opts.failureLogFile, deployResult, logger);
             // oclif writes spinner frames to stderr — extract the real
             // `› Error:` line instead of surfacing "- Building actions...".
             const detail =
@@ -330,6 +322,22 @@ async function deployAppComponentOnce(
                 `aio app deploy exited with code ${deployResult.code}`;
             throw new Error(`App deployment failed: ${detail}`);
         }
+        await rememberDeployTarget(componentPath, runtimeCreds.namespace, logger);
+
+        // The URLs the app's own config declares, in the namespace it just deployed
+        // to. No process, and the only source that works for an extension-layout app;
+        // `get-url` runs only when the config names no actions.
+        const fromConfig = urlsForDeclaredActions(
+            runtimeCreds.namespace,
+            await listDeclaredActions(componentPath),
+        );
+        if (Object.keys(fromConfig).length > 0) {
+            logger.info(
+                `[App Builder] ${Object.keys(fromConfig).length} deployed URL(s) derived from the app config`,
+            );
+            return { success: true, data: urlPayload(fromConfig) };
+        }
+        logger.debug('[App Builder] the app config declares no actions; falling back to get-url');
 
         onProgress?.(OPERATION_STAGES.resolvingAppUrl.label, '');
 
@@ -348,7 +356,11 @@ async function deployAppComponentOnce(
             return { success: true, data: { url: '', deployedUrls: {} } };
         }
 
-        return { success: true, data: parseGetUrlOutput(urlResult.stdout) };
+        const fromGetUrl = parseGetUrlOutput(urlResult.stdout);
+        logger.info(
+            `[App Builder] ${Object.keys(fromGetUrl?.deployedUrls ?? {}).length} deployed URL(s) read from get-url`,
+        );
+        return { success: true, data: fromGetUrl };
     } catch (error) {
         logger.error('[App Builder] Deployment failed', error as Error);
         return { success: false, error: toError(error).message };

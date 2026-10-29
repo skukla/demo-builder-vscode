@@ -17,6 +17,7 @@
  */
 
 import {
+    fetchExternalLedger,
     fetchExternalPatches,
     _clearExternalPatchCacheForTests,
 } from '@/features/eds/services/patches/externalPatchFetcher';
@@ -232,5 +233,50 @@ describe('fetchExternalPatches — ledger responses', () => {
         await expect(
             fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger())
         ).resolves.toStrictEqual(LEDGER.patches);
+    });
+});
+
+/**
+ * A ledger also lists the patches it RETIRED (EDS-62): what Demo Builder used to write and now
+ * takes back out. They come from the same file, at the same ref, through the same cache.
+ */
+describe('fetchExternalLedger — retired patches', () => {
+    const RETIRED = [{ id: 'old', target: 'scripts/b.js', retiredBy: 'abc1234', reason: 'gone' }];
+
+    function ledgerFetch(ledger: Record<string, unknown>): jest.Mock {
+        return jest.fn().mockImplementation((url: string) =>
+            Promise.resolve(
+                url.includes('api.github.com')
+                    ? { ok: true, status: 200, json: () => Promise.resolve({ tag_name: 'v1.0.0' }) }
+                    : { ok: true, status: 200, json: () => Promise.resolve(ledger) },
+            ),
+        );
+    }
+
+    it('returns the retired list beside the patches', async () => {
+        global.fetch = ledgerFetch({ ...LEDGER, retired: RETIRED });
+
+        const ledger = await fetchExternalLedger(SOURCE, 'code-patches.json', makeLogger());
+
+        expect(ledger).toStrictEqual({ patches: LEDGER.patches, retired: RETIRED });
+    });
+
+    it('answers an empty retired list for a ledger that has none', async () => {
+        global.fetch = ledgerFetch(LEDGER);
+
+        const ledger = await fetchExternalLedger(SOURCE, 'code-patches.json', makeLogger());
+
+        expect(ledger.retired).toStrictEqual([]);
+    });
+
+    it('shares one content fetch with fetchExternalPatches for the same file', async () => {
+        const mock = ledgerFetch({ ...LEDGER, retired: RETIRED });
+        global.fetch = mock;
+        const logger = makeLogger();
+
+        await fetchExternalPatches(SOURCE, 'code-patches.json', logger);
+        await fetchExternalLedger(SOURCE, 'code-patches.json', logger);
+
+        expect(contentUrls(mock)).toHaveLength(1);
     });
 });

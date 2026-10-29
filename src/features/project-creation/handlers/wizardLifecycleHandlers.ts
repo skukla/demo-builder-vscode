@@ -12,8 +12,10 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import { openUrl } from '@/core/utils/browserUtils';
 import { validateURL } from '@/core/validation/URLValidator';
+import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, HandlerContext } from '@/types/handlers';
 import { SimpleResult, DataResult } from '@/types/results';
@@ -22,15 +24,12 @@ import { toError } from '@/types/typeGuards';
 /**
  * ready - Initial wizard ready event
  *
- * Called when the wizard webview is fully loaded and ready.
- * Loads component definitions for the component selection step.
+ * Called when the wizard webview is fully loaded and ready. An acknowledgement
+ * only: the init message is sent by BaseWebviewCommand with getInitialData(),
+ * and the wizard requests the component registry itself (`get-components-data`).
  */
 export async function handleReady(context: HandlerContext): Promise<SimpleResult> {
     context.logger.debug('Wizard webview ready');
-
-    // Note: init message is already sent by BaseWebviewCommand with getInitialData()
-    // Just load components here
-    await loadComponents(context);
 
     return { success: true };
 }
@@ -114,6 +113,17 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
 
 
 /**
+ * backToProject - Edit's last button: back to the project it came from.
+ *
+ * Edit opens from the project's dashboard, so finishing it replaces the wizard with
+ * that dashboard rather than the projects list Create ends on (owner, 2026-10-17).
+ */
+export async function handleBackToProject(_context: HandlerContext): Promise<SimpleResult> {
+    await swapWebviewSurface(WIZARD_WEBVIEW_ID, 'demoBuilder.showProjectDashboard');
+    return { success: true };
+}
+
+/**
  * log - Handles logging messages from webview
  *
  * Routes log messages from the webview to the appropriate logger.
@@ -182,28 +192,6 @@ export async function handleOpenExternal(
     }
 }
 
-/**
- * Helper: Load components
- *
- * Loads component definitions from templates/components.json
- * Uses the modern handler pattern by directly invoking the handler
- */
-async function loadComponents(context: HandlerContext): Promise<void> {
-    try {
-        // Invoke the loadComponents handler directly
-        const { handleLoadComponents } = await import('../../components/handlers/componentHandlers');
-        const result = await handleLoadComponents(context);
-
-        // Send result to webview if successful
-        if (result.success && result.data && context.communicationManager) {
-            const messageType = (result as { type?: string }).type || 'componentsLoaded';
-            await context.communicationManager.sendMessage(messageType, result.data);
-        }
-    } catch (error) {
-        context.logger.error('Failed to load components:', error as Error);
-    }
-}
-
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
 // ============================================================================
@@ -225,6 +213,7 @@ export const lifecycleHandlers = defineHandlers({
 
     // Project actions
     'openProject': handleOpenProject,
+    'backToProject': handleBackToProject,
 
     // Utilities
     'log': handleLog,

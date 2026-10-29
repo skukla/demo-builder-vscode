@@ -100,7 +100,8 @@ describe('ComponentManager - install delegation', () => {
         expect(mockDependencies.installDependenciesForComponent).toHaveBeenCalledWith(
             clonedInstance().path,
             GIT_COMPONENT,
-            false
+            false,
+            undefined
         );
     });
 

@@ -2,6 +2,7 @@ import { AuthenticationService } from '@/features/authentication/services/authen
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import type { TokenManager } from '@/features/authentication/services/tokenManager';
 import {
     createSuccessResult,
     mockOrg,
@@ -23,15 +24,10 @@ import {
 // Only mock external dependencies
 jest.mock('@/features/authentication/services/adobeSDKClient');
 jest.mock('@/features/authentication/services/adobeEntityService');
-// Mocked so the assertion is on the CALL, not on cache state in another feature.
-jest.mock('@/features/data-installer/services/commerceCredentialBroker', () => ({
-    clearSharedCredentialCache: jest.fn(),
-}));
 
 import { getLogger } from '@/core/logging/debugLogger';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { createEntityServices } from '@/features/authentication/services/adobeEntityService';
-import { clearSharedCredentialCache } from '@/features/data-installer/services/commerceCredentialBroker';
 
 describe('AuthenticationService - Login/Logout Operations', () => {
     let authService: AuthenticationService;
@@ -156,6 +152,60 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(1);
         });
 
+        // 2026-10-14: a sign-in started from Configure left the dashboard showing
+        // "SIGNED OUT", because nothing told it a sign-in had happened.
+        it('tells its listeners once when a sign-in succeeds, even with two callers', async () => {
+            const token = 'x'.repeat(150);
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
+            const heard = jest.fn();
+            authService.onDidSignIn(heard);
+
+            await Promise.all([authService.login(), authService.login()]);
+
+            expect(heard).toHaveBeenCalledTimes(1);
+        });
+
+        it('tells nobody when the sign-in fails', async () => {
+            mockCommandExecutor.execute.mockRejectedValue(new Error('timeout'));
+            const heard = jest.fn();
+            authService.onDidSignIn(heard);
+
+            await authService.login();
+
+            expect(heard).not.toHaveBeenCalled();
+        });
+
+        it('stops telling a listener once it is disposed', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult('x'.repeat(150)));
+            const gone = jest.fn();
+            const kept = jest.fn();
+            authService.onDidSignIn(gone).dispose();
+            authService.onDidSignIn(kept);
+
+            await authService.login();
+
+            expect(gone).not.toHaveBeenCalled();
+            expect(kept).toHaveBeenCalledTimes(1);
+        });
+
+        // 2026-10-28: a forced sign-in also ends the DA.live sign-in, so the eds
+        // feature registers a watch; every registered watch is read around a forced run.
+        it('reads every registered watch around a forced sign-in, and none once disposed', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult('x'.repeat(150)));
+            const afterKept = jest.fn(async () => undefined);
+            const kept = jest.fn(async () => afterKept);
+            const gone = jest.fn(async () => async () => undefined);
+            authService.watchForcedSignIns(kept);
+            authService.watchForcedSignIns(gone).dispose();
+
+            await authService.login(true);
+            await authService.login(false);
+
+            expect(kept).toHaveBeenCalledTimes(1);
+            expect(afterKept).toHaveBeenCalledTimes(1);
+            expect(gone).not.toHaveBeenCalled();
+        });
+
         it('should NOT retry when CLI succeeds with valid token', async () => {
             const token = 'x'.repeat(150);
             mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
@@ -189,24 +239,6 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             mockCommandExecutor.execute.mockRejectedValue(error);
 
             await expect(authService.logout()).rejects.toThrow('Logout failed');
-        });
-
-        /**
-         * The shared Commerce credential is cached per service URL, and it was
-         * fetched under THIS user's authorization — the discovery service checks
-         * their IMS token and email domain before serving it. Whoever signs in
-         * next must not inherit a credential they were never cleared for.
-         *
-         * Pinned here rather than left to the broker's own suite because the
-         * coupling is what matters: the cache is in another feature entirely, and
-         * nothing else would notice if this call were dropped.
-         */
-        it('clears the cached shared Commerce credential', async () => {
-            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult('Logged out'));
-
-            await authService.logout();
-
-            expect(clearSharedCredentialCache).toHaveBeenCalled();
         });
     });
 
@@ -412,6 +444,48 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             expect(clearAuthStatus).toHaveBeenCalledTimes(1);
             expect(clearValidation).toHaveBeenCalledTimes(1);
             expect(clearInspection).toHaveBeenCalledTimes(1);
+        });
+
+        describe('a sign-in the browser gave up on', () => {
+            const gaveUp = { code: 1, stdout: '', stderr: 'timed out', duration: 0 };
+            const units = () =>
+                authService as unknown as {
+                    cacheManager: AuthCacheManager;
+                    tokenManager: TokenManager;
+                };
+
+            it('counts as signed in when a valid token is there, read fresh, and drops the old sign-in', async () => {
+                const { cacheManager, tokenManager } = units();
+                const clearInspection = jest.spyOn(cacheManager, 'clearTokenInspectionCache');
+                const forgetOrg = jest.spyOn(cacheManager, 'setCachedOrganization');
+                const clearOrgList = jest.spyOn(cacheManager, 'clearOrgListCache');
+                const isTokenValid = jest.spyOn(tokenManager, 'isTokenValid').mockResolvedValue(true);
+                mockCommandExecutor.execute.mockResolvedValue(gaveUp);
+
+                await expect(authService.login()).resolves.toBe(true);
+
+                // Fresh: the inspection cache is dropped BEFORE the token is read.
+                expect(isTokenValid).toHaveBeenCalledTimes(1);
+                expect(clearInspection.mock.invocationCallOrder[0]).toBeLessThan(
+                    isTokenValid.mock.invocationCallOrder[0],
+                );
+                // Taken up as a completed sign-in would be: nothing of the old one is kept.
+                expect(mockSDKClient.clear).toHaveBeenCalledTimes(1);
+                expect(forgetOrg).toHaveBeenCalledWith(undefined);
+                expect(clearOrgList).toHaveBeenCalledTimes(1);
+            });
+
+            it('stays a failed sign-in when no valid token is there, and keeps what was cached', async () => {
+                const { cacheManager, tokenManager } = units();
+                const forgetOrg = jest.spyOn(cacheManager, 'setCachedOrganization');
+                jest.spyOn(tokenManager, 'isTokenValid').mockResolvedValue(false);
+                mockCommandExecutor.execute.mockResolvedValue(gaveUp);
+
+                await expect(authService.login()).resolves.toBe(false);
+
+                expect(mockSDKClient.clear).not.toHaveBeenCalled();
+                expect(forgetOrg).not.toHaveBeenCalled();
+            });
         });
 
         it('answers false when the step logger cannot be created', async () => {

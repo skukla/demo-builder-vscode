@@ -13,9 +13,45 @@ EDS storefronts have no built-in routing for per-product URLs (`/products/{urlKe
 Demo Builder uses the canonical BYOM pattern with **two deliberate innovations** on top, each justified by the demo workflow's needs (see ADR-005 for full rationale):
 
 1. **Multi-tenant hosted action** — Adobe's reference is single-tenant (one App Builder workspace per storefront). Demo Builder hosts one shared `render-pdp` action serving every SC's storefronts via `?org=&site=` query params on the registered overlay URL.
-2. **Smart-404 client-side recovery** — Adobe's reference relies on a scheduled poller to publish catalog SKUs into Helix content-bus over time, with operator CLI tools (`refresh-pdps.js`) for manual recovery. Demo Builder adds a JS snippet vendored into the storefront's `head.html` / `404.html` / `delayed.js` that triggers on-demand publish for any unknown PDP URL on first visit. Closes the gap Adobe acknowledges in [`aem-commerce-prerender` issue #262](https://github.com/adobe-rnd/aem-commerce-prerender/issues/262) (event-driven recovery, OPEN).
+2. **Smart-404 client-side recovery** — Adobe's reference relies on a scheduled poller to publish catalog SKUs into Helix content-bus over time, with operator CLI tools (`refresh-pdps.js`) for manual recovery. Demo Builder adds a JS snippet vendored into the storefront's `head.html` / `404.html` that triggers on-demand publish for any unknown product or category URL on first visit. Closes the gap Adobe acknowledges in [`aem-commerce-prerender` issue #262](https://github.com/adobe-rnd/aem-commerce-prerender/issues/262) (event-driven recovery, OPEN).
 
 **Phase 2 status: LIVE as of 2026-06-09.** The `render-pdp` overlay fetches the storefront's authored `/products/default` (per-org/site cache, generic shell as fallback on failure) and serves that on real product URLs. SC customizations to `/products/default` inherit on every PDP automatically.
+
+---
+
+## Is this what a merchant would run?
+
+Mostly, yes. Checked 2026-10-06 against `adobe-rnd/aem-commerce-prerender` at
+`91a491c0` (2026-09-23), the reference a merchant would deploy.
+
+**Matches the reference:**
+
+| | Adobe's prerender | Demo Builder |
+|---|---|---|
+| How pages reach Helix | BYOM `content.overlay`, `type: "markup"` | Same overlay, same shape |
+| Product URL | `/products/{urlKey}/{sku}` through Helix `sanitizePath`, which cleans the last segment — the SKU (`getProductUrl`, `actions/utils.js`); its README: `MY_PRODUCT_123` → `my-product-123` | Same result for the SKU; we also clean the URL key segment with `sanitizeName` — `pdpPathFor`, canonical `getProductLink`, `render-pdp` all agree (ADR-024) |
+| Where the SKU comes from | `<meta name="sku">` in the page head (`pdp-renderer/templates/head.hbs`); its README calls this "a requirement when the SKU is sanitized" | `render-pdp` adds the same tag |
+| How the storefront reads it | Canonical `getMetadata('sku') \|\| getSkuFromUrl()` | Unpatched canonical code — no SKU encoder (ADR-024 deleted ours) |
+
+**Differs on purpose — demo needs:**
+
+| | Adobe's prerender | Demo Builder | Why |
+|---|---|---|---|
+| Tenancy | One App Builder workspace per storefront | One shared action, `?org=&site=` on the overlay URL | SCs get PDPs without deploying anything |
+| When pages publish | Ahead of time: a poller (5–60 min alarm triggers in `app.config.yaml`) detects catalog changes, renders, publishes | Once at create/reset (catalog pre-warming), then on demand: the smart-404 snippet publishes an unknown product page on its first visit | Demos are created and reset constantly; a demo cannot wait for a poll cycle, and nothing should run on a schedule for a demo nobody is looking at |
+| What the page contains | Full server-rendered product markup + JSON-LD (SEO, AI crawlers) | The storefront's authored `/products/default` + the SKU tag; the drop-in renders the product in the browser | Demo audiences are people on a call, not crawlers |
+| Where HTML lives | Static files in App Builder storage | Rendered by the action when Helix previews the page | No storage to clean up per demo |
+
+**The one piece a merchant would not have** is the smart-404 script at the end of
+the code's `404.html` (in `scripts/delayed.js` until 2026-10-29: Adobe's B2B template
+removed that file on 2026-07-30, which left B2B storefronts with no recovery). In production every product is published before a shopper
+arrives, so a missing product page is a real 404. For a demo it is the cheapest
+way to make any SKU work immediately — including products added after the
+storefront was built. Adobe tracks the same gap as event-driven recovery in
+[`aem-commerce-prerender` issue #262](https://github.com/adobe-rnd/aem-commerce-prerender/issues/262).
+
+If an SC needs production-grade SEO, deploying `aem-commerce-prerender` to their
+own workspace is the answer; the URL and the SKU tag are already compatible.
 
 ---
 
@@ -32,8 +68,8 @@ Demo Builder uses the canonical BYOM pattern with **two deliberate innovations**
 │      prepended to head.html. Runs synchronously before     │
 │      body paint. Handles the common case (PLP click on a   │
 │      mixed-case product URL) with zero visible 404 flash.  │
-│    • Smart-404 JS snippet appended to                      │
-│      scripts/delayed.js in the storefront's GitHub repo,   │
+│    • Smart-404 JS snippet inline at the end of             │
+│      404.html in the storefront's GitHub repo,             │
 │      with the storefront's org, site, and the              │
 │      prepublish-pdp endpoint URL templated in. Gated on    │
 │      window.isErrorPage. Handles the cold case (lowercase  │
@@ -59,12 +95,13 @@ Demo Builder uses the canonical BYOM pattern with **two deliberate innovations**
 │    Called by the smart 404 from the visitor's browser.     │
 │    Triggers Helix admin POST /preview + POST /live for     │
 │    the requested path. Gated to PDP-shape paths only.      │
-│    No auth (Helix admin POST is currently open).           │
+│    Signs with the site's publish key (registered by the    │
+│    extension; see publishKeyRegistrar.ts).                 │
 │                                                            │
 └────────────────────────────────────────────────────────────┘
 ```
 
-The two repos coordinate via three URL strings — the `render-pdp` overlay URL, the `prepublish-pdp` trigger URL, and the storefront's `?org=&site=` stamping. No per-tenant credentials, no per-tenant state, no shared secret.
+The two repos coordinate via three URL strings — the `render-pdp` overlay URL, the `prepublish-pdp` trigger URL, and the storefront's `?org=&site=` stamping. One piece of per-tenant state: since storefront setup pins a site admin (which closes the Helix admin API to anonymous callers), the extension registers a site-scoped publish key with the shared action after every site config write, and a sweep renews it (`src/features/eds/services/pdp/publishKeyRegistrar.ts`, `publishKeyRenewalSweep.ts`). No shared secret between tenants.
 
 ---
 
@@ -84,8 +121,8 @@ The two repos coordinate via three URL strings — the `render-pdp` overlay URL,
    - If already published (warm path): Helix serves the cached page
      → drop-in runs → done.
    - If not yet published (cold path): Helix 404s again → storefront
-     renders its default 404 chrome. delayed.js loads, the smart-404
-     snippet checks window.isErrorPage:
+     serves 404.html. The smart-404 script at the end of its body
+     runs inline (no helper script, no consent wait):
    a. Recognizes PDP-shape URL
    b. Computes lowercase variant /products/orchard-2/orchard2
    c. HEAD checks lowercase variant → 404 (not yet published)
@@ -99,7 +136,12 @@ The two repos coordinate via three URL strings — the `render-pdp` overlay URL,
       → Helix promotes preview to live
    d. Returns 200 to the browser
 5. Smart-404 JS: location.replace('/products/orchard-2/orchard2?pdpRetry=1')
-6. Browser navigates to lowercase URL → Helix serves the cached template → 200
+   (the tab reads "Loading…" meanwhile). A 409 from the action means the page
+   is already live and this 404 came from a cache: it reloads once with
+   ?pdpRetry=1&pdpFresh=<time>, which no cache has seen.
+6. Browser navigates to lowercase URL → Helix serves the cached template → 200.
+   head.html's eager script takes pdpRetry/pdpFresh back out of the address
+   (history.replaceState, no reload), keeping every other parameter.
 7. Drop-in runs, reads SKU=orchard2 from URL, queries Catalog Service
    → Catalog Service returns the canonical Orchard2 product (case-insensitive lookup)
 8. Page populates with product data. Total time: ~2-3 seconds for cold path.
@@ -127,18 +169,114 @@ The cold path runs once per SKU across all visitors to a storefront. Every subse
 
 | Piece | Where | Behavior |
 |---|---|---|
-| `render-pdp` overlay action | `accs-discovery-service`, deployed (Phase 2 LIVE) | Fetches and returns the storefront's authored `/products/default` for `/products/{urlKey}/{sku}`; generic shell fallback on failure; returns 404 for non-PDP paths |
-| `prepublish-pdp` trigger action | `accs-discovery-service`, deployed | Validates the PDP path, runs a fail-open SKU-existence gate (`check-sku-exists.js` — confirmed-absent SKU → 404, no publish), then relays to Helix admin preview/publish |
+| `render-pdp` overlay action | `accs-discovery-service`, deployed (Phase 2 LIVE) | Fetches and returns the storefront's authored `/products/default` for `/products/{urlKey}/{sku}`, with the product's real SKU added as `<meta name="sku">` (ADR-024); 404 for a product that does not exist or a path that is not the product's canonical one; generic shell fallback on template-fetch failure; 404 for non-PDP paths |
+| `prepublish-pdp` trigger action | `accs-discovery-service`, deployed | Validates the PDP path, resolves the product (`lib/pdp-product.js`, fail-open — a confirmed-absent product → 404, no publish), relays Helix admin preview/publish for the product's **canonical** path, and returns that path so the snippet redirects there |
 | Configuration Service registration with overlay URL | This repo (`ConfigurationService.registerSite` / `updateSiteConfig` with `byomOverlayUrl`) | Wires the overlay into the site config with `{ url, type: "markup", suffix: ".html" }` — shape matches canonical `aem-commerce-prerender` setup wizard |
 | **Catalog pre-warming at create/reset** | This repo (`catalogPrewarmService.ts` + pipeline step) | Enumerates the Commerce catalog via Catalog Service GraphQL and pre-publishes every SKU's PDP URL via batches of 5 to `prepublish-pdp`. Equivalent to one cycle of the canonical scheduled poller. v1 supports ACCS storefronts; PaaS follow-up tracked separately. |
-| Smart-404 snippet install step | This repo (`pdp404HandlerPublisher.ts` + pipeline step) | Vendors three pieces into the storefront: (1) cold-path action call + spinner UI in `scripts/delayed.js`, (2) eager mixed-case → lowercase redirect in `head.html`, (3) same eager redirect in static `404.html` |
+| Smart-404 snippet install step | This repo (`bringStorefrontUpToDate`, with `pdp404HandlerPublisher.ts`, `pdp404Page.ts` and `storefrontCodeBlocks.ts`) | Vendors two scripts into the storefront: (1) the eager mixed-case → lowercase product redirect plus the cold-path `<main>` hide, in `head.html` and in `404.html`'s `<head>`; (2) the cold-path action call + spinner, for product and category addresses, inline at the end of `404.html`'s body. Each is a marked block, rewritten in place when it changes. A storefront still carrying the old copy in `scripts/delayed.js` loses it once `404.html` has the new one |
 | `demoBuilder.byom.enabled` setting | This repo | Master toggle; when off, no overlay registers and no 404 publishes |
 | `demoBuilder.byom.overlayUrl` setting | This repo | Override for non-default deployments. Defaults to the team's shared deployment. |
+
+### Reset and delete remove the product pages (EDS-26)
+
+Product pages are published through the overlay and have no DA.live document, so
+re-copying or deleting the content never cleared them. Until 2026-10-05 a reset left
+every product page of the old catalog live, and deleting a storefront left them too.
+
+Both now remove them (`storefront/productPageRemoval.ts`, one implementation):
+
+| Flow | When | Where |
+|---|---|---|
+| Reset (dashboard, `reset_project`) | Before the content pipeline, whose last step pre-warms the current catalog. A reset ends with product pages for the current catalog only. | `reset/edsResetProductPages.ts` |
+| Delete (the delete-project button, `delete_project`, `cleanup_dalive_site` with `githubRepo`) | In the storefront teardown, after the DA.live pages are unpublished and before the source is deleted. | `storefront/storefrontTeardown.ts` |
+
+The rules (owner, 2026-10-05):
+
+- **True deletion.** The live copy goes, then the preview copy, page by page with the
+  DA.live sign-in (ADR-002). If Helix refuses the preview removal, the result says the
+  live copies are gone and the preview copies remain. It is never reported as clean.
+- **The list comes from Helix,** not from pre-warm: a page a shopper's first visit
+  published is recorded nowhere else. It is the Admin API's bulk status job for
+  `/products/*` on the site keyed by GitHub owner/repo (`helix/helixPublishedPaths.ts`).
+  If the listing fails, nothing is removed and the sentence says the pages may still be
+  live.
+- **Only generated product pages.** A path is removed only when it is
+  `/products/<urlKey>/<sku>` and DA.live has no document for it. The authored template
+  `/products/default`, and any page an author made under `/products`, is DA.live
+  content and is not touched by this step.
+- **Refused on a shared repository.** When another local project publishes to the same
+  GitHub repository, nothing is removed and the sentence names that project. Only
+  projects on this machine can be seen.
+
+The sentence goes on the progress line and in the log, and to agents as `productPages`
+on the `reset_project`, `delete_project` and `cleanup_dalive_site` results. The delete
+button shows anything short of a clean removal in its results.
+
+**Not yet seen live** (the build made no cloud writes): the bulk status request and its
+response shape, whether the DA.live sign-in alone is enough for it on teardown (which has
+no GitHub token), and whether Helix removes a preview copy while the overlay still
+answers for the path. If it does not, the fallback above is what the SC sees; removing
+the overlay registration first on delete is the untested alternative. The live check is
+in `.rptc/backlog/2026-10-05-product-pages-survive-reset.md`.
+
+The "Manage DA.live Sites" command goes through the same teardown (EDS-31). It finds
+each site's repository from the local project that uses it, else assumes the
+same-named repository in the DA.live org's namespace; when the unpublish fails, the
+result names the sites whose pages may still be live.
+
+**What the teardown unpublishes, and how it knows (EDS-33, 2026-10-09).** The pages
+handed to the unpublish used to be the DA.live listing alone. Once a site's content was
+gone, that list was empty and the teardown reported the site down while all 174 of its
+pages still answered on aem.live. The list is now Helix's own record of the whole site
+(the same bulk status job, for `/*`), joined to the DA.live listing, minus the generated
+product pages the step above handles. When Helix cannot be read, the DA.live listing is
+all there is and the sentence says so. Afterwards the home page and the first few
+unpublished pages are fetched from the live host: the site is reported down only when
+a check came back 404, nothing checked still answers, and every live copy was removed.
+Otherwise the answer is `still-live` or `unknown`, said in words (`publishSummary`).
+`storefront/storefrontUnpublish.ts`.
+
+**What a reset unpublishes (EDS-33, decided 2026-10-09).** Reset does not use the
+teardown, and it no longer unpublishes the DA.live files it deletes: that left the
+storefront offline from the delete until the republish, and missed every page live on
+Helix whose DA.live file was already gone. Reset now deletes the DA.live content, copies
+and republishes over the top (the site stays up), then lists the whole site from Helix
+(the same `/*` status job) and unpublishes, live and preview, what was not republished.
+Product pages are never on that list: the old catalog's were taken out before the copy
+(the step above), and the pre-warm after it publishes the current catalog's. Nor are
+non-page files or the folders the whole-site publish skips, since "not republished"
+says nothing about them. When Helix cannot be read, nothing is removed and the reset
+says old pages may still be live (`leftoverPages` on its result, and a warning to the
+SC). `storefront/leftoverPages.ts`.
+
+### Category pages ride the same overlay (EDS-61)
+
+Since EDS-61 the overlay serves a second kind of page: each category's own url path
+(`/signs`, `/signs/danger-signs`; owner decision 2026-10-22), for every category the store
+view lists (one Catalog Service `categories(ids: [])` query per site, cached five minutes),
+filled from the site's authored `/categories/default` (the first `<h1>`, the
+`product-list-page` block's `urlPath` row, the title tags), or a built-in shell. Category
+pages **fail closed**, unlike products: a category the list does not hold, or a lookup
+that cannot answer, is a 404.
+
+Helix asks the overlay first on every preview — **measured 2026-10-22 on scratch-1022-b**:
+an authored DA.live page at a product path, previewed and published, was not served; the
+overlay's was. At category addresses that would replace authored pages, so the overlay
+steps aside for the paths a public sheet, `/authored-category-pages.json`, lists, and it
+renders category pages only on a site where that sheet exists. The extension writes the
+sheet, then publishes the category pages, at setup, reset and republish (generated ones
+through the authenticated Helix path, on ACCS); the smart-404 snippet asks for any other
+missing path of category shape (every segment `[a-z0-9-]`) with a "Loading…" state, and
+the action refuses all but a category the store has (404: the storefront's own 404 comes
+back; 503: the shopper goes to a search filtered to the category; a refused
+product-shaped address always goes to `/404`); the
+generated-page removal takes them down (`removeCategoryPages`, shared with product pages).
+Full write-up: `docs/systems/category-pages.md`.
 
 ### Out of scope (later workstreams or deliberate non-goals)
 
 - **~~SC template customizations on real product URLs.~~** Resolved — Phase 2 shipped 2026-06-09. The overlay now fetches the storefront's authored `/products/default` and serves it on `/products/{urlKey}/{sku}`. SC customizations inherit automatically.
-- **PDP cleanup after SKU deletion — cold case handled, cached case residual.** When a visitor hits a PDP URL for a SKU that no longer exists, there are two sub-cases. (1) **Never-published / cold URL — HANDLED:** `prepublish-pdp` runs a SKU-existence gate (`actions/prepublish-pdp/check-sku-exists.js`) before publishing — it reads the storefront's served `config.json` for the Catalog Service endpoint + headers and runs the case-insensitive `products(skus:)` lookup. A confirmed-absent SKU returns 404 **without publishing** (so no empty page is ever cached), and the smart-404 snippet's failure branch redirects the shopper to the storefront's native `/404` (`buildSmart404Snippet`). The gate **fails open** — config unreachable / query error / unexpected shape all proceed to publish, so a real product is never 404'd by an infra hiccup. (2) **Already-published URL — RESIDUAL:** a SKU deleted *after* its PDP was published (or pre-warmed) still serves the cached 200 template, so `window.isErrorPage` is false, the snippet never fires, and the overlay isn't re-invoked for a served page — the drop-in renders an empty product block. **CLOSED 2026-08-23** by the `pdp-empty-data-redirect` code patch (eds-demo-patches): `fetchProductData` resolves null for the missing SKU, and the patched initializer redirects to the native 404 instead of mounting the empty drop-in — no cache invalidation needed. Record: `.rptc/complete/2026-06-09-pdp-graceful-empty-state.md`.
+- **PDP cleanup after SKU deletion — cold case handled, cached case residual.** When a visitor hits a PDP URL for a SKU that no longer exists, there are two sub-cases. (1) **Never-published / cold URL — HANDLED:** `prepublish-pdp` resolves the product before publishing (`actions/lib/pdp-product.js`, which replaced `check-sku-exists.js` under ADR-024) — it reads the storefront's served `config.json` for the Catalog Service endpoint + headers, looks the product up by URL key, and falls back to the `products(skus:)` lookup. A confirmed-absent SKU returns 404 **without publishing** (so no empty page is ever cached), and the smart-404 snippet's failure branch redirects the shopper to the storefront's native `/404` (`buildSmart404Snippet`). The gate **fails open** — config unreachable / query error / unexpected shape all proceed to publish, so a real product is never 404'd by an infra hiccup. (2) **Already-published URL — RESIDUAL:** a SKU deleted *after* its PDP was published (or pre-warmed) still serves the cached 200 template, so `window.isErrorPage` is false, the snippet never fires, and the overlay isn't re-invoked for a served page — the drop-in renders an empty product block. **CLOSED 2026-08-23** by the `pdp-empty-data-redirect` code patch (eds-demo-patches): `fetchProductData` resolves null for the missing SKU, and the patched initializer redirects to the native 404 instead of mounting the empty drop-in — no cache invalidation needed. Record: `.rptc/complete/2026-06-09-pdp-graceful-empty-state.md`.
 - **PaaS catalog pre-warming.** v1 of pre-warming covers ACCS only because the PaaS direct `/graphql` auth requirements are unverified for our use case. PaaS storefronts continue to work via the smart-404 fallback for catalog-churn paths; their warm catalog still loads (just less aggressively pre-warmed at setup).
 - **Server-side SSR (Tier 3) — JSON-LD per SKU, og:image per SKU, Merchant Center metadata.** Deliberately omitted. The canonical `aem-commerce-prerender` does this; we don't, because demo audiences are humans on calls, not crawlers. If an SC ever needs production-grade SEO, they can deploy `aem-commerce-prerender` to their own workspace alongside Demo Builder's overlay.
 
@@ -164,7 +302,9 @@ Verified 2026-06-09: `products(skus: ["Orchard2"])` and `products(skus: ["orchar
 
 **If this ever changes** (Catalog Service becomes case-sensitive): every PDP across every storefront resolves at the routing layer but renders with empty product details — silent rot. Detection probe in `.rptc/research/multitenant-prerender-evaluation/addendum-2026-06-09-runtime-validation.md` (Finding 4 + reproducibility block). Mitigation paths documented in the same Finding.
 
-### 3. Helix admin `POST /preview` and `POST /live` are currently unauthenticated for these storefronts
+### 3. Helix admin `POST /preview` and `POST /live` — no longer unauthenticated (superseded)
+
+**Corrected 2026-10-05.** The assumption below held when this was written; it stopped holding once storefront setup pinned a site admin, which sets `requireAuth: "auto"` and closes the admin API to anonymous callers. `prepublish-pdp` now signs each publish with a site-scoped publish key the extension mints and registers (`publishKeyRegistrar.ts`; measured 2026-08-15 in `.rptc/complete/pdp-prewarm-401-after-admin-pinning.md`). The text below is kept as the original record.
 
 Verified by the `accs-discovery-service` team (research doc at `accs-discovery-service/docs/research/helix-admin-auth-findings.md`, summarized in this repo's addendum at `.rptc/research/multitenant-prerender-evaluation/addendum-2026-06-09-helix-admin-auth-and-trigger-placement.md`).
 
@@ -172,15 +312,17 @@ Verified by the `accs-discovery-service` team (research doc at `accs-discovery-s
 
 **If this ever changes** (Helix locks down admin POST): `prepublish-pdp` would need to authenticate. The shape of that authentication is the question we'd revisit. The shared-secret pattern is rejected (see commit `facaec19` rationale); the most likely path is a GitHub App that SCs install on their account. That's significant new infrastructure — at minimum, a multi-day project on the `accs-discovery-service` side. Worth flagging early so it's not a surprise.
 
-### 4. The SKU URL segment is reversibly encoded (not slugified)
+### 4. The URL is Helix-clean; the page carries the SKU
 
-The PDP URL is `/products/{urlKey}/{sku}`, and the drop-in reads the SKU back from the URL to query Commerce. Adobe canonical slugifies the SKU lossily (`sanitizeName`), which breaks any SKU with spaces/punctuation/mixed case (blank PDP). Demo Builder patches `getProductLink`/`getSkuFromUrl` to use a **reversible, lowercase-stable, Helix-safe** encoding (`encodeSkuForUrl`/`decodeSkuFromUrl` — keep `[a-z0-9-]` literal, escape every other UTF-8 byte as `_HH`). Clean SKUs encode unchanged; only messy SKUs gain `_HH` markers.
+The PDP URL is `/products/{urlKey}/{sku}` with both segments cleaned by `sanitizeName` — Helix's own rule for every path it publishes (lowercase; every run of characters outside `[a-z0-9]` becomes `-`). Canonical `getProductLink` builds links that way, the extension's `pdpPathFor` builds prewarm/probe paths that way, and Helix stores pages there, so all three agree by construction. Because cleaning is lossy, the URL does not carry the real SKU: `render-pdp` looks the product up by URL key at publish time and writes `<meta name="sku">` into the page, and canonical `getProductSku()` reads that tag before the URL. `prepublish-pdp` publishes the product's canonical path whatever link form arrived and tells the smart-404 snippet where to redirect.
 
-**Why it matters**: builds on #1 and #2 — the encoding stays lowercase (so the redirect is a no-op on it) and decodes modulo case (so the case-insensitive Catalog lookup still resolves the product). `encodeURIComponent` is unusable here: aem.live's CDN rejects `%`-encoded paths with a bare 404 before the storefront renders. The same encoder lives in `catalogPrewarmService.ts` (extension) and the `eds-demo-patches` commerce.js patches — they must stay byte-identical so published paths match generated links.
+**Why it matters**: a segment Helix would clean is a path no page will ever have. ADR-007's `_HH` encoding put `_` in the URL; Helix rewrote it to `-` on publish, and every SKU containing `_` 404'd (10 of 49 on JustRite, 2026-10-06). `encodeURIComponent` is unusable for the same family of reasons: aem.live's CDN rejects `%`-encoded paths with a bare 404.
 
-**SC guidance**: for the cleanest demo URLs, give products clean alphanumeric SKUs (avoid spaces/special characters); the product *name* is unconstrained. Custom blocks that link to PDPs should build the href with `getProductLink(urlKey, sku)`. Full rationale, alternatives, and the producer audit are in [ADR-007](adr/007-pdp-sku-url-encoding.md).
+**SC guidance**: any SKU works; the URL shows the cleaned form. Custom blocks that link to PDPs must build the href with `getProductLink(urlKey, sku)` — a hand-built link keeps case and punctuation and misses the page. Full rationale in [ADR-024](adr/024-pdp-sku-in-the-page.md).
 
-**If this ever changes** (canonical adopts reversible encoding, or Catalog Service becomes case-sensitive): see ADR-007 — the former retires the patch, the latter is the same silent-rot risk as #2.
+**The overlay request carries the suffix.** The overlay is registered with `suffix: ".html"`, so Helix asks `render-pdp` for `/products/{urlKey}/{sku}.html`, never the bare path. `parsePdpPath` strips it. The first ADR-024 deploy did not, the SKU segment cleaned to `…-html`, no request ever matched its canonical path, and the JustRite reset's pre-warm went 0/49 (2026-10-06, fixed in `accs-discovery-service` `8035199`). A `render-pdp` test that calls the bare path is testing a request Helix never sends.
+
+**If this ever changes** (the URL-key lookup stops resolving, e.g. a catalog whose search index cannot filter on `url_key`): `render-pdp` falls back to the SKU lookup, which finds plain SKUs only; pages for SKUs Helix had to clean are then served without the tag and render empty. Check the lookup before anything else.
 
 ### 5. One overlay per base content — and it is bound to the content, not the site
 
@@ -228,13 +370,14 @@ If Phase 1's behavior diverges from this in production, those four probes locali
 | Concern | File |
 |---|---|
 | Overlay URL resolution + stamping | `src/features/eds/handlers/byomOverlay.ts` (`resolveByomOverlayConfig`, `appendOverlayParams`) |
-| Overlay registration failure surfacing | `src/features/eds/handlers/byomOverlay.ts` (`surfaceOverlayRegistrationFailure`), wired from `handlers/configServiceRegistration.ts` (create/edit, toast — the 403 toast carries Manage Site Access / Repair Site Configuration buttons) and `edsResetService.ts` (reset, `report()` — headless-safe) |
+| Overlay registration failure surfacing | `src/features/eds/handlers/byomOverlay.ts` (`surfaceOverlayRegistrationFailure`), wired from `handlers/configServiceRegistration.ts` (create/edit, toast — the 403 toast carries Manage Site Access / Repair Site Configuration buttons) and `edsResetConfigStep.ts` (reset, `report()` — headless-safe) |
 | Site-registration protocol (409→update, 401→re-auth, 403→propagation retry) | `src/features/eds/services/configService/siteConfigRegistrar.ts` (`registerSiteConfig`), shared by the wizard, the reset path and the repair command |
 | Standalone retry after a refused registration | `src/features/eds/services/configService/repairSiteConfigHeadless.ts` + `src/commands/repairSiteConfiguration.ts` (`demoBuilder.repairSiteConfiguration`) |
-| Configuration Service registration with overlay (incl. `suffix: ".html"`) | `src/features/eds/services/configService/configurationService.ts` (`registerSite`, `updateSiteConfig`, `buildSiteConfigParams`) |
-| Smart-404 snippet generation + install (head.html, 404.html, delayed.js) | `src/features/eds/services/pdp/pdp404HandlerPublisher.ts` |
-| **Catalog pre-warming (enumerate + bulk pre-publish)** | `src/features/eds/services/catalogPrewarmService.ts` |
+| Configuration Service registration with overlay (incl. `suffix: ".html"`) | `src/features/eds/services/configService/configurationService.ts` (`registerSite`, `updateSiteConfig`); the overlay body and `buildSiteConfigParams` in `siteConfigParams.ts` (`buildRegistrationBody`) |
+| Smart-404 snippet generation + install (head.html, 404.html) | `src/features/eds/services/pdp/pdp404Snippet.ts` (the scripts), `pdp404Page.ts` (where they sit), `pdp404HandlerPublisher.ts` (one storefront's script), `storefront/storefrontCodeBlocks.ts` (head.html, taking the old delayed.js copy out) |
+| **Catalog pre-warming (enumerate + bulk pre-publish)** | `src/features/eds/services/catalogPrewarmService.ts` (publish), `catalogEnumeration.ts` (enumerate) |
 | Pipeline integration (smart-404 install + pre-warming) | `src/features/eds/services/edsPipeline.ts`, `src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts` (create / edit), `src/features/eds/services/reset/edsResetRepoHelper.ts` (reset) |
+| **Product page removal on reset and delete (EDS-26)** | `src/features/eds/services/storefront/productPageRemoval.ts` (the rules), `helix/helixPublishedPaths.ts` (the listing), `reset/edsResetProductPages.ts`, `storefront/storefrontTeardown.ts`, `storefront/sharedRepoProjects.ts` |
 | Settings | `package.json` (`demoBuilder.byom.enabled`, `demoBuilder.byom.overlayUrl`) |
 
 ---

@@ -17,6 +17,7 @@ import type { Project, ComponentInstance } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -54,7 +55,7 @@ jest.mock('@/features/mesh/services/meshDeployment', () => ({
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     fetchMeshInfoFromAdobeIO: jest.fn().mockResolvedValue({ meshId: '' }),
 }));
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -62,9 +63,11 @@ const mockRefreshStatus = jest.fn().mockResolvedValue(undefined);
 const mockSendMeshStatusUpdate = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendMeshStatusUpdate: mockSendMeshStatusUpdate,
         refreshStatus: mockRefreshStatus,
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendMeshStatusUpdate: mockSendMeshStatusUpdate,
 }));
 
 function createTestProject(): Project {
@@ -117,10 +120,10 @@ describe('DeployMeshCommand - pre-deploy subscribe', () => {
             saveProject: jest.fn().mockResolvedValue(undefined),
         }) as unknown as jest.Mocked<StateManager>;
         mockLogger = createMockLogger();
-        mockAuthManager = {
+        mockAuthManager = poolUnits({
             testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        };
+        });
         mockCommandExecutor = {
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '', duration: 1 }),
         };

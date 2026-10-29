@@ -91,6 +91,10 @@ jscpd-output/
 .claude/settings.local.json  # Local overrides
 .claude/.env*           # Secrets
 .jest-cache/
+
+# The type-aware lint suite's probe directory (PL-44). Created and removed by
+# tests/sop/eslint-type-aware.test.ts; a crashed run can leave it behind.
+.eslint-probe/
 .playwright-mcp/
 .serena/
 

@@ -5,13 +5,9 @@
  * Each handler contains business logic and returns structured responses.
  *
  * Handlers:
- * - update-component-selection: Update current component selection
- * - update-components-data: Update components data cache
- * - loadComponents: Load component definitions
  * - get-components-data: Fetch component data
  * - checkCompatibility: Check component compatibility
  * - loadDependencies: Load component dependencies
- * - loadPreset: Load preset configuration
  * - validateSelection: Validate component selection
  */
 
@@ -26,10 +22,6 @@ import {
     ComponentRegistryManager,
     DependencyResolver,
 } from '@/features/components/services/ComponentRegistryManager';
-import {
-    ComponentSelection,
-    type ComponentConfigs as ComponentConfigsData,
-} from '@/types/components';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
@@ -49,92 +41,6 @@ function createDependencyResolver(context: HandlerContext): DependencyResolver {
     const registryManager = createRegistryManager(context);
     return new DependencyResolver(registryManager);
 }
-
-/**
- * update-component-selection - Update current component selection
- *
- * Stores the user's current component selection in context state.
- */
-export const handleUpdateComponentSelection: MessageHandler = async (
-    context: HandlerContext,
-    payload?: unknown,
-) => {
-    if (!payload || typeof payload !== 'object') {
-        context.logger.error('[Components] handleUpdateComponentSelection: invalid payload');
-        return { success: false, error: 'Invalid payload' };
-    }
-    const selection = payload as ComponentSelection;
-    context.sharedState.currentComponentSelection = selection;
-    context.logger.debug(
-        `Updated component selection: ${selection.frontend || 'none'}/${selection.backend || 'none'} + ${selection.dependencies?.length || 0} deps + ${selection.services?.length || 0} services`,
-    );
-    return { success: true };
-};
-
-/**
- * update-components-data - Update components data cache
- *
- * Stores the components data in context state.
- */
-export const handleUpdateComponentsData: MessageHandler = async (
-    context: HandlerContext,
-    payload?: unknown,
-) => {
-    if (!payload || typeof payload !== 'object') {
-        context.logger.error('[Components] handleUpdateComponentsData: invalid payload');
-        return { success: false, error: 'Invalid payload' };
-    }
-    const componentsData = payload as ComponentConfigsData;
-    context.sharedState.componentsData = componentsData;
-    context.logger.debug('Updated components data');
-    return { success: true };
-};
-
-/**
- * loadComponents - Load component definitions
- *
- * Loads component definitions from the component registry and returns them.
- */
-export const handleLoadComponents: MessageHandler = async (context: HandlerContext) => {
-    try {
-        const registryManager = createRegistryManager(context);
-
-        const frontends = await registryManager.getFrontends();
-        const backends = await registryManager.getBackends();
-        const integrations = await registryManager.getIntegrations();
-        const dependencies = await registryManager.getDependencies();
-        const presets = await registryManager.getPresets();
-
-        const componentsData = {
-            frontends: toComponentDataArray(frontends, {
-                recommendedId: 'headless',
-                includeFeatures: true,
-            }),
-            backends: toComponentDataArray(backends),
-            integrations: toComponentDataArray(integrations),
-            dependencies: toComponentDataArray(dependencies),
-            presets,
-        };
-
-        return {
-            success: true,
-            type: 'componentsLoaded',
-            data: componentsData,
-        };
-    } catch (error) {
-        context.logger.error('Failed to load components:', error);
-        return {
-            success: false,
-            error: extractErrorMessage(error),
-            // DELIBERATE, not inferred from the message text. Nothing consumes a
-            // code from these handlers -- checked 2026-09-11, the only consumers of
-            // TIMEOUT/NETWORK codes are on the auth surface -- so guessing one from
-            // words in the error bought nothing and claimed knowledge we lack.
-            code: ErrorCode.UNKNOWN,
-            message: 'Failed to load components',
-        };
-    }
-};
 
 /**
  * get-components-data - Fetch component data with full configuration
@@ -189,6 +95,22 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
 };
 
 /**
+ * The frontend/backend pair a selection handler is asked about, or undefined
+ * when the payload is not an object carrying both as strings. Every handler
+ * below refuses with the same 'Invalid payload' on undefined.
+ */
+function readStackPayload(payload: unknown): { frontend: string; backend: string } | undefined {
+    if (!payload || typeof payload !== 'object') {
+        return undefined;
+    }
+    const { frontend, backend } = payload as { frontend?: unknown; backend?: unknown };
+    if (typeof frontend !== 'string' || typeof backend !== 'string') {
+        return undefined;
+    }
+    return { frontend, backend };
+}
+
+/**
  * checkCompatibility - Check component compatibility
  *
  * Validates that selected components are compatible with each other.
@@ -198,13 +120,11 @@ export const handleCheckCompatibility: MessageHandler = async (
     payload?: unknown,
 ) => {
     try {
-        if (!payload || typeof payload !== 'object') {
+        const stack = readStackPayload(payload);
+        if (!stack) {
             return { success: false, error: 'Invalid payload' };
         }
-        const { frontend, backend } = payload as { frontend: string; backend: string };
-        if (typeof frontend !== 'string' || typeof backend !== 'string') {
-            return { success: false, error: 'Invalid payload' };
-        }
+        const { frontend, backend } = stack;
         const registryManager = createRegistryManager(context);
 
         const compatible = await registryManager.checkCompatibility(frontend, backend);
@@ -239,13 +159,11 @@ export const handleLoadDependencies: MessageHandler = async (
     payload?: unknown,
 ) => {
     try {
-        if (!payload || typeof payload !== 'object') {
+        const stack = readStackPayload(payload);
+        if (!stack) {
             return { success: false, error: 'Invalid payload' };
         }
-        const { frontend, backend } = payload as { frontend: string; backend: string };
-        if (typeof frontend !== 'string' || typeof backend !== 'string') {
-            return { success: false, error: 'Invalid payload' };
-        }
+        const { frontend, backend } = stack;
         const dependencyResolver = createDependencyResolver(context);
 
         const resolved = await dependencyResolver.resolveDependencies(frontend, backend);
@@ -276,56 +194,6 @@ export const handleLoadDependencies: MessageHandler = async (
 };
 
 /**
- * loadPreset - Load preset configuration
- *
- * Loads a preset configuration of components.
- */
-export const handleLoadPreset: MessageHandler = async (
-    context: HandlerContext,
-    payload?: unknown,
-) => {
-    try {
-        if (!payload || typeof payload !== 'object') {
-            return { success: false, error: 'Invalid payload' };
-        }
-        const { presetId } = payload as { presetId: string };
-        if (typeof presetId !== 'string') {
-            return { success: false, error: 'Invalid payload' };
-        }
-        const registryManager = createRegistryManager(context);
-
-        const presets = await registryManager.getPresets();
-        const preset = presets.find((p) => p.id === presetId);
-
-        if (!preset) {
-            throw new Error(`Preset ${presetId} not found`);
-        }
-
-        return {
-            success: true,
-            type: 'presetLoaded',
-            data: {
-                frontend: preset.selections.frontend,
-                backend: preset.selections.backend,
-                dependencies: preset.selections.dependencies,
-            },
-        };
-    } catch (error) {
-        context.logger.error('Failed to load preset:', error);
-        return {
-            success: false,
-            error: extractErrorMessage(error),
-            // DELIBERATE, not inferred from the message text. Nothing consumes a
-            // code from these handlers -- checked 2026-09-11, the only consumers of
-            // TIMEOUT/NETWORK codes are on the auth surface -- so guessing one from
-            // words in the error bought nothing and claimed knowledge we lack.
-            code: ErrorCode.UNKNOWN,
-            message: 'Failed to load preset',
-        };
-    }
-};
-
-/**
  * validateSelection - Validate component selection
  *
  * Validates the current component selection is valid.
@@ -335,21 +203,15 @@ export const handleValidateSelection: MessageHandler = async (
     payload?: unknown,
 ) => {
     try {
-        if (!payload || typeof payload !== 'object') {
+        const stack = readStackPayload(payload);
+        if (!stack) {
             return { success: false, error: 'Invalid payload' };
         }
-        const { frontend, backend, dependencies } = payload as {
-            frontend: string;
-            backend: string;
-            dependencies: string[];
-        };
-        if (
-            typeof frontend !== 'string' ||
-            typeof backend !== 'string' ||
-            !Array.isArray(dependencies)
-        ) {
+        const { dependencies } = payload as { dependencies?: string[] };
+        if (!Array.isArray(dependencies)) {
             return { success: false, error: 'Invalid payload' };
         }
+        const { frontend, backend } = stack;
         const dependencyResolver = createDependencyResolver(context);
 
         const resolved = await dependencyResolver.resolveDependencies(

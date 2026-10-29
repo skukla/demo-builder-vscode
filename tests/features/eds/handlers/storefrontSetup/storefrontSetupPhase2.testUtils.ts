@@ -50,9 +50,6 @@ export const inspectorHelpers = jest.requireMock('@/features/eds/services/inspec
     generateInspectorTreeEntries: jest.Mock;
     installInspectorTagging: jest.Mock;
 };
-export const pdp404Publisher = jest.requireMock(
-    '@/features/eds/services/pdp/pdp404HandlerPublisher',
-) as { installSmart404Handler: jest.Mock };
 export const quickEditPublisher = jest.requireMock(
     '@/features/eds/services/quickEditPublisher',
 ) as { installQuickEdit: jest.Mock };
@@ -65,16 +62,23 @@ export const EDS_CONFIG: StorefrontSetupStartPayload['edsConfig'] = {
 
 export const makeRepoInfo = (): RepoInfo => ({ repoOwner: 'me', repoName: 'shop' });
 
-/** The three file-ops calls this phase makes; the class itself holds private Octokit state. */
+/** The file-ops calls this phase makes; the class itself holds private Octokit state. */
 export type FileOpsStub = jest.Mocked<
-    Pick<GitHubFileOperations, 'getFileContent' | 'createOrUpdateFile' | 'commitTreeToBranch'>
+    Pick<
+        GitHubFileOperations,
+        'getFileContent' | 'createOrUpdateFile' | 'commitTreeToBranch' | 'getLatestCommitSha'
+    >
 >;
+
+/** The source commit a library is recorded at when it contributed no blocks (EDS-51). */
+export const LIBRARY_HEAD_SHA = 'f00dfeed00000000000000000000000000000000';
 
 export function makeFileOps(overrides: Partial<FileOpsStub> = {}): FileOpsStub {
     return {
         getFileContent: jest.fn().mockResolvedValue(null),
         createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
         commitTreeToBranch: jest.fn().mockResolvedValue('sha123'),
+        getLatestCommitSha: jest.fn().mockResolvedValue(LIBRARY_HEAD_SHA),
         ...overrides,
     };
 }
@@ -114,8 +118,5 @@ export function resetPhase2Mocks(): void {
     fstabGenerator.generateFstabContent.mockReset().mockReturnValue('mock-fstab');
     inspectorHelpers.generateInspectorTreeEntries.mockReset().mockResolvedValue([]);
     inspectorHelpers.installInspectorTagging.mockReset().mockResolvedValue({ success: true });
-    pdp404Publisher.installSmart404Handler
-        .mockReset()
-        .mockResolvedValue({ installed: false, reason: 'BYOM disabled' });
     quickEditPublisher.installQuickEdit.mockReset().mockResolvedValue({ installed: true });
 }

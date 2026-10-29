@@ -1,4 +1,4 @@
-import { withTimeout, tryWithTimeout, runInBatches } from '@/core/utils/promiseUtils';
+import { firstSuccess, withTimeout, tryWithTimeout, runInBatches } from '@/core/utils/promiseUtils';
 
 /**
  * A rejected promise whose rejection is ALREADY observed.
@@ -427,5 +427,38 @@ describe('promiseUtils', () => {
             });
             expect(result.error?.message).toBe('Operation cancelled by user');
         });
+    });
+});
+
+// Used where two ways of fetching the same answer are both in flight: the caller
+// wants the first ANSWER, and a fast failure of one must not hide the other.
+describe('firstSuccess', () => {
+    it('takes the faster of two answers', async () => {
+        const slow = new Promise<string>((resolve) => setTimeout(() => resolve('slow'), 50));
+
+        await expect(firstSuccess(slow, Promise.resolve('fast'))).resolves.toBe('fast');
+    });
+
+    it('waits past a failure for the other answer', async () => {
+        const later = new Promise<string>((resolve) => setTimeout(() => resolve('later'), 20));
+
+        await expect(firstSuccess(rejectedWith(new Error('504')), later)).resolves.toBe('later');
+    });
+
+    it("rejects only when both fail, with the primary's reason", async () => {
+        const primary = rejectedWith(new Error('primary failed'));
+        const secondary = rejectedWith(new Error('secondary failed'));
+
+        await expect(firstSuccess(primary, secondary)).rejects.toThrow('primary failed');
+    });
+
+    it("reports the primary's reason even when it fails second", async () => {
+        const primary = new Promise<string>((_, reject) =>
+            setTimeout(() => reject(new Error('primary failed')), 20),
+        );
+
+        await expect(firstSuccess(primary, rejectedWith(new Error('secondary failed')))).rejects.toThrow(
+            'primary failed',
+        );
     });
 });

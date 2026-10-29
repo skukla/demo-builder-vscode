@@ -11,6 +11,10 @@
  * @module features/app-builder/services/appBuilderDeployOutcome
  */
 
+import { deriveProvidedValues } from './deployInputs';
+import { deriveScreenUrl } from './systemScreen';
+import type { AppDeploymentResult } from './types';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentKind, AppBuilderComponentState, Project } from '@/types/base';
 
 /**
@@ -28,6 +32,7 @@ export type DeployOutcome = Pick<
     | 'url'
     | 'deployedUrls'
     | 'lastDeployed'
+    | 'deployedCommit'
     | 'sourceHash'
     | 'envVars'
     | 'userDeclinedUpdate'
@@ -50,7 +55,7 @@ export type DeployOutcome = Pick<
  * id stands (several = the N-integration model; siblings must not be touched).
  *
  * Shared by the deploy-outcome write below and the per-id remove
- * ({@link import('./appBuilderComponentRunner').removeAppBuilderComponent}),
+ * ({@link import('./appBuilderRemoveRun').removeAppBuilderComponent}),
  * which must clear the SAME entry a deploy would have written.
  */
 export function resolveKeyedComponentId(
@@ -68,7 +73,8 @@ export function resolveKeyedComponentId(
 }
 
 /**
- * Refresh a mesh entry's provided MESH_ENDPOINT with the freshly deployed one.
+ * What the entry provides after this deploy: the recorded values, with any the
+ * deploy freshly derived written over them, and a mesh's MESH_ENDPOINT refreshed.
  * Entries that don't provide env vars stay as they are — nothing is fabricated
  * (the catalog decides what a component provides, not the deploy path).
  */
@@ -76,9 +82,14 @@ function refreshProvidedEnvVars(
     existing: AppBuilderComponentState | undefined,
     outcome: DeployOutcome,
 ): Record<string, string> | undefined {
-    // The existing entry is authoritative on an update; on a CREATE there is none,
-    // so the outcome carries what the catalog says this component provides.
-    const provided = existing?.providesEnvVars ?? outcome.providesEnvVars;
+    // A value the deploy derived is the truth; the recorded one is kept only when
+    // the deploy derived nothing. Before, the recorded map always won, so after
+    // Bodea's ERP moved Adobe projects its ERP_BASE_URL kept naming the old
+    // namespace and the integration was deployed against it (2026-09-19).
+    const provided =
+        existing?.providesEnvVars && outcome.providesEnvVars
+            ? { ...existing.providesEnvVars, ...outcome.providesEnvVars }
+            : (existing?.providesEnvVars ?? outcome.providesEnvVars);
     if (!provided || outcome.endpoint === undefined || !('MESH_ENDPOINT' in provided)) {
         return provided;
     }
@@ -141,6 +152,10 @@ export function recordDeployOutcome(
             error: resolveErrorReason(existing, outcome),
         },
     };
+    // A deploy makes a stopped removal's reason stale; the next removal finds
+    // out afresh whether its clean-up can finish.
+    delete project.appBuilderComponents[id].removalStopped;
+    delete project.appBuilderComponents[id].removalCleanedUp;
 
     // Mirror the deploy STATUS onto the component instance.
     //
@@ -164,4 +179,38 @@ export function recordDeployOutcome(
         instance.status = outcome.status;
         instance.lastUpdated = new Date();
     }
+}
+
+/**
+ * Build the persisted state from a successful app deploy (integration or
+ * system). What the app PROVIDES to other components is read off its deployed
+ * URLs here (the ERP's web base becomes `ERP_BASE_URL`), and a row named from
+ * an input (`nameFromEnvVar`) takes that name.
+ */
+export function integrationOutcome(
+    entry: AppBuilderComponentCatalogEntry,
+    data: AppDeploymentResult['data'],
+    displayName: string,
+): DeployOutcome {
+    return {
+        status: 'deployed',
+        ...identityOf(entry),
+        name: displayName,
+        // A component with its own screen is opened at that screen, not at
+        // whichever action happened to be listed first.
+        url: deriveScreenUrl(entry, data?.deployedUrls) ?? data?.url,
+        deployedUrls: data?.deployedUrls,
+        lastDeployed: new Date().toISOString(),
+        providesEnvVars: deriveProvidedValues(entry, data?.deployedUrls),
+    };
+}
+
+/** The identity a CREATE must supply; an update inherits it from its entry. */
+export function identityOf(
+    entry: AppBuilderComponentCatalogEntry,
+): Pick<DeployOutcome, 'name' | 'source'> {
+    return {
+        name: entry.name,
+        source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
+    };
 }

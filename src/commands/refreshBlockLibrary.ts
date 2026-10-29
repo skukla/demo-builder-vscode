@@ -16,6 +16,7 @@
  */
 
 import { BaseCommand } from '@/core/base/baseCommand';
+import { reportStep } from '@/core/utils/operationStepChannel';
 import {
     refreshBlockLibraryHeadless,
     type RefreshBlockLibraryHeadlessDeps,
@@ -34,16 +35,18 @@ export class RefreshBlockLibraryCommand extends BaseCommand {
      */
     public helixService?: RefreshBlockLibraryHeadlessDeps['helixService'];
 
-    public async execute(): Promise<void> {
+    public async execute(): Promise<RefreshBlockLibraryHeadlessResult> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
             await this.showWarning('No project loaded.');
-            return;
+            return { success: false, error: 'No project loaded.' };
         }
 
-        // Run the shared, UI-free rebuild core inside the progress notification,
-        // bridging its progress messages to the reporter. The result is captured
-        // from the task (not withProgress's return) so it survives regardless.
+        // Run the shared, UI-free rebuild core inside the progress notification.
+        // Each message arrives with its step: the dashboard's progress modal shows
+        // the step with the message under it; the notification, its one line, the
+        // step (progress vocabulary slice 2, owner 2026-10-16). The result is
+        // captured from the task (not withProgress's return) so it survives regardless.
         let result: RefreshBlockLibraryHeadlessResult = { success: false };
         await this.withProgress('Refreshing block library', async (progress) => {
             result = await refreshBlockLibraryHeadless({
@@ -51,18 +54,22 @@ export class RefreshBlockLibraryCommand extends BaseCommand {
                 context: this.context,
                 logger: this.logger,
                 helixService: this.helixService,
-                onProgress: (message) => progress.report({ message }),
+                onStep: (stage, message) => {
+                    if (!reportStep(stage, message)) progress.report({ message: stage });
+                },
             });
         });
 
         if (result.success) {
             await this.showSuccessMessage('Block library refreshed.');
-            return;
+            return result;
         }
         // The user cancelled the mid-pipeline DA.live re-auth — no error toast.
         if (result.cancelled) {
-            return;
+            return result;
         }
         await this.showError(`Failed to refresh block library: ${result.error || 'Unknown error'}`);
+        // ...and the same reason to whoever is watching a progress modal (PL-59).
+        return result;
     }
 }

@@ -13,6 +13,8 @@
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(),
     getDaLiveAuthService: jest.fn(() => mockDaLiveAuth),
+    // The DA.live session the code removal after a repository delete reads (EDS-67).
+    tryCreateDaLiveTokenProvider: jest.fn(() => ({ getAccessToken: () => mockDaLiveAuth.getAccessToken() })),
 }));
 
 /** The DA.live session: no token by default, so the suites drive the IMS fallback they were written for. */
@@ -32,7 +34,20 @@ jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     DaLiveOrgOperations: jest.fn(() => ({ listOrgSites: mockListOrgSites })),
 }));
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn(() => ({ deleteAllSiteContent: mockDeleteAllSiteContent })),
+    DaLiveContentOperations: jest.fn(() => ({
+        sourceOps: { deleteAllSiteContent: mockDeleteAllSiteContent },
+    })),
+}));
+// The teardown's last step (site permissions and config) is DA.live's own client. Unmocked,
+// `cleanup_dalive_site` made REAL calls to admin.da.live with the fake token, and its 401
+// then sent the token to IMS (measured 2026-10-28 with a fetch probe). Answered here.
+jest.mock('@/features/eds/services/daLive/daLiveConfigService', () => ({
+    DaLiveConfigService: jest.fn(() => ({
+        removeSitePermissions: async () => ({ success: true }),
+        deleteSiteConfig: async () => ({ success: true }),
+    })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: (service: { getAccessToken(): Promise<string | null> }) => ({
         getAccessToken: () => service.getAccessToken(),
     }),
@@ -122,6 +137,8 @@ export function gh(
         deleteRepository?: jest.Mock;
         createFromTemplate?: jest.Mock;
         waitForContent?: jest.Mock;
+        /** The repository's files, read before a delete. Empty by default: not a storefront. */
+        listRepoFiles?: jest.Mock;
     } = {}
 ) {
     const validateToken = overrides.validateThrows
@@ -133,6 +150,8 @@ export function gh(
         tokenService: { validateToken },
         repoOperations: {
             listUserRepositories: jest.fn(async () => overrides.repos ?? []),
+        },
+        repoLifecycle: {
             deleteRepository: overrides.deleteRepository ?? jest.fn(async () => undefined),
             // Shape from GitHubRepo (`types.ts:47-66`): fullName/htmlUrl/defaultBranch,
             // and NO `owner` field — the tool derives the owner from fullName.
@@ -148,6 +167,9 @@ export function gh(
                     isPrivate: false,
                 })),
             waitForContent: overrides.waitForContent ?? jest.fn(async () => true),
+        },
+        fileOperations: {
+            listRepoFiles: overrides.listRepoFiles ?? jest.fn(async () => []),
         },
     };
 }

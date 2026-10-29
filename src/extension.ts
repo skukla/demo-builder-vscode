@@ -10,14 +10,21 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import { adobeCliInstalledUnder } from '@/core/shell/ensureNodeVersion';
+import { listNodeFolderMajors } from '@/core/shell/nodeFolder';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
 import { StateManager } from '@/core/state/stateManager';
+import { createWorkingProjectStateManager } from '@/core/state/workingProjectStateManager';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
+import { withProgressRegister } from '@/core/vscode/progressRegister';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
+import { watchEngineChoice } from '@/features/ai/engine/engineChoiceWatch';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAddedDemoTools } from '@/features/ai/server/addedDemoTools';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
@@ -33,9 +40,13 @@ import { registerAuthTools } from '@/features/ai/server/authTools';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
+import { registerCommerceRestTool } from '@/features/ai/server/commerceRestTool';
+import { registerCommerceRestWriteTool } from '@/features/ai/server/commerceRestWriteTool';
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
+import { registerCopyProjectTool } from '@/features/ai/server/copyProjectTool';
+import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
@@ -43,16 +54,18 @@ import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectToo
 import { registerDemoPackageTools } from '@/features/ai/server/demoPackageTools';
 import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
-import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
+import { registerEventProviderTools } from '@/features/ai/server/eventProviderTools';
+import { registerFinishStorefrontUpdateTool } from '@/features/ai/server/finishStorefrontUpdateTool';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import {
     InExtensionMcpServer,
     type InExtensionMcpServerOptions,
 } from '@/features/ai/server/inExtensionMcpServer';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
+import { withProjectChangeNotice } from '@/features/ai/server/projectChangeNotice';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
-import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
+import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
@@ -64,16 +77,27 @@ import { registerValidateSelectionTool } from '@/features/ai/server/validateSele
 import { registerViewTools } from '@/features/ai/server/viewTools';
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
-import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
+import { ComponentManager } from '@/features/components/services/componentManager';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
+import { bareDefinition, sweepOntoDemoBuilderNode } from '@/features/components/services/demoBuilderNodeSweep';
+import { ensureNode } from '@/features/components/services/nodeEnsure';
+import {
+    ProjectDashboardWebviewCommand,
+    screenAfterClose,
+    shouldAutoReopenProjectsList,
+} from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
+import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
 import { cleanupDaLiveSitesCommand } from '@/features/eds/commands/cleanupDaLiveSites';
 import { manageGitHubReposCommand } from '@/features/eds/commands/manageGitHubRepos';
+import { registerDaLiveForcedSignInWatch } from '@/features/eds/handlers/daLive/daLiveSignedOutNotice';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { registerEwSettingChangeListener } from '@/features/eds/services/ewSettingChangeListener';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { renewPublishKeys } from '@/features/eds/services/pdp/publishKeyRenewalSweep';
+import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import { setThirdPartyToolsResolver } from '@/features/project-creation/services/aiBundle/aiToolingGate';
 import { refreshGlobalMcpIfPresent } from '@/features/project-creation/services/aiBundle/globalMcpRegistration';
@@ -85,9 +109,9 @@ import { registerThirdPartyToolingSettingListener } from '@/features/project-cre
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Project } from '@/types/base';
+import type { AgentWorkingProject } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
-import { AutoUpdater } from '@/utils/autoUpdater';
 
 /**
  * Whether this window should re-home to the projects root on activation.
@@ -105,7 +129,6 @@ export function shouldReHomeToRoot(ws: string | undefined, projectsRoot: string)
 
 let logger: Logger;
 let stateManager: StateManager;
-let autoUpdater: AutoUpdater;
 let externalCommandManager: CommandExecutor;
 let authenticationService: AuthenticationService;
 let daLiveAuthService: DaLiveAuthService;
@@ -243,11 +266,18 @@ export async function activate(context: vscode.ExtensionContext) {
             // newest sweeps sit last so they are the easiest to drop if the upkeep
             // chain ever needs shortening.
             await sweepCommerceSecretStorage(context);
+            // Same job for the DA.live token: out of plaintext globalState and
+            // into SecretStorage, without waiting for the SC to touch DA.live.
+            await migrateDaLiveTokenStorage(context);
             // Manifest write-back migration: load+save any manifest not stamped
             // with MANIFEST_FORMAT_VERSION, so legacy shapes are rewritten on
             // disk instead of converted on every read forever. Must stay IN this
             // sequential chain — it saves whole manifests, same as the others.
             await sweepManifestFormats();
+            // Demo Builder's Node (PR-1a): a release that moved it moves installed
+            // components onto it here, before anyone reaches Start. It reinstalls and
+            // saves whole manifests too, so it belongs in this chain, last.
+            await sweepDemoBuilderNode(context);
         })().catch((error) => {
             logger.warn(`[Activation] Project upkeep sweep failed: ${(error as Error).message}`);
         });
@@ -267,7 +297,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register Sidebar WebviewView EARLY to minimize blank sidebar time
         // The sidebar only needs stateManager and logger to render
-        const sidebarProvider = new SidebarProvider(context, stateManager, logger);
+        const agentCliProbe = {
+            commandExists: (name: string) => ServiceLocator.getCommandExecutor().commandExists(name),
+        };
+        const sidebarProvider = new SidebarProvider(context, stateManager, logger, agentCliProbe);
+        context.subscriptions.push(watchEngineChoice(agentCliProbe));
         context.subscriptions.push(
             vscode.window.registerWebviewViewProvider(sidebarProvider.viewId, sidebarProvider, {
                 webviewOptions: {
@@ -287,13 +321,15 @@ export async function activate(context: vscode.ExtensionContext) {
         //   - a webview transition is in progress (user is mid-navigation), or
         //   - the workspace folder is not a Demo Builder project (the dashboard
         //     was open in a non-project workspace; nothing to reopen toward).
+        //
+        // Configure closing as the last screen opens the dashboard (screenAfterClose).
         BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
-            if (webviewId !== 'demoBuilder.projectDashboard') return;
-            const workspaceFolderPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            const transitionInProgress = BaseWebviewCommand.isWebviewTransitionInProgress();
-            if (shouldAutoReopenProjectsList(workspaceFolderPath, transitionInProgress)) {
-                await vscode.commands.executeCommand('demoBuilder.showProjectsList');
-            }
+            const next = screenAfterClose(webviewId, {
+                workspaceFolderPath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+                transitionInProgress: BaseWebviewCommand.isWebviewTransitionInProgress(),
+                openScreens: BaseWebviewCommand.getActivePanelCount(),
+            });
+            if (next) await vscode.commands.executeCommand(next);
         });
 
         // Initialize external command manager
@@ -395,6 +431,17 @@ export async function activate(context: vscode.ExtensionContext) {
             }),
         );
 
+        // A save made anywhere shows on an open dashboard. An agent's
+        // configure_project changed the store and the Republish tile stayed plain
+        // until the dashboard was reopened (owner, 2026-10-17): only the Configure
+        // screen refreshed it. The status post is cheap; the on-open checks are not
+        // rerun.
+        context.subscriptions.push(
+            stateManager.onProjectChanged(() => {
+                void ProjectDashboardWebviewCommand.pushStatus();
+            }),
+        );
+
         // The publish key's SECOND trigger. The activation run happens above,
         // sequenced behind the AI-bundle sweep; this one fires on sign-in.
         //
@@ -412,6 +459,20 @@ export async function activate(context: vscode.ExtensionContext) {
                 void sweepPublishKeyRenewals(context);
             }),
         );
+
+        // An Adobe sign-in started from another screen (Configure's store discovery)
+        // left an open dashboard saying SIGNED OUT until it was reopened (2026-10-14).
+        context.subscriptions.push(
+            authenticationService.onDidSignIn(() => {
+                // Said once here, so every screen that signs in says it the same way.
+                showSuccessInStatusBar('Signed in to Adobe');
+                void ProjectDashboardWebviewCommand.refreshStatus();
+            }),
+        );
+
+        // A FORCED Adobe sign-in also ends the DA.live sign-in (measured 2026-10-28); the
+        // SC is told at once, on every forced path, and offered the DA.live sign-in.
+        context.subscriptions.push(registerDaLiveForcedSignInWatch(context, authenticationService));
 
         // Register file watchers early (before loading projects)
         // This ensures the initializeFileHashes command exists when we need it
@@ -438,6 +499,14 @@ export async function activate(context: vscode.ExtensionContext) {
             // The SHARED token service: its validation cache is per-instance, so
             // building a fresh one downstream would cost a GitHub round trip.
             githubTokenService: getGitHubServices(context.secrets).tokenService,
+            onReapplied: async (project) => {
+                const current = await stateManager.getCurrentProject();
+                if (current?.path === project.path) {
+                    await sendAuthoringExperienceUpdate(
+                        ProjectDashboardWebviewCommand.authoringUrlFor(project),
+                    );
+                }
+            },
         }),
             // Step 7 of the third-party-tooling item: re-enabling must install.
             registerThirdPartyToolingSettingListener(
@@ -447,9 +516,14 @@ export async function activate(context: vscode.ExtensionContext) {
             ),
         );
 
-        // Initialize auto-updater (but don't check yet - wait for sidebar activation)
-        // Update checks are triggered when the user clicks the sidebar icon
-        autoUpdater = new AutoUpdater(context, logger);
+        // While VS Code stays open, check for updates every four hours, quietly: the check
+        // notifies only when something is waiting (PL-80). The first check runs when the
+        // sidebar opens. Until PL-80 a second updater did this with its own popup.
+        const updateTimer = setInterval(() => {
+            if (!vscode.workspace.getConfiguration('demoBuilder').get<boolean>('autoUpdate', true)) return;
+            void vscode.commands.executeCommand('demoBuilder.checkForUpdates', { background: true });
+        }, TIMEOUTS.AUTO_UPDATE_CHECK_INTERVAL);
+        context.subscriptions.push({ dispose: () => clearInterval(updateTimer) });
 
         // Clean up any stale flag files from previous versions
         await cleanupStaleFlagFiles();
@@ -552,11 +626,12 @@ function registerRuntimeCommands(
         vscode.commands.registerCommand('demoBuilder.showDebugLogs', () => {
             debugLogger.showDebug(false); // Show Debug channel, take focus
         }),
-        vscode.commands.registerCommand('demoBuilder.restartDemo', async () => {
-            await vscode.commands.executeCommand('demoBuilder.stopDemo');
+        vscode.commands.registerCommand('demoBuilder.restartDemo', async (projectPath?: unknown) => {
+            // The project a screen or agent named rides through both halves (AI-15).
+            await vscode.commands.executeCommand('demoBuilder.stopDemo', projectPath);
             // Small delay to ensure clean stop
             await sleep(TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
-            await vscode.commands.executeCommand('demoBuilder.startDemo');
+            await vscode.commands.executeCommand('demoBuilder.startDemo', projectPath);
         }),
         vscode.commands.registerCommand('demoBuilder.openBrowser', async () => {
             const project = await stateManager.getCurrentProject();
@@ -597,7 +672,6 @@ export function deactivate() {
     logger?.info('Adobe Demo Builder extension is deactivating');
 
     // Clean up resources
-    autoUpdater?.dispose();
     inExtensionMcpServer?.dispose();
     stateManager?.dispose();
     externalCommandManager?.dispose();
@@ -676,18 +750,21 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                     .getConfiguration('demoBuilder')
                     .get<boolean>('ai.requireAgentConsent', true) === false,
             trace: agentTrace,
-            registerExtraTools: (mcpServer, scopedProjectDir) => {
-                // Per-connection scope (owner decision 2026-08-28): a session
-                // whose directory sits inside a project acts on THAT project —
-                // reads load it fresh from disk, saves never flip the
-                // dashboard pointer (scopedStateManager). The home chat and
-                // bare clients arrive unscoped and keep pointer semantics.
-                const connState = scopedProjectDir
-                    ? createScopedStateManager(stateManager, scopedProjectDir)
-                    : stateManager;
-                const connCtxFactory = scopedProjectDir
-                    ? () => createHeadlessHandlerContext(context, connState, logger)
-                    : ctxFactory;
+            registerExtraTools: (connectionServer, scopedProjectDir) => {
+                // Each connection has its own working project (AI-15). A session
+                // whose directory sits inside a project starts on THAT project
+                // (owner decision 2026-08-28); any other follows the person's current
+                // project until the agent creates or picks one. Either way its saves
+                // never move the person's pointer to another project
+                // (workingProjectStateManager).
+                const working: AgentWorkingProject = { path: scopedProjectDir };
+                const connState = createWorkingProjectStateManager(stateManager, () => working.path);
+                const connCtxFactory = () => createHeadlessHandlerContext(context, connState, logger, working);
+                // While it follows the person's project, an agent is told when they move
+                // it (AI-15). Every tool below registers through this.
+                const mcpServer = withProjectChangeNotice(connectionServer, working, () =>
+                    stateManager.getCurrentProject(),
+                );
                 registerDescriptorTools(
                     mcpServer,
                     [
@@ -705,6 +782,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAuthTools(mcpServer, connCtxFactory);
                 registerAdobeTools(mcpServer, connCtxFactory);
                 registerCreateProjectTool(mcpServer, connCtxFactory);
+                registerCreateProjectFromFileTool(mcpServer, connCtxFactory);
+                registerCopyProjectTool(mcpServer, connCtxFactory);
                 registerCurrentProjectTool(mcpServer, connCtxFactory, scopedProjectDir);
                 // Same derivation as activate()'s sink wiring — the dir is a
                 // pure function of the extension's log storage.
@@ -716,12 +795,15 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerProjectStatusTool(mcpServer, connState);
                 registerCommerceEndpointsTool(mcpServer, connState);
                 registerCommerceQueryTool(mcpServer, connState);
+                registerCommerceRestTool(mcpServer, connCtxFactory);
+                registerCommerceRestWriteTool(mcpServer, connCtxFactory);
                 registerValidateSelectionTool(mcpServer, connCtxFactory);
                 registerComponentRequirementsTool(mcpServer);
                 registerAdobeResourceTools(mcpServer, connCtxFactory);
-                // I/O Events lifecycle (AB-6) — scoped to the current
-                // project's Console workspace; deletes are consent-gated.
-                registerConfigureProjectTool(mcpServer, connState);
+                // I/O Events (AB-6) — list and delete, scoped to the open
+                // project's Console workspace; the delete is consent-gated.
+                registerEventProviderTools(mcpServer, connCtxFactory);
+                registerConfigureProjectTool(mcpServer, connCtxFactory);
                 registerCloudResourceTools(mcpServer, connCtxFactory);
                 registerStorefrontTools(mcpServer, connCtxFactory);
                 registerSiteTools(mcpServer, connCtxFactory);
@@ -735,11 +817,12 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                         .get(key.slice(lastDot + 1));
                 });
                 registerContentAuthoringTools(mcpServer, connCtxFactory);
-                registerEdsResetTool(mcpServer, connCtxFactory);
+                registerResetProjectTool(mcpServer, connCtxFactory);
                 registerAddedDemoTools(mcpServer, connCtxFactory);
                 registerDemoPackageTools(mcpServer, connCtxFactory);
                 registerDeleteProjectTool(mcpServer, connCtxFactory);
                 registerApplyUpdatesTool(mcpServer, connCtxFactory);
+                registerFinishStorefrontUpdateTool(mcpServer, connCtxFactory);
                 registerViewTools(mcpServer, (commandId) =>
                     Promise.resolve(vscode.commands.executeCommand(commandId)),
                 );
@@ -766,13 +849,14 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
  * two rather than three because the duplicate carries a SIDE EFFECT that is easy
  * to miss: `loadProjectFromPath` defaults to `persistAfterLoad: true`, so each
  * copy re-saves every project and moves `currentProject`. Two copies did that
- * twice per activation.
+ * twice per activation. A sweep that saves only what it changed passes
+ * `persistAfterLoad: false` (the Node sweep).
  */
-async function loadAllProjects(): Promise<Project[]> {
+async function loadAllProjects(options: { persistAfterLoad?: boolean } = {}): Promise<Project[]> {
     const summaries = await stateManager.getAllProjects();
     const projects: Project[] = [];
     for (const summary of summaries) {
-        const project = await stateManager.loadProjectFromPath(summary.path);
+        const project = await stateManager.loadProjectFromPath(summary.path, undefined, options);
         if (project) projects.push(project);
     }
     return projects;
@@ -798,6 +882,21 @@ async function sweepCommerceSecretStorage(context: vscode.ExtensionContext): Pro
         });
     } catch (error) {
         logger.debug(`[Secrets] Sweep skipped: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Move a DA.live token an older build left in globalState into SecretStorage.
+ *
+ * Glue only; the verified write-through lives in `daLiveTokenMigration`, and the
+ * service also runs it on first read, so this only makes it happen sooner. A
+ * keychain that refuses leaves the token where it was and costs nothing else.
+ */
+async function migrateDaLiveTokenStorage(context: vscode.ExtensionContext): Promise<void> {
+    try {
+        await getDaLiveAuthService(context).migrateLegacyToken();
+    } catch (error) {
+        logger.debug(`[DA.live Auth] Token move skipped: ${(error as Error).message}`);
     }
 }
 
@@ -844,6 +943,56 @@ async function sweepManifestFormats(): Promise<void> {
         });
     } catch (error) {
         logger.debug(`[ManifestFormat] Sweep skipped: ${(error as Error).message}`);
+    }
+}
+
+/**
+ * Glue for the Node sweep (demoBuilderNodeSweep.ts, PR-1a step 9): loads every project the
+ * careful way (persistAfterLoad: false, like the manifest sweep), saves through
+ * saveProjectConfigOnly, and is the one place it is shown to the SC: the shared
+ * progress notification while it works, then a status-bar line, or a warning naming
+ * anything that could not move.
+ */
+async function sweepDemoBuilderNode(context: vscode.ExtensionContext): Promise<void> {
+    try {
+        const node = demoBuilderNode();
+        const installer = new ComponentManager(logger, externalCommandManager);
+        const registry = getComponentRegistryManager(context.extensionPath);
+        const result = await sweepOntoDemoBuilderNode({
+            projects: await loadAllProjects({ persistAfterLoad: false }),
+            node,
+            nodeReady: async () => (await listNodeFolderMajors(externalCommandManager)).includes(node)
+                && adobeCliInstalledUnder(externalCommandManager, node),
+            ensureNode: (major) => ensureNode(
+                externalCommandManager,
+                getPrerequisitesManager(context.extensionPath, logger, externalCommandManager),
+                { major, adobeCli: true },
+                logger,
+            ),
+            reinstall: async (componentId, component, major) => {
+                if (!component.path) return 'it has no folder on disk';
+                const definition = (await registry.getComponentById(componentId)) ?? bareDefinition(componentId, component);
+                const installed = await installer.installNpmDependencies(component.path, definition, major);
+                return installed.success ? undefined : (installed.error ?? 'the reinstall failed');
+            },
+            saveProject: (project) => stateManager.saveProjectConfigOnly(project),
+            withProgress: (title, run) => withProgressRegister({ title }, run),
+            log: (line) => logger.info(`[Node] ${line}`),
+            logDetail: (line) => logger.debug(`[Node] ${line}`),
+        });
+        if (!result.ran) return;
+        if (result.nodeError) {
+            void vscode.window.showWarningMessage(`Demo Builder could not prepare Node ${node}. It will try again the `
+                + 'next time VS Code starts. See Debug Logs for details.');
+            return;
+        }
+        vscode.window.setStatusBarMessage(`$(check) Demo Builder now runs on Node ${node}`, TIMEOUTS.STATUS_BAR_SUCCESS);
+        if (result.failed.length > 0) {
+            void vscode.window.showWarningMessage(`Could not move ${result.failed.map((f) => f.component).join(', ')} `
+                + `to Node ${node}. They still run on their old Node. See Debug Logs for details.`);
+        }
+    } catch (error) {
+        logger.debug(`[Node] Sweep skipped: ${(error as Error).message}`);
     }
 }
 

@@ -63,22 +63,273 @@
     padding: 8px;
 }
 
-/* ---- Dashboard integrations summary tile (build zone) ----
- * Shaped exactly like its neighbours (Configure / More) — the dot and count are
- * absolutely positioned overlays, NOT extra inline content, so the tile keeps a
- * neighbour's footprint and the action row stays on one line. Widening the tile
- * is what pushed it to wrap onto its own row. */
-.integrations-tile {
-    position: relative;
+/* The demo setup guide's step (SetupGuideModal): state, title, why, where, actions — each
+   its own paragraph, with room between them, since the SC reads one step at a time. */
+/* The demo setup guide (SetupGuideModal): a two-pane body — every step down the left, the
+   chosen one on the right. The step's buttons live in the dialog footer.
+
+   Type: ONE body size everywhere (the dialog's own 14px) and the step title one size up.
+   Labels are muted, not smaller. The first cut mixed 11px uppercase, 12px, 14px and a 16px
+   heading and the owner read the hierarchy as "really awful" (2026-10-01).
+
+   Spacing is generous on purpose: the SC reads a step, switches to the Admin and comes
+   back, and the tighter cut read as cramped (owner, 2026-10-01). */
+.setup-guide-layout {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
 }
 
-/* Status dot rides the tile's top-right corner. */
-/* POSITION only. Colour, size and the in-progress pulse come from StatusDot;
-   this tile used to restate all three from Spectrum globals, which is how it
-   ended up with a blue dot that never pulsed. */
-.integrations-tile-dot {
-    position: absolute;
-    top: 8px;
-    right: 8px;
+/* The list is wide enough to read its labels whole, and a label may wrap: a list of cut-off
+   titles was "pointless as it is". */
+/* The list and, under it, Apply all (AB-82), with the rule beside both. */
+.setup-guide-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding-right: 24px;
+    border-right: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+/* What acts on the whole list, under it: Check all steps, and Apply all when it would do more
+   than the step's own Apply. Always as tall as both buttons, so Apply all coming and going
+   does not change the dialog's height and re-centre it (release test row 4.19, 2026-10-28). */
+.setup-guide-list-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spectrum-global-dimension-size-100);
+    min-height: calc(2 * var(--spectrum-global-dimension-size-400) + var(--spectrum-global-dimension-size-100));
+}
+
+.setup-guide-rail {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+/* A step in the list: a real button, so it is keyboard-reachable. The shown one is bold with
+   the accent bar the wizard's step strip uses; the only other mark is a check on a done step. */
+.setup-guide-rail-step {
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--spectrum-global-color-gray-800);
+    font: inherit;
+    line-height: 1.4;
+    text-align: left;
+    cursor: pointer;
+}
+
+.setup-guide-rail-step:hover {
+    background: var(--spectrum-global-color-gray-200);
+}
+
+.setup-guide-rail-step--active {
+    border-left-color: var(--spectrum-global-color-blue-500);
+    background: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-900);
+    font-weight: 600;
+}
+
+.setup-guide-rail-step--skipped {
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.setup-guide-rail-mark {
+    display: inline-flex;
+    justify-content: center;
+}
+
+.setup-guide-rail-step--skipped .setup-guide-rail-mark {
+    color: var(--spectrum-global-color-gray-500);
+}
+
+/* A check run: the step being checked shows Spectrum's small progress circle in its mark
+   slot, and a mark the run changes fades in, so the SC watches each step land rather than
+   the whole list jumping at the end (owner, 2026-10-01). The fade is on only once a run has
+   started, so opening the guide does not animate every existing check. Reduced motion
+   switches it off (reset.css). */
+.setup-guide-rail[data-animate] .setup-guide-rail-mark {
+    animation: setup-guide-mark-in var(--spectrum-global-animation-duration-300) ease-out;
+}
+
+@keyframes setup-guide-mark-in {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Every step in one grid cell: the cell is as tall as the tallest, and only the shown step
+   is visible (SetupGuideModal). */
+.setup-guide-panes {
+    display: grid;
+}
+
+.setup-guide-panes > .setup-guide-step {
+    grid-area: 1 / 1;
+}
+
+.setup-guide-step--hidden {
+    visibility: hidden;
+}
+
+/* A step's banner fades in each time its step is shown, not once when the guide opens: every
+   step is drawn from the start, so without this a switch between two finished steps changed
+   nothing on screen and read as the banner never clearing (release test row 4.14, 2026-10-28). */
+.setup-guide-step--hidden .inline-notice {
+    animation: none;
+}
+
+.setup-guide-step {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    min-width: 0;
+}
+
+/* The step's title with its Optional badge beside it, centred on the title's line. */
+.setup-guide-step-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.setup-guide-step-title > h3 {
+    margin: 0;
+}
+
+/* A step's header (`StepHeader`, AB-82): the title, then the house banner for where the step
+   stands, closer to the title than the step's other parts. */
+.setup-guide-step-head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.setup-guide-step-head > .inline-notice {
+    margin: 0;
+}
+
+/* Where / Enter / Then / Why is `ui/FactList` (core/ui/styles/fact-list.css). */
+
+.setup-guide-path {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+}
+
+/* A path segment: a quiet pill at body size, so the path reads as the Admin's own menu. */
+.setup-guide-crumb {
+    padding: 2px 10px;
+    border-radius: 10px;
+    background: var(--spectrum-global-color-gray-200);
+    white-space: nowrap;
+}
+
+/* A step label may take two lines; it must never be cut off. */
+.setup-guide-rail-title {
+    overflow-wrap: anywhere;
+}
+
+.setup-guide-crumb-sep {
+    color: var(--spectrum-global-color-gray-500);
+}
+
+.setup-guide-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* The reason reads a step quieter than the instructions above it. */
+.setup-guide-why {
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* Skip (or Reopen) is the rare action, so it is a quiet link under the step rather than a
+   third footer button. */
+/* Assign products (AB-74): one toolbar line, the list filling the rest of the dialog, one line
+   of counts under it (owner, 2026-10-18: not a list halfway down). The body is height-bounded
+   like Manage APIs, so the list is the one region that scrolls. */
+.assign-products-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: min(640px, calc(100vh - 240px));
+    max-height: 100%;
+    min-height: 0;
+    min-width: 0;
+}
+
+.assign-products-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.assign-filters {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+/* Select all sits at the filters' right edge, level with the pickers. */
+.assign-count {
+    margin-left: auto;
+    padding-bottom: 6px;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.assign-list {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.assign-list-empty {
+    padding: 16px 4px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.assign-counts {
+    display: flex;
+    align-items: center;
+    /* Held when empty, so the table does not resize as a pick starts or ends. */
+    min-height: 32px;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.assign-summary-slot {
+    flex: 1 1 auto;
+    color: var(--spectrum-global-color-gray-800);
+}
+
+.assign-summary {
+    font-size: 13px;
+}
+
+/* One scroller in the dialog, as Manage APIs has: the product list, not the modal body. */
+.modal-body:has(.assign-products-body) {
+    overflow: hidden;
 }
 }

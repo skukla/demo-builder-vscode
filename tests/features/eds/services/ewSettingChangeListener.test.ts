@@ -21,6 +21,11 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
+/** The last status-bar line: a success says so there, a ✅ line that goes by itself (owner, 2026-10-15). */
+const lastStatusBarLine = (): unknown => {
+    const calls = (vscode.window.setStatusBarMessage as jest.Mock).mock.calls;
+    return calls[calls.length - 1]?.[0];
+};
 
 const mockApplyAuthoringExperienceFlip = jest.fn().mockResolvedValue({
     editorPath: 'ok',
@@ -242,11 +247,10 @@ describe('registerEwSettingChangeListener', () => {
         await flushDebounce();
 
         expect(mockApplyAuthoringExperienceFlip).toHaveBeenCalledTimes(2);
-        // Prompt + completion toast.
-        expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(2);
-        expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
-            'Re-applied Experience Workspace config to 2 of 2 projects'
-        );
+        // The prompt is a notification; the completion is a ✅ status-bar line (owner,
+        // 2026-10-15), so only one notification.
+        expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);
+        expect(lastStatusBarLine()).toBe('✅ Re-applied Experience Workspace config to 2 of 2 projects');
     });
 
     it('single affected project → completion toast names it', async () => {
@@ -257,9 +261,7 @@ describe('registerEwSettingChangeListener', () => {
         fireChange('demoBuilder.daLive.authoringExperience');
         await flushDebounce();
 
-        expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
-            'Re-applied Experience Workspace config to solo'
-        );
+        expect(lastStatusBarLine()).toBe('✅ Re-applied Experience Workspace config to solo');
     });
 
     it('debounce coalesces rapid edits into a single handling pass', async () => {
@@ -447,9 +449,7 @@ describe('registerEwSettingChangeListener', () => {
         await flushDebounce();
 
         expect(mockApplyAuthoringExperienceFlip).toHaveBeenCalledTimes(2);
-        expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
-            'Re-applied Experience Workspace config to 1 of 2 projects'
-        );
+        expect(lastStatusBarLine()).toBe('✅ Re-applied Experience Workspace config to 1 of 2 projects');
     });
 
     it('an enumeration failure stays silent rather than prompting about nothing', async () => {
@@ -463,6 +463,61 @@ describe('registerEwSettingChangeListener', () => {
 
         expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
         expect(mockApplyAuthoringExperienceFlip).not.toHaveBeenCalled();
+    });
+
+    it('tells the host about each project it re-applied, so an open dashboard can swap its Author link', async () => {
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Republish');
+        mockApplyAuthoringExperienceFlip
+            .mockRejectedValueOnce(new Error('DA.live 403'))
+            .mockResolvedValueOnce({ editorPath: 'ok', quickEdit: 'ok', configRegen: 'ok' });
+        const onReapplied = jest.fn().mockResolvedValue(undefined);
+        registerEwSettingChangeListener({
+            context: mockContext,
+            stateManager: buildStateManager([
+                { name: 'failed', eds: true },
+                { name: 'flipped', eds: true },
+            ]),
+            logger: mockLogger,
+            githubTokenService: {} as GitHubTokenService,
+            onReapplied,
+        });
+
+        fireChange('demoBuilder.daLive.authoringExperience');
+        await flushDebounce();
+
+        expect(onReapplied).toHaveBeenCalledTimes(1);
+        expect((onReapplied.mock.calls[0][0] as Project).name).toBe('flipped');
+    });
+
+    it('a failing dashboard refresh does not turn a successful re-apply into a failure', async () => {
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Republish');
+        registerEwSettingChangeListener({
+            context: mockContext,
+            stateManager: buildStateManager([{ name: 'justrite', eds: true }]),
+            logger: mockLogger,
+            githubTokenService: {} as GitHubTokenService,
+            onReapplied: jest.fn().mockRejectedValue(new Error('panel gone')),
+        });
+
+        fireChange('demoBuilder.daLive.authoringExperience');
+        await flushDebounce();
+
+        expect(lastStatusBarLine()).toBe('✅ Re-applied Experience Workspace config to justrite');
+    });
+
+    it('re-applies cleanly when no host callback is registered, reporting no failure', async () => {
+        // `onReapplied` is optional. Calling through its absence would throw
+        // after the flip had already succeeded, and the project would be
+        // reported as a failed republish when nothing failed.
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Republish');
+        register(buildStateManager([{ name: 'solo', eds: true }]));
+
+        fireChange('demoBuilder.daLive.authoringExperience');
+        await flushDebounce();
+
+        expect(mockApplyAuthoringExperienceFlip).toHaveBeenCalledTimes(1);
+        expect(mockLogger.warn).not.toHaveBeenCalled();
+        expect(mockLogger.error).not.toHaveBeenCalled();
     });
 
     it('dispose() removes the subscription', () => {

@@ -1,0 +1,126 @@
+/**
+ * Reset's touch on the product pages the overlay published (EDS-26), on reset's own
+ * clients.
+ *
+ * Product pages (`/products/{urlKey}/{sku}`) are not in DA.live, so re-copying the
+ * content never cleared them: after a reset, every product of the OLD catalog still
+ * had a live page. Reset now removes them before the content pipeline runs. The
+ * pipeline's last step pre-warms the current catalog, so a reset ends with product
+ * pages for the current catalog only (`edsResetService.ts`).
+ *
+ * The rules — which paths, the shared-repository refusal, the live-only fallback — are
+ * `storefront/productPageRemoval.ts`. This module supplies reset's side of them:
+ *
+ * - the Helix site is `repoOwner/repoName`;
+ * - the authored pages under `/products` are read from the project's DA.live site,
+ *   folder by folder, and a listing that fails stops the removal;
+ * - "another project" is any other local project on the same repository.
+ *
+ * Never throws; the sentence goes on the progress line, in the log and on the result.
+ *
+ * @module features/eds/services/reset/edsResetProductPages
+ */
+
+import type { TokenProvider } from '../daLive/daLiveOrgOperations';
+import type { DaLiveSourceOperations } from '../daLive/daLiveSourceOperations';
+import type { GitHubTokenService } from '../github/githubTokenService';
+import { HelixService } from '../helix/helixService';
+import type { LeftoverPagesResult } from '../storefront/leftoverPages';
+import { removeProductPages, type ProductPageHelix } from '../storefront/productPageRemoval';
+import { productPageRemovalDepsFor } from '../storefront/projectProductPages';
+import type { EdsResetParams, PageSentence } from './edsResetParams';
+import { RESET_STEP } from '@/core/utils/resetStages';
+import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
+
+/** The clients reset already holds, narrowed to what this step uses. */
+interface ResetClients {
+    daLiveContentOps: Pick<DaLiveSourceOperations, 'listDirectory'>;
+    githubTokenService?: GitHubTokenService;
+    tokenProvider?: TokenProvider;
+}
+
+/**
+ * Before the content is re-copied and the catalog pre-warmed: remove the product pages
+ * the overlay published on this storefront.
+ *
+ * @param params - the reset's parameters: the project and its storefront coordinates
+ * @param context - the reset's logger and state manager
+ * @param clients - the DA.live and token clients reset built
+ * @param report - the reset's progress reporter
+ * @param helixSeam - Helix seam; production builds it from reset's clients
+ * @returns the sentence for the reset's result, a problem unless every page came off live and
+ *   preview; undefined when there were none to remove
+ */
+export async function takeOutProductPages(
+    params: EdsResetParams,
+    context: { logger: Logger; stateManager: StateManager },
+    clients: ResetClients,
+    report: (step: number, message: string) => void,
+    helixSeam?: ProductPageHelix,
+): Promise<PageSentence | undefined> {
+    const { logger, stateManager } = context;
+    const { repoOwner, repoName, daLiveOrg, daLiveSite, project } = params;
+    report(RESET_STEP.clearingOldContent, 'Removing the old product pages');
+    const result = await removeProductPages(
+        { repoOwner, repoName },
+        productPageRemovalDepsFor({
+            projectPath: project.path,
+            target: { repoOwner, repoName, daLiveOrg, daLiveSite },
+            daLive: clients.daLiveContentOps,
+            helix: helixSeam ?? new HelixService(logger, clients.githubTokenService, clients.tokenProvider),
+            stateManager,
+            logger,
+        }),
+    );
+    if (result.status === 'nothing') return undefined;
+    logger.info(`[EdsReset] Product pages: ${result.summary}`);
+    report(RESET_STEP.clearingOldContent, result.summary);
+    return { sentence: result.summary, problem: result.status !== 'removed' };
+}
+
+/**
+ * Put the page sentences reset collected on its result — only the ones there are.
+ *
+ * @param result - the reset's result
+ * @param sentences - what happened to the category pages and to the product pages
+ * @returns the result with `catalogMenu` and `productPages` when they have something to say
+ */
+export function withPageSentences<T extends object>(
+    result: T,
+    sentences: {
+        catalogMenu: PageSentence | undefined;
+        productPages: PageSentence | undefined;
+    },
+): T & { catalogMenu?: string; productPages?: string; pageWarnings?: string[] } {
+    const { catalogMenu, productPages } = sentences;
+    // The same object when there is nothing to add: callers compare the result they got.
+    if (catalogMenu === undefined && productPages === undefined) {
+        return result;
+    }
+    const pageWarnings = [catalogMenu, productPages]
+        .filter((s): s is PageSentence => s?.problem === true)
+        .map((s) => s.sentence);
+    return {
+        ...result,
+        ...(catalogMenu === undefined ? {} : { catalogMenu: catalogMenu.sentence }),
+        ...(productPages === undefined ? {} : { productPages: productPages.sentence }),
+        ...(pageWarnings.length ? { pageWarnings } : {}),
+    };
+}
+
+/**
+ * Put what happened to the pages left over from before the reset (EDS-33) on its
+ * result, when there is something to say: removed, some left, or could not tell.
+ *
+ * @param result - the reset's result
+ * @param leftoverPages - the pipeline's answer; absent when the content was kept
+ * @returns the result with `leftoverPages` unless there were none to remove
+ */
+export function withLeftoverPages<T extends object>(
+    result: T,
+    leftoverPages: LeftoverPagesResult | undefined,
+): T & { leftoverPages?: LeftoverPagesResult } {
+    if (!leftoverPages || leftoverPages.status === 'none') return result;
+    return { ...result, leftoverPages };
+}

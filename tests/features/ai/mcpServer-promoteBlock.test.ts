@@ -27,9 +27,13 @@ const mockUpsertBlockDocPage = jest.fn();
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        appendBlockToLibrary: mockAppendBlockToLibrary,
-        upsertBlockDocPage: mockUpsertBlockDocPage,
+        blockLibOps: {
+            appendBlockToLibrary: mockAppendBlockToLibrary,
+            upsertBlockDocPage: mockUpsertBlockDocPage,
+        },
     })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(),
     createDaLiveTokenProvider: jest.fn(),
 }));
@@ -499,10 +503,18 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         const srcPath = realPath.resolve(__dirname, '../../../src/mcp-server.ts');
         const src = realFs.readFileSync(srcPath, 'utf-8');
         expect(src).toContain('promote_block_to_library');
-        // Must mention "Block changes to push back to source library" — the
-        // canonical phrasing in the generated sync-changes.md skill, so the
-        // tool description and the skill doc describe the operation the same way.
-        expect(src).toMatch(/Block changes to push back to source library/);
+        // Must say "this site's own DA.live block library" — the canonical
+        // phrasing in the generated sync-changes.md skill, so the tool description
+        // and the skill describe the operation the same way. And neither may claim
+        // the block is saved for reuse: it was "push back to source library" until
+        // 2026-10-13, which read as exactly that.
+        expect(src).toMatch(/this site's own DA\.live block library/);
+        const skill = realFs.readFileSync(
+            realPath.resolve(__dirname, '../../../src/features/project-creation/templates/skills/sync-changes.md'),
+            'utf-8',
+        );
+        expect(skill).toMatch(/this site's own DA\.live block library/);
+        expect(src + skill).not.toMatch(/push back to source library/);
     });
 });
 

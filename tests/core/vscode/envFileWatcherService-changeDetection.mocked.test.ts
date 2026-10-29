@@ -291,16 +291,17 @@ describe('apply prompts are re-armed by a new config change', () => {
         expect(shouldShow('Mesh')).toBe(true);
     });
 
-    it('does not touch the restart prompt', () => {
-        // Scoped deliberately: restart is a different concern with its own
-        // trigger, and re-arming it here would reintroduce notification spam.
-        markShown('Storefront');
+    it('re-arms the restart prompt too (PL-76)', () => {
+        // It used to be left alone, to avoid spam. But it was then re-armed only
+        // by the next demo start, so closing it once left a running demo on its
+        // old .env through every later save. One prompt per change, as for the
+        // mesh and storefront.
         commandCallbacks['demoBuilder._internal.markRestartNotificationShown']();
 
         configChanged();
 
         expect(commandCallbacks['demoBuilder._internal.shouldShowRestartNotification']()).toBe(
-            false
+            true
         );
     });
 });

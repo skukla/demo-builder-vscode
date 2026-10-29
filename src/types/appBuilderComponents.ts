@@ -7,14 +7,18 @@
  * its OWN env schema (the data backbone for D2's selection/config UX).
  */
 
-import type { AppBuilderComponentKind } from './base';
+import type { AppBuilderComponentKind, SetupCheckOutcome } from './base';
 import type { AddonSource } from './demoPackages';
 
 /** A single env-var an App Builder component needs or provides, with collection metadata. */
 export interface AppBuilderComponentEnvVar {
     /** Env-var name (e.g. "MESH_ENDPOINT", "ERP_API_KEY"). */
     name: string;
-    /** `secret` → masked input + SecretStorage; `text` → Configure UI → .env. */
+    /**
+     * `text` → the integration's Settings, stored in `componentConfigs[id]`;
+     * `secret` → a masked field, stored in SecretStorage. Both reach the app only
+     * through its deploy's process env.
+     */
     type: 'text' | 'secret';
     /** Human-readable label for the collection UI. */
     label: string;
@@ -22,6 +26,205 @@ export interface AppBuilderComponentEnvVar {
     derivedFrom?: string;
     /** Provided by another appBuilderComponent that declares it in providesEnvVars. */
     providedBy?: string;
+    /**
+     * The value used when nobody typed one. A text var with a default is not
+     * something the add door has to stop for: the app deploys with the default
+     * and the integration's Settings let the SC change it later (the ERP's name).
+     */
+    default?: string;
+}
+
+/** One setting an SC can change, as the Settings modal shows it. */
+export interface ComponentSettingField {
+    name: string;
+    label: string;
+    type: 'text' | 'secret';
+    /** A text setting's current value (typed, else the default). Never set for a secret. */
+    value?: string;
+    /** A secret setting: whether one is stored. The value itself never leaves SecretStorage. */
+    isSet?: boolean;
+    /** No default: the app cannot deploy until someone fills it in. */
+    required: boolean;
+}
+
+/** A setting another component supplies, shown read-only ("ERP address, from ERP"). */
+export interface ComponentConnectedSetting {
+    name: string;
+    label: string;
+    /** The providing component's display name. */
+    from: string;
+    /** The provided value, once the provider is deployed. */
+    value?: string;
+}
+
+/** What one component's Settings modal shows. */
+export interface ComponentSettings {
+    fields: ComponentSettingField[];
+    connected: ComponentConnectedSetting[];
+}
+
+/** One of a component's own web actions, called by POST with no body. */
+export interface WebActionCall {
+    /** The web action, e.g. "admin". */
+    action: string;
+    /** The path under it, e.g. "wipe". */
+    path: string;
+}
+
+/** A check's state as the checklist says it: what it concluded, or that none has run. */
+export type SetupCheckState = SetupCheckOutcome | 'unchecked';
+
+/** How Demo Builder can tell a setup step is done, when it can (`setupChecks.ts`). */
+export type SetupCheck =
+    | 'companies-have-own-catalogs'
+    | 'erp-source-in-website-stock'
+    | 'erp-attributes-exist'
+    | 'erp-confirmed-status'
+    | 'partially-held-status'
+    | 'price-scope-website'
+    | 'payment-on-account-enabled'
+    | 'storefront-returns-enabled'
+    | 'card-payments-enabled';
+
+/**
+ * A setup step's fix that is settings: the `path` = `value` rows the demo setup's Apply writes
+ * through `PUT /V1/system/config` (AB-77). `scope: 'website'` is resolved to the project's
+ * website code when applied; `'default'` writes the default scope. A second catalog entry
+ * declares its own in JSON alone, with no code.
+ */
+export interface SetupConfigFixItem {
+    /** The setting's path, e.g. `catalog/price/scope`. */
+    path: string;
+    /** The value Commerce stores: a string, as the API takes it ("1" for Yes). */
+    value: string;
+    scope: 'default' | 'website';
+    /** The setting as the Admin names it, for what the SC reads: "Catalog Price Scope". */
+    field?: string;
+    /** Each stored value as the Admin shows it: `{ "0": "Global", "1": "Website" }`. */
+    values?: Record<string, string>;
+}
+
+/** A fix that is settings alone (see `SetupConfigFixItem`). */
+export interface SetupConfigFix {
+    kind: 'config';
+    items: SetupConfigFixItem[];
+    /** What stays by hand after the settings are written, said in the preview and the result. */
+    manual?: string;
+}
+
+/**
+ * The fixes that need code: each a handler in `storePreparation/` implementing the same
+ * preview / apply / undo contract as the config fix, so the engine drives them alike.
+ * - `create-erp-attributes`: `erp_owner` and `brand` as Text Fields, then `erp_owner` into
+ *   every attribute set the products use (AB-74's fix).
+ * - `erp-warehouse-in-website-stock`: a source per ERP, a stock for the website, linked.
+ * - `company-shared-catalogs`: a custom shared catalog per company the check finds without one.
+ */
+export type SetupFixHandler = 'create-erp-attributes' | 'erp-warehouse-in-website-stock' | 'company-shared-catalogs';
+
+/** A fix a named handler applies (see `SetupFixHandler`). */
+export interface SetupHandlerFix {
+    kind: 'handler';
+    handler: SetupFixHandler;
+}
+
+/**
+ * Something Demo Builder can DO about a setup step, offered as a confirmed action beside the
+ * check (AB-74, generalized by AB-77): either settings declared as data, or a named handler.
+ * Every fix previews before it writes, records what it changed on the component
+ * (`storePreparation`) and can be undone step by step.
+ */
+export type SetupFix = SetupConfigFix | SetupHandlerFix;
+
+/** How a system is known in its integration's list of systems (see `listedAs`). */
+export interface SystemListing {
+    /** The deploy-time input that carries the id, e.g. "ERP_ID". */
+    envVar: string;
+    /** Which of the integration's adapters talks to it, e.g. "demo-erp". */
+    adapter: string;
+}
+
+/** The picture a setup step carries in the guide; each names a Spectrum workflow icon. */
+export type SetupStepIcon =
+    | 'status'
+    | 'catalog'
+    | 'price'
+    | 'stock'
+    | 'attributes'
+    | 'hold'
+    | 'credit';
+
+/**
+ * One thing an SC prepares by hand for a demo (see `setupSteps`).
+ *
+ * `where` is the whole instruction in one sentence — what the MCP tool prints and what
+ * the guide falls back to. The structured fields (2026-10-01, owner: the guide read as
+ * "crowded and too verbose") let the guide draw the Admin path as breadcrumbs, the
+ * values to type as copyable pills and the follow-up as one line, with `why` folded away.
+ */
+export interface SetupStep {
+    /** Stable key the project records the step's state under. */
+    id: string;
+    /** What to do, as an instruction. */
+    title: string;
+    /** Two or three words for the step list, where the title would be cut off. */
+    label?: string;
+    /** Why it matters, in one sentence. */
+    why: string;
+    /** Where in Commerce Admin it is done, as the menu path. */
+    where: string;
+    /** The Admin menu path, one segment per entry (`["Stores", "Settings", "Order Status"]`). */
+    path?: string[];
+    /** The exact values the SC types or picks, each shown as a copyable pill. */
+    enter?: string[];
+    /** What to do after the values are in, in one sentence. */
+    then?: string;
+    /** The step's picture in the guide. */
+    icon?: SetupStepIcon;
+    /** A check Demo Builder can run; absent = the SC marks it done. */
+    check?: SetupCheck;
+    /** What Demo Builder can do itself when the check finds the step undone (AB-74). */
+    fix?: SetupFix;
+    /**
+     * Only some demos need it (card payments, 2026-10-02). Still listed, checked and marked,
+     * but an open optional step is not left to do: it counts in no "steps left" (`isLeftToDo`).
+     */
+    optional?: boolean;
+}
+
+/** One demo setup step as the flyout shows it (AB-26x). */
+export interface SetupChecklistItem {
+    id: string;
+    title: string;
+    why: string;
+    where: string;
+    /** The structured form of `where`, when the catalog gives one (see `SetupStep`). */
+    label?: string;
+    path?: string[];
+    enter?: string[];
+    then?: string;
+    icon?: SetupStepIcon;
+    /** Only some demos need it (see `SetupStep`); absent on a step every demo needs. */
+    optional?: boolean;
+    state: 'open' | 'done' | 'dismissed';
+    /** What the last check found, when one ran. */
+    note?: string;
+    /** What that check concluded, when one ran. */
+    lastCheck?: SetupCheckOutcome;
+    /**
+     * The check's state, said outright (AB-77 fix): passed, failed, unknown (it could not tell,
+     * and the step is then NEVER read as done, whatever was saved) or unchecked (no check has
+     * run). On every item `setupChecklistOf` builds.
+     */
+    checkState?: SetupCheckState;
+    /** Demo Builder can check this one itself. */
+    checkable: boolean;
+    /** What Demo Builder can do about it itself (see `SetupStep`). */
+    fix?: SetupFix;
+    /** Demo Builder can apply this one itself (the demo setup's Apply, AB-77): it declares a fix. Set on every item `setupChecklistOf` builds. */
+    applicable?: boolean;
+    /** Demo Builder applied the fix and recorded it, so it can be undone (AB-74, AB-77). */
+    fixApplied?: boolean;
 }
 
 /** A pre-built appBuilderComponent catalog entry. */
@@ -51,14 +254,11 @@ export interface AppBuilderComponentCatalogEntry {
      */
     lifecycle?: 'deploy-only' | 'app-management';
     /**
-     * Node.js MAJOR version this app's install/build/deploy must run under
-     * (e.g. `"24"`). The add door ensures it via fnm before installing —
-     * measured 2026-08-27: the starter kit ships `.npmrc engine-strict` with
-     * `engines: node ^24.0.0`, so npm under an older node refuses outright.
-     * The graphical prerequisites step cannot know this (integrations are
-     * selected after it runs, and the dashboard/MCP add paths never pass it),
-     * so the add door is the one chokepoint every path shares. Omitted = the
-     * executor's default node.
+     * Node.js MAJOR version a CUSTOM integration installs and deploys on, set at the
+     * add door from its own repo's `engines.node` when that range excludes Demo
+     * Builder's Node (`withCustomIntegrationNode`, PR-1a). Bundled catalog entries
+     * never carry it: their ranges are part of the generated Demo Builder Node, and
+     * the catalog JSON and its schema have no such field. Omitted = Demo Builder's Node.
      */
     nodeVersion?: string;
     /**
@@ -77,6 +277,76 @@ export interface AppBuilderComponentCatalogEntry {
      * loader's source recognition.
      */
     seed?: boolean;
+    /**
+     * For `kind: 'system'` only: the id of the integration that brings this
+     * system. Adding the integration adds and deploys the system first; in a
+     * project the two are linked (`appBuilderComponentLinks`), and removing
+     * either removes both (decision 2). The system is never offered alone.
+     */
+    boundTo?: string;
+    /**
+     * Set on a SECOND copy of a catalog entry (`demo-erp-2`): the entry it was made
+     * from. Never written in the catalog JSON — `catalogEntryFor` sets it, and the
+     * add persists it as the component's `catalogId`. Every "which kind is this"
+     * question asks `entry.catalogId ?? entry.id`.
+     */
+    catalogId?: string;
+    /**
+     * kind 'system' only: what kind of system it is ("ERP"), shown as the badge
+     * on its card. The SC names the system; the type says what it is.
+     */
+    systemType?: string;
+    /**
+     * The env var whose value NAMES this component's row (the ERP's row reads
+     * "Acme ERP", or whatever the SC typed; the ERP integration's row reads its
+     * own name, "ERP Integration" by default). Absent = the entry's `name`.
+     */
+    nameFromEnvVar?: string;
+    /**
+     * What an SC prepares in Commerce by hand for this component's demo, shown as a
+     * checklist on its tile (AB-26x, owner 2026-09-25). Demo setup, not integration
+     * code: the integration itself carries no setup steps.
+     */
+    setupSteps?: SetupStep[];
+    /**
+     * A screen this component serves from one of its own web actions, opened by
+     * a link that carries a key Demo Builder generates (the ERP; see
+     * `systemScreen.ts` for why it cannot use the static site).
+     */
+    screen?: {
+        /** The web action that serves the page, e.g. "screen". */
+        action: string;
+        /** The deploy-time input that carries the key, e.g. "ERP_SCREEN_KEY". */
+        keyEnvVar: string;
+    };
+    /**
+     * kind 'system' only: the call that deletes the system's records (the ERP's
+     * `POST admin/wipe`). Removal makes it before the undeploy, while the action
+     * still exists: an undeploy removes code, not the workspace database, so
+     * without it a removed system's records stay there with nothing left to
+     * reach them.
+     */
+    wipe?: WebActionCall;
+    /**
+     * Demo Builder fills the system this integration serves from Commerce once the
+     * Commerce install SUCCEEDS on an add (`fillErpForProject`), and on "Load demo
+     * data". Filling is demo setup, so it is Demo Builder's, not the integration's
+     * (AB-26y, 2026-09-27). A failure never fails the deploy; the line says why.
+     */
+    fillsSystem?: boolean;
+    /**
+     * kind 'integration' only: a project holds it once. Adding it again is refused
+     * rather than made a numbered copy (`copyForAdd`); its card adds more of the system
+     * it serves instead ("Add another ERP", AB-16), each named by the system's `listedAs`.
+     */
+    addOnce?: boolean;
+    /**
+     * kind 'system' only: its integration serves a LIST of these systems, keyed by id
+     * (the ERP list, `erpList.ts`). The deploy tells each system its id through `envVar`:
+     * the id derived from the system's name when it was added (`listId` on its record,
+     * AB-51).
+     */
+    listedAs?: SystemListing;
     /** Pre-built source repo (owner/repo/branch). */
     source: AddonSource;
     /** Backend ids this appBuilderComponent fits (omitted/empty = any backend). */

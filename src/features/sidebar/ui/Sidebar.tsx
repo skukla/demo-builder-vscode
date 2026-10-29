@@ -24,8 +24,6 @@ export interface SidebarProps {
     context: SidebarContext;
     /** Callback for navigation actions */
     onNavigate: (target: string) => void;
-    /** Callback for back navigation */
-    onBack?: () => void;
     /** Callback for creating a new project */
     onCreateProject: () => void;
     /** Callback for opening tools */
@@ -41,16 +39,8 @@ export interface SidebarProps {
     /** Callback to show the prompt picker — Prompts button in AiZone. */
     onShowPrompts?: () => void;
     onNewAiChat?: () => void;
-    /** Callback to start demo */
-    onStartDemo?: () => void;
-    /** Callback to stop demo */
-    onStopDemo?: () => void;
-    /** Callback to open dashboard */
-    onOpenDashboard?: () => void;
-    /** Callback to open configure */
-    onOpenConfigure?: () => void;
-    /** Callback to check for updates */
-    onCheckUpdates?: () => void;
+    /** Opens Claude Code's picker of earlier chats — a Chat menu item (AI-4b). */
+    onPickAiChat?: () => void;
 }
 
 /**
@@ -59,7 +49,6 @@ export interface SidebarProps {
 export function Sidebar({
     context: _context,
     onNavigate: _onNavigate,
-    onBack: _onBack,
     onCreateProject: _onCreateProject,
     onOpenTools,
     onOpenHelp,
@@ -68,11 +57,7 @@ export function Sidebar({
     onOpenAiChat,
     onShowPrompts,
     onNewAiChat,
-    onStartDemo: _onStartDemo,
-    onStopDemo: _onStopDemo,
-    onOpenDashboard: _onOpenDashboard,
-    onOpenConfigure: _onOpenConfigure,
-    onCheckUpdates: _onCheckUpdates,
+    onPickAiChat,
 }: SidebarProps) {
     const showAiZone = onOpenAiChat && onShowPrompts;
     return (
@@ -103,6 +88,7 @@ export function Sidebar({
                     onOpenAiChat={onOpenAiChat}
                     onShowPrompts={onShowPrompts}
                     onNewAiChat={onNewAiChat}
+                    onPickAiChat={onPickAiChat}
                 />
             )}
             <UtilityBar

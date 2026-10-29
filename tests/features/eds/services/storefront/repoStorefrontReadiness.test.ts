@@ -20,6 +20,10 @@
  * The repo that prompted this was NOT empty — it had 53 blocks — so emptiness
  * detection alone would have missed it. That is why the canonical-file check
  * carries the weight here.
+ *
+ * The canonical files are the ones setup needs. `scripts/delayed.js` was one until
+ * 2026-10-29: Adobe's B2B template removed it (2026-07-30), so a B2B storefront read as
+ * "not a storefront", and the smart 404 script moved to `404.html`, which is one now.
  */
 
 import { classifyRepoForStorefront } from '@/features/eds/services/storefront/repoStorefrontReadiness';
@@ -46,7 +50,7 @@ function fileOps(
     } as GithubFake;
 }
 
-const CANONICAL = ['scripts/scripts.js', 'scripts/delayed.js', 'head.html'];
+const CANONICAL = ['scripts/scripts.js', '404.html', 'head.html'];
 
 describe('classifyRepoForStorefront', () => {
     beforeEach(() => jest.clearAllMocks());
@@ -84,7 +88,7 @@ describe('classifyRepoForStorefront', () => {
 
         assertKind(result, 'not-a-storefront');
         expect(result.missing).toEqual(
-            expect.arrayContaining(['scripts/scripts.js', 'scripts/delayed.js'])
+            expect.arrayContaining(['scripts/scripts.js', '404.html'])
         );
         expect(result.missing).not.toContain('head.html');
     });
@@ -106,7 +110,7 @@ describe('classifyRepoForStorefront', () => {
         // An unreachable GitHub must never read as "empty" — that answer would
         // authorize a destructive reset on a repo we could not see.
         const result = await classifyRepoForStorefront(
-            fileOps(CANONICAL, { throwOn: 'scripts/delayed.js' }),
+            fileOps(CANONICAL, { throwOn: '404.html' }),
             'skukla',
             'b2b-tester',
             logger
@@ -146,7 +150,7 @@ describe('classifyRepoForStorefront', () => {
         // already return content. Requiring every probe to agree is what stops that
         // from reading as `empty` and authorizing a reset over the new content.
         const result = await classifyRepoForStorefront(
-            fileOps(['scripts/scripts.js', 'head.html'], { emptyRepoOn: 'scripts/delayed.js' }),
+            fileOps(['scripts/scripts.js', 'head.html'], { emptyRepoOn: '404.html' }),
             'skukla',
             'racing',
             logger

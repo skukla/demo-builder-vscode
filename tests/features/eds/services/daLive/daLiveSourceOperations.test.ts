@@ -185,6 +185,17 @@ describe('DaLiveSourceOperations', () => {
             await expect(data.text()).resolves.toBe('<p>hello</p>');
         });
 
+        it('sends a sheet as JSON when the caller names that type (EDS-61)', async () => {
+            // The shape `createJsonSpreadsheet` posts: a JSON blob under `data` at <path>.json.
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
+
+            await service.createSource('org', 'site', '/list.json', '{"data":[]}', { contentType: 'application/json' });
+
+            const data = (sentInit().body as FormData).get('data') as Blob;
+            expect(data.type).toBe('application/json');
+            await expect(data.text()).resolves.toBe('{"data":[]}');
+        });
+
         it('omits the overwrite field unless it was asked for', async () => {
             apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
 

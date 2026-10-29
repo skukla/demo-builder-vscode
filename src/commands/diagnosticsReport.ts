@@ -12,12 +12,15 @@
 
 import { claudeFootprintLines, type ClaudeCodeFootprint } from './claudeCodeFootprint';
 import { maskEmail } from '@/core/utils/maskEmail';
-import type { SamplePdp } from '@/features/eds/services/catalogPrewarmService';
+import type { SamplePdp } from '@/features/eds/services/catalogSampleSku';
 import { type ConfigServiceProbeResult } from '@/features/eds/services/configService/configServiceProbe';
-import { type CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 import type { CredentialProbeResult } from '@/features/eds/services/github/githubCredentialProbe';
 import { describeScope } from '@/features/eds/services/storefront/servedStorefrontConfig';
 import type { StorefrontProbeResult } from '@/features/eds/services/storefront/storefrontProbe';
+import {
+    storefrontReportLines,
+    type StorefrontReport,
+} from '@/features/eds/services/storefront/storefrontReport';
 
 // Diagnostic Type Definitions
 export interface SystemInfo {
@@ -146,12 +149,6 @@ export interface DiagnosticsReport {
     /** Absent when no EDS project is open — there is no site config to probe. */
     configService?: ConfigServiceProbeResult;
     /**
-     * Whether the shared Commerce credential service is configured and serving.
-     * Always present: it is a global capability, not a per-project one, so a user
-     * with no project open can still find out why sample-data import is missing.
-     */
-    credentialService?: CredentialServiceProbeResult;
-    /**
      * What the storefront is actually SERVING, as opposed to what the creating run
      * attempted. Absent when no EDS project is open.
      */
@@ -162,6 +159,12 @@ export interface DiagnosticsReport {
      * sampled.
      */
     storefrontScope?: StorefrontScopeReport;
+    /**
+     * Where the storefront comes from and what Demo Builder wrote into it (EDS-13f):
+     * the storefront report's own computation. Absent when
+     * no EDS project is open.
+     */
+    storefrontOrigin?: StorefrontReport;
     /**
      * Claude Code's own `~/.claude` disk footprint — measured on demand because
      * it grows ~4 GB/year with nothing reporting it, and it sits beside our
@@ -270,7 +273,7 @@ function storefrontLines(probe: StorefrontProbeResult, scope?: StorefrontScopeRe
         lines.push(`  Site: unreachable${probe.site.status ? ` (HTTP ${probe.site.status})` : ''}`);
     } else {
         lines.push('  Site: reachable');
-        lines.push(`  Smart 404 handler (delayed.js): ${mark(probe.smart404Snippet)}`);
+        lines.push(`  Smart 404 handler (404.html): ${mark(probe.smart404Snippet)}`);
         lines.push(`  Eager redirect (404.html): ${mark(probe.eagerRedirect)}`);
         if (probe.pdp) {
             // The SKU is printed so the reader can repeat the request by hand —
@@ -308,6 +311,14 @@ function storefrontLines(probe: StorefrontProbeResult, scope?: StorefrontScopeRe
     return lines;
 }
 
+/** The storefront report as a Diagnostics section: its own lines under its own headings (one computation, decision 8). */
+function storefrontOriginLines(report: StorefrontReport): string[] {
+    const body = storefrontReportLines(report).map((line) =>
+        line.startsWith('## ') ? `  ${line.slice(3)}` : `    ${line}`,
+    );
+    return ['', 'Storefront origin:', ...body];
+}
+
 /**
  * Report whether the shared PDP action can read this site's key.
  *
@@ -337,35 +348,6 @@ function describeActionKey(
         '    Fix: run "Demo Builder: Repair Site Configuration". If that does not help, ' +
             'the deployed ENCRYPTION_KEY no longer matches the one the keys were written with.',
     ];
-}
-
-/**
- * The shared Commerce credential service.
- *
- * Reports whether one is configured and whether it will serve THIS user — four
- * states that are otherwise indistinguishable from the import screen, where all
- * of them end at "add a client id and secret".
- *
- * The endpoint URL is never printed: it is an internal Runtime address, and this
- * report gets pasted into tickets.
- */
-function credentialServiceLines(probe: CredentialServiceProbeResult): string[] {
-    const lines = ['', 'Commerce credential service (shared):'];
-
-    if (!probe.configured) {
-        lines.push('  Configured: no');
-        lines.push(`  \u2192 ${probe.verdict}`);
-        return lines;
-    }
-
-    lines.push(`  Configured: yes${probe.orgId ? ` (org ${probe.orgId})` : ''}`);
-    if (probe.endpoint?.error) {
-        lines.push(`  Endpoint: unreachable (${probe.endpoint.error})`);
-    } else if (probe.endpoint?.httpStatus !== undefined) {
-        lines.push(`  Endpoint: HTTP ${probe.endpoint.httpStatus}`);
-    }
-    lines.push(`  \u2192 ${probe.verdict}`);
-    return lines;
 }
 
 function configServiceLines(probe: ConfigServiceProbeResult): string[] {
@@ -564,11 +546,11 @@ export function buildSummaryLines(report: DiagnosticsReport): string[] {
         ...credentialLines(report.githubCredential),
     ];
 
-    if (report.credentialService) lines.push(...credentialServiceLines(report.credentialService));
     if (report.configService) lines.push(...configServiceLines(report.configService));
     if (report.storefront) {
         lines.push(...storefrontLines(report.storefront, report.storefrontScope));
     }
+    if (report.storefrontOrigin) lines.push(...storefrontOriginLines(report.storefrontOrigin));
     if (report.claudeCode) lines.push(...claudeFootprintLines(report.claudeCode));
     lines.push('', 'Use VS Code\'s "Set Log Level..." command to see debug/trace details');
     return lines;

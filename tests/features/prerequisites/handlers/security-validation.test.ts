@@ -32,6 +32,13 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
+// The per-Node check also asks whether the tool's file sits beside that Node.
+// Default yes, so a check command's exit code decides, as it did before.
+jest.mock('@/core/shell/ensureNodeVersion', () => ({
+    ...jest.requireActual('@/core/shell/ensureNodeVersion'),
+    toolInstalledUnder: jest.fn(() => Promise.resolve(true)),
+}));
+
 // Mock validateNodeVersion to track calls. `...actual` is deliberate: the suite
 // asserts on CALLS while still running the real validator, so only that one
 // export is wrapped.

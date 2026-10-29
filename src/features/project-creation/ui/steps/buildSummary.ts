@@ -12,9 +12,12 @@
 
 import type { SummaryRow, SummaryGroup } from '../components/BuildYourProjectSummary';
 import { commerceSectionStates, ROW_LABELS } from './commerceSections';
+import { isSetInConfigure } from './editLocks';
 import { STOREFRONT_SECTION_TITLES } from './storefrontSections';
 import { isAdobeSignedIn, meshComponentForStack } from './tileStatus';
+import { ACCS_STORE_VIEW_CODE, PAAS_STORE_VIEW_CODE } from '@/core/config/envVarKeys';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { isAlwaysIncludedBlockLibrary } from '@/features/components/services/blockLibraryLoader';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { AddedDemo } from '@/types/projectFile';
@@ -52,6 +55,9 @@ export function commerceSummaryGroup(state: WizardState): SummaryGroup {
     const isAccs = state.selectedBackend === ACCS_BACKEND;
     const signedIn = isAdobeSignedIn(state);
     const sectionStates = commerceSectionStates(state, { isAccs, signedIn });
+    if (isSetInConfigure(state)) {
+        return { heading: 'Commerce', rows: editingRows(state, sectionStates) };
+    }
     const committed = new Set(state.committedCommerceSteps ?? []);
     const rows: SummaryRow[] = sectionStates.map((s) => {
         const done = s.status === 'done' && committed.has(s.id);
@@ -61,9 +67,41 @@ export function commerceSummaryGroup(state: WizardState): SummaryGroup {
 }
 
 /**
+ * Edit, before the backend or package changes: the project already has every
+ * Commerce setting. The rows read what it has, not what was clicked past (going
+ * Back cleared that, and a working project read "Not set"), and the three settings
+ * rows are added here because their steps are not in Edit's strip (owner,
+ * 2026-10-17).
+ */
+function editingRows(
+    state: WizardState,
+    sectionStates: ReturnType<typeof commerceSectionStates>,
+): SummaryRow[] {
+    const rows: SummaryRow[] = sectionStates.map((s) => {
+        const done = s.status === 'done';
+        return { label: ROW_LABELS[s.id], value: done ? s.value : undefined, done };
+    });
+    const settings: SummaryRow[] = [
+        { label: ROW_LABELS.connection, value: 'Connected', done: true },
+        { label: ROW_LABELS['business-structure'], value: storeViewCodeOf(state) ?? 'Selected', done: true },
+        { label: ROW_LABELS.catalog, value: 'Configured', done: true },
+    ];
+    // Before Datapacks, the last row, as in the strip they came from.
+    rows.splice(rows.length - 1, 0, ...settings);
+    return rows;
+}
+
+/** The store view code the project records, under either backend's name for it. */
+function storeViewCodeOf(state: WizardState): string | undefined {
+    const configs = state.componentConfigs?.[state.selectedBackend ?? ''];
+    const code = configs?.[ACCS_STORE_VIEW_CODE] ?? configs?.[PAAS_STORE_VIEW_CODE];
+    return typeof code === 'string' && code !== '' ? code : undefined;
+}
+
+/**
  * The Storefront group: mirrors the Storefront sub-steps the way the Commerce group
- * mirrors its sub-steps — Accounts (both services connected), Repository, Code Sync,
- * and Block Libraries. Each row shows ✓ + value once that sub-step's PERSISTED state
+ * mirrors its sub-steps — Accounts (both services connected), Repository and Block
+ * Libraries. Each row shows ✓ + value once that sub-step's PERSISTED state
  * is satisfied (Storefront has no commit-gating, so no Continue-press is required).
  * The chosen frontend isn't a sub-step — it lives in the architecture line above.
  */
@@ -72,9 +110,12 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
     const accountsDone =
         Boolean(eds?.githubAuth?.isAuthenticated) && Boolean(eds?.daLiveAuth?.isAuthenticated);
     const repoDone = state.storefrontRepoValid === true;
-    const codeSyncDone = state.storefrontCodeSyncValid === true;
-    const libCount =
-        (state.selectedBlockLibraries?.length ?? 0) + (state.customBlockLibraries?.length ?? 0);
+    // What the picker shows: the always-included library is kept out of it, though a
+    // built project records it, so Edit counted 2 beside 1 card (owner, 2026-10-17).
+    const chosen = (state.selectedBlockLibraries ?? []).filter(
+        (id) => !isAlwaysIncludedBlockLibrary(id),
+    );
+    const libCount = chosen.length + (state.customBlockLibraries?.length ?? 0);
 
     const rows: SummaryRow[] = [
         // An added demo names itself first (D21): the card is far away by now.
@@ -90,15 +131,6 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
             done: repoDone && Boolean(eds?.repoName),
         },
     ];
-    // Code Sync only applies to a NEW repo (mirrors storefrontSectionOrder); an existing
-    // repo has no Code Sync sub-step, so omit the row.
-    if (eds?.repoMode === 'new') {
-        rows.push({
-            label: STOREFRONT_SECTION_TITLES['code-sync'],
-            value: codeSyncDone ? 'Verified' : undefined,
-            done: codeSyncDone,
-        });
-    }
     rows.push({
         label: STOREFRONT_SECTION_TITLES['block-libraries'],
         value: libCount > 0 ? `${libCount} selected` : undefined,
@@ -131,12 +163,17 @@ export function integrationsSummaryGroup(
     const catalog = getAvailableAppBuilderComponents(
         stack?.backend ?? '',
         stack?.frontend ?? '',
-    ).filter((entry) => entry.kind === 'integration');
-    const rows: SummaryRow[] = resolveIntegrationRows(state, meshComponent, catalog).map((row) => ({
-        label: row.name,
-        value: row.needsSetup ? 'Needs setup' : 'Ready',
-        done: !row.needsSetup,
-    }));
+    ).filter((entry) => entry.kind === 'integration' || entry.kind === 'system');
+    // The system that comes with an integration (the ERP) is its own row: the
+    // summary names everything the build will deploy (decision 2).
+    const rows: SummaryRow[] = resolveIntegrationRows(state, meshComponent, catalog).flatMap((row) => {
+        const own: SummaryRow = {
+            label: row.name,
+            value: row.needsSetup ? 'Needs setup' : 'Ready',
+            done: !row.needsSetup,
+        };
+        return row.companion ? [own, { ...own, label: row.companion }] : [own];
+    });
     return { heading: 'Integrations', rows };
 }
 

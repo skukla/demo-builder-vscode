@@ -96,7 +96,7 @@ describe('uninstallAppManagementApp', () => {
     it('starts the uninstall with the FULL spec-required body, then clears both records', async () => {
         const client = makeClient();
         const result = await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeDeps(client)
         );
@@ -132,7 +132,7 @@ describe('uninstallAppManagementApp', () => {
         });
 
         const result = await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeDeps(client)
         );
@@ -145,7 +145,7 @@ describe('uninstallAppManagementApp', () => {
     it('skips with no app-management URL — never deployed means nothing installed', async () => {
         const client = makeClient();
         const result = await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             { 'starter-kit/info': `${NS_BASE}/starter-kit/info` },
             makeDeps(client)
         );
@@ -168,7 +168,7 @@ describe('uninstallAppManagementApp', () => {
         });
 
         const result = await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeDeps(client)
         );
@@ -193,7 +193,7 @@ describe('uninstallAppManagementApp', () => {
         });
 
         const result = await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeDeps(client)
         );
@@ -211,7 +211,7 @@ describe('uninstallAppManagementApp', () => {
         });
 
         const result = await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeDeps(client)
         );
@@ -232,7 +232,7 @@ describe('uninstallAppManagementApp', () => {
             logger: createMockLogger({ warn }),
         });
 
-        const result = await uninstallAppManagementApp(paasProject(), DEPLOYED_URLS, deps);
+        const result = await uninstallAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
 
         expect(result.status).toBe('uninstalled');
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('association'));
@@ -242,19 +242,31 @@ describe('uninstallAppManagementApp', () => {
         const client = makeClient();
         const deps = makeDeps(client, { getAuth: jest.fn().mockResolvedValue(undefined) });
 
-        const result = await uninstallAppManagementApp(paasProject(), DEPLOYED_URLS, deps);
+        const result = await uninstallAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
 
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('No Adobe sign-in');
         expect(client.startUninstallation).not.toHaveBeenCalled();
     });
+
+    it('names the UNINSTALL call in the no-sign-in refusal', async () => {
+        const deps = makeDeps(makeClient(), { getAuth: jest.fn().mockResolvedValue(undefined) });
+
+        const result = await uninstallAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
+
+        expect(result.detail).toBe(
+            'No Adobe sign-in is available to authenticate the uninstall call. ' +
+                APP_MANAGEMENT_HANDS_BACK
+        );
+    });
+
     it('constructs the real client from the derived base URL and the resolved auth', async () => {
         const constructed = AppManagementClient as unknown as jest.Mock;
         constructed.mockReset();
         constructed.mockImplementation(() => makeClient());
         const deps = makeDeps(makeClient(), { clientFactory: undefined });
 
-        const result = await uninstallAppManagementApp(paasProject(), DEPLOYED_URLS, deps);
+        const result = await uninstallAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
 
         expect(result.status).toBe('uninstalled');
         expect(constructed).toHaveBeenCalledWith(`${NS_BASE}/app-management`, {
@@ -270,7 +282,7 @@ describe('uninstallAppManagementApp', () => {
             componentSelections: {},
         });
 
-        const result = await uninstallAppManagementApp(project, DEPLOYED_URLS, makeDeps(client));
+        const result = await uninstallAppManagementApp(project, 'app', DEPLOYED_URLS, makeDeps(client));
 
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('no Commerce backend');
@@ -285,7 +297,7 @@ describe('uninstallAppManagementApp', () => {
             adobe: { ...base.adobe, workspaceName: undefined },
         });
 
-        const result = await uninstallAppManagementApp(project, DEPLOYED_URLS, makeDeps(client));
+        const result = await uninstallAppManagementApp(project, 'app', DEPLOYED_URLS, makeDeps(client));
 
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('Adobe context is missing');
@@ -299,7 +311,7 @@ describe('uninstallAppManagementApp', () => {
         });
 
         const result = await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeDeps(client)
         );
@@ -322,7 +334,7 @@ describe('uninstallAppManagementApp', () => {
         });
 
         const result = await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeDeps(client)
         );
@@ -351,7 +363,7 @@ describe('uninstallAppManagementApp', () => {
         });
 
         await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeDeps(client, { onProgress })
         );
@@ -369,7 +381,7 @@ describe('uninstallAppManagementApp', () => {
         });
 
         const result = await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeDeps(client)
         );
@@ -388,7 +400,7 @@ describe('uninstallAppManagementApp', () => {
         });
 
         const result = await uninstallAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeDeps(client)
         );

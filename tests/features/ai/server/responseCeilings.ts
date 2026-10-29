@@ -51,6 +51,47 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'must raise this with it.',
     },
 
+    write_commerce_rest: {
+        bytes: 31_000,
+        why:
+            'ENFORCED like run_commerce_rest: the shared client cuts the body at 30,000 characters ' +
+            'and declares the cut. A write answers the record it changed (2026-09-24).',
+    },
+    run_erp_rest: {
+        bytes: 31_000,
+        why:
+            'ENFORCED: the handler cuts the ERP answer at 30,000 characters and declares the cut ' +
+            '(an orders or products list can be long). 2026-09-24.',
+    },
+    write_erp_rest: {
+        bytes: 31_000,
+        why: 'ENFORCED like run_erp_rest; a write answers the record it changed. 2026-09-24.',
+    },
+    list_runtime_activations: {
+        bytes: 12_000,
+        why:
+            'BOUNDED by the CLI: at most 50 rows, each five short fields (about 180 bytes on the ' +
+            'live shape read 2026-09-24), so 50 rows stay under 10,000 bytes.',
+    },
+    read_runtime_activation: {
+        bytes: 40_000,
+        why:
+            'ENFORCED: log lines are compacted (one timestamp, no action path, node deprecation ' +
+            'noise dropped) and cut at 30,000 characters with the cut declared (2026-09-25).',
+    },
+    invoke_runtime_action: {
+        bytes: 40_000,
+        why:
+            "ENFORCED like read_runtime_activation: the action's result plus its compacted log lines, " +
+            'cut at 30,000 characters (2026-09-25).',
+    },
+    run_commerce_rest: {
+        bytes: 31_000,
+        why:
+            'ENFORCED the same way run_commerce_query is: the tool cuts the body at 30,000 ' +
+            'characters and declares the cut. A customers/search page can be far larger; ' +
+            'the bound is what the code holds, not a figure measured once (2026-09-24).',
+    },
     run_commerce_query: {
         bytes: 31_000,
         why:
@@ -175,13 +216,16 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     select_org: { bytes: 6_000, why: 'selection, or valid options — orgs are a short list' },
     select_project: {
         bytes: 2_000,
-        why: 'selection; on a bad id it reports a COUNT, never the 725-row list it used to enumerate',
+        why: 'selection; on a bad id a sentence naming the search, never the 725-row list it used to enumerate',
     },
     select_workspace: { bytes: 6_000, why: 'selection, or valid options — workspaces are few' },
 
     // ── storefront ──────────────────────────────────────────────────────────
     republish: { bytes: 1_000, why: 'per-step publish outcome' },
-    sync_content: { bytes: 1_000, why: 'per-step publish outcome' },
+    get_storefront_report: {
+        bytes: 6_000,
+        why: 'seven fixes with their targets plus the ~12 lines the SC reads; measured 2026-10-03 on a full fixture, not live',
+    },
 
     // ── discovery / status ──────────────────────────────────────────────────
     list_components: { bytes: 4_000, why: 'catalog summary; 581 live' },
@@ -189,6 +233,7 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     list_stacks: { bytes: 4_000, why: 'catalog summary; 601 live' },
     get_auth_status: { bytes: 2_000, why: 'per-provider status flags; 120 live' },
     get_current_project: { bytes: 2_000, why: 'name + path; 110 live' },
+    set_current_project: { bytes: 1_000, why: 'one name + path and the scope (AI-15)' },
 
     get_project_status: {
         bytes: 2_000,
@@ -222,6 +267,17 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
     create_adobe_project: {
         bytes: 1_000,
         why: 'created project id + name, or a refusal explaining the likely cause',
+    },
+    list_event_providers: {
+        bytes: 20_000,
+        why:
+            "One workspace's own providers + its registrations, or a one-sentence reason it " +
+            'could not read them. A workspace holds a handful of each (the starter kit, the ' +
+            'largest known producer, makes ~23 registrations) — far under this ceiling.',
+    },
+    delete_event_provider: {
+        bytes: 4_000,
+        why: 'one outcome per deleted entity (the named registrations, then the provider), or a refusal',
     },
     create_adobe_workspace: {
         bytes: 1_000,

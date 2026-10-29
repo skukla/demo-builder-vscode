@@ -12,7 +12,7 @@
 import {
     extractReferencedPaths,
     filterProductOverlays,
-} from '@/features/eds/services/daLive/daLiveContentCopy';
+} from '@/features/eds/services/daLive/daLiveContentReferences';
 
 const BASE = 'https://main--site--org.aem.live';
 

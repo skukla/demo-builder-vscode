@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { editChoicesOf, editSkipsStorefrontStep } from '../editChanges';
+import { integrationStateFromSettings } from '../integrationStateFromSettings';
 import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import {
     getEnabledWizardSteps,
@@ -7,9 +9,7 @@ import {
     initializeProjectName,
     getFirstEnabledStep,
 } from '../wizardHelpers';
-import { isMeshComponentId } from '@/core/constants';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
 import type { GetComponentsDataResponse } from '@/types/webviewRequests';
@@ -123,55 +123,31 @@ function buildEditModeEdsConfig(
     };
 }
 
-/**
- * Build EDS config for import mode from imported project settings.
- * Auth tokens are assumed valid since importing from existing project.
- */
-function buildImportModeEdsConfig(
-    edsConfig: NonNullable<ImportedSettings['edsConfig']>,
-): WizardState['edsConfig'] {
-    const owner = edsConfig.githubOwner || '';
-    const repo = edsConfig.repoName || '';
-    const site = edsConfig.daLiveSite || '';
-    const hasGithub = Boolean(owner && repo);
-    const hasDaLive = Boolean(edsConfig.daLiveOrg);
+/** A datapack creation can record: it records a name AND a version, so a file naming no version seeds none. */
+function recordableDatapack(datapack: ImportedSettings['datapack']): WizardState['datapack'] {
+    return datapack?.version ? { name: datapack.name, version: datapack.version } : undefined;
+}
 
+/**
+ * The project's choices, seeded the same from every door that starts from saved
+ * settings — Edit, Import from file and Copy from existing. Each door used to
+ * list these by hand, and the import list lacked `selectedBackend`, so an
+ * imported project opened with neither backend card chosen.
+ */
+function choicesFromSettings(settings: ImportedSettings): Partial<WizardState> {
     return {
-        accsHost: '',
-        storeViewCode: '',
-        customerGroup: '',
-        repoName: repo,
-        daLiveOrg: edsConfig.daLiveOrg || '',
-        daLiveSite: site,
-        githubAuth: hasGithub
-            ? {
-                  isAuthenticated: true,
-                  // Seed with the login only; the auth check fills the rest.
-                  user: { login: owner, email: null, name: null, avatarUrl: null },
-              }
-            : undefined,
-        daLiveAuth: hasDaLive
-            ? {
-                  isAuthenticated: true,
-                  org: edsConfig.daLiveOrg,
-              }
-            : undefined,
-        repoUrl: edsConfig.repoUrl,
-        repoMode: hasGithub ? 'existing' : undefined,
-        selectedRepo: hasGithub
-            ? {
-                  id: `${owner}/${repo}`,
-                  name: repo,
-                  fullName: `${owner}/${repo}`,
-                  htmlUrl: `https://github.com/${owner}/${repo}`,
-              }
-            : undefined,
-        selectedSite: site
-            ? {
-                  id: site,
-                  name: site,
-              }
-            : undefined,
+        selectedPackage: settings.selectedPackage,
+        demo: settings.demo,
+        selectedStack: settings.selectedStack,
+        // The Commerce → Backend cards read `selectedBackend` (e.g.
+        // 'adobe-commerce-accs' for a SaaS project), not `components.backend`.
+        selectedBackend: settings.selections?.backend,
+        selectedAddons: settings.selectedAddons,
+        selectedBlockLibraries: settings.selectedBlockLibraries,
+        customBlockLibraries: settings.customBlockLibraries,
+        ...integrationStateFromSettings(settings),
+        datapack: recordableDatapack(settings.datapack),
+        storeDiscoveryData: settings.commerceStoreStructure,
     };
 }
 
@@ -189,46 +165,6 @@ function buildEditModeAdobeContext(adobe: ImportedSettings['adobe']) {
                   title: adobe.workspaceTitle,
               }
             : undefined,
-    };
-}
-
-/**
- * Seed the wizard's App Builder integration state from a project's extracted
- * settings so integration rows survive an edit rebuild:
- * - `selections.appBuilder` ∪ mesh ids from `selections.dependencies` →
- *   `selectedAppBuilderComponents` (the row ids). The executor deliberately
- *   excludes mesh-kind from `appBuilder` and persists the mesh as a dep id
- *   (ADR-011), while the wizard's single mesh authority is
- *   `selectedAppBuilderComponents` (D3) — without the union the mesh row
- *   vanishes in edit mode AND an edit Finish (which derives the wire's
- *   dependencies from the mesh ids in selectedAppBuilderComponents) silently
- *   drops the mesh. Non-mesh base deps are filtered — seeding them would
- *   falsely trip anyDeployableSelected and force the destination gate.
- * - `appBuilderComponentSources` → custom-URL sources (else custom rows vanish)
- * - `componentApiPicks` → `selectedConsoleApis` per integration, PREFERRED: it is
- *   the attributed form, and the only one that survives step 07. Seeding from the
- *   flat field instead collapsed every pick into one anonymous bucket, so reopening
- *   a project forgot which integration wanted what.
- * - flat `additionalConsoleApis` → `selectedConsoleApis['__existing__']`, the
- *   fallback for a settings file written before the keyed form existed
- *   (reserved key: joins the serialization union, never shown per-row)
- */
-function buildEditModeIntegrationState(editSettings: ImportedSettings): Partial<WizardState> {
-    const keyedPicks = editSettings.componentApiPicks;
-    const hasKeyedPicks = keyedPicks && Object.keys(keyedPicks).length > 0;
-    const existingApis = editSettings.additionalConsoleApis;
-    const meshDeps = editSettings.selections?.dependencies?.filter(isMeshComponentId);
-    const appBuilderWithMesh = [
-        ...new Set([...(editSettings.selections?.appBuilder ?? []), ...(meshDeps ?? [])]),
-    ];
-    return {
-        selectedAppBuilderComponents: appBuilderWithMesh.length ? appBuilderWithMesh : undefined,
-        appBuilderComponentSources: editSettings.appBuilderComponentSources,
-        selectedConsoleApis: hasKeyedPicks
-            ? keyedPicks
-            : existingApis?.length
-              ? { [RESERVED_EXISTING_KEY]: existingApis }
-              : undefined,
     };
 }
 
@@ -272,35 +208,31 @@ function buildEditModeState(firstStep: WizardStep, editProject: EditProjectConfi
 
     const adobeContext = buildEditModeAdobeContext(editSettings.adobe);
 
-    return {
+    const opened: WizardState = {
         currentStep: firstStep,
         projectName: editProject.projectName,
         projectTitle: editProject.projectTitle,
         wizardMode: 'edit',
         editProjectPath: editProject.projectPath,
         editOriginalName: editProject.projectName,
+        editOriginalTitle: editProject.projectTitle,
         componentConfigs: editSettings.configs || {},
         adobeAuth: { isAuthenticated: true, isChecking: false },
         components: buildEditModeComponents(editSettings.selections),
         adobeOrg: adobeContext.org,
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
-        selectedPackage: editSettings.selectedPackage,
-        demo: editSettings.demo,
-        selectedStack: editSettings.selectedStack,
-        // Restore the backend selection so the Commerce → Backend cards show the
-        // project's backend pre-selected on edit (the cards read `selectedBackend`,
-        // e.g. 'adobe-commerce-accs' for a SaaS project). Without this the step
-        // opens with neither card highlighted.
-        selectedBackend: editSettings.selections?.backend,
-        selectedAddons: editSettings.selectedAddons,
-        selectedBlockLibraries: editSettings.selectedBlockLibraries,
-        customBlockLibraries: editSettings.customBlockLibraries,
-        ...buildEditModeIntegrationState(editSettings),
+        ...choicesFromSettings(editSettings),
         edsConfig: editSettings.edsConfig
             ? buildEditModeEdsConfig(editSettings.edsConfig)
             : undefined,
+        // The project was built with its repository. Opened without it marked, the
+        // summary read "Not set" for it (owner, 2026-10-17). Screen state, never an
+        // edit. (The Commerce rows read the project directly: buildSummary.ts.)
+        storefrontRepoValid: true,
     };
+    // What the SC chose, as the wizard opened: an Edit that leaves it alone only saves.
+    return { ...opened, editBaseline: editChoicesOf(opened) };
 }
 
 /**
@@ -324,6 +256,12 @@ function computeInitialState(
     const adobeContext = initializeAdobeContextFromImport(importedSettings);
     const initialProjectName = initializeProjectName(importedSettings, existingProjectNames);
     const wizardMode = importedSettings ? 'import' : 'create';
+    // The title only when the slug is the source's own: "Bodea Demo" over a folder
+    // named bodea-demo-copy would show two projects under one name.
+    const projectTitle =
+        initialProjectName && initialProjectName === importedSettings?.source?.project
+            ? importedSettings.title
+            : undefined;
 
     if (importedSettings) {
         log.info(`Initializing wizard in ${wizardMode} mode`, {
@@ -339,6 +277,7 @@ function computeInitialState(
     return {
         currentStep: firstStep,
         projectName: initialProjectName,
+        projectTitle,
         wizardMode,
         componentConfigs: importedSettings?.configs || {},
         adobeAuth: { isAuthenticated: false, isChecking: false },
@@ -346,15 +285,14 @@ function computeInitialState(
         adobeOrg: adobeContext.org,
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
-        selectedPackage: importedSettings?.selectedPackage,
-        demo: importedSettings?.demo,
-        selectedStack: importedSettings?.selectedStack,
-        selectedAddons: importedSettings?.selectedAddons,
-        selectedBlockLibraries: importedSettings?.selectedBlockLibraries,
-        customBlockLibraries: importedSettings?.customBlockLibraries,
-        edsConfig: importedSettings?.edsConfig
-            ? buildImportModeEdsConfig(importedSettings.edsConfig)
-            : undefined,
+        // The same seeding edit mode runs (PL-56d): an import used to open with
+        // no integrations, no mesh and no backend whatever the file said.
+        ...(importedSettings ? choicesFromSettings(importedSettings) : {}),
+        // No storefront and no sign-in state: the receiver creates their own
+        // repository and site, and GitHub and DA.live are asked exactly as for a
+        // new project. A file's repository is the sender's (provenance only), and
+        // an import used to mark both sign-ins as proven without checking (PL-56d).
+        edsConfig: undefined,
     };
 }
 
@@ -385,6 +323,11 @@ export function useWizardState({
             existingProjectNames || [],
         ),
     );
+
+    // An Edit that changed nothing, or only added or removed integrations, skips
+    // the storefront step: it would push and republish the storefront for no
+    // change to it (PL-75).
+    const skipStorefront = editSkipsStorefrontStep(state);
 
     // Filter steps based on enabled flag AND stack conditions
     // When a predefined stack is selected, hide steps with showWhenNoStack: true
@@ -418,12 +361,14 @@ export function useWizardState({
             isEditMode: !!editProject,
         });
 
-        return filteredSteps.map((step) => ({
-            id: step.id as WizardStep,
-            name: step.name,
-            description: step.description,
-        }));
-    }, [wizardSteps, stacks, state.selectedStack, editProject]);
+        return filteredSteps
+            .filter((step) => !(skipStorefront && step.id === 'storefront-setup'))
+            .map((step) => ({
+                id: step.id as WizardStep,
+                name: step.name,
+                description: step.description,
+            }));
+    }, [wizardSteps, stacks, state.selectedStack, editProject, skipStorefront]);
 
     // Step completion tracking
     // Neither import mode nor edit mode pre-marks steps as completed

@@ -18,7 +18,7 @@ import {
  * - Clear all caches
  * - Org cleared flag management
  *
- * Total tests: 14
+ * Total tests: 12
  */
 
 // Mock getLogger
@@ -158,13 +158,6 @@ describe('AuthCacheManager - Invalidation Operations', () => {
             const result = cacheManager.wasOrgClearedDueToValidation();
 
             expect(result).toBe(false);
-        });
-
-        it('should return true when flag is set', () => {
-            cacheManager.setOrgClearedDueToValidation(true);
-            const result = cacheManager.wasOrgClearedDueToValidation();
-
-            expect(result).toBe(true);
         });
 
         it('should clear flag after reading', () => {

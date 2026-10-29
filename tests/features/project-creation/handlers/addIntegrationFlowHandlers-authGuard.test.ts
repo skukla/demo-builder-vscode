@@ -3,12 +3,12 @@
  *
  * REGRESSION (2026-08-04): opening Add Integration on a project whose token had
  * expired launched a BROWSER unannounced, mid-modal, while the destination stage
- * showed "Fetching projects…". The pause-and-prompt guard did exist, but it lived
+ * showed "Fetching projects". The pause-and-prompt guard did exist, but it lived
  * in `appBuilderComponentHandlers.runGuards` — which runs on the ADD, after the
  * modal choices. The user saw the browser first and the in-app prompt afterwards.
  *
  * Mechanism: `handleGetProjects` fetched with no auth check, and
- * `adobeEntityFetcher.getProjects` is "SDK with CLI fallback" — a stale token
+ * `AdobeProjectReads.getProjects` is "SDK with CLI fallback" — a stale token
  * drops it to `aio console project list --json`, which triggers interactive
  * browser auth. The codebase already names this hazard (the P1 rule behind
  * `getOrganizationsSdkOnly`: the CLI path "can stall ~14.5s and trigger
@@ -25,7 +25,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockAuthenticationService, entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 
 const mockEnsureAdobeIOAuth = jest.fn();
@@ -42,7 +42,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
  * Every handler in the flow map that reaches Adobe through the entity fetcher.
  *
  * `getProjects`, `getWorkspaces` and the org read each carry a CLI fallback
- * (`adobeEntityFetcher` lines ~300/~471/~568), and the create/delete/select
+ * (`AdobeProjectReads`, `AdobeWorkspaceReads`, `AdobeOrgReads`), and the create/delete/select
  * handlers reach the same fetcher to resolve their target — so all of them can
  * open a browser on a stale token.
  */
@@ -64,18 +64,28 @@ const AUTH_HANDLERS = ['check-auth', 'authenticate', 'switchOrg'] as const;
 
 function createContext(): jest.Mocked<HandlerContext> {
     return createMockHandlerContext({
-        authManager: createMockAuthenticationService({
-            // If a guard is missing, the handler reaches these — the fetch that
-            // drops to the CLI and opens a browser. They must never be called
-            // while unauthenticated.
-            getProjects: jest.fn().mockResolvedValue([]),
-            // The P1 sibling: no CLI fallback, so a background read cannot open
-            // a browser even with a stale token.
-            getProjectsSdkOnly: jest.fn().mockResolvedValue([]),
-            getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
-            getWorkspaces: jest.fn().mockResolvedValue([]),
-            getCurrentOrganization: jest.fn().mockResolvedValue({ name: 'Org' }),
-        }),
+        authManager: createMockAuthenticationService(
+            {
+                // If a guard is missing, the handler reaches these — the fetch that
+                // drops to the CLI and opens a browser. They must never be called
+                // while unauthenticated.
+                getProjects: jest.fn().mockResolvedValue([]),
+            },
+            {
+                entities: {
+                    projectReads: {
+                        // The P1 sibling: no CLI fallback, so a background read cannot
+                        // open a browser even with a stale token.
+                        getProjectsSdkOnly: jest.fn().mockResolvedValue([]),
+                    },
+                    workspaceReads: {
+                        getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
+                        getWorkspaces: jest.fn().mockResolvedValue([]),
+                    },
+                    resolver: { getCurrentOrganization: jest.fn().mockResolvedValue({ name: 'Org' }) },
+                },
+            },
+        ),
         stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(undefined) }),
     });
 }
@@ -105,7 +115,7 @@ describe('Adobe entity handlers refuse before fetching when sign-in is declined'
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
     });
 
-    // THE regression. Reaching the fetcher is what runs `aio console …` and
+    // THE regression. Reaching the fetcher is what runs `aio console ` and
     // opens the browser, so "did we fetch" is the only assertion that
     // distinguishes the fixed code from the broken code.
     it('never reaches the project fetch (the call that shells out to aio)', async () => {
@@ -119,7 +129,7 @@ describe('Adobe entity handlers refuse before fetching when sign-in is declined'
         const context = createContext();
         await addIntegrationFlowHandlers['get-workspaces'](context, {});
 
-        expect(context.authManager?.getWorkspaces).not.toHaveBeenCalled();
+        expect(entityServicesOf(context.authManager).workspaceReads.getWorkspaces).not.toHaveBeenCalled();
     });
 
     it('returns AUTH_REQUIRED so the picker offers Sign In rather than Retry', async () => {
@@ -217,7 +227,7 @@ describe('quiet reads neither prompt nor shell out', () => {
 
         await addIntegrationFlowHandlers['get-projects'](context, { quiet: true });
 
-        expect(context.authManager?.getProjectsSdkOnly).toHaveBeenCalledTimes(1);
+        expect(entityServicesOf(context.authManager).projectReads.getProjectsSdkOnly).toHaveBeenCalledTimes(1);
         expect(context.authManager?.getProjects).not.toHaveBeenCalled();
     });
 
@@ -237,7 +247,7 @@ describe('quiet reads neither prompt nor shell out', () => {
 
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
         expect(context.authManager?.getProjects).toHaveBeenCalledTimes(1);
-        expect(context.authManager?.getProjectsSdkOnly).not.toHaveBeenCalled();
+        expect(entityServicesOf(context.authManager).projectReads.getProjectsSdkOnly).not.toHaveBeenCalled();
     });
 });
 

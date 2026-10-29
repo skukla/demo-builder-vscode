@@ -9,7 +9,8 @@
  * whose LENGTH solved issue #63. It knows nothing about the SDK.
  *
  * Extracted from `adobeEntityFetcher.ts` (god-file decomposition, 2026-08-23);
- * the fetcher facade wires one instance into `AdobeEntityReads`.
+ * `createEntityCollaborators` wires one instance into the org, project and
+ * workspace reads (`AdobeOrgReads`, `AdobeProjectReads`, `AdobeWorkspaceReads`).
  *
  * @module features/authentication/services/adobeCliFallback
  */
@@ -148,7 +149,7 @@ export class AdobeCliFallback {
                 const tokenValid = (await this.config.isTokenValid?.()) ?? false;
                 if (!tokenValid) {
                     throw new Error(
-                        'AUTH_EXPIRED: Your Adobe I/O session has expired. Please sign in again.',
+                        'AUTH_EXPIRED: Your Adobe sign-in has expired. Sign in again.',
                     );
                 }
                 throw new Error(

@@ -26,6 +26,8 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 
@@ -33,7 +35,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 beforeEach(() => {
@@ -473,11 +475,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
         const result = await removeAppBuilderComponent(project, 'kit-app', deps);
 
         expect(result.success).toBe(true);
-        expect(uninstallAppManagement).toHaveBeenCalledWith(
-            project,
-            KIT_URLS,
-            expect.any(Function)
-        );
+        expect(uninstallAppManagement).toHaveBeenCalledWith(project, 'kit-app', expect.any(Function));
         // Order: the app's API must still exist when the uninstall runs.
         const uninstallOrder = uninstallAppManagement.mock.invocationCallOrder[0];
         const undeployOrder = (deps.commandManager.execute as jest.Mock).mock
@@ -532,7 +530,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
         expect(uninstallAppManagement).not.toHaveBeenCalled();
     });
 
-    it('a failed or throwing uninstall never blocks the remove', async () => {
+    it('a throwing uninstall stops the remove before anything is undeployed', async () => {
         const project = appManagementProject('kit-app');
         const deps = createDeps({
             catalog: [appManagementCatalogEntry('kit-app')],
@@ -541,11 +539,10 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
 
         const result = await removeAppBuilderComponent(project, 'kit-app', deps);
 
-        expect(result.success).toBe(true);
-        expect(deps.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('Commerce uninstall warning')
-        );
+        expect(result).toMatchObject({ success: false, code: 'COMPONENT_REMOVAL_STOPPED' });
+        expect(result.error).toContain('could not be uninstalled from Commerce (api down)');
+        expect(deps.commandManager.execute).not.toHaveBeenCalled();
         const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
-        expect(saved.appBuilderComponents?.['kit-app']).toBeUndefined();
+        expect(saved.appBuilderComponents?.['kit-app']?.removalStopped).toBe(result.error);
     });
 });

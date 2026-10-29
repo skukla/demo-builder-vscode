@@ -1,5 +1,6 @@
 /**
- * "Save as demo package": what the extension already knows about a project,
+ * Share Demo's link save (once "Save as demo package"): what the extension
+ * already knows about a project,
  * written as the description file a colleague's "Add a demo package" reads, and the
  * checks that say whether their add will work.
  *
@@ -16,7 +17,9 @@
 
 import { resolveContentIndex } from '../contentIndex';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
+import { asBoilerplate } from '../storefront/storefrontProvenance';
 import {
+    ACCS_GRAPHQL_ENDPOINT,
     ACCS_STORE_CODE,
     ACCS_STORE_VIEW_CODE,
     ACCS_WEBSITE_CODE,
@@ -24,14 +27,16 @@ import {
     PAAS_STORE_VIEW_CODE,
     PAAS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
+import { COMPONENT_IDS } from '@/core/constants';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
+import { readBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import type { Project } from '@/types/base';
 import type { DaLiveContentSource, DemoIntegrations, DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
-import { SHARED_DEMO_FILE_VERSION, type SharedDemoDescription } from '@/types/projectFile';
+import { SHARED_DEMO_FILE_VERSION, type SharedDemoBuiltWith, type SharedDemoDescription } from '@/types/projectFile';
 import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
 
 /** The storefront the project owns, as the file and the checks need it. */
@@ -55,15 +60,23 @@ export function ownStorefrontOf(project: Project): OwnStorefront | undefined {
     return { owner: repo.owner, repo: repo.repo, daLiveOrg: site.org, daLiveSite: site.site };
 }
 
-/** Store codes under both key families, as the Add dialog writes them, from whichever the project set. */
-function storeCodeDefaults(project: Project): Record<string, string> | undefined {
+/**
+ * Store codes under both key families, as the Add dialog writes them, from
+ * whichever the project set; and an ACCS project's Commerce endpoint, under the
+ * ACCS key only, so a receiver is told which instance the demo runs on (EDS-22).
+ * The storefront's `config.json` is not read for this: behind a mesh it names
+ * the mesh, not Commerce. A PaaS endpoint is not carried (an owner decision).
+ */
+function commerceDefaults(project: Project): Record<string, string> | undefined {
     const configs = project.componentConfigs ?? {};
+    const out: Record<string, string> = {};
+    const endpoint = lookupComponentConfigValue(configs, ACCS_GRAPHQL_ENDPOINT);
+    if (endpoint) out[ACCS_GRAPHQL_ENDPOINT] = endpoint;
     const pairs: Array<[string, string]> = [
         [PAAS_WEBSITE_CODE, ACCS_WEBSITE_CODE],
         [PAAS_STORE_CODE, ACCS_STORE_CODE],
         [PAAS_STORE_VIEW_CODE, ACCS_STORE_VIEW_CODE],
     ];
-    const out: Record<string, string> = {};
     for (const [paas, accs] of pairs) {
         const value = lookupComponentConfigValue(configs, paas) ?? lookupComponentConfigValue(configs, accs);
         if (value) {
@@ -108,24 +121,31 @@ export function packageDraftFor(project: Project, packages?: readonly DemoPackag
     return { name, description };
 }
 
+export interface DescribeOptions {
+    /** The catalog; defaults to the bundled one. */
+    packages?: readonly DemoPackage[];
+    /** The Demo Builder version writing the file; 'unknown' when not given. */
+    extension?: string;
+}
+
 /**
  * The description file's content for this project.
  *
  * @param project - The project being shared
  * @param draft - The name and description as the SC left them
  * @param contentSource - The project's own content site, its index path resolved
- * @param packages - The catalog; defaults to the bundled one
+ * @param options - The catalog and the extension version
  */
 export function describeProject(
     project: Project,
     draft: PackageDraft,
     contentSource: DaLiveContentSource,
-    packages?: readonly DemoPackage[],
+    options: DescribeOptions = {},
 ): SharedDemoDescription {
-    const resolved = resolveStorefrontForProject(project, packages);
+    const resolved = resolveStorefrontForProject(project, options.packages);
     const pkg = resolved?.package;
     const requiresMesh = resolved?.storefront?.requiresMesh ?? pkg?.requiresMesh;
-    const configDefaults = storeCodeDefaults(project);
+    const configDefaults = commerceDefaults(project);
     const integrations = integrationsOf(project);
     const blockLibraries = project.selectedBlockLibraries?.filter((id) => id.length > 0);
     return {
@@ -140,6 +160,55 @@ export function describeProject(
         ...(integrations ? { integrations } : {}),
         ...(blockLibraries?.length ? { blockLibraries } : {}),
         contentSource,
+        builtWith: builtWithOf(project, resolved?.source === 'catalog' ? resolved : undefined, options.extension),
+    };
+}
+
+/**
+ * What the storefront was built from (EDS-13f decision 2). A shipped brand
+ * names its package, template and ledger from the catalog and its pin from the
+ * storefront record; a project started from a saved package carries that
+ * package's record forward; a colleague's storefront with no record gets only
+ * the facts this project knows. The boilerplate is the one creation or the
+ * last reset read back from the repository.
+ */
+function builtWithOf(
+    project: Project,
+    catalog: ReturnType<typeof resolveStorefrontForProject>,
+    extension = 'unknown',
+): SharedDemoBuiltWith {
+    const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata ?? {};
+    const boilerplate = asBoilerplate(metadata.boilerplate);
+    const carried: Omit<SharedDemoBuiltWith, 'extension'> = project.demo?.builtWith
+        ? withoutExtension(project.demo.builtWith)
+        : fromCatalog(catalog, metadata);
+    // A colleague's storefront whose Adobe half the updates keep (EDS-56): where its code is
+    // now, which the next colleague should start from, rather than the creation record.
+    const adobe = readBoilerplateBase(project);
+    const base = adobe ? { template: adobe.template, lkg: adobe.commit } : {};
+    return { ...carried, ...base, ...(boilerplate ? { boilerplate } : {}), extension };
+}
+
+function withoutExtension(builtWith: SharedDemoBuiltWith): Omit<SharedDemoBuiltWith, 'extension'> {
+    const { extension: _previous, ...rest } = builtWith;
+    return rest;
+}
+
+/** A shipped brand's record: the catalog's template and ledger, the pin when there is one. */
+function fromCatalog(
+    catalog: ReturnType<typeof resolveStorefrontForProject>,
+    metadata: Record<string, unknown>,
+): Omit<SharedDemoBuiltWith, 'extension'> {
+    if (!catalog) return {};
+    const storefront = catalog.storefront;
+    const { templateOwner, templateRepo, codePatchSource, codePatches } = storefront ?? {};
+    const lkg = metadata.lkgSource && typeof metadata.lastSyncedCommit === 'string' ? metadata.lastSyncedCommit : undefined;
+    return {
+        package: catalog.package.id,
+        ...(templateOwner && templateRepo ? { template: { owner: templateOwner, repo: templateRepo } } : {}),
+        ...(lkg ? { lkg } : {}),
+        ...(codePatchSource ? { codePatchSource } : {}),
+        ...(codePatches?.length ? { codePatches } : {}),
     };
 }
 

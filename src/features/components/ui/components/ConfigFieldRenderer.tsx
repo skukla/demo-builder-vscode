@@ -6,6 +6,7 @@ import {
     Flex,
     Text,
 } from '@adobe/react-spectrum';
+import type { SpectrumTextFieldProps } from '@react-types/textfield';
 import React from 'react';
 import { UniqueField } from '../hooks/useComponentConfig';
 import { renderTextWithCopyable } from '@/core/ui/components/forms/descriptionRenderer';
@@ -64,24 +65,30 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
         ? renderTextWithCopyable(field.description)
         : undefined;
 
+    // The text, url and password fields are one TextField; only `type` and the
+    // url-only blur differ, so the rest is built once and spread into both.
+    const textFieldProps = (): Partial<SpectrumTextFieldProps> => ({
+        label: renderLabel(),
+        value: value as string,
+        onChange: (val: string) => onUpdate(field, val),
+        placeholder: field.placeholder,
+        description: renderedDescription,
+        isRequired: isFieldRequired,
+        validationState: showError ? 'invalid' : undefined,
+        errorMessage: showError ? error : undefined,
+        width: '100%',
+        marginBottom: 'size-200',
+        ...(hasDefault ? selectableDefaultProps : {}),
+    });
+
     switch (field.type) {
         case 'text':
         case 'url':
             return (
                 <div key={field.key} id={`field-${field.key}`} className="config-field">
                     <TextField
-                        label={renderLabel()}
-                        value={value as string}
-                        onChange={(val) => onUpdate(field, val)}
+                        {...textFieldProps()}
                         onBlur={field.type === 'url' && onNormalizeUrl ? () => onNormalizeUrl(field) : undefined}
-                        placeholder={field.placeholder}
-                        description={renderedDescription}
-                        isRequired={isFieldRequired}
-                        validationState={showError ? 'invalid' : undefined}
-                        errorMessage={showError ? error : undefined}
-                        width="100%"
-                        marginBottom="size-200"
-                        {...(hasDefault ? selectableDefaultProps : {})}
                     />
                 </div>
             );
@@ -89,20 +96,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
         case 'password':
             return (
                 <div key={field.key} id={`field-${field.key}`} className="config-field">
-                    <TextField
-                        label={renderLabel()}
-                        type="password"
-                        value={value as string}
-                        onChange={(val) => onUpdate(field, val)}
-                        placeholder={field.placeholder}
-                        description={renderedDescription}
-                        isRequired={isFieldRequired}
-                        validationState={showError ? 'invalid' : undefined}
-                        errorMessage={showError ? error : undefined}
-                        width="100%"
-                        marginBottom="size-200"
-                        {...(hasDefault ? selectableDefaultProps : {})}
-                    />
+                    <TextField {...textFieldProps()} type="password" />
                 </div>
             );
 

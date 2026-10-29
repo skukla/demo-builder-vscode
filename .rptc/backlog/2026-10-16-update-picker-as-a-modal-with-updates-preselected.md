@@ -1,0 +1,74 @@
+---
+id: PL-80
+kind: feature
+area: platform
+parent: PL-81
+needs: []
+value: med
+status: built
+---
+
+# Check for Updates in a modal, with the updates already ticked
+
+Filed 2026-10-16 from the release-candidate walk. The owner's concern: the update picker
+is hard to use. Two questions to answer:
+
+1. Would a modal be easier than VS Code's picker?
+2. Should the updates that need applying start ticked, so the SC only has to confirm?
+
+## What it does today (read 2026-10-16)
+
+- `checkUpdates.ts` `showMultiProjectUpdatePicker` opens VS Code's multi-select list
+  (`showQuickPick`, `canPickMany`) over EVERY project with a pending update, one row per
+  update: extension, components, EDS template, block library installs, add-ons, fork syncs.
+- Only the OPEN project's rows start ticked (`picked: isCurrent` in `updateTypes.ts` and
+  `checkUpdates.ts`); fork syncs always start ticked. Every other project's rows start
+  unticked, so an SC updating more than one project ticks each row by hand.
+- Rows name the project by its folder name (`project.name`), not its title; the same fix
+  `getProjectDisplayName` made elsewhere on 2026-10-15/16 applies here.
+- The results arrive as separate notifications afterwards; the progress modal pattern
+  (PL-59) is not used.
+
+## Direction to decide
+
+- A modal on the dashboard (or projects list) that groups updates by project, every
+  needed update ticked, with one Apply, told in the shared progress modal
+  (`OperationProgressModal`), as Configure's Republish now is.
+- Or keep the picker and change only the pre-ticking and the names. Cheaper; does not
+  address "hard to use" if the list itself is the problem.
+
+Recommendation: the modal, with everything pending ticked by default. The picker cannot
+group by project or show what each update does, and its results land as notifications.
+The agent's `apply_updates` keeps working against the same apply service either way.
+
+## Shipped so far
+
+- 2026-10-20  docs(updates): Check for Updates is the Updates modal (`bd889e4e9`)
+- 2026-10-20  feat(updates): Check for Updates opens the Updates modal; the picker goes (`339e1021a`)
+- 2026-10-20  feat(projects-dashboard): the Updates modal (`734c49f9c`)
+- 2026-10-20  refactor(ui): CheckboxRow, the API picker's row as a shared component (`0466dbee8`)
+- 2026-10-20  feat(updates): the projects list checks and applies updates for the modal (`b6ef2c6d0`)
+- 2026-10-20  feat(updates): the shared apply asks a person when there is one (`8a3409341`)
+- 2026-10-20  feat(updates): the Updates modal's rows, and the ticked ids back as a selection (`ddb590a6e`)
+- 2026-10-20  refactor(updates): one update check for one project or many (`b93508de1`)
+- 2026-10-20  chore(updates): lock in the cast the auto-updater took with it; name it in words (`04649dbd4`)
+- 2026-10-20  fix(projects-dashboard): the Updates window keeps one height from checking to result (`9798e1425`)
+- 2026-10-20  feat(updates): the notification checks again; the modal only replaces the picker (`688ae81ee`)
+- 2026-10-20  feat(projects-dashboard): the Updates window reads like the other modals (`a85153474`)
+- 2026-10-20  refactor(ui): SectionLabel and LeadText, the modal text styles five modals share (`b4f24ee84`)
+- 2026-10-20  fix(updates): the Adobe MCP update check reads npm, which publishes it (`841aa8906`)
+- 2026-10-20  test(visual-baseline): the harness answers the projects list's updates request (`724b5bc7f`)
+- 2026-10-20  feat(projects-dashboard): Updates groups are closed project panels; a redeploy waits for a tick (`84e3d0f7b`)
+- 2026-10-20  feat(projects-dashboard): Updates rows say what they change, and the list stays one size (`0e1047ec2`)
+- 2026-10-21  fix(updates): drop the "1 of 2" count beside each group (`c11a7a0de`)
+- 2026-10-21  fix(updates): a click during the background check joins it (`67feaf5a0`)
+- 2026-10-21  feat(updates): show the apply run row by row in the Updates modal (`f01c45494`)
+- 2026-10-21  refactor(ui): move the Prerequisites status icon to core as StepStatusIcon (`f67d49669`)
+- 2026-10-21  feat(updates): ask under the row, run project by project, keep the local copy step (`dbcbaab08`)
+- 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
+- 2026-10-24  feat(updates): open every group when 3 updates or fewer are waiting (`ad9a50cf2`)
+- 2026-10-24  fix(updates): ask about a clash in plain words, one choice per line (`561a3531e`)
+- 2026-10-24  fix(updates): ask about a clash the way an SC would say it (`3c95f8d02`)
+- 2026-10-24  fix(updates): say what happens next at the end of a run, not why (`46a5e73c8`)
+- 2026-10-24  fix(updates): compare full file ids when finishing a fixed clash (`1fcb92a92`)
+- 2026-10-24  fix(updates): Apply checks again when the list it was shown is gone (`c07aa3109`)

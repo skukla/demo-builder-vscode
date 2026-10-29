@@ -351,64 +351,6 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
         });
     });
 
-    describe('state version tracking', () => {
-        beforeEach(async () => {
-            manager = new WebviewCommunicationManager(mockPanel);
-            const initPromise = manager.initialize();
-            await Promise.resolve();
-
-            messageListener({
-                id: 'webview-1',
-                type: '__webview_ready__',
-                timestamp: Date.now()
-            });
-
-            await initPromise;
-        });
-
-        it('should increment state version', () => {
-            const initialVersion = manager.getStateVersion();
-            const newVersion = manager.incrementStateVersion();
-
-            expect(newVersion).toBe(initialVersion + 1);
-            expect(manager.getStateVersion()).toBe(newVersion);
-        });
-
-        it('should return current state version', () => {
-            const version = manager.getStateVersion();
-            expect(typeof version).toBe('number');
-            expect(version).toBeGreaterThanOrEqual(0);
-        });
-
-        it('should include state version in handshake complete', async () => {
-            manager = new WebviewCommunicationManager(mockPanel);
-
-            manager.incrementStateVersion();
-            manager.incrementStateVersion();
-
-            const initPromise = manager.initialize();
-            await Promise.resolve();
-
-            messageListener({
-                id: 'webview-1',
-                type: '__webview_ready__',
-                timestamp: Date.now()
-            });
-
-            await initPromise;
-
-            // Should include stateVersion in handshake complete
-            expect(mockWebview.postMessage).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    type: '__handshake_complete__',
-                    payload: expect.objectContaining({
-                        stateVersion: expect.any(Number)
-                    })
-                })
-            );
-        });
-    });
-
     describe('dispose', () => {
         beforeEach(async () => {
             manager = new WebviewCommunicationManager(mockPanel);

@@ -16,6 +16,7 @@ import { HandlerContext } from '@/types/handlers';
 import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 // Mock dependencies
 jest.mock('@/core/validation/validators/AdobeResourceValidator');
@@ -28,10 +29,10 @@ describe('workspaceHandlers', () => {
         jest.clearAllMocks();
 
         // Mock authentication manager
-        mockAuthManager = {
+        mockAuthManager = poolUnits({
             getCurrentProject: jest.fn(),
             getWorkspaces: jest.fn(),
-        };
+        });
 
         // Create mock context
         mockContext = createMockHandlerContext({

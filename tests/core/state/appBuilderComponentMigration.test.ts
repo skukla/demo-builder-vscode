@@ -7,7 +7,11 @@
  * malformed/partial legacy state (no silent data loss).
  */
 
-import { migrateLegacyToAppBuilderComponents } from '@/core/state/appBuilderComponentMigration';
+import {
+    healPartialComponents,
+    migrateLegacyToAppBuilderComponents,
+} from '@/core/state/appBuilderComponentMigration';
+import type { AppBuilderComponentState } from '@/types/base';
 import type { ProjectManifest } from '@/core/state/projectFileLoader';
 
 describe('migrateLegacyToAppBuilderComponents', () => {
@@ -256,5 +260,138 @@ describe('migrateLegacyToAppBuilderComponents', () => {
             expect(() => migrateLegacyToAppBuilderComponents(manifest)).not.toThrow();
             expect(migrateLegacyToAppBuilderComponents(manifest)).toStrictEqual({});
         });
+    });
+});
+
+/**
+ * A record left by an add that stopped after its workspace was made and before its
+ * deploy began — the workspace and nothing else (live, 2026-09-22). Builds up to
+ * that day wrote it; the manifest then failed its own schema and, worse, opening the
+ * project threw on the missing `source`, so the whole dashboard went blank.
+ */
+describe('healPartialComponents', () => {
+    const partial = { workspace: { id: 'ws-9', name: 'ContosoERP', title: 'Contoso ERP' } };
+
+    it('completes it as a failed add, keeping the workspace so it can still be removed', () => {
+        const components = {
+            'erp-integration-2': partial as AppBuilderComponentState,
+        };
+
+        const healed = healPartialComponents(components);
+
+        expect(healed['erp-integration-2']).toMatchObject({
+            kind: 'integration',
+            status: 'error',
+            name: 'Contoso ERP',
+            workspace: { id: 'ws-9' },
+        });
+        // A source that would fail GitHub's name charset is worse than none: the
+        // catalog loader throws on it, which is what blanked the integrations screen
+        // (live, 2026-09-22).
+        expect(healed['erp-integration-2'].source).toStrictEqual({
+            owner: 'unknown',
+            repo: 'erp-integration-2',
+        });
+        expect(healed['erp-integration-2'].error).toContain('did not finish');
+    });
+
+    // The heal's own first version wrote `owner: ''`, the project was saved with it,
+    // and the screens went on failing — a record that LOOKS whole and is not.
+    it('repairs a source whose owner or repo is blank', () => {
+        const saved = {
+            kind: 'integration',
+            status: 'error',
+            name: 'Contoso ERP',
+            source: { owner: '', repo: 'erp-integration-2' },
+            workspace: { id: 'ws-9', name: 'ContosoERP', title: 'Contoso ERP' },
+        } as AppBuilderComponentState;
+
+        const healed = healPartialComponents({ 'erp-integration-2': saved })['erp-integration-2'];
+
+        expect(healed.source).toStrictEqual({ owner: 'unknown', repo: 'erp-integration-2' });
+    });
+
+    // The charset every source is gated on before a clone (GITHUB_NAME in
+    // appBuilderComponentCatalogLoader). A healed record that fails it throws where
+    // the missing field would have.
+    it('heals to a source that passes the charset a clone demands', () => {
+        const healed = healPartialComponents({ 'erp-integration-2': partial as AppBuilderComponentState });
+        const { owner, repo } = healed['erp-integration-2'].source;
+
+        expect(owner).toMatch(/^[A-Za-z0-9._-]+$/);
+        expect(repo).toMatch(/^[A-Za-z0-9._-]+$/);
+    });
+
+    it('leaves a whole record exactly as it is', () => {
+        const whole: AppBuilderComponentState = {
+            kind: 'system',
+            status: 'deployed',
+            name: 'Northwind ERP',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        };
+
+        expect(healPartialComponents({ 'demo-erp': whole })['demo-erp']).toBe(whole);
+    });
+
+    // A hand-edited manifest can hold `null` where a record should be, and the types
+    // say it cannot. It heals like any other half-written record, keyed by its id.
+    it('heals a record that is JSON null rather than throwing on it', () => {
+        const components: Record<string, AppBuilderComponentState> = JSON.parse('{"erp-2": null}');
+
+        expect(healPartialComponents(components)['erp-2']).toStrictEqual({
+            kind: 'integration',
+            status: 'error',
+            name: 'erp-2',
+            source: { owner: 'unknown', repo: 'erp-2' },
+            error: 'Adding this did not finish. Remove it to clean up what it made, then add it again.',
+        });
+    });
+
+    it('heals a record that has a kind and a status and no source at all', () => {
+        const saved = { kind: 'system', status: 'deployed' } as AppBuilderComponentState;
+
+        const healed = healPartialComponents({ 'demo-erp': saved })['demo-erp'];
+
+        // No name and no workspace to borrow a title from: the id is the name.
+        expect(healed).toMatchObject({ kind: 'system', status: 'error', name: 'demo-erp' });
+        expect(healed.source).toStrictEqual({ owner: 'unknown', repo: 'demo-erp' });
+    });
+
+    // Whole means kind AND status: a record with a good source and a kind is still
+    // half-written when the status never landed.
+    it('heals a record whose source is whole and whose status is missing', () => {
+        const saved = {
+            kind: 'integration',
+            source: { owner: 'skukla', repo: 'demo-erp' },
+        } as AppBuilderComponentState;
+
+        const healed = healPartialComponents({ 'demo-erp': saved })['demo-erp'];
+
+        expect(healed.status).toBe('error');
+        expect(healed.source).toStrictEqual({ owner: 'skukla', repo: 'demo-erp' });
+    });
+
+    it('keeps the repo the record already names when only the owner is blank', () => {
+        const saved = {
+            kind: 'integration',
+            status: 'error',
+            source: { owner: '', repo: 'contoso-erp' },
+        } as AppBuilderComponentState;
+
+        const healed = healPartialComponents({ 'erp-integration-2': saved })['erp-integration-2'];
+
+        expect(healed.source).toStrictEqual({ owner: 'unknown', repo: 'contoso-erp' });
+    });
+
+    it('names the repo after the catalog entry before falling back to the id', () => {
+        const saved = { ...partial, catalogId: 'erp-integration' } as AppBuilderComponentState;
+
+        const healed = healPartialComponents({ 'erp-integration-2': saved })['erp-integration-2'];
+
+        expect(healed.source).toStrictEqual({ owner: 'unknown', repo: 'erp-integration' });
+    });
+
+    it('answers an empty map for a project with no components', () => {
+        expect(healPartialComponents(undefined)).toStrictEqual({});
     });
 });

@@ -59,7 +59,7 @@ DEF = r'(export (async )?(function|const|class|interface|type)|function|class)'
 NAME = re.compile(r'^\+ *' + DEF + r' ([A-Za-z_][A-Za-z0-9_]*)')
 ever = set()
 for l in subprocess.run(
-        ['git','log','--all','-p','--unified=0','--diff-filter=AM','--',f'{root}/*.ts',f'{root}/*.tsx'],
+        ['git','log','--exclude=refs/t3/*','--all','-p','--unified=0','--diff-filter=AM','--',f'{root}/*.ts',f'{root}/*.tsx'],
         capture_output=True, text=True).stdout.splitlines():
     m = NAME.match(l)
     if m:
@@ -69,7 +69,7 @@ for l in subprocess.run(
 # Split on the FIRST dot, not the last: `AdobeProjectStep.refactored.tsx` must
 # yield `AdobeProjectStep`, and stripping only the extension left the remnant.
 ever |= {n.rsplit('/', 1)[-1].split('.')[0] for n in subprocess.run(
-    ['git','log','--all','--diff-filter=A','--name-only','--format=','--',f'{root}/*.ts',f'{root}/*.tsx'],
+    ['git','log','--exclude=refs/t3/*','--all','--diff-filter=A','--name-only','--format=','--',f'{root}/*.ts',f'{root}/*.tsx'],
     capture_output=True, text=True).stdout.split()
     if n.endswith(('.ts','.tsx'))}
 

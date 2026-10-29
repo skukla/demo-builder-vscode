@@ -7,10 +7,10 @@
 import AdmZip from 'adm-zip';
 import { buildDemoBundle, defaultBundleName } from '@/features/eds/services/demoPackage/demoBundle';
 import type { SharedDemoDescription } from '@/types/projectFile';
-import type { SettingsFile } from '@/types/settingsFile';
+import { projectFileV2 } from '../../../../helpers/projectFileFixtures';
 
 const DESCRIPTION: SharedDemoDescription = { kind: 'demo', version: 1, name: 'Bodea' };
-const SETTINGS = { version: 1, exportedAt: 'x', source: { project: 'bodea' }, includesSecrets: false, selections: {}, configs: {} } as unknown as SettingsFile;
+const SETTINGS = projectFileV2();
 
 function archive(entries: Record<string, string>, root = 'skukla-kukla-bodea-abc1234/'): Buffer {
     const zip = new AdmZip();
@@ -50,6 +50,25 @@ describe('buildDemoBundle', () => {
         const setupOnly = buildDemoBundle('bodea', { settings: SETTINGS });
         expect(names(setupOnly.bytes)).toEqual(['bodea-demo-bundle/setup.demo-builder.json']);
         expect(setupOnly.parts).toEqual(['setup']);
+    });
+
+    it('never packs a .env file from the repository into the bundle, at any depth', () => {
+        const out = buildDemoBundle('bodea', {
+            storefront: {
+                archive: archive({
+                    'head.html': 'x',
+                    '.env': 'SECRET=1',
+                    '.env.local': 'SECRET=2',
+                    'api/.env.production': 'SECRET=3',
+                }),
+                description: DESCRIPTION,
+            },
+        });
+
+        expect(names(out.bytes)).toEqual([
+            'bodea-demo-bundle/storefront/demo.demo-builder.json',
+            'bodea-demo-bundle/storefront/head.html',
+        ]);
     });
 
     it('names the file after the project', () => {

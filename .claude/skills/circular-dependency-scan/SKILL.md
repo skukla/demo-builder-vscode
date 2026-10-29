@@ -11,6 +11,10 @@ fragile** (whichever module loads first sees the other half-initialized), cause
 evaluating), and **block refactors** (you can't move or lazy-load one file without the
 other). This does NOT overlap `/sop-scan` (God files, complexity) — cross-reference that.
 
+**Since 2026-10-08 a new cycle in `src/` fails the build** (`tests/sop/import-cycles.test.ts`,
+same filter as `scan.sh`). Use this skill to read and break one when that suite goes red;
+you no longer need it to find out whether one exists.
+
 ## When to use
 - A symbol is unexpectedly `undefined` at module load, or init order feels fragile.
 - A refactor / extraction is blocked because two files won't separate.
@@ -47,8 +51,12 @@ other). This does NOT overlap `/sop-scan` (God files, complexity) — cross-refe
 ## Heuristics
 - Cut at the weakest edge — the one import that's easiest to relocate or invert, not the
   whole chain.
-- A leaf module of shared types/util is the durable fix; ad-hoc lazy `require()` hides the
-  cycle without removing it.
+- A leaf module of shared types/util is the durable fix; ad-hoc lazy `require()` or
+  `await import()` hides the cycle without removing it. Three of the four cycles broken on
+  2026-10-07 were hidden that way: handlers and the mesh deploy lazily imported the
+  dashboard command to push updates, while the command imported their handler map. The
+  fix moved the pushes to `dashboard/services/projectPanelPushes.ts`, which imports
+  neither side.
 - Type-only edges are safe to leave short-term, but `import type` costs nothing — do it.
 
 ## Output format

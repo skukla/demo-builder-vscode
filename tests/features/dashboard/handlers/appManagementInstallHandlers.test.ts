@@ -8,166 +8,45 @@
  * outcome — a mock cannot see a malformed call.
  */
 
-import type { AppBuilderComponentState, Project } from '@/types/base';
-
-// ---- the progress notification, RECORDED rather than mocked away -----------
-// `vscode` is walled twice in this suite's import chain: the shared testUtils
-// registers its own factory, but only AFTER the subject has bound the file mock
-// (this suite is on mock-wall-import-order's ledger). So the vscode a test can
-// reach is not the one the handler reports progress to. Recording here — above
-// every import — is what makes the notification observable at all. Plain
-// functions, not jest.fn, so no mock reset can quietly empty them.
-const mockProgressTitles: string[] = [];
-const mockProgressSteps: unknown[] = [];
-jest.mock('vscode', () => {
-    const vscode = jest.requireActual('../../../__mocks__/vscode') as {
-        window: Record<string, unknown>;
-    };
-    vscode.window.withProgress = async (
-        options: { title: string },
-        task: (p: { report: (value: { message?: string }) => void }) => unknown,
-    ) => {
-        mockProgressTitles.push(options.title);
-        return task({ report: (value) => mockProgressSteps.push(value?.message) });
-    };
-    return vscode;
-});
-
-// ---- runner deps + auth resolver (all mocked) ------------------------------
-const mockInstallAppManagement = jest.fn();
-// Declared with its arguments, not as a bare `jest.fn(() => ...)`: the second
-// one is the progress adapter, and a zero-arity signature makes it unreadable.
-const mockBuildDefaultRunnerDeps = jest.fn((..._args: unknown[]) => ({
-    installAppManagement: mockInstallAppManagement,
-}));
-const mockBuildRunnerDepsContext = jest.fn(async () => ({}));
-const mockResolveAppManagementAuth = jest.fn();
-jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
-    buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
-    buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
-    resolveAppManagementAuth: (...a: unknown[]) => mockResolveAppManagementAuth(...a),
-}));
-
-// ---- the App Management client (status read constructs it directly) --------
-const mockGetInstallationState = jest.fn();
-const mockClientCtor = jest.fn();
-jest.mock('@/features/app-builder/services/appManagementClient', () => ({
-    AppManagementClient: class {
-        constructor(...args: unknown[]) {
-            mockClientCtor(...args);
-        }
-        getInstallationState = (...a: unknown[]) => mockGetInstallationState(...a);
-    },
-}));
-
-// ---- catalog loader (lifecycle resolution) ---------------------------------
-const mockGetAppBuilderComponentEntry = jest.fn();
-const mockBuildCustomIntegrationEntry = jest.fn();
-jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
-    buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...(a as [])),
-    entryFitsProjectAxes: jest.fn().mockReturnValue(true),
-}));
-
-// ---- DI (runGuards resolves the auth service through it) -------------------
-// Mocked HERE, not only via dashboardHandlers.testUtils: that module's own
-// jest.mock('@/core/di/serviceLocator') registers after this spec's SUT import chain has
-// already required the real ServiceLocator.
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            getTokenManager: () => ({ inspectToken: jest.fn(async () => ({ valid: false })) }),
-            getCachedOrganization: jest.fn(),
-            getS2SDeployCredentials: jest.fn(),
-        })),
-        // ADR-015 (2026-08-28): the handler resolves these when assembling
-        // runner deps, so the module mock must answer them.
-        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
-    },
-}));
-
-// ---- guards ----------------------------------------------------------------
-const mockEnsureAdobeIOAuth = jest.fn();
-jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: (...a: unknown[]) => mockEnsureAdobeIOAuth(...a),
-}));
-const mockDetectProjectOrgMismatch = jest.fn();
-jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => ({
-    detectProjectOrgMismatch: (...a: unknown[]) => mockDetectProjectOrgMismatch(...a),
-}));
-
-// ---- dashboard channels (imported by the shared handler module) ------------
-jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
-    handleRequestStatus: jest.fn().mockResolvedValue({ success: true }),
-}));
-jest.mock('@/features/dashboard/commands/showDashboard', () => ({
-    ProjectDashboardWebviewCommand: {
-        sendAppBuilderComponentStatusUpdate: jest.fn(),
-        sendAppBuilderComponentsSnapshot: jest.fn(),
-        refreshStatus: jest.fn(),
-    },
-}));
-
+import type { Project } from '@/types/base';
+import { ErrorCode } from '@/types/errorCodes';
 import {
+    APP_URLS,
+    KIT_STATE,
     handleGetAppBuilderInstallStatus,
     handleInstallAppBuilderComponent,
-} from '@/features/dashboard/handlers/appManagementInstallHandlers';
-import { setupMocks } from './dashboardHandlers.testUtils';
-import { ErrorCode } from '@/types/errorCodes';
+    handleReinstallAppBuilderComponent,
+    kitProject,
+    mockBuildCustomIntegrationEntry,
+    mockBuildDefaultRunnerDeps,
+    mockBuildRunnerDepsContext,
+    mockClientCtor,
+    mockDeveloperPermissions,
+    mockEnsureAdobeIOAuth,
+    mockGetAppBuilderComponentEntry,
+    mockGetInstallationState,
+    mockInstallAppManagement,
+    mockProgressSteps,
+    mockProgressTitles,
+    mockResolveAppManagementAuth,
+    mockUninstallAppManagement,
+    resetInstallHandlerMocks,
+    setupMocks,
+} from './appManagementInstallHandlers.testUtils';
 
-const APP_URLS = {
-    'app-management/installation':
-        'https://ns.adobeioruntime.net/api/v1/web/app-management/installation',
-};
-
-const KIT_STATE: AppBuilderComponentState = {
-    kind: 'integration',
-    status: 'deployed',
-    name: 'Kit App',
-    source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
-    deployedUrls: APP_URLS,
-    installation: { status: 'failed', detail: 'earlier failure', at: '2026-08-27T00:00:00Z' },
-};
-
-function kitProject(): Partial<Project> {
-    return { appBuilderComponents: { 'kit-app': { ...KIT_STATE } } };
-}
-
-function mockDeveloperPermissions(): void {
-    const { ServiceLocator } = require('@/core/di/serviceLocator');
-    ServiceLocator.getAuthenticationService().testDeveloperPermissions = jest
-        .fn()
-        .mockResolvedValue({ hasPermissions: true });
-}
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    mockProgressTitles.length = 0;
-    mockProgressSteps.length = 0;
-    mockGetAppBuilderComponentEntry.mockReturnValue({
-        id: 'kit-app',
-        lifecycle: 'app-management',
-    });
-    mockResolveAppManagementAuth.mockResolvedValue({
-        accessToken: 'fake-test-pw-not-a-secret',
-        imsOrgId: 'ABC@AdobeOrg',
-    });
-    mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
-    mockDetectProjectOrgMismatch.mockResolvedValue({ reachable: true });
-    mockInstallAppManagement.mockResolvedValue({ status: 'installed' });
-    mockGetInstallationState.mockResolvedValue({
-        id: 'i-1',
-        status: 'succeeded',
-        startedAt: '2026-08-27T01:00:00Z',
-        completedAt: '2026-08-27T01:02:00Z',
-    });
-});
-
-
+beforeEach(resetInstallHandlerMocks);
 
 describe('handleGetAppBuilderInstallStatus', () => {
+    const INSTALLED = {
+        status: 'installed' as const,
+        detail: 'Installed.',
+        at: '2026-08-27T00:00:00Z',
+    };
+
     it('reads the LIVE state from the app base URL and returns it with the persisted record', async () => {
-        const { mockContext } = setupMocks(kitProject());
+        const { mockContext } = setupMocks({
+            appBuilderComponents: { 'kit-app': { ...KIT_STATE, installation: INSTALLED } },
+        });
 
         const result = (await handleGetAppBuilderInstallStatus(mockContext, {
             id: 'kit-app',
@@ -180,13 +59,44 @@ describe('handleGetAppBuilderInstallStatus', () => {
         );
         expect(result.data).toEqual({
             id: 'kit-app',
-            persisted: KIT_STATE.installation,
+            persisted: INSTALLED,
             live: {
                 status: 'succeeded',
                 startedAt: '2026-08-27T01:00:00Z',
                 completedAt: '2026-08-27T01:02:00Z',
             },
         });
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('repairs a record that says failed over an app that says succeeded, and redraws the cards', async () => {
+        // 2026-09-30: the install call timed out one second before the app finished, and the
+        // flyout read "Not installed" for two hours over a working install.
+        const { mockContext } = setupMocks(kitProject());
+
+        const result = (await handleGetAppBuilderInstallStatus(mockContext, {
+            id: 'kit-app',
+        })) as { success: boolean; data: Record<string, unknown> };
+
+        expect(result.data).toMatchObject({
+            repaired: true,
+            persisted: { status: 'installed', at: '2026-08-27T01:02:00Z' },
+        });
+        expect((result.data.persisted as { detail: string }).detail).toContain('timed out');
+        expect(mockContext.stateManager.saveProject).toHaveBeenCalled();
+    });
+
+    it('leaves a failed record alone while the app still says failed', async () => {
+        mockGetInstallationState.mockResolvedValue({ id: 'i-1', status: 'failed' });
+        const { mockContext } = setupMocks(kitProject());
+
+        const result = (await handleGetAppBuilderInstallStatus(mockContext, {
+            id: 'kit-app',
+        })) as { success: boolean; data: Record<string, unknown> };
+
+        expect(result.data).not.toHaveProperty('repaired');
+        expect(result.data).toMatchObject({ persisted: KIT_STATE.installation });
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
     });
 
     it('flattens the step tree to FAILED step names', async () => {
@@ -275,10 +185,13 @@ describe('handleInstallAppBuilderComponent', () => {
         })) as { success: boolean; installation: { status: string } };
 
         expect(result.success).toBe(true);
+        // The component's id, not its URLs: the id also picks the workspace
+        // Commerce is told about (AB-23), and the URLs are read from it.
         expect(mockInstallAppManagement).toHaveBeenCalledWith(
             mockProject,
-            APP_URLS,
-            expect.any(Function)
+            'kit-app',
+            expect.any(Function),
+            { appVersion: undefined }
         );
         // The persisted record is what the drawer and the status read serve.
         expect(result.installation.status).toBe('installed');
@@ -459,7 +372,7 @@ describe('the install pass and what it hands its collaborators', () => {
                 branch: 'main',
                 name: 'Kit App',
             },
-            'kit-app',
+            'kit-app'
         );
         expect(result.success).toBe(true);
     });
@@ -487,7 +400,7 @@ describe('the install pass and what it hands its collaborators', () => {
             expect.objectContaining({
                 authManager: expect.anything(),
                 commandManager: expect.anything(),
-            }),
+            })
         );
     });
 
@@ -495,7 +408,7 @@ describe('the install pass and what it hands its collaborators', () => {
         const { mockContext } = setupMocks(kitProject());
         mockDeveloperPermissions();
         mockBuildDefaultRunnerDeps.mockReturnValue(
-            {} as unknown as ReturnType<typeof mockBuildDefaultRunnerDeps>,
+            {} as unknown as ReturnType<typeof mockBuildDefaultRunnerDeps>
         );
 
         const result = await handleInstallAppBuilderComponent(mockContext, { id: 'kit-app' });
@@ -505,24 +418,172 @@ describe('the install pass and what it hands its collaborators', () => {
         expect(mockInstallAppManagement).not.toHaveBeenCalled();
     });
 
-    it('forwards the runner’s step text, preferring the sub-step when there is one', async () => {
-        // The runner reports a coarse step and a fine one. The notification is
-        // the only surface with room for the fine one, so that is the one it
-        // gets — dropping to the coarse text makes a three-minute install look
-        // frozen on one line.
+    it('forwards the runner’s stage to the notification, never the finer step', async () => {
+        // The runner reports a coarse stage and a fine step. The notification shows
+        // the stage — the short set of words that fits after its title — and the fine
+        // step goes to the progress modal's second row (PL-59 phase 2, owner
+        // 2026-09-19). The cost, accepted then: a long install's retry rounds show in
+        // the modal, not in the notification.
         const { mockContext } = setupMocks(kitProject());
         mockDeveloperPermissions();
 
         await handleInstallAppBuilderComponent(mockContext, { id: 'kit-app' });
         const forward = mockBuildDefaultRunnerDeps.mock.calls[0][1] as (
             message: string,
-            subMessage?: string,
+            subMessage?: string
         ) => void;
         // The guard's own first step has already been reported by now.
         mockProgressSteps.length = 0;
         forward('Registering events', 'provider 2 of 3');
         forward('Creating providers');
 
-        expect(mockProgressSteps).toStrictEqual(['provider 2 of 3', 'Creating providers']);
+        expect(mockProgressSteps).toStrictEqual(['Registering events', 'Creating providers']);
+    });
+});
+
+describe('handleReinstallAppBuilderComponent', () => {
+    function refusedProject(): Partial<Project> {
+        return {
+            appBuilderComponents: {
+                'kit-app': {
+                    ...KIT_STATE,
+                    installation: {
+                        status: 'failed',
+                        detail: 'Commerce cannot upgrade the installed app in place.',
+                        at: '2026-09-17T00:00:00Z',
+                        needsReinstall: true,
+                    },
+                },
+            },
+        };
+    }
+
+    it('uninstalls, then installs the deployed version, and records the fresh install', async () => {
+        const { mockContext, mockProject } = setupMocks(refusedProject());
+        mockDeveloperPermissions();
+        const order: string[] = [];
+        mockUninstallAppManagement.mockImplementation(async () => {
+            order.push('uninstall');
+            return { status: 'uninstalled' };
+        });
+        mockInstallAppManagement.mockImplementation(async () => {
+            order.push('install');
+            return { status: 'installed', version: '0.2.0' };
+        });
+
+        const result = (await handleReinstallAppBuilderComponent(mockContext, {
+            id: 'kit-app',
+        })) as { success: boolean; installation: Record<string, unknown> };
+
+        expect(result.success).toBe(true);
+        expect(order).toEqual(['uninstall', 'install']);
+        expect(mockUninstallAppManagement).toHaveBeenCalledWith(
+            mockProject,
+            'kit-app',
+            expect.any(Function)
+        );
+        expect(mockInstallAppManagement).toHaveBeenCalledWith(
+            mockProject,
+            'kit-app',
+            expect.any(Function),
+            {
+                appVersion: undefined,
+            }
+        );
+        expect(mockProgressTitles.some((title) => title.startsWith('Reinstalling'))).toBe(true);
+        const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls.at(-1)![0];
+        expect(saved.appBuilderComponents['kit-app'].installation).toMatchObject({
+            status: 'installed',
+            version: '0.2.0',
+        });
+        expect(saved.appBuilderComponents['kit-app'].installation.needsReinstall).toBeUndefined();
+    });
+
+    // The repair an SC has no other way to make: Commerce can lose what an app
+    // registered — another copy of the same app uninstalling took its webhooks with
+    // it (2026-09-22, live) — and the app still reports itself installed, so the
+    // install pass answers "skipped" and nothing comes back. A reinstall is the one
+    // pass that starts from nothing, so it may be asked for at any time.
+    it('started from the integrations screen, it narrates in the modal and opens no notification', async () => {
+        const { mockContext } = setupMocks(refusedProject());
+        mockDeveloperPermissions();
+        mockUninstallAppManagement.mockResolvedValue({ status: 'uninstalled' });
+        mockInstallAppManagement.mockResolvedValue({ status: 'installed', version: '0.2.0' });
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app', progress: 'modal' });
+
+        expect(result.success).toBe(true);
+        expect(mockProgressTitles).toStrictEqual([]);
+        expect(mockContext.sendMessage).toHaveBeenCalledWith(
+            'operationProgress',
+            expect.objectContaining({ id: 'kit-app' }),
+        );
+    });
+
+    it('reinstalls an app Commerce never refused to upgrade — the repair for a lost install', async () => {
+        const { mockContext } = setupMocks(kitProject());
+        mockDeveloperPermissions();
+        mockUninstallAppManagement.mockResolvedValue({ status: 'uninstalled' });
+        mockInstallAppManagement.mockResolvedValue({ status: 'installed', version: '0.2.0' });
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result.success).toBe(true);
+        expect(mockUninstallAppManagement).toHaveBeenCalled();
+        expect(mockInstallAppManagement).toHaveBeenCalled();
+    });
+
+    it('still refuses an integration that is not deployed', async () => {
+        const project = kitProject();
+        project.appBuilderComponents!['kit-app']!.status = 'error';
+        const { mockContext } = setupMocks(project);
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result).toEqual({
+            success: false,
+            error: '"kit-app" is not deployed yet — deploy it first (the deploy runs the install).',
+            code: ErrorCode.INVALID_OPERATION,
+        });
+        expect(mockUninstallAppManagement).not.toHaveBeenCalled();
+        expect(mockInstallAppManagement).not.toHaveBeenCalled();
+    });
+
+    it('keeps asking for a reinstall when the uninstall fails', async () => {
+        const { mockContext } = setupMocks(refusedProject());
+        mockDeveloperPermissions();
+        mockUninstallAppManagement.mockResolvedValue({ status: 'failed', detail: 'HTTP 500' });
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('nothing was reinstalled: HTTP 500');
+        expect(mockInstallAppManagement).not.toHaveBeenCalled();
+        const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls.at(-1)![0];
+        expect(saved.appBuilderComponents['kit-app'].installation.needsReinstall).toBe(true);
+    });
+
+    it('a failed guard blocks before anything is uninstalled', async () => {
+        const { mockContext } = setupMocks(refusedProject());
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result.code).toBe(ErrorCode.AUTH_REQUIRED);
+        expect(mockUninstallAppManagement).not.toHaveBeenCalled();
+    });
+
+    it('refuses when the uninstall is not wired, persisting nothing', async () => {
+        const { mockContext } = setupMocks(refusedProject());
+        mockDeveloperPermissions();
+        mockBuildDefaultRunnerDeps.mockReturnValue({
+            installAppManagement: mockInstallAppManagement,
+        } as unknown as ReturnType<typeof mockBuildDefaultRunnerDeps>);
+
+        const result = await handleReinstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result).toMatchObject({ success: false, error: 'The reinstall is not available.' });
+        expect(mockContext.stateManager.saveProject).not.toHaveBeenCalled();
+        expect(mockInstallAppManagement).not.toHaveBeenCalled();
     });
 });

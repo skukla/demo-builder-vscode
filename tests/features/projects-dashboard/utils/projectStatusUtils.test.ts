@@ -16,7 +16,6 @@ import {
     getStatusVariant,
     getFrontendPort,
     getDeploymentSummary,
-    hasIntegrations,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import { createProjectsDashboardProject, createRunningProject } from '../testUtils';
 
@@ -100,6 +99,11 @@ describe('projectStatusUtils', () => {
             expect(result).toBe('Error');
         });
 
+        it('says Creating while a project is being created, EDS or not', () => {
+            expect(getStatusText('creating')).toBe('Creating');
+            expect(getStatusText('creating', undefined, true)).toBe('Creating');
+        });
+
         it('should return "Stopped" for unknown status (default case)', () => {
             // Given: Unknown/unhandled status (cast to bypass TypeScript)
             const status = 'unknown' as ProjectStatus;
@@ -124,26 +128,13 @@ describe('projectStatusUtils', () => {
             expect(result).toBe('success');
         });
 
-        it('should return "warning" for starting status', () => {
-            // Given: Starting status (transitional)
-            const status: ProjectStatus = 'starting';
-
-            // When: Getting variant
-            const result = getStatusVariant(status);
-
-            // Then: Should be warning (yellow/amber)
-            expect(result).toBe('warning');
+        // Blue while in progress, StatusDot's `info` (owner, 2026-10-16).
+        it('should return "info" for starting status', () => {
+            expect(getStatusVariant('starting')).toBe('info');
         });
 
-        it('should return "warning" for stopping status', () => {
-            // Given: Stopping status (transitional)
-            const status: ProjectStatus = 'stopping';
-
-            // When: Getting variant
-            const result = getStatusVariant(status);
-
-            // Then: Should be warning (yellow/amber)
-            expect(result).toBe('warning');
+        it('should return "info" for stopping status', () => {
+            expect(getStatusVariant('stopping')).toBe('info');
         });
 
         it('should return "error" for error status', () => {
@@ -278,6 +269,11 @@ describe('projectStatusUtils', () => {
             expect(getStatusVariant('error', true)).toBe('success');
         });
 
+        it('creating is in progress (blue), EDS or not (PL-82)', () => {
+            expect(getStatusVariant('creating', true)).toBe('info');
+            expect(getStatusVariant('creating', false)).toBe('info');
+        });
+
         it('should return normal variant when isEds is false', () => {
             expect(getStatusVariant('running', false)).toBe('success');
             expect(getStatusVariant('stopped', false)).toBe('neutral');
@@ -373,60 +369,6 @@ describe('projectStatusUtils', () => {
             });
 
             expect(getDeploymentSummary(project)?.text).toBe('Attention needed');
-        });
-    });
-
-    describe('hasIntegrations', () => {
-        it('is true for any keyed App Builder component', () => {
-            const project = createProjectsDashboardProject({
-                appBuilderComponents: {
-                    'erp-sync': {
-                        kind: 'integration',
-                        status: 'deployed',
-                        source: { owner: 'acme', repo: 'erp-sync' },
-                    },
-                },
-            });
-
-            expect(hasIntegrations(project)).toBe(true);
-        });
-
-        // Deliberately unfiltered by status: a not-deployed or failed integration
-        // is exactly when you want to go and look at it.
-        it.each(['not-deployed', 'error', 'stale'] as const)(
-            'is true for a %s integration too',
-            (status) => {
-                const project = createProjectsDashboardProject({
-                    appBuilderComponents: {
-                        'erp-sync': {
-                            kind: 'integration',
-                            status,
-                            source: { owner: 'acme', repo: 'erp-sync' },
-                        },
-                    },
-                });
-
-                expect(hasIntegrations(project)).toBe(true);
-            }
-        );
-
-        it('counts the mesh — it is a card on that page too', () => {
-            const project = createProjectsDashboardProject({
-                appBuilderComponents: {
-                    mesh: {
-                        kind: 'mesh',
-                        status: 'deployed',
-                        source: { owner: 'skukla', repo: 'commerce-mesh' },
-                    },
-                },
-            });
-
-            expect(hasIntegrations(project)).toBe(true);
-        });
-
-        it('is false when the keyed map is absent or empty', () => {
-            expect(hasIntegrations(createProjectsDashboardProject({}))).toBe(false);
-            expect(hasIntegrations(createProjectsDashboardProject({ appBuilderComponents: {} }))).toBe(false);
         });
     });
 });

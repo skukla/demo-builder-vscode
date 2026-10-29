@@ -1,0 +1,86 @@
+/**
+ * IntegrationsGrid — the flyout's "Open demo setup" opens that card's demo setup guide
+ * (AB-26x), the way its "Edit settings" opens the Settings modal.
+ */
+
+import { screen, within } from '@testing-library/react';
+import {
+    card,
+    cardsFor,
+    openPanel,
+    renderCards,
+    resetGridMocks,
+    setupUser,
+    twoDeployed,
+} from './IntegrationsGrid.testUtils';
+import type { SetupChecklistItem } from '@/types/appBuilderComponents';
+
+const STEPS: SetupChecklistItem[] = [
+    {
+        id: 'confirmed-status',
+        title: 'Create the "Confirmed in ERP" order status',
+        why: 'An order the ERP confirmed looks different in the Orders grid.',
+        where: 'Stores > Settings > Order Status',
+        state: 'open',
+        checkable: false,
+    },
+];
+
+function renderWithSteps() {
+    const cards = cardsFor({ appBuilderComponents: twoDeployed() }).map((card) =>
+        card.id === 'other-app' ? { ...card, setupChecklist: STEPS } : card
+    );
+    return renderCards(cards);
+}
+
+const SETUP_LINE = 'Demo setup: 0 of 1 done';
+/** The card's accessible name: its name, status and setup line. */
+const LABEL = `Deployed, ${SETUP_LINE}`;
+
+beforeEach(() => {
+    resetGridMocks();
+});
+
+describe('IntegrationsGrid setup guide', () => {
+    it("the flyout's link opens that card's guide on its first step, and Close closes it", async () => {
+        const user = setupUser();
+        renderWithSteps();
+
+        // The card says there is setup left, in its badge and in what a screen reader hears.
+        expect(
+            within(card('other-app', LABEL)).getByRole('button', { name: SETUP_LINE })
+        ).toBeInTheDocument();
+        const panel = await openPanel(user, 'other-app', LABEL);
+        expect(within(panel).getByText('0 of 1 done')).toBeInTheDocument();
+        await user.click(within(panel).getByRole('link', { name: 'Open demo setup' }));
+
+        const guide = screen.getByRole('dialog', { name: /^Demo setup:/ });
+        // The title appears twice by design — in the step list and as the shown step's heading.
+        expect(
+            within(guide).getByRole('heading', {
+                name: 'Create the "Confirmed in ERP" order status',
+            })
+        ).toBeInTheDocument();
+        expect(within(guide).getByRole('tab', { name: /Confirmed in ERP/ })).toHaveAttribute(
+            'aria-selected',
+            'true'
+        );
+        expect(within(guide).getByText('Where')).toBeInTheDocument();
+
+        await user.click(within(guide).getByRole('button', { name: 'Close' }));
+        expect(screen.queryByRole('dialog', { name: /^Demo setup:/ })).not.toBeInTheDocument();
+    });
+
+    // The tile's setup line goes straight to the guide; the flyout stays shut.
+    it("the card's setup line opens the guide without opening the flyout", async () => {
+        const user = setupUser();
+        renderWithSteps();
+
+        await user.click(
+            within(card('other-app', LABEL)).getByRole('button', { name: SETUP_LINE })
+        );
+
+        expect(screen.getByRole('dialog', { name: /^Demo setup:/ })).toBeInTheDocument();
+        expect(document.querySelector('.db-drawer.open')).toBeNull();
+    });
+});

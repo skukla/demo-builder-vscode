@@ -46,10 +46,12 @@ describe('ProjectDashboardScreen - Integrations summary tile', () => {
         expect(await screen.findByTestId('integrations-tile-dot')).toBeInTheDocument();
     });
 
-    it('does NOT render the tile without hasAdobeContext', () => {
+    // A project with no Adobe org renders it too: the tile is the way in to add the first
+    // integration, and the add flow signs in itself (release walk 2026-10-28).
+    it('renders the tile without an Adobe org too', async () => {
         renderDashboard({ appBuilderComponents: INTEGRATIONS });
 
-        expect(screen.queryByTestId('integrations-tile-dot')).not.toBeInTheDocument();
+        expect(await screen.findByTestId('integrations-tile-dot')).toBeInTheDocument();
     });
 
     it('does NOT render the grid on the dashboard anymore', () => {

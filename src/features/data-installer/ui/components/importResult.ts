@@ -9,8 +9,8 @@
  * The rule these encode, and the one worth not losing: **the result is keyed on
  * the LAST ACTION**, not on which request objects happen to hold values. Request
  * state persists after settling (`useVSCodeRequest` never clears `data`), so a
- * fixed precedence replays an old outcome over a new one — a provisioning
- * success would outrank the dry run the user just ran.
+ * fixed precedence replays an old outcome over a new one — an earlier import's
+ * failure would outrank the dry run the user just ran.
  *
  * @module features/data-installer/ui/components/importResult
  */
@@ -37,7 +37,7 @@ export function describePerType(
 }
 
 /** The operation whose outcome the result view should show. */
-export type LastAction = 'dryRun' | 'start' | 'reset' | 'provision';
+export type LastAction = 'dryRun' | 'start' | 'reset';
 
 /** One rendered outcome, whatever produced it. */
 export interface ResultContent {
@@ -45,8 +45,6 @@ export interface ResultContent {
     title: string;
     message?: string;
     details?: string[];
-    /** The credentials refusal offers console-free provisioning in the footer. */
-    offerProvisioning?: boolean;
 }
 
 /**
@@ -62,12 +60,11 @@ export function resolveResult(
         dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>;
         start: DataInstallerRequest<{ activationId: string }>;
         reset: DataInstallerRequest<{ activationId: string }>;
-        provision: DataInstallerRequest<never>;
         record: ImportJobRecord | null;
         startedActivation: string | undefined;
     },
 ): ResultContent | null {
-    const { dryRun, start, reset, provision, record, startedActivation } = sources;
+    const { dryRun, start, reset, record, startedActivation } = sources;
 
     switch (lastAction) {
         case 'dryRun':
@@ -89,19 +86,6 @@ export function resolveResult(
                           title: 'The service refused this request',
                           message: dryRun.value.reason,
                       };
-            }
-            return null;
-        case 'provision':
-            if (provision.failure) {
-                return failureResult('Automatic setup failed', provision.failure);
-            }
-            if (provision.settled) {
-                return {
-                    variant: 'success',
-                    title: 'Credentials configured',
-                    message:
-                        "The OAuth pair was created in this project's workspace and saved to its configuration. Run the dry run again.",
-                };
             }
             return null;
         case 'start':
@@ -129,19 +113,9 @@ export function resolveResult(
     }
 }
 
-/** A failed request, with the provisioning offer when the refusal flags it. */
-function failureResult(
-    title: string,
-    failure: { message: string; data?: unknown },
-): ResultContent {
-    return {
-        variant: 'error',
-        title,
-        message: failure.message,
-        offerProvisioning: Boolean(
-            (failure.data as { needsAccsCredentials?: boolean } | undefined)?.needsAccsCredentials,
-        ),
-    };
+/** A failed request. */
+function failureResult(title: string, failure: { message: string }): ResultContent {
+    return { variant: 'error', title, message: failure.message };
 }
 
 /** A finished job, worded for ITS operation — a reset must not say "Import". */

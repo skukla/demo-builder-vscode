@@ -14,17 +14,15 @@ import { addIntegrationFlowHandlers } from './addIntegrationFlowHandlers';
 // (registry -> index -> registry) that worked on evaluation-order luck.
 import { checkGitHubApp } from './checkGitHubAppHandler';
 import { handleCreateProject } from './createHandler';
+import { handleCheckErpIntegrationHolder } from './erpIntegrationHolderHandler';
 import { handleValidate } from './validateHandler';
 import * as lifecycle from './wizardLifecycleHandlers';
-import { handleReDetectContext } from '@/features/authentication/handlers/organizationHandlers';
-import { handleCheckProjectApis, handleEnsureOrgSelected } from '@/features/authentication/handlers/projectHandlers';
 import * as components from '@/features/components/handlers/componentHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
-import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { handleCheckDaLiveAuth, handleClearDaLiveAuth, handleOpenDaLiveLogin, handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveHandlers';
 import { handleEditAddedDemo } from '@/features/eds/handlers/editAddedDemoHandler';
 import { handleCheckGitHubAuth, handleCreateGitHubRepo, handleGetGitHubRepos, handleGitHubChangeAccount, handleGitHubOAuth } from '@/features/eds/handlers/edsGitHubHandlers';
@@ -33,6 +31,7 @@ import { handleForgetAddedDemo } from '@/features/eds/handlers/forgetAddedDemoHa
 import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
 import { handleCancelStorefrontSetup, handleStartStorefrontSetup } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
+import { handleCheckStoreViewProducts } from '@/features/eds/handlers/storeViewProductsHandler';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { handleCheckPrerequisites } from '@/features/prerequisites/handlers/checkHandler';
 import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
@@ -56,6 +55,7 @@ export const projectCreationHandlers = defineHandlers({
     ready: lifecycle.handleReady,
     cancel: lifecycle.handleCancel,
     openProject: lifecycle.handleOpenProject,
+    backToProject: lifecycle.handleBackToProject,
     log: lifecycle.handleLog,
     'cancel-project-creation': lifecycle.handleCancelProjectCreation,
     openExternal: lifecycle.handleOpenExternal,
@@ -66,21 +66,12 @@ export const projectCreationHandlers = defineHandlers({
     'install-prerequisite': handleInstallPrerequisite,
 
     // Component handlers
-    'update-component-selection': components.handleUpdateComponentSelection,
-    'update-components-data': components.handleUpdateComponentsData,
-    loadComponents: components.handleLoadComponents,
     'get-components-data': components.handleGetComponentsData,
     checkCompatibility: components.handleCheckCompatibility,
     loadDependencies: components.handleLoadDependencies,
-    loadPreset: components.handleLoadPreset,
     validateSelection: components.handleValidateSelection,
 
     // Re-detect Adobe context after an external auth/org change
-    're-detect-context': handleReDetectContext,
-
-    // Project handlers
-    'ensure-org-selected': handleEnsureOrgSelected,
-    'check-project-apis': handleCheckProjectApis,
 
     // Workspace handlers
     // Mesh handlers
@@ -132,10 +123,12 @@ export const projectCreationHandlers = defineHandlers({
     // EDS handlers - ACCS
     // EDS handlers - Store Discovery
     'discover-store-structure': handleDiscoverStoreStructure,
-    // Whether the shared service supplies the Commerce credential, so the
-    // Connection step can say the OAuth fields need no filling in. Status only —
-    // the pair never crosses to the webview.
-    'check-credential-service': handleCheckCredentialService,
+    // Whether the store view the SC picked shows guests any products (EDS-46).
+    // ACCS only; answers `unknown` otherwise, which the pickers render as nothing.
+    'check-store-view-products': handleCheckStoreViewProducts,
+    // Whether another local project already runs an ERP integration on this
+    // Commerce instance (AB-78): one instance runs one.
+    'check-erp-integration-holder': handleCheckErpIntegrationHolder,
 
     // EDS handlers - Storefront Setup (renamed from Preflight)
     'storefront-setup-start': handleStartStorefrontSetup,

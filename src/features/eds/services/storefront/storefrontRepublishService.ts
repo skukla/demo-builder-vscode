@@ -2,7 +2,7 @@
  * Storefront Republish Service
  *
  * Republishes config.json for EDS storefronts when configuration changes.
- * Reuses existing generateConfigJson() and syncConfigToRemote() services.
+ * Reuses existing generateProjectConfigJson() and syncConfigToRemote() services.
  *
  * @module features/eds/services/storefront/storefrontRepublishService
  */
@@ -10,25 +10,13 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type * as vscode from 'vscode';
-import { resolveByomOverlayConfig } from '../../handlers/byomOverlay';
-import {
-    applyDaLiveOrgConfigSettings,
-    configureDaLivePermissions,
-    resolveProjectAuthoringExperience,
-} from '../../handlers/edsHelpers';
-import { prewarmCatalog } from '../catalogPrewarmService';
-import { generateConfigJson, buildConfigGeneratorParams } from '../configGenerator';
-import { syncConfigToRemote, verifyConfigOnCdn } from '../configSyncService';
-import type { DaLiveAuthService } from '../daLive/daLiveAuthService';
-import {
-    DaLiveContentOperations,
-    createDaLiveServiceTokenProvider,
-} from '../daLive/daLiveContentOperations';
-import type { GitHubTokenService } from '../github/githubTokenService';
-import { HelixService } from '../helix/helixService';
+import { generateProjectConfigJson } from '../configGenerator';
+import { syncConfigToRemote } from '../configSyncService';
 import type { PhaseProgressCallback } from '../types';
 import { updateStorefrontState } from './storefrontStalenessDetector';
+import { catalogPagesPendingAfter } from './storeScopeChange';
 import { COMPONENT_IDS } from '@/core/constants';
+import { STOREFRONT_JOBS, jobLine } from '@/core/utils/storefrontJobs';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -46,8 +34,30 @@ export interface RepublishParams {
     secrets: vscode.SecretStorage;
     /** Logger instance */
     logger: Logger;
-    /** Optional progress callback */
+    /**
+     * Optional progress callback. Each line is "Publishing the settings: <what it is
+     * doing>" (progress vocabulary slice 3): one job, one name, wherever it runs, so a
+     * caller showing the "Publishing the settings" step shows only what follows it.
+     */
     onProgress?: PhaseProgressCallback;
+    /**
+     * Ask for the DA.live sign-in before the CDN publish, when there is someone
+     * to ask. Every storefront the extension sets up carries a site admin role,
+     * and with that role every Helix admin call — the code publish included —
+     * needs the DA.live session. The dashboard's Republish button asked; the
+     * republish that runs inside an add, a deploy, a mesh deploy or a Configure
+     * save did not, so on 2026-09-24 an add finished "done" while the CDN kept
+     * the previous config.json and only the Debug Logs said so.
+     *
+     * The prompt's surface follows the operation's (the `ensureDaLiveAuth` rule,
+     * owner 2026-09-20): the sign-in form in a modal-hosted operation, a modal
+     * under an agent call, a notification with Sign In from a plain button. A
+     * refusal does not stop the GitHub push; it names the reason on `cdnError`
+     * and leaves the storefront STALE, so the Republish tile stays amber.
+     *
+     * Optional only for callers with nobody to ask; production callers pass it.
+     */
+    ensureDaLiveSession?: () => Promise<{ authenticated: boolean; error?: string }>;
     /**
      * Persist the project after the publish clears its stale flag.
      *
@@ -84,6 +94,13 @@ export interface RepublishResult {
      */
     cdnError?: string;
 }
+
+/** What `cdnError` says when the SC declined (or nobody could answer) the sign-in. */
+export const NO_DALIVE_SESSION_MESSAGE =
+    'No DA.live session — sign in to DA.live and republish from the dashboard.';
+
+/** What the settings publish is doing, under its one name. */
+const settingsLine = (detail: string): string => jobLine(STOREFRONT_JOBS.publishingSettings, detail);
 
 // ==========================================================
 // Parameter Extraction
@@ -163,6 +180,34 @@ export function extractRepublishParams(project: Project):
 // ==========================================================
 
 /**
+ * Record what the CDN now serves, and whether the store changed with it (EDS-44).
+ *
+ * The codes published before are read BEFORE `updateStorefrontState` replaces them,
+ * which is why the comparison lives here and not in each caller: every config publish
+ * — Configure, the dashboard, the agent, the mesh deploy's own republish — passes
+ * through this function. A store change leaves the storefront `stale` until a
+ * republish has replaced the product and category pages (`storeScopePages.ts`).
+ */
+function recordPublished(
+    project: Project,
+    publishedConfigs: Record<string, unknown>,
+    logger: Logger,
+): void {
+    const previous = project.edsStorefrontState;
+    updateStorefrontState(project, publishedConfigs);
+    const state = project.edsStorefrontState;
+    const pending = state ? catalogPagesPendingAfter(previous, state.envVars) : undefined;
+    if (state && pending) {
+        state.catalogPagesPending = pending;
+        logger.info(
+            `[StorefrontRepublish] The store changed (was ${pending.fromWebsiteCode || 'unset'}); ` +
+                'its product and category pages are replaced on the next republish',
+        );
+    }
+    project.edsStorefrontStatusSummary = pending ? 'stale' : 'published';
+}
+
+/**
  * Republish storefront config.json
  *
  * This function:
@@ -176,11 +221,11 @@ export function extractRepublishParams(project: Project):
  * @returns Republish result
  */
 export async function republishStorefrontConfig(params: RepublishParams): Promise<RepublishResult> {
-    const { project, secrets, logger, onProgress, persist } = params;
+    const { project, secrets, logger, onProgress, persist, ensureDaLiveSession } = params;
 
     try {
         // Step 1: Extract EDS metadata
-        onProgress?.('Extracting configuration');
+        onProgress?.(settingsLine('Reading the project settings'));
         logger.debug('[StorefrontRepublish] Starting republish for project:', project.name);
 
         const extractResult = extractRepublishParams(project);
@@ -194,7 +239,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         const { repoOwner, repoName, componentPath } = extractResult;
 
         // Step 2: Generate config.json
-        onProgress?.('Generating config.json');
+        onProgress?.(settingsLine('Building config.json'));
         logger.debug('[StorefrontRepublish] Generating config.json');
 
         // Snapshot the configs THIS publish is generated from, before the push.
@@ -207,7 +252,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
             project.componentConfigs ?? {},
         );
 
-        const configResult = generateConfigJson(buildConfigGeneratorParams(project), logger);
+        const configResult = generateProjectConfigJson(project, logger);
 
         if (!configResult.success || !configResult.content) {
             return {
@@ -227,7 +272,7 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         // That seam is scoped to the generated AI BUNDLE (`aiBundle/`), which lands in a
         // project people then edit. Reaching for it here would be applying the right rule
         // to the wrong file.
-        onProgress?.('Writing config.json');
+        onProgress?.(settingsLine('Writing config.json'));
         const configJsonPath = path.join(componentPath, 'config.json');
 
         try {
@@ -240,8 +285,17 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
             };
         }
 
-        // Step 4: Sync to GitHub and CDN
-        onProgress?.('Syncing to GitHub and CDN');
+        // Step 4: the DA.live session the CDN publish needs — asked for BEFORE the
+        // push, so a declined sign-in is known when the CDN answer comes back.
+        const session = ensureDaLiveSession ? await ensureDaLiveSession() : undefined;
+        if (session && !session.authenticated) {
+            logger.warn(
+                '[StorefrontRepublish] No DA.live session — pushing to GitHub, the CDN publish will not land',
+            );
+        }
+
+        // Step 5: Sync to GitHub and CDN
+        onProgress?.(settingsLine('Pushing config.json, then publishing it'));
         logger.info(`[StorefrontRepublish] Syncing config.json to ${repoOwner}/${repoName}`);
 
         const syncResult = await syncConfigToRemote({
@@ -250,7 +304,8 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
             repoName,
             logger,
             secrets,
-            onProgress,
+            // Its own lines ("Waiting for the CDN") are this job's too.
+            onProgress: onProgress && ((line) => onProgress(settingsLine(line))),
         });
 
         if (!syncResult.success) {
@@ -263,28 +318,37 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
             };
         }
 
-        // Step 5: Update storefront state
-        logger.debug('[StorefrontRepublish] Updating storefront state');
-        updateStorefrontState(project, publishedConfigs);
-        project.edsStorefrontStatusSummary = 'published';
-        // To DISK, not just memory — see `persist` on RepublishParams.
-        await persist(project);
+        // A refused sign-in explains the 401 better than the 401 does.
+        const cdnError =
+            syncResult.cdnError && session?.authenticated === false
+                ? NO_DALIVE_SESSION_MESSAGE
+                : syncResult.cdnError;
 
-        if (syncResult.cdnError) {
+        // Step 6: Update storefront state — only when the CDN actually took it.
+        // A GitHub push the CDN did not publish leaves the storefront serving the
+        // previous config.json, which is exactly what `stale` means; recording the
+        // new baseline here would turn the Republish tile green over a storefront
+        // that is not current, and nothing else would ever say so.
+        if (cdnError) {
+            project.edsStorefrontStatusSummary = 'stale';
             logger.warn(
                 '[StorefrontRepublish] Republished to GitHub, but the CDN still serves the ' +
-                    `previous config.json: ${syncResult.cdnError}`,
+                    `previous config.json: ${cdnError}`,
             );
         } else {
+            logger.debug('[StorefrontRepublish] Updating storefront state');
+            recordPublished(project, publishedConfigs, logger);
             logger.info('[StorefrontRepublish] Storefront config republished successfully');
         }
+        // To DISK, not just memory — see `persist` on RepublishParams.
+        await persist(project);
 
         return {
             success: true,
             githubPushed: syncResult.githubPushed,
             cdnPublished: syncResult.cdnPublished,
             cdnVerified: syncResult.cdnVerified,
-            cdnError: syncResult.cdnError,
+            cdnError,
         };
     } catch (error) {
         const errorMessage = (error as Error).message;
@@ -293,196 +357,5 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
             success: false,
             error: errorMessage,
         };
-    }
-}
-
-/**
- * Check if a project needs storefront republish
- *
- * @param project - Project to check
- * @returns True if storefront needs republishing
- */
-export function needsStorefrontRepublish(project: Project): boolean {
-    const status = project.edsStorefrontStatusSummary;
-    return status === 'stale' || status === 'update-declined';
-}
-
-// ==========================================================
-// Full content republish (config + code + DA.live content)
-// ==========================================================
-
-/** Parameters for the full storefront content republish pipeline. */
-export interface RepublishContentParams {
-    project: Project;
-    /** Forwarded to the config step, which clears and saves the stale flag. */
-    persist: (project: Project) => Promise<void>;
-    /** GitHub repo owner. */
-    repoOwner: string;
-    /** GitHub repo name. */
-    repoName: string;
-    /** DA.live organization. */
-    daLiveOrg: string;
-    /** DA.live site. */
-    daLiveSite: string;
-    /** Secret storage for the GitHub token (config.json push). */
-    secrets: vscode.SecretStorage;
-    logger: Logger;
-    /** Authenticated DA.live auth service (token provider + user email source). */
-    daLiveAuthService: DaLiveAuthService;
-    /** GitHub token service for the Helix Admin API. */
-    githubTokenService: GitHubTokenService;
-    /** Optional per-step progress callback. */
-    onProgress?: (message: string) => void;
-    /**
-     * Helix seam. Defaults to a service built from this call's logger and
-     * credentials; production never passes it.
-     *
-     * HelixService is stateless, so ADR-015 leaves the construction here — the cost
-     * was test design. `storefrontRepublishContent.test.ts` had to `jest.mock` the
-     * module to reach `previewCode`/`purgeCacheAll`/`publishAllSiteContent`, and its
-     * prewarm assertion could only say `expect.anything()` about the instance it
-     * could not name. With the seam it asserts the identity it handed in.
-     */
-    helixService?: HelixService;
-}
-
-/** Result of the full content republish. */
-export interface RepublishContentResult {
-    success: boolean;
-    error?: string;
-    /** Whether config.json was verified on the CDN (best-effort — may still be propagating). */
-    cdnVerified?: boolean;
-}
-
-/**
- * Republish ALL storefront content to the CDN — the headless 5-step pipeline
- * (EDS config → config.json → code → permissions → publish + verify) that
- * `handleRepublishContent` wraps with UI (auth modal, progress, status).
- *
- * Single source of truth: both the dashboard's Republish button and the MCP
- * `sync_content` tool call this, so the pipeline never diverges. Callers are
- * responsible for ensuring DA.live + GitHub auth before invoking (the UI pops a
- * sign-in modal; the MCP tool returns a `needsAuth` handoff).
- */
-export async function republishStorefrontContent(
-    params: RepublishContentParams,
-): Promise<RepublishContentResult> {
-    const {
-        project,
-        repoOwner,
-        repoName,
-        daLiveOrg,
-        daLiveSite,
-        secrets,
-        logger,
-        daLiveAuthService,
-        githubTokenService,
-        persist,
-    } = params;
-    const report = (message: string): void => params.onProgress?.(message);
-
-    try {
-        const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-        const helixService =
-            params.helixService ??
-            new HelixService(logger, githubTokenService, daLiveTokenProvider);
-        const daLiveContentOps = new DaLiveContentOperations(daLiveTokenProvider, logger);
-
-        // Step 1: Apply EDS site config (AEM Assets, authoring experience).
-        report('Applying EDS configuration');
-        const experience = resolveProjectAuthoringExperience(project);
-        await applyDaLiveOrgConfigSettings(
-            daLiveContentOps,
-            daLiveOrg,
-            daLiveSite,
-            logger,
-            experience,
-        );
-
-        // Step 2: Regenerate + sync config.json (picks up env var changes).
-        report('Regenerating storefront configuration');
-        const configResult = await republishStorefrontConfig({
-            project,
-            secrets,
-            logger,
-            onProgress: report,
-            persist,
-        });
-        if (!configResult.success) {
-            logger.warn(`[Republish] Config regeneration warning: ${configResult.error}`);
-        }
-
-        // Step 3: Sync code to CDN + configure site permissions.
-        report('Syncing code to CDN');
-        await helixService.previewCode(repoOwner, repoName, '/*');
-        const userEmail = await daLiveAuthService.getUserEmail();
-        if (userEmail) {
-            report('Configuring site permissions');
-            await configureDaLivePermissions(
-                daLiveTokenProvider,
-                daLiveOrg,
-                daLiveSite,
-                userEmail,
-                logger,
-            );
-        } else {
-            logger.warn('[Republish] No user email available for permissions');
-        }
-
-        // Step 4: Purge stale cache + publish all content.
-        report('Purging stale cache');
-        await helixService.purgeCacheAll(repoOwner, repoName, 'main');
-        report('Publishing content to CDN');
-        await helixService.publishAllSiteContent(
-            `${repoOwner}/${repoName}`,
-            'main',
-            daLiveOrg,
-            daLiveSite,
-            (info) => report(info.message),
-        );
-
-        // Step 5: Pre-warm the catalog's PDP pages (self-gating: ACCS + BYOM
-        // only; non-fatal). Decided 2026-08-23: Republish is the lightweight
-        // retry for a prewarm that failed at creation — e.g. a hibernated
-        // Live Search index since reactivated via the "Reactivate Live
-        // Search" support request — and it also refreshes previously-prewarmed
-        // PDPs, which Step 4's content publish never reaches (they are
-        // synthetic pages, not DA content). Reset remains the heavyweight path.
-        try {
-            const overlayUrl = resolveByomOverlayConfig(undefined, daLiveOrg, daLiveSite);
-            if (overlayUrl) {
-                report('Loading the product pages so they are quick for visitors');
-                const prewarm = await prewarmCatalog(
-                    project,
-                    overlayUrl,
-                    daLiveOrg,
-                    daLiveSite,
-                    helixService,
-                    logger,
-                    (p) => report(p.message),
-                );
-                if (!prewarm.skipped) {
-                    logger.info(
-                        `[Republish] Catalog pre-warming: ${prewarm.succeeded}/${prewarm.attempted} SKUs pre-published`,
-                    );
-                }
-            }
-        } catch (prewarmError) {
-            logger.warn(
-                `[Republish] Catalog pre-warming failed (non-fatal): ${(prewarmError as Error).message}`,
-            );
-        }
-
-        // Step 6: Verify config.json on the CDN (best-effort).
-        report('Verifying CDN');
-        const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, logger);
-        return { success: true, cdnVerified };
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logger.error(
-            '[Republish] Content republish failed',
-            error instanceof Error ? error : undefined,
-        );
-        return { success: false, error: message };
     }
 }

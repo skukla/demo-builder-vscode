@@ -20,6 +20,7 @@ import {
     getBlockLibraryContentSource,
     getBlockLibraryName,
     isBlockLibraryAvailableForPackage,
+    withAlwaysIncludedBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
 import type { Stack } from '@/types/stacks';
 
@@ -106,13 +107,13 @@ describe('blockLibraryLoader', () => {
             expect(isle5).toBeUndefined();
         });
 
-        it('should return demo-team-blocks as the only available library for Isle5 on EDS', () => {
+        it('should return demo-team-blocks as the available library for Isle5 on EDS', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'isle5');
 
-            // Isle5 sees: demo-team-blocks (not isle5 — native, not buildright-blocks — pinned)
-            expect(libs).toHaveLength(1);
-            expect(libs[0].id).toBe('demo-team-blocks');
+            // Isle5 sees demo-team-blocks — not isle5 (native), not buildright-blocks
+            // (pinned), not demo-builder-blocks (always included, never offered)
+            expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks']);
         });
 
         it('should not include pinned libraries for other packages', () => {
@@ -124,20 +125,21 @@ describe('blockLibraryLoader', () => {
             expect(buildrightLib).toBeUndefined();
         });
 
-        it('should return only demo-team-blocks for Custom package on EDS', () => {
+        it('should return demo-team-blocks for Custom package on EDS', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'starter');
 
-            // Custom sees demo-team-blocks only (isle5 and buildright-blocks
-            // are pinned to their own hidden packages via onlyForPackages)
+            // Custom sees demo-team-blocks (isle5 and buildright-blocks are pinned to
+            // their own packages; demo-builder-blocks is always included, never offered)
             expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks']);
         });
 
-        it('should return only demo-team-blocks for CitiSignal on EDS', () => {
+        it('should return demo-team-blocks for CitiSignal on EDS', () => {
             const edsStack = makeStack();
             const libs = getAvailableBlockLibraries(edsStack, 'citisignal');
 
-            // CitiSignal sees demo-team-blocks only (package-DEFAULT, deselectable)
+            // CitiSignal sees demo-team-blocks (package-DEFAULT, deselectable);
+            // demo-builder-blocks is always included, so it is never a choice
             expect(libs.map((l) => l.id)).toEqual(['demo-team-blocks']);
         });
 
@@ -155,6 +157,29 @@ describe('blockLibraryLoader', () => {
             const libs = getAvailableBlockLibraries(edsStack, 'bodea');
 
             expect(libs.map((l) => l.id)).not.toContain('bodea-blocks');
+        });
+    });
+
+    describe('withAlwaysIncludedBlockLibraries (owner, 2026-10-15)', () => {
+        // Demo Builder Blocks carries catalog-menu, the nav built from the Commerce
+        // category tree that category pages rely on: every storefront gets it,
+        // whatever was ticked, and it is never offered as a choice.
+        it('adds the always-included library to what was ticked', () => {
+            expect(withAlwaysIncludedBlockLibraries(['demo-team-blocks'], 'citisignal')).toEqual([
+                'demo-team-blocks',
+                'demo-builder-blocks',
+            ]);
+        });
+
+        it('adds it when nothing was ticked, and to a project that never recorded a choice', () => {
+            expect(withAlwaysIncludedBlockLibraries([], 'bodea')).toEqual(['demo-builder-blocks']);
+            expect(withAlwaysIncludedBlockLibraries(undefined, 'starter')).toEqual(['demo-builder-blocks']);
+        });
+
+        it('never lists it twice', () => {
+            expect(withAlwaysIncludedBlockLibraries(['demo-builder-blocks'], 'starter')).toEqual([
+                'demo-builder-blocks',
+            ]);
         });
     });
 
@@ -332,6 +357,13 @@ describe('blockLibraryLoader', () => {
             ]);
         });
 
+        it('never seeds demo-builder-blocks: off by default until its first real run passes (category-pages step 3)', () => {
+            const edsStack = makeStack();
+            for (const pkg of ['citisignal', 'starter', 'isle5', 'bodea', 'buildright']) {
+                expect(getPackageDefaultBlockLibraryIds(edsStack, pkg)).not.toContain('demo-builder-blocks');
+            }
+        });
+
         it('returns [] for packages the library does not default to', () => {
             const edsStack = makeStack();
             expect(getPackageDefaultBlockLibraryIds(edsStack, 'isle5')).toStrictEqual([]);
@@ -469,6 +501,7 @@ describe('blockLibraryLoader', () => {
             description: string;
             default?: boolean;
             onlyForPackages?: string[];
+            alwaysIncluded?: boolean;
         };
         const libraries: LibraryEntry[] = blockLibrariesJson.libraries;
 
@@ -477,7 +510,8 @@ describe('blockLibraryLoader', () => {
         // because they would mislead users into selecting them for incompatible brands.
         // Note: matches production blockLibraryLoader logic — presence of onlyForPackages (even [])
         // marks a library as brand-scoped, consistent with isBlockLibraryAvailableForPackage.
-        const globalLibraries = libraries.filter((l) => !l.onlyForPackages);
+        // An always-included library is not a choice, so it is no default either.
+        const globalLibraries = libraries.filter((l) => !l.onlyForPackages && !l.alwaysIncluded);
         const globalLibraryIds = globalLibraries.map((l) => l.id);
 
         it('should only include global (non-brand-scoped) library IDs in the settings enum', () => {

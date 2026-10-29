@@ -37,8 +37,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
-    GitHubRepoOperations: jest.fn().mockImplementation(() => ({
+jest.mock('@/features/eds/services/github/githubRepoLifecycle', () => ({
+    GitHubRepoLifecycle: jest.fn().mockImplementation(() => ({
         createFromTemplate: jest.fn(),
         waitForContent: jest.fn(),
     })),
@@ -70,11 +70,14 @@ import { ensureDaLiveAuth, configureDaLivePermissions } from '@/features/eds/han
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
 
 // Get mock references
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
 const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<typeof executeEdsPipeline>;
-const mockConfigurePerms = configureDaLivePermissions as jest.MockedFunction<typeof configureDaLivePermissions>;
+const mockConfigurePerms = configureDaLivePermissions as jest.MockedFunction<
+    typeof configureDaLivePermissions
+>;
 
 // =============================================================================
 // Helpers
@@ -123,7 +126,9 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
         // Given: Pipeline throws DaLiveAuthError on first attempt, succeeds on second
         mockExecuteEdsPipeline
             .mockRejectedValueOnce(new DaLiveAuthError('DA.live token expired'))
-            .mockResolvedValueOnce({ success: true, contentFilesCopied: 0, libraryPaths: [] });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] })
+            );
 
         // And: Re-auth succeeds
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
@@ -134,11 +139,20 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: ensureDaLiveAuth should have been called
-        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(mockContext, '[Storefront Setup]');
+        // The run's own context: the same one, its progress pushes numbered as steps
+        // on the way out (`withSetupSteps`).
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(
+            expect.objectContaining({
+                context: mockContext.context,
+                logger: mockContext.logger,
+                stateManager: mockContext.stateManager,
+            }),
+            '[Storefront Setup]'
+        );
         expect(result.success).toBe(true);
     });
 
@@ -150,7 +164,9 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
         // Given: First pipeline call fails with auth error
         mockExecuteEdsPipeline
             .mockRejectedValueOnce(new DaLiveAuthError('Token expired'))
-            .mockResolvedValueOnce({ success: true, contentFilesCopied: 0, libraryPaths: ['nav'] });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: ['nav'] })
+            );
 
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 
@@ -160,7 +176,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Pipeline should have been called twice
@@ -183,7 +199,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should return error (caught by outer try-catch)
@@ -209,7 +225,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should return error
@@ -233,7 +249,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should have attempted pipeline 3 times (initial + 2 retries)
@@ -258,7 +274,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should NOT call ensureDaLiveAuth
@@ -277,7 +293,9 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
         // Given: Pipeline throws auth error
         mockExecuteEdsPipeline
             .mockRejectedValueOnce(new DaLiveAuthError('Token expired'))
-            .mockResolvedValueOnce({ success: true, contentFilesCopied: 0, libraryPaths: [] });
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] })
+            );
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 
         // When
@@ -286,7 +304,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should send auth-recovery progress
@@ -295,7 +313,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             expect.objectContaining({
                 phase: 'auth-recovery',
                 progress: -1,
-            }),
+            })
         );
 
         // And: Should send resume progress after re-auth
@@ -304,7 +322,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             expect.objectContaining({
                 phase: 'content',
                 message: expect.stringContaining('Resuming'),
-            }),
+            })
         );
     });
 
@@ -321,7 +339,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
         const result = await executeStorefrontSetupPhases(
             mockContext,
             createEdsConfig(),
-            abortController.signal,
+            abortController.signal
         );
 
         // Then: Should return error about cancellation
@@ -344,7 +362,9 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
         jest.clearAllMocks();
         mockContext = createSetupContext();
         // Default: pipeline succeeds
-        mockExecuteEdsPipeline.mockResolvedValue({ success: true, contentFilesCopied: 0, libraryPaths: [] });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] })
+        );
     });
 
     it('should recover when configureDaLivePermissions throws DaLiveAuthError', async () => {
@@ -362,12 +382,21 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should succeed after recovery
         expect(result.success).toBe(true);
-        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(mockContext, '[Storefront Setup]');
+        // The run's own context: the same one, its progress pushes numbered as steps
+        // on the way out (`withSetupSteps`).
+        expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(
+            expect.objectContaining({
+                context: mockContext.context,
+                logger: mockContext.logger,
+                stateManager: mockContext.stateManager,
+            }),
+            '[Storefront Setup]'
+        );
         // configureDaLivePermissions called twice (fail + retry)
         expect(mockConfigurePerms).toHaveBeenCalledTimes(2);
     });
@@ -385,7 +414,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should send auth-recovery progress for phase 2-3
@@ -394,7 +423,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             expect.objectContaining({
                 phase: 'auth-recovery',
                 progress: -1,
-            }),
+            })
         );
         // And: Should send resume progress
         expect(mockContext.sendMessage).toHaveBeenCalledWith(
@@ -402,7 +431,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             expect.objectContaining({
                 phase: 'code-sync',
                 message: expect.stringContaining('Resuming'),
-            }),
+            })
         );
     });
 
@@ -417,7 +446,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: Should return error
@@ -437,7 +466,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             createEdsConfig(),
             new AbortController().signal,
             undefined,
-            SERVICES,
+            SERVICES
         );
 
         // Then: configureDaLivePermissions called 3 times (initial + 2 retries)

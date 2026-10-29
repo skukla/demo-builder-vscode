@@ -30,10 +30,32 @@ const config = blockLibrariesConfig as unknown as BlockLibrariesConfig;
 export function getAvailableBlockLibraries(stack: Stack, packageId: string): BlockLibrary[] {
     return config.libraries.filter((lib) => {
         if (!lib.stackTypes.includes(stack.frontend)) return false;
+        if (lib.alwaysIncluded) return false;
         if (lib.nativeForPackages?.includes(packageId)) return false;
         if (lib.onlyForPackages && !lib.onlyForPackages.includes(packageId)) return false;
         return true;
     });
+}
+
+/**
+ * The libraries a storefront gets whatever was ticked, added to what was.
+ *
+ * `alwaysIncluded` libraries (Demo Builder Blocks: catalog-menu, which category
+ * pages rely on) are never offered as a choice, so no selection names them.
+ * Creation, reset, Check for Updates and removal each read the selection through
+ * here, so every storefront has them, an existing one is offered them, and none
+ * loses them (owner, 2026-10-15). Callers are Edge Delivery paths, so the stack
+ * is not re-checked; `onlyForPackages` still is.
+ *
+ * @param selected - the ticked library ids, if any were recorded
+ * @param packageId - the project's package
+ * @returns the ticked ids, then each always-included library not already there
+ */
+export function withAlwaysIncludedBlockLibraries(selected: string[] | undefined, packageId: string): string[] {
+    const always = config.libraries
+        .filter((lib) => lib.alwaysIncluded && isBlockLibraryAvailableForPackage(lib.id, packageId))
+        .map((lib) => lib.id);
+    return [...new Set([...(selected ?? []), ...always])];
 }
 
 /**
@@ -119,6 +141,17 @@ export function isBlockLibraryAvailableForPackage(libraryId: string, packageId: 
     if (!lib) return false;
     if (lib.onlyForPackages && !lib.onlyForPackages.includes(packageId)) return false;
     return true;
+}
+
+/**
+ * Whether a library comes with every storefront (`alwaysIncluded`): never offered
+ * in the picker, so never counted as chosen either (the Build Your Project summary).
+ *
+ * @param libraryId - The block library ID
+ * @returns True for an always-included library
+ */
+export function isAlwaysIncludedBlockLibrary(libraryId: string): boolean {
+    return config.libraries.some((lib) => lib.id === libraryId && lib.alwaysIncluded === true);
 }
 
 /**

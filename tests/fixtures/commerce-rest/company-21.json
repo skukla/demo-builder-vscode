@@ -1,0 +1,35 @@
+{
+  "_captured": {
+    "from": "Bodea sandbox (Adobe Commerce as a Cloud Service)",
+    "on": "2026-09-27",
+    "request": "GET company/21",
+    "note": "Contact details, IPs, hostnames, the tenant id and the company name replaced; everything else as answered."
+  },
+  "body": {
+    "id": 21,
+    "status": 1,
+    "company_name": "Example Studios",
+    "legal_name": "Example Studios, LLC",
+    "company_email": "company@example.com",
+    "street": ["1 Demo Way"],
+    "city": "Springfield",
+    "country_id": "US",
+    "region_id": "44",
+    "postcode": "12345",
+    "telephone": "5550100",
+    "customer_group_id": 19,
+    "sales_representative_id": 1,
+    "reject_reason": null,
+    "rejected_at": null,
+    "super_user_id": 44,
+    "extension_attributes": {
+      "is_purchase_order_enabled": false,
+      "is_company_address_book_enabled": false,
+      "is_custom_shipping_address_allowed": false,
+      "quote_config": {
+        "company_id": "21",
+        "is_quote_enabled": true
+      }
+    }
+  }
+}

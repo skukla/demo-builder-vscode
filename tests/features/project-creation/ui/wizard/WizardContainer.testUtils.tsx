@@ -4,6 +4,7 @@ import { settle } from '../../../../helpers/reactSettle';
 import { render as rtlRender } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelection } from '@/types/webview';
+import type { ImportedSettings } from '@/types/wizard';
 
 /**
  * Shared test utilities for WizardContainer tests
@@ -41,12 +42,14 @@ export const createMockWizardSteps = () => [
     { id: 'create-project', name: 'Create Project', enabled: true },
 ];
 
-// Helper to create mock imported settings for import flow tests.
-// Shape pinned by ImportedSettings (= Partial<SettingsFile>): `version` is a
-// NUMBER and there is no `exportedFrom` field — the old string/invented pair
-// survived only while this fixture was checked against a hand-copied type.
-export const createMockImportedSettings = () => ({
-    version: 1,
+// Helper to create mock imported settings for import flow tests: a version-2
+// project file as Import hands it to the wizard. Typed to ImportedSettings, so a
+// field the type lacks fails to compile — the old string `version` and invented
+// `exportedFrom` survived only while this fixture was checked against a
+// hand-copied type.
+export const createMockImportedSettings = (): ImportedSettings => ({
+    kind: 'project',
+    version: 2,
     adobe: {
         orgId: 'org123',
         orgName: 'Test Organization',
@@ -67,6 +70,7 @@ export const createMockImportedSettings = () => ({
     },
     source: {
         project: 'my-existing-project',
+        extension: '1.0.0-test',
     },
 });
 

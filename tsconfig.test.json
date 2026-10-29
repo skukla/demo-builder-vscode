@@ -38,6 +38,9 @@
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["src/**/*", "tests/**/*"],
+  // `.eslint-probe/` exists only while tests/sop/eslint-type-aware.test.ts runs; it
+  // is listed so the type-aware lint (eslint.casts.mjs, which reads THIS config)
+  // can parse the probe file. Normally the directory is absent and matches nothing.
+  "include": ["src/**/*", "tests/**/*", ".eslint-probe/**/*"],
   "exclude": ["node_modules", "dist"]
 }

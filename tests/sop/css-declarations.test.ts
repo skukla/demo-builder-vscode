@@ -16,6 +16,7 @@ import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, relative } from 'path';
+import { workingTreeFiles } from './architectureScan';
 
 const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 
@@ -43,8 +44,7 @@ describe('ADR-018 §2: reduced-motion blocks live in @layer overrides', () => {
      * survivors were not a legitimate residue; they were evidence of a misplaced
      * block, and accepting them would have written that mistake down as a rule.
      */
-    const SHEETS = execSync('git ls-files "*.css"', { cwd: ROOT, encoding: 'utf8' })
-        .split('\n')
+    const SHEETS = workingTreeFiles('*.css')
         .filter((f) => f && !f.includes('node_modules'));
     const blank = (css: string): string =>
         css.replace(/\/\*[\s\S]*?\*\//g, (m) => ' '.repeat(m.length));
@@ -132,8 +132,7 @@ describe('ADR-018 §7: motion timings come from Spectrum\'s scale', () => {
      * not a UI transition, and forcing those onto the scale moves them by up to
      * 500ms. They stay literal, and this check leaves anything >= 1s alone.
      */
-    const SHEETS = execSync('git ls-files "*.css"', { cwd: ROOT, encoding: 'utf8' })
-        .split('\n')
+    const SHEETS = workingTreeFiles('*.css')
         .filter((f) => f && !f.includes('node_modules'));
 
     const LOOP_MS = 1000;
@@ -199,8 +198,7 @@ describe('every stylesheet PARSES — a rule the browser drops is not a rule', (
      * This is a PARSE check, not a style opinion, which is why it has no ledger:
      * there is no such thing as a grandfathered unparseable rule.
      */
-    const SHEETS = execSync('git ls-files "*.css"', { cwd: ROOT, encoding: 'utf8' })
-        .split('\n')
+    const SHEETS = workingTreeFiles('*.css')
         .filter((f) => f && !f.includes('node_modules'));
 
     /** Blank out comments, keeping line numbers so a hit can be cited. */

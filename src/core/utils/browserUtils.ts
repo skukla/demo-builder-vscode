@@ -4,14 +4,14 @@
  * Helpers for opening URLs in the system browser from the extension host.
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Open a URL in incognito mode (Chrome on macOS)
@@ -22,7 +22,9 @@ const execAsync = promisify(exec);
 export async function openInIncognito(url: string): Promise<boolean> {
     if (process.platform === 'darwin') {
         try {
-            await execAsync(`open -na "Google Chrome" --args --incognito "${url}"`);
+            // Arguments, never a shell string: a URL is data. Inside a quoted shell
+            // string, `$(…)` in a stored URL would run as a command.
+            await execFileAsync('open', ['-na', 'Google Chrome', '--args', '--incognito', url]);
             return true;
         } catch {
             // Chrome not available, fall back
@@ -32,6 +34,33 @@ export async function openInIncognito(url: string): Promise<boolean> {
     // Fallback to normal browser
     await vscode.env.openExternal(vscode.Uri.parse(url));
     return false;
+}
+
+/**
+ * Open a URL in a private browser window, with a notification covering the launch.
+ *
+ * Chrome takes a second or two to start, and the two screens that open a live site
+ * had written this notification out separately. The URL is expected to be validated
+ * already — the caller refuses a bad one in its own shape before anything opens.
+ *
+ * @param url - a validated URL
+ * @returns true if opened in incognito, false if fell back to normal browser
+ */
+export async function openPrivateBrowser(url: string): Promise<boolean> {
+    let openedIncognito = false;
+
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Opening a private browser',
+            cancellable: false,
+        },
+        async () => {
+            openedIncognito = await openInIncognito(url);
+        },
+    );
+
+    return openedIncognito;
 }
 
 /**

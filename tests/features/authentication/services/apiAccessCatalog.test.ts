@@ -51,7 +51,7 @@ describe('buildApiAccessCatalog', () => {
                 code: 'AEMAssetsAuthor',
                 enabled: false,
                 disabledReasons: ['USER_MISSING_PRODUCT_PROFILES'],
-                licenseConfigs: [], // empty — the old heuristic would MISS this
+                properties: { licenseConfigs: [] }, // empty — the old heuristic would MISS this
             }),
         ]);
         expect(row.requiresProfile).toBe(true);

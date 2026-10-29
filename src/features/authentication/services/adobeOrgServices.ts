@@ -11,15 +11,23 @@
  * @module features/authentication/services/adobeOrgServices
  */
 
+import { ensureSDKReady } from './adobeEntityReads';
 import type { AdobeSDKClient } from './adobeSDKClient';
-import { readSavedCatalog, saveCatalog, type OrgServicesStore } from './orgServicesSavedCatalog';
-import type { OrgServiceInfo, SDKResponse, ServiceSubscriptionInfo } from './types';
+import { OrgServicesCatalog, type SavedState } from './orgServicesSavedCatalog';
+import type {
+    OrgServiceInfo,
+    SDKResponse,
+    ServiceLicenseConfig,
+    ServiceSubscriptionInfo,
+    SubscribedService,
+} from './types';
 import { getLogger } from '@/core/logging/debugLogger';
-import { tryWithTimeout } from '@/core/utils/promiseUtils';
+import { tryWithTimeout , firstSuccess } from '@/core/utils/promiseUtils';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { sleep } from '@/core/utils/sleep';
 import { formatDuration } from '@/core/utils/timeFormatting';
-import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { withOneTransientRetry } from '@/core/utils/transientRetry';
 
 /**
  * The subscribe response, only as deep as the refusal check reads.
@@ -47,9 +55,9 @@ interface SubscribeResponseBody {
  * Both subscribe wrappers used to discard the response entirely, so this read as
  * success. That mattered because **the subscription IS the entitlement** — it is
  * what moves an S2S credential's scopes from `AdobeID,openid` to `commerce.accs`
- * — so `provisionAccsCredentials` went on to return a scope-less credential whose
- * only symptom was a Data Installer pre-flight 400 minutes later, in a different
- * feature, with nothing connecting the two. Measured 2026-08-16 against an org
+ * — so the Data Installer's ACCS credential provisioning (removed 2026-10-28, DI-6)
+ * went on to return a scope-less credential whose only symptom was a pre-flight 400
+ * minutes later, in a different feature, with nothing connecting the two. Measured 2026-08-16 against an org
  * holding no ACCS product (`.rptc/plans/data-installer-credential-broker/step-05.md`).
  *
  * **Only positive evidence fails.** The SDK does not always return a body, and an
@@ -85,33 +93,21 @@ const ORG_SERVICES_ATTEMPTS = 3;
 /**
  * Reads the org service catalog and subscribes credentials to services.
  */
+/** Whether an SDK error is Adobe's 404 — the SDK carries the status only in its message. */
+function isNotFound(error: unknown): boolean {
+    return / 404 - Not Found/.test(error instanceof Error ? error.message : String(error));
+}
+
 export class AdobeOrgServices {
     private debugLogger = getLogger();
-    /**
-     * Per-org cache of the entitled-services catalog (see getServicesForOrg).
-     * Per-instance: the owning fetcher is a session singleton (created once via
-     * ServiceLocator/AuthenticationService), so this lives for the session.
-     */
-    private servicesCache = new Map<string, { services: OrgServiceInfo[]; expiresAt: number }>();
+    /** Each org's kept API list, in memory and saved across reloads (see getServicesForOrg). */
+    private readonly catalog: OrgServicesCatalog;
     /** In-flight catalog fetch per org — see getServicesForOrg. */
     private readonly servicesFlights = new Map<string, SingleFlight<OrgServiceInfo[]>>();
 
-    /**
-     * @param store - keeps the API list across window reloads. Without one the
-     *   list lives for the session only, and every reload waits on Adobe again.
-     */
-    constructor(
-        private sdkClient: AdobeSDKClient,
-        private readonly store?: OrgServicesStore,
-    ) {}
-
-    /**
-     * Ensure SDK is initialized (lazy init pattern)
-     */
-    private async ensureSDKReady(): Promise<void> {
-        if (!this.sdkClient.isInitialized()) {
-            await this.sdkClient.ensureInitialized();
-        }
+    /** @param store - keeps the API list across window reloads; without one, every reload waits. */
+    constructor(private sdkClient: AdobeSDKClient, store?: SavedState) {
+        this.catalog = new OrgServicesCatalog(store);
     }
 
     /**
@@ -119,78 +115,70 @@ export class AdobeOrgServices {
      * Resolves an App Builder component's `requiredApis` names → sdkCodes + platformList.
      * Each entry carries `{ code, platformList, domainMandatory?, ... }`.
      */
-    async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
-        // Once loaded, the list is ALWAYS answered from memory — Developer Console's
-        // pattern. It is identical for every workspace in the org and barely changes,
-        // while a cold fetch takes about a minute and can hit Adobe's 60s gateway limit.
-        // An expired copy is still returned, and starts one background refresh; only
-        // the session's very first ask waits on Adobe. On 2026-09-21 a 30-minute expiry
-        // turned Manage APIs, opened 40 minutes after the warm-up, into a 60s timeout.
-        // The copy is also SAVED, so a window reload does not throw it away: the same
-        // day, the first open after a reload hit Adobe's 60s cutoff twice running.
-        const cached = this.servicesCache.get(orgId) ?? this.restoreSaved(orgId);
+    async getServicesForOrg(orgId: string, sdkCodes?: readonly string[]): Promise<OrgServiceInfo[]> {
+        // Once loaded, ALWAYS answered from memory (Developer Console's pattern): the list is
+        // the same for every workspace and barely changes, and a cold fetch takes about a minute.
+        // An old copy starts one background refresh; only the session's first ask waits. On
+        // 2026-09-21 a 30-minute expiry made Manage APIs a 60s timeout 40 minutes in. The copy
+        // is also SAVED, so a reload keeps it: that day the first open after one hit 60s twice.
+        const cached = this.catalog.get(orgId);
+        const flight = this.servicesFlights.get(orgId) ?? new SingleFlight<OrgServiceInfo[]>();
+        this.servicesFlights.set(orgId, flight);
         if (cached) {
             if (Date.now() >= cached.expiresAt) {
-                this.flightFor(orgId)
-                    .run(() => this.fetchServicesForOrg(orgId))
-                    .catch(() => {
-                        // Keep the copy we have; the next ask tries again.
-                        this.debugLogger.debug('[Entity Fetcher] Background org services refresh failed');
-                    });
+                flight.run(() => this.fetchServicesForOrg(orgId)).catch(() => {
+                    this.debugLogger.debug('[Entity Fetcher] Background org services refresh failed');
+                });
             }
-            return cached.services;
+            return sdkCodes ? cached.services.filter((s) => sdkCodes.includes(s.code)) : cached.services;
         }
-        return this.flightFor(orgId).run(() => this.fetchServicesForOrg(orgId));
-    }
-
-    /** Load the org's saved list into memory, keeping its age. */
-    private restoreSaved(orgId: string): { services: OrgServiceInfo[]; expiresAt: number } | undefined {
-        const saved = readSavedCatalog(this.store, orgId);
-        if (!saved) {
-            return undefined;
+        // Only the named codes: warm, three took 1.3s where the full catalog hit Adobe's 60s
+        // limit. Never cached as the full list (the picker would show 4 APIs). A full load
+        // already running races it rather than queuing it: cold, three codes took 54s too.
+        if (sdkCodes) {
+            const narrowed = this.fetchServicesForOrg(orgId, sdkCodes);
+            if (!flight.isInFlight) return narrowed;
+            const running = flight.run(() => this.fetchServicesForOrg(orgId));
+            return firstSuccess(narrowed, running.then((all) => all.filter((s) => sdkCodes.includes(s.code))));
         }
-        const entry = { services: saved.services, expiresAt: saved.fetchedAt + CACHE_TTL.ORG_SERVICES };
-        this.servicesCache.set(orgId, entry);
-        return entry;
+        // Single-flight PER ORG: the picker and the dashboard's warm-up ask at once.
+        return flight.run(() => this.fetchServicesForOrg(orgId));
     }
 
     /**
-     * The org's single-flight slot. The Add Integration modal and the dashboard's
-     * warm-up ask at once by construction; without this each pulled the full list.
+     * The shared one-retry (`@/core/utils/transientRetry`), logging under this
+     * service's prefix. The rationale lives on the helper.
      */
-    private flightFor(orgId: string): SingleFlight<OrgServiceInfo[]> {
-        let flight = this.servicesFlights.get(orgId);
-        if (!flight) {
-            flight = new SingleFlight<OrgServiceInfo[]>();
-            this.servicesFlights.set(orgId, flight);
-        }
-        return flight;
+    private withOneTransientRetry<T>(label: string, run: () => Promise<T>): Promise<T> {
+        return withOneTransientRetry(`[Entity Fetcher] ${label}`, run, (message) =>
+            this.debugLogger.warn(message),
+        );
     }
 
     /** The uncached catalog fetch behind {@link getServicesForOrg}'s single-flight. */
-    private async fetchServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
+    private async fetchServicesForOrg(
+        orgId: string,
+        sdkCodes?: readonly string[],
+    ): Promise<OrgServiceInfo[]> {
         const startTime = Date.now();
-        await this.ensureSDKReady();
-        const client = this.sdkClient.getClient() as {
-            getServicesForOrg: (orgId: string) => Promise<SDKResponse<OrgServiceInfo[]>>;
-        };
+        await ensureSDKReady(this.sdkClient);
+        type ListServices = (orgId: string, codes?: string) => Promise<SDKResponse<OrgServiceInfo[]>>;
+        const client = this.sdkClient.getClient() as { getServicesForOrg: ListServices };
+        const codes = sdkCodes?.join(',');
 
         // Bounded like every other SDK read (trySDKFetch's contract, which this
         // method predates): an unbounded call left the API picker spinning with no
         // log line and no ceiling when the endpoint stalled.
         const attempt = (label: string) =>
-            tryWithTimeout(client.getServicesForOrg(orgId), {
+            tryWithTimeout(client.getServicesForOrg(orgId, codes), {
                 timeoutMs: TIMEOUTS.ORG_SERVICES_FETCH,
                 timeoutMessage: `SDK org services fetch${label}`,
             });
 
-        // The tries live HERE, inside the one shared request, so everyone waiting on
-        // it — the Manage APIs spinner and the dashboard's warm-up alike — sees a
-        // single load that ends in the list or in one error. On 2026-09-21 the retry
-        // lived in the warm-up instead: Adobe's gateway cut the first try off at 60s,
-        // the dialog showed "Couldn't load Adobe APIs" while a retry it could not see
-        // loaded the list 31s later. A cold load that dies at the gateway usually
-        // leaves Adobe's side warmer, and Developer Console just keeps spinning.
+        // The tries live HERE, in the one shared request, so every waiter (the Manage APIs
+        // spinner, the warm-up) sees one load ending in the list or one error. On 2026-09-21
+        // the retry lived in the warm-up: the dialog showed an error at Adobe's 60s cutoff
+        // while a retry it could not see loaded the list 31s later.
         let outcome = await attempt('');
         for (let tryNumber = 2; tryNumber <= ORG_SERVICES_ATTEMPTS && !outcome.result; tryNumber++) {
             this.debugLogger.warn(
@@ -219,14 +207,10 @@ export class AdobeOrgServices {
                 `${formatDuration(Date.now() - startTime)}`,
         );
 
-        // Cache only a successful, non-empty fetch — never a degraded empty result,
-        // so a transient 500 → [] cannot poison the cache for the whole session.
-        if (services.length > 0) {
-            this.servicesCache.set(orgId, {
-                services,
-                expiresAt: Date.now() + CACHE_TTL.ORG_SERVICES,
-            });
-            saveCatalog(this.store, orgId, services);
+        // Cache only a successful, non-empty, FULL fetch: a transient 500 → [] must not
+        // poison the session, and a narrowed answer is a subset by construction.
+        if (services.length > 0 && !sdkCodes) {
+            this.catalog.keep(orgId, services);
         }
         return services;
     }
@@ -243,18 +227,79 @@ export class AdobeOrgServices {
      */
     async getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]> {
         try {
-            await this.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
             const client = this.sdkClient.getClient() as {
                 getIntegration: (
                     orgId: string,
                     idIntegration: string
                 ) => Promise<SDKResponse<{ sdkList?: string[] }>>;
             };
-            const response = await client.getIntegration(orgId, idIntegration);
+            const response = await this.withOneTransientRetry('getSubscribedServiceCodes', () =>
+                client.getIntegration(orgId, idIntegration),
+            );
             return response?.body?.sdkList ?? [];
         } catch (error) {
             this.debugLogger.debug('[Entity Fetcher] getSubscribedServiceCodes failed', error);
             return [];
+        }
+    }
+
+    /**
+     * Every service a credential is subscribed to, WITH the product profiles each
+     * holds — what a subscribe must carry forward, because Adobe's subscribe call
+     * REPLACES a credential's whole list (a deploy that sent only what it needed
+     * removed ACCS-REST-API and its profile from Kukla Bodea / Stage, 2026-09-19).
+     *
+     * `sdkList` from `getIntegration`, then `getSDKProperties` per service for its
+     * `licenseConfigs`. Never throws: ANY failed read answers `undefined` — unknown —
+     * because a subscribe built from a partial list is the removal this prevents.
+     *
+     * @param orgId - Adobe org id
+     * @param idIntegration - the credential's integration id
+     * @returns the subscribed services with their profiles, or `undefined` when unknown
+     */
+    async getSubscribedServices(
+        orgId: string,
+        idIntegration: string,
+    ): Promise<SubscribedService[] | undefined> {
+        try {
+            await ensureSDKReady(this.sdkClient);
+            const client = this.sdkClient.getClient() as {
+                getIntegration: (
+                    orgId: string,
+                    idIntegration: string,
+                ) => Promise<SDKResponse<{ sdkList?: string[] }>>;
+                getSDKProperties: (
+                    orgId: string,
+                    idIntegration: string,
+                    sdkCode: string,
+                ) => Promise<SDKResponse<{ licenseConfigs?: ServiceLicenseConfig[] | null }>>;
+            };
+            const codes =
+                (
+                    await this.withOneTransientRetry('getSubscribedServices', () =>
+                        client.getIntegration(orgId, idIntegration),
+                    )
+                )?.body?.sdkList ?? [];
+            return await Promise.all(
+                codes.map(async (sdkCode) => {
+                    // An API-key credential has no profile properties at all: Adobe
+                    // answers 404 for them (the API Mesh credential, measured live
+                    // 2026-09-19). That is "no profiles", not "unknown" — every other
+                    // failure still makes the whole answer unknown.
+                    const props = await this.withOneTransientRetry(
+                        `getSDKProperties(${sdkCode})`,
+                        () => client.getSDKProperties(orgId, idIntegration, sdkCode),
+                    ).catch((error: unknown) => {
+                        if (isNotFound(error)) return undefined;
+                        throw error;
+                    });
+                    return { sdkCode, licenseConfigs: props?.body?.licenseConfigs ?? [] };
+                }),
+            );
+        } catch (error) {
+            this.debugLogger.debug('[Entity Fetcher] getSubscribedServices failed', error);
+            return undefined;
         }
     }
 
@@ -268,7 +313,7 @@ export class AdobeOrgServices {
         idIntegration: string,
         serviceInfo: ServiceSubscriptionInfo[],
     ): Promise<void> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
         const client = this.sdkClient.getClient() as {
             subscribeAdobeIdIntegrationToServices: (
                 orgId: string,
@@ -276,10 +321,11 @@ export class AdobeOrgServices {
                 serviceInfo: ServiceSubscriptionInfo[]
             ) => Promise<SDKResponse<unknown>>;
         };
-        const response = await client.subscribeAdobeIdIntegrationToServices(
-            orgId,
-            idIntegration,
-            serviceInfo,
+        // Retried once on a transient failure, and safe to: the call REPLACES the
+        // credential's whole list, so re-sending the same list converges whether or
+        // not the first attempt landed — which is what a 504 leaves unknown.
+        const response = await this.withOneTransientRetry('subscribeAdobeIdIntegrationToServices', () =>
+            client.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo),
         );
         assertSubscribeAccepted(response);
     }
@@ -298,7 +344,7 @@ export class AdobeOrgServices {
         idIntegration: string,
         serviceInfo: ServiceSubscriptionInfo[],
     ): Promise<void> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
         const client = this.sdkClient.getClient() as {
             subscribeOAuthServerToServerIntegrationToServices: (
                 orgId: string,
@@ -306,10 +352,11 @@ export class AdobeOrgServices {
                 serviceInfo: ServiceSubscriptionInfo[]
             ) => Promise<SDKResponse<unknown>>;
         };
-        const response = await client.subscribeOAuthServerToServerIntegrationToServices(
-            orgId,
-            idIntegration,
-            serviceInfo,
+        // Retried once on a transient failure, and safe to: the call REPLACES the
+        // credential's whole list, so re-sending the same list converges whether or
+        // not the first attempt landed — which is what a 504 leaves unknown.
+        const response = await this.withOneTransientRetry('subscribeOAuthServerToServerIntegrationToServices', () =>
+            client.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, serviceInfo),
         );
         assertSubscribeAccepted(response);
     }

@@ -1,5 +1,5 @@
 import { waitForMeshDeployment } from '@/features/mesh/services/meshDeploymentVerifier';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     createMockCommandManager,
@@ -13,6 +13,12 @@ import {
 } from './meshDeploymentVerifier.testUtils';
 
 // Mock dependencies
+// The deploy check asks the mesh which host answers (a real HTTP call); these
+// suites exercise the check around it, so the stated address stands.
+jest.mock('@/features/mesh/services/meshEndpoint', () => ({
+    ...jest.requireActual('@/features/mesh/services/meshEndpoint'),
+    answeringEndpoint: jest.fn(async (endpoint: string) => endpoint),
+}));
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(),
@@ -158,7 +164,7 @@ describe('MeshDeploymentVerifier - Deployment Verification', () => {
             expect(mockCommandManager.execute).toHaveBeenNthCalledWith(2, 'aio api-mesh:describe', {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
             });
         });

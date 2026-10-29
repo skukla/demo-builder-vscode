@@ -9,15 +9,20 @@
  */
 
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import {
     ensureWorkspaceRuntime,
     aioOutputTail,
     extractAioErrorDetail,
     fetchRuntimeCredentials,
+    fetchWorkspaceS2SCredential,
+    readRuntimeCredentials,
     workspaceHasRuntime,
 } from '@/features/app-builder/services/runtimeCredentials';
 import { sleep } from '@/core/utils/sleep';
 import type { Logger } from '@/types/logger';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
@@ -50,6 +55,70 @@ const WORKSPACE_JSON = JSON.stringify({
     },
 });
 
+/**
+ * A workspace with an OAuth server-to-server credential, in the download's shape.
+ * The mapping it is tested against is `aio app use`'s own (aio-cli-plugin-app 14.8,
+ * `getOAuthS2SCredential` + `importConsoleConfig`, read 2026-09-15): client_id, the
+ * FIRST secret, the project's IMS org id, and the scopes as a JSON string.
+ */
+const WORKSPACE_WITH_S2S = JSON.stringify({
+    project: {
+        org: { ims_org_id: 'ABC123@AdobeOrg' },
+        workspace: {
+            name: 'Stage',
+            details: {
+                runtime: { namespaces: [{ name: '12345-myproject-stage', auth: 'fake-test-pw-not-a-secret' }] },
+                credentials: [
+                    { integration_type: 'apikey', api_key: { client_id: 'not-this-one' } },
+                    {
+                        integration_type: 'oauth_server_to_server',
+                        oauth_server_to_server: {
+                            client_id: 's2s-client',
+                            client_secrets: ['fake-test-pw-not-a-secret-1', 'fake-test-pw-not-a-secret-2'],
+                            scopes: ['AdobeID', 'adobeio.abdata.read'],
+                        },
+                    },
+                ],
+            },
+        },
+    },
+});
+
+// An extension app's `aio app use` already downloaded the workspace config; its
+// namespace and key are read from that file instead of downloading it again.
+describe('readRuntimeCredentials', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('reads namespace and key from the given file, with no download', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
+
+        await expect(readRuntimeCredentials('/tmp/db-use-x/ws.json', logger)).resolves.toEqual({
+            namespace: '12345-myproject-stage',
+            auth: 'fake-test-pw-not-a-secret',
+        });
+        expect(fsPromises.readFile).toHaveBeenCalledWith('/tmp/db-use-x/ws.json', 'utf-8');
+        expect(executeMock).not.toHaveBeenCalled();
+    });
+
+    it('refuses a file with no Runtime namespace, as the download path does', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(JSON.stringify({ project: {} }));
+
+        await expect(readRuntimeCredentials('/tmp/x.json', logger)).rejects.toThrow(/no Adobe I\/O Runtime namespace/);
+    });
+
+    it('says where to enable Runtime, not only that it is missing', async () => {
+        // The second half is the part the SC can act on.
+        (fsPromises.readFile as jest.Mock).mockResolvedValue('{}');
+
+        await expect(readRuntimeCredentials('/tmp/x.json', logger)).rejects.toThrow(
+            new Error(
+                'The targeted workspace has no Adobe I/O Runtime namespace. Enable Runtime ' +
+                    'for the workspace in the Adobe Developer Console, then retry the deploy.'
+            )
+        );
+    });
+});
+
 describe('fetchRuntimeCredentials', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -60,13 +129,13 @@ describe('fetchRuntimeCredentials', () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
         (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
 
-        const creds = await fetchRuntimeCredentials(commandManager, logger, 'auto');
+        const creds = await fetchRuntimeCredentials(commandManager, logger, demoBuilderNode());
 
         expect(executeMock).toHaveBeenCalledWith(
             expect.stringMatching(/^aio console workspace download "/),
             // `shell: true` is what makes the quoted path survive the call; without it
             // the aio CLI is handed a path it cannot write to.
-            expect.objectContaining({ shell: true, useNodeVersion: 'auto', enhancePath: true })
+            expect.objectContaining({ shell: true, useNodeVersion: demoBuilderNode(), enhancePath: true })
         );
         expect(creds).toEqual({
             namespace: '12345-myproject-stage',
@@ -74,11 +143,50 @@ describe('fetchRuntimeCredentials', () => {
         });
     });
 
+    it('downloads to a random file in a private temp dir and reads that same file back', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
+
+        await fetchRuntimeCredentials(commandManager, logger, demoBuilderNode());
+
+        expect(fsPromises.mkdtemp).toHaveBeenCalledWith(path.join(os.tmpdir(), 'db-ws-'));
+        const command = executeMock.mock.calls[0][0] as string;
+        const downloaded = /^aio console workspace download "(.+)"$/.exec(command)?.[1];
+        // Inside the dir mkdtemp made, so the one `rm` of that dir takes the key with it.
+        expect(downloaded).toMatch(new RegExp(`^${path.join('/tmp/db-ws-abc', 'ws-')}[0-9a-f]{12}\\.json$`));
+        expect(fsPromises.readFile).toHaveBeenCalledWith(downloaded, 'utf-8');
+    });
+
+    it("carries the workspace S2S credential as the four IMS_OAUTH_S2S values aio app use writes", async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_WITH_S2S);
+
+        const creds = await fetchRuntimeCredentials(commandManager, logger, demoBuilderNode());
+
+        expect(creds.imsOAuthS2SEnv).toStrictEqual({
+            IMS_OAUTH_S2S_CLIENT_ID: 's2s-client',
+            IMS_OAUTH_S2S_CLIENT_SECRET: 'fake-test-pw-not-a-secret-1',
+            IMS_OAUTH_S2S_ORG_ID: 'ABC123@AdobeOrg',
+            IMS_OAUTH_S2S_SCOPES: '["AdobeID","adobeio.abdata.read"]',
+        });
+        const logged = JSON.stringify((logger.debug as jest.Mock).mock.calls);
+        expect(logged).not.toContain('fake-test-pw-not-a-secret-1');
+    });
+
+    it('carries no IMS values when the workspace has no S2S credential', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
+
+        const creds = await fetchRuntimeCredentials(commandManager, logger, demoBuilderNode());
+
+        expect(creds.imsOAuthS2SEnv).toBeUndefined();
+    });
+
     it('never logs the auth value', async () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
         (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
 
-        await fetchRuntimeCredentials(commandManager, logger, 'auto');
+        await fetchRuntimeCredentials(commandManager, logger, demoBuilderNode());
 
         const allLogged = [logger.info, logger.debug, logger.warn, logger.error]
             .flatMap((fn) => (fn as jest.Mock).mock.calls.flat())
@@ -91,7 +199,7 @@ describe('fetchRuntimeCredentials', () => {
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
         (fsPromises.readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
 
-        await expect(fetchRuntimeCredentials(commandManager, logger, 'auto')).rejects.toThrow();
+        await expect(fetchRuntimeCredentials(commandManager, logger, demoBuilderNode())).rejects.toThrow();
 
         expect(fsPromises.rm).toHaveBeenCalledWith(
             '/tmp/db-ws-abc',
@@ -105,7 +213,7 @@ describe('fetchRuntimeCredentials', () => {
             JSON.stringify({ project: { workspace: { details: { runtime: { namespaces: [] } } } } })
         );
 
-        await expect(fetchRuntimeCredentials(commandManager, logger, 'auto')).rejects.toThrow(
+        await expect(fetchRuntimeCredentials(commandManager, logger, demoBuilderNode())).rejects.toThrow(
             /no Adobe I\/O Runtime namespace/
         );
     });
@@ -123,7 +231,7 @@ describe('fetchRuntimeCredentials', () => {
             })
         );
 
-        await expect(fetchRuntimeCredentials(commandManager, logger, 'auto')).rejects.toThrow(
+        await expect(fetchRuntimeCredentials(commandManager, logger, demoBuilderNode())).rejects.toThrow(
             /no Adobe I\/O Runtime namespace/
         );
     });
@@ -131,7 +239,7 @@ describe('fetchRuntimeCredentials', () => {
     it('reports the exit code when the failing command wrote no error line', async () => {
         executeMock.mockResolvedValue({ code: 7, stdout: '', stderr: '- spinner only\n' });
 
-        await expect(fetchRuntimeCredentials(commandManager, logger, 'auto')).rejects.toThrow(
+        await expect(fetchRuntimeCredentials(commandManager, logger, demoBuilderNode())).rejects.toThrow(
             /exit code 7/
         );
     });
@@ -143,9 +251,104 @@ describe('fetchRuntimeCredentials', () => {
             stderr: '- Downloading Workspace config...\n ›   Error: 404 - Not Found',
         });
 
-        await expect(fetchRuntimeCredentials(commandManager, logger, 'auto')).rejects.toThrow(
+        await expect(fetchRuntimeCredentials(commandManager, logger, demoBuilderNode())).rejects.toThrow(
             /404 - Not Found/
         );
+    });
+});
+
+// An ERP added in its own workspace is reached by the integration only with THAT workspace's
+// credential (AB-16a): read whole, including the technical account when the download has it.
+describe('fetchWorkspaceS2SCredential', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (fsPromises.mkdtemp as jest.Mock).mockResolvedValue('/tmp/db-ws-abc');
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+    });
+
+    it('reads the S2S credential with its first secret, org, scopes and technical account', async () => {
+        const config = JSON.parse(WORKSPACE_WITH_S2S);
+        Object.assign(config.project.workspace.details.credentials[1].oauth_server_to_server, {
+            technical_account_id: 'fake-ta@techacct.adobe.com',
+            technical_account_email: 'fake-ta@example.com',
+        });
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(JSON.stringify(config));
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).resolves.toStrictEqual({
+            clientId: 's2s-client',
+            clientSecret: 'fake-test-pw-not-a-secret-1',
+            orgId: 'ABC123@AdobeOrg',
+            scopes: ['AdobeID', 'adobeio.abdata.read'],
+            technicalAccountId: 'fake-ta@techacct.adobe.com',
+            technicalAccountEmail: 'fake-ta@example.com',
+        });
+        expect(executeMock).toHaveBeenCalledWith(expect.stringMatching(/^aio console workspace download "/), expect.anything());
+        expect(fsPromises.rm).toHaveBeenCalledWith('/tmp/db-ws-abc', expect.objectContaining({ recursive: true }));
+    });
+
+    it('answers undefined for a workspace with no S2S credential, Runtime or not', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(JSON.stringify({ project: {} }));
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).resolves.toBeUndefined();
+    });
+
+    it('throws the aio error when the download fails', async () => {
+        executeMock.mockResolvedValue({ code: 2, stdout: '', stderr: ' ›   Error: 404 - Not Found' });
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).rejects.toThrow(/404 - Not Found/);
+    });
+
+    const S2S = { client_id: 's2s-client', client_secrets: ['fake-test-pw-not-a-secret-1'], scopes: ['AdobeID'] };
+    const ORG = { ims_org_id: 'ABC123@AdobeOrg' };
+    /** `org` is spread, so `{}` is a project with no org block at all. */
+    const withCredentials = (credentials: unknown[], org: Record<string, unknown> = { org: ORG }): string =>
+        JSON.stringify({ project: { ...org, workspace: { details: { credentials } } } });
+    const s2sEntry = (fields: Record<string, unknown>): Record<string, unknown> => ({
+        integration_type: 'oauth_server_to_server',
+        oauth_server_to_server: fields,
+    });
+
+    // Every level of the download is optional in practice: a workspace nobody has added
+    // a credential to stops at `details`, and one with only an API key has a list with
+    // no S2S entry. Each must answer "no credential", never a crash in the caller.
+    it.each([
+        ['unparseable output', 'not json at all {'],
+        ['no project', '{}'],
+        ['no details', JSON.stringify({ project: { workspace: {} } })],
+        ['no credentials list', JSON.stringify({ project: { workspace: { details: {} } } })],
+        ['no S2S entry among the credentials', withCredentials([{ integration_type: 'apikey' }])],
+        ['an S2S entry with no credential block', withCredentials([{ integration_type: 'oauth_server_to_server' }])],
+    ])('answers undefined, not a crash, when the download has %s', async (_label, raw) => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(raw);
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).resolves.toBeUndefined();
+    });
+
+    // A credential missing ONE of the three is as unusable as none: the token request
+    // fails later with a message that names neither the workspace nor the missing part.
+    it.each([
+        ['no client id', withCredentials([s2sEntry({ ...S2S, client_id: undefined })])],
+        ['no secrets list', withCredentials([s2sEntry({ ...S2S, client_secrets: undefined })])],
+        ['an empty secrets list', withCredentials([s2sEntry({ ...S2S, client_secrets: [] })])],
+        ['no org block', withCredentials([s2sEntry(S2S)], {})],
+        ['an org with no id', withCredentials([s2sEntry(S2S)], { org: {} })],
+    ])('answers undefined for a credential with %s', async (_label, raw) => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(raw);
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).resolves.toBeUndefined();
+    });
+
+    it('answers no scopes and no technical account when the download carries neither', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(
+            withCredentials([s2sEntry({ ...S2S, scopes: undefined })])
+        );
+
+        await expect(fetchWorkspaceS2SCredential(commandManager, demoBuilderNode())).resolves.toStrictEqual({
+            clientId: 's2s-client',
+            clientSecret: 'fake-test-pw-not-a-secret-1',
+            orgId: 'ABC123@AdobeOrg',
+            scopes: [],
+        });
     });
 });
 
@@ -162,12 +365,12 @@ describe('workspaceHasRuntime', () => {
 
     it('is true when the workspace has a Runtime namespace', async () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
-        await expect(workspaceHasRuntime(commandManager, 'auto')).resolves.toBe(true);
+        await expect(workspaceHasRuntime(commandManager, demoBuilderNode())).resolves.toBe(true);
     });
 
     it('is false when the workspace has none', async () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue(NO_NS_JSON);
-        await expect(workspaceHasRuntime(commandManager, 'auto')).resolves.toBe(false);
+        await expect(workspaceHasRuntime(commandManager, demoBuilderNode())).resolves.toBe(false);
     });
 
     // The download JSON is read defensively at six levels, and every one of them is a
@@ -186,7 +389,7 @@ describe('workspaceHasRuntime', () => {
         ],
     ])('is false, not a crash, when the download has %s', async (_label, raw) => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue(raw);
-        await expect(workspaceHasRuntime(commandManager, 'auto')).resolves.toBe(false);
+        await expect(workspaceHasRuntime(commandManager, demoBuilderNode())).resolves.toBe(false);
     });
 });
 
@@ -201,7 +404,7 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue(WORKSPACE_JSON);
         const provision = jest.fn().mockResolvedValue(undefined);
 
-        await ensureWorkspaceRuntime(commandManager, logger, 'auto', provision, 0);
+        await ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 0);
 
         expect(provision).not.toHaveBeenCalled();
     });
@@ -213,7 +416,7 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
             .mockResolvedValue(WORKSPACE_JSON);
         const provision = jest.fn().mockResolvedValue(undefined);
 
-        await ensureWorkspaceRuntime(commandManager, logger, 'auto', provision, 0);
+        await ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 0);
 
         expect(provision).toHaveBeenCalledTimes(1);
     });
@@ -223,8 +426,14 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
         const provision = jest.fn().mockResolvedValue(undefined);
 
         await expect(
-            ensureWorkspaceRuntime(commandManager, logger, 'auto', provision, 0)
-        ).rejects.toThrow(/Could not provision an Adobe I\/O Runtime namespace/);
+            ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 0)
+        ).rejects.toThrow(
+            new Error(
+                'Could not provision an Adobe I/O Runtime namespace for the workspace. Confirm your ' +
+                    'account has the Developer role, or enable Runtime for the workspace in the Adobe ' +
+                    'Developer Console, then retry.'
+            )
+        );
         expect(provision).toHaveBeenCalledTimes(1);
     });
 
@@ -237,7 +446,7 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
         const provision = jest.fn().mockResolvedValue(undefined);
 
         await expect(
-            ensureWorkspaceRuntime(commandManager, logger, 'auto', provision, 0)
+            ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 0)
         ).resolves.toBeUndefined();
     });
 
@@ -246,7 +455,7 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
         const provision = jest.fn().mockResolvedValue(undefined);
 
         await expect(
-            ensureWorkspaceRuntime(commandManager, logger, 'auto', provision, 250)
+            ensureWorkspaceRuntime(commandManager, logger, demoBuilderNode(), provision, 250)
         ).rejects.toThrow();
 
         // Three attempts, two gaps. A pause after the final attempt delays the failure
@@ -320,6 +529,32 @@ describe('extractAioErrorDetail — a wrapped error keeps its continuation', () 
 
         expect(extractAioErrorDetail(stderr)).toBe('Error: first thing');
     });
+
+    it('keeps no › line that comes before any error', () => {
+        // oclif marks warnings and notices the same way; without an error line above
+        // them they are not part of one.
+        expect(extractAioErrorDetail(' ›   a notice about something\nplain output')).toBe('');
+    });
+
+    it('ends the block at the first unmarked line — a later › line is not the same error', () => {
+        const stderr = ' ›   Error: first thing\nsome unrelated output\n ›   a notice about something';
+
+        expect(extractAioErrorDetail(stderr)).toBe('Error: first thing');
+    });
+
+    it('keeps the continuation when the marker starts the line with no space before it', () => {
+        expect(extractAioErrorDetail('›   Error: Request x to\n›   v1/db failed with code 504')).toBe(
+            'Error: Request x to v1/db failed with code 504'
+        );
+    });
+
+    it('does not treat a › inside an unmarked error as the start of a block', () => {
+        // Only a LEADING › is oclif's marker. This error line is plain output that
+        // happens to contain one, so the marked line after it belongs to something else.
+        const stderr = 'Error: open Console › Runtime to enable it\n ›   a notice about something';
+
+        expect(extractAioErrorDetail(stderr)).toBe('Error: open Console › Runtime to enable it');
+    });
 });
 
 describe('aioOutputTail', () => {
@@ -347,5 +582,13 @@ describe('aioOutputTail', () => {
 
     it('answers empty for no output', () => {
         expect(aioOutputTail(undefined, undefined)).toBe('');
+    });
+
+    it('drops a line of several spinner glyphs, spaced or not, and blank lines', () => {
+        expect(aioOutputTail('-\\|/\n⠋ ⠙ ⠹\n   \n\n✔ ✔', 'kept')).toBe('kept');
+    });
+
+    it('keeps a one-word line — only glyphs and spaces are spinner noise', () => {
+        expect(aioOutputTail('Deployed\n-', '')).toBe('Deployed');
     });
 });

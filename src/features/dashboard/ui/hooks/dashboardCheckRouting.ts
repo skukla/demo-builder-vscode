@@ -24,6 +24,7 @@ export interface CheckRoutingActions {
     setOrgStatus: (status: CheckStatus | undefined) => void;
     setOrgMismatch: (mismatch: OrgMismatchInfo | undefined) => void;
     setOrgCurrentName: (name: string | undefined) => void;
+    setOrgSignedOut: (signedOut: boolean) => void;
     setMcpHealing: (healing: boolean) => void;
     setAiToolingMissing: (missing: boolean) => void;
     setProjectStatus: Dispatch<SetStateAction<DashboardStatusUpdatePayload | null>>;
@@ -43,7 +44,8 @@ export interface DemoSourceIssue {
 /**
  * Apply one on-open check result, routed by checkId:
  *   - org-context: `pending` telegraph → ok / warning (mismatch) / unknown
- *     ("sign in to check"). Re-checks (after a switch / re-auth) repeat.
+ *     (signed out, or not verified). Re-checks (after a switch, a re-auth or
+ *     Verify) repeat.
  *   - mcp-health: `warning` telegraphs a visible self-heal of stale MCP
  *     paths; ok/error ends it.
  *   - ai-context-freshness, mesh-verify, ai-verify: see the branch comments.
@@ -58,12 +60,14 @@ export function routeCheckOutcome(
             actions.setOrgStatus('pending');
             actions.setOrgMismatch(undefined);
             actions.setOrgCurrentName(undefined);
+            actions.setOrgSignedOut(false);
             return;
         }
         actions.setOrgChecked(true);
         actions.setOrgStatus(outcome.status);
         actions.setOrgMismatch(outcome.data?.orgMismatch);
         actions.setOrgCurrentName(outcome.data?.currentOrg);
+        actions.setOrgSignedOut(outcome.data?.signedOut === true);
         return;
     }
 

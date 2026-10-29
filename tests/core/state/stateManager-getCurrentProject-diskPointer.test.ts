@@ -14,12 +14,9 @@
  * an unrelated project reassigned this window's in-memory pointer too.
  */
 
+import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 import * as fs from 'fs/promises';
 import type { Project } from '@/types/base';
-import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
-
-jest.mock('fs/promises');
-jest.mock('os');
 
 describe('StateManager.getCurrentProject — disk pointer', () => {
     let testMocks: TestMocks;

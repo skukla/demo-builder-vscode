@@ -548,13 +548,9 @@ describe('StorefrontStep crossfade key', () => {
 
     const viewKey = () => screen.getByTestId('area-shell').getAttribute('data-view-key');
 
-    it('should group repository and code-sync under one key so the repo view survives the flip', () => {
-        const { restate } = renderStep({ activeStorefrontStep: 'repository' });
-        expect(viewKey()).toBe('repo');
-
-        restate({ activeStorefrontStep: 'code-sync' });
-
-        expect(viewKey()).toBe('repo');
+    it('keys the repository view by its own sub-step (no Code Sync stop to survive since 2026-09-25)', () => {
+        renderStep({ activeStorefrontStep: 'repository' });
+        expect(viewKey()).toBe('repository');
     });
 
     it('should give every other sub-step its own key, so it crossfades', () => {

@@ -6,9 +6,12 @@
  */
 
 import * as vscode from 'vscode';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { STOREFRONT_JOBS } from '@/core/utils/storefrontJobs';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { EdsContentHelix } from '@/features/project-creation/services/edsContentSetup';
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
@@ -19,10 +22,16 @@ const mockOverlayAccountChrome = jest.fn();
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        copyContentFromSource: mockCopyContentFromSource,
-        createBlockLibraryFromTemplate: mockCreateBlockLibraryFromTemplate,
-        overlayAccountChrome: mockOverlayAccountChrome,
+        copyOps: {
+            copyContentFromSource: mockCopyContentFromSource,
+            overlayAccountChrome: mockOverlayAccountChrome,
+        },
+        blockLibOps: {
+            createBlockLibraryFromTemplate: mockCreateBlockLibraryFromTemplate,
+        },
     })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest
         .fn()
         .mockImplementation((service: { getAccessToken: () => Promise<string> }) => ({
@@ -56,7 +65,7 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
     getGitHubServices: jest.fn(() => {
         const { GitHubTokenService } = jest.requireMock(
-            '@/features/eds/services/github/githubTokenService',
+            '@/features/eds/services/github/githubTokenService'
         );
         return { tokenService: new GitHubTokenService() };
     }),
@@ -83,11 +92,13 @@ jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
 const mockConfigureDaLivePermissions = jest.fn();
 const mockApplyDaLiveOrgConfigSettings = jest.fn();
 const mockPublishLibraryPaths = jest.fn();
+const mockPublishSheetPaths = jest.fn();
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     configureDaLivePermissions: (...args: unknown[]) => mockConfigureDaLivePermissions(...args),
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
     publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
+    publishSheetPaths: (...args: unknown[]) => mockPublishSheetPaths(...args),
     getDaLiveAuthService: jest.fn().mockReturnValue({
         getAccessToken: mockGetAccessToken,
         getUserEmail: mockGetUserEmail,
@@ -127,12 +138,15 @@ function makeDeps() {
         secrets: createMockSecretStorage().secrets,
         extensionContext: createMockExtensionContext(),
         makeHelix: () => helixSeam,
+        readCodePaths: mockReadCodePaths,
     };
 }
 
+const mockReadCodePaths = jest.fn();
+
 function setupDefaultMocks() {
     mockFetch.mockResolvedValue({ ok: false, status: 404 });
-    mockCopyContentFromSource.mockResolvedValue({ success: true, totalFiles: 10, failedFiles: [] });
+    mockCopyContentFromSource.mockResolvedValue({ success: true, totalFiles: 10, failedFiles: [], sheetPaths: [] });
     mockGetUserEmail.mockResolvedValue('user@example.com');
     mockConfigureDaLivePermissions.mockResolvedValue({ success: true });
     mockCreateBlockLibraryFromTemplate.mockResolvedValue({ blocksCount: 3, paths: ['/library'] });
@@ -142,7 +156,9 @@ function setupDefaultMocks() {
     mockGetResourceStatus.mockResolvedValue({ httpStatus: 200 });
     mockPublishAllSiteContent.mockResolvedValue(undefined);
     mockPublishLibraryPaths.mockResolvedValue(undefined);
+    mockPublishSheetPaths.mockResolvedValue({ published: 0, failed: 0 });
     mockGetAccessToken.mockResolvedValue('da-live-token');
+    mockReadCodePaths.mockResolvedValue(undefined);
     mockOverlayAccountChrome.mockResolvedValue({ success: true, totalFiles: 4, failedFiles: [] });
 }
 
@@ -174,6 +190,23 @@ describe('ensureEdsContent', () => {
         expect(args[6]).toEqual(expect.objectContaining({ results: expect.any(Array) }));
     });
 
+    // EDS-40: the copy used the fixed lists only, so pages a demo's code loads were dropped.
+    it("hands the copy the paths the SC's storefront code loads (9th arg)", async () => {
+        mockReadCodePaths.mockResolvedValue(['/cart', '/placeholders/b2b']);
+
+        await ensureEdsContent(makeConfig(), makeDeps());
+
+        expect(mockReadCodePaths).toHaveBeenCalledWith({ owner: 'test-owner', repo: 'test-repo' });
+        expect(mockCopyContentFromSource.mock.calls[0][8]).toEqual(['/cart', '/placeholders/b2b']);
+    });
+
+    // EDS-54: the permissions step is non-fatal, except for an expired sign-in.
+    it('stops on an expired DA.live sign-in in the permissions step', async () => {
+        mockConfigureDaLivePermissions.mockRejectedValue(new DaLiveAuthError('Authentication expired. Please log in again.'));
+
+        await expect(ensureEdsContent(makeConfig(), makeDeps())).rejects.toBeInstanceOf(DaLiveAuthError);
+    });
+
     it('does NOT fire the warning toast when no content patches failed', async () => {
         await ensureEdsContent(makeConfig(), makeDeps());
 
@@ -200,7 +233,7 @@ describe('ensureEdsContent', () => {
                     applied: false,
                     reason: 'Search pattern not found in content',
                 });
-                return { success: true, totalFiles: 5, failedFiles: [] };
+                return { success: true, totalFiles: 5, failedFiles: [], sheetPaths: [] };
             }
         );
 
@@ -229,9 +262,18 @@ describe('ensureEdsContent', () => {
             'test-owner/test-repo',
             'main',
             'test-org',
-            'test-site'
+            'test-site',
+            expect.any(Function)
         );
         expect(mockPublishLibraryPaths).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs the caller hook after the copy and before the publish; a failing hook stops nothing (EDS-61)', async () => {
+        const hook = jest.fn().mockRejectedValue(new Error('DA.live 503'));
+        await ensureEdsContent(makeConfig(), { ...makeDeps(), beforeContentPublish: hook });
+        const at = hook.mock.invocationCallOrder[0];
+        expect(mockCopyContentFromSource.mock.invocationCallOrder[0]).toBeLessThan(at);
+        expect(at).toBeLessThan(mockPublishAllSiteContent.mock.invocationCallOrder[0]);
     });
 
     it('permission failure is non-fatal', async () => {
@@ -448,12 +490,20 @@ describe('ensureEdsContent — the calls it makes', () => {
             reportProgress({ message: 'Copying /products/index', processed: 3, total: 9 });
 
             expect(onProgress).toHaveBeenCalledWith(
-                'Setting up storefront content',
+                OPERATION_STAGES.copyingContent.label,
                 'Copying /products/index'
             );
         });
 
-        it('counts pages when the copy reports no message', async () => {
+        // Line 2 on its own, under "Copying the content": a phrase, not a fragment.
+        it('names the source it copies from, starting with a capital', async () => {
+            const onProgress = jest.fn();
+            await ensureEdsContent(makeConfig(), makeDeps(), onProgress);
+
+            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.copyingContent.label, 'From source-org/source-site');
+        });
+
+        it('counts files when the copy reports no message', async () => {
             const onProgress = jest.fn();
             await ensureEdsContent(makeConfig(), makeDeps(), onProgress);
             onProgress.mockClear();
@@ -461,8 +511,42 @@ describe('ensureEdsContent — the calls it makes', () => {
             reportProgress({ processed: 3, total: 9 });
 
             expect(onProgress).toHaveBeenCalledWith(
-                'Setting up storefront content',
-                'Copying content (3/9)'
+                OPERATION_STAGES.copyingContent.label,
+                'Copying the content: 3 of 9 files'
+            );
+        });
+
+        // Reset's steps for the same work, each job on the line under its step
+        // (progress vocabulary, owner 2026-10-16).
+        it("reports Reset's steps in the order it runs them, each job named the one way", async () => {
+            const onProgress = jest.fn();
+            mockPublishAllSiteContent.mockImplementation(
+                async (_r: string, _b: string, _o: string, _s: string, cb: (i: { message: string }) => void) => {
+                    cb({ message: 'Publishing the pages: 5 of 64 pages' });
+                }
+            );
+
+            await ensureEdsContent(
+                makeConfig({ templateOwner: 'tmpl-owner', templateRepo: 'tmpl-repo' }),
+                makeDeps(),
+                onProgress
+            );
+
+            const steps = onProgress.mock.calls.map(([stage]) => stage as string);
+            expect([...new Set(steps)]).toStrictEqual([
+                OPERATION_STAGES.copyingContent.label,
+                OPERATION_STAGES.settingUpAuthoring.label,
+                OPERATION_STAGES.publishingPages.label,
+            ]);
+            expect(onProgress.mock.calls.map(([, step]) => step)).toEqual(
+                expect.arrayContaining([
+                    STOREFRONT_JOBS.settingSitePermissions,
+                    STOREFRONT_JOBS.buildingBlockLibrary,
+                    STOREFRONT_JOBS.applyingDaLiveSettings,
+                    STOREFRONT_JOBS.clearingCache,
+                    'Publishing the pages: 5 of 64 pages',
+                    STOREFRONT_JOBS.publishingBlockList,
+                ])
             );
         });
 
@@ -472,7 +556,7 @@ describe('ensureEdsContent — the calls it makes', () => {
             mockCopyContentFromSource.mockImplementation(
                 async (_src, _o, _s, progress: (p: unknown) => void) => {
                     progress({ processed: 1, total: 2 });
-                    return { success: true, totalFiles: 2, failedFiles: [] };
+                    return { success: true, totalFiles: 2, failedFiles: [], sheetPaths: [] };
                 }
             );
             const config = makeConfig({
@@ -562,11 +646,103 @@ describe('ensureEdsContent — the calls it makes', () => {
             success: false,
             totalFiles: 4,
             failedFiles: ['/products/a', '/products/b'],
+            sheetPaths: [],
         });
 
         const result = await ensureEdsContent(makeConfig(), makeDeps());
 
         expect(result).toBe(true);
         expect(mockPublishAllSiteContent).toHaveBeenCalledTimes(1);
+    });
+
+    describe('the sheets the copy wrote', () => {
+        // The whole-site publish skips sheets, so a copied sheet is served only
+        // when it is published by path, the way the pipeline does it.
+        const withSheets = (sheetPaths: string[]) =>
+            mockCopyContentFromSource.mockResolvedValue({
+                success: true,
+                totalFiles: 3,
+                failedFiles: [],
+                sheetPaths,
+            });
+
+        it('publishes exactly the sheet paths the copy reported', async () => {
+            withSheets(['/metadata.json', '/placeholders/cart.json']);
+            const deps = makeDeps();
+
+            await ensureEdsContent(makeConfig(), deps);
+
+            expect(mockPublishSheetPaths).toHaveBeenCalledTimes(1);
+            expect(mockPublishSheetPaths).toHaveBeenCalledWith(
+                helixSeam,
+                'test-owner',
+                'test-repo',
+                ['/metadata.json', '/placeholders/cart.json'],
+                deps.logger
+            );
+        });
+
+        it('publishes them after the pages', async () => {
+            withSheets(['/metadata.json']);
+
+            await ensureEdsContent(makeConfig(), makeDeps());
+
+            expect(mockPublishAllSiteContent.mock.invocationCallOrder[0]).toBeLessThan(
+                mockPublishSheetPaths.mock.invocationCallOrder[0]
+            );
+            expect(mockPublishLibraryPaths).not.toHaveBeenCalled();
+        });
+
+        it('publishes nothing when the copy wrote no sheet', async () => {
+            withSheets([]);
+
+            await ensureEdsContent(makeConfig(), makeDeps());
+
+            expect(mockPublishSheetPaths).not.toHaveBeenCalled();
+        });
+
+        it('carries on when the sheet publish throws', async () => {
+            withSheets(['/metadata.json']);
+            mockPublishSheetPaths.mockRejectedValue(new Error('publish refused'));
+
+            await expect(ensureEdsContent(makeConfig(), makeDeps())).resolves.toBe(true);
+        });
+    });
+
+    describe('the broken links it hands back for the Storefront Report', () => {
+        it('hands the caller the links the copy recorded, exactly as recorded', async () => {
+            const recorded = [{ link: '/fr', pages: ['/footer', '/nav'] }];
+            mockCopyContentFromSource.mockImplementation(
+                async (
+                    _src: unknown,
+                    _destOrg: unknown,
+                    _destSite: unknown,
+                    _progress: unknown,
+                    _ids: unknown,
+                    _source: unknown,
+                    patchReport: PatchReport | undefined
+                ) => {
+                    if (patchReport) patchReport.brokenLinks = recorded;
+                    return { success: true, totalFiles: 5, failedFiles: [], sheetPaths: [] };
+                }
+            );
+            const onBrokenLinks = jest.fn();
+
+            await ensureEdsContent(makeConfig(), { ...makeDeps(), onBrokenLinks });
+
+            expect(onBrokenLinks).toHaveBeenCalledTimes(1);
+            expect(onBrokenLinks).toHaveBeenCalledWith(recorded);
+        });
+
+        it('hands the caller an empty list, not nothing, when the copy recorded none', async () => {
+            // The caller writes this straight onto the project; an undefined here
+            // would leave a previous run's links standing in the report.
+            const onBrokenLinks = jest.fn();
+
+            await ensureEdsContent(makeConfig(), { ...makeDeps(), onBrokenLinks });
+
+            expect(onBrokenLinks).toHaveBeenCalledTimes(1);
+            expect(onBrokenLinks.mock.calls[0]).toStrictEqual([[]]);
+        });
     });
 });

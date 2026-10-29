@@ -8,6 +8,11 @@
  */
 
 import './dashboardValidatorMocks';
+
+const mockOpenInIncognito = jest.fn().mockResolvedValue(true);
+jest.mock('@/core/utils/browserUtils', () => ({
+    openInIncognito: (...args: unknown[]) => mockOpenInIncognito(...args),
+}));
 import * as vscode from 'vscode';
 import {
     handleConfigure,
@@ -44,8 +49,8 @@ jest.mock(
     { virtual: true }
 );
 
-// Mock stalenessDetector
-jest.mock('@/features/mesh/services/stalenessDetector');
+// Mock projectStateSync (detectFrontendChanges)
+jest.mock('@/core/state/projectStateSync');
 
 // Mock authentication
 
@@ -86,10 +91,12 @@ describe('Dashboard Action Handlers', () => {
 
     describe('handleConfigure', () => {
         it('should execute configureProject command', async () => {
-            const result = await handleConfigure(createMockHandlerContext());
+            // AI-15: Configure opens for the screen's own project, named by its path.
+            const { mockContext } = setupMocks();
+            const result = await handleConfigure(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject', '/path/to/project');
         });
     });
 
@@ -103,7 +110,11 @@ describe('Dashboard Action Handlers', () => {
             const result = await handleDeleteProject(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(deleteProject).toHaveBeenCalledWith(mockContext, mockProject);
+            // Plus where it reports and the id its modal follows (PL-59).
+            expect(deleteProject).toHaveBeenCalledWith(mockContext, mockProject, undefined, {
+                progress: undefined,
+                operationId: expect.stringContaining('delete:'),
+            });
         });
 
         it('should return error when no project available', async () => {
@@ -203,7 +214,7 @@ describe('Dashboard Action Handlers', () => {
             const result = await handleEditProject(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(extractSettingsFromProject).toHaveBeenCalledWith(mockProject, true);
+            expect(extractSettingsFromProject).toHaveBeenCalledWith(mockProject);
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.createProject', {
                 editProject: {
                     projectPath: mockProject.path,
@@ -249,8 +260,9 @@ describe('Dashboard Action Handlers', () => {
             const result = await handleOpenAdminPanel(mockContext);
 
             expect(result).toEqual({ success: true });
-            expect(mockUriParse).toHaveBeenCalledWith(adminUrl);
-            expect(mockOpenExternal).toHaveBeenCalled();
+            // A private window: a normal profile's adobe.com cookies overflow the
+            // Admin's header limit.
+            expect(mockOpenInIncognito).toHaveBeenCalledWith(adminUrl);
         });
 
         it('should return an error and not open the browser when the URL is invalid', async () => {
@@ -266,7 +278,7 @@ describe('Dashboard Action Handlers', () => {
                 error: 'Invalid URL',
                 code: ErrorCode.CONFIG_INVALID,
             });
-            expect(mockOpenExternal).not.toHaveBeenCalled();
+            expect(mockOpenInIncognito).not.toHaveBeenCalled();
             expect(mockContext.logger.error).toHaveBeenCalled();
         });
 
@@ -291,7 +303,7 @@ describe('Dashboard Action Handlers', () => {
             await flushPromises();
 
             expect(result).toEqual({ success: true });
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject');
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject', '/path/to/project');
         });
 
         it('should not open Configure when the notification is dismissed', async () => {

@@ -7,6 +7,7 @@ import { createMockContext } from './projectHandlers.testUtils';
 import { handleRenameAdobeProject } from '@/features/authentication/handlers/renameAdobeProjectHandler';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockProject } from '../../../helpers/projectFake';
+import { entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/core/di/serviceLocator');
 jest.mock('@/core/validation/validators/AdobeResourceValidator');
@@ -19,7 +20,7 @@ function renameContext() {
         { id: 'org-123', code: 'C', name: 'Test Org' },
     ]);
     context.authManager.getProjects.mockResolvedValue([]);
-    context.authManager.renameRemoteProject.mockResolvedValue({ ok: true });
+    entityServicesOf(context.authManager).projectOps.renameRemoteProject.mockResolvedValue({ ok: true });
     return context;
 }
 
@@ -30,7 +31,7 @@ describe('handleRenameAdobeProject', () => {
         const result = await handleRenameAdobeProject(context, PAYLOAD);
 
         expect(result).toStrictEqual({ success: true, data: { projectId: 'proj-1', title: 'Kukla Bodea' } });
-        expect(context.authManager.renameRemoteProject).toHaveBeenCalledWith(
+        expect(entityServicesOf(context.authManager).projectOps.renameRemoteProject).toHaveBeenCalledWith(
             'org-123',
             'proj-1',
             'Kukla Bodea',
@@ -74,7 +75,7 @@ describe('handleRenameAdobeProject', () => {
 
     it("says Adobe's read-only refusal in plain words", async () => {
         const context = renameContext();
-        context.authManager.renameRemoteProject.mockResolvedValue({
+        entityServicesOf(context.authManager).projectOps.renameRemoteProject.mockResolvedValue({
             ok: false,
             error: "403 ERR_MSG_OPERATION_NOT_ALLOWED doesn't have the matching licenses",
         });
@@ -87,7 +88,7 @@ describe('handleRenameAdobeProject', () => {
 
     it('never passes on a refusal it cannot read', async () => {
         const context = renameContext();
-        context.authManager.renameRemoteProject.mockResolvedValue({ ok: false, error: 'socket hang up' });
+        entityServicesOf(context.authManager).projectOps.renameRemoteProject.mockResolvedValue({ ok: false, error: 'socket hang up' });
 
         const result = await handleRenameAdobeProject(context, PAYLOAD);
 
@@ -107,7 +108,7 @@ describe('handleRenameAdobeProject', () => {
             error: 'Enter a name.',
             code: ErrorCode.PROJECT_INVALID,
         });
-        expect(context.authManager.renameRemoteProject).not.toHaveBeenCalled();
+        expect(entityServicesOf(context.authManager).projectOps.renameRemoteProject).not.toHaveBeenCalled();
     });
 
     it('refuses a name over 100 characters', async () => {
@@ -116,7 +117,7 @@ describe('handleRenameAdobeProject', () => {
         const result = await handleRenameAdobeProject(context, { ...PAYLOAD, title: 'x'.repeat(101) });
 
         expect(result.error).toBe('Use 100 characters or fewer.');
-        expect(context.authManager.renameRemoteProject).not.toHaveBeenCalled();
+        expect(entityServicesOf(context.authManager).projectOps.renameRemoteProject).not.toHaveBeenCalled();
     });
 
     it('refuses under a different org, without calling Adobe', async () => {
@@ -128,6 +129,6 @@ describe('handleRenameAdobeProject', () => {
         const result = await handleRenameAdobeProject(context, PAYLOAD);
 
         expect(result.code).toBe(ErrorCode.ORG_MISMATCH);
-        expect(context.authManager.renameRemoteProject).not.toHaveBeenCalled();
+        expect(entityServicesOf(context.authManager).projectOps.renameRemoteProject).not.toHaveBeenCalled();
     });
 });

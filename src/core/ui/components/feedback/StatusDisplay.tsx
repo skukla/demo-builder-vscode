@@ -111,7 +111,6 @@ export function StatusDisplay({
     const { icon: defaultIcon } = variantConfig[variant];
     const displayIcon = customIcon ?? defaultIcon;
 
-
     return (
         <FadeTransition show={true}>
             <Flex
@@ -133,10 +132,25 @@ export function StatusDisplay({
                         <Flex direction="column" gap="size-100" alignItems="center">
                             <Text UNSAFE_className="text-xl font-medium">{title}</Text>
                             {message && (
-                                <Text UNSAFE_className={cn('text-sm text-gray-600', centerMessage && 'text-center')}>{message}</Text>
+                                <Text
+                                    UNSAFE_className={cn(
+                                        'text-sm',
+                                        'text-gray-600',
+                                        centerMessage && 'text-center',
+                                    )}
+                                >
+                                    {message}
+                                </Text>
                             )}
                             {details?.map((detail, index) => (
-                                <Text key={index} UNSAFE_className={cn('text-sm text-gray-600', centerMessage && 'text-center')}>
+                                <Text
+                                    key={index}
+                                    UNSAFE_className={cn(
+                                        'text-sm',
+                                        'text-gray-600',
+                                        centerMessage && 'text-center',
+                                    )}
+                                >
                                     {detail}
                                 </Text>
                             ))}

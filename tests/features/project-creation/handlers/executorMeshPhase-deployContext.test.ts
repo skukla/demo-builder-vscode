@@ -55,6 +55,7 @@ import { deployFreshMesh } from './executorMeshPhase.testUtils';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { MeshSetupContext } from '@/features/project-creation/services/meshSetupService';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import { createMockLogger } from './executorMeshPhase.testUtils';
@@ -68,16 +69,19 @@ function createLogger() {
 }
 
 function createContext(
-    authOverrides: Partial<jest.Mocked<AuthenticationService>> = {}
+    authOverrides: Partial<jest.Mocked<AuthenticationService>> = {},
+    cache: Partial<jest.Mocked<AuthCacheManager>> = {}
 ): HandlerContext {
     return createMockHandlerContext({
         logger: createLogger(),
-        authManager: createMockAuthenticationService({
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
-            getCachedOrganization: jest.fn().mockReturnValue(undefined),
-            ...authOverrides,
-        }),
+        authManager: createMockAuthenticationService(
+            {
+                isAuthenticated: jest.fn().mockResolvedValue(true),
+                loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
+                ...authOverrides,
+            },
+            { cache: { getCachedOrganization: jest.fn().mockReturnValue(undefined), ...cache } }
+        ),
     });
 }
 
@@ -133,13 +137,16 @@ describe('Executor - Mesh Deploy Org-Context (Phase 4a)', () => {
     });
 
     it('should resolve org code/name from the cached org when its id matches', async () => {
-        const context = createContext({
-            getCachedOrganization: jest.fn().mockReturnValue({
-                id: 'org-123',
-                code: 'CODE@AdobeOrg',
-                name: 'Acme Inc',
-            }),
-        });
+        const context = createContext(
+            {},
+            {
+                getCachedOrganization: jest.fn().mockReturnValue({
+                    id: 'org-123',
+                    code: 'CODE@AdobeOrg',
+                    name: 'Acme Inc',
+                }),
+            }
+        );
         await deployFreshMesh(context, createConfig(), meshContext);
 
         expect(mockWithOrgContext).toHaveBeenCalledWith(
@@ -153,13 +160,16 @@ describe('Executor - Mesh Deploy Org-Context (Phase 4a)', () => {
     });
 
     it('should NOT borrow cached org code/name when the cached org id differs', async () => {
-        const context = createContext({
-            getCachedOrganization: jest.fn().mockReturnValue({
-                id: 'org-OTHER',
-                code: 'OTHER@AdobeOrg',
-                name: 'Other',
-            }),
-        });
+        const context = createContext(
+            {},
+            {
+                getCachedOrganization: jest.fn().mockReturnValue({
+                    id: 'org-OTHER',
+                    code: 'OTHER@AdobeOrg',
+                    name: 'Other',
+                }),
+            }
+        );
         await deployFreshMesh(context, createConfig(), meshContext);
 
         const target = mockWithOrgContext.mock.calls[0][0] as Record<string, unknown>;

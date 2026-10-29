@@ -16,11 +16,13 @@ import {
     getProvidedEnvVars,
     hasMeshDeploymentRecord,
     getMeshEndpoint,
+    recordInstallation,
 } from '@/core/state/appBuilderComponentState';
 import type { Project, AppBuilderComponentState } from '@/types/base';
+import { makeAppBuilderComponent } from './appBuilderComponentState.testUtils';
 import { createMockProject } from '../../helpers/projectFake';
 
-/** Minimal Project for accessor testing. */
+/** Minimal Project for accessor testing — local, never exported (PL-16). */
 function makeProject(overrides: Partial<Project> = {}): Project {
     return {
         name: 'demo',
@@ -28,17 +30,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
         status: 'stopped',
         created: new Date(),
         lastModified: new Date(),
-        ...overrides,
-    };
-}
-
-function makeAppBuilderComponent(
-    overrides: Partial<AppBuilderComponentState> = {}
-): AppBuilderComponentState {
-    return {
-        kind: 'mesh',
-        status: 'deployed',
-        source: { owner: 'skukla', repo: 'commerce-paas-mesh' },
         ...overrides,
     };
 }
@@ -569,5 +560,53 @@ describe('getMeshEndpoint', () => {
 
         // Then: Should return the meshState endpoint
         expect(result).toBe('https://correct-endpoint.adobe.io/graphql');
+    });
+});
+
+describe('recordInstallation', () => {
+    const deployed = (): AppBuilderComponentState => ({
+        kind: 'integration',
+        status: 'deployed',
+        source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+    });
+
+    it('stores the outcome with its time, version and reinstall flag', () => {
+        const state = deployed();
+
+        recordInstallation(
+            state,
+            { status: 'failed', detail: 'cannot upgrade in place', version: '0.2.0', needsReinstall: true },
+            '2026-09-17T12:00:00.000Z',
+        );
+
+        expect(state.installation).toStrictEqual({
+            status: 'failed',
+            detail: 'cannot upgrade in place',
+            at: '2026-09-17T12:00:00.000Z',
+            version: '0.2.0',
+            needsReinstall: true,
+        });
+    });
+
+    it('leaves out a version it does not know and a reinstall it does not need', () => {
+        const state = deployed();
+        state.installation = { status: 'failed', needsReinstall: true, version: '0.1.0' };
+
+        recordInstallation(state, { status: 'upgraded', detail: 'Upgraded.' }, '2026-09-17T12:05:00.000Z');
+
+        expect(state.installation).toStrictEqual({
+            status: 'upgraded',
+            detail: 'Upgraded.',
+            at: '2026-09-17T12:05:00.000Z',
+        });
+    });
+
+    it('stamps the current time by default', () => {
+        const state = deployed();
+        const before = Date.now();
+
+        recordInstallation(state, { status: 'installed' });
+
+        expect(Date.parse(state.installation?.at ?? '')).toBeGreaterThanOrEqual(before);
     });
 });

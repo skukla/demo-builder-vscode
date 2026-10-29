@@ -11,7 +11,16 @@ CONSERVATIVE BY DESIGN. It reports a path only when the write intent is ATTACHED
 that path, never merely co-present in the command. `grep x src/a.ts > /tmp/out`
 writes to /tmp/out, not to src/a.ts, and this says so.
 
-Reads the command on stdin, prints one repo-relative path per line.
+Reads the command on stdin, prints one path per line: repo-relative, or absolute
+when the command starts by changing folder.
+
+A LEADING `cd <dir> &&` MOVES THE BASE (PL-83). Relative paths after it are the
+folder's, not the session's: a session rooted in the main checkout that runs
+`cd <worktree> && python3 ... open('src/x.ts','w')` writes the WORKTREE's file.
+Joined to the session's folder instead, the god-file rule measured the main
+checkout's 426-line copy of a file that was 293 lines where it was being edited
+(2026-10-18). Those paths are printed absolute, and the router uses them as given.
+A `cd` this cannot read (a variable, a later `cd`) reports nothing rather than guess.
 """
 import os
 import re
@@ -23,6 +32,32 @@ cmd = sys.stdin.read()
 
 paths: list[str] = []
 
+# The folder relative paths belong to: the session's, unless the command opens with a cd.
+BASE = ROOT
+ABSOLUTE = False
+lead = re.match(r'\s*cd\s+([\'"]?)([^\s\'";&|]+)\1\s*(?:&&|;)', cmd)
+if lead:
+    target = os.path.expanduser(lead.group(2))
+    if '$' in target:
+        sys.exit(0)
+    BASE = os.path.normpath(target if os.path.isabs(target) else os.path.join(ROOT, target))
+    ABSOLUTE = True
+
+
+def in_checkout(folder: str) -> bool:
+    """A git checkout holds the folder: a cd into /tmp scratch is not the subject."""
+    while folder != os.path.dirname(folder):
+        if os.path.exists(os.path.join(folder, '.git')):
+            return True
+        folder = os.path.dirname(folder)
+    return False
+
+
+if ABSOLUTE and not in_checkout(BASE):
+    sys.exit(0)
+if re.search(r'(?:&&|;|\|\|)\s*cd\s', cmd[lead.end() if lead else 0:]):
+    sys.exit(0)
+
 
 def add(p: str) -> None:
     if not p or p.startswith('-'):
@@ -30,14 +65,14 @@ def add(p: str) -> None:
     p = p.strip().strip('\'"')
     if not p or '$' in p or '*' in p:
         return
-    full = p if os.path.isabs(p) else os.path.join(ROOT, p)
+    full = p if os.path.isabs(p) else os.path.join(BASE, p)
     full = os.path.normpath(full)
-    # Only files inside the repo. /tmp scratch and $SCRATCH are not the subject.
-    if not full.startswith(os.path.normpath(ROOT) + os.sep):
+    # Only files inside the checkout. /tmp scratch and $SCRATCH are not the subject.
+    if not full.startswith(BASE + os.sep):
         return
-    rel = os.path.relpath(full, ROOT)
-    if rel not in paths:
-        paths.append(rel)
+    out = full if ABSOLUTE else os.path.relpath(full, ROOT)
+    if out not in paths:
+        paths.append(out)
 
 
 # 1. Redirects: `> path`, `>> path`. Excludes `2>&1`, `>&2` and friends by requiring

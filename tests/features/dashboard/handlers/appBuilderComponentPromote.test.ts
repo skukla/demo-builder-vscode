@@ -1,0 +1,366 @@
+/**
+ * The human doors for saving a blank-starter app to GitHub and for the undo
+ * (AB-1c): nothing reaches GitHub without the modal's yes, the modal names the
+ * public repository and what is left out, and the project is saved with the new
+ * source only after the push landed. The core runs for real against faked
+ * GitHub operations and a real folder.
+ */
+
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import {
+    CREATE_REPOSITORY,
+    DELETE_REPOSITORY,
+    OPEN_ON_GITHUB,
+    handlePromoteAppBuilderComponent,
+    handleUnpromoteAppBuilderComponent,
+} from '@/features/dashboard/handlers/appBuilderComponentPromote';
+import { answerOperationPrompt, isAwaitingAnswer } from '@/core/vscode/operationPrompt';
+import type { AppBuilderComponentState, Project } from '@/types/base';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+
+const validateToken = jest.fn();
+const getUserOrgs = jest.fn();
+const createEmptyRepository = jest.fn();
+const waitForContent = jest.fn();
+const deleteRepository = jest.fn();
+const treeCommits = {
+    getBranchInfo: jest.fn(),
+    createBlob: jest.fn(),
+    createTree: jest.fn(),
+    createCommit: jest.fn(),
+    updateBranchRef: jest.fn(),
+};
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    getGitHubServices: () => ({
+        tokenService: { validateToken, getUserOrgs },
+        repoLifecycle: { createEmptyRepository, waitForContent, deleteRepository },
+        treeCommits,
+    }),
+}));
+jest.mock('@/features/dashboard/handlers/appBuilderComponentPush', () => ({
+    postComponentsSnapshot: jest.fn(),
+}));
+
+const SHELL = { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' };
+const warn = vscode.window.showWarningMessage as jest.Mock;
+const input = vscode.window.showInputBox as jest.Mock;
+const pick = vscode.window.showQuickPick as jest.Mock;
+
+function appFolder(): string {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'promote-handler-'));
+    fs.writeFileSync(path.join(root, 'app.config.yaml'), 'application: {}');
+    fs.writeFileSync(path.join(root, '.env'), 'AIO_RUNTIME_AUTH=secret');
+    return root;
+}
+
+function setup(state: Partial<AppBuilderComponentState> = {}) {
+    const project: Project = createMockProject({
+        appBuilderComponents: {
+            'my-app': {
+                kind: 'integration',
+                status: 'deployed',
+                name: 'Order Sync',
+                source: { ...SHELL },
+                ...state,
+            },
+        },
+        componentInstances: {
+            'my-app': { id: 'my-app', name: 'Order Sync', status: 'ready', path: appFolder() },
+        },
+    });
+    const stateManager = createMockStateManager({
+        getCurrentProject: jest.fn().mockResolvedValue(project),
+    });
+    const context = createMockHandlerContext({
+        logger: createMockLogger(),
+        stateManager,
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
+    });
+    return { project, stateManager, context };
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    validateToken.mockResolvedValue({ valid: true, user: { login: 'steve' } });
+    getUserOrgs.mockResolvedValue([]);
+    input.mockResolvedValue('order-sync');
+    createEmptyRepository.mockResolvedValue({
+        id: 1,
+        name: 'order-sync',
+        fullName: 'steve/order-sync',
+        htmlUrl: 'https://github.com/steve/order-sync',
+        cloneUrl: 'https://github.com/steve/order-sync.git',
+        defaultBranch: 'main',
+    });
+    waitForContent.mockResolvedValue(true);
+    treeCommits.getBranchInfo.mockResolvedValue({ commitSha: 'head', treeSha: 't0' });
+    treeCommits.createTree.mockResolvedValue('tree-1');
+    treeCommits.createCommit.mockResolvedValue('c1');
+    deleteRepository.mockResolvedValue(undefined);
+});
+
+describe('handlePromoteAppBuilderComponent', () => {
+    it('confirms naming the public repository and what is left out, then creates, pushes and saves', async () => {
+        const { project, stateManager, context } = setup();
+        warn.mockResolvedValueOnce(CREATE_REPOSITORY);
+
+        const result = await handlePromoteAppBuilderComponent(context, { id: 'my-app' });
+
+        const [message, options] = warn.mock.calls[0];
+        expect(message).toBe('Create the public GitHub repository steve/order-sync?');
+        expect(options.modal).toBe(true);
+        expect(options.detail).toMatch(
+            /pushes 1 files of "Order Sync".*1 are left out: secret files \(\.env\)/
+        );
+        expect(createEmptyRepository).toHaveBeenCalledWith('order-sync', false, undefined);
+        expect(result).toEqual({
+            success: true,
+            repository: {
+                owner: 'steve',
+                repo: 'order-sync',
+                url: 'https://github.com/steve/order-sync',
+                fileCount: 1,
+            },
+        });
+        expect(stateManager.saveProject).toHaveBeenCalledWith(project);
+        expect(project.appBuilderComponents?.['my-app']?.source).toEqual({
+            owner: 'steve',
+            repo: 'order-sync',
+            branch: 'main',
+        });
+    });
+
+    it('creates nothing when the SC says no', async () => {
+        const { stateManager, context } = setup();
+        warn.mockResolvedValueOnce(undefined);
+
+        const result = await handlePromoteAppBuilderComponent(context, { id: 'my-app' });
+
+        expect(result).toEqual({ success: true, cancelled: true });
+        expect(createEmptyRepository).not.toHaveBeenCalled();
+        expect(stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('offers the organisations and creates under the one picked', async () => {
+        const { context } = setup();
+        getUserOrgs.mockResolvedValue(['acme']);
+        pick.mockResolvedValueOnce({ label: 'acme' });
+        warn.mockResolvedValueOnce(CREATE_REPOSITORY);
+
+        await handlePromoteAppBuilderComponent(context, { id: 'my-app' });
+
+        expect(warn.mock.calls[0][0]).toBe('Create the public GitHub repository acme/order-sync?');
+        expect(createEmptyRepository).toHaveBeenCalledWith('order-sync', false, 'acme');
+    });
+
+    it('asks for a GitHub sign-in rather than opening one, and refuses an app that already has a repository', async () => {
+        validateToken.mockResolvedValueOnce({ valid: false, reason: 'no-token' });
+        const signedOut = await handlePromoteAppBuilderComponent(setup().context, { id: 'my-app' });
+        expect(signedOut).toMatchObject({
+            success: false,
+            error: expect.stringMatching(/Sign in to GitHub/),
+        });
+
+        const imported = await handlePromoteAppBuilderComponent(
+            setup({ source: { owner: 'acme', repo: 'sync' } }).context,
+            { id: 'my-app' }
+        );
+        expect(imported).toMatchObject({
+            success: false,
+            error: expect.stringMatching(/own repository/),
+        });
+        expect(warn).not.toHaveBeenCalled();
+        expect(createEmptyRepository).not.toHaveBeenCalled();
+    });
+
+    it('saves nothing when the push fails, and says the repository was created', async () => {
+        const { stateManager, context } = setup();
+        warn.mockResolvedValueOnce(CREATE_REPOSITORY);
+        treeCommits.createTree.mockRejectedValueOnce(new Error('rate limited'));
+
+        const result = await handlePromoteAppBuilderComponent(context, { id: 'my-app' });
+
+        expect(result).toMatchObject({
+            success: false,
+            error: expect.stringMatching(/was created but the files did not reach it/),
+        });
+        expect(stateManager.saveProject).not.toHaveBeenCalled();
+    });
+});
+
+describe('handlePromoteAppBuilderComponent from the card (progress modal)', () => {
+    /** Start a modal save and wait until its one question is up. */
+    async function saveAndAsk(context: ReturnType<typeof setup>['context']) {
+        const done = handlePromoteAppBuilderComponent(context, { id: 'my-app', progress: 'modal' });
+        for (let i = 0; i < 200 && !isAwaitingAnswer('my-app'); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        expect(isAwaitingAnswer('my-app')).toBe(true);
+        return { done };
+    }
+
+    it('asks where, what to call it and the yes as ONE question, with no dialogs', async () => {
+        const { context } = setup();
+        getUserOrgs.mockResolvedValue(['acme']);
+        const { done } = await saveAndAsk(context);
+
+        answerOperationPrompt('my-app', CREATE_REPOSITORY, { owner: 'acme', name: 'Order Sync!' });
+        const result = await done;
+
+        expect(createEmptyRepository).toHaveBeenCalledWith('order-sync', false, 'acme');
+        expect(result).toMatchObject({ success: true, repository: { url: expect.any(String) } });
+        expect(pick).not.toHaveBeenCalled();
+        expect(input).not.toHaveBeenCalled();
+        expect(warn).not.toHaveBeenCalled();
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+    });
+
+    it('creates nothing when the modal is dismissed', async () => {
+        const { stateManager, context } = setup();
+        const { done } = await saveAndAsk(context);
+
+        answerOperationPrompt('my-app', undefined, { name: 'order-sync' });
+
+        expect(await done).toEqual({ success: true, cancelled: true });
+        expect(createEmptyRepository).not.toHaveBeenCalled();
+        expect(stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('asks again, keeping the owner, when the name is empty', async () => {
+        const { context } = setup();
+        getUserOrgs.mockResolvedValue(['acme']);
+        const { done } = await saveAndAsk(context);
+
+        answerOperationPrompt('my-app', CREATE_REPOSITORY, { owner: 'acme', name: '  ' });
+        // The answered question clears before the second one is put up.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        for (let i = 0; i < 200 && !isAwaitingAnswer('my-app'); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        expect(isAwaitingAnswer('my-app')).toBe(true);
+        expect(createEmptyRepository).not.toHaveBeenCalled();
+
+        answerOperationPrompt('my-app', CREATE_REPOSITORY, { owner: 'acme', name: 'sync' });
+        await done;
+        expect(createEmptyRepository).toHaveBeenCalledWith('sync', false, 'acme');
+    });
+});
+
+describe('handleUnpromoteAppBuilderComponent', () => {
+    const PROMOTED = {
+        source: { owner: 'steve', repo: 'order-sync', branch: 'main' },
+        promotion: { from: { ...SHELL }, at: '2026-10-05T00:00:00.000Z' },
+    };
+
+    // Saved from the card's command (not the modal): a notification with a way to the
+    // repository, since a status-bar line cannot be clicked (owner, 2026-10-28).
+    it('says it is saved, and Open on GitHub opens the repository', async () => {
+        const { context } = setup();
+        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce(OPEN_ON_GITHUB);
+
+        const result = await handlePromoteAppBuilderComponent(context, { id: 'my-app', repoName: 'Order Sync', confirm: true });
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(result).toMatchObject({ success: true });
+        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('"Order Sync" is saved to GitHub.', OPEN_ON_GITHUB);
+        expect(vscode.env.openExternal).toHaveBeenCalledTimes(1);
+    });
+
+    it('deletes only after the modal yes, and makes it a blank-starter app again', async () => {
+        const { project, stateManager, context } = setup(PROMOTED);
+        warn.mockResolvedValueOnce(DELETE_REPOSITORY);
+
+        const result = await handleUnpromoteAppBuilderComponent(context, { id: 'my-app' });
+
+        expect(warn.mock.calls[0][0]).toBe(
+            'Delete steve/order-sync from GitHub? This cannot be undone.'
+        );
+        expect(deleteRepository).toHaveBeenCalledWith('steve', 'order-sync');
+        expect(result).toEqual({ success: true, deleted: 'steve/order-sync' });
+        expect(project.appBuilderComponents?.['my-app']?.source).toEqual(SHELL);
+        expect(stateManager.saveProject).toHaveBeenCalledWith(project);
+        // A success says so as every success does, a ✅ line that goes by itself (owner,
+        // 2026-10-15), not a notification that waits in the corner (2026-10-28).
+        expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        expect((vscode.window.setStatusBarMessage as jest.Mock).mock.calls[0][0]).toBe('✅ Deleted steve/order-sync');
+    });
+
+    it('deletes nothing when the SC says no, or when Demo Builder did not make the repository', async () => {
+        warn.mockResolvedValueOnce(undefined);
+        expect(
+            await handleUnpromoteAppBuilderComponent(setup(PROMOTED).context, { id: 'my-app' })
+        ).toEqual({
+            success: true,
+            cancelled: true,
+        });
+        expect(
+            await handleUnpromoteAppBuilderComponent(setup().context, { id: 'my-app' })
+        ).toMatchObject({
+            success: false,
+            error: expect.stringMatching(/was not saved/),
+        });
+        expect(deleteRepository).not.toHaveBeenCalled();
+    });
+});
+
+// The agent's door (save_app_to_github, delete_app_github_repo): the answers the dialogs
+// would ask for arrive as arguments, with confirm: true, and NO dialog opens (2026-10-18).
+describe('the agent door: answers as arguments, no dialogs', () => {
+    const PROMOTED = {
+        source: { owner: 'steve', repo: 'order-sync', branch: 'main' },
+        promotion: { from: { ...SHELL }, at: '2026-10-05T00:00:00.000Z' },
+    };
+
+    it('saves to the named repository on the user account with no dialog', async () => {
+        const { context } = setup();
+
+        const result = await handlePromoteAppBuilderComponent(context, { id: 'my-app', repoName: 'Order Sync', confirm: true });
+
+        expect(warn).not.toHaveBeenCalled();
+        expect(input).not.toHaveBeenCalled();
+        expect(pick).not.toHaveBeenCalled();
+        expect(createEmptyRepository).toHaveBeenCalledWith('order-sync', false, undefined);
+        expect(result).toMatchObject({ success: true, repository: { owner: 'steve', repo: 'order-sync' } });
+    });
+
+    it('saves under an organisation the user belongs to', async () => {
+        getUserOrgs.mockResolvedValue(['acme']);
+        const { context } = setup();
+
+        await handlePromoteAppBuilderComponent(context, { id: 'my-app', repoName: 'order-sync', owner: 'acme', confirm: true });
+
+        expect(createEmptyRepository).toHaveBeenCalledWith('order-sync', false, 'acme');
+    });
+
+    it('SAFETY: creates nothing without confirm, for an owner the user is not in, or with no name', async () => {
+        getUserOrgs.mockResolvedValue(['acme']);
+        const calls = [
+            { id: 'my-app', repoName: 'order-sync' },
+            { id: 'my-app', repoName: 'order-sync', owner: 'someone-else', confirm: true },
+            { id: 'my-app', repoName: '  ', confirm: true },
+        ];
+        for (const payload of calls) {
+            expect(await handlePromoteAppBuilderComponent(setup().context, payload)).toMatchObject({ success: false });
+        }
+        expect(createEmptyRepository).not.toHaveBeenCalled();
+        expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('deletes with confirm: true and no modal', async () => {
+        const { context } = setup(PROMOTED);
+
+        const result = await handleUnpromoteAppBuilderComponent(context, { id: 'my-app', confirm: true });
+
+        expect(warn).not.toHaveBeenCalled();
+        expect(deleteRepository).toHaveBeenCalledWith('steve', 'order-sync');
+        expect(result).toEqual({ success: true, deleted: 'steve/order-sync' });
+    });
+});

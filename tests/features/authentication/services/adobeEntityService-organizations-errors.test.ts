@@ -53,11 +53,11 @@ describe('AdobeEntityService - Organizations - Error Handling', () => {
         // consults it before calling a CLI 401 an expired session. Nothing else
         // builds the services WITH a checker, so this is the only place the
         // forwarding is observed: the checker must be the one that was handed in.
-        it('forwards isTokenValid to the fetcher, which consults it on a CLI 401', async () => {
+        it('forwards isTokenValid to the org reads, which consult it on a CLI 401', async () => {
             const { mockCommandExecutor, mockSDKClient, mockCacheManager, mockLogger, mockStepLogger } =
                 testMocks;
             const isTokenValid = jest.fn().mockResolvedValue(false);
-            const { fetcher } = createEntityServices(
+            const { orgReads } = createEntityServices(
                 mockCommandExecutor,
                 mockSDKClient,
                 mockCacheManager,
@@ -73,7 +73,7 @@ describe('AdobeEntityService - Organizations - Error Handling', () => {
                 duration: 0,
             });
 
-            await expect(fetcher.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
+            await expect(orgReads.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
             expect(isTokenValid).toHaveBeenCalledTimes(1);
         });
 
@@ -84,7 +84,7 @@ describe('AdobeEntityService - Organizations - Error Handling', () => {
                 testMocks;
             const saved = { services: [{ code: 'GraphQLServiceSDK' }], fetchedAt: Date.now() };
             const store = { get: jest.fn().mockReturnValue(saved), update: jest.fn() };
-            const { fetcher } = createEntityServices(
+            const { orgServices } = createEntityServices(
                 mockCommandExecutor,
                 mockSDKClient,
                 mockCacheManager,
@@ -94,7 +94,7 @@ describe('AdobeEntityService - Organizations - Error Handling', () => {
                 store,
             );
 
-            await expect(fetcher.getServicesForOrg('org-1')).resolves.toEqual(saved.services);
+            await expect(orgServices.getServicesForOrg('org-1')).resolves.toEqual(saved.services);
             expect(store.get).toHaveBeenCalledWith('demoBuilder.orgServicesCatalog.org-1');
         });
     });

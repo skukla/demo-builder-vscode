@@ -29,14 +29,19 @@ import type { Logger } from '@/types/logger';
 /**
  * Files every EDS storefront has.
  *
- * Chosen because the pipeline itself already depends on them: Inspector Tagging
- * and the smart-404 install both need `scripts/delayed.js`, Quick Edit needs
- * `scripts/scripts.js`, and the eager redirect needs `head.html`. A repo
- * missing any of them cannot complete setup — it can only appear to.
+ * Chosen because the pipeline itself already depends on them: Quick Edit needs
+ * `scripts/scripts.js`, the smart-404 script needs `404.html`, and the eager
+ * redirect needs `head.html`. A repo missing any of them cannot complete setup —
+ * it can only appear to.
+ *
+ * `scripts/delayed.js` is not one: Adobe's B2B template removed it on 2026-07-30,
+ * so requiring it called every B2B storefront "not a storefront" and demanded a
+ * reset. Inspector Tagging still writes to it where it exists and skips where it
+ * does not.
  */
 export const CANONICAL_STOREFRONT_FILES = [
     'scripts/scripts.js',
-    'scripts/delayed.js',
+    '404.html',
     'head.html',
 ] as const;
 

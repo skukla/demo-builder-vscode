@@ -64,11 +64,19 @@ NOT a fifth seam: it lives inside `aiDefaultsEntryApplies` via an injected resol
 
 Orchestrated by `generateAIContextFiles` (creation phase 6 + regenerate + update post-step).
 
+**Name no agent outside the engine seam** (ADR-025). The bundle serves Claude Code, Copilot
+CLI and Copilot in VS Code alike: `.mcp.json` is the one file all three read, `AGENTS.md`
+is read by all three, and anything agent-specific — a user-level config path, a hook
+format, a launch command — is a field on the descriptor in
+`src/features/ai/engine/agentEngine.ts`, read by asking `describeEngine`. A writer that
+hard-codes `~/.claude.json` or a Claude-only hook shape has quietly opted the other two
+out.
+
 ## Test pins that move
 
 - `skillsWriter.hashAndSkip.test.ts` / `skillsWriter.toolGating.test.ts` — these pin the
-  exact skill-file COUNT, and the count depends on gating: **14** always-on with the
-  Playwright tools present, **11** without them (3 of the 14 are delivery-gated via
+  exact skill-file COUNT, and the count depends on gating: **15** always-on with the
+  Playwright tools present, **12** without them (3 of the 15 are delivery-gated via
   `SKILL_MCP_TOOL_DEPENDENCIES`), plus `extend-app-builder-app` when its predicate holds.
   A new conditional skill bumps these and needs positive + negative (bare-project) cases.
 

@@ -178,3 +178,18 @@ it('forwards the project\'s recorded hashes to verify (drives inventory.editedFi
 
     expect(verify).toHaveBeenCalledWith('/proj', aiFileHashes);
 });
+
+it('Claude Code not installed → warning that says so, and the data carries it (AI-4a)', async () => {
+    const check = makeCheck({
+        status: 'ok',
+        checks: okChecks,
+        inventory: emptyInventory,
+        agentCli: { installed: false, name: 'Claude Code' },
+    });
+
+    const outcome = (await check.run(makeCtx())) as CheckResult<{ agentCli?: unknown }>;
+
+    expect(outcome.status).toBe('warning');
+    expect(outcome.message).toMatch(/Claude Code \(the command-line tool\) is not installed/);
+    expect(outcome.data?.agentCli).toEqual({ installed: false, name: 'Claude Code' });
+});

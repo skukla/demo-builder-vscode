@@ -99,15 +99,17 @@ describe('spine choke-points', () => {
         expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
-    it('app-builder UNDEPLOY: the aio app undeploy primitive lives only in the runner', () => {
+    it('app-builder UNDEPLOY: the aio app undeploy primitive lives only in the teardown module', () => {
         // Audited 2026-08-22: one invocation site — the remove flow's
         // kind-dispatched command (integration → app undeploy, mesh →
         // api-mesh:delete). Doors: dashboard remove + MCP remove_component,
         // both through removeAppBuilderComponent. actionDescriptors mentions
         // the command inside a tool DESCRIPTION string (starts with a paren,
         // so the exact-quoted-literal pattern below does not match it).
+        // Moved 2026-09-17 with the removal clean-ups into the teardown module;
+        // `teardownRemote` there is still called only by removeAppBuilderComponent.
         const primitive = /'aio app undeploy'|`aio app undeploy`|"aio app undeploy"/;
-        const spine = ['features/app-builder/services/appBuilderComponentRunner.ts'];
+        const spine = ['features/app-builder/services/appBuilderComponentTeardown.ts'];
 
         const hits = filesTouchingPrimitive(primitive);
 
@@ -179,15 +181,20 @@ describe('spine choke-points', () => {
         expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
-    it('adobe SIGN-IN/OUT: aio auth login/logout run only in authenticationService', () => {
+    it('adobe SIGN-IN/OUT: aio auth login/logout run only in the auth service and its sign-in unit', () => {
         // Audited 2026-08-22: one login site (forced/normal ternary) and one
         // logout site, both in the service every auth door routes through.
+        // 2026-10-08 (decompose-god-file): the login site moved, unchanged, to
+        // adobeSignIn.ts, which only the service's sign-in gate calls; logout stayed.
         // Excluded by the pattern: diagnostics' `aio auth login --help`
         // capability probe (a read, not a sign-in — the lookahead skips it)
         // and ResetAllCommand's "run: aio auth logout" instruction text in a
         // log message (not quote-prefixed, so it never matches).
         const primitive = /['"`]aio (auth )?(login|logout)(?! --help)/;
-        const spine = ['features/authentication/services/authenticationService.ts'];
+        const spine = [
+            'features/authentication/services/authenticationService.ts',
+            'features/authentication/services/adobeSignIn.ts',
+        ];
 
         const hits = filesTouchingPrimitive(primitive);
 
@@ -233,12 +240,15 @@ describe('spine choke-points', () => {
         // missed them — the reason this list is a test, not a comment. The
         // load-bearing half is the NEGATIVE: settingsTools.ts documents that
         // MCP tools must never call getConfiguration().update() — this makes
-        // that sentence mechanical.
+        // that sentence mechanical. Added 2026-10-06: the engine-choice warning's
+        // "Use Copilot in VS Code" button (engineChoiceWatch) — an SC's click,
+        // not a tool, clearing the one setting it warned about.
         const primitive = /\.update\(\s*['"`]|getConfiguration\([^)]*\)\.update\(/;
         const settingsContext = /getConfiguration\(/;
         const spine = [
             'commands/commandManager.ts',
             'commands/openInClaude.ts',
+            'features/ai/engine/engineChoiceWatch.ts',
             'features/project-creation/commands/createProject.ts',
             'features/updates/commands/checkUpdates.ts',
         ];
@@ -259,13 +269,16 @@ describe('spine choke-points', () => {
         // the GitHub token, App Builder component secrets, and the Commerce
         // secret migration (which the data-installer's provisioning routes
         // through rather than storing directly). A credential write anywhere
-        // else means a fifth cache nobody rotates.
+        // else means a fifth cache nobody rotates. Added 2026-10-09 (EDS-35): the
+        // DA.live access token, moved out of globalState; its migration module
+        // owns every write and delete, and the auth service calls through it.
         const primitive = /[sS]ecret[sS]?(torage)?\.(store|delete)\(/;
         const spine = [
             'features/eds/services/helix/helixKeyStore.ts',
             'features/eds/services/github/githubTokenService.ts',
-            'features/dashboard/handlers/appBuilderComponentSecrets.ts',
+            'features/app-builder/services/componentSettingSecrets.ts',
             'features/components/services/commerceSecretMigration.ts',
+            'features/eds/services/daLive/daLiveTokenMigration.ts',
         ];
 
         const hits = filesTouchingPrimitive(primitive);
@@ -325,7 +338,9 @@ describe('spine choke-points', () => {
         // top), configServiceAccess owns the admin-role GRANTS object
         // (read-merge-write), configServiceProbe is the read-only diagnostics
         // oracle. Verified: the probe and access-checker GET the site config,
-        // never write it.
+        // never write it. Since 2026-10-08 (EDS-8) configurationService sends
+        // its writes through configServiceRequest, which is handed the URL and
+        // builds no path, so the site-config doors are still the ones pinned here.
         const primitive = /\/config\/\$\{encodeURIComponent\(org\)\}/;
         const spine = [
             'features/eds/services/configService/configServiceAccess.ts',
@@ -340,18 +355,23 @@ describe('spine choke-points', () => {
     });
 
     it('github MUTATIONS: repo/content writes go through the two eds owners only', () => {
-        // Audited 2026-08-22: a clean split — githubRepoOperations owns
-        // repo-level mutations (create-from-template, delete, settings PATCH),
-        // githubFileOperations owns content mutations (file put/delete and the
-        // tree/commit/ref bulk-reset machinery). The four other files touching
-        // api.github.com (component install, patch fetcher, updates, auto-
-        // updater) are read-only — verified: no mutating method anywhere in
+        // Audited 2026-08-22: a clean split — githubRepoLifecycle owns
+        // repo-level mutations (create-from-template, empty create, Actions
+        // off, template flag, delete, archive; until 2026-10-08 these were in
+        // githubRepoOperations, which now holds only reads — EDS-8 split by
+        // job), githubFileOperations owns content mutations (file put/delete).
+        // The tree/commit/ref machinery those two shared a file with until
+        // 2026-10-08 is githubTreeCommits (EDS-8 split by job); the template
+        // reset drives it and makes no request of its own. The four other files
+        // touching api.github.com (component install, patch fetcher, updates,
+        // auto-updater) are read-only — verified: no mutating method anywhere in
         // them. Mutations ride octokit.request with a verb-prefixed route,
         // which is what the pattern anchors on.
         const primitive = /octokit\.request\(\s*['"`](POST|DELETE|PATCH|PUT) /;
         const spine = [
             'features/eds/services/github/githubFileOperations.ts',
-            'features/eds/services/github/githubRepoOperations.ts',
+            'features/eds/services/github/githubRepoLifecycle.ts',
+            'features/eds/services/github/githubTreeCommits.ts',
         ];
 
         const hits = filesTouchingPrimitive(primitive);
@@ -397,5 +417,181 @@ describe('spine choke-points', () => {
 
         expect(hits).toEqual(expect.arrayContaining(spine));
         expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
+    });
+
+    it('category PAGES: one step writes and removes them, from the storefront flows only', () => {
+        // Audited 2026-10-05 (EDS-24 redesign, no button). The primitive is the service
+        // pair that writes and removes the category pages and the nav switch; only the
+        // step calls it, because the step is what keeps the record on the project.
+        // The step itself is reached from exactly three doors: project creation (the
+        // wizard and create_project, via the executor; an Edit that changes the
+        // datapack goes through the same phase file, `rewriteCatalogMenuPhase` running
+        // reset's removal first), reset (dashboard Reset and
+        // reset_project, via executeEdsReset), and republish (dashboard Republish and
+        // the agent's republish, via republishStorefrontContent).
+        //
+        // EDS-44 (2026-10-15) added a fourth: after a store change, the store-change
+        // service (`storeScopePages`) swaps the old store's pages for the new store's
+        // through `replaceCatalogMenuStep` — reset's removal then build, kept in the step
+        // file so the record still has one keeper. That service's own doors are pinned
+        // in 'STORE CHANGE pages' below.
+        const primitive = /\b(applyCatalogMenu|removeCatalogMenu)\(/;
+        expect(filesTouchingPrimitive(primitive)).toStrictEqual([
+            'features/eds/services/catalogMenu/catalogMenuService.ts',
+            'features/eds/services/catalogMenu/catalogMenuStep.ts',
+        ]);
+
+        const doors = [
+            'features/eds/services/catalogMenu/catalogMenuStep.ts',
+            'features/eds/services/reset/edsResetCatalogMenu.ts',
+            'features/eds/services/storefront/storeScopePages.ts',
+            'features/eds/services/storefront/storefrontContentRepublishService.ts',
+            'features/project-creation/services/catalogMenuPhase.ts',
+        ];
+        const stepHits = filesTouchingPrimitive(
+            /\b(applyCatalogMenuStep|removeCatalogMenuStep|replaceCatalogMenuStep)\(/,
+        );
+        expect(stepHits).toEqual(expect.arrayContaining(doors));
+        expect(stepHits.filter((f) => !doors.includes(f))).toStrictEqual([]);
+    });
+
+    it('product PAGE removal: one implementation, reached from teardown, reset and a store change only', () => {
+        // Audited 2026-10-05 (EDS-26). Product pages are published through the overlay
+        // and have no DA.live document, so nothing that walks DA.live ever removed them.
+        // The primitive is `removeProductPages` — the one place that decides WHICH
+        // paths may go (generated product pages only), refuses on a shared repository,
+        // and reports a live-only removal as such.
+        //
+        // Traced down, every delete door converges on tearDownStorefront: the
+        // delete-project button (edsExternalCleanup, split from projectDeletionService
+        // 2026-10-09), the agent's delete_project
+        // (agentProjectCleanup), cleanup_dalive_site (cloudResourceTools) and the
+        // "Manage DA.live Sites" command (cleanupDaLiveSites, since EDS-31: it used to
+        // delete content alone and leave every page live). Reset has its own door
+        // (edsResetProductPages, called once by executeEdsReset before the content
+        // pipeline pre-warms).
+        //
+        // EDS-44 (2026-10-15): a store change has its own door, the store-change
+        // service (`storeScopePages`), which removes the OLD store's product pages before
+        // publishing the new store's — Reset's order, without the rest of Reset. It
+        // builds the removal's deps with reset (`projectProductPages`), so the two read
+        // the authored pages and the other local projects the same way.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\bremoveProductPages\(/)).toStrictEqual([
+            'features/eds/services/reset/edsResetProductPages.ts',
+            'features/eds/services/storefront/productPageRemoval.ts',
+            'features/eds/services/storefront/storeScopePages.ts',
+            'features/eds/services/storefront/storefrontTeardown.ts',
+        ]);
+        expect(sorted(/\btearDownStorefront\(/)).toStrictEqual([
+            'features/ai/server/agentProjectCleanup.ts',
+            'features/ai/server/cloudResourceTools.ts',
+            'features/eds/commands/cleanupDaLiveSites.ts',
+            'features/eds/services/storefront/storefrontTeardown.ts',
+            'features/projects-dashboard/services/edsExternalCleanup.ts',
+        ]);
+        expect(sorted(/\btakeOutProductPages\(/)).toStrictEqual([
+            'features/eds/services/reset/edsResetProductPages.ts',
+            'features/eds/services/reset/edsResetService.ts',
+        ]);
+    });
+
+    it("storefront REPOSITORY delete: every door lists, deletes, then removes the site's code (EDS-67)", () => {
+        // Audited 2026-10-28. Deleting a storefront's repository left AEM's copy of its
+        // code serving on aem.live. The code bus is cleared one file at a time, and only
+        // a listing made BEFORE the delete can name the files, so the repository delete
+        // and the code removal are one function, `deleteStorefrontRepository`.
+        //
+        // Traced down, the doors that delete a repository: the delete-project button
+        // (edsExternalCleanup), the agent's delete_project (agentProjectCleanup) and
+        // delete_github_repo (cloudResourceTools), Manage GitHub Repositories, and the
+        // setup cancel (cleanupService; its ARCHIVE keeps the repository and the code).
+        // Each hands the primitive to the shared function as a lambda, so each still
+        // matches `.deleteRepository(` below. Two doors are NOT storefronts and delete
+        // the repository directly: an App Builder app's repository (appRepoPromotion) and
+        // the repository a zip import made for an added demo (forgetAddedDemoHandler).
+        // Demo Builder never publishes that one: importStorefrontZipHandler pushes it and
+        // makes no Helix call. Whether the AEM Code Sync App mirrors it on push anyway
+        // depends on which repositories the App is installed on, and is unverified.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\bdeleteStorefrontRepository\(/)).toStrictEqual([
+            'features/ai/server/agentProjectCleanup.ts',
+            'features/ai/server/cloudResourceTools.ts',
+            'features/eds/commands/manageGitHubRepos.ts',
+            'features/eds/services/cleanupService.ts',
+            'features/eds/services/storefront/storefrontCodeRemoval.ts',
+            'features/projects-dashboard/services/edsExternalCleanup.ts',
+        ]);
+        expect(sorted(/\.deleteRepository\(/)).toStrictEqual([
+            'features/ai/server/agentProjectCleanup.ts',
+            'features/ai/server/cloudResourceTools.ts',
+            'features/app-builder/services/appRepoPromotion.ts',
+            'features/eds/commands/manageGitHubRepos.ts',
+            'features/eds/handlers/forgetAddedDemoHandler.ts',
+            'features/eds/services/cleanupService.ts',
+            'features/eds/services/storefront/storefrontCodeRemoval.ts',
+            'features/projects-dashboard/services/edsExternalCleanup.ts',
+        ]);
+        // The one call of the code-bus DELETE.
+        expect(sorted(/\.deleteCode\(/)).toStrictEqual(['features/eds/services/storefront/storefrontCodeRemoval.ts']);
+    });
+
+    it('STORE CHANGE pages: one service, two doors (EDS-44)', () => {
+        // Audited 2026-10-15. After a store change the old store's product and category
+        // pages are replaced by ONE service, `replaceStoreScopePages`. Its doors:
+        // Configure's Republish (configureStorefrontRepublish), and the dashboard's
+        // Republish (republishStorefrontContent), which the agent's `republish` runs too
+        // since 2026-10-23 (EDS-63; it was a third door of its own before). Each calls it
+        // only when the marker is set and its own config publish reached the CDN. A third
+        // door, or a door that rebuilds the pages by itself, fails here.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\breplaceStoreScopePages\(/)).toStrictEqual([
+            'features/dashboard/commands/configureStorefrontRepublish.ts',
+            'features/eds/services/storefront/storeScopePages.ts',
+            'features/eds/services/storefront/storefrontContentRepublishService.ts',
+        ]);
+    });
+
+    it('UNPUBLISHING storefront pages: three deciders, and reset unpublishes only after it republishes', () => {
+        // Audited 2026-10-09 (EDS-33, the reset door). The primitive is the Helix call that
+        // takes pages off live and preview. Three modules decide WHICH pages: the teardown
+        // (everything Helix lists), the product-page removal (generated product pages, with
+        // the shared-repository refusal), and the reset's leftover step (what Helix lists
+        // that the reset did not republish). The pipeline used to make a fourth call in its
+        // content-clear step, which took the site down until the republish; it must not
+        // come back there.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\.unpublishPages\(/)).toStrictEqual([
+            'features/eds/services/storefront/leftoverPages.ts',
+            'features/eds/services/storefront/productPageRemoval.ts',
+            'features/eds/services/storefront/storefrontUnpublish.ts',
+        ]);
+        // The leftover step has one door: the shared pipeline, after the content publish.
+        expect(sorted(/\bunpublishLeftoverPages\(/)).toStrictEqual([
+            'features/eds/services/edsPipeline.ts',
+            'features/eds/services/storefront/leftoverPages.ts',
+        ]);
+    });
+
+    it('category PAGE removal: one implementation, reached only through the catalog menu site', () => {
+        // Audited 2026-10-22 (EDS-61). Category pages are published through the overlay
+        // at each category's own address and have no DA.live document. The primitive is
+        // `removeCategoryPages` — handed the exact paths the step published for categories
+        // that are gone (never an address DA.live holds a document for, never the
+        // template), it refuses on a shared repository and reports a live-only removal as
+        // such. Its one door is the site the catalog menu step runs on
+        // (`catalogMenuSiteDeps`), so reset, a store change and republish all go through
+        // the step.
+        // The watcher and add_category_pages that EDS-27 added were removed with it.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\bremoveCategoryPages\(/)).toStrictEqual([
+            'features/eds/services/catalogMenu/catalogMenuSiteDeps.ts',
+            'features/eds/services/storefront/productPageRemoval.ts',
+        ]);
     });
 });

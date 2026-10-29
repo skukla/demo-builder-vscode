@@ -12,11 +12,14 @@
  * pick up `.mcp.json` natively and need no per-tool file.
  */
 
-import { fsPromises, writeMcpConfigs } from './mcpConfigWriter.testUtils';
+import { FAKE_FNM, fsPromises, mockFindFnmPath, writeMcpConfigs } from './mcpConfigWriter.testUtils';
 import { makeEdsProject, EDS_STOREFRONT_PATH, makeHeadlessProject } from './aiBundleFixtures';
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
+import { nodeFolderPath } from '@/core/shell/nodeFolder';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import type { AiDefaults } from '@/types/aiDefaults';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -135,18 +138,74 @@ describe('MCP config content', () => {
         );
 
         const config = captureWrittenConfig('.claude/mcp.json') as {
-            mcpServers: Record<string, { command: string; args: string[] }>;
+            mcpServers: Record<string, { command: string; args: string[]; env?: Record<string, string> }>;
         };
         const entry = config.mcpServers['commerce-extensibility'];
 
         expect(entry).toBeDefined();
-        expect(entry.command).toBe('node');
+        // Run on Demo Builder's Node, through fnm (AI-13), from Demo Builder's Node
+        // folder: the tools are installed there, not in the SC's own fnm (PR-1a).
+        expect(entry.command).toBe(FAKE_FNM);
+        expect(entry.env).toStrictEqual({ FNM_DIR: nodeFolderPath() });
         // MCP tools install into the per-project isolated dir, decoupled from the
         // storefront manifest (whose `npm install` can fail on b2b dropins).
         expect(entry.args).toEqual([
+            'exec',
+            `--using=${demoBuilderNode()}`,
+            'node',
             `${project.path}/.demo-builder-mcp/node_modules/@adobe-commerce/commerce-extensibility-tools/index.js`,
         ]);
-        expect(entry.args[0]).not.toContain(EDS_STOREFRONT_PATH);
+        expect(entry.args[3]).not.toContain(EDS_STOREFRONT_PATH);
+    });
+
+    it('keeps the plain node launch when fnm cannot be found (AI-13)', async () => {
+        mockFindFnmPath.mockReturnValueOnce(null);
+        const project = makeEdsProject();
+        await writeMcpConfigs('/projects/test', project, EXTENSION_DIST, makeTestWriter('/projects/test'), NODE_PATH);
+
+        const config = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, { command: string; args: string[] }>;
+        };
+        expect(config.mcpServers['commerce-extensibility'].command).toBe('node');
+        expect(config.mcpServers['commerce-extensibility'].args).toHaveLength(1);
+    });
+
+    it('leaves a server that is not started with node on its own launch line, fnm or not', async () => {
+        // Every entry the bundled ai-defaults.json ships is a node server, so the
+        // real file can never show this half of the rule. The declaration is
+        // handed in, typed to the real interface; fnm IS found here (the default).
+        const defaults: AiDefaults = {
+            mcpServers: [
+                {
+                    id: 'not-a-node-server',
+                    package: 'some-python-tool',
+                    version: '^1.0.0',
+                    command: 'uvx',
+                    args: ['/opt/tools/some-python-tool'],
+                    description: 'A server that is not started with node.',
+                    requires: 'app-builder-tooling',
+                },
+            ],
+        };
+
+        await writeMcpConfigs(
+            '/projects/test',
+            makeEdsProject(),
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH,
+            defaults
+        );
+
+        const config = captureWrittenConfig('.claude/mcp.json') as {
+            mcpServers: Record<string, unknown>;
+        };
+        expect(config.mcpServers['not-a-node-server']).toStrictEqual({
+            command: 'uvx',
+            args: ['/opt/tools/some-python-tool'],
+        });
+        // And the handed-in declaration replaces the bundled one rather than adding to it.
+        expect(Object.keys(config.mcpServers)).toStrictEqual(['demo-builder', 'not-a-node-server']);
     });
 
     it('omits ai-defaults MCP entries for bare projects (no storefront, mesh, or app-builder component)', async () => {

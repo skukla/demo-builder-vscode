@@ -17,7 +17,8 @@ import {
     type TeardownItem,
     type TeardownProgress,
 } from '@/features/authentication/services/consoleProjectTeardown';
-import type { RawProvider } from '@/features/authentication/services/ioEventsClient';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import type { RawProvider } from '@/features/authentication/services/ioEventsTransport';
 import {
     TARGET,
     CRED_WS1,
@@ -365,26 +366,30 @@ describe('teardownConsoleProject', () => {
             expect(progress.every((p) => p.totalSteps === 4)).toBe(true);
         });
 
-        it('should emit human-readable messages', async () => {
+        // Every flow names its steps from the one table (owner, 2026-10-16).
+        it("names each step by its table label", async () => {
             const harness = makeHarness();
             const progress: TeardownProgress[] = [];
 
             await teardownConsoleProject(harness.deps, TARGET, (p) => progress.push(p));
 
-            expect(progress[0].message).toMatch(/workspace/i);
-            expect(progress[progress.length - 1].message).toMatch(/project/i);
-            expect(progress.every((p) => p.message.trim().length > 0)).toBe(true);
+            expect(progress.map((p) => p.message)).toEqual([
+                OPERATION_STAGES.findingWorkspaces.label,
+                OPERATION_STAGES.checkingCredentials.label,
+                OPERATION_STAGES.removingEventSetup.label,
+                OPERATION_STAGES.deletingAdobeProject.label,
+            ]);
         });
 
-        it('should emit all four steps (with a skip message for step 3) when the events phase is skipped', async () => {
+        // A step with nothing to do is skipped and the count moves on, as in every
+        // other flow; it used to report a step 3 called "Nothing to remove".
+        it('skips step 3 when there is no event setup to remove', async () => {
             const harness = makeHarness({ credentials: {} });
             const progress: TeardownProgress[] = [];
 
             await teardownConsoleProject(harness.deps, TARGET, (p) => progress.push(p));
 
-            expect(progress.map((p) => p.step)).toEqual([1, 2, 3, 4]);
-            const stepThree = progress.find((p) => p.step === 3);
-            expect(stepThree?.message).toMatch(/no event entities/i);
+            expect(progress.map((p) => p.step)).toEqual([1, 2, 4]);
         });
     });
 });

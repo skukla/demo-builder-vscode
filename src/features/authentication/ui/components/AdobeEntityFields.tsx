@@ -4,7 +4,7 @@
  * The Integrations "Workspace" sub-step lets the user pick an EXISTING Adobe I/O
  * project/workspace OR create a NEW one in-app. The look + feel mirrors the extension's
  * existing "create GitHub repo" flow (see {@link NewRepoForm} in
- * `eds/ui/steps/repoSelectionInline.helpers`): a BROWSE list with a "New" header button
+ * `eds/ui/steps/NewRepoForm`): a BROWSE list with a "New" header button
  * that toggles to a CREATE panel (a gray-50 card with a name field + Browse/Create
  * footer), then snaps back to the browse list once the entity exists and is selected.
  *

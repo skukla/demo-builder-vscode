@@ -12,58 +12,37 @@
 
 import { resolveDataInstallerAccess } from '../handlers/dataInstallerHandlers';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
-import { resolveProjectCredentials } from './commerceCredentialBroker';
-import { DataInstallerWriteClient } from './dataInstallerWriteClient';
+import { buildDatapackEngine, engineThatInstalled } from './buildDatapackEngine';
+import { selectedDatapackEngine } from './dataInstallerConfig';
+import type { DatapackEngine } from './datapackEngine';
 import { watchImportJob } from './importJobRunner';
 import type { SampleDataDeps } from './sampleDataInstall';
 import { PollingService } from '@/core/shell/pollingService';
+import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
-
-/**
- * What this needs to know about a project.
- *
- * Typed rather than `unknown` because the credential resolver dispatches on
- * `stackBackend`, which is NOT a persisted field — it is mapped from
- * `componentSelections.backend`, and `unknown` plus a cast is exactly how that
- * mapping went missing (see {@link buildSampleDataDeps}).
- */
-export interface SampleDataProject {
-    componentSelections?: { backend?: string };
-    componentConfigs?: Record<string, Record<string, string | boolean | number | undefined>>;
-    adobe?: { organization?: string };
-}
 
 /** What this deps set is being built for. */
 export type SampleDataMode = 'install' | 'remove';
-
-/** The progress line's verb per job. */
-const PROGRESS_VERB: Record<SampleDataMode, string> = {
-    install: 'Installing',
-    remove: 'Removing',
-};
 
 /**
  * Build the dependency set for one sample-data job.
  *
  * `mode` exists because this builder serves BOTH `installSampleData` and
- * `removeSampleData`, and two things it produces are phrased: the progress line
- * a user reads, and the name the poller logs.
+ * `removeSampleData`, and the name the poller logs is phrased by it.
  *
- * Both used to be hardcoded to the install wording, so a reset's REMOVAL
- * reported `Installing sample data — 2 of 14 types done` on the progress bar
- * while deleting, and logged `data-installer import <id>` on every poll. Found
- * 2026-08-17 when that progress line was read as evidence that reset reinstalls
- * data — it does not, and a backlog item was nearly written around the label.
+ * It used to be hardcoded to the install wording, so a reset's REMOVAL logged
+ * `data-installer import <id>` on every poll, and its progress bar said
+ * "Installing" while deleting (found 2026-08-17). The progress line's wording now
+ * comes from each surface's step in the stage table ("Installing the datapack",
+ * Reset's removal step), so the report below carries only the counts.
  */
 /**
  * One live progress update for a sample-data job. Callers compose it for
- * their surface: the wizard puts the count in the loading title and the
- * processing types in the detail row (the three-row contract); the reset
- * notification flattens it to one line.
+ * their surface (`typesLine`): the types done and the ones processing go on
+ * the line under the surface's step.
  */
 export interface SampleDataProgress {
-    /** 'Installing' or 'Removing' — phrased by the job mode. */
-    verb: string;
     /** Types finished (success or error). */
     done: number;
     /** Total types in the job. */
@@ -74,30 +53,15 @@ export interface SampleDataProgress {
 
 export function buildSampleDataDeps(
     context: HandlerContext,
-    project: SampleDataProject,
+    project: Project,
     report: (progress: SampleDataProgress) => void,
     mode: SampleDataMode = 'install',
 ): SampleDataDeps {
+    // One engine for the whole job: Demo Builder's keeps its jobs in memory, so the engine
+    // that starts one has to be the engine that is asked how it is going.
+    let built: Promise<DatapackEngine> | undefined;
+    const engineOnce = (): Promise<DatapackEngine> => (built ??= engine(context, project, mode));
     return {
-        credentials: async () => {
-            // The broker matters MORE here than anywhere else: this runs during
-            // project creation, and a project that selected no App Builder
-            // components is exactly the one with no workspace to mint a pair in.
-            // Omitting it would leave every unit test green and the feature inert
-            // on its main path.
-            //
-            // Through the shared resolver, which owns the `stackBackend` mapping.
-            // This line passed a raw project through `as never` and so resolved
-            // nothing for anyone — see `resolveProjectCredentials` for the three
-            // sites that made the same mistake.
-            const resolution = await resolveProjectCredentials(context, project);
-            // The pair goes into the REQUEST and nowhere else — never into the
-            // result, never into a log line.
-            return resolution.ok
-                ? { ok: true, credentials: resolution.credentials }
-                : { ok: false, reason: 'This project has no usable Commerce credentials.' };
-        },
-
         // What the service HOLDS, which is the detail plus a batch item lookup —
         // the same pairing `get-datapack-detail` does. A pack can DECLARE a type
         // the service stores no item for, and asking for it imports nothing while
@@ -115,19 +79,14 @@ export function buildSampleDataDeps(
             return inventory.present;
         },
 
-        startImport: async (request) => {
-            const client = await writeClient(context);
-            return client.startImport(request);
-        },
+        startImport: async (request) => (await engineOnce()).startImport(request),
 
-        // The Reset workflow's half. Same request, same client, different verb.
-        startDelete: async (request) => {
-            const client = await writeClient(context);
-            return client.startDelete(request);
-        },
+        // The Reset workflow's half. Same request, same engine, different verb.
+        startDelete: async (request) => (await engineOnce()).startDelete(request),
 
         /**
-         * Polls with the READ client, which is the only one that can answer.
+         * Polls through the engine. For the service engine that is the READ client,
+         * the only one that can answer.
          *
          * `watchImportJob` needs a `JobStatusSource` — `getJobStatus` and
          * `getJobFailureReason` — and those live on `DataInstallerClient`. This
@@ -140,12 +99,8 @@ export function buildSampleDataDeps(
          * the same call, made the same way. Another cast, another silent mismatch.
          */
         watch: async ({ activationId, requestedTypes, operation, onProgress }) => {
-            const access = await resolveDataInstallerAccess(context);
-            if (!access.ok) {
-                throw new Error('The Data Installer is not reachable for this project.');
-            }
             const result = await watchImportJob({
-                client: access.client,
+                client: await engineOnce(),
                 activationId,
                 requestedTypes,
                 polling: new PollingService(),
@@ -158,7 +113,6 @@ export function buildSampleDataDeps(
         onProgress: (perType) => {
             const entries = Object.entries(perType);
             report({
-                verb: PROGRESS_VERB[mode],
                 done: entries.filter(
                     ([, state]) => state === 'success' || state === 'error',
                 ).length,
@@ -171,18 +125,24 @@ export function buildSampleDataDeps(
     };
 }
 
-/** The write client, built the way the import handlers build it. */
-async function writeClient(context: HandlerContext): Promise<DataInstallerWriteClient> {
+/** The engine the setting chooses, built the way the import handlers build it (`buildDatapackEngine`). */
+async function engine(context: HandlerContext, project: Project, mode: SampleDataMode): Promise<DatapackEngine> {
     const access = await resolveDataInstallerAccess(context);
     if (!access.ok) {
         throw new Error('The Data Installer is not reachable for this project.');
     }
-    return new DataInstallerWriteClient({
-        baseUrl: access.baseUrl,
-        getToken: access.getToken,
-        orgCode: access.orgCode,
-        // One line per service call in Debug Logs — the first live dry run
-        // refused with an EMPTY channel, undebuggable for the user and for us.
-        log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
-    });
+    // A removal goes through the engine that installed the project's pack (DI-5).
+    const engineId =
+        mode === 'remove' && project.datapack ? await engineThatInstalled(project.path, project.datapack) : selectedDatapackEngine();
+    // The org that owns the store is the org the sign-in must be in, as the screen's import
+    // checks (`importHandlers`, `orgGuard`).
+    if (engineId === 'demo-builder' && context.authManager) {
+        const orgFailure = await orgGuard(context, project, context.authManager);
+        if (orgFailure) throw new Error(orgFailure.error);
+    }
+    return buildDatapackEngine(
+        engineId,
+        { ...access, jobs: access.client, catalog: access.client, project, authManager: context.authManager, secrets: context.context?.secrets },
+        (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
+    );
 }

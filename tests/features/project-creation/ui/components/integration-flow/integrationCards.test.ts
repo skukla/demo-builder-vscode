@@ -16,7 +16,6 @@ import {
     sublineFor,
     toIntegrationCards,
 } from '@/features/project-creation/ui/components/integration-flow/integrationCards';
-import type { IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import type { IntegrationRow } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 
 function row(overrides: Partial<IntegrationRow> = {}): IntegrationRow {
@@ -106,6 +105,14 @@ describe('toIntegrationCards', () => {
             expect(card.menuActions).toEqual(expected);
         });
 
+        it('offers Settings on a pair whose ERP can still be named, before Remove', () => {
+            const [card] = toIntegrationCards([
+                row({ kind: 'catalog', companion: 'Acme ERP', renamable: true, companionRenamable: true }),
+            ]);
+            expect(card.menuActions).toEqual(['settings', 'remove']);
+            expect(card.canRename).toBe(true);
+        });
+
         it('always offers Remove — every non-required row can be dropped from the build', () => {
             for (const kind of ['mesh', 'catalog', 'blank', 'custom'] as const) {
                 const [card] = toIntegrationCards([row({ kind })]);
@@ -135,7 +142,7 @@ describe('toIntegrationCards', () => {
         it.each([
             ['mesh', 'mesh', 'API Mesh'],
             ['catalog', 'catalog', 'Pre-built'],
-            ['blank', 'blank', 'Custom · blank starter'],
+            ['blank', 'blank', 'Custom (blank starter)'],
             ['custom', 'custom', 'Imported repo'],
         ])('labels a %s row', (_name, kind, expected) => {
             const [card] = toIntegrationCards([row({ kind: kind as IntegrationRow['kind'] })]);
@@ -177,58 +184,30 @@ describe('toIntegrationCards', () => {
             expect(renamable.canRename).toBe(true);
             expect(plain.canRename).toBe(false);
         });
-
-        it('marks AI-built instances so the subline can read as prose, not a repo', () => {
-            const [ai] = toIntegrationCards([row({ kind: 'blank' })]);
-            const [imported] = toIntegrationCards([row({ kind: 'custom' })]);
-
-            expect(ai.sourceIsAi).toBe(true);
-            expect(imported.sourceIsAi).toBe(false);
-        });
     });
 });
 
 describe('sublineFor', () => {
-    // The count replaces the row's collapsible "APIs in use · N" list. Losing the
-    // count would be a regression — it is the only pre-build signal that an
-    // integration will provision anything. Losing the expanded NAMES is not: the
-    // kebab's Manage APIs opens the picker, which lists them.
-    it('joins the source line and the API count', () => {
-        expect(sublineFor(toIntegrationCards([row()])[0])).toBe(
-            'Custom integration · acme/erp-sync · 2 APIs'
-        );
+    // One fact per line (owner, 2026-10-07), and no API count: the kebab's
+    // Manage APIs opens the picker, which lists them.
+    it('gives the source line alone, with no API count', () => {
+        expect(sublineFor(toIntegrationCards([row()])[0])).toEqual([
+            'Custom integration · acme/erp-sync',
+        ]);
     });
 
-    it('singularises a lone API', () => {
-        expect(
-            sublineFor(toIntegrationCards([row({ apis: ['AdobeIOManagementAPISDK'] })])[0])
-        ).toBe('Custom integration · acme/erp-sync · 1 API');
+    it('puts what comes with the integration on its own line', () => {
+        expect(sublineFor(toIntegrationCards([row()])[0], 'Acme ERP')).toEqual([
+            'Custom integration · acme/erp-sync',
+            'Comes with Acme ERP',
+        ]);
     });
 
-    it('drops the source segment when the row has none', () => {
-        expect(sublineFor(toIntegrationCards([row({ sourceLine: '' })])[0])).toBe('2 APIs');
+    it('drops a line with nothing to say', () => {
+        expect(sublineFor(toIntegrationCards([row({ sourceLine: '' })])[0])).toStrictEqual([]);
     });
 
-    // Every row carries at least the baseline (integrationRows.apiCodesFor), so
-    // this is unreachable from the resolver — pinned so the helper degrades
-    // honestly rather than printing "0 APIs" if that ever changes.
-    it('drops the API segment when there are none', () => {
-        expect(sublineFor(toIntegrationCards([row({ apis: [] })])[0])).toBe(
-            'Custom integration · acme/erp-sync'
-        );
-    });
-
-    // `apis` is OPTIONAL on IntegrationCardModel — the dashboard's producer omits
-    // it entirely on cards that provision nothing — so the helper has to survive
-    // a card that carries no key at all, not merely an empty array.
-    it('survives a card with no apis key at all', () => {
-        const { apis: _apis, ...withoutApis } = toIntegrationCards([row()])[0];
-        const card: IntegrationCardModel = withoutApis;
-
-        expect(sublineFor(card)).toBe('Custom integration · acme/erp-sync');
-    });
-
-    it('explains a required mesh — the card with no kebab must say why', () => {
+    it('explains a required mesh on its own line — the card with no kebab must say why', () => {
         const [card] = toIntegrationCards([
             row({
                 kind: 'mesh',
@@ -237,6 +216,6 @@ describe('sublineFor', () => {
                 apis: [],
             }),
         ]);
-        expect(sublineFor(card)).toBe('Commerce data via API Mesh · Required by this package');
+        expect(sublineFor(card)).toEqual(['Commerce data via API Mesh', 'Required by this package']);
     });
 });

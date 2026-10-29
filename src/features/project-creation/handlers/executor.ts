@@ -17,36 +17,46 @@
  */
 
 import * as fsPromises from 'fs/promises';
-import * as os from 'os';
 import * as path from 'path';
+import { creationReporter, creationSteps } from './creationProgress';
 import {
     executeAppBuilderIntegrationsPhase,
     ensureWorkspaceRuntimeReady,
 } from './executorAppBuilderPhase';
 import { loadComponentDefinitions } from './executorComponentLoading';
+import { finishEditWithoutRebuild } from './executorEditApply';
 import {
+    carriedOverFromEdit,
     loadExistingProjectForEdit,
     prepareEditModeTempDir,
     performAtomicComponentSwap,
 } from './executorEditMode';
+import { renameAfterEdit } from './executorEditRename';
 import { populateEdsMetadata, syncEdsConfigToRemote, setupEdsContent } from './executorEdsPhase';
 import { executeMeshPhase, populateMeshComponentConfigs } from './executorMeshPhase';
-import { handlePortConflicts, cleanupOrphanedDirectory } from './executorPreflight';
+import {
+    creationPath,
+    handlePortConflicts,
+    cleanupOrphanedDirectory,
+    refuseSecondErpIntegration,
+} from './executorPreflight';
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { whileRunning } from '@/core/state/projectWorkRunning';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import { cloneAllComponents, installAllComponents } from '@/features/project-creation/services/componentInstallationOrchestrator';
+import { fillCreationDefaults } from '@/features/project-creation/services/creationConfigDefaults';
 import { finalizeProject, generateEnvironmentFiles, sendCompletionAndCleanup } from '@/features/project-creation/services/projectFinalizationService';
 import { HandlerContext } from '@/types/handlers';
 import { isEdsStackId } from '@/types/typeGuards';
-import type { MeshPhaseState } from '@/types/webview';
-import type { CreationProgressPayload } from '@/types/webviewPayloads';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 // ============================================================================
@@ -94,7 +104,9 @@ function selectedAppBuilderIds(typedConfig: ProjectCreationConfig): string[] {
  * Project — notably `additionalConsoleApis` for the subscribe union — must be
  * written here. `componentSelections.appBuilder` persists the selected ids;
  * custom/instance SOURCES are NOT persisted (§E) — edit mode derives them from
- * the keyed `appBuilderComponents` map via `extractSettingsFromProject`.
+ * the keyed `appBuilderComponents` map via `extractSettingsFromProject` (Edit
+ * and Copy) and `createExportSettings` (the exported project file).
+ * In Edit, the old project's records are kept: see `carriedOverFromEdit`.
  */
 export function buildInitialProject(
     typedConfig: ProjectCreationConfig,
@@ -102,6 +114,7 @@ export function buildInitialProject(
     existingProject?: import('@/types/base').Project,
 ): import('@/types/base').Project {
     return {
+        ...carriedOverFromEdit(existingProject),
         name: typedConfig.projectName,
         // Only when the user actually set one. Seeding it from the slug would
         // render identically and then persist the slug as a genuine title, so a
@@ -147,57 +160,54 @@ export function buildInitialProject(
         selectedAddons: typedConfig.selectedAddons,
         selectedBlockLibraries: typedConfig.selectedBlockLibraries,
         customBlockLibraries: typedConfig.customBlockLibraries,
+        // What THIS run's storefront setup installed; an edit that installed none keeps its own.
+        installedBlockLibraries: typedConfig.edsConfig?.installedBlockLibraries?.length
+            ? typedConfig.edsConfig.installedBlockLibraries
+            : existingProject?.installedBlockLibraries,
         componentApiPicks: typedConfig.componentApiPicks,
-        // Note: componentVersions, meshState, etc. are NOT preserved during edit
-        // - componentVersions: Regenerated from fresh component installation
-        // - meshState: Must be clean slate - old sourceHash won't match fresh files
-        // - frontendEnvState: Only valid if demo is running (cleared during edit)
     };
 }
 
+/**
+ * Create a project, or rebuild an edited one.
+ *
+ * Listed as running for as long as it runs, so the projects list can tell a project
+ * being created from one whose creation never finished (PL-82).
+ */
 export async function executeProjectCreation(
+    context: HandlerContext,
+    config: ProjectCreationConfig,
+): Promise<void> {
+    await whileRunning(creationPath(config), 'creating', () => createOrRebuild(context, config));
+    await renameAfterEdit(context, config); // a name changed in Edit, applied after it
+}
+
+async function createOrRebuild(
     context: HandlerContext,
     config: ProjectCreationConfig,
 ): Promise<void> {
     const typedConfig = config;
 
-    // Debug: trace incoming config values for selectedPackage/selectedStack
     context.logger.debug(
         `[Project Creation] Received config: selectedPackage=${typedConfig.selectedPackage}, selectedStack=${typedConfig.selectedStack}`,
     );
 
-    // Track current mesh phase for progress messages
-    let currentMeshPhase: MeshPhaseState | undefined;
-
-    // Create progress tracker (includes mesh phase state when present)
-    const progressTracker: ProgressTracker = (
-        currentOperation: string,
-        progress: number,
-        message?: string,
-    ) => {
-        const payload: CreationProgressPayload = {
-            currentOperation,
-            progress,
-            message: message || '',
-            logs: [],
-            meshPhase: currentMeshPhase,
-        };
-        context.sendMessage('creationProgress', payload);
-    };
+    // One reporter for the wizard's screen and an agent (`creationProgress.ts`).
+    const progress = creationReporter(context.sendMessage);
+    const progressTracker: ProgressTracker = progress.report;
 
     // ========================================================================
     // PRE-FLIGHT CHECKS
     // ========================================================================
 
-    // Safety check: Ensure port is available
-    await handlePortConflicts(context, typedConfig, progressTracker);
+    // An Edit that changed nothing, or only integrations, is not a rebuild (PL-75).
+    if (await finishEditWithoutRebuild(context, typedConfig, progressTracker)) return;
+    await handlePortConflicts(context, typedConfig, progressTracker); // the port is free
+    await refuseSecondErpIntegration(context, typedConfig); // one ERP integration per instance (AB-78)
 
     // Determine project path based on edit mode (editProjectPath presence signals edit)
     const isEditMode = Boolean(typedConfig.editProjectPath);
-    const projectPath =
-        isEditMode && typedConfig.editProjectPath
-            ? typedConfig.editProjectPath
-            : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
+    const projectPath = creationPath(typedConfig);
 
     // Load existing project state if in edit mode (to preserve creation date);
     // otherwise clean up any orphaned/invalid directory (new project only).
@@ -207,12 +217,14 @@ export async function executeProjectCreation(
     } else {
         await cleanupOrphanedDirectory(projectPath, context, progressTracker, fsPromises);
     }
+    // From here the run's steps are known, so each shows "(n of N)".
+    progress.numberFrom(creationSteps(typedConfig, existingProject));
 
     // ========================================================================
     // PROJECT INITIALIZATION
     // ========================================================================
 
-    progressTracker('Setting Up Project', 10, 'Creating project directory structure');
+    progressTracker(OPERATION_STAGES.settingUpProject.label, 10, 'Creating project directory structure');
 
     const componentsDir = path.join(projectPath, 'components');
     await fsPromises.mkdir(componentsDir, { recursive: true });
@@ -220,7 +232,7 @@ export async function executeProjectCreation(
 
     context.logger.debug(`[Project Creation] Created directory: ${projectPath}`);
 
-    progressTracker('Setting Up Project', 15, 'Initializing project configuration');
+    progressTracker(OPERATION_STAGES.settingUpProject.label, 15, 'Initializing project configuration');
 
     const project: import('@/types/base').Project = buildInitialProject(
         typedConfig,
@@ -270,10 +282,15 @@ export async function executeProjectCreation(
     // LOAD COMPONENT DEFINITIONS
     // ========================================================================
 
-    progressTracker('Loading Components', 20, 'Preparing component definitions');
+    progressTracker(OPERATION_STAGES.loadingComponents.label, 20, 'Preparing component definitions');
 
     const registryManager = componentRegistryFrom(context);
     const registry = await registryManager.loadRegistry();
+
+    // The defaults the wizard's settings screen fills on load, filled here for
+    // every door — an agent's create_project never mounts that screen. Absent
+    // keys only: a value the wizard saved, or one the user cleared, stands.
+    project.componentConfigs = fillCreationDefaults(typedConfig, registry, project.componentConfigs ?? {});
 
     // Create unified setup context (eliminates parameter threading)
     // Composes HandlerContext to avoid duplicating logger and other common dependencies
@@ -398,7 +415,7 @@ export async function executeProjectCreation(
         progressTracker,
     );
 
-    await setupEdsContent(context, typedConfig, isEdsStack, progressTracker);
+    await setupEdsContent(context, typedConfig, isEdsStack, progressTracker, project);
 
     // ========================================================================
     // PHASE 5c: SAMPLE DATA
@@ -419,6 +436,17 @@ export async function executeProjectCreation(
     // and impossible for creation, where the pipeline runs during storefront
     // setup and the datapack lands here. Never throws.
     await executeCatalogPrewarmPhase(context, project, progressTracker);
+
+    // ========================================================================
+    // PHASE 5e: CATEGORY PAGES AND THE CATALOG MENU (EDS-24)
+    // ========================================================================
+    //
+    // AFTER sample data for the same reason as pre-warming: the categories the pages
+    // are written for arrive with the datapack. Acts only on a storefront that has the
+    // catalog-menu block; reset and republish run the same step. Never throws.
+    if (isEdsStack) {
+        await executeCatalogMenuPhase(context, project, progressTracker, existingProject);
+    }
 
     await finalizeProject(finalizationContext);
     await sendCompletionAndCleanup(finalizationContext);

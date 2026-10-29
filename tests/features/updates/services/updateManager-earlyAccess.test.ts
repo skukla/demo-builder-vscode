@@ -11,14 +11,6 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000 },
 }));
 
-jest.mock('@/core/validation/SensitiveDataRedactor', () => ({
-    sanitizeErrorForLogging: jest.fn((msg: string) => msg),
-}));
-
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateGitHubDownloadURL: jest.fn().mockReturnValue(true),
-}));
-
 // Mock the gate so we control collaborator verification
 jest.mock('@/features/updates/services/collaboratorGate', () => ({
     isRepoCollaborator: jest.fn(),
@@ -27,9 +19,8 @@ jest.mock('@/features/updates/services/collaboratorGate', () => ({
 
 global.fetch = jest.fn();
 
-import { UpdateManager } from '@/features/updates/services/updateManager';
+import { UpdateManager, vscode } from './updateManager.testUtils';
 import { isRepoCollaborator } from '@/features/updates/services/collaboratorGate';
-import * as vscode from 'vscode';
 import {
     createUpdateManagerContext,
     createMockLogger,

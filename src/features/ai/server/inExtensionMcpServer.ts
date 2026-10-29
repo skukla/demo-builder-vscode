@@ -25,6 +25,7 @@ import { readCwdPreamble, resolveScopedProjectDir } from './connectionScope';
 import { askChatForConsent } from './consentViaChat';
 import { probeSocket } from './mcpSocketDiscovery';
 import { asRawText } from './mcpToolResult';
+import { declaredReadOnly } from './mcpToolServer';
 import { progressLabel, SERVER_DISPLAY_NAME } from './toolDisplayName';
 import {
     fingerprintArgs,
@@ -54,35 +55,11 @@ const SERVER_VERSION = '1.0.0';
  * mutating and routed through the injected long-running notifier.
  *
  * An allowlist, deliberately (same reasoning as mcp-live-probe's --force
- * gate, which started as a denylist and let `sync_content` and `republish`
+ * gate, which started as a denylist and let two whole-site publishes
  * straight through): a false positive costs one unnecessary notification,
  * a false negative is a live-CDN mutation running invisibly. A new tool
  * with a novel name fails CLOSED into "mutating".
  */
-/**
- * Does this tool's own definition say it only reads?
- *
- * THE classifier. Three things gate on it — the dry run, the chat's opening
- * line, and the phase sinks — and all three used to gate on
- * {@link isReadOnlyToolName}, a regex over the tool's name.
- *
- * A name cannot express "called `check_` and writes anyway". `check_github_app`
- * is exactly that (it triggers a Helix code sync on a 404) and the guard that
- * holds it closed had to be found by a hand audit of all 43 read-shaped tools,
- * because nothing could state it.
- *
- * FAILS CLOSED: no declaration means "assume it writes". A tool that forgets is
- * over-blocked under the dry run, which is recoverable; the other direction is a
- * real mutation during a mode that promises none. `inExtensionMcpServer-toolAnnotations.test.ts`
- * asserts every registered tool declares, so the fallback never runs in
- * production.
- */
-function declaredReadOnly(schema: unknown): boolean {
-    const annotations = (schema as { annotations?: { readOnlyHint?: unknown } } | undefined)
-        ?.annotations;
-    return annotations?.readOnlyHint === true;
-}
-
 /**
  * Name-shape guess at read-vs-write. NOT used to gate anything any more — see
  * {@link declaredReadOnly}, which reads the tool's own declaration.
@@ -135,7 +112,7 @@ export type ConsentVerdict = { allowed: true } | { allowed: false; refusal: unkn
  *
  * The generated guidance tells agents that destructive tools take `confirm:true`
  * (and a `confirmName` echo on the most destructive), and several write tools
- * legitimately declare NO arguments — `republish`, `sync_content`. Strictifying
+ * legitimately declare NO arguments — `republish`, for one. Strictifying
  * those naively would reject the very call the guidance asks for, turning a
  * safety affordance into a hard failure. Declared shapes still win: a tool that
  * describes its own `confirm` keeps its description.
@@ -255,7 +232,9 @@ function withToolLogging(
     notifier?: (
         toolName: string,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        run: (report: PhaseSink) => Promise<any>
+        run: (report: PhaseSink) => Promise<any>,
+        /** The call's arguments, so the notification can name what it acts on. */
+        args?: Record<string, unknown>,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) => Promise<any>,
     consentGate?: (
@@ -407,8 +386,10 @@ function withToolLogging(
                             invoke = () => handler(args);
                         } else if (notifier) {
                             invoke = () =>
-                                notifier(name, (report) =>
-                                    withPhaseSinks([mcpSink, report], () => handler(args)),
+                                notifier(
+                                    name,
+                                    (report) => withPhaseSinks([mcpSink, report], () => handler(args)),
+                                    args,
                                 );
                         } else {
                             invoke = () => withPhaseSinks([mcpSink], () => handler(args));
@@ -464,7 +445,8 @@ export interface InExtensionMcpServerOptions {
     // its own implementation, which is exactly the silenced-type-error shape.
     longRunningNotifier?: (
         toolName: string,
-        run: (report: (message: string) => void) => Promise<unknown>
+        run: (report: (message: string) => void) => Promise<unknown>,
+        args?: Record<string, unknown>,
     ) => Promise<unknown>;
     /**
      * Native consent for destructive calls (injected — this module stays

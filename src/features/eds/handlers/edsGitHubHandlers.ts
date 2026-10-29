@@ -18,6 +18,7 @@ import { GITHUB_SCOPES } from '../services/types';
 import { getGitHubServices } from './edsHelpers';
 import { createRepoFromSource } from './storefrontSetup/storefrontSetupPhase1';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -160,6 +161,7 @@ export async function signInToGitHub(
     // session.account.label is the GitHub login. Do NOT re-validate after a
     // forced re-auth — the token was just minted; a transient 401 here would
     // falsely flag a working session as broken and re-prompt indefinitely.
+    showSuccessInStatusBar(`Signed in to GitHub as ${session.account.label}`);
     return { login: session.account.label };
 }
 
@@ -310,6 +312,7 @@ export async function handleGitHubChangeAccount(
         };
 
         context.logger.debug('[EDS] GitHub account changed to:', user.login);
+        showSuccessInStatusBar(`Signed in to GitHub as ${user.login}`);
         await context.sendMessage('github-auth-complete', {
             isAuthenticated: true,
             user,
@@ -393,7 +396,7 @@ interface CreateGitHubRepoPayload {
  * Create a GitHub repository from a template
  *
  * Creates the repository and waits for template content to be populated.
- * This is called from RepoSelectionInline when creating a new repository,
+ * This is called from useRepoCreation (the repo picker's create flow),
  * allowing the repo to exist before proceeding to code sync verification.
  *
  * @param context - Handler context with logging and messaging
@@ -414,17 +417,17 @@ export async function handleCreateGitHubRepo(
 
     try {
         context.logger.info(`[EDS] Creating GitHub repository: ${repoName} from ${templateOwner}/${templateRepo}`);
-        const { repoOperations } = getGitHubServices(context.context.secrets);
+        const { repoOperations, repoLifecycle } = getGitHubServices(context.context.secrets);
 
         // Create repository from template — or, for an added demo whose source
         // is not a template, an empty repository reset onto the source.
         const templateSync = new TemplateSyncService(
-            context.context.secrets,
+            getGitHubServices(context.context.secrets),
             context.logger,
             ServiceLocator.getCommandExecutor(),
         );
         const repo = await createRepoFromSource(
-            { repoOps: repoOperations, templateSync },
+            { repoOps: repoOperations, repoLifecycle, templateSync },
             { newRepoName: repoName, isPrivate: isPrivate ?? false, fromAddedDemo: Boolean(fromAddedDemo) },
             templateOwner,
             templateRepo,
@@ -435,7 +438,7 @@ export async function handleCreateGitHubRepo(
 
         // Wait for template content to be populated
         context.logger.debug('[EDS] Waiting for repository content');
-        await repoOperations.waitForContent(repo.fullName.split('/')[0], repo.name);
+        await repoLifecycle.waitForContent(repo.fullName.split('/')[0], repo.name);
 
         context.logger.info(`[EDS] Repository ready: ${repo.htmlUrl}`);
 

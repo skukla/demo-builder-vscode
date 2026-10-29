@@ -62,7 +62,7 @@ Multisite needs a map keyed by environment (or locale):
 
 #### 2. `buildSiteConfigParams` — takes one org/site
 
-**File**: `src/features/eds/services/configService/configurationService.ts` (line 65)
+**File**: `src/features/eds/services/configService/siteConfigParams.ts` (in `configurationService.ts` until the 2026-10-08 EDS-8 split)
 
 ```typescript
 export function buildSiteConfigParams(
@@ -130,7 +130,7 @@ Where the singular assumption is encoded:
 | `features/components/config/components.json` | three scalar keys per backend |
 | `features/components/config/envVarKeys.ts` | `BACKEND_OWNED_SCOPE_KEYS` — "the backend owns *the* scope", not the scope map |
 | `features/components/ui/components/StoreSelectionRow.tsx` | `getFieldKeys(group.id)` writes exactly three fixed keys |
-| `features/eds/services/configGenerator.ts` | `extractConfigParamsFromConfigs` emits singular `websiteCode` / `storeCode` / `storeViewCode` into `config.json` |
+| `features/eds/services/storefrontConfigParams.ts` | `extractConfigParamsFromConfigs` emits singular `websiteCode` / `storeCode` / `storeViewCode` into `config.json` |
 | `features/mesh/services/stalenessDetector.ts` | compares scalar values against the deployed snapshot |
 | `features/dashboard/ui/components/integrations/integrationCardModel.ts` | `deriveCommerceScope` returns ONE triple for the flyout's Commerce scope row |
 
@@ -151,6 +151,12 @@ group (the store cascade branches on `group.id`).
 **Trigger for the UI change specifically: when the scope stops being one triple.** Not
 before — a whole tab for three pickers reproduces the single-control-tab problem that
 `.rptc/plans/configure-commerce-subsections` removed.
+
+> **Done earlier than this trigger (note added 2026-10-13).** Business Structure became
+> its own tab on 2026-08-17 (`a6fdbb6e7`, "credentials get a section, Business Structure
+> gets a tab"), while the scope was still one triple. The promotion described above is
+> what `buildConfigureSections` now does for the connection group, so the multisite work
+> no longer needs it. The current tabs are listed in `docs/systems/configure.md`.
 
 ---
 
@@ -207,7 +213,7 @@ No code changes in this ADR. When multisite work happens, the implementing PR(s)
 
 - Add `buildSiteConfigParamsForEnvironments(repoOwner, repoName, environments)` returning `SiteRegistrationParams[]`.
 - Setup flow (`handlers/configServiceRegistration.ts::registerConfigurationService`) becomes `Promise.all(envs.map(env => configService.registerSite(...)))`.
-- Reset flow (`edsResetService.ts::publishConfigAndRegisterSite`) same pattern.
+- Reset flow (`edsResetConfigStep.ts::publishConfigAndRegisterSite`) same pattern.
 
 ### Step 3 — Mesh per-env deployment
 
@@ -275,7 +281,7 @@ This ADR has no implementation, so no test verification. Acceptance criteria for
 - **Adobe pattern**: [Repoless multisite manager](https://www.aem.live/developer/repoless-multisite-manager)
 - **Single-env code locations**:
   - `src/features/eds/services/reset/edsResetParams.ts` (project state shape)
-  - `src/features/eds/services/configService/configurationService.ts` (`buildSiteConfigParams`)
+  - `src/features/eds/services/configService/siteConfigParams.ts` (`buildSiteConfigParams`)
   - `src/features/mesh/services/meshDeployment.ts` (`deployMeshComponent`)
   - `src/features/eds/config/config-template.json` (template URL substitution)
 

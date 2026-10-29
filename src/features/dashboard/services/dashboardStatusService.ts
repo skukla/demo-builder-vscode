@@ -12,6 +12,7 @@
 
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { storefrontNeedsReset } from '@/features/eds/services/storefront/storefrontChanges';
 import { Project } from '@/types/base';
 import {
     getProjectFrontendPort,
@@ -53,6 +54,7 @@ export function buildStatusPayload(
         frontendConfigChanged,
         mesh,
         edsStorefrontStatus: project.edsStorefrontStatusSummary,
+        ...(storefrontNeedsReset(project) ? { storefrontNeedsReset: true as const } : {}),
     };
 }
 

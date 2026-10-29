@@ -30,6 +30,84 @@ jest.mock('os', () => {
 const NODE = '/usr/local/bin/node';
 const DIST = '/ext/dist';
 
+describe('registerGlobalMcp — the engines that keep a user-level config', () => {
+    /**
+     * Claude Code keeps user MCP config in `~/.claude.json`; Copilot CLI keeps it in
+     * `~/.copilot/mcp-config.json`, under the same `mcpServers` key. A machine can have
+     * both agents, and the SC asking for global registration means "make the tools
+     * reachable", not "make them reachable from one of them" (AI-12 step 04).
+     */
+    let home: string;
+
+    beforeEach(async () => {
+        home = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'dbmcp-home-'));
+        (os.homedir as jest.Mock).mockReturnValue(home);
+    });
+
+    afterEach(async () => {
+        await fsPromises.rm(home, { recursive: true, force: true });
+    });
+
+    const read = async (rel: string): Promise<Record<string, unknown>> =>
+        JSON.parse(await fsPromises.readFile(path.join(home, rel), 'utf-8'));
+
+    it('writes the same entry to each named agent CLI, and answers what it wrote', async () => {
+        const written = await registerGlobalMcp(DIST, NODE, ['claude', 'copilot']);
+
+        expect(written).toStrictEqual([
+            path.join(home, '.claude.json'),
+            path.join(home, '.copilot/mcp-config.json'),
+        ]);
+        const entry = { command: NODE, args: [path.join(DIST, 'mcp-proxy.js')] };
+        expect((await read('.claude.json')).mcpServers).toStrictEqual({ 'demo-builder': entry });
+        expect((await read('.copilot/mcp-config.json')).mcpServers).toStrictEqual({
+            'demo-builder': entry,
+        });
+    });
+
+    it('creates the Copilot config directory when it does not exist yet', async () => {
+        await registerGlobalMcp(DIST, NODE, ['copilot']);
+
+        expect((await read('.copilot/mcp-config.json')).mcpServers).toBeDefined();
+    });
+
+    it("preserves a Copilot user's other servers and settings", async () => {
+        await fsPromises.mkdir(path.join(home, '.copilot'), { recursive: true });
+        await fsPromises.writeFile(
+            path.join(home, '.copilot/mcp-config.json'),
+            JSON.stringify({ mcpServers: { other: { command: 'x' } }, somethingElse: 1 })
+        );
+
+        await registerGlobalMcp(DIST, NODE, ['copilot']);
+
+        const config = await read('.copilot/mcp-config.json');
+        expect(config.somethingElse).toBe(1);
+        expect(Object.keys(config.mcpServers as object).sort()).toStrictEqual([
+            'demo-builder',
+            'other',
+        ]);
+    });
+
+    it('writes Copilot CLI by default — it is no Chat choice, but an SC may run `copilot` themselves', async () => {
+        const written = await registerGlobalMcp(DIST, NODE);
+
+        expect(written).toStrictEqual([
+            path.join(home, '.claude.json'),
+            path.join(home, '.copilot/mcp-config.json'),
+        ]);
+    });
+
+    it('refuses a malformed Copilot config rather than overwriting it', async () => {
+        await fsPromises.mkdir(path.join(home, '.copilot'), { recursive: true });
+        await fsPromises.writeFile(path.join(home, '.copilot/mcp-config.json'), '{ not json');
+
+        await expect(registerGlobalMcp(DIST, NODE, ['copilot'])).rejects.toThrow(/malformed/);
+        await expect(
+            fsPromises.readFile(path.join(home, '.copilot/mcp-config.json'), 'utf-8')
+        ).resolves.toBe('{ not json');
+    });
+});
+
 describe('registerGlobalMcp', () => {
     let home: string;
     let configPath: string;
@@ -180,6 +258,30 @@ describe('refreshGlobalMcpIfPresent', () => {
         await fsPromises.rm(home, { recursive: true, force: true });
     });
 
+    it("repairs a stale entry in Copilot's config too, not only Claude's", async () => {
+        // An extension update invalidates every agent's entry at once: the path it
+        // embeds carries the version (AI-12 step 04).
+        await fsPromises.mkdir(path.join(home, '.copilot'), { recursive: true });
+        await fsPromises.writeFile(
+            path.join(home, '.copilot/mcp-config.json'),
+            JSON.stringify({
+                mcpServers: {
+                    'demo-builder': { command: NODE, args: ['/old/build/mcp-proxy.js'] },
+                },
+            })
+        );
+
+        const repaired = await refreshGlobalMcpIfPresent(DIST, NODE);
+
+        expect(repaired).toBe(true);
+        const config = JSON.parse(
+            await fsPromises.readFile(path.join(home, '.copilot/mcp-config.json'), 'utf-8')
+        );
+        expect(config.mcpServers['demo-builder'].args).toStrictEqual([
+            path.join(DIST, 'mcp-proxy.js'),
+        ]);
+    });
+
     const OLD = '/ext/skukla.adobe-demo-builder-1.0.0-beta.111/dist';
 
     async function writeConfig(body: unknown): Promise<void> {
@@ -232,6 +334,28 @@ describe('refreshGlobalMcpIfPresent', () => {
 
         expect(await refreshGlobalMcpIfPresent(DIST, NODE)).toBe(true);
         expect(await entryArgs()).toEqual([path.join(DIST, 'mcp-proxy.js')]);
+    });
+
+    it('repairs with the node binary it was HANDED, not one it resolves itself', async () => {
+        // A path no machine has, so a repair that ignored the argument and went to
+        // `which node` instead cannot land on the same answer by accident.
+        const handed = '/handed/in/by/the/caller/node';
+        await writeConfig({
+            mcpServers: {
+                'demo-builder': {
+                    command: '/gone/versions/node/v22.0.0/bin/node',
+                    args: [path.join(DIST, 'mcp-proxy.js')],
+                },
+            },
+        });
+
+        expect(await refreshGlobalMcpIfPresent(DIST, handed)).toBe(true);
+
+        const c = JSON.parse(await fsPromises.readFile(configPath, 'utf-8'));
+        expect(c.mcpServers['demo-builder']).toStrictEqual({
+            command: handed,
+            args: [path.join(DIST, 'mcp-proxy.js')],
+        });
     });
 
     it('leaves a bare command name alone rather than guessing', async () => {

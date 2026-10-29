@@ -15,11 +15,15 @@
  * Written BEFORE the builder exists (strict RED).
  */
 
+import blockLibraries from '@/features/components/config/block-libraries.json';
 import { buildInitialProject } from '@/features/project-creation/handlers/executor';
+import { findUninstalledBlockLibraries } from '@/features/updates/services/blockLibraryInstall';
 import type { Project } from '@/types/base';
+import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
-import { createMockProject } from '../../../helpers/projectFake';
+import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
+import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
 
 const PROJECT_PATH = '/home/user/.demo-builder/projects/demo';
 
@@ -259,5 +263,205 @@ describe('buildInitialProject — the fields the wire config decides', () => {
         const project = buildInitialProject(config(), PROJECT_PATH, existing);
 
         expect(project.datapack).toEqual(kept);
+    });
+
+    it('takes the added demo from the config on a project that has none', () => {
+        // A new project built on an added demo has no existing row to fall back to;
+        // the row the config carries is the only one there is.
+        const demo = makeAddedDemo();
+
+        const project = buildInitialProject(config({ demo }), PROJECT_PATH);
+
+        expect(project.demo).toEqual(demo);
+    });
+
+    it('falls back to the existing project’s added demo when the config names none', () => {
+        const kept = makeAddedDemo({ name: 'Kept demo' });
+        const existing = createMockProject({ demo: kept });
+
+        const project = buildInitialProject(config(), PROJECT_PATH, existing);
+
+        expect(project.demo).toEqual(kept);
+    });
+});
+
+/**
+ * The block libraries storefront setup installed ride the wire config to here, and
+ * land on THIS project. Until 2026-10-09 setup saved them itself onto whichever
+ * project was open, so a new project had none and its first update check offered
+ * every selected library as an install ("... is already in <project>").
+ */
+describe('buildInitialProject — installed block libraries', () => {
+    const LIBRARY: CustomBlockLibrary = {
+        name: 'Demo Team Blocks',
+        source: { owner: 'demo-team', repo: 'blocks', branch: 'main' },
+    };
+    const RECORD: InstalledBlockLibrary = {
+        ...LIBRARY,
+        commitSha: 'abc123',
+        blockIds: ['hero', 'cards'],
+        installedAt: '2026-10-09T00:00:00.000Z',
+    };
+    const OLD_RECORD: InstalledBlockLibrary = {
+        ...RECORD,
+        commitSha: 'old000',
+        installedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const demoBuilder = blockLibraries.libraries.find((l) => l.id === 'demo-builder-blocks');
+    if (!demoBuilder) throw new Error('demo-builder-blocks is not in block-libraries.json');
+    /**
+     * Storefront setup installs Demo Builder Blocks into every storefront (always included,
+     * owner decision 2026-10-15), so its records carry this one too.
+     */
+    const DEMO_BUILDER_RECORD: InstalledBlockLibrary = {
+        name: demoBuilder.name,
+        source: demoBuilder.source,
+        commitSha: 'def456',
+        blockIds: ['catalog-menu'],
+        installedAt: '2026-10-09T00:00:00.000Z',
+    };
+
+    const withRecords = (records?: InstalledBlockLibrary[]): ProjectCreationConfig =>
+        config({
+            customBlockLibraries: [LIBRARY],
+            edsConfig: {
+                repoName: 'shop',
+                repoMode: 'new',
+                daLiveOrg: 'acme',
+                daLiveSite: 'shop',
+                ...(records ? { installedBlockLibraries: records } : {}),
+            },
+        });
+
+    /** The storefront metadata `populateEdsMetadata` adds after cloning. */
+    function withStorefront(project: Project): Project {
+        project.componentInstances = {
+            'eds-storefront': {
+                ...edsStorefrontInstance(),
+                metadata: { githubRepo: 'acme/shop', templateOwner: 'adobe', templateRepo: 'boilerplate' },
+            },
+        };
+        return project;
+    }
+
+    it('records on the created project what storefront setup installed', () => {
+        const project = buildInitialProject(withRecords([RECORD]), PROJECT_PATH);
+
+        expect(project.installedBlockLibraries).toStrictEqual([RECORD]);
+    });
+
+    it('leaves nothing for the update check to offer on the created project', () => {
+        const project = withStorefront(
+            buildInitialProject(withRecords([DEMO_BUILDER_RECORD, RECORD]), PROJECT_PATH),
+        );
+
+        expect(findUninstalledBlockLibraries(project)).toStrictEqual([]);
+    });
+
+    it('control: without the records, the update check offers the libraries again', () => {
+        const project = withStorefront(buildInitialProject(withRecords(), PROJECT_PATH));
+
+        // Demo Builder Blocks is offered too: it is always included (owner decision 2026-10-15).
+        expect(findUninstalledBlockLibraries(project).map((lib) => lib.name)).toEqual([
+            demoBuilder.name,
+            'Demo Team Blocks',
+        ]);
+    });
+
+    it("writes an edit's fresh records onto the edited project, replacing its old ones", () => {
+        const edited = createMockProject({ installedBlockLibraries: [OLD_RECORD] });
+
+        const project = buildInitialProject(withRecords([RECORD]), edited.path, edited);
+
+        expect(project.path).toBe(edited.path);
+        expect(project.installedBlockLibraries).toStrictEqual([RECORD]);
+    });
+
+    it('keeps the edited project’s records when this run installed none', () => {
+        // The project is rebuilt from the config on every edit; without this fallback
+        // an edit silently dropped every record the project had.
+        const edited = createMockProject({ installedBlockLibraries: [OLD_RECORD] });
+
+        const project = buildInitialProject(withRecords(), edited.path, edited);
+
+        expect(project.installedBlockLibraries).toStrictEqual([OLD_RECORD]);
+    });
+
+    it('carries none on a create that installed none — control', () => {
+        expect(buildInitialProject(withRecords(), PROJECT_PATH).installedBlockLibraries).toBeUndefined();
+    });
+});
+
+describe('buildInitialProject — what an Edit keeps of the project it rebuilds', () => {
+    // The default used to be "drop": this function listed what to keep, and every
+    // record it forgot was deleted from the manifest by the next Edit. Two of them
+    // made every Edit create new Adobe workspaces and overwrite hand-edited AI files.
+    const ERP: NonNullable<Project['appBuilderComponents']>[string] = {
+        kind: 'integration',
+        status: 'deployed',
+        name: 'ERP Integration',
+        source: { owner: 'acme', repo: 'erp-integration', branch: 'main' },
+        workspace: { id: 'ws-1', name: 'ERPIntegration' },
+    };
+    const edited = createMockProject({
+        appBuilderComponents: { 'erp-integration': ERP },
+        aiFileHashes: { 'AGENTS.md': 'abc123' },
+        aiContextVersion: 7,
+        aiPrompts: [{ id: 'p1', title: 'Check orders', prompt: 'List open orders' }],
+        pinned: true,
+        publishKeyRegisteredAt: '2026-10-01T00:00:00Z',
+        frontendEnvState: { envVars: {}, capturedAt: '2026-10-01T00:00:00Z' },
+        meshStatusSummary: 'deployed',
+        additionalConsoleApis: ['AssetComputeSDK'],
+    });
+
+    it("keeps each integration's record, so its Adobe workspace is reused", () => {
+        const project = buildInitialProject(config(), edited.path, edited);
+
+        expect(project.appBuilderComponents).toStrictEqual({ 'erp-integration': ERP });
+    });
+
+    it('keeps the AI file hashes, so a hand-edited file is skipped rather than overwritten', () => {
+        const project = buildInitialProject(config(), edited.path, edited);
+
+        expect(project.aiFileHashes).toStrictEqual({ 'AGENTS.md': 'abc123' });
+    });
+
+    it('keeps the other records nothing in the rebuild writes', () => {
+        const project = buildInitialProject(config(), edited.path, edited);
+
+        expect(project).toMatchObject({
+            aiContextVersion: 7,
+            aiPrompts: edited.aiPrompts,
+            pinned: true,
+            publishKeyRegisteredAt: '2026-10-01T00:00:00Z',
+        });
+    });
+
+    it('starts what the rebuild makes fresh from nothing', () => {
+        const project = buildInitialProject(config(), edited.path, edited);
+
+        expect(project.componentInstances).toStrictEqual({});
+        expect(project.frontendEnvState).toBeUndefined();
+        expect(project.meshStatusSummary).toBeUndefined();
+        expect(project.additionalConsoleApis).toBeUndefined();
+    });
+
+    it('lets the wizard decide what it owns', () => {
+        const project = buildInitialProject(
+            config({ projectName: 'renamed', selectedAddons: ['live-search'] }),
+            edited.path,
+            createMockProject({ selectedAddons: ['old-addon'] }),
+        );
+
+        expect(project.name).toBe('renamed');
+        expect(project.selectedAddons).toStrictEqual(['live-search']);
+    });
+
+    it('carries nothing on a create — control', () => {
+        const project = buildInitialProject(config(), PROJECT_PATH);
+
+        expect(project.appBuilderComponents).toBeUndefined();
+        expect(project.aiFileHashes).toBeUndefined();
     });
 });

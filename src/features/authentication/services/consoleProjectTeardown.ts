@@ -26,10 +26,13 @@
  * deletion) live in `consoleProjectTeardownEvents.ts`.
  */
 
+import { explainMissingDeveloperAccess } from './authenticationErrorFormatter';
 import { errorMessage, teardownEventEntities } from './consoleProjectTeardownEvents';
-import type { EventsAuth, IoEventsClient } from './ioEventsClient';
+import type { IoEventsClient } from './ioEventsClient';
+import type { EventsAuth } from './ioEventsTransport';
 import type { WorkspaceS2SCredentialIds } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 /** Progress steps reported to `onProgress`. */
 const TOTAL_STEPS = 4;
@@ -230,9 +233,14 @@ const UNPREEMPTED_DELETE_BLOCKERS =
     'submitted for approval (Pending or Published) — revoke the published app, ' +
     'then retry; or a workspace whose Runtime namespace exposes a shared package.';
 
-/** The raw Console error, plus what it declines to tell you. */
+/**
+ * The raw Console error, plus what it declines to tell you — or, when the refusal
+ * names its cause (a project read-only for this person, AB-18), that cause in plain
+ * words instead of the blockers that apply only when Adobe names none.
+ */
 function explainDeleteFailure(error: unknown): string {
-    return `${errorMessage(error)} — ${UNPREEMPTED_DELETE_BLOCKERS}`;
+    const raw = errorMessage(error);
+    return `${raw} — ${explainMissingDeveloperAccess(raw) ?? UNPREEMPTED_DELETE_BLOCKERS}`;
 }
 
 /** Step 4: delete the Console project (only reached with zero failed items). */
@@ -286,7 +294,7 @@ export async function teardownConsoleProject(
         onProgress?.({ step, totalSteps: TOTAL_STEPS, message });
     };
 
-    report(1, 'Finding workspaces');
+    report(1, OPERATION_STAGES.findingWorkspaces.label);
     const prep = await prepareTeardown(deps, target, items);
     if (!prep) {
         debugLogger.debug('[Teardown] preparation failed — aborting before any deletion');
@@ -294,7 +302,7 @@ export async function teardownConsoleProject(
     }
     debugLogger.debug(`[Teardown] found ${prep.workspaces.length} workspace(s)`);
 
-    report(2, 'Checking workspace credentials');
+    report(2, OPERATION_STAGES.checkingCredentials.label);
     const ctx: TeardownContext = {
         deps,
         target,
@@ -310,19 +318,20 @@ export async function teardownConsoleProject(
             `${firstCredential ? '' : ' — skipping event-entity sweep'}`,
     );
     if (firstCredential) {
-        report(3, 'Removing event registrations and providers');
+        report(3, OPERATION_STAGES.removingEventSetup.label);
         // A failed sweep records a failed item, which the gate below aborts on.
         await teardownEventEntities(ctx, prep.workspaces, firstCredential);
     } else {
-        // Keep the reported steps monotonic and complete even on the fast path.
-        report(3, 'No event entities to remove');
+        // Nothing to remove: the step is skipped and the count moves on, as in every
+        // other flow (it used to report a step 3 called "Nothing to remove").
+        debugLogger.debug('[Teardown] step 3 skipped: no event setup to remove');
         skipAllWorkspaces(items, prep.workspaces);
     }
 
     if (items.some((item) => item.outcome === 'failed')) {
         return buildResult(items, false);
     }
-    report(4, 'Deleting Adobe project');
+    report(4, OPERATION_STAGES.deletingAdobeProject.label);
     const result = await deleteProject(deps, target, items);
     debugLogger.debug(
         `[Teardown] done — projectDeleted=${result.projectDeleted}, ${result.items.length} item(s)`,

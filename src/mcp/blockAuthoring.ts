@@ -15,6 +15,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import sanitizeHtml from 'sanitize-html';
+import { stringifyJsonLike } from '@/core/utils/jsonFormatting';
 
 // Rows in a get_block_authoring_shape INDEX. A 78-block catalog is 5,577 bytes;
 // a 300-component one measured 21,992. The index/detail split bounds the detail
@@ -100,7 +101,7 @@ interface ComponentDefinition {
  */
 export async function readComponentDefinition(
     storefrontPath: string,
-): Promise<{ compDefPath: string; parsed: ComponentDefinition }> {
+): Promise<{ compDefPath: string; parsed: ComponentDefinition; raw: string }> {
     const compDefPath = path.join(storefrontPath, 'component-definition.json');
     let raw: string;
     try {
@@ -111,7 +112,7 @@ export async function readComponentDefinition(
         );
     }
     try {
-        return { compDefPath, parsed: JSON.parse(raw) as ComponentDefinition };
+        return { compDefPath, parsed: JSON.parse(raw) as ComponentDefinition, raw };
     } catch (err) {
         throw new Error(
             `component-definition.json is not valid JSON (${compDefPath}): ${(err as Error).message}`,
@@ -200,7 +201,7 @@ export async function applyComponentDefinitionEntry(
     unsafeHTML: string,
     description: string | undefined,
 ): Promise<'added' | 'unchanged'> {
-    const { compDefPath, parsed } = await readComponentDefinition(storefrontPath);
+    const { compDefPath, parsed, raw } = await readComponentDefinition(storefrontPath);
     const groups = parsed.groups ?? [];
     const allComponents = groups.flatMap((g) => g.components ?? []);
     if (allComponents.some((c) => c.id === blockId)) {
@@ -219,7 +220,7 @@ export async function applyComponentDefinitionEntry(
         entry.description = description;
     }
     firstGroup.components = [...(firstGroup.components ?? []), entry];
-    await fsPromises.writeFile(compDefPath, JSON.stringify(parsed, null, 2), 'utf-8');
+    await fsPromises.writeFile(compDefPath, stringifyJsonLike(raw, parsed), 'utf-8');
     return 'added';
 }
 
@@ -233,7 +234,7 @@ export async function removeComponentDefinitionEntry(
     storefrontPath: string,
     blockId: string,
 ): Promise<'removed' | 'absent'> {
-    const { compDefPath, parsed } = await readComponentDefinition(storefrontPath);
+    const { compDefPath, parsed, raw } = await readComponentDefinition(storefrontPath);
     const groups = parsed.groups ?? [];
     let changed = false;
     for (const group of groups) {
@@ -248,7 +249,7 @@ export async function removeComponentDefinitionEntry(
     if (!changed) {
         return 'absent';
     }
-    await fsPromises.writeFile(compDefPath, JSON.stringify(parsed, null, 2), 'utf-8');
+    await fsPromises.writeFile(compDefPath, stringifyJsonLike(raw, parsed), 'utf-8');
     return 'removed';
 }
 

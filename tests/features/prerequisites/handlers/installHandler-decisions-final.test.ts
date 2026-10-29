@@ -444,13 +444,14 @@ describe('the final status for a per-node-version prerequisite', () => {
         }));
     });
 
-    it('falls back to the re-check verdict when no component requires a Node version', async () => {
+    it("post-checks the per-node-version prerequisite's majors even when no component requires Node", async () => {
+        // The post-check no longer reads the component mapping; an empty one changes nothing.
         (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({});
-        (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue([]);
+        const postCheck = [{ version: `Node ${shared.perNodeVersionMajors()[0]}`, component: '', installed: false }];
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
-            perNodeVersionStatus: [{ version: 'Node 20', component: '', installed: false }],
+            perNodeVersionStatus: postCheck,
             perNodeVariantMissing: true,
-            missingVariantMajors: ['20'],
+            missingVariantMajors: shared.perNodeVersionMajors(),
         });
         (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(
             status({ id: 'adobe-cli', name: 'Adobe I/O CLI', installed: true, version: '10.0.0' }),
@@ -458,8 +459,11 @@ describe('the final status for a per-node-version prerequisite', () => {
 
         await handleInstallPrerequisite(context, { prereqId: 0 });
 
+        expect(shared.checkPerNodeVersionStatus).toHaveBeenLastCalledWith(
+            AIO, shared.perNodeVersionMajors(), context,
+        );
         expect(lastFinalStatus(context)).toEqual(expect.objectContaining({
-            status: 'success', installed: true, nodeVersionStatus: undefined,
+            status: 'error', installed: false, nodeVersionStatus: postCheck,
         }));
     });
 });

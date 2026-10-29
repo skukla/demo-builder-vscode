@@ -3,8 +3,10 @@ import execa, { type ExecaError, type ExecaChildProcess } from 'execa';
 import { CommandQueue } from './commandQueue';
 import { CommandResultCache } from './commandResultCache';
 import { CommandSequencer } from './commandSequencer';
+import { demoBuilderNode } from './demoBuilderNode';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
+import { fnmExecCommand, nodeFolderEnv } from './nodeFolder';
 import { buildAioConsoleEnv, getActiveOrgContext, needsOrgTargeting } from './orgContextEnv';
 import { PollingService } from './pollingService';
 import { isPortAvailable } from './portChecker';
@@ -15,6 +17,23 @@ import { getLogger } from '@/core/logging/debugLogger';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
+
+/** Process groups are a POSIX idea; on Windows `detached` opens a console instead. */
+const OWN_PROCESS_GROUP = process.platform !== 'win32';
+
+/**
+ * Stop every process in a command's group. Its first process may already be gone
+ * (a timeout kills it first), and the group outlives it while anything it started
+ * still runs.
+ */
+function killProcessGroup(pid: number | undefined): void {
+    if (!OWN_PROCESS_GROUP || pid === undefined) return;
+    try {
+        process.kill(-pid, 'SIGTERM');
+    } catch {
+        // Nothing left in the group.
+    }
+}
 
 /** The machinery a CommandExecutor runs on; assembled by createCommandExecutorDeps. */
 export interface CommandExecutorDeps {
@@ -100,20 +119,12 @@ export class CommandExecutor {
 
     /**
      * Apply Adobe CLI default options when auto-detected.
-     * Returns a promise only when async Node version setup is needed, null otherwise.
      */
     private applyAdobeCLIDefaults(
         command: string,
         options: ExecuteOptions,
         finalOptions: ExecOptions,
-    ): Promise<void> | null {
-        const isVersionCheck = command.includes('--version') || command.includes('-v');
-        let asyncWork: Promise<void> | null = null;
-
-        if (!isVersionCheck) {
-            asyncWork = this.environmentSetup.ensureAdobeCLINodeVersion(this.execute.bind(this));
-        }
-
+    ): void {
         if (!finalOptions.shell) {
             finalOptions.shell = DEFAULT_SHELL;
         }
@@ -141,20 +152,19 @@ export class CommandExecutor {
             );
         }
 
-        if (options.configureTelemetry === undefined) {
-            options.configureTelemetry = false;
-        }
         if (options.enhancePath === undefined) {
             options.enhancePath = true;
         }
+        // Every `aio` call runs on Demo Builder's Node, from its Node folder (PR-1a).
+        // It replaced 'auto', which meant "the first fnm folder that happens to
+        // contain aio" (Node 18 on the owner's machine), and a session-wide
+        // `fnm use` that changed nothing.
         if (options.useNodeVersion === undefined) {
-            options.useNodeVersion = null;
+            options.useNodeVersion = demoBuilderNode();
         }
         if (!options.retryStrategy) {
             options.retryStrategy = this.retryManager.getStrategy('adobe-cli');
         }
-
-        return asyncWork;
     }
 
     /**
@@ -166,64 +176,35 @@ export class CommandExecutor {
     ): void {
         const fnmPath = this.environmentSetup.findFnmPath();
         if (fnmPath && nodeVersion !== 'current') {
-            state.finalCommand = `${fnmPath} exec --using=${nodeVersion} ${state.finalCommand}`;
-            state.finalOptions.shell = '/bin/zsh';
+            state.finalCommand = fnmExecCommand(fnmPath, nodeVersion, state.finalCommand);
+            // `fnm exec` needs a shell, not zsh in particular: keep the one the caller
+            // named, else the platform's. Forcing zsh overrode both for every `aio`
+            // command once they all ran on Demo Builder's Node (PR-1a).
+            const chosen = state.finalOptions.shell;
+            state.finalOptions.shell = typeof chosen === 'string' ? chosen : DEFAULT_SHELL;
         } else if (nodeVersion === 'current') {
             state.finalCommand = `eval "$(fnm env)" && ${state.finalCommand}`;
             state.finalOptions.shell = '/bin/zsh';
         }
+        // Demo Builder's Node folder (PR-1a), on the child only. The full
+        // environment is kept: an `env` without PATH runs nothing.
+        state.finalOptions.env = { ...process.env, ...state.finalOptions.env, ...nodeFolderEnv() };
     }
 
     /**
-     * Resolve Node version and wrap command with fnm if needed.
-     * Returns synchronously when no async resolution is required.
+     * Wrap the command with fnm when a Node version is named.
      */
     private resolveNodeVersion(
         options: ExecuteOptions,
         state: { finalCommand: string; finalOptions: ExecOptions },
-    ): string | null | Promise<string | null> {
+    ): string | null {
         if (options.useNodeVersion === null || options.useNodeVersion === undefined) {
-            return options.useNodeVersion ?? null;
+            return null;
         }
-
-        // SECURITY FIX (CWE-77): Validate nodeVersion BEFORE resolving "auto"
+        // SECURITY FIX (CWE-77): validate before it reaches a shell command.
         validateNodeVersion(options.useNodeVersion);
-
-        if (options.useNodeVersion === 'auto') {
-            return this.resolveAutoNodeVersion(options, state);
-        }
-
-        const nodeVersion = options.useNodeVersion;
-
-        // SECURITY FIX (CWE-77): Defense-in-depth validation for resolved version
-        if (nodeVersion !== 'current') {
-            validateNodeVersion(nodeVersion);
-        }
-
-        this.wrapCommandWithFnm(nodeVersion, state);
-
-        return nodeVersion;
-    }
-
-    /**
-     * Resolve "auto" Node version asynchronously
-     */
-    private async resolveAutoNodeVersion(
-        options: ExecuteOptions,
-        state: { finalCommand: string; finalOptions: ExecOptions },
-    ): Promise<string | null> {
-        const nodeVersion = await this.environmentSetup.findAdobeCLINodeVersion();
-
-        // SECURITY FIX (CWE-77): Defense-in-depth validation for resolved version
-        if (nodeVersion && nodeVersion !== 'current') {
-            validateNodeVersion(nodeVersion);
-        }
-
-        if (nodeVersion) {
-            this.wrapCommandWithFnm(nodeVersion, state);
-        }
-
-        return nodeVersion;
+        this.wrapCommandWithFnm(options.useNodeVersion, state);
+        return options.useNodeVersion;
     }
 
     /**
@@ -245,14 +226,10 @@ export class CommandExecutor {
     /**
      * Apply enhanced PATH environment variable
      */
-    private applyEnhancedPath(
-        options: ExecuteOptions,
-        command: string,
-        finalOptions: ExecOptions,
-    ): void {
-        const shouldEnhance = options.enhancePath ||
-            (options.useNodeVersion === undefined && command.startsWith('aio '));
-        if (!shouldEnhance) return;
+    private applyEnhancedPath(options: ExecuteOptions, finalOptions: ExecOptions): void {
+        // `enhancePath` alone decides: an Adobe CLI command has already been given
+        // its default (true) by applyAdobeCLIDefaults before it reaches here.
+        if (!options.enhancePath) return;
 
         const extraPaths = this.environmentSetup.findNpmGlobalPaths();
         if (extraPaths.length > 0) {
@@ -286,8 +263,9 @@ export class CommandExecutor {
      */
     private checkTelemetryNeeded(command: string, options: ExecuteOptions): Promise<void> | null {
         const isVersionCheck = command.includes('--version') || command.includes('-v');
-        const needsTelemetry = !isVersionCheck &&
-            (options.configureTelemetry || (command.startsWith('aio ') && options.configureTelemetry !== false));
+        // `configureTelemetry` alone decides, and unset means no: an Adobe CLI
+        // command is configured only when its caller asks.
+        const needsTelemetry = !isVersionCheck && options.configureTelemetry;
         if (needsTelemetry) {
             return this.environmentSetup.ensureAdobeCLIConfigured(this.execute.bind(this));
         }
@@ -306,10 +284,7 @@ export class CommandExecutor {
         // Auto-detect Adobe CLI commands and automatically apply required defaults
         const isAdobeCLI = command.startsWith('aio ') || command.startsWith('aio-');
         if (isAdobeCLI) {
-            const adobeDefaultsPromise = this.applyAdobeCLIDefaults(command, options, state.finalOptions);
-            if (adobeDefaultsPromise) {
-                await adobeDefaultsPromise;
-            }
+            this.applyAdobeCLIDefaults(command, options, state.finalOptions);
         }
 
         // Step 1: Handle telemetry configuration for Adobe CLI (only await when needed)
@@ -318,11 +293,8 @@ export class CommandExecutor {
             await telemetryPromise;
         }
 
-        // Step 2: Handle Node version management and resolve "auto" to actual version
-        const nodeVersionResult = this.resolveNodeVersion(options, state);
-        const effectiveNodeVersion = nodeVersionResult instanceof Promise
-            ? await nodeVersionResult
-            : nodeVersionResult;
+        // Step 2: Run on the named Node from Demo Builder's Node folder
+        const effectiveNodeVersion = this.resolveNodeVersion(options, state);
 
         // Step 2.5: Check cache for Adobe CLI commands
         if (isAdobeCLI) {
@@ -331,7 +303,7 @@ export class CommandExecutor {
         }
 
         // Step 3: Handle enhanced PATH
-        this.applyEnhancedPath(options, command, state.finalOptions);
+        this.applyEnhancedPath(options, state.finalOptions);
 
         // Step 4: Set and validate timeout
         state.finalOptions.timeout = this.validateTimeout(options.timeout);
@@ -392,12 +364,18 @@ export class CommandExecutor {
             env: options.env as NodeJS.ProcessEnv | undefined,
             timeout: options.timeout,
             reject: false,
+            // Its own process group, so a timeout or a cancel can stop everything it
+            // started. A command runs as shell → `fnm exec` → the tool, and killing the
+            // shell alone left the tool running: a timed-out `aio auth login` kept its
+            // sign-in listener open for good (2026-10-23).
+            detached: OWN_PROCESS_GROUP,
         });
 
         // Manual AbortController support
         if (signal) {
             const abortHandler = () => {
                 subprocess.kill();
+                killProcessGroup(subprocess.pid);
             };
             signal.addEventListener('abort', abortHandler);
             subprocess.finally(() => {
@@ -432,6 +410,7 @@ export class CommandExecutor {
 
             // With reject: false, timeout doesn't throw - check explicitly
             if (result.timedOut) {
+                killProcessGroup(subprocess.pid);
                 this.logger.warn(`[Command Executor] Command timed out after ${options.timeout}ms`);
                 throw new Error(`Command timed out after ${options.timeout}ms`);
             }
@@ -447,17 +426,18 @@ export class CommandExecutor {
                 duration,
             };
         } catch (error) {
-            this.handleStreamingError(error, options.timeout);
+            this.handleStreamingError(error, options.timeout, subprocess.pid);
         }
     }
 
     /**
      * Handle errors from streaming execution
      */
-    private handleStreamingError(error: unknown, timeout?: number): never {
+    private handleStreamingError(error: unknown, timeout?: number, pid?: number): never {
         const execaError = error as ExecaError;
 
         if (execaError.timedOut) {
+            killProcessGroup(pid);
             this.logger.warn(`[Command Executor] Command timed out after ${timeout}ms`);
             throw new Error(`Command timed out after ${timeout}ms`);
         }
@@ -519,7 +499,6 @@ export class CommandExecutor {
                     exclusive: config.resource,
                     configureTelemetry: command.startsWith('aio '),
                     enhancePath: command.startsWith('aio '),
-                    useNodeVersion: command.startsWith('aio ') ? 'auto' : undefined,
                 });
             },
             stopOnError,
@@ -537,7 +516,6 @@ export class CommandExecutor {
                     ...config.options,
                     configureTelemetry: command.startsWith('aio '),
                     enhancePath: command.startsWith('aio '),
-                    useNodeVersion: command.startsWith('aio ') ? 'auto' : undefined,
                 });
             },
         );
@@ -574,9 +552,12 @@ export class CommandExecutor {
                 return result.stdout.trim().length > 0;
             }
 
-            // For other commands, use enhanced path
+            // For other commands, use enhanced path. `shell` is NOT optional: without
+            // one execa takes the whole string as an executable name, nothing runs,
+            // and the empty stdout read as "absent" for every tool (found 2026-10-03).
             const result = await this.execute(`which ${command}`, {
                 enhancePath: true,
+                shell: DEFAULT_SHELL,
             });
             return result.stdout.trim().length > 0;
         } catch {

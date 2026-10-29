@@ -110,8 +110,35 @@ describe('save_demo_package', () => {
 
     it('hands the handler the given name and description, the prefilled ones when absent', async () => {
         const result = await server().call('save_demo_package', { name: ' Bodea by Steve ', confirm: true });
-        expect(mockSave).toHaveBeenCalledWith(ctx, { name: 'Bodea by Steve', description: 'Bodea-branded B2B demo' });
+        // addToWelcome defaults to true, as the dashboard's box does.
+        expect(mockSave).toHaveBeenCalledWith(ctx, {
+            name: 'Bodea by Steve',
+            description: 'Bodea-branded B2B demo',
+            addToWelcome: true,
+        });
         expect(result).toMatchObject({ link: PREVIEW.link, file: 'written', onList: true, hint: expect.stringContaining('Add a demo package') });
+    });
+
+    it('leaves the card off the Welcome step when asked, and says so before the write', async () => {
+        const refusal = await server().call('save_demo_package', { addToWelcome: false });
+        expect(refusal.error).toBe(
+            'save_demo_package would write demo.demo-builder.json named "Bodea" into https://github.com/steve/kukla-bodea and leave it off your Welcome step. Call again with confirm:true to do it.',
+        );
+        expect(mockSave).not.toHaveBeenCalled();
+
+        mockSave.mockResolvedValue({
+            success: true,
+            data: { link: PREVIEW.link, file: 'written', onList: false, checks: PREVIEW.checks },
+        });
+        const result = await server().call('save_demo_package', { addToWelcome: false, confirm: true });
+        expect(mockSave).toHaveBeenCalledWith(ctx, {
+            name: 'Bodea',
+            description: 'Bodea-branded B2B demo',
+            addToWelcome: false,
+        });
+        // The hint must not claim a card that is not there.
+        expect(result.hint).not.toMatch(/on your Welcome step/);
+        expect(result.hint).toMatch(/Add a demo package/);
     });
 
     it("passes the handler's failure through", async () => {

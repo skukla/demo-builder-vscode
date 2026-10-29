@@ -15,43 +15,16 @@ jest.mock('@/features/mesh/services/deployMeshHeadless', () => ({
 }));
 
 const mockSendMeshStatusUpdate = jest.fn();
-jest.mock('@/features/dashboard/commands/showDashboard', () => ({
-    ProjectDashboardWebviewCommand: {
-        sendMeshStatusUpdate: (...args: unknown[]) => mockSendMeshStatusUpdate(...args),
-    },
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendMeshStatusUpdate: (...args: unknown[]) => mockSendMeshStatusUpdate(...args),
 }));
 
 
 import { handleDeployApiMesh } from '@/features/mesh/handlers/deployHandler';
-import type { HandlerContext } from '@/types/handlers';
+import { ErrorCode } from '@/types/errorCodes';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-
-/**
- * ADR-015 (2026-08-28): the handler resolves the auth manager and executor at
- * the boundary, which is where fetching is allowed. The shared node setup empties
- * the registry after EVERY test, so the fakes are seeded per-test.
- */
-function seedRegistry(): void {
-    ServiceLocator.setAuthenticationService(createMockAuthenticationService());
-    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
-}
-
-function ctx(project: unknown): HandlerContext {
-    return createMockHandlerContext({
-        stateManager: createMockStateManager({
-            getCurrentProject: jest.fn().mockResolvedValue(project),
-        }),
-        logger: createMockLogger(),
-        context: createMockExtensionContext({ extensionPath: '/ext' }),
-    });
-}
+import { ctx, seedRegistry } from './deployHandler.testUtils';
 
 describe('handleDeployApiMesh', () => {
     beforeEach(() => {
@@ -61,7 +34,12 @@ describe('handleDeployApiMesh', () => {
 
     it('errors when no project is loaded', async () => {
         const result = await handleDeployApiMesh(ctx(undefined));
-        expect(result.success).toBe(false);
+        // The code is what a caller branches on; the sentence is what the agent reads.
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'No project found',
+            code: ErrorCode.PROJECT_NOT_FOUND,
+        });
         expect(mockDeployMeshHeadless).not.toHaveBeenCalled();
     });
 
@@ -87,6 +65,71 @@ describe('handleDeployApiMesh', () => {
         const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/sign|auth/i);
+    });
+
+    // The tool has no screen to recover on, so each block has to say what to do next.
+    it.each([
+        ['auth', 'Adobe sign-in required. Sign in (sign_in), then retry.'],
+        ['org', 'This project uses a different Adobe organization. Switch orgs, then retry.'],
+        [
+            'permission',
+            'Your account lacks the Developer or System Admin role for this organization ' +
+                '(required for App Builder / API Mesh).',
+        ],
+        ['no-mesh', 'This project has no API Mesh component to deploy.'],
+    ])('answers a %s block with its own next step', async (blockedBy, message) => {
+        mockDeployMeshHeadless.mockResolvedValue({ success: false, blockedBy });
+
+        const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(result).toStrictEqual({ success: false, error: message });
+    });
+
+    it("prefers the core's own reason for a block over the general one", async () => {
+        mockDeployMeshHeadless.mockResolvedValue({
+            success: false,
+            blockedBy: 'org',
+            error: 'Signed in to Acme, but this project belongs to Bodea.',
+        });
+
+        const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'Signed in to Acme, but this project belongs to Bodea.',
+        });
+    });
+
+    it('warns when the mesh deployed but the storefront still reads the old one', async () => {
+        // Owner, 2026-09-21: a redeploy that moved the mesh left the live site on a dead
+        // address. The deploy succeeded, so this is a warning beside the result.
+        mockDeployMeshHeadless.mockResolvedValue({
+            success: true,
+            meshId: 'm1',
+            endpoint: 'https://mesh/graphql',
+            storefrontNotRepublished: 'the CDN still serves the previous config',
+        });
+
+        const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(result).toStrictEqual({
+            success: true,
+            data: {
+                meshId: 'm1',
+                endpoint: 'https://mesh/graphql',
+                warning:
+                    'The mesh is deployed, but the storefront was not republished: ' +
+                    'the CDN still serves the previous config',
+            },
+        });
+    });
+
+    it('carries no warning when the storefront needed nothing', async () => {
+        mockDeployMeshHeadless.mockResolvedValue({ success: true, meshId: 'm1', endpoint: 'https://mesh/graphql' });
+
+        const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(result).toStrictEqual({ success: true, data: { meshId: 'm1', endpoint: 'https://mesh/graphql' } });
     });
 
     it('surfaces a deploy failure error', async () => {

@@ -8,90 +8,26 @@
  * subscribe (a failed code must not poison later reconciles).
  */
 
-import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import {
+    ErrorCode,
+    createApiSubscriberClient,
+    getAvailableAppBuilderComponents,
     handleAddConsoleApis,
     handleListConsoleApis,
     handleSetConsoleApis,
-} from '@/features/dashboard/handlers/consoleApiHandlers';
-import { ErrorCode } from '@/types/errorCodes';
-import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
-import { subscribeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
-import { withOrgContext } from '@/core/shell/orgContextEnv';
-import type { HandlerContext } from '@/types/handlers';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-
-jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
-    runGuards: jest.fn().mockResolvedValue(undefined),
-}));
-jest.mock('@/features/app-builder/services/apiSubscriber', () => ({
-    computeRequiredApis: jest.requireActual('@/features/app-builder/services/apiSubscriber')
-        .computeRequiredApis,
-    subscribeRequiredApis: jest.fn().mockResolvedValue([
-        { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
-        { code: 'FireflyAPISDK', name: 'Firefly Services' },
-    ]),
-}));
-jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
-    createApiSubscriberClient: jest.fn(() => ({
-        getServicesForOrg: jest.fn().mockResolvedValue([
-            { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
-            { code: 'FireflyAPISDK', name: 'Firefly Services' },
-            { code: 'GraphQLServiceSDK', name: 'API Mesh' },
-        ]),
-    })),
-}));
-jest.mock('@/features/app-builder/services/allowedDomain', () => ({
-    deriveAllowedDomain: jest.fn(() => 'localhost:3000'),
-}));
-jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAvailableAppBuilderComponents: jest.fn(() => []),
-    // resolveApiOwners reads this per integration. A partial module mock left it
-    // undefined and the handler failed inside its own try/catch, surfacing as a
-    // missing `data` rather than as the real cause.
-    getAppBuilderComponentEntry: jest.fn(() => undefined),
-}));
-jest.mock('@/core/shell/orgContextEnv', () => ({
-    buildOrgTargetFromProjectAdobe: jest.fn(() => ({ orgId: 'org-1' })),
-    withOrgContext: jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn()),
-}));
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        })),
-    },
-}));
-
-function makeProject(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-    return {
-        name: 'demo',
-        path: '/projects/demo',
-        adobe: { organization: 'org-1', projectId: 'p-1', workspace: 'w-1' },
-        ...overrides,
-    };
-}
-
-function makeContext(project: Record<string, unknown> | null): HandlerContext {
-    return createMockHandlerContext({
-        stateManager: createMockStateManager({
-            getCurrentProject: jest.fn().mockResolvedValue(project),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        }),
-        logger: createMockLogger(),
-        sendMessage: jest.fn(),
-    });
-}
+    consoleApiContext,
+    consoleApiProject,
+    resolveDesiredApis,
+    runGuards,
+    subscribeRequiredApis,
+    withOrgContext,
+} from './consoleApiHandlers.testUtils';
 
 describe('handleListConsoleApis', () => {
     beforeEach(() => jest.clearAllMocks());
 
     it('flags only ALWAYS-ON as managed; returns optional extras as `added`', async () => {
-        const context = makeContext(makeProject({ additionalConsoleApis: ['FireflyAPISDK'] }));
+        const context = consoleApiContext(consoleApiProject({ additionalConsoleApis: ['FireflyAPISDK'] }));
 
         const result = await handleListConsoleApis(context, undefined);
 
@@ -108,14 +44,26 @@ describe('handleListConsoleApis', () => {
         expect(data.added).toEqual(['FireflyAPISDK']);
     });
 
+    it("does not lock an API that belongs to an integration the project does not have", async () => {
+        (getAvailableAppBuilderComponents as jest.Mock).mockReturnValueOnce([
+            { id: 'erp-integration', name: 'ERP', description: '', kind: 'integration', requiredApis: ['FireflyAPISDK'], source: { owner: 'o', repo: 'r', branch: 'main' } },
+        ]);
+        const context = consoleApiContext(consoleApiProject());
+
+        const result = await handleListConsoleApis(context, undefined);
+
+        const data = result.data as { apis: Array<{ code: string; managed: boolean }> };
+        expect(data.apis.find((a) => a.code === 'FireflyAPISDK')?.managed).not.toBe(true);
+    });
+
     it('fails without a project', async () => {
-        const result = await handleListConsoleApis(makeContext(null), undefined);
+        const result = await handleListConsoleApis(consoleApiContext(null), undefined);
         expect(result.success).toBe(false);
     });
 
     it('fails when the project has no Adobe org context', async () => {
         const result = await handleListConsoleApis(
-            makeContext(makeProject({ adobe: undefined })),
+            consoleApiContext(consoleApiProject({ adobe: undefined })),
             undefined
         );
         expect(result.success).toBe(false);
@@ -129,7 +77,7 @@ describe('handleListConsoleApis', () => {
             error: 'Adobe sign-in required.',
             code: ErrorCode.AUTH_REQUIRED,
         });
-        const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
+        const result = await handleListConsoleApis(consoleApiContext(consoleApiProject()), undefined);
         expect(result).toEqual({
             success: false,
             error: 'Adobe sign-in required.',
@@ -146,7 +94,7 @@ describe('handleListConsoleApis', () => {
             ]),
         });
 
-        const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
+        const result = await handleListConsoleApis(consoleApiContext(consoleApiProject()), undefined);
 
         const apis = (result.data as { apis: Array<{ code: string; group?: unknown }> }).apis;
         expect(apis.map((a) => a.code)).toEqual(['FireflyAPISDK']); // DEPRECATED dropped
@@ -158,7 +106,7 @@ describe('handleAddConsoleApis', () => {
     beforeEach(() => jest.clearAllMocks());
 
     it('rejects a missing/empty/non-string apis payload', async () => {
-        const context = makeContext(makeProject());
+        const context = consoleApiContext(consoleApiProject());
         for (const payload of [undefined, {}, { apis: [] }, { apis: [42] }]) {
             const result = await handleAddConsoleApis(
                 context,
@@ -170,7 +118,7 @@ describe('handleAddConsoleApis', () => {
     });
 
     it('rejects sdk codes with unexpected characters', async () => {
-        const result = await handleAddConsoleApis(makeContext(makeProject()), {
+        const result = await handleAddConsoleApis(consoleApiContext(consoleApiProject()), {
             apis: ['Firefly;rm -rf'],
         });
         expect(result.success).toBe(false);
@@ -178,8 +126,8 @@ describe('handleAddConsoleApis', () => {
     });
 
     it('subscribes the merged union under org context and persists AFTER success', async () => {
-        const project = makeProject({ additionalConsoleApis: ['ExistingSDK'] });
-        const context = makeContext(project);
+        const project = consoleApiProject({ additionalConsoleApis: ['ExistingSDK'] });
+        const context = consoleApiContext(project);
 
         const result = await handleAddConsoleApis(context, { apis: ['FireflyAPISDK'] });
 
@@ -194,6 +142,8 @@ describe('handleAddConsoleApis', () => {
             ['ExistingSDK', 'FireflyAPISDK'],
             undefined,
             [],
+            // The apply's own lines, for the modal to show while it waits.
+            expect.objectContaining({ onStep: expect.any(Function) }),
         );
         // Step 07 retired the flat write; the keyed map carries the union.
         expect(resolveDesiredApis(project)).toEqual(['ExistingSDK', 'FireflyAPISDK']);
@@ -207,8 +157,8 @@ describe('handleAddConsoleApis', () => {
         (subscribeRequiredApis as jest.Mock).mockRejectedValueOnce(
             new Error('Unknown Adobe API "NopeSDK" — not entitled for this org.')
         );
-        const project = makeProject();
-        const context = makeContext(project);
+        const project = consoleApiProject();
+        const context = consoleApiContext(project);
 
         const result = await handleAddConsoleApis(context, { apis: ['NopeSDK'] });
 
@@ -220,12 +170,31 @@ describe('handleAddConsoleApis', () => {
         expect(context.logger.info).not.toHaveBeenCalled();
     });
 
+    it('a code Adobe did not subscribe is neither reported as added nor kept', async () => {
+        // The subscribe answers with what a PUT actually took. Before 2026-09-16 the
+        // handler logged "Added ACCS-REST-API" and persisted it while Adobe had not
+        // subscribed it.
+        (subscribeRequiredApis as jest.Mock).mockResolvedValueOnce([
+            { code: 'AdobeIOManagementAPISDK', name: 'I/O Management API' },
+            { code: 'ExistingSDK' },
+        ]);
+        const project = consoleApiProject({ additionalConsoleApis: ['ExistingSDK'] });
+        const context = consoleApiContext(project);
+
+        const result = await handleAddConsoleApis(context, { apis: ['SilentSDK'] });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/did not subscribe SilentSDK/);
+        expect(resolveDesiredApis(project)).toEqual(['ExistingSDK']);
+        expect(context.logger.info).not.toHaveBeenCalled();
+    });
+
     it('aborts on a guard failure before subscribing', async () => {
         (runGuards as jest.Mock).mockResolvedValueOnce(
             'Developer or System Admin role required for App Builder.'
         );
 
-        const result = await handleAddConsoleApis(makeContext(makeProject()), {
+        const result = await handleAddConsoleApis(consoleApiContext(consoleApiProject()), {
             apis: ['FireflyAPISDK'],
         });
 
@@ -239,8 +208,8 @@ describe('handleSetConsoleApis', () => {
 
     it('sets the extras to EXACTLY the given list (add + remove) and persists', async () => {
         // Starts with two extras; setting to one REMOVES the other.
-        const project = makeProject({ additionalConsoleApis: ['KeepSDK', 'DropSDK'] });
-        const context = makeContext(project);
+        const project = consoleApiProject({ additionalConsoleApis: ['KeepSDK', 'DropSDK'] });
+        const context = consoleApiContext(project);
 
         const result = await handleSetConsoleApis(context, { apis: ['KeepSDK', 'NewSDK'] });
 
@@ -256,6 +225,7 @@ describe('handleSetConsoleApis', () => {
             ['KeepSDK', 'NewSDK'],
             undefined,
             ['DropSDK'],
+            expect.objectContaining({ onStep: expect.any(Function) }),
         );
         expect(resolveDesiredApis(project)).toEqual(['KeepSDK', 'NewSDK']);
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
@@ -274,12 +244,12 @@ describe('handleSetConsoleApis', () => {
         // extras), so it contains a code the request never mentioned. Asserting on
         // THAT code is what proves the line reports the outcome rather than
         // echoing the input.
-        subscribeRequiredApis.mockResolvedValue([
+        subscribeRequiredApis.mockResolvedValueOnce([
             { code: 'NewSDK', name: 'New Thing' },
             { code: 'BaselineSDK', name: 'Always On' },
         ]);
-        const project = makeProject({});
-        const context = makeContext(project);
+        const project = consoleApiProject({});
+        const context = consoleApiContext(project);
 
         await handleSetConsoleApis(context, { apis: ['NewSDK'] });
 
@@ -288,28 +258,25 @@ describe('handleSetConsoleApis', () => {
         expect(context.logger.warn).not.toHaveBeenCalled();
     });
 
-    it('WARNS when a requested API is absent from what was actually subscribed', async () => {
+    it('FAILS, naming it, when a requested API is absent from what was actually subscribed', async () => {
         // The silent-skip path: a service matching neither platform reaches no
-        // subscribe endpoint, so subscribeRequiredApis now omits it from its
-        // result. Success alone must not imply every request landed.
-        const { subscribeRequiredApis } = jest.requireMock(
-            '@/features/app-builder/services/apiSubscriber'
-        );
-        subscribeRequiredApis.mockResolvedValue([{ code: 'KeptSDK', name: 'Kept' }]);
-        const project = makeProject({});
-        const context = makeContext(project);
+        // subscribe endpoint, so subscribeRequiredApis omits it from its result.
+        // Success must not be reported, and the absent code must not be kept.
+        (subscribeRequiredApis as jest.Mock).mockResolvedValueOnce([{ code: 'KeptSDK', name: 'Kept' }]);
+        const project = consoleApiProject({});
+        const context = consoleApiContext(project);
 
         const result = await handleSetConsoleApis(context, { apis: ['KeptSDK', 'GhostSDK'] });
 
-        expect(result.success).toBe(true);
-        const warned = (context.logger.warn as jest.Mock).mock.calls.flat().join(' ');
-        expect(warned).toContain('GhostSDK');
-        expect(warned).not.toContain('KeptSDK');
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('GhostSDK');
+        expect(result.error).not.toContain('KeptSDK');
+        expect(resolveDesiredApis(project)).toEqual(['KeptSDK']);
     });
 
     it('accepts an EMPTY list (remove all extras)', async () => {
-        const project = makeProject({ additionalConsoleApis: ['DropSDK'] });
-        const context = makeContext(project);
+        const project = consoleApiProject({ additionalConsoleApis: ['DropSDK'] });
+        const context = consoleApiContext(project);
 
         const result = await handleSetConsoleApis(context, { apis: [] });
 
@@ -322,12 +289,13 @@ describe('handleSetConsoleApis', () => {
             [],
             undefined,
             ['DropSDK'],
+            expect.objectContaining({ onStep: expect.any(Function) }),
         );
         expect(resolveDesiredApis(project)).toStrictEqual([]);
     });
 
     it('rejects a non-array / invalid-code payload', async () => {
-        const context = makeContext(makeProject());
+        const context = consoleApiContext(consoleApiProject());
         for (const payload of [undefined, { apis: 'x' }, { apis: [42] }, { apis: ['Bad;rm'] }]) {
             const result = await handleSetConsoleApis(
                 context,
@@ -340,8 +308,8 @@ describe('handleSetConsoleApis', () => {
 
     it('does NOT persist when the subscribe fails', async () => {
         (subscribeRequiredApis as jest.Mock).mockRejectedValueOnce(new Error('boom'));
-        const project = makeProject({ additionalConsoleApis: ['OldSDK'] });
-        const context = makeContext(project);
+        const project = consoleApiProject({ additionalConsoleApis: ['OldSDK'] });
+        const context = consoleApiContext(project);
 
         const result = await handleSetConsoleApis(context, { apis: ['NewSDK'] });
 
@@ -353,7 +321,7 @@ describe('handleSetConsoleApis', () => {
 
     it('aborts on a guard failure before subscribing', async () => {
         (runGuards as jest.Mock).mockResolvedValueOnce('role required');
-        const result = await handleSetConsoleApis(makeContext(makeProject()), { apis: ['X'] });
+        const result = await handleSetConsoleApis(consoleApiContext(consoleApiProject()), { apis: ['X'] });
         expect(result.success).toBe(false);
         expect(subscribeRequiredApis).not.toHaveBeenCalled();
     });
@@ -376,7 +344,7 @@ describe('per-integration attribution (step 04)', () => {
 
     /** Two integrations, each holding one code, both also holding SharedSDK. */
     function twoIntegrationProject() {
-        return makeProject({
+        return consoleApiProject({
             appBuilderComponents: {
                 'erp-sync': {
                     kind: 'integration',
@@ -398,9 +366,72 @@ describe('per-integration attribution (step 04)', () => {
         });
     }
 
+    /** The same pair, but erp-sync has a workspace of its own (AB-23). */
+    function withOwnWorkspace() {
+        const project = twoIntegrationProject();
+        const components = project.appBuilderComponents as Record<string, Record<string, unknown>>;
+        components['erp-sync'].workspace = { id: 'ws-erp-own', name: 'ErpSyncq3k9' };
+        return project;
+    }
+
+    describe('a component with a workspace of its own', () => {
+        /**
+         * The union exists to stop an edit unsubscribing a code out from under
+         * another integration that SHARES the workspace. Nothing else deploys to
+         * this one, so widening would instead entitle its credential to APIs
+         * belonging to integrations living elsewhere — and every profile service
+         * among them is another Commerce profile attach on a credential nobody
+         * there uses.
+         */
+        it("sends THIS component's list to ITS workspace, not the project union", async () => {
+            const context = consoleApiContext(withOwnWorkspace());
+
+            await handleSetConsoleApis(context, {
+                apis: ['FireflyAPISDK'],
+                componentId: 'erp-sync',
+            });
+
+            const call = (subscribeRequiredApis as jest.Mock).mock.calls[0];
+            expect(call[1]).toEqual(expect.objectContaining({ workspaceId: 'ws-erp-own' }));
+            expect(call[4]).toEqual(['FireflyAPISDK']);
+        });
+
+        /**
+         * Removal is measured against the SAME scope it sends. Scoping the two
+         * differently is how another integration's code lands in `removing` and is
+         * stripped from a workspace the edit never mentioned.
+         */
+        it('removes only what THIS component is giving up', async () => {
+            const context = consoleApiContext(withOwnWorkspace());
+
+            await handleSetConsoleApis(context, {
+                apis: ['FireflyAPISDK'],
+                componentId: 'erp-sync',
+            });
+
+            expect((subscribeRequiredApis as jest.Mock).mock.calls[0][6]).toEqual([
+                'GraphQLServiceSDK',
+            ]);
+        });
+
+        it('CONTROL: the same edit on a SHARED workspace still sends the union', async () => {
+            const context = consoleApiContext(twoIntegrationProject());
+
+            await handleSetConsoleApis(context, {
+                apis: ['FireflyAPISDK'],
+                componentId: 'erp-sync',
+            });
+
+            const call = (subscribeRequiredApis as jest.Mock).mock.calls[0];
+            expect(call[1]).toEqual(expect.objectContaining({ workspaceId: 'w-1' }));
+            expect(call[4]).toEqual(['FireflyAPISDK', 'GraphQLServiceSDK']);
+            expect(call[6]).toStrictEqual([]);
+        });
+    });
+
     describe('list', () => {
         it("returns only THIS integration's picks as `added`, not the union", async () => {
-            const context = makeContext(twoIntegrationProject());
+            const context = consoleApiContext(twoIntegrationProject());
 
             const result = await handleListConsoleApis(context, { componentId: 'firefly-app' });
 
@@ -410,7 +441,7 @@ describe('per-integration attribution (step 04)', () => {
         });
 
         it('attributes a code another integration holds, naming the holder', async () => {
-            const context = makeContext(twoIntegrationProject());
+            const context = consoleApiContext(twoIntegrationProject());
 
             const result = await handleListConsoleApis(context, { componentId: 'firefly-app' });
 
@@ -427,7 +458,7 @@ describe('per-integration attribution (step 04)', () => {
         it('stays project-scoped when no componentId is given', async () => {
             // The MCP tools and any pre-step-04 caller pass no componentId. They must
             // keep seeing the union, not an empty list.
-            const context = makeContext(twoIntegrationProject());
+            const context = consoleApiContext(twoIntegrationProject());
 
             const result = await handleListConsoleApis(context, undefined);
 
@@ -439,7 +470,7 @@ describe('per-integration attribution (step 04)', () => {
     describe('set', () => {
         it("writes only this integration's entry, leaving the others intact", async () => {
             const project = twoIntegrationProject();
-            const context = makeContext(project);
+            const context = consoleApiContext(project);
 
             await handleSetConsoleApis(context, {
                 componentId: 'firefly-app',
@@ -463,7 +494,7 @@ describe('per-integration attribution (step 04)', () => {
             // still holds it, so the subscribe must still include it. If this regresses,
             // a working integration loses an API it needs.
             const project = twoIntegrationProject();
-            const context = makeContext(project);
+            const context = consoleApiContext(project);
 
             await handleSetConsoleApis(context, { componentId: 'firefly-app', apis: [] });
 
@@ -495,8 +526,8 @@ describe('missing inputs and failed reads', () => {
 
     describe('list', () => {
         it("filters the catalog by the project's own stack axes", async () => {
-            const context = makeContext(
-                makeProject({ componentSelections: { backend: 'aco', frontend: 'eds' } })
+            const context = consoleApiContext(
+                consoleApiProject({ componentSelections: { backend: 'aco', frontend: 'eds' } })
             );
 
             await handleListConsoleApis(context, undefined);
@@ -505,14 +536,14 @@ describe('missing inputs and failed reads', () => {
         });
 
         it('falls back to the empty axes when the project has no selections', async () => {
-            await handleListConsoleApis(makeContext(makeProject()), undefined);
+            await handleListConsoleApis(consoleApiContext(consoleApiProject()), undefined);
 
             expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('', '');
         });
 
         it("reports no `added` for an integration holding none of the project's picks", async () => {
-            const context = makeContext(
-                makeProject({ componentApiPicks: { 'erp-sync': ['FireflyAPISDK'] } })
+            const context = consoleApiContext(
+                consoleApiProject({ componentApiPicks: { 'erp-sync': ['FireflyAPISDK'] } })
             );
 
             const result = await handleListConsoleApis(context, { componentId: 'firefly-app' });
@@ -521,7 +552,7 @@ describe('missing inputs and failed reads', () => {
         });
 
         it('answers for an integration on a project that has no picks at all', async () => {
-            const result = await handleListConsoleApis(makeContext(makeProject()), {
+            const result = await handleListConsoleApis(consoleApiContext(consoleApiProject()), {
                 componentId: 'firefly-app',
             });
 
@@ -539,8 +570,8 @@ describe('missing inputs and failed reads', () => {
                     { code: 'LegacySDK', name: 'Legacy', enabled: false, disabledReasons: ['DEPRECATED'] },
                 ]),
             });
-            const context = makeContext(
-                makeProject({ componentApiPicks: { __existing__: ['LegacySDK'] } })
+            const context = consoleApiContext(
+                consoleApiProject({ componentApiPicks: { __existing__: ['LegacySDK'] } })
             );
 
             const result = await handleListConsoleApis(context, undefined);
@@ -550,8 +581,8 @@ describe('missing inputs and failed reads', () => {
         });
 
         it('marks the always-on codes as baseline for the asking integration', async () => {
-            const context = makeContext(
-                makeProject({ componentApiPicks: { 'firefly-app': ['FireflyAPISDK'] } })
+            const context = consoleApiContext(
+                consoleApiProject({ componentApiPicks: { 'firefly-app': ['FireflyAPISDK'] } })
             );
 
             const result = await handleListConsoleApis(context, { componentId: 'firefly-app' });
@@ -569,7 +600,7 @@ describe('missing inputs and failed reads', () => {
                 throw new Error('catalog exploded');
             });
 
-            const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
+            const result = await handleListConsoleApis(consoleApiContext(consoleApiProject()), undefined);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('catalog exploded');
@@ -578,7 +609,7 @@ describe('missing inputs and failed reads', () => {
 
     describe('add', () => {
         it('fails without a project, before any Console touch', async () => {
-            const result = await handleAddConsoleApis(makeContext(null), {
+            const result = await handleAddConsoleApis(consoleApiContext(null), {
                 apis: ['FireflyAPISDK'],
             });
 
@@ -591,8 +622,8 @@ describe('missing inputs and failed reads', () => {
         });
 
         it('files an add nobody owns under the unattributed key', async () => {
-            const project = makeProject();
-            const context = makeContext(project);
+            const project = consoleApiProject();
+            const context = consoleApiContext(project);
 
             await handleAddConsoleApis(context, { apis: ['FireflyAPISDK'] });
 
@@ -606,7 +637,7 @@ describe('missing inputs and failed reads', () => {
 
     describe('set', () => {
         it('fails without a project, before any Console touch', async () => {
-            const result = await handleSetConsoleApis(makeContext(null), { apis: [] });
+            const result = await handleSetConsoleApis(consoleApiContext(null), { apis: [] });
 
             expect(result).toEqual({
                 success: false,

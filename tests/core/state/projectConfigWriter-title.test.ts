@@ -35,25 +35,14 @@ describe('a project with a title', () => {
         // must never displace it.
         expect(writtenManifest().name).toBe('bodea-demo');
     });
-
-    it('keeps a title that differs from the slug in more than case', async () => {
-        await write(createTestProject({ name: 'bodea-demo', title: 'Bodea B2B Demo' }));
-
-        expect(writtenManifest().title).not.toBe(writtenManifest().name);
-    });
 });
 
 describe('a project with no title — everything that predates this', () => {
+    // Rule 2 above too: a title backfilled from the slug would put the key here.
     it('omits the key entirely rather than writing a null', async () => {
         await write(createTestProject());
 
         expect('title' in writtenManifest()).toBe(false);
-    });
-
-    it('does not backfill it from the slug', async () => {
-        await write(createTestProject());
-
-        expect(writtenManifest().title).toBeUndefined();
     });
 
     it('still writes the slug, so the project is not orphaned', async () => {

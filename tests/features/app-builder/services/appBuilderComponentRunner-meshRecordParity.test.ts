@@ -31,6 +31,8 @@ jest.setTimeout(5000);
 const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     ...jest.requireActual('@/features/app-builder/services/appConfigPackages'),
     detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
@@ -40,7 +42,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // =============================================================================
 
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
-import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import {
     MESH_ENTRY,
     INTEGRATION_ENTRY,

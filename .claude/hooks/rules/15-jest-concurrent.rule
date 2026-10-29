@@ -27,6 +27,12 @@
 # excluded — a resident `--watch` parent is idle almost always, and blocking every
 # run for the lifetime of an open watcher would make this unusable.
 #
+# The process line must START with node (or a path to it). The same scar the
+# command side carries, on the ps side: on 2026-10-08 a status-watcher shell loop
+# whose python one-liner contained the TEXT 'node_modules/.bin/jest' counted as a
+# live run, and every jest invocation in that session was blocked while `ps`
+# showed no jest at all. A shell that names the binary is not running it.
+#
 # A jest run that is this hook's OWN ANCESTOR is never counted. Without that, the
 # rule fires throughout `tests/hooks/router.test.ts` — the suite exercising the
 # router is itself hosted by a `node_modules/.bin/jest` parent — and every guard
@@ -125,7 +131,10 @@ rule_match() {
     # assert on, never an exit status — a check that did not run must not read
     # as "found nothing".
     while read -r pid rest; do
-        case "$rest" in *node_modules/.bin/jest*) ;; *) continue ;; esac
+        case "$rest" in
+            node\ *node_modules/.bin/jest*|*/node\ *node_modules/.bin/jest*) ;;
+            *) continue ;;
+        esac
         case "$rest" in *--watch*) continue ;; esac
         case "$ancestors" in *" $pid "*) continue ;; esac
         live=$((live + 1))

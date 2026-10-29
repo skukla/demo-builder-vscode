@@ -5,20 +5,16 @@
  * Covers loadProjectFromPath, getAllProjects, reload, dispose, and edge cases.
  */
 
-import * as vscode from 'vscode';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import {
     setupMocks,
     mockHomedir,
     createStateManagerProject,
     type TestMocks,
 } from './stateManager.testUtils';
+import * as vscode from 'vscode';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import type { Project } from '@/types/base';
-
-// Re-declare mocks to ensure proper typing and hoisting
-jest.mock('fs/promises');
-jest.mock('os');
 
 describe('StateManager - Utilities', () => {
     let testMocks: TestMocks;

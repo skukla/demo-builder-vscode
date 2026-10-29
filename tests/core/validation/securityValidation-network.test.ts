@@ -353,6 +353,17 @@ describe('securityValidation - Network Security', () => {
                 expect(sanitized).not.toContain('YWJjZGVmZ2hpamtsbW5vcHFy');
             });
 
+            // Moved 2026-10-20 from checkUpdates.security.test.ts, which tested this function
+            // under the update command's name (PL-80 removed the command's picker).
+            it('should sanitize a GitHub token in a URL', () => {
+                const error = new Error(
+                    'GitHub API error: https://api.github.com/repos?token=ghp_abcdefghijklmnopqrstuvwxyz123456'
+                );
+                const sanitized = sanitizeErrorForLogging(error);
+                expect(sanitized).not.toContain('ghp_abcdefghijklmnopqrstuvwxyz123456');
+                expect(sanitized).toContain('<redacted>');
+            });
+
             it('should sanitize API keys', () => {
                 const error = new Error('API key abc123def456ghi789jkl012 is invalid');
                 const sanitized = sanitizeErrorForLogging(error);

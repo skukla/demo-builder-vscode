@@ -86,9 +86,6 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
         states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
         mockContext.sharedState.currentPrerequisiteStates = states;
 
-        // Mock empty required versions - use mockResolvedValueOnce to override global mock
-        (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValueOnce([]);
-
         // Mock empty mapping (no components requiring Node versions)
         (shared.getNodeVersionMapping as jest.Mock).mockResolvedValueOnce({});
 
@@ -123,27 +120,22 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
     });
 
     /**
-     * WHICH Node versions a per-version tool installs for when NOTHING requires one.
+     * WHICH Node versions a per-version tool (the Adobe CLI) is checked and installed for.
      *
-     * `installHandler.ts:72` and `:142` both answer it, with the same expression
-     * written twice: `nodeVersions.length ? nodeVersions : [version || '20']`. Both
-     * were unconstrained — six mutants between them — because the shared setup always
-     * returns `['18', '20']`, so the empty case never ran in any test.
-     *
-     * The rule: with no Node version required by the project, fall back to the version
-     * the caller asked for, or to Node 20. Get it wrong and the tool installs against a
-     * runtime the user never chose — silently, since the install still succeeds.
+     * The version the caller named, else the per-node-version prerequisite's own set
+     * (`perNodeVersionMajors`) — never the majors the project's components need. Get it
+     * wrong and the tool installs against a runtime nothing runs it on, silently,
+     * since the install still succeeds.
      *
      * These assert the ARGUMENT handed to the collaborator rather than the outcome:
      * the version list IS the decision, and an outcome assertion would pass whatever
      * list was used.
      */
-    describe('the default Node version when the project requires none', () => {
-        function usePerNodeWithNoRequiredVersions() {
+    describe('the Node versions a per-version tool is installed for', () => {
+        function usePerNodeTool() {
             const states = new Map();
             states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue([]);
             (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
                 perNodeVersionStatus: [],
                 perNodeVariantMissing: true,
@@ -151,29 +143,32 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
             });
         }
 
-        it('falls back to Node 20 when the caller names no version either', async () => {
-            usePerNodeWithNoRequiredVersions();
+        it("uses the per-node-version prerequisite's majors, not the project's, when the caller names none", async () => {
+            // The shared setup's project needs Node 18 and 20.
+            usePerNodeTool();
 
             await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
-            expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
+            expect(shared.checkPerNodeVersionStatus).toHaveBeenNthCalledWith(
+                1,
                 mockAdobeCliPrereq,
-                ['20'],
+                shared.perNodeVersionMajors(),
                 mockContext
             );
-            // The SECOND copy of the same decision, read by the install planner.
+            // The SECOND reader of the same decision: the install planner.
             expect(mockContext.prereqManager?.getInstallSteps).toHaveBeenCalledWith(
                 mockAdobeCliPrereq,
-                { nodeVersions: ['20'] }
+                { nodeVersions: shared.perNodeVersionMajors() }
             );
         });
 
-        it('uses the version the caller named, not the default', async () => {
-            usePerNodeWithNoRequiredVersions();
+        it('uses the version the caller named', async () => {
+            usePerNodeTool();
 
             await handleInstallPrerequisite(mockContext, { prereqId: 0, version: '22' });
 
-            expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
+            expect(shared.checkPerNodeVersionStatus).toHaveBeenNthCalledWith(
+                1,
                 mockAdobeCliPrereq,
                 ['22'],
                 mockContext
@@ -181,31 +176,6 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
             expect(mockContext.prereqManager?.getInstallSteps).toHaveBeenCalledWith(
                 mockAdobeCliPrereq,
                 { nodeVersions: ['22'] }
-            );
-        });
-
-        it('uses the required versions when the project HAS them, ignoring the default', async () => {
-            const states = new Map();
-            states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-            mockContext.sharedState.currentPrerequisiteStates = states;
-            (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue(['18', '20']);
-            (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
-                perNodeVersionStatus: [],
-                perNodeVariantMissing: true,
-                missingVariantMajors: ['18'],
-            });
-
-            await handleInstallPrerequisite(mockContext, { prereqId: 0, version: '22' });
-
-            // The named version must NOT win here: the project's requirements do.
-            expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
-                mockAdobeCliPrereq,
-                ['18', '20'],
-                mockContext
-            );
-            expect(mockContext.prereqManager?.getInstallSteps).toHaveBeenCalledWith(
-                mockAdobeCliPrereq,
-                { nodeVersions: ['18', '20'] }
             );
         });
     });
@@ -218,34 +188,14 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
      * version in the list is the one made the default. So a text sort quietly makes the
      * wrong Node version the system default.
      *
-     * Two separate sorts do this, written out twice (installHandler.ts:118 and :143).
-     * Neither was constrained, because the shared test setup hands back keys that are
-     * already in numeric order — so the sort could be deleted with nothing failing.
-     * These tests hand back UNSORTED input, which is what production actually gets.
+     * The sort was unconstrained, because the shared test setup hands back keys that
+     * are already in numeric order — so it could be deleted with nothing failing.
+     * This test hands back UNSORTED input, which is what production actually gets.
+     * (The per-version tool's own sort is pinned in installHandler-plugins.)
      */
     describe('ordering Node versions as numbers rather than as text', () => {
         const OUT_OF_ORDER = ['20', '8', '10'];
         const NUMERIC = ['8', '10', '20'];
-
-        it('sorts the versions a per-version tool is checked against', async () => {
-            const states = new Map();
-            states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-            mockContext.sharedState.currentPrerequisiteStates = states;
-            (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue([...OUT_OF_ORDER]);
-            (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
-                perNodeVersionStatus: [],
-                perNodeVariantMissing: true,
-                missingVariantMajors: ['8'],
-            });
-
-            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
-
-            expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
-                mockAdobeCliPrereq,
-                NUMERIC,
-                mockContext
-            );
-        });
 
         it('sorts the missing Node versions before installing them', async () => {
             const states = new Map();

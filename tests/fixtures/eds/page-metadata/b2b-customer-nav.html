@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Commerce Account Nav</title>
+    <link rel="canonical" href="https://main--boilerplate-b2b--adobe-commerce.aem.live/customer/nav">
+    <meta property="og:title" content="Commerce Account Nav">
+    <meta property="og:url" content="https://main--boilerplate-b2b--adobe-commerce.aem.live/customer/nav">
+    <meta property="og:image" content="https://main--boilerplate-b2b--adobe-commerce.aem.live/default-meta-image.png?width=1200&#x26;format=pjpg&#x26;optimize=medium">
+    <meta property="og:image:secure_url" content="https://main--boilerplate-b2b--adobe-commerce.aem.live/default-meta-image.png?width=1200&#x26;format=pjpg&#x26;optimize=medium">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Commerce Account Nav">
+    <meta name="twitter:image" content="https://main--boilerplate-b2b--adobe-commerce.aem.live/default-meta-image.png?width=1200&#x26;format=pjpg&#x26;optimize=medium">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script nonce="KAax230WRPmKVsvGD/nV2yIt" type="speculationrules">
+    {
+        "prerender": [{
+            "where": {
+                "href_matches": "/*"
+            },
+            "eagerness": "moderate"
+        }]
+    }
+</script>
+    <script nonce="KAax230WRPmKVsvGD/nV2yIt" type="importmap">
+    {
+        "imports": {
+            "@dropins/storefront-account/": "/scripts/__dropins__/storefront-account/",
+            "@dropins/storefront-auth/": "/scripts/__dropins__/storefront-auth/",
+            "@dropins/storefront-cart/": "/scripts/__dropins__/storefront-cart/",
+            "@dropins/storefront-checkout/": "/scripts/__dropins__/storefront-checkout/",
+            "@dropins/storefront-order/": "/scripts/__dropins__/storefront-order/",
+            "@dropins/storefront-payment-services/": "/scripts/__dropins__/storefront-payment-services/",
+            "@dropins/storefront-pdp/": "/scripts/__dropins__/storefront-pdp/",
+            "@dropins/storefront-recommendations/": "/scripts/__dropins__/storefront-recommendations/",
+            "@dropins/storefront-wishlist/": "/scripts/__dropins__/storefront-wishlist/",
+            "@dropins/storefront-personalization/": "/scripts/__dropins__/storefront-personalization/",
+            "@dropins/storefront-product-discovery/": "/scripts/__dropins__/storefront-product-discovery/",
+            "@dropins/tools/": "/scripts/__dropins__/tools/"
+        }
+    }
+</script>
+    <link rel="stylesheet" href="/styles/styles.css">
+    <script nonce="KAax230WRPmKVsvGD/nV2yIt" type="module">
+    if (!(HTMLScriptElement.supports?.('importmap'))) {
+        import('/scripts/__dropins__/tools/shims/importmap.js');
+    }
+</script>
+    <script nonce="KAax230WRPmKVsvGD/nV2yIt" src="/scripts/aem.js" type="module"></script>
+    <script nonce="KAax230WRPmKVsvGD/nV2yIt" src="/scripts/scripts.js" type="module"></script>
+    <script nonce="KAax230WRPmKVsvGD/nV2yIt" src="/scripts/commerce.js" type="module"></script>
+    <link rel="modulepreload" href="/scripts/__dropins__/tools/lib/aem/configs.js">
+    <link rel="modulepreload" href="/scripts/initializers/index.js">
+    <link rel="modulepreload" href="/scripts/initializers/auth.js">
+    <link rel="modulepreload" href="/scripts/initializers/personalization.js">
+    <link rel="modulepreload" href="/scripts/__dropins__/storefront-auth/api.js">
+    <link rel="modulepreload" href="/scripts/__dropins__/tools/event-bus.js">
+    <link rel="modulepreload" href="/scripts/__dropins__/tools/fetch-graphql.js">
+    <link rel="modulepreload" href="/scripts/__dropins__/tools/initializer.js">
+    <link rel="modulepreload" href="/scripts/__dropins__/tools/preact.js">
+    <link rel="modulepreload" href="/scripts/__dropins__/tools/preact-compat.js">
+    <link rel="modulepreload" href="/scripts/__dropins__/tools/preact-hooks.js">
+    <link rel="modulepreload" href="/scripts/__dropins__/tools/components.js">
+  </head>
+  <body>
+    <header></header>
+    <main>
+      <div>
+        <div class="commerce-account-nav">
+          <div>
+            <div><strong>label</strong></div>
+            <div><strong>icon</strong></div>
+            <div><strong>permission</strong></div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/account">My account</a></strong></p>
+              <p>Account details</p>
+            </div>
+            <div>User</div>
+            <div>all</div>
+          </div>
+        </div>
+        <div class="commerce-account-nav">
+          <div>
+            <div><strong>label</strong></div>
+            <div><strong>icon</strong></div>
+            <div><strong>permission</strong></div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/orders">Orders</a></strong></p>
+              <p>Track, manage, and return</p>
+            </div>
+            <div>Order</div>
+            <div>all</div>
+          </div>
+        </div>
+        <div class="commerce-account-nav">
+          <div>
+            <div><strong>label</strong></div>
+            <div><strong>icon</strong></div>
+            <div><strong>permission</strong></div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/address">Addresses</a></strong></p>
+              <p>Manage your locations</p>
+            </div>
+            <div>AddressBook</div>
+            <div>all</div>
+          </div>
+        </div>
+        <div class="commerce-account-nav">
+          <div>
+            <div><strong>label</strong></div>
+            <div><strong>icon</strong></div>
+            <div><strong>permission</strong></div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/returns">Returns</a></strong></p>
+              <p>Manage your returns</p>
+            </div>
+            <div>EmptyBox</div>
+            <div>all</div>
+          </div>
+        </div>
+        <div class="commerce-account-nav">
+          <div>
+            <div><strong>label</strong></div>
+            <div><strong>icon</strong></div>
+            <div><strong>permission</strong></div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/requisition-lists">Requisition Lists</a></strong></p>
+              <p>Manage your requisition lists</p>
+            </div>
+            <div>List</div>
+            <div>all</div>
+          </div>
+        </div>
+        <div class="commerce-account-nav">
+          <div>
+            <div><strong>label</strong></div>
+            <div><strong>icon</strong></div>
+            <div><strong>permission</strong></div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/company">Company Profile</a></strong></p>
+              <p>Manage company</p>
+            </div>
+            <div>Business</div>
+            <div>Magento_Company::view_account</div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/company/structure">Company Structure</a></strong></p>
+              <p>Manage company structure</p>
+            </div>
+            <div>Structure</div>
+            <div>Magento_Company::users_view</div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/company/users">Company Users</a></strong></p>
+              <p>Manage company users</p>
+            </div>
+            <div>Team</div>
+            <div>Magento_Company::users_view</div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/company/roles">Roles and Permissions</a></strong></p>
+              <p>Manage roles and permissions</p>
+            </div>
+            <div>Locker</div>
+            <div>Magento_Company::roles_view</div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/company/credit">Company Credit</a></strong></p>
+              <p>View company credit history</p>
+            </div>
+            <div>Wallet</div>
+            <div>Magento_Company::credit</div>
+          </div>
+        </div>
+        <div class="commerce-account-nav">
+          <div>
+            <div><strong>label</strong></div>
+            <div><strong>icon</strong></div>
+            <div><strong>permission</strong></div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/negotiable-quote">Quotes</a></strong></p>
+              <p>Manage negotiable quotes</p>
+            </div>
+            <div>Quote</div>
+            <div>all</div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/negotiable-quote-template">Quote Templates</a></strong></p>
+              <p>Manage negotiable quote templates</p>
+            </div>
+            <div>Bulk</div>
+            <div>all</div>
+          </div>
+        </div>
+        <div class="commerce-account-nav">
+          <div>
+            <div><strong>label</strong></div>
+            <div><strong>icon</strong></div>
+            <div><strong>permission</strong></div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/purchase-orders">Purchase Orders</a></strong></p>
+              <p>Manage purchase orders</p>
+            </div>
+            <div>Purchase</div>
+            <div>Magento_PurchaseOrder::view_purchase_orders</div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/approval-rules">Approval Rules</a></strong></p>
+              <p>Manage approval rules</p>
+            </div>
+            <div>CheckWithCircle</div>
+            <div>Magento_PurchaseOrderRule::view_approval_rules</div>
+          </div>
+        </div>
+        <div class="commerce-account-nav">
+          <div>
+            <div><strong>label</strong></div>
+            <div><strong>icon</strong></div>
+            <div><strong>permission</strong></div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/seller-assisted-purchasing">Seller Assisted Purchasing</a></strong></p>
+              <p>Manage seller assisted purchases</p>
+            </div>
+            <div>Placeholder</div>
+            <div>all</div>
+          </div>
+          <div>
+            <div>
+              <p><strong><a href="/customer/company/hierarchy">Company Hierarchy</a></strong></p>
+              <p>Manage company hierarchy</p>
+            </div>
+            <div>Structure</div>
+            <div>admin</div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer></footer>
+  </body>
+</html>

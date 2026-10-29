@@ -20,6 +20,8 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
 }));
 
@@ -27,8 +29,9 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 import { MESH_ENTRY, createDeps, createProject } from './appBuilderComponentRunner.testUtils';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 const ID = MESH_ENTRY.id;
 
@@ -142,13 +145,13 @@ describe('deployAppBuilderComponent — Node preparation', () => {
         );
     });
 
-    it('never touches fnm for an entry that declares no Node version', async () => {
+    it("prepares Demo Builder's Node for an entry that declares none (PR-1a)", async () => {
         const ensureNodeVersion = jest.fn().mockResolvedValue(undefined);
         const deps = createDeps({ ensureNodeVersion });
 
         await deployAppBuilderComponent(deployedMeshProject(), ID, deps);
 
-        expect(ensureNodeVersion).not.toHaveBeenCalled();
+        expect(ensureNodeVersion).toHaveBeenCalledWith(demoBuilderNode());
     });
 
     it('a Node preparation failure aborts the redeploy with fnm’s own reason', async () => {
@@ -161,6 +164,51 @@ describe('deployAppBuilderComponent — Node preparation', () => {
 
         expect(result).toEqual({ success: false, error: 'fnm could not install Node 24' });
         expect(deps.deployMesh).not.toHaveBeenCalled();
+    });
+
+    it('records a Node preparation failure, so the tile is not left saying deploying', async () => {
+        const project = deployedMeshProject();
+        const deps = createDeps({
+            catalog: [WITH_NODE],
+            ensureNodeVersion: jest.fn().mockResolvedValue('fnm could not install Node 24'),
+        });
+
+        await deployAppBuilderComponent(project, ID, deps);
+
+        expect(project.appBuilderComponents![ID]).toMatchObject({
+            status: 'error',
+            error: 'fnm could not install Node 24',
+        });
+    });
+});
+
+// =============================================================================
+// The tile says "deploying" for the WHOLE run
+// =============================================================================
+
+describe('deployAppBuilderComponent — the in-flight marker', () => {
+    // Bodea, 2026-09-19: the API step ran for two minutes while the tile still
+    // read the previous run's "Deploy failed". The marker is saved before it.
+    it('is saved before the slow preparation steps begin', async () => {
+        const project = deployedMeshProject();
+        project.appBuilderComponents![ID].status = 'error';
+        project.appBuilderComponents![ID].error = 'an older run';
+        const seen: Array<{ status?: string; error?: string }> = [];
+        const deps = createDeps({
+            catalog: [{ ...MESH_ENTRY, nodeVersion: '24' }],
+            ensureNodeVersion: jest.fn(async () => {
+                const { status, error } = project.appBuilderComponents![ID];
+                seen.push({ status, error });
+                return undefined;
+            }),
+        });
+
+        await deployAppBuilderComponent(project, ID, deps);
+
+        expect(seen).toEqual([{ status: 'deploying', error: undefined }]);
+        expect((deps.saveProject as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+            (deps.ensureNodeVersion as jest.Mock).mock.invocationCallOrder[0],
+        );
     });
 });
 
@@ -178,5 +226,24 @@ describe('deployAppBuilderComponent — a collaborator that throws', () => {
 
         expect(result).toEqual({ success: false, error: 'manifest is read-only' });
         expect(deps.deployMesh).not.toHaveBeenCalled();
+    });
+
+    // Bodea, 2026-09-19: a redeploy that failed before its deploy left the tile
+    // on a two-day-old error. The failure it DID hit is recorded now.
+    it('records the failure on the component, replacing an older one', async () => {
+        const project = deployedMeshProject();
+        project.appBuilderComponents![ID].error = 'an older run';
+        const deps = createDeps({
+            deployMesh: jest.fn().mockRejectedValue(new Error('Service requires selection of a product')),
+        });
+
+        const result = await deployAppBuilderComponent(project, ID, deps);
+
+        expect(result.success).toBe(false);
+        expect(project.appBuilderComponents![ID]).toMatchObject({
+            status: 'error',
+            error: 'Service requires selection of a product',
+        });
+        expect(deps.saveProject).toHaveBeenLastCalledWith(project);
     });
 });

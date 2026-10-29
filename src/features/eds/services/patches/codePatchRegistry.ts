@@ -234,19 +234,9 @@ function tryApplyOne(
         };
     }
 
+    if (isAlreadyApplied(content, patch)) return alreadyApplied(patch, logger);
+
     if (!content.includes(patch.precondition)) {
-        // The precondition being gone BECAUSE the replacement is in place is
-        // success, not drift — a create over an existing repo re-runs patches
-        // that a previous create/reset already applied.
-        if (content.includes(patch.replacement)) {
-            logger.info(`[CodePatch] '${patch.id}' already applied to ${patch.target} — skipping`);
-            return {
-                patchId: patch.id,
-                target: patch.target,
-                applied: true,
-                alreadyApplied: true,
-            };
-        }
         return {
             patchId: patch.id,
             target: patch.target,
@@ -263,6 +253,31 @@ function tryApplyOne(
         target: patch.target,
         applied: true,
     };
+}
+
+/**
+ * Whether a file already holds a patch's fix.
+ *
+ * A replacement that KEEPS its precondition (a guard added around the original lines, as
+ * `pdp-empty-data-redirect` does) leaves the precondition in place once applied, so for it the
+ * replacement being present is the answer; otherwise it would be applied again and write the
+ * guard twice (2026-10-23). Any other patch is applied only when its precondition is gone
+ * BECAUSE the replacement is in place: its replacement appearing beside the precondition does
+ * not mean it was applied. A create over an existing repo re-runs patches a previous create or
+ * reset applied, so this is success, not drift.
+ *
+ * @param content - the target file's text
+ * @param patch - the patch
+ */
+export function isAlreadyApplied(content: string, patch: Pick<CodePatch, 'precondition' | 'replacement'>): boolean {
+    if (!content.includes(patch.replacement)) return false;
+    return patch.replacement.includes(patch.precondition) || !content.includes(patch.precondition);
+}
+
+/** A patch whose replacement is already in the file: success, nothing written. */
+function alreadyApplied(patch: CodePatch, logger: Logger): CodePatchResult {
+    logger.info(`[CodePatch] '${patch.id}' already applied to ${patch.target} — skipping`);
+    return { patchId: patch.id, target: patch.target, applied: true, alreadyApplied: true };
 }
 
 /**

@@ -17,7 +17,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
         })),
     },
 }));
-jest.mock('@/features/mesh/services/stalenessDetector');
+jest.mock('@/core/state/projectStateSync');
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
     syncMeshStatus: jest.fn().mockResolvedValue(undefined),
@@ -43,7 +43,7 @@ describe('dashboardHandlers - handleSwitchOrg', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
         forcedSwitch().mockResolvedValue({ success: true });
     });

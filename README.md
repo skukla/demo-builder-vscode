@@ -15,8 +15,8 @@ Create and manage Adobe Commerce demos with ease directly from Visual Studio Cod
 
 ## Requirements
 
-- Visual Studio Code 1.74.0 or higher
-- Node.js 18.x or 20.x
+- Visual Studio Code 1.84 or higher
+- Node.js 24 (Demo Builder installs it through fnm if it is missing)
 - Valid Demo Builder license key
 - Adobe I/O CLI (optional, for mesh deployment)
 
@@ -58,7 +58,7 @@ See [build documentation](docs/build.md) for detailed build instructions.
 Available from the Command Palette (all prefixed **Demo Builder:**):
 
 - `Demo Builder: Create Project` - Create a new demo project
-- `Demo Builder: Check for Updates` - Manually check for extension updates
+- `Demo Builder: Check for Updates` - Opens Your Projects with the Updates modal: every update waiting for the extension and each project, ticked, applied with one button
 - `Demo Builder: Diagnostics` - Run comprehensive system diagnostics
 - `Demo Builder: Manage Site Access` - View, add or remove the Configuration Service admins on the project's storefront
 - `Demo Builder: Repair Site Configuration` - Re-run a refused Configuration Service registration, then republish

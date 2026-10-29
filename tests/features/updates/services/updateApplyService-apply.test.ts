@@ -28,7 +28,9 @@ import {
     resetFakes,
 } from './updateApplyService.testUtils';
 import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 const getConfigMock = vscode.workspace.getConfiguration as jest.Mock;
 
@@ -53,7 +55,7 @@ describe('fork sync', () => {
 
         expect(ForkSyncServiceCtor).toHaveBeenCalledWith(ctx.secrets, ctx.logger);
         expect(mockSyncFork).toHaveBeenCalledWith('me', 'a', 'main');
-        expect(onProgress).toHaveBeenCalledWith('Syncing fork me/a');
+        expect(onProgress).toHaveBeenCalledWith(S.syncingSourceRepos.label, 'me/a');
         expect(res.forkSync).toEqual({ successCount: 1, failCount: 0, errors: [] });
     });
 
@@ -119,14 +121,15 @@ describe('template sync', () => {
             onProgress
         );
 
+        // The extension's own GitHub services for this context, handed in (EDS-49).
         expect(TemplateSyncServiceCtor).toHaveBeenCalledWith(
-            ctx.secrets,
+            getGitHubServices(ctx.secrets),
             ctx.logger,
             ctx.commandManager
         );
         expect(mockSyncWithTemplate).toHaveBeenCalledWith(project, { strategy: 'merge' });
         expect(mockUpdateLastSyncedCommit).toHaveBeenCalledWith(project, 'c1', ctx.stateManager);
-        expect(onProgress).toHaveBeenCalledWith('Syncing template for demo');
+        expect(onProgress).toHaveBeenCalledWith(S.updatingTemplate.label, 'demo');
         expect(res.template).toEqual({ successCount: 1, failCount: 0, errors: [] });
     });
 
@@ -157,7 +160,7 @@ describe('template sync', () => {
             strategy: 'merge',
             syncedCommit: '',
             conflicts: ['blocks/hero/hero.js'],
-            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
+            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
         };
 
         it('by default STOP: reported as a failure naming the file, no reset, no commit recorded', async () => {
@@ -175,6 +178,8 @@ describe('template sync', () => {
                 successCount: 0,
                 failCount: 1,
                 errors: [`demo: ${CONFLICTED.error}`],
+                // The files, for the agent, without parsing the sentence (EDS-57).
+                clashes: [{ project: 'demo', projectName: 'demo', track: 'template', files: ['blocks/hero/hero.js'] }],
             });
         });
 
@@ -303,7 +308,20 @@ describe('components', () => {
             'https://x/mesh.zip',
             '2.0.0'
         );
-        expect(onProgress).toHaveBeenCalledWith('Updating mesh in demo');
+        expect(onProgress).toHaveBeenCalledWith(S.updatingComponents.label, 'mesh in demo');
+    });
+
+    // Line 2 names the component as the SC knows it, not by its id (owner, 2026-10-16).
+    it("names the component on line 2 by its display name, not its id", async () => {
+        const onProgress = jest.fn();
+
+        await applyUpdatesHeadless(
+            { ...emptySelections(), component: [item(edsProject(), 'eds-storefront')] },
+            makeCtx(),
+            onProgress
+        );
+
+        expect(onProgress).toHaveBeenCalledWith(S.updatingComponents.label, 'EDS Storefront in demo');
     });
 
     it('does not build the updater or save anything when nothing is selected', async () => {
@@ -387,7 +405,7 @@ describe('Adobe MCP', () => {
         );
 
         expect(mockApplyAdobeMcpUpdate).toHaveBeenCalledWith(project, PKG, '2.0.0', ctx);
-        expect(onProgress).toHaveBeenCalledWith(`Updating ${PKG} → 2.0.0 in demo`);
+        expect(onProgress).toHaveBeenCalledWith(S.updatingAiTools.label, `${PKG} 2.0.0 in demo`);
         expect(res.adobeMcp).toEqual({ successCount: 1, failCount: 0, errors: [] });
     });
 
@@ -436,8 +454,29 @@ describe('add-ons', () => {
         );
 
         expect(mockApplyBlockLibraryUpdateResolved).toHaveBeenCalledWith(item, resolved, ctx);
-        expect(onProgress).toHaveBeenCalledWith('Updating block library Lib A');
+        expect(onProgress).toHaveBeenCalledWith(S.updatingAddOns.label, 'Lib A');
         expect(res.addon).toEqual(expected);
+    });
+
+    it('says which entries an update left out because the SC removed them (EDS-36)', async () => {
+        const ctx = makeCtx();
+        mockApplyBlockLibraryUpdateResolved.mockResolvedValue([
+            { library: 'Lib A', file: 'component-models.json', id: 'promo' },
+        ]);
+
+        const res = await applyUpdatesHeadless(
+            { ...emptySelections(), blockLibrary: [lib()] },
+            ctx
+        );
+
+        expect(res.addon).toEqual({
+            successCount: 1,
+            failCount: 0,
+            errors: [],
+            leftOut: [
+                'Lib A in demo: Left out 1 block entry removed by hand: promo (component-models.json).',
+            ],
+        });
     });
 
     it('a failed block library is recorded by name', async () => {
@@ -477,7 +516,7 @@ describe('add-ons', () => {
             expect.any(Function)
         );
         expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
-        expect(onProgress).toHaveBeenCalledWith('Updating Inspector SDK in demo');
+        expect(onProgress).toHaveBeenCalledWith(S.updatingAddOns.label, 'Inspector SDK in demo');
         expect(res.addon.successCount).toBe(1);
     });
 
@@ -512,12 +551,16 @@ describe('totals', () => {
             {
                 forkSync: [fork],
                 template: [{ project }],
+                boilerplate: [],
+                finish: [],
                 component: [{ project, componentId: 'mesh', latestVersion: '2', downloadUrl: 'u' }],
                 adobeMcp: [{ project, packageName: 'p', latestVersion: '1' }],
                 blockLibrary: [
                     { project, library: installedLibrary('Lib A'), latestCommit: 'bbb' },
                 ],
+                blockLibraryInstall: [],
                 inspector: [{ project, latestCommit: 'z' }],
+                integration: [],
             },
             makeCtx()
         );

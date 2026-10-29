@@ -61,7 +61,7 @@ const MIN_ELEMENTS = 20;
 
 const SURFACES = [
     'wizard', 'dashboard', 'configure', 'sidebar',
-    'projectsList', 'aiOverview', 'integrations', 'dataInstaller',
+    'projectsList', 'aiOverview', 'integrations', 'dataInstaller', 'siteAccess',
 ];
 
 /**

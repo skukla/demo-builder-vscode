@@ -100,7 +100,24 @@
     align-items: start;
 }
 
-/* Sticky group headers — deliberately QUIETER than the "Skills · N installed"
+/* Inside an integration section the NAMES run in two columns (owner,
+   2026-10-22: sixteen Demo Builder skills in one column read as noise). A
+   section holds one skill set, so the group grid above has nothing to split
+   there; the names are the unit. Same track and gutter rules as the groups. */
+.ai-skill-names {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px 24px;
+}
+
+/* The one sentence saying which edited files Regenerate keeps (ADR-013). It
+   sits under the scrolling lists, just above the footer's Regenerate button,
+   because that is the only action it is about. */
+.ai-regenerate-note {
+    margin: 12px 0 0 0;
+}
+
+/* Sticky group headers — deliberately QUIETER than the "Skills (N)"
    section heading above them: sentence case (caps read as emphasis regardless
    of size), small, muted. Hierarchy: section > group > names. They pin to the
    top of the scroll region while their group's skills scroll under. */
@@ -257,26 +274,5 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: break-word;
-}
-}
-
-@layer theme {
-/* The "+ New prompt" tile. Fixed height matches .prompt-card so the tile is the
-   same size whether the grid is empty or populated — min-height would let it
-   shrink when alone and stretch when sharing a row with cards. */
-.prompt-new-tile {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: var(--prompt-card-height);
-    padding: 10px 12px;
-    border: 1px dashed var(--spectrum-global-color-gray-400);
-    border-radius: 4px;
-    background: transparent;
-    cursor: pointer;
-    font: inherit;
-    color: inherit;
-    box-sizing: border-box;
 }
 }

@@ -16,8 +16,6 @@ import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { COMPONENT_IDS } from '@/core/constants';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { reKeyProjectSecrets } from '@/features/components/services/commerceSecretMigration';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
@@ -36,10 +34,6 @@ jest.mock('@/commands/handlerContextFactory', () => ({
     createPanelHandlerContext: jest.fn(() => ({ stub: 'handler-context' })),
 }));
 
-jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAvailableAppBuilderComponents: jest.fn(() => []),
-}));
-
 jest.mock('@/features/projects-dashboard/handlers/dashboardHandlers', () => ({
     handleRenameProject: jest.fn(async () => ({ success: true })),
 }));
@@ -52,7 +46,6 @@ jest.mock('@/features/components/services/commerceSecretMigration', () => ({
         retained: [],
         cleared: [],
     })),
-    reKeyProjectSecrets: jest.fn(async () => undefined),
 }));
 
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
@@ -86,17 +79,20 @@ jest.mock('@/features/eds/services/authoringExperienceFlip', () => ({
 const mockSendAuthoringExperienceUpdate = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendAuthoringExperienceUpdate: (...args: unknown[]) =>
-            mockSendAuthoringExperienceUpdate(...args),
         refreshStatus: jest.fn().mockResolvedValue(undefined),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAuthoringExperienceUpdate: (...args: unknown[]) =>
+        mockSendAuthoringExperienceUpdate(...args),
 }));
 
 interface SaveInternals {
     handleSaveConfiguration(data: {
-        componentConfigs: Record<string, Record<string, string>>;
+        configChanges: Record<string, Record<string, string>>;
         newProjectName?: string;
         authoringExperience?: string;
+        selectedBlockLibraries?: string[];
     }): Promise<unknown>;
     renameProjectIfRequested(project: Project, newName: string | undefined): Promise<Project>;
     applyAuthoringExperienceMetadata(project: Project, experience: string | undefined): boolean;
@@ -105,6 +101,25 @@ interface SaveInternals {
 
 function save(command: ConfigureProjectWebviewCommand): SaveInternals {
     return command as unknown as SaveInternals;
+}
+
+/** An EDS project whose storefront has a GitHub repository, so a library can be installed in it. */
+function storefrontProject(overrides: Partial<Project> = {}): Project {
+    return createMockProject({
+        name: 'Test Project',
+        path: '/test/project',
+        selectedStack: 'eds-accs',
+        selectedPackage: 'citisignal',
+        componentInstances: {
+            [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
+                metadata: { githubRepo: 'me/demo-storefront' },
+            },
+        },
+        ...overrides,
+    });
 }
 
 /** An EDS project carrying a stored authoring experience. */
@@ -171,7 +186,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
         it('returns a coded failure — not a throw — when there is no project', async () => {
             stateManager.getCurrentProject.mockResolvedValue(undefined);
 
-            const result = await save(command).handleSaveConfiguration({ componentConfigs: {} });
+            const result = await save(command).handleSaveConfiguration({ configChanges: {} });
 
             expect(result).toEqual({
                 success: false,
@@ -186,7 +201,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
         it('surfaces a persistence failure with the underlying message', async () => {
             stateManager.saveProject.mockRejectedValue(new Error('disk full'));
 
-            const result = await save(command).handleSaveConfiguration({ componentConfigs: {} });
+            const result = await save(command).handleSaveConfiguration({ configChanges: {} });
 
             expect(result).toEqual({
                 success: false,
@@ -202,7 +217,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             stateManager.getCurrentProject.mockResolvedValue(project);
 
             await save(command).handleSaveConfiguration({
-                componentConfigs: { mesh: { MESH_KEY: 'v' } },
+                configChanges: { mesh: { MESH_KEY: 'v' } },
             });
 
             expect(detectMeshChanges).toHaveBeenCalledWith(
@@ -215,31 +230,34 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             );
         });
 
-        it('reads the App Builder catalog for the project own stack ids', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(
-                edsProject('da-live-classic', {
-                    componentSelections: { backend: 'accs', frontend: 'eds-storefront' },
-                })
-            );
+        it("keeps an integration's stored settings, whatever an older Configure window sent back", async () => {
+            // An integration's settings are set on its tile (AB-21), so a window opened
+            // before a Settings save must not restore the old name, nor revive a removed
+            // integration's, even if a change for it rides in the save.
+            const project = edsProject('da-live-classic', {
+                appBuilderComponents: {
+                    'erp-integration': { kind: 'integration', status: 'deployed', source: { owner: 'o', repo: 'r' } },
+                    'demo-erp': { kind: 'system', status: 'deployed', source: { owner: 'o', repo: 'e' } },
+                    'eds-commerce-mesh': { kind: 'mesh', status: 'deployed', source: { owner: 'o', repo: 'm' } },
+                },
+                componentConfigs: { 'erp-integration': { ERP_DISPLAY_NAME: 'Nordwind' } },
+            });
+            stateManager.getCurrentProject.mockResolvedValue(project);
 
-            await save(command).handleSaveConfiguration({ componentConfigs: {} });
+            await save(command).handleSaveConfiguration({
+                configChanges: {
+                    eds: { STORE_VIEW: 'main' },
+                    'erp-integration': { ERP_DISPLAY_NAME: 'Acme ERP' },
+                    'demo-erp': { ERP_DISPLAY_NAME: 'Old' },
+                    'eds-commerce-mesh': { MESH_X: 'edited here' },
+                },
+            });
 
-            // The catalog decides which keys count as secrets, so the wrong stack
-            // ids here mean a secret is written into the manifest in clear.
-            expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith(
-                'accs',
-                'eds-storefront'
-            );
-        });
-
-        it('reads the catalog with empty ids when the project has no selections', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(
-                edsProject('da-live-classic', { componentSelections: undefined })
-            );
-
-            await save(command).handleSaveConfiguration({ componentConfigs: {} });
-
-            expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('', '');
+            expect(project.componentConfigs).toEqual({
+                eds: { STORE_VIEW: 'main' },
+                'erp-integration': { ERP_DISPLAY_NAME: 'Nordwind' },
+                'eds-commerce-mesh': { MESH_X: 'edited here' },
+            });
         });
 
         it('hands the same configs to the storefront detector', async () => {
@@ -247,7 +265,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             stateManager.getCurrentProject.mockResolvedValue(project);
 
             await save(command).handleSaveConfiguration({
-                componentConfigs: { eds: { STORE_VIEW: 'main' } },
+                configChanges: { eds: { STORE_VIEW: 'main' } },
             });
 
             expect(detectStorefrontChanges).toHaveBeenCalledWith(project, {
@@ -260,11 +278,73 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             stateManager.getCurrentProject.mockResolvedValue(project);
 
             await save(command).handleSaveConfiguration({
-                componentConfigs: { mesh: { A: '1' } },
+                configChanges: { mesh: { A: '1' } },
             });
 
             expect(stateManager.saveProject).toHaveBeenCalledWith(project);
             expect(project.componentConfigs).toEqual({ mesh: { A: '1' } });
+        });
+
+        it('keeps a value changed elsewhere while the window was open (PL-76)', async () => {
+            // An agent set the store view after this Configure window loaded. The SC
+            // changed only the customer group, so only that rides, and the agent's
+            // store view survives. It used to be overwritten by the window's old copy.
+            const project = edsProject('da-live-classic', {
+                componentConfigs: {
+                    'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'set-by-agent', ACCS_CUSTOMER_GROUP: 'a' },
+                },
+            });
+            stateManager.getCurrentProject.mockResolvedValue(project);
+
+            await save(command).handleSaveConfiguration({
+                configChanges: { 'adobe-commerce-accs': { ACCS_CUSTOMER_GROUP: 'b' } },
+            });
+
+            expect(project.componentConfigs).toEqual({
+                'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'set-by-agent', ACCS_CUSTOMER_GROUP: 'b' },
+            });
+        });
+
+        it('changes nothing when the save carries no changes', async () => {
+            const project = edsProject('da-live-classic', {
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'main' } },
+            });
+            stateManager.getCurrentProject.mockResolvedValue(project);
+
+            await save(command).handleSaveConfiguration({ configChanges: {} });
+
+            expect(project.componentConfigs).toEqual({
+                'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'main' },
+            });
+        });
+
+        it('records the block libraries the save carries on the project it saves', async () => {
+            const project = edsProject('da-live-classic', {
+                selectedBlockLibraries: ['demo-team-blocks'],
+            });
+            stateManager.getCurrentProject.mockResolvedValue(project);
+
+            await save(command).handleSaveConfiguration({
+                configChanges: {},
+                selectedBlockLibraries: ['demo-team-blocks', 'demo-builder-blocks'],
+            });
+
+            expect(stateManager.saveProject).toHaveBeenCalledWith(project);
+            expect(project.selectedBlockLibraries).toEqual([
+                'demo-team-blocks',
+                'demo-builder-blocks',
+            ]);
+        });
+
+        it('keeps the recorded block libraries when the save carries none', async () => {
+            const project = edsProject('da-live-classic', {
+                selectedBlockLibraries: ['demo-team-blocks'],
+            });
+            stateManager.getCurrentProject.mockResolvedValue(project);
+
+            await save(command).handleSaveConfiguration({ configChanges: {} });
+
+            expect(project.selectedBlockLibraries).toEqual(['demo-team-blocks']);
         });
 
         it('marks the mesh stale — and only the mesh — when the mesh config changed', async () => {
@@ -272,7 +352,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             const project = edsProject();
             stateManager.getCurrentProject.mockResolvedValue(project);
 
-            await save(command).handleSaveConfiguration({ componentConfigs: {} });
+            await save(command).handleSaveConfiguration({ configChanges: {} });
 
             expect(project.meshStatusSummary).toBe('stale');
             expect(project.edsStorefrontStatusSummary).toBeUndefined();
@@ -283,7 +363,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             const project = edsProject();
             stateManager.getCurrentProject.mockResolvedValue(project);
 
-            await save(command).handleSaveConfiguration({ componentConfigs: {} });
+            await save(command).handleSaveConfiguration({ configChanges: {} });
 
             expect(project.edsStorefrontStatusSummary).toBe('stale');
             expect(project.meshStatusSummary).toBeUndefined();
@@ -292,15 +372,54 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
         it('re-arms the apply prompts when anything went stale', async () => {
             (detectStorefrontChanges as jest.Mock).mockReturnValue({ hasChanges: true });
 
-            await save(command).handleSaveConfiguration({ componentConfigs: {} });
+            await save(command).handleSaveConfiguration({ configChanges: {} });
 
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.configChanged'
             );
         });
 
-        it('leaves the prompts as they are when nothing went stale', async () => {
-            await save(command).handleSaveConfiguration({ componentConfigs: {} });
+        it('re-arms the apply prompts when a newly ticked block library is not in the storefront', async () => {
+            stateManager.getCurrentProject.mockResolvedValue(storefrontProject());
+
+            await save(command).handleSaveConfiguration({
+                configChanges: {},
+                selectedBlockLibraries: ['demo-builder-blocks'],
+            });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder._internal.configChanged'
+            );
+        });
+
+        it('re-arms them again on the NEXT save, when the SC answered Later to that library', async () => {
+            // Later left the library selected and not installed. This save carries
+            // no block library fields at all: the work is read from the project.
+            stateManager.getCurrentProject.mockResolvedValue(
+                storefrontProject({ selectedBlockLibraries: ['demo-builder-blocks'] })
+            );
+
+            await save(command).handleSaveConfiguration({ configChanges: {} });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder._internal.configChanged'
+            );
+        });
+
+        it('re-arms them when only an ordinary setting changed, for the restart prompt (PL-76)', async () => {
+            // Nothing went stale, but a running demo still reads the old .env until
+            // it restarts, so its prompt must be offered for this change.
+            await save(command).handleSaveConfiguration({
+                configChanges: { headless: { ADOBE_ASSETS_URL: 'https://assets.example' } },
+            });
+
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder._internal.configChanged'
+            );
+        });
+
+        it('leaves the prompts as they are when nothing changed at all', async () => {
+            await save(command).handleSaveConfiguration({ configChanges: {} });
 
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
                 'demoBuilder._internal.configChanged'
@@ -317,7 +436,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             });
 
             await save(command).handleSaveConfiguration({
-                componentConfigs: { mesh: { A: '1' } },
+                configChanges: { mesh: { A: '1' } },
             });
 
             expect(order).toEqual(['register', 'regenerate']);
@@ -333,7 +452,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             const project = edsProject();
             stateManager.getCurrentProject.mockResolvedValue(project);
 
-            await save(command).handleSaveConfiguration({ componentConfigs: {} });
+            await save(command).handleSaveConfiguration({ configChanges: {} });
             await new Promise<void>((resolve) => setImmediate(resolve));
 
             expect(internals(command).showPostSaveNotifications).toHaveBeenCalledWith(
@@ -344,11 +463,24 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             );
         });
 
+        it('logs a post-save prompt failure instead of leaving it unhandled (PL-76)', async () => {
+            internals(command).showPostSaveNotifications = jest
+                .fn()
+                .mockRejectedValue(new Error('refresh failed'));
+
+            await save(command).handleSaveConfiguration({ configChanges: {} });
+            await new Promise<void>((resolve) => setImmediate(resolve));
+            await new Promise<void>((resolve) => setImmediate(resolve));
+
+            // Handled and logged; what the log line says is not the contract.
+            expect(logger.error).toHaveBeenCalledTimes(1);
+        });
+
         it('tells the notifier the authoring experience changed, so it stays quiet', async () => {
             stateManager.getCurrentProject.mockResolvedValue(edsProject('da-live-classic'));
 
             await save(command).handleSaveConfiguration({
-                componentConfigs: {},
+                configChanges: {},
                 authoringExperience: 'experience-workspace',
             });
             await new Promise<void>((resolve) => setImmediate(resolve));
@@ -366,7 +498,7 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             stateManager.getCurrentProject.mockResolvedValue(edsProject('da-live-classic'));
 
             const result = await save(command).handleSaveConfiguration({
-                componentConfigs: {},
+                configChanges: {},
                 authoringExperience: 'experience-workspace',
             });
 
@@ -394,12 +526,8 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             expect(handleRenameProject).not.toHaveBeenCalled();
         });
 
-        it('renames by PATH, then re-keys the secrets from the old path to the new one', async () => {
-            const renamed = createMockProject({
-                name: 'Renamed',
-                path: '/test/renamed',
-                componentConfigs: { 'commerce-accs': {}, mesh: {} },
-            });
+        it('renames by PATH and answers the project read back at its new path', async () => {
+            const renamed = createMockProject({ name: 'Renamed', path: '/test/renamed' });
             stateManager.getCurrentProject.mockResolvedValue(renamed);
 
             const result = await save(command).renameProjectIfRequested(edsProject(), 'Renamed');
@@ -409,31 +537,6 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
                 projectPath: '/test/project',
                 newName: 'Renamed',
             });
-            // The path BEFORE the rename first — reversing these silently orphans
-            // every already-migrated secret, and the field then just reads blank.
-            expect(reKeyProjectSecrets).toHaveBeenCalledWith(
-                '/test/project',
-                '/test/renamed',
-                ['commerce-accs', 'mesh'],
-                expect.anything(),
-                expect.any(Function)
-            );
-        });
-
-        it('re-keys nothing when the renamed project has no componentConfigs', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(
-                createMockProject({ path: '/test/renamed', componentConfigs: undefined })
-            );
-
-            await save(command).renameProjectIfRequested(edsProject(), 'Renamed');
-
-            expect(reKeyProjectSecrets).toHaveBeenCalledWith(
-                expect.anything(),
-                expect.anything(),
-                [],
-                expect.anything(),
-                expect.any(Function)
-            );
         });
 
         it('aborts the save with the rename error the handler reported', async () => {
@@ -445,7 +548,6 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             await expect(
                 save(command).renameProjectIfRequested(edsProject(), 'Renamed')
             ).rejects.toThrow('A project called Renamed already exists');
-            expect(reKeyProjectSecrets).not.toHaveBeenCalled();
         });
 
         it('aborts with a generic message when the rename failed without saying why', async () => {
@@ -462,7 +564,6 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
             await expect(
                 save(command).renameProjectIfRequested(edsProject(), 'Renamed')
             ).rejects.toThrow('Project not found after rename');
-            expect(reKeyProjectSecrets).not.toHaveBeenCalled();
         });
     });
 
@@ -585,10 +686,10 @@ describe('ConfigureProjectWebviewCommand - save spine', () => {
                 expect.any(Function)
             );
             expect(ewMessages).toEqual([
-                'Updating the DA.live editor link',
-                'Adding Quick Edit to the storefront',
+                'Updating the editor link',
+                'Adding Quick Edit',
             ]);
-            expect(classicMessages).toEqual(['Updating the DA.live editor link']);
+            expect(classicMessages).toEqual(['Updating the editor link']);
         });
 
         it('gives the flip the INJECTED GitHub token service when the command has one', async () => {

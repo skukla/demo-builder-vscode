@@ -32,6 +32,16 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
             kind: 'integration',
             source: { owner: 'adobe', repo: 'reco', branch: 'main' },
         },
+        // The ERP that comes with Recommendations here, so the summary's
+        // companion row can be pinned without the real catalog.
+        {
+            id: 'cat-erp',
+            name: 'Acme ERP',
+            description: 'the ERP',
+            kind: 'system',
+            boundTo: 'cat-reco',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        },
     ];
     return {
         ...actual,
@@ -181,6 +191,57 @@ describe('commerceSummaryGroup - ACCS', () => {
     });
 });
 
+/**
+ * Edit, before the backend or package changes: the settings belong to Configure and
+ * their steps are not in the strip, but the project HAS them. The rows used to wait
+ * for a Continue past each step, so a working project read "Not set" throughout,
+ * and going Back cleared what had been clicked (owner, 2026-10-17).
+ */
+describe('commerceSummaryGroup - Edit', () => {
+    const editing = (partial: Partial<WizardState> = {}) =>
+        state({
+            wizardMode: 'edit',
+            selectedBackend: 'adobe-commerce-paas',
+            componentConfigs: {
+                'adobe-commerce-paas': { ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us' },
+            },
+            ...partial,
+        });
+
+    it('shows every row done with the project value, with nothing moved past', () => {
+        const group = commerceSummaryGroup(editing());
+
+        expect(group.rows).toEqual([
+            { label: 'Backend', value: 'Adobe Commerce (PaaS)', done: true },
+            { label: 'Connection', value: 'Connected', done: true },
+            { label: 'Business', value: 'citisignal_us', done: true },
+            { label: 'Catalog', value: 'Configured', done: true },
+            { label: 'Datapacks', value: 'None', done: true },
+        ]);
+    });
+
+    it('reads the ACCS store view code on an ACCS project', () => {
+        const group = commerceSummaryGroup(
+            editing({
+                selectedBackend: 'adobe-commerce-accs',
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'bodea_us' } },
+            }),
+        );
+
+        expect(group.rows.find((r) => r.label === 'Business')?.value).toBe('bodea_us');
+    });
+
+    it('goes back to the walk once the backend or package changed', () => {
+        const group = commerceSummaryGroup(editing({ foundationChanged: true }));
+
+        expect(group.rows.find((r) => r.label === 'Connection')).toEqual({
+            label: 'Connection',
+            value: undefined,
+            done: false,
+        });
+    });
+});
+
 describe('storefrontSummaryGroup', () => {
     it('names an added demo first, and says when its site will start empty', () => {
         const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
@@ -194,7 +255,18 @@ describe('storefrontSummaryGroup', () => {
         expect(storefrontSummaryGroup(state({})).rows[0].label).not.toBe('Demo');
     });
 
-    it('heads "Storefront" and mirrors the sub-steps (existing repo → no Code Sync)', () => {
+    it('calls a headless demo Headless, and never says its site starts empty', () => {
+        // No content source on purpose: the empty-site note is about Edge Delivery pages,
+        // so a headless demo without one must still read as the bare name and kind.
+        const demo = { kind: 'demo' as const, version: 1, name: 'Bodea', source: { owner: 'jen', repo: 'bodea-demo' }, storefrontKind: 'headless' as const };
+        expect(storefrontSummaryGroup(state({ demo })).rows[0]).toEqual({
+            label: 'Demo',
+            value: 'Bodea · Headless',
+            done: true,
+        });
+    });
+
+    it('heads "Storefront" and mirrors the three sub-steps', () => {
         const group = storefrontSummaryGroup(state({}));
         expect(group.heading).toBe('Storefront');
         expect(group.rows.map((r) => r.label)).toEqual([
@@ -204,17 +276,6 @@ describe('storefrontSummaryGroup', () => {
         ]);
     });
 
-    it('includes the Code Sync row only for a NEW repo', () => {
-        const group = storefrontSummaryGroup(
-            state({ edsConfig: { repoMode: 'new' } } as Partial<WizardState>)
-        );
-        expect(group.rows.map((r) => r.label)).toEqual([
-            'Accounts',
-            'Repository',
-            'Code Sync',
-            'Block Libraries',
-        ]);
-    });
 
     it('marks Accounts done only when BOTH GitHub and DA.live are connected', () => {
         const githubOnly = storefrontSummaryGroup(
@@ -235,20 +296,17 @@ describe('storefrontSummaryGroup', () => {
         expect(accounts?.value).toBe('Connected');
     });
 
-    it('shows Repository + Code Sync values from their persisted validity', () => {
+    it('shows the Repository value from its persisted validity', () => {
         const group = storefrontSummaryGroup(
             state({
                 storefrontRepoValid: true,
-                storefrontCodeSyncValid: true,
                 edsConfig: { repoName: 'my-repo', repoMode: 'new' },
             } as Partial<WizardState>)
         );
         const repo = group.rows.find((r) => r.label === 'Repository');
         expect(repo?.value).toBe('my-repo');
         expect(repo?.done).toBe(true);
-        const codeSync = group.rows.find((r) => r.label === 'Code Sync');
-        expect(codeSync?.value).toBe('Verified');
-        expect(codeSync?.done).toBe(true);
+        expect(group.rows.map((r) => r.label)).not.toContain('Code Sync');
     });
 
     it('needs the persisted repo VALIDITY, not just a repo name', () => {
@@ -261,15 +319,6 @@ describe('storefrontSummaryGroup', () => {
         expect(repository?.value).toBeUndefined();
     });
 
-    it('leaves Code Sync undone on a new repo until it is verified', () => {
-        const group = storefrontSummaryGroup(
-            state({ edsConfig: { repoMode: 'new', repoName: 'my-storefront' } })
-        );
-
-        const codeSync = group.rows.find((r) => r.label === 'Code Sync');
-        expect(codeSync?.done).toBe(false);
-        expect(codeSync?.value).toBeUndefined();
-    });
 
     it('survives a validated repo whose EDS config has not been written yet', () => {
         // storefrontRepoValid is a top-level flag; it can be true before edsConfig
@@ -299,6 +348,17 @@ describe('storefrontSummaryGroup', () => {
         expect(libs?.value).toBe('3 selected');
     });
 
+    // Demo Builder Blocks comes with every storefront and is kept out of the picker.
+    // A built project records it, so Edit counted 2 beside a picker showing 1
+    // (owner, 2026-10-17). The count is what the picker shows.
+    it('leaves the always-included library out of the count, as the picker does', () => {
+        const group = storefrontSummaryGroup(
+            state({ selectedBlockLibraries: ['demo-builder-blocks', 'demo-team-blocks'] }),
+        );
+
+        expect(group.rows.find((r) => r.label === 'Block Libraries')?.value).toBe('1 selected');
+    });
+
     it('leaves not-yet-configured rows undone with no value', () => {
         const group = storefrontSummaryGroup(state({}));
         expect(group.rows.every((r) => !r.done)).toBe(true);
@@ -322,6 +382,23 @@ describe('integrationsSummaryGroup', () => {
             stacks
         );
         expect(meshAvailable.rows).toStrictEqual([]);
+    });
+
+    it('lists the system that comes with an integration as its own row, with the same readiness', () => {
+        const group = integrationsSummaryGroup(
+            state({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-accs',
+                selectedAppBuilderComponents: ['cat-reco'],
+                ...COMMITTED_DEST,
+            }),
+            packages,
+            stacks
+        );
+        expect(group.rows).toEqual([
+            { label: 'Recommendations', value: 'Ready', done: true },
+            { label: 'Acme ERP', value: 'Ready', done: true },
+        ]);
     });
 
     it('adds a "Needs setup" row for a selected mesh without a destination', () => {
@@ -380,7 +457,9 @@ describe('integrationsSummaryGroup', () => {
             packages,
             stacks
         );
-        expect(group.rows.map((r) => r.label)).toEqual(['API Mesh', 'Recommendations', 'widget']);
+        // Recommendations brings Acme ERP with it in this fixture, so the ERP is
+        // its own row, right after the integration it comes with.
+        expect(group.rows.map((r) => r.label)).toEqual(['API Mesh', 'Recommendations', 'Acme ERP', 'widget']);
         expect(group.rows.every((r) => r.done && r.value === 'Ready')).toBe(true);
     });
 
@@ -415,15 +494,16 @@ describe('integrationsSummaryGroup', () => {
 });
 
 describe('integrationsSummaryGroup - the catalog it hands over', () => {
-    it('passes the integration entries only, never the mesh entry', () => {
+    it('passes the integration and system entries, never the mesh entry', () => {
         // The mesh reaches the resolver as its own argument; leaving it in the
-        // catalog list too would offer it twice.
+        // catalog list too would offer it twice. Systems ride along so a row can
+        // name what comes with it; they never become rows themselves.
         (resolveIntegrationRows as jest.Mock).mockClear();
 
         integrationsSummaryGroup(state({ selectedStack: 'eds-accs' }), packages, stacks);
 
         const [, , catalog] = (resolveIntegrationRows as jest.Mock).mock.calls[0];
-        expect(catalog.map((e: { id: string }) => e.id)).toEqual(['cat-reco']);
+        expect(catalog.map((e: { id: string }) => e.id)).toEqual(['cat-reco', 'cat-erp']);
     });
 });
 

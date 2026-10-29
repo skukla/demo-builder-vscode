@@ -18,14 +18,19 @@ import type { Project } from '@/types/base';
 jest.setTimeout(5000);
 
 const mockListDeclaredPackageNames = jest.fn();
+const mockListDeclaredTriggersAndRules = jest.fn();
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
     listDeclaredPackageNames: (...a: unknown[]) => mockListDeclaredPackageNames(...a),
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: (...a: unknown[]) => mockListDeclaredTriggersAndRules(...a),
 }));
 
-import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 const ID = 'app-builder-shell';
@@ -72,6 +77,7 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockWithOrgContext.mockImplementation((_target: unknown, fn: () => Promise<unknown>) => fn());
     mockListDeclaredPackageNames.mockResolvedValue([]);
+    mockListDeclaredTriggersAndRules.mockResolvedValue({ triggers: [], rules: [] });
 });
 
 describe('post-undeploy runtime verification', () => {
@@ -130,7 +136,8 @@ describe('post-undeploy runtime verification', () => {
 
         const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
-        expect(result.success).toBe(true);
+        // Unchecked is not clean: the removal stops and keeps what names the app.
+        expect(result).toMatchObject({ success: false, code: 'COMPONENT_REMOVAL_STOPPED' });
         // Nothing was found and nothing was deleted — the two lists are EMPTY,
         // not merely present. A summary that named packages it never touched
         // would read as a cleanup that happened.
@@ -140,6 +147,64 @@ describe('post-undeploy runtime verification', () => {
             failed: [],
         });
         expect(result.runtimeCleanup?.note).toContain('Could not list');
+    });
+
+    // 2026-09-26: three recursive deletes were refused and the same shapes later deleted
+    // cleanly. A refused leftover is looked for again after a pause and deleted again.
+    it('deletes a leftover Runtime refused once on the next attempt, and the removal finishes', async () => {
+        const owPackage = deriveOwPackage(ID);
+        const deps = createDeps();
+        const lines: Array<string | undefined> = [];
+        deps.onProgress = (_stage: string, line?: string) => lines.push(line);
+        let refusals = 0;
+        (deps.commandManager.execute as jest.Mock).mockImplementation(async (command: string) => {
+            if (command.includes('package list')) return { code: 0, stdout: JSON.stringify([{ name: owPackage }]), stderr: '' };
+            if (command.includes('package delete') && refusals++ === 0) throw new Error('package not empty');
+            return { code: 0, stdout: command.includes(' list --json') ? '[]' : '', stderr: '' };
+        });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect(deps.wait).toHaveBeenCalledWith(10_000);
+        // Line 2 while it waits: short, and counted in words (owner, 2026-10-16).
+        expect(lines).toContain('Retrying: Runtime still has 1 item');
+        expect(result.success).toBe(true);
+        expect(result.runtimeCleanup).toEqual({ verified: true, deleted: [owPackage], failed: [] });
+    });
+
+    it('tries four times, longer each time, then keeps the card, folder and workspace', async () => {
+        const owPackage = deriveOwPackage(ID);
+        const deps = createDeps();
+        routeExecute(deps, {
+            'package list': { stdout: JSON.stringify([{ name: owPackage }]) },
+            'package delete': { reject: true },
+        });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect((deps.wait as jest.Mock).mock.calls.map((c) => c[0])).toEqual([10_000, 30_000, 60_000]);
+        const deletes = (deps.commandManager.execute as jest.Mock).mock.calls.filter((c: unknown[]) =>
+            String(c[0]).startsWith(`aio runtime package delete ${owPackage}`),
+        );
+        expect(deletes).toHaveLength(4);
+        expect(result).toMatchObject({ success: false, code: 'COMPONENT_REMOVAL_STOPPED' });
+        expect(result.error).toMatch(/after 4 attempts/);
+        expect(deps.componentManager.removeComponent).not.toHaveBeenCalled();
+        expect(deps.deleteComponentWorkspace).not.toHaveBeenCalled();
+    });
+
+    it('a retry after that stop skips the clean-up that already ran, and Remove anyway finishes', async () => {
+        const project = integrationProject();
+        project.appBuilderComponents![ID] = { ...project.appBuilderComponents![ID], removalCleanedUp: true, removalStopped: 'kept' };
+        const detach = jest.fn();
+        const deps = createDeps({ detachFromCommerce: detach });
+        routeExecute(deps, { 'package list': { stdout: JSON.stringify([{ name: deriveOwPackage(ID) }]) }, 'package delete': { reject: true } });
+
+        const result = await removeAppBuilderComponent(project, ID, deps, { force: true });
+
+        expect(detach).not.toHaveBeenCalled();
+        expect(result.success).toBe(true);
+        expect(deps.componentManager.removeComponent).toHaveBeenCalled();
     });
 
     it('a failed leftover delete lands in failed[] — those packages are STILL RUNNING', async () => {
@@ -191,7 +256,7 @@ describe('post-undeploy runtime verification', () => {
         expect(deps.commandManager.execute).toHaveBeenCalledWith(
             'aio runtime package list --json',
             {
-                useNodeVersion: 'auto',
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
                 shell: true,
                 timeout: TIMEOUTS.LONG,
@@ -212,7 +277,7 @@ describe('post-undeploy runtime verification', () => {
         expect(deps.commandManager.execute).toHaveBeenCalledWith(
             `aio runtime package delete ${owPackage} --recursive`,
             {
-                useNodeVersion: 'auto',
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
                 shell: true,
                 timeout: TIMEOUTS.LONG,
@@ -249,7 +314,74 @@ describe('post-undeploy runtime verification', () => {
 
         const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
-        expect(result.runtimeCleanup).toEqual({ verified: true, deleted: [owPackage], failed: [] });
+        // The leftovers go; what the failed undeploy left UNKNOWN is said, not assumed gone:
+        // this component has no workspace of its own, so its registration cannot be read.
+        expect(result.runtimeCleanup).toEqual({
+            verified: true,
+            deleted: [owPackage],
+            failed: [],
+            note: 'The undeploy itself failed, and its Commerce Admin registration could not be checked.',
+        });
+    });
+
+    // 2026-09-21: the ERP's one-minute timer and its rule outlived a failed undeploy,
+    // firing at an action that was gone. Deleting the package does not delete them.
+    it("deletes the app's own leftover rule and timer — rules first, then timers, then packages", async () => {
+        const owPackage = deriveOwPackage(ID);
+        mockListDeclaredTriggersAndRules.mockResolvedValue({
+            triggers: ['erp-refresh-timer'],
+            rules: ['erp-refresh-on-timer'],
+        });
+        const deps = createDeps();
+        routeExecute(deps, {
+            'rule list': { stdout: JSON.stringify([{ name: 'erp-refresh-on-timer' }, { name: 'not-ours' }]) },
+            'trigger list': { stdout: JSON.stringify([{ name: 'erp-refresh-timer' }]) },
+            'package list': { stdout: JSON.stringify([{ name: owPackage }]) },
+        });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        const deletes = (deps.commandManager.execute as jest.Mock).mock.calls
+            .map((c: unknown[]) => String(c[0]))
+            .filter((command: string) => command.includes(' delete '));
+        expect(deletes).toEqual([
+            'aio runtime rule delete erp-refresh-on-timer',
+            'aio runtime trigger delete erp-refresh-timer',
+            `aio runtime package delete ${owPackage} --recursive`,
+        ]);
+        expect(result.runtimeCleanup).toEqual({
+            verified: true,
+            deleted: ['rule erp-refresh-on-timer', 'trigger erp-refresh-timer', owPackage],
+            failed: [],
+        });
+    });
+
+    it('a rule list that fails is "not verified" too', async () => {
+        mockListDeclaredTriggersAndRules.mockResolvedValue({ triggers: [], rules: ['erp-refresh-on-timer'] });
+        const deps = createDeps();
+        routeExecute(deps, { 'rule list': { code: 2 }, 'package list': { stdout: '[]' } });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect(result.runtimeCleanup).toMatchObject({ verified: false, deleted: [], failed: [] });
+    });
+
+    // A removal ran as one line, "Taking the app down", for 3m 39s (2026-09-21).
+    it('says what each phase of the removal is doing, in order', async () => {
+        const deps = createDeps();
+        routeExecute(deps, { 'package list': { stdout: '[]' } });
+        const stages: Array<[string, string | undefined]> = [];
+        deps.onProgress = (message: string, subMessage?: string) => stages.push([message, subMessage]);
+
+        await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect(stages).toEqual([
+            [OPERATION_STAGES.removing.label, 'Undeploying Custom Integration'],
+            [
+                OPERATION_STAGES.checkingLeftovers.label,
+                'Looking for anything still in Runtime',
+            ],
+        ]);
     });
 
     it('a mesh removal runs NO runtime verification (its own status flow owns that)', async () => {

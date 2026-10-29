@@ -9,6 +9,7 @@
  */
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
     linkExistingMesh,
@@ -18,7 +19,7 @@ import {
 import type { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { Project } from '@/types/base';
 
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
@@ -29,7 +30,7 @@ jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
 }));
 
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
-import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
+import { updateMeshState } from '@/features/mesh/services/meshDeployBaseline';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
@@ -129,24 +130,24 @@ describe('meshSetupService linkExistingMesh', () => {
                     _logger: unknown,
                     onProgress: (message: string, subMessage?: string) => void
                 ) => {
-                    onProgress('Deploying mesh', 'Uploading schema');
-                    onProgress('Verifying mesh');
+                    onProgress(OPERATION_STAGES.deployingMesh.label, 'Updating the existing mesh');
+                    onProgress(OPERATION_STAGES.verifyingMesh.label, 'Waiting for Adobe');
+                    onProgress(OPERATION_STAGES.buildingMesh.label);
                     return { success: true, data: {} };
                 }
             );
 
             await linkExistingMesh(buildContext(), linkedConfig);
 
+            // One step, 'Deploying the mesh'; the deploy's own stages are the line under it.
+            const deploying = OPERATION_STAGES.deployingMesh.label;
+            expect(progressTracker).toHaveBeenCalledWith(deploying, 78, 'Updating the existing mesh');
             expect(progressTracker).toHaveBeenCalledWith(
-                'Deploying API Mesh',
+                deploying,
                 78,
-                'Uploading schema'
+                'Checking the mesh is live: Waiting for Adobe'
             );
-            expect(progressTracker).toHaveBeenCalledWith(
-                'Deploying API Mesh',
-                78,
-                'Verifying mesh'
-            );
+            expect(progressTracker).toHaveBeenCalledWith(deploying, 78, 'Building the mesh');
         });
     });
 

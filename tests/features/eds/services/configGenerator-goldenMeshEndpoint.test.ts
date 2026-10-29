@@ -17,10 +17,8 @@
  * parsed JSON. If any case diverges, DO NOT adjust this test — fix the read.
  */
 
-import {
-    generateConfigJson,
-    buildConfigGeneratorParams,
-} from '@/features/eds/services/configGenerator';
+import { generateConfigJson } from '@/features/eds/services/configGenerator';
+import { buildConfigGeneratorParams } from '@/features/eds/services/storefrontConfigParams';
 import {
     PAAS_GRAPHQL_ENDPOINT,
     PAAS_CATALOG_SERVICE_ENDPOINT,

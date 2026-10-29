@@ -21,6 +21,84 @@ function project(overrides: Partial<Project> = {}): Project {
     return createMockProject({ name: 'p', path: '/p', ...overrides });
 }
 
+describe('resolveDesiredApis — narrowed to ONE component (AB-23)', () => {
+    /**
+     * A component with a workspace of its own must not have the project's whole
+     * union subscribed to that workspace's credential: each extra is a product
+     * profile attached to a credential nothing there uses, and the Commerce one
+     * is the attach step that has been fragile.
+     */
+    it("returns only that component's picks", () => {
+        const p = project({
+            componentApiPicks: {
+                'erp-sync': ['AssetsSDK', 'FireflySDK'],
+                'starter-kit': ['CloudIntegrationSDK'],
+            },
+        });
+
+        expect(resolveDesiredApis(p, 'erp-sync').sort()).toEqual(['AssetsSDK', 'FireflySDK']);
+    });
+
+    /**
+     * Their owner is unrecoverable by construction, so leaving them out of a NEW
+     * workspace would silently drop an API an SC added by hand, with no way to
+     * tell which component wanted it.
+     */
+    it('carries the UNATTRIBUTED picks along with every component', () => {
+        const p = project({
+            componentApiPicks: {
+                'erp-sync': ['AssetsSDK'],
+                [UNATTRIBUTED_PICKS_KEY]: ['LegacyPickSDK'],
+            },
+        });
+
+        expect(resolveDesiredApis(p, 'erp-sync').sort()).toEqual(['AssetsSDK', 'LegacyPickSDK']);
+    });
+
+    it('answers just the unattributed ones for a component with no picks', () => {
+        const p = project({
+            componentApiPicks: {
+                'erp-sync': ['AssetsSDK'],
+                [UNATTRIBUTED_PICKS_KEY]: ['LegacyPickSDK'],
+            },
+        });
+
+        expect(resolveDesiredApis(p, 'starter-kit')).toEqual(['LegacyPickSDK']);
+    });
+
+    it('answers empty for an unknown component when nothing is unattributed', () => {
+        const p = project({ componentApiPicks: { 'erp-sync': ['AssetsSDK'] } });
+
+        expect(resolveDesiredApis(p, 'never-heard-of-it')).toStrictEqual([]);
+    });
+
+    /**
+     * Narrowing ADDS fewer, it never removes: `buildSubscriptionList` carries every
+     * current subscription forward with its profiles since 2026-09-19, and a code
+     * leaves only when a caller names it in `removing`. The empty answer above is
+     * therefore safe — which was NOT true before that merge landed.
+     */
+    it('CONTROL: without a component id the union is unchanged', () => {
+        const p = project({
+            componentApiPicks: {
+                'erp-sync': ['AssetsSDK'],
+                'starter-kit': ['CloudIntegrationSDK'],
+            },
+        });
+
+        expect(resolveDesiredApis(p).sort()).toEqual(['AssetsSDK', 'CloudIntegrationSDK']);
+    });
+
+    // The keyed map wins over the legacy field, so a migrated project narrows too;
+    // one that has NOT migrated has no attribution to narrow by and reports its
+    // whole flat list, which is the only honest answer.
+    it('falls back to the whole legacy list when no keyed map exists', () => {
+        const p = project({ additionalConsoleApis: ['AssetsSDK', 'FireflySDK'] });
+
+        expect(resolveDesiredApis(p, 'erp-sync').sort()).toEqual(['AssetsSDK', 'FireflySDK']);
+    });
+});
+
 describe('resolveDesiredApis', () => {
     it("unions every component's picks, deduped and stable", () => {
         const p = project({
@@ -210,5 +288,50 @@ describe('applyDesiredApis — editing the union without losing attribution', ()
         );
 
         expect(next).toEqual({ [UNATTRIBUTED_PICKS_KEY]: ['SharedSDK', 'LegacySDK', 'NewSDK'] });
+    });
+});
+
+// Found 2026-09-21 and fixed on the owner's word: the project's workspace was handed
+// the picks of integrations living in workspaces of their own, so Production held
+// APIs nothing in it uses. The project-wide list is now the project workspace's.
+describe('the project-wide list leaves out integrations with a workspace of their own', () => {
+    const OWN = { id: 'ws-erp', name: 'Northwind-ERP' };
+    const record = (workspace?: typeof OWN) => ({
+        kind: 'integration' as const,
+        status: 'deployed' as const,
+        source: { owner: 'o', repo: 'r' },
+        ...(workspace ? { workspace } : {}),
+    });
+    const bodea = () =>
+        project({
+            appBuilderComponents: { 'erp-integration': record(OWN), 'firefly-app': record() },
+            componentApiPicks: {
+                'erp-integration': ['commerceeventing'],
+                'firefly-app': ['FireflySDK'],
+                [UNATTRIBUTED_PICKS_KEY]: ['CCAPI'],
+            },
+        });
+
+    it('resolves the project workspace without them', () => {
+        expect(resolveDesiredApis(bodea()).sort()).toEqual(['CCAPI', 'FireflySDK']);
+    });
+
+    it('CONTROL: asked for that integration, its picks are still there', () => {
+        expect(resolveDesiredApis(bodea(), 'erp-integration').sort()).toEqual(['CCAPI', 'commerceeventing']);
+    });
+
+    it("keeps their picks untouched when the project's list is edited", () => {
+        expect(applyDesiredApis(bodea(), ['FireflySDK'])).toEqual({
+            'erp-integration': ['commerceeventing'],
+            'firefly-app': ['FireflySDK'],
+        });
+    });
+
+    it("records a project-workspace pick of the same code as the project's own", () => {
+        expect(applyDesiredApis(bodea(), ['FireflySDK', 'commerceeventing'])).toEqual({
+            'erp-integration': ['commerceeventing'],
+            'firefly-app': ['FireflySDK'],
+            [UNATTRIBUTED_PICKS_KEY]: ['commerceeventing'],
+        });
     });
 });

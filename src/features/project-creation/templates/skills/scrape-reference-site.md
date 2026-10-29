@@ -52,7 +52,7 @@ Choose this when the user prefers to stay in the IDE, lacks Mod Agent access yet
    - `browser_take_screenshot` at 1440px and 375px viewports.
    - `browser_evaluate` to dump computed styles via `getComputedStyle` for major sections.
    - `browser_network_requests` to capture font URLs.
-4. Save the captured bundle to `.scraped/<domain>/` in the project. (The project's `.gitignore` excludes `.scraped/` so these don't get committed.)
+4. Save the captured bundle to `.scraped/<domain>/` at the project root. (The project root is not a git repository, so these are not committed. Never save them inside `components/`: the storefront folder there commits every file automatically and pushes it to GitHub.)
 5. Hand off to:
    - `commerce-block-mapper` for PDP/PLP block decomposition
    - `header-nav-footer` for site chrome blocks

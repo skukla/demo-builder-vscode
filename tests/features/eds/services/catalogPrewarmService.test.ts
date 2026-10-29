@@ -9,7 +9,7 @@
  * NEVER throws to the caller. These tests pin that contract.
  */
 
-import { pickSampleSku, prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
+import { prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
 import {
     catalogPage,
     makeAccsProject,
@@ -247,11 +247,10 @@ describe('prewarmCatalog — happy path', () => {
         );
     });
 
-    it('underscore-escapes SKUs with spaces/special chars so the path matches getProductLink (ADR-007)', async () => {
-        // A prose SKU (spaces) must be encoded with the same _HH scheme the
-        // storefront's getProductLink uses, or the prewarmed/published path
-        // won't match the link the browser requests. Raw spaces would also be
-        // CDN-rejected by aem.live. urlKey is sanitized like sanitizeName.
+    it('cleans SKUs with spaces/underscores the way Helix and getProductLink do (ADR-024)', async () => {
+        // Helix stores every published page under a cleaned path, and the
+        // storefront's canonical getProductLink links to that same path. Any
+        // other spelling publishes a page no link reaches.
         (global.fetch as jest.Mock)
             .mockResolvedValueOnce({
                 ok: true,
@@ -261,7 +260,7 @@ describe('prewarmCatalog — happy path', () => {
                             items: [
                                 {
                                     productView: {
-                                        sku: 'Yale UNOplus-Series A',
+                                        sku: 'Yale UNOplus_Series A',
                                         urlKey: 'CMLodestar',
                                     },
                                 },
@@ -283,7 +282,7 @@ describe('prewarmCatalog — happy path', () => {
             mockLogger
         );
 
-        const expectedPath = '/products/cmlodestar/yale_20unoplus-series_20a';
+        const expectedPath = '/products/cmlodestar/yale-unoplus-series-a';
         expect(publisher.previewAndPublishPage).toHaveBeenCalledWith(DA_ORG, DA_SITE, expectedPath);
     });
 
@@ -372,88 +371,56 @@ describe('prewarmCatalog — happy path', () => {
         const perSkuUpdates = progressCalls.filter((p) => p.current !== undefined);
         expect(perSkuUpdates).toHaveLength(2);
         expect(perSkuUpdates[1]).toEqual(expect.objectContaining({ current: 2, total: 2 }));
+        expect(perSkuUpdates.map((p) => p.message)).toStrictEqual([
+            'Warming product pages: 1 of 2 pages',
+            'Warming product pages: 2 of 2 pages',
+        ]);
     });
 });
 
-describe('pickSampleSku', () => {
+describe('prewarmCatalog — the skip reason it reports', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         global.fetch = jest.fn();
     });
 
-    it('returns the first product with a path built by the shared encoders', async () => {
-        // The path must be byte-identical to what the storefront's getProductLink
-        // produces, which is the whole point of building it with the same
-        // sanitizeUrlKey / encodeSkuForUrl rather than by hand.
-        (global.fetch as jest.Mock).mockResolvedValue(
-            catalogPage([{ sku: 'VA19-SI-NA', urlKey: 'Cronus Yoga Pant' }])
-        );
-
-        const sample = await pickSampleSku(makeAccsProject(), mockLogger);
-
-        expect(sample).toEqual({
-            sku: 'VA19-SI-NA',
-            urlKey: 'Cronus Yoga Pant',
-            path: '/products/cronus-yoga-pant/va19-si-na',
-            // No EDS repo on this fixture, so there is no served config to read.
-            scopeSource: 'manifest',
-            scopeDivergence: undefined,
-        });
-    });
-
-    it('escapes a SKU that needs it, matching the URL the storefront will emit', async () => {
-        // A SKU with a space is exactly the case ADR-007 exists for, and the case
-        // where a drifted encoder copy would produce a different URL.
-        (global.fetch as jest.Mock).mockResolvedValue(
-            catalogPage([{ sku: 'AB 12/CD', urlKey: 'Widget' }])
-        );
-
-        const sample = await pickSampleSku(makeAccsProject(), mockLogger);
-
-        expect(sample?.path).toBe('/products/widget/ab_2012_2fcd');
-    });
-
-    it('issues no POST to prepublish-pdp — this probe must not publish', async () => {
-        // The control on read-only-ness. The GraphQL enumeration IS a POST, so
-        // assert on the destination rather than the verb.
-        (global.fetch as jest.Mock).mockResolvedValue(catalogPage([{ sku: 'S1', urlKey: 'u1' }]));
-
-        await pickSampleSku(makeAccsProject(), mockLogger);
-
-        for (const [url] of (global.fetch as jest.Mock).mock.calls) {
-            expect(String(url)).not.toContain('prepublish-pdp');
-        }
-        expect(global.fetch).toHaveBeenCalledTimes(1);
-    });
-
-    it('returns undefined for a non-ACCS backend', async () => {
-        const paas = makeAccsProject({
+    it('names the backend it refused to prewarm', async () => {
+        // The reason reaches the setup summary, so "non-ACCS backend" alone
+        // leaves the reader guessing which backend they actually have.
+        const paas = createMockProject({
+            ...makeAccsProject(),
             componentSelections: { backend: 'adobe-commerce-paas' },
         });
 
-        expect(await pickSampleSku(paas, mockLogger)).toBeUndefined();
-        expect(global.fetch).not.toHaveBeenCalled();
+        const result = await prewarmCatalog(
+            paas,
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            makePublisher(),
+            mockLogger,
+        );
+
+        expect(result.skipReason).toBe('non-ACCS backend (paas)');
     });
 
-    it('returns undefined when the catalog is empty', async () => {
-        (global.fetch as jest.Mock).mockResolvedValue(catalogPage([]));
+    it('announces the enumeration step before it starts', async () => {
+        (global.fetch as jest.Mock).mockResolvedValueOnce(catalogPage([{ sku: 'SKU1', urlKey: 'orchard' }]));
+        const onProgress = jest.fn();
 
-        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
-    });
+        await prewarmCatalog(
+            makeAccsProject(),
+            ACCS_OVERLAY,
+            DA_ORG,
+            DA_SITE,
+            makePublisher(),
+            mockLogger,
+            onProgress,
+        );
 
-    it('returns undefined when Catalog Service is down', async () => {
-        (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 503 });
-
-        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
-    });
-
-    it('returns undefined on GraphQL errors rather than throwing', async () => {
-        (global.fetch as jest.Mock).mockResolvedValue({
-            ok: true,
-            status: 200,
-            json: async () => ({ errors: [{ message: 'boom' }] }),
+        expect(onProgress).toHaveBeenCalledWith({
+            operation: 'catalog-prewarm',
+            message: 'Warming product pages: Reading the catalog',
         });
-
-        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
     });
 });

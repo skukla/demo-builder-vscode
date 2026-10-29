@@ -2,16 +2,16 @@
  * appBuilderComponentHandlers — the refusals and the fallbacks.
  *
  * Split from the main handler suite for size; this one holds the paths a project
- * only reaches when something is missing or already there. Two of them are gates
- * against a silent overwrite and are worth stating plainly:
+ * only reaches when something is missing or already there. One of them is a gate
+ * against a silent overwrite and is worth stating plainly:
  *
  *   the same-id gate      an id is simultaneously the map slot, the clone folder
  *                         and the OpenWhisk package, so a second add REPLACES the
  *                         first on Runtime rather than sitting beside it
- *   the same-source gate  extension-layout apps ship FIXED package names, so two
- *                         copies collide even under different ids — the scan is
- *                         over owner AND repo AND a different id, and dropping any
- *                         one of the three either misses a real clash or invents one
+ *
+ * A same-SOURCE gate stood beside it (extension-layout apps ship fixed package
+ * names, so two copies in ONE workspace collide) until every add got a workspace
+ * of its own (AB-23), which removed the collision it guarded.
  *
  * The rest are fallbacks: a project with no selections, an entry with no name, a
  * runner failure with no message. Each is asserted on what a collaborator is
@@ -22,6 +22,7 @@ import {
     ERP_ENTRY,
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
+    handleRedeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
     mockAddAppBuilderComponent,
@@ -29,6 +30,7 @@ import {
     mockBuildRunnerDepsContext,
     mockDeployAppBuilderComponent,
     mockEnsureAdobeIOAuth,
+    mockGetAppBuilderComponentCatalog,
     mockGetAppBuilderComponentEntry,
     mockRemoveAppBuilderComponent,
     mockSendAppBuilderComponentStatusUpdate,
@@ -37,6 +39,9 @@ import {
     setupMocks,
     vscodeMock,
 } from './appBuilderComponentHandlers.testUtils';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+// After the shared setup, whose jest.mock calls must be in place before this loads.
+import { addWithSteps } from '@/features/dashboard/handlers/appBuilderComponentAdd';
 import type { AppBuilderComponentState } from '@/types/base';
 
 beforeEach(() => {
@@ -125,7 +130,9 @@ describe('the same-id gate', () => {
         ).resolves.toMatchObject({ success: true });
     });
 
-    it('names the EXISTING entry by its display name when it refuses', async () => {
+    // AB-23: a project may hold two of a kind, each in its own workspace. Adding a
+    // catalog entry the project already has adds a numbered copy instead of refusing.
+    it('adds a numbered copy when the id is taken, remembering the entry it came from', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: { 'erp-sync': deployed('acme', 'erp-sync') },
         });
@@ -133,90 +140,77 @@ describe('the same-id gate', () => {
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
-        expect(result.error).toContain('"ERP Sync"');
-        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
-    });
-});
-
-describe('the same-source gate on extension-layout apps', () => {
-    const EXTENSION_ENTRY = {
-        ...ERP_ENTRY,
-        id: 'shell-two',
-        name: 'Shell Two',
-        layout: 'extension' as const,
-        source: { owner: 'acme', repo: 'shell' },
-    };
-
-    beforeEach(() => {
-        mockGetAppBuilderComponentEntry.mockReturnValue(EXTENSION_ENTRY);
+        expect(result.success).toBe(true);
+        expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ id: 'erp-sync-2', catalogId: 'erp-sync', name: 'ERP Sync 2' }),
+            expect.anything(),
+        );
     });
 
-    it('refuses a second copy built from the same owner AND repo', async () => {
+    it('retries the first copy under its own id when its add had failed', async () => {
         const { mockContext } = setupMocks({
-            appBuilderComponents: { 'shell-one': deployed('acme', 'shell', 'Shell One') },
+            appBuilderComponents: { 'erp-sync': { ...deployed('acme', 'erp-sync'), status: 'error' } },
         });
         mockTestDeveloperPermissions(true);
 
-        const result = await handleAddAppBuilderComponent(mockContext, { id: 'shell-two' });
+        await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ id: 'erp-sync' }),
+            expect.anything(),
+        );
+    });
+
+    // AB-16: the ERP integration is added once; a second ERP is added from its card.
+    it('refuses a second add-once integration, pointing at the card action that adds another ERP', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: { 'erp-sync': deployed('acme', 'erp-sync') },
+        });
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({ ...ERP_ENTRY, addOnce: true });
+        mockGetAppBuilderComponentCatalog.mockReturnValue([
+            {
+                id: 'demo-erp',
+                name: 'ERP',
+                description: '',
+                kind: 'system',
+                boundTo: 'erp-sync',
+                systemType: 'ERP',
+                listedAs: { envVar: 'ERP_ID', adapter: 'demo-erp' },
+                source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+            },
+        ]);
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
         expect(result.success).toBe(false);
-        expect(result.error).toContain('"Shell One"');
-        expect(result.error).toContain('acme/shell');
+        expect(result.error).toContain('is already added to this project. To add another ERP, use "Add another ERP" on its card');
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
     });
 
-    it('allows the same repo under a DIFFERENT owner', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: { 'shell-one': deployed('other-org', 'shell', 'Shell One') },
-        });
-        mockTestDeveloperPermissions(true);
-
-        await expect(
-            handleAddAppBuilderComponent(mockContext, { id: 'shell-two' })
-        ).resolves.toMatchObject({ success: true });
-    });
-
-    it('allows the same owner with a DIFFERENT repo', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: { 'shell-one': deployed('acme', 'other-shell', 'Shell One') },
-        });
-        mockTestDeveloperPermissions(true);
-
-        await expect(
-            handleAddAppBuilderComponent(mockContext, { id: 'shell-two' })
-        ).resolves.toMatchObject({ success: true });
-    });
-
-    it('adds when nothing else in the project came from anywhere near it', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: { 'erp-sync': deployed('vendor', 'erp-sync', 'ERP') },
-        });
-        mockTestDeveloperPermissions(true);
-
-        await expect(
-            handleAddAppBuilderComponent(mockContext, { id: 'shell-two' })
-        ).resolves.toMatchObject({ success: true });
-    });
-
-    it('does NOT count the entry itself as its own clash on the error retry', async () => {
+    it('still refuses a second mesh, naming the one it has', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: {
-                'shell-two': { ...deployed('acme', 'shell', 'Shell Two'), status: 'error' },
+                'commerce-mesh': { kind: 'mesh', status: 'deployed', source: { owner: 'o', repo: 'm' }, name: 'API Mesh' },
             },
         });
         mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({ ...ERP_ENTRY, id: 'commerce-mesh', name: 'API Mesh', kind: 'mesh' });
 
-        // Re-adding an entry left in error is the documented recovery; a scan
-        // that matched the same id would block it.
-        await expect(
-            handleAddAppBuilderComponent(mockContext, { id: 'shell-two' })
-        ).resolves.toMatchObject({ success: true });
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'commerce-mesh' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('"API Mesh"');
+        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
     });
 });
 
-describe('the Configure route for bucket-3 inputs', () => {
-    const NEEDS_INPUT = {
+describe('an entry that needs values before it can deploy', () => {
+    const NEEDS_INPUT: AppBuilderComponentCatalogEntry = {
         ...ERP_ENTRY,
+        source: { ...ERP_ENTRY.source, branch: 'main' },
         envSchema: [{ name: 'ERP_API_KEY', type: 'secret', label: 'ERP API Key' }],
     };
 
@@ -236,6 +230,21 @@ describe('the Configure route for bucket-3 inputs', () => {
             expect.any(String),
             undefined
         );
+    });
+
+    // Read directly by an Edit's Finish (PL-75), which has no `blocked` check in
+    // front of it: a refusal must say it failed, or Finish reads it as added.
+    it('answers a failure, marked blocked, and adds nothing', async () => {
+        const { mockContext, mockProject } = setupMocks();
+
+        const result = await addWithSteps(mockContext, mockProject, NEEDS_INPUT, jest.fn());
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: expect.stringContaining('needs ERP_API_KEY before it can deploy'),
+            blocked: true,
+        });
+        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
     });
 });
 
@@ -311,11 +320,12 @@ describe('the deploy path', () => {
             'erp-sync',
             'deploying',
             expect.any(String),
-            undefined
         );
     });
 
-    it('shows the SUB-step alone in the notification when the runner supplies one', async () => {
+    // PL-59 phase 2 (owner, 2026-09-19): a notification shows the STAGE, the short
+    // set; the step is the modal's long set. It replaced "the sub-step alone" (2026-08-27).
+    it('shows the stage name in the notification, not the step', async () => {
         const { mockContext } = setupMocks({ appBuilderComponents: DEPLOYED });
         mockTestDeveloperPermissions(true);
         const report = jest.fn();
@@ -331,7 +341,7 @@ describe('the deploy path', () => {
         ) => void;
         reporter('Deploying custom integration…', 'Running aio app deploy');
 
-        expect(report).toHaveBeenCalledWith({ message: 'Running aio app deploy' });
+        expect(report).toHaveBeenCalledWith({ message: 'Deploying custom integration…' });
     });
 
     it('falls back to the top-level message when the runner supplies no sub-step', async () => {
@@ -368,7 +378,6 @@ describe('the deploy path', () => {
             'erp-sync',
             'error',
             'aio app deploy exited 1',
-            undefined
         );
     });
 
@@ -383,7 +392,6 @@ describe('the deploy path', () => {
             'erp-sync',
             'error',
             'Deployment failed',
-            undefined
         );
     });
 
@@ -397,7 +405,6 @@ describe('the deploy path', () => {
             'erp-sync',
             'deployed',
             undefined,
-            undefined
         );
     });
 
@@ -467,7 +474,6 @@ describe('the remove path', () => {
             'erp-sync',
             'deploying',
             expect.any(String),
-            undefined
         );
     });
 
@@ -542,5 +548,35 @@ describe('the rename collision domain', () => {
             error: 'AppBuilderComponent id is required',
             code: expect.any(String),
         });
+    });
+});
+
+describe('a system left behind by a failed integration add', () => {
+    // 2026-10-05: an integration add failed after its ERP deployed; redeploying the ERP
+    // alone renamed it "Acme ERP" and left it running with nothing to talk to.
+    it('refuses a system whose integration is not in the project, and says what finishes it', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'demo-erp': {
+                    kind: 'system',
+                    status: 'deployed',
+                    name: 'Justrite ERP',
+                    source: { owner: 'skukla', repo: 'demo-erp' },
+                },
+            },
+        });
+        mockGetAppBuilderComponentCatalog.mockReturnValue([
+            { id: 'demo-erp', kind: 'system', boundTo: 'erp-integration', name: 'ERP' },
+            { id: 'erp-integration', kind: 'integration', name: 'ERP Integration' },
+        ]);
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleRedeployAppBuilderComponent(mockContext, { id: 'demo-erp' });
+
+        expect(result).toEqual({
+            success: false,
+            error: 'Justrite ERP came with ERP Integration, which is not in this project. Add ERP Integration to finish — it reuses Justrite ERP.',
+        });
+        expect(mockDeployAppBuilderComponent).not.toHaveBeenCalled();
     });
 });

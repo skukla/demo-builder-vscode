@@ -54,7 +54,8 @@ import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { AGENT_PAGE_SIZE } from './projectors';
-import { phaseReporter } from '@/core/utils/agentPhaseChannel';
+import { phaseReporter, stepPhaseReporter } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
 import {
     addSiteAdmin,
@@ -304,12 +305,15 @@ export function registerSiteTools(server: McpToolServer, ctxFactory: () => Handl
             const wrongShape = refuseIfNotEds(project, 'repair_site_configuration');
             if (wrongShape) return asText(wrongShape);
 
+            // The agent hears the step by its table name, once, as every flow names
+            // it (owner, 2026-10-16); the raw lines under it are a modal's detail.
+            const step = stepPhaseReporter();
             const result = await repairSiteConfigForProject(
                 project,
                 ctx.context,
                 ctx.logger,
                 (p) => ctx.stateManager.saveProject(p),
-                phaseReporter(),
+                () => step(OPERATION_STAGES.updatingSiteConfig.label),
             );
 
             // Say what remains rather than reporting a bare success. A registration
@@ -330,7 +334,7 @@ export function registerSiteTools(server: McpToolServer, ctxFactory: () => Handl
                             "Your Adobe account holds no admin role on this site's " +
                             'configuration, so the repair was refused. Run "Demo Builder: ' +
                             'Manage Site Access": it names anyone who can add you, and when ' +
-                            'nobody is visible it opens the AEM Code Sync app on GitHub. Once ' +
+                            'nobody is visible it links to the GitHub pages that fix it. Once ' +
                             'you hold the role, the repair can be retried.',
                         resumeWith: 'get_site_access',
                     })),

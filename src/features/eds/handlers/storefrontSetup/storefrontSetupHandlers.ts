@@ -15,11 +15,11 @@
 import * as vscode from 'vscode';
 import { CleanupService } from '../../services/cleanupService';
 import { ConfigurationService } from '../../services/configService/configurationService';
+import { DaLiveOrgOperations } from '../../services/daLive/daLiveOrgOperations';
 import {
     createDaLiveTokenProvider,
     createDaLiveServiceTokenProvider,
-} from '../../services/daLive/daLiveContentOperations';
-import { DaLiveOrgOperations } from '../../services/daLive/daLiveOrgOperations';
+} from '../../services/daLive/daLiveTokenProviders';
 import { ToolManager } from '../../services/toolManager';
 import type { EdsMetadata, EdsCleanupOptions } from '../../services/types';
 import {
@@ -30,7 +30,6 @@ import {
 } from '../edsHelpers';
 import { rehydratePackageDerivedConfig } from './storefrontSetupConfigRehydration';
 import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
-import type { StorefrontSetupResult } from './storefrontSetupTypes';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -166,26 +165,6 @@ export async function handleCancelStorefrontSetup(
  * @param payload - Start payload with project and EDS config
  * @returns Success with setup results
  */
-/** What the caller should do with a finished setup run. */
-export type SetupOutcome = 'complete' | 'awaiting-github-app' | 'error';
-
-/**
- * Classify a setup result.
- *
- * Three outcomes, not two. Collapsing "stopped so the user can install the App"
- * into "failed" is what replaced the install dialog with the failure screen: the
- * dialog message is sent first, then the error message overwrote it a moment
- * later, and the resume handler could never fire.
- *
- * Decided by the flag, never by the error text — that wording changed twice in
- * one release, and matching on it would have broken silently each time.
- */
-export function classifySetupResult(result: StorefrontSetupResult): SetupOutcome {
-    if (result.success) return 'complete';
-    if (result.awaitingGitHubApp) return 'awaiting-github-app';
-    return 'error';
-}
-
 /**
  * The card's headline. PDP caveats mean product pages will not load at all;
  * an added demo's dry-check caveats mean some things may not work on this
@@ -195,6 +174,11 @@ function completionMessage(pdpBlocked: boolean, hasCaveats: boolean): string {
     if (pdpBlocked) return 'Storefront created, but product detail pages will not load.';
     if (hasCaveats) return 'Storefront created. A few things to know about this demo.';
     return 'Storefront setup completed successfully!';
+}
+
+/** The caveats after the PDP ones: what the content pipeline could not do (EDS-55). */
+function otherCaveats(result: { pipelineWarnings?: string[] }): string[] {
+    return [...(result.pipelineWarnings ?? [])];
 }
 
 export async function handleStartStorefrontSetup(
@@ -256,10 +240,10 @@ export async function handleStartStorefrontSetup(
         context.logger.info('[Storefront Setup] No mesh selected — skipping Adobe I/O auth check');
     }
 
-    // Pre-flight: Check DA.live authentication (with inline re-auth). The org
-    // arms the guard's server probe — a locally-valid token the server refuses
-    // is caught here rather than as "missing permission" 403s mid-pipeline.
-    const daLiveResult = await ensureDaLiveAuth(context, '[Storefront Setup]', edsConfig.daLiveOrg);
+    // Pre-flight: Check DA.live authentication (with inline re-auth). The guard asks
+    // IMS, so a locally-valid token IMS no longer accepts is caught here rather than
+    // as "missing permission" 403s mid-pipeline.
+    const daLiveResult = await ensureDaLiveAuth(context, '[Storefront Setup]');
     if (!daLiveResult.authenticated) {
         await context.sendMessage('storefront-setup-error', {
             message: 'DA.live authentication expired',
@@ -308,19 +292,11 @@ export async function handleStartStorefrontSetup(
             },
         );
 
-        const outcome = classifySetupResult(result);
-
-        // Awaiting installation: the install dialog is already up and the resume
-        // handler takes over from here. Emitting an error tears the dialog down
-        // and leaves the user with nothing to act on.
-        if (outcome === 'awaiting-github-app') {
-            context.logger.info(
-                '[Storefront Setup] Paused — waiting for AEM Code Sync installation',
-            );
-            return { success: false, error: result.error };
-        }
-
-        if (outcome === 'complete') {
+        // Two outcomes. There used to be a third, "awaiting the GitHub App", when
+        // a missing App ENDED the run at the install dialog; since EDS-20
+        // (2026-09-25) the run pauses inside the phase and resumes on its own, so
+        // a result is either the finished storefront or a failure to report.
+        if (result.success) {
             // "Complete" has to mean it. A storefront whose BYOM overlay never
             // registered is built, published and browsable — and cannot serve a
             // single product detail page. Reported as plain success (2026-07-28)
@@ -328,7 +304,7 @@ export async function handleStartStorefrontSetup(
             // found later. The repo URL still ships: everything except
             // PDPs works, and withholding it would be the opposite lie.
             const pdpCaveats = result.pdpCaveats ?? [];
-            const caveats = [...pdpCaveats, ...(result.demoCaveats ?? [])];
+            const caveats = [...pdpCaveats, ...otherCaveats(result)];
             const hasCaveats = caveats.length > 0;
             context.logger.info(
                 hasCaveats
@@ -342,6 +318,10 @@ export async function handleStartStorefrontSetup(
                 daLiveSite: `https://da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
                 repoOwner: result.repoOwner,
                 repoName: result.repoName,
+                ...(result.brokenLinks?.length ? { brokenLinks: result.brokenLinks } : {}),
+                // Recorded by creation on the project it makes, as brokenLinks are.
+                installedBlockLibraries: result.installedBlockLibraries,
+                storefrontBuildComplete: result.storefrontBuildComplete,
                 // Note: previewUrl/liveUrl not sent - derived from githubRepo by typeGuards
             } satisfies StorefrontSetupCompletePayload);
             return { success: true, data: result };
@@ -412,6 +392,10 @@ async function cleanupStorefrontSetupResources(
         if (!result.daLive.success && !result.daLive.skipped) {
             failures.push(`DA.live: ${result.daLive.error}`);
         }
+        // The repository went, and its code on aem.live may not have (EDS-67).
+        if (!result.siteCode.success && !result.siteCode.skipped) {
+            failures.push(`Site code: ${result.siteCode.error}`);
+        }
 
         if (failures.length > 0) {
             return { success: false, error: failures.join('; ') };
@@ -439,7 +423,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     // Both come from the cache — it builds the repo operations FROM the same
     // token service, so building them here produced a second pair with a cold
     // validation cache (D-2).
-    const { repoOperations: githubRepoOps } = getGitHubServices(context.context.secrets);
+    const { repoLifecycle: githubRepoOps, fileOperations } = getGitHubServices(context.context.secrets);
 
     // Create TokenProvider adapter from AuthenticationService if available
     const tokenProvider = createDaLiveTokenProvider(context.authManager);
@@ -457,6 +441,9 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
         githubRepoOps,
         daLiveOrgOps,
         toolManager,
+        // A deleted repository's code on aem.live goes after it (EDS-67): the files are
+        // read first, and the DA.live IMS token is the one the code bus DELETE accepts.
+        { files: fileOperations, tokenProvider: daLiveTokenProvider },
         context.logger,
         configurationService,
     );

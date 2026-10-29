@@ -13,6 +13,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
+    boilerplateOfZip,
     cardFromZip,
     classifyZipStorefront,
     createRepositoryFromZip,
@@ -23,13 +24,14 @@ import {
 import { getGitHubServices } from './edsHelpers';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getRepositoryNameError } from '@/core/validation/normalizers';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { rememberAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
+import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { StorefrontZipProgressPayload } from '@/types/webviewPayloads';
 import type { ImportStorefrontZipRequest, ImportStorefrontZipResult, UseBundleSetupRequest } from '@/types/webviewRequests';
 
 const PICKER_TITLE = 'Add a storefront from a zip file';
-const WIZARD_PANEL = 'demoBuilderWizard';
 
 async function pickZip(): Promise<string | undefined> {
     const picked = await vscode.window.showOpenDialog({
@@ -91,11 +93,11 @@ export async function handleImportStorefrontZip(
     // Public unless asked otherwise (owner, 2026-09-14): a demo package is for sharing.
     const isPrivate = request?.isPrivate ?? false;
 
-    const { repoOperations, fileOperations } = getGitHubServices(context.context.secrets);
+    const { repoLifecycle, treeCommits } = getGitHubServices(context.context.secrets);
     try {
         context.logger.info(`[Zip] ${zipPath}: ${unpacked.files.size} files, ${unpacked.dropped} dropped${unpacked.setup ? ', setup included' : ''}`);
         const created = await createRepositoryFromZip(
-            { repoOps: repoOperations, fileOps: fileOperations, logger: context.logger, onProgress: report },
+            { repoOps: repoLifecycle, fileOps: treeCommits, logger: context.logger, onProgress: report },
             unpacked.files,
             { repoName, isPrivate, leftOut: unpacked.dropped },
         );
@@ -154,7 +156,7 @@ export async function handleUseBundleSetup(context: HandlerContext, request?: Us
     if (!request?.setup || !request.demo) return { success: false, error: "The bundle's setup and the demo it belongs to are required" };
     const importedSettings = setupForCard(request.setup, request.demo);
     context.logger.info(`[Zip] Starting a project from the bundle's setup on ${request.demo.source.owner}/${request.demo.source.repo}`);
-    BaseWebviewCommand.disposePanel(WIZARD_PANEL);
+    BaseWebviewCommand.disposePanel(WIZARD_WEBVIEW_ID);
     await vscode.commands.executeCommand('demoBuilder.createProject', { importedSettings, sourceDescription: 'the demo bundle' });
     return { success: true };
 }
@@ -187,9 +189,9 @@ export async function importDemoBundle(context: HandlerContext, zipPath: string)
     let settings = unpacked.setup;
     try {
         if (hasStorefront) {
-            const { repoOperations, fileOperations } = getGitHubServices(context.context.secrets);
+            const { repoLifecycle, treeCommits } = getGitHubServices(context.context.secrets);
             const created = await createRepositoryFromZip(
-                { repoOps: repoOperations, fileOps: fileOperations, logger: context.logger },
+                { repoOps: repoLifecycle, fileOps: treeCommits, logger: context.logger },
                 unpacked.files,
                 { repoName: suggestRepoName(unpacked.rootName, 'storefront'), isPrivate: false },
             );
@@ -199,12 +201,14 @@ export async function importDemoBundle(context: HandlerContext, zipPath: string)
                 name: created.repo,
                 source: { owner: created.owner, repo: created.repo, branch: created.defaultBranch },
                 storefrontKind: 'eds',
+                ...boilerplateOfZip(unpacked.files),
                 createdFromZip: true,
             };
             await rememberAddedDemo(card);
             context.logger.info(`[Zip] Bundle: ${created.fullName} created and "${card.name}" added to the Welcome step`);
             if (settings) settings = setupForCard(settings, card);
-            else void vscode.window.showInformationMessage(`"${card.name}" is on your Welcome step now.`);
+            // A success: a ✅ line that goes by itself (owner, 2026-10-15).
+            else showSuccessInStatusBar(`"${card.name}" is on your Welcome step now`);
         }
     } catch (error) {
         context.logger.error(`[Zip] Bundle import failed: ${(error as Error).message}`);

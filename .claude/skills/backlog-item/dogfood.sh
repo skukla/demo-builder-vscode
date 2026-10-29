@@ -196,6 +196,83 @@ denies "epics excluded from stale" "AI-2 " -- "${T[@]}" stale
 "${T[@]}" set EDS-3 status=backlog >/dev/null 2>&1
 
 echo
+echo "LEFTOVERS — a finished item whose own body still names work"
+# PL-39. Nobody re-opens a finished item, so a remainder written inside one is
+# invisible to `next`, to `stale` and to `check`. Four planted items, because the
+# command has four ways to be wrong: miss a real remainder, fire on history, fire
+# on a remainder that already has a home (a child), fire on unfinished work.
+plant() {   # plant <id> <slug> <status> <body sentence...>
+  local id="$1" slug="$2" status="$3"; shift 3
+  "${T[@]}" new "$slug" --id "$id" --area platform >/dev/null 2>&1
+  printf '\n%s\n' "$*" >> "$(ls .rptc/backlog/*-"$slug".md)"
+  "${T[@]}" set "$id" "status=$status" >/dev/null 2>&1
+}
+plant ZZ-1 leftover-present  shipped "The remaining work is the legacy read path, which is still load-bearing."
+plant ZZ-2 leftover-history  shipped "The remaining work was finished in the March release."
+plant ZZ-3 leftover-with-child built "Not yet done: the second exporter. It is left for the child item."
+plant ZZ-4 leftover-child    backlog "The second exporter."
+"${T[@]}" set ZZ-4 parent=ZZ-3 >/dev/null 2>&1
+plant ZZ-5 leftover-unfinished active "The remaining work is most of it."
+# A remainder split across a hard-wrapped line is still one sentence.
+plant ZZ-6 leftover-wrapped  built "The remaining
+work was finished in the April release."
+exits 0 "check still passes with the planted items"   -- "${T[@]}" check
+exits 0 "leftovers runs, and never fails the build"   -- "${T[@]}" leftovers
+says   "POSITIVE CONTROL: a present-tense remainder IS named" "ZZ-1 " -- "${T[@]}" leftovers
+says   "  ...with the sentence that says so" "legacy read path" -- "${T[@]}" leftovers
+denies "NEGATIVE CONTROL: a remainder told as history is not" "ZZ-2 " -- "${T[@]}" leftovers
+denies "  ...nor one whose history wraps onto the next line" "ZZ-6 " -- "${T[@]}" leftovers
+denies "an item with a child is not (the remainder has a home)" "ZZ-3 " -- "${T[@]}" leftovers
+denies "an unfinished item is not (that is what next is for)" "ZZ-5 " -- "${T[@]}" leftovers
+says   "the control line says what it skipped" "have a child or superseded-by" -- "${T[@]}" leftovers
+exits 0 "leftovers --json parses as JSON"             -- bash -c '"$@" leftovers --json | node -e "JSON.parse(require(\"fs\").readFileSync(0))"' _ "${T[@]}"
+# Losing the child puts the parent back in the report: the exclusion is the child, not luck.
+"${T[@]}" set ZZ-4 parent=ZZ-1 >/dev/null 2>&1
+says   "  ...and losing its child makes it reported" "ZZ-3 " -- "${T[@]}" leftovers
+rm -f .rptc/backlog/*-leftover-*.md
+exits 0 "check passes with the planted items gone"    -- "${T[@]}" check
+
+echo
+echo "READINESS — built items against the release test plan's Result column"
+# One planted item per bucket, because each bucket has its own way to be wrong.
+plant ZZ-7  ready-passed   built "Passed its row."
+plant ZZ-8  ready-failed   built "Failed its row."
+plant ZZ-9  ready-unrun    built "Has a row nobody ran."
+plant ZZ-10 ready-livelog  built "No row."
+plant ZZ-11 ready-norow    built "No row and no live log."
+plant ZZ-12 ready-owed     built "No row."
+plant ZZ-13 ready-oldtable built "Its only row is in a table with no Result column."
+"${T[@]}" log ZZ-10 "LIVE on the scratch project: it worked" >/dev/null 2>&1
+"${T[@]}" log ZZ-12 "Built. Live check owed: run it on the scratch project" >/dev/null 2>&1
+exits 1 "readiness refuses when there is no plan to read" -- "${T[@]}" readiness
+mkdir -p .rptc/handoff
+cat > .rptc/handoff/2026-01-01-release-test-plan.md <<'PLAN'
+| | Do this | Expect | Result |
+|---|---|---|---|
+| ★ | a | b [ZZ-7] | pass |
+| | a | b [ZZ-8] | fail: the button is missing |
+| | a | b [ZZ-8, ZZ-13x] | pass |
+| ★ | a | b [ZZ-9] |  |
+
+| | Do this | Expect |
+|---|---|---|
+| | a | b [ZZ-13] |
+PLAN
+RJ() { "${T[@]}" readiness --json | node -e "const r=JSON.parse(require('fs').readFileSync(0));const b=$1;process.stdout.write(b)"; }
+exits 0 "readiness runs, and never fails the build"   -- "${T[@]}" readiness
+says   "POSITIVE CONTROL: a passed row makes its item ready" "ZZ-7:plan" -- RJ "r.ready.map(e=>e.id+':'+e.by).join()"
+says   "a fail wins over a pass on another row"       "^ZZ-8$" -- RJ "r.failed.map(e=>e.id).join()"
+says   "a blank Result is unchecked"                  "ZZ-9" -- RJ "r.unchecked.map(e=>e.id).join()"
+says   "a row in a table with no Result column is unchecked, never passed" "ZZ-13" -- RJ "r.unchecked.map(e=>e.id).join()"
+says   "a live log line with no row counts as ready" "ZZ-10:live log" -- RJ "r.ready.map(e=>e.id+':'+e.by).join()"
+says   "NEGATIVE CONTROL: 'Live check owed' is not a live run" "ZZ-12" -- RJ "r.noRow.map(e=>e.id).join()"
+says   "no row and no live log is reported as such"   "ZZ-11" -- RJ "r.noRow.map(e=>e.id).join()"
+says   "an unchecked ★ row blocks the cut"            "not ready" -- "${T[@]}" readiness
+says   "the control line counts the Result columns"   "2 table(s), 1 with a Result column, 5 row(s)" -- "${T[@]}" readiness
+rm -rf .rptc/handoff; rm -f .rptc/backlog/*-ready-*.md
+exits 0 "check passes with the planted items gone"    -- "${T[@]}" check
+
+echo
 echo "UNLOGGED — commits that name an item but never reached its record"
 # This needs a REAL git repo, so the sandbox becomes one. Mocking git here would
 # test the mock: the thing under test is trailer parsing against `git log` output.

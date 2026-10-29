@@ -35,7 +35,7 @@ import './styles/ai.css';
 // .dashboard-* rules, moved out of utilities.css by the same migration.
 // This is the ONLY entry whose graph reaches a component using them.
 import './styles/dashboard.css';
-// The Export dialog and its parts (More menu).
+// The Export dialog and its parts (the Share row's Export tile).
 import './styles/export-dialog.css';
 // .modal-* — the shared Modal shell.
 import '@/core/ui/styles/modal.css';
@@ -56,6 +56,13 @@ import '@/core/ui/styles/inline-controls.css';
 // the bundles whose entry imports it).
 import '@/features/project-creation/ui/styles/add-demo.css';
 import '@/features/project-creation/ui/styles/add-integration-flow.css';
+// CheckboxRow, the API picker's rows (ADR-017 §6).
+import '@/core/ui/styles/checkbox-row.css';
+// WorkRow, the progress modal's rows of what a run changed (ADR-017 §6).
+import '@/core/ui/styles/work-row.css';
+// SectionLabel and LeadText (ADR-017 §6).
+import '@/core/ui/styles/modal-text.css';
+import '@/core/ui/styles/fact-list.css';
 import '@/features/project-creation/ui/styles/build-summary.css';
 import '@/features/project-creation/ui/styles/choice-cards.css';
 

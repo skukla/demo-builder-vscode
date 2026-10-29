@@ -4,7 +4,8 @@ kind: epic
 area: ai
 needs: []
 value: high
-status: active
+status: gated
+waiting-on: parked by the owner (2026-10-03)
 ---
 # Can you see what the agent is doing?
 
@@ -13,7 +14,8 @@ cannot tell what is running."* Not which MCP server, not which tool, not which
 phase of a long operation.
 
 **Partly shipped.** MCP progress notifications narrate each tool call into the
-terminal, and `toolNarration.ts` gives 105 tools authored plain-English phrases.
+terminal, and `toolNarration.ts` gives every tool an authored plain-English phrase
+(121 of them on 2026-09-23; the count moves with the surface, the coverage does not).
 What is missing is the summary and anything interactive — MCP only lets us speak
 in response to a tool call, and we never learn that a turn ended.
 
@@ -47,3 +49,4 @@ producers' hands — do not close it on the activity channel alone.
 
 - 2026-08-28  Owner clarified the aim: this epic is the Prompt Workbench's visibility layer. beta.145's activity record + call tags are its foundation; the view components are parked on feature/evaluation-mode-dry-run (AI-3b). Stays active — not closable on the channel alone.
 - 2026-08-28  docs(backlog): AI-2 aims at the Prompt Workbench's visibility layer (`c1de7e44d`)
+- 2026-10-03  Parked 2026-10-03 (owner): the Prompt Workbench is neither built nor closed; nothing moves until the owner picks it up.

@@ -8,9 +8,16 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { ProjectActions } from './components/ProjectActionsMenu';
+import { UpdatesModal } from './components/UpdatesModal';
+import { useUpdatesModal } from './hooks/useUpdatesModal';
 import { ProjectsDashboard } from './ProjectsDashboard';
+import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
+import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
+import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { COPY_SETTINGS_OPERATION_ID, deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
 import type {
@@ -37,12 +44,27 @@ import '@/core/ui/styles/utilities.css';
 // them — the family looked cross-cutting on a bare `project-` prefix match, which
 // was catching file paths and prose rather than class names.
 import './styles/project-cards.css';
+// The Updates modal's project headings (PL-80). This entry alone draws it.
+import './styles/updates-modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
+// The progress modal a reset narrates into is hosted here now (PL-59): a
+// stylesheet reaches only the bundles whose entry imports it (ADR-017 §6).
+import '@/core/ui/styles/modal.css';
 // .inline-notice-*, .inline-rename-* — two small shared components.
 import '@/core/ui/styles/inline-controls.css';
+// .add-card — the "New project" card at the grid's end, which opens the New menu
+// (PL-62). A stylesheet reaches only the bundles whose entry imports it (ADR-017 §6).
+import '@/core/ui/styles/add-card.css';
+// CheckboxRow, the Updates modal's rows (PL-80, ADR-017 §6).
+import '@/core/ui/styles/checkbox-row.css';
+// WorkRow, the Updates modal's run (ADR-017 §6).
+import '@/core/ui/styles/work-row.css';
+// SectionLabel and LeadText (ADR-017 §6).
+import '@/core/ui/styles/modal-text.css';
+import '@/core/ui/styles/disclosure-toggle.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts
@@ -56,7 +78,9 @@ function ProjectsDashboardApp() {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-    const [initialViewMode, setInitialViewMode] = useState<'cards' | 'rows'>('cards');
+    // Destructured to the hook's STABLE callbacks — the object itself is rebuilt each
+    // render, and fetchProjects/the config listener depend on what they call.
+    const { viewMode, choose: chooseViewMode, adopt: adoptViewMode } = useViewModePreference('projects');
     const [runningProjectPath, setRunningProjectPath] = useState<string | undefined>(undefined);
     // Track whether initial fetch was triggered (prevent StrictMode double-fetch)
     const initialFetchTriggeredRef = useRef(false);
@@ -85,7 +109,7 @@ function ProjectsDashboardApp() {
                 projectList = response.data.projects;
                 // View mode comes from backend (includes session override if set)
                 if (response.data.projectsViewMode) {
-                    setInitialViewMode(response.data.projectsViewMode);
+                    adoptViewMode(response.data.projectsViewMode);
                 }
                 // Update running project path from response
                 setRunningProjectPath(response.data.runningProjectPath);
@@ -99,7 +123,7 @@ function ProjectsDashboardApp() {
             setIsLoading(false);
             setIsRefreshing(false);
         }
-    }, []);
+    }, [adoptViewMode]);
 
     // Fetch projects on mount and listen for messages
     useEffect(() => {
@@ -114,7 +138,7 @@ function ProjectsDashboardApp() {
         const unsubscribeConfig = webviewClient.onMessage('configChanged', (data) => {
             const configData = data as Partial<ConfigChangedPayload> | undefined;
             if (configData?.projectsViewMode) {
-                setInitialViewMode(configData.projectsViewMode);
+                adoptViewMode(configData.projectsViewMode);
             }
         });
 
@@ -143,7 +167,7 @@ function ProjectsDashboardApp() {
             unsubscribeDeleted();
             unsubscribeDemoState();
         };
-    }, [fetchProjects]);
+    }, [fetchProjects, adoptViewMode]);
 
     // Handle refresh
     const handleRefresh = useCallback(() => {
@@ -178,16 +202,6 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    // Handle copy from existing project
-    const handleCopyFromExisting = useCallback(async () => {
-        try {
-            await webviewClient.postMessage('copyFromExisting');
-            // QuickPick will show, then wizard opens - handled by extension
-        } catch (error) {
-            console.error('Failed to copy from existing:', error);
-        }
-    }, []);
-
     // Handle import from file
     const handleImportFromFile = useCallback(async () => {
         try {
@@ -210,26 +224,46 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    // Handle delete project
-    const handleDeleteProject = useCallback(
-        async (project: Project) => {
-            try {
-                const response = await webviewClient.request<{
-                    success: boolean;
-                    data?: { success: boolean; error?: string };
-                }>('deleteProject', {
-                    projectPath: project.path,
-                });
+    // Both kebab actions that take minutes — delete and reset — narrate into this
+    // screen's one progress modal (PL-59).
+    const operations = useOperationRunner();
+    const startOperation = operations.startWhenItBegins;
+    // Check for Updates (PL-80): its list, and then its run, in the Updates modal.
+    const refreshAfterUpdates = useCallback(() => void fetchProjects(true), [fetchProjects]);
+    const updates = useUpdatesModal(refreshAfterUpdates);
 
-                // Refresh projects list if deletion was successful
-                if (response?.success && response.data?.success) {
-                    fetchProjects(true);
-                }
-            } catch (error) {
-                console.error('Failed to delete project:', error);
-            }
+    // Copy from a project: the modal asks which one, then the wizard opens with
+    // its settings (picker-to-modal).
+    const handleCopyFromExisting = useCallback(() => {
+        startOperation({
+            id: COPY_SETTINGS_OPERATION_ID,
+            name: 'settings',
+            message: 'copyFromExisting',
+            title: 'Copy settings from a project',
+            failureTitle: "Couldn't copy the settings",
+            successTitle: 'Settings copied',
+        });
+    }, [startOperation]);
+
+    // Handle delete project — narrated in this screen's progress modal, which
+    // opens once the run reports: VS Code asks to confirm first, and for an EDS
+    // project it also asks which cloud resources to take with it (PL-59 R1).
+    const handleDeleteProject = useCallback(
+        (project: Project) => {
+            startOperation(
+                {
+                    id: deleteOperationId(project.name),
+                    name: project.name,
+                    message: 'deleteProject',
+                    title: `Deleting ${getProjectDisplayName(project)}`,
+                    failureTitle: `Couldn't delete ${getProjectDisplayName(project)}`,
+                    successTitle: `${getProjectDisplayName(project)} deleted`,
+                    payload: { projectPath: project.path },
+                },
+                () => fetchProjects(true),
+            );
         },
-        [fetchProjects],
+        [startOperation, fetchProjects],
     );
 
     // Handle start demo
@@ -306,26 +340,24 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    // Handle reset project (all project types)
+    // Handle reset project (all project types) — narrated in this screen's
+    // progress modal (PL-59 R1), which opens once the run starts reporting: VS
+    // Code confirms first, and may ask about sample data.
     const handleResetProject = useCallback(
-        async (project: Project) => {
-            try {
-                const response = await webviewClient.request<{
-                    success: boolean;
-                    cancelled?: boolean;
-                }>('resetProject', {
-                    projectPath: project.path,
-                });
-
-                // Refresh projects list if reset was successful
-                if (response?.success) {
-                    fetchProjects(true);
-                }
-            } catch (error) {
-                console.error('Failed to reset project:', error);
-            }
+        (project: Project) => {
+            startOperation({
+                id: resetOperationId(project.name),
+                name: project.name,
+                message: 'resetProject',
+                title: `Resetting ${getProjectDisplayName(project)}`,
+                failureTitle: `Couldn't reset ${getProjectDisplayName(project)}`,
+                successTitle: `${getProjectDisplayName(project)} reset`,
+                // The list must reflect what the reset changed; the modal closes
+                // on success, so the refresh rides the same moment.
+                payload: { projectPath: project.path },
+            }, () => fetchProjects(true));
         },
-        [fetchProjects],
+        [startOperation, fetchProjects],
     );
 
     // Handle per-integration redeploy (one kebab item per redeployable keyed
@@ -418,13 +450,6 @@ function ProjectsDashboardApp() {
         [fetchProjects],
     );
 
-    // Handle view mode override - saves to backend for session persistence
-    const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
-        setInitialViewMode(mode);
-        // Persist to backend so it survives webview recreations
-        webviewClient.postMessage('setViewModeOverride', { viewMode: mode });
-    }, []);
-
     // Bundle all project action callbacks into a single object
     const projectActions: ProjectActions = useMemo(
         () => ({
@@ -462,6 +487,7 @@ function ProjectsDashboardApp() {
     );
 
     return (
+        <>
         <ProjectsDashboard
             projects={projects}
             runningProjectPath={runningProjectPath}
@@ -474,9 +500,16 @@ function ProjectsDashboardApp() {
             isRefreshing={isRefreshing}
             onRefresh={handleRefresh}
             hasLoadedOnce={hasLoadedOnce}
-            initialViewMode={initialViewMode}
-            onViewModeOverride={handleViewModeOverride}
+            initialViewMode={viewMode}
+            onViewModeOverride={chooseViewMode}
         />
+        <OperationProgressModal
+            operation={operations.open}
+            onRetry={operations.retry}
+            onClose={operations.close}
+        />
+        <UpdatesModal controls={updates} />
+        </>
     );
 }
 

@@ -11,13 +11,17 @@
 
 import { buildDeployOrgTarget } from './executorMeshPhase';
 import type { ProgressTracker } from './shared';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { withOrgContext } from '@/core/shell/orgContextEnv';
+import { phaseSinkHere, withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { HandlerContext } from '@/types/handlers';
+import type { OperationPosition } from '@/types/webviewPayloads';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**
@@ -26,19 +30,34 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
  * selections are excluded (the mesh phase installs them). This is the set
  * that will `aio app deploy`, so it also gates the Runtime pre-flight.
  */
-function deployableAppIntegrationEntries(
+export function deployableAppIntegrationEntries(
     typedConfig: ProjectCreationConfig,
 ): AppBuilderComponentCatalogEntry[] {
-    const sources = typedConfig.appBuilderComponentSources ?? {};
     return (typedConfig.selectedAppBuilderComponents ?? [])
-        .map(
-            (id) =>
-                getAppBuilderComponentEntry(id) ??
-                // The sources-map key IS the instance id (shell instancing: N
-                // named instances may share one template repo).
-                (sources[id] ? buildCustomIntegrationEntry(sources[id], id) : undefined),
-        )
+        .map((id) => selectedEntry(typedConfig, id))
         .filter((entry): entry is AppBuilderComponentCatalogEntry => entry?.kind === 'integration');
+}
+
+/**
+ * The catalog entry a selected id stands for: a catalog id, else a custom-URL
+ * source the wizard recorded under it. Creation and an Edit that adds (PL-75)
+ * resolve the same way.
+ *
+ * @param typedConfig - what Finish was given
+ * @param id - a selected App Builder component id
+ * @returns the entry, or undefined when the id resolves to nothing
+ */
+export function selectedEntry(
+    typedConfig: ProjectCreationConfig,
+    id: string,
+): AppBuilderComponentCatalogEntry | undefined {
+    const source = typedConfig.appBuilderComponentSources?.[id];
+    return (
+        getAppBuilderComponentEntry(id) ??
+        // The sources-map key IS the instance id (shell instancing: N
+        // named instances may share one template repo).
+        (source ? buildCustomIntegrationEntry(source, id) : undefined)
+    );
 }
 
 /**
@@ -77,8 +96,12 @@ export async function ensureWorkspaceRuntimeReady(
     // The namespace check runs via CLI (needs withOrgContext targeting); the SDK
     // `createRuntimeNamespace` provision takes explicit ids (targeting-agnostic).
     await withOrgContext(target, () =>
-        ensureWorkspaceRuntime(commandManager, context.logger, 'auto', () =>
-            authService.ensureWorkspaceRuntimeNamespace(organization, projectId, workspace),
+        ensureWorkspaceRuntime(commandManager, context.logger, demoBuilderNode(), async () =>
+            (await authService.getEntityServices()).workspaceOps.ensureWorkspaceRuntimeNamespace(
+                organization,
+                projectId,
+                workspace,
+            ),
         ),
     );
 }
@@ -120,22 +143,90 @@ export async function executeAppBuilderIntegrationsPhase(
         '@/features/project-creation/services/appBuilderComponentRunnerDeps'
     );
     const { addAppBuilderComponent } = await import(
-        '@/features/app-builder/services/appBuilderComponentRunner'
+        '@/features/app-builder/services/appBuilderAddRun'
     );
-    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project, {
-                    authManager: ServiceLocator.getAuthenticationService(),
-                    commandManager: ServiceLocator.getCommandExecutor(),
-                }));
+    const { replaceDeployedElsewhere } = await import(
+        '@/features/dashboard/handlers/replaceDeployedElsewhere'
+    );
+    const { report, nested, start } = integrationProgress(progressTracker);
+    const services = {
+        authManager: ServiceLocator.getAuthenticationService(),
+        commandManager: ServiceLocator.getCommandExecutor(),
+    };
+    const deps = buildDefaultRunnerDeps(await buildRunnerDepsContext(context, project, services), report);
 
     // The runner's first step per integration is the union API subscribe — surface
     // it once up front so the user sees API access being provisioned at build time
     // (the Add-Integration modal no longer subscribes anything itself).
-    progressTracker('Deploying Integrations', 69, 'Enabling API access');
+    progressTracker(OPERATION_STAGES.deployingIntegrations.label, 69, 'Enabling API access');
     for (const entry of entries) {
-        progressTracker('Deploying Integrations', 70, `Deploying ${entry.name}`);
-        const result = await addAppBuilderComponent(project, entry, deps);
+        // A copied project deploys here, into the Adobe project its original already
+        // deployed to (2026-10-08): the original's same-named deployment goes first.
+        const replaced = await replaceDeployedElsewhere(context, project, entry, services, report);
+        if (replaced) throw new Error(replaced.error);
+        progressTracker(OPERATION_STAGES.deployingIntegrations.label, 70, `Deploying ${entry.name}`);
+        start(entry.name);
+        const result = await withPhaseSinks([nested], () => addAppBuilderComponent(project, entry, deps));
         if (!result.success) {
             throw new Error(result.error || 'App Builder integration deployment failed');
         }
     }
+}
+
+/**
+ * An integration's own steps, folded into the one step creation (or an Edit) is on.
+ *
+ * Line 1 stays `step` ("Deploying integrations (6 of 9)") however many steps each
+ * integration runs, and line 2 is the integration's own step under its name
+ * ("Northwind ERP: Deploying the app"), as every other flow keeps one numbered step
+ * with its parts under it (owner, 2026-10-16: "Fold"). When the runner names the moment
+ * ("Registering webhooks"), or a line arrives from deeper in (the Commerce installer's),
+ * that is the part line 2 shows. A pair names the member it is on.
+ *
+ * The reporter creation hands in also tells an agent, through the same channel the
+ * lines from deeper in arrive on. What it tells the agent goes on to the agent, not
+ * back round as a line from deeper in: until 2026-10-16 each came round again until
+ * the stack ran out, sending the screen a thousand growing lines per step.
+ *
+ * @param progressTracker - the creation screen's reporter
+ * @param step - the step on line 1 while these run
+ * @returns the runner's reporter, the sink for lines from deeper in, and `start`, which
+ *   names the integration the next steps are for
+ */
+export function integrationProgress(
+    progressTracker: ProgressTracker,
+    step: string = OPERATION_STAGES.deployingIntegrations.label,
+): {
+    report: (stage: string, step?: string, position?: OperationPosition) => void;
+    nested: (message: string) => void;
+    start: (name: string) => void;
+} {
+    let integration = '';
+    let current: { stage: string; name: string } | undefined;
+    let showing = false;
+    // Made here, outside the scope the deploys run in, so it reaches the agent.
+    const toAgent = phaseSinkHere();
+    const show = (part: string): void => {
+        if (!current) return;
+        showing = true;
+        try {
+            progressTracker(step, 70, current.name ? `${current.name}: ${part}` : part);
+        } finally {
+            showing = false;
+        }
+    };
+    return {
+        report: (stage, detail, position) => {
+            current = { stage, name: position?.name ?? integration };
+            show(detail || stage);
+        },
+        nested: (message) => {
+            if (showing) toAgent(message);
+            else show(message);
+        },
+        start: (name) => {
+            integration = name;
+            current = undefined;
+        },
+    };
 }

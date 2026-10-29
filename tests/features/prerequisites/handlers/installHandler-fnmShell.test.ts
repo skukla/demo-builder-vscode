@@ -124,7 +124,6 @@ describe('Install Handler - FNM Shell Options', () => {
             missingVariantMajors: ['20', '18'], // Unsorted
         });
 
-        (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue(['18', '20']);
 
         const executedVersions: string[] = [];
         (mockContext.progressUnifier!.executeStep as jest.Mock).mockImplementation(

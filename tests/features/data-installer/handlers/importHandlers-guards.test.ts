@@ -1,11 +1,11 @@
 /**
- * The guards that run before anything is sent, and the bookkeeping that runs after.
+ * The guards that run before anything is sent.
  *
- * Three groups. The payload guards, reached by calling a handler with NO payload
+ * Two groups. The payload guards, reached by calling a handler with NO payload
  * at all — which is what an agent does and the modal never does, so it is the
- * shape no suite had exercised. The access guard, when the Data Installer URL is
- * not configured. And `recordDatapackOnProject`, which must never turn a started
- * import into a reported failure however badly its own write goes.
+ * shape no suite had exercised. And the access guard, when the Data Installer URL
+ * is not configured. (`recordDatapackOnProject` moved to `importJobWatch.test.ts`
+ * with the watch, 2026-10-08.)
  */
 
 import {
@@ -166,66 +166,5 @@ describe('how the write client is built', () => {
         // The WIRING is the claim here, not the wording.
         options.log?.('a service line');
         expect(context.debugLogger.debug).toHaveBeenCalled();
-    });
-});
-
-describe('recording the datapack on the project', () => {
-    it('writes the pack the import was accepted for', async () => {
-        const { context } = makeImportHarness();
-        happyClient();
-
-        await importHandlers['start-datapack-import'](context, PAYLOAD);
-
-        expect(context.stateManager.saveProject).toHaveBeenCalledWith(
-            expect.objectContaining({ datapack: { name: 'bodea', version: 'main' } }),
-        );
-    });
-
-    it('CLEARS it on a reset, so removal is not offered for data that is gone', async () => {
-        const { context } = makeImportHarness();
-        happyClient();
-
-        await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
-
-        expect(context.stateManager.saveProject).toHaveBeenCalledWith(
-            expect.objectContaining({ datapack: undefined }),
-        );
-    });
-
-    it('still reports the import as started when the project write throws', async () => {
-        // The service has already accepted the job. Failing the handler over
-        // bookkeeping would report a started import as a failed one.
-        const { context } = makeImportHarness();
-        happyClient();
-        (context.stateManager.saveProject as jest.Mock).mockRejectedValue(
-            new Error('manifest locked'),
-        );
-
-        const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
-
-        expect(result).toEqual({ success: true, data: { activationId: 'act-1' } });
-    });
-
-    it('records nothing, and still succeeds, when the project vanishes mid-flight', async () => {
-        const { context } = makeImportHarness();
-        happyClient();
-        // Present for prepareImport, gone by the time the record is written.
-        (context.stateManager.getCurrentProject as jest.Mock)
-            .mockResolvedValueOnce({
-                name: 'demo-a',
-                componentSelections: { backend: 'adobe-commerce-paas' },
-                componentConfigs: {
-                    'adobe-commerce-paas': {
-                        ADOBE_COMMERCE_ADMIN_USERNAME: 'admin',
-                        ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret',
-                    },
-                },
-            })
-            .mockResolvedValue(null);
-
-        const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
-
-        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
-        expect(result.success).toBe(true);
     });
 });

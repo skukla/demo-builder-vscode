@@ -140,6 +140,56 @@ describe('getEdsDaLiveUrl - experience branch', () => {
 // Repo-name fallback (legacyLookupKey retirement, 2026-08-23): the loader
 // strips `daLiveSite` from the manifest when it equals the repo name, so most
 // projects carry only `githubRepo`. Readers must derive the site from it.
+// The org half of the same rule, found by sweeping for it rather than by it
+// biting: republish and the agent's storefront tools already fell back to the
+// repo OWNER, so a project with no stored org could republish fine while these
+// two hid its DA.live link (owner sweep, 2026-09-20).
+describe('daLiveOrg repo-owner fallback', () => {
+    const noStoredOrg = createMockProject({
+        selectedStack: 'eds-dalive',
+        componentInstances: {
+            'eds-storefront': {
+                id: 'eds-storefront',
+                name: 'Edge Delivery Services',
+                status: 'deployed',
+                metadata: { githubRepo: 'leahrayard/leah-b2b-demo' },
+            },
+        },
+    });
+
+    it('getEdsDaLiveUrl uses the repo owner when no org is stored', () => {
+        expect(getEdsDaLiveUrl(noStoredOrg, 'da-live-classic')).toBe(
+            'https://da.live/#/leahrayard/leah-b2b-demo'
+        );
+    });
+
+    it('getEdsDaLiveTarget uses the repo owner when no org is stored', () => {
+        expect(getEdsDaLiveTarget(noStoredOrg)).toEqual({
+            org: 'leahrayard',
+            site: 'leah-b2b-demo',
+        });
+    });
+
+    it('a stored org still wins over the repo owner', () => {
+        const stored = createMockProject({
+            selectedStack: 'eds-dalive',
+            componentInstances: {
+                'eds-storefront': {
+                    id: 'eds-storefront',
+                    name: 'Edge Delivery Services',
+                    status: 'deployed',
+                    metadata: {
+                        daLiveOrg: 'a-team-org',
+                        githubRepo: 'leahrayard/leah-b2b-demo',
+                    },
+                },
+            },
+        });
+
+        expect(getEdsDaLiveTarget(stored)?.org).toBe('a-team-org');
+    });
+});
+
 describe('daLiveSite repo-name fallback', () => {
     const strippedProject = createMockProject({
         selectedStack: 'eds-dalive',

@@ -45,6 +45,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getToken: jest.fn() })),
 }));
 
@@ -58,6 +60,7 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockPipelineResult } from '../../../helpers/pipelineResultFake';
 
 const pipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -107,11 +110,12 @@ describe('refreshBlockLibraryHeadless', () => {
             tokenService: {},
             fileOperations: { getFileContent: jest.fn() },
         });
-        pipelineMock.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 0,
-            libraryPaths: ['/.da/library/blocks/hero'],
-        });
+        pipelineMock.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 0,
+                libraryPaths: ['/.da/library/blocks/hero'],
+            })
+        );
     });
 
     it('runs the library-only pipeline and returns the real result', async () => {
@@ -121,13 +125,23 @@ describe('refreshBlockLibraryHeadless', () => {
         const params = pipelineMock.mock.calls[0][0];
         expect(params.includeBlockLibrary).toBe(true);
         expect(params.skipContent).toBe(true);
-        expect(params.skipPublish).toBe(false);
+        // The site's pages are untouched by a block list change; the library's own
+        // pages publish whatever this says (2026-10-15).
+        expect(params.skipPublish).toBe(true);
         expect(params.blockCollectionIds).toStrictEqual([]);
+        // The full rebuild: every doc page, unless a caller names the blocks it added.
+        expect(params).not.toHaveProperty('publishLibraryBlocksOnly');
 
         expect(result).toEqual({
             success: true,
             libraryPaths: ['/.da/library/blocks/hero'],
         });
+    });
+
+    it('publishes only the blocks a caller names, when it names them', async () => {
+        await refreshBlockLibraryHeadless({ ...deps(), publishOnlyBlocks: ['cards', 'hero'] });
+
+        expect(pipelineMock.mock.calls[0][0].publishLibraryBlocksOnly).toEqual(['cards', 'hero']);
     });
 
     it('forwards pipeline progress through onProgress', async () => {
@@ -229,7 +243,9 @@ describe('refreshBlockLibraryHeadless', () => {
         await refreshBlockLibraryHeadless(deps({ onProgress: undefined }));
 
         const reportProgress = pipelineMock.mock.calls[0][2];
-        expect(() => reportProgress({ operation: 'block-library', message: 'configuring...' })).not.toThrow();
+        expect(() =>
+            reportProgress({ operation: 'block-library', message: 'configuring...' })
+        ).not.toThrow();
     });
 
     it('returns a cancelled result when the user declines re-auth', async () => {
@@ -241,5 +257,112 @@ describe('refreshBlockLibraryHeadless', () => {
         expect(result.success).toBe(false);
         expect(result.cancelled).toBe(true);
         expect(pipelineMock).toHaveBeenCalledTimes(1);
+    });
+});
+
+/**
+ * The step each pipeline message belongs to (progress vocabulary slice 2, owner
+ * 2026-10-16). Refresh Blocks is three steps an SC can name; its messages are what
+ * each is doing, the line under it.
+ */
+describe('refreshBlockLibraryHeadless — its steps', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ensureAuthMock.mockResolvedValue({ authenticated: true });
+    });
+
+    /** The pipeline as it runs a library-only rebuild, by the operations it reports. */
+    function pipelineReporting(messages: Array<{ operation: string; message: string }>): void {
+        pipelineMock.mockImplementation(
+            async (
+                _params: unknown,
+                _services: unknown,
+                onProgress: (info: { operation: string; message: string }) => void
+            ) => {
+                messages.forEach((info) => onProgress(info));
+                return createMockPipelineResult({
+                    contentFilesCopied: 0,
+                    libraryPaths: ['/.da/library/blocks.json'],
+                });
+            }
+        );
+    }
+
+    it('puts each message under the step its operation is', async () => {
+        pipelineReporting([
+            { operation: 'block-library', message: 'Building block library' },
+            { operation: 'block-library', message: 'Building block library: 5 blocks' },
+            { operation: 'eds-settings', message: 'Applying DA.live settings' },
+            { operation: 'library-publish', message: 'Publishing the block list: 2 pages' },
+            {
+                operation: 'library-publish',
+                message: 'Publishing the block list: Checking the block list is live',
+            },
+        ]);
+        const onStep = jest.fn();
+
+        await refreshBlockLibraryHeadless(deps({ onStep }));
+
+        expect(onStep.mock.calls).toStrictEqual([
+            ['Building block library', 'Building block library'],
+            ['Building block library', 'Building block library: 5 blocks'],
+            ['Applying DA.live settings', 'Applying DA.live settings'],
+            ['Publishing the block list', 'Publishing the block list: 2 pages'],
+            [
+                'Publishing the block list',
+                'Publishing the block list: Checking the block list is live',
+            ],
+        ]);
+    });
+
+    // A step it does not name (a code patch, brand assets) is part of the one before.
+    it('keeps a message of an operation it does not name under the step before it', async () => {
+        pipelineReporting([
+            { operation: 'block-library', message: 'Building block library' },
+            { operation: 'block-code-patches', message: 'Patching 2 blocks' },
+        ]);
+        const onStep = jest.fn();
+
+        await refreshBlockLibraryHeadless(deps({ onStep }));
+
+        expect(onStep).toHaveBeenLastCalledWith('Building block library', 'Patching 2 blocks');
+    });
+
+    it('says the DA.live sign-in ran out under the step it ran out in', async () => {
+        pipelineMock
+            .mockImplementationOnce(
+                async (
+                    _p: unknown,
+                    _s: unknown,
+                    onProgress: (info: { operation: string; message: string }) => void
+                ) => {
+                    onProgress({ operation: 'eds-settings', message: 'Applying DA.live settings' });
+                    throw new DaLiveAuthError('DA.live token expired');
+                }
+            )
+            .mockResolvedValueOnce(
+                createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] })
+            );
+        const onStep = jest.fn();
+
+        await refreshBlockLibraryHeadless(deps({ onStep }));
+
+        expect(onStep).toHaveBeenCalledWith(
+            'Applying DA.live settings',
+            'DA.live session expired. Please re-authenticate'
+        );
+    });
+
+    // Configure's Republish shows the whole rebuild under its own step and reads the
+    // plain messages, as it did.
+    it('still hands every plain message to onProgress', async () => {
+        pipelineReporting([
+            { operation: 'block-library', message: 'Building block library: 5 blocks' },
+        ]);
+        const onProgress = jest.fn();
+
+        await refreshBlockLibraryHeadless(deps({ onProgress }));
+
+        expect(onProgress.mock.calls).toStrictEqual([['Building block library: 5 blocks']]);
     });
 });

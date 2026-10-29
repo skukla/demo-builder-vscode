@@ -30,22 +30,6 @@ const edsProject = (name = 'EDS Project') =>
     createProjectsDashboardProject({ name, selectedStack: 'eds-dalive' });
 
 /**
- * A project that HAS integrations — `hasIntegrations` counts the keys of
- * `appBuilderComponents`, the keyed record the manifest persists.
- */
-const withIntegrations = (name = 'Integrated') =>
-    createProjectsDashboardProject({
-        name,
-        appBuilderComponents: {
-            'app-builder-shell': {
-                kind: 'integration',
-                status: 'deployed',
-                source: { owner: 'adobe', repo: 'app-builder-shell' },
-            },
-        },
-    });
-
-/**
  * An EDS project (the resolved authoring experience no longer rides in the
  * view model — the Author label is static and the backend resolves the target).
  */
@@ -134,7 +118,7 @@ describe('ProjectActionsMenu', () => {
     });
 
     describe('MANAGE group', () => {
-        it('heads a "Manage" section with Edit, Pin, Reset in order (no Rename — inline rename owns it)', () => {
+        it('heads a "Manage" section with Edit then Reset (no Rename, no Pin: the card owns both)', () => {
             const actions: ProjectActions = {
                 onEdit: jest.fn(),
                 onPinToggle: jest.fn(),
@@ -152,11 +136,10 @@ describe('ProjectActionsMenu', () => {
             expect(screen.queryByText('Rename')).not.toBeInTheDocument();
             const labels = menuItemLabels();
             const editIdx = labels.findIndex((l) => l.includes('Edit'));
-            const pinIdx = labels.findIndex((l) => l.includes('Pin'));
             const resetIdx = labels.findIndex((l) => l.includes('Reset'));
             expect(editIdx).toBeGreaterThanOrEqual(0);
-            expect(editIdx).toBeLessThan(pinIdx);
-            expect(pinIdx).toBeLessThan(resetIdx);
+            expect(editIdx).toBeLessThan(resetIdx);
+            expect(labels.some((l) => /\bPin\b|Unpin/.test(l))).toBe(false);
         });
 
         it('keeps Reset a normal Manage action, not in the submenu', () => {
@@ -174,14 +157,17 @@ describe('ProjectActionsMenu', () => {
             expect(screen.getByText('Reset')).toBeInTheDocument();
         });
 
-        it('flips the pin label to Unpin when the project is pinned', () => {
+        // Pin moved onto the card (owner, 2026-10-28): the menu had grown past what fits a
+        // window, and the card shows which projects are pinned at a glance.
+        it('has no Pin or Unpin row, pinned or not', () => {
             const project = createProjectsDashboardProject({ name: 'Test', pinned: true });
             renderWithProvider(
-                <ProjectActionsMenu project={project} actions={{ onPinToggle: jest.fn() }} />
+                <ProjectActionsMenu project={project} actions={{ onPinToggle: jest.fn(), onEdit: jest.fn() }} />
             );
             openMenu();
 
-            expect(screen.getByText('Unpin')).toBeInTheDocument();
+            expect(screen.getByText('Edit')).toBeInTheDocument();
+            expect(screen.queryByText('Unpin')).not.toBeInTheDocument();
             expect(screen.queryByText('Pin')).not.toBeInTheDocument();
         });
     });
@@ -512,9 +498,10 @@ describe('ProjectActionsMenu', () => {
         // The projects list is the ONLY short route to the integrations surface
         // (project → dashboard → Integrations is the long way), and this item
         // replaced the per-integration "Redeploy <name>" entries that grew with N.
+        // It shows with no integrations too: that page is where the first is added.
 
-        it('offers Integrations when the project has integrations and the callback is wired', () => {
-            const project = withIntegrations();
+        it('offers Integrations when the callback is wired', () => {
+            const project = createProjectsDashboardProject({ name: 'Test' });
             const onOpenIntegrations = jest.fn();
             renderWithProvider(
                 <ProjectActionsMenu project={project} actions={{ onOpenIntegrations }} />
@@ -526,22 +513,10 @@ describe('ProjectActionsMenu', () => {
             expect(onOpenIntegrations).toHaveBeenCalledWith(project);
         });
 
-        it('omits it for a project with no integrations, even with the callback wired', () => {
+        it('omits it when the callback is absent', () => {
             renderWithProvider(
                 <ProjectActionsMenu
                     project={createProjectsDashboardProject({ name: 'Test' })}
-                    actions={{ onOpenIntegrations: jest.fn(), onDelete: jest.fn() }}
-                />
-            );
-            openMenu();
-
-            expect(screen.queryByText('Integrations')).not.toBeInTheDocument();
-        });
-
-        it('omits it when the callback is absent, however many integrations exist', () => {
-            renderWithProvider(
-                <ProjectActionsMenu
-                    project={withIntegrations()}
                     actions={{ onDelete: jest.fn() }}
                 />
             );

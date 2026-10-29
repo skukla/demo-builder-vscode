@@ -63,7 +63,11 @@ export function CardActionsMenu({
     return (
         // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child MenuTrigger/ActionButton
         <div onClick={contain} onKeyDown={contain}>
-            <MenuTrigger>
+            {/* BESIDE the button, not below it (owner, 2026-10-28): below or above, a
+                project card's twelve rows fit neither way in an 820 px window, and the
+                menu became a scrolling list with Delete out of sight. Beside it, the
+                menu can use the window's whole height. */}
+            <MenuTrigger direction="end">
                 <ActionButton isQuiet aria-label={ariaLabel} UNSAFE_className={className}>
                     <MoreSmallListVert size="S" />
                 </ActionButton>

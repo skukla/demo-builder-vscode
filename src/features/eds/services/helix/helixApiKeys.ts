@@ -166,24 +166,18 @@ export class HelixApiKeys {
             return { success: true };
         }
 
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${keyStore.toUrlSafeKeyId(persisted.id)}.json`;
         try {
-            const imsToken = await this.getDaLiveToken();
-            const response = await fetch(url, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${imsToken}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-            if (response.ok || response.status === 404) {
+            const { gone, status } = await this.deleteKeyOnServer(org, site, persisted.id);
+            if (gone) {
                 this.logger.debug(
-                    `[Helix] Admin API key deleted for ${cacheKey} (id=${persisted.id}, status=${response.status})`,
+                    `[Helix] Admin API key deleted for ${cacheKey} (id=${persisted.id}, status=${status})`,
                 );
                 return { success: true };
             }
             this.logger.debug(
-                `[Helix] Admin API key deletion returned ${response.status} for ${cacheKey}`,
+                `[Helix] Admin API key deletion returned ${status} for ${cacheKey}`,
             );
-            return { success: false, error: `DELETE returned ${response.status}` };
+            return { success: false, error: `DELETE returned ${status}` };
         } catch (error) {
             const message = (error as Error).message;
             this.logger.debug(`[Helix] Admin API key deletion failed for ${cacheKey}: ${message}`);
@@ -205,27 +199,37 @@ export class HelixApiKeys {
         // Remove from persistent store first (even if API call fails)
         await keyStore.deletePersistedKey(cacheKey);
 
-        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${keyStore.toUrlSafeKeyId(persisted.id)}.json`;
         try {
-            const imsToken = await this.getDaLiveToken();
-            const response = await fetch(url, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${imsToken}` },
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-            if (response.ok || response.status === 404) {
-                this.logger.debug(
-                    `[Helix] Old API key deleted (id=${persisted.id}, status=${response.status})`,
-                );
+            const { gone, status } = await this.deleteKeyOnServer(org, site, persisted.id);
+            if (gone) {
+                this.logger.debug(`[Helix] Old API key deleted (id=${persisted.id}, status=${status})`);
             } else {
-                this.logger.debug(
-                    `[Helix] Old API key deletion returned ${response.status}, continuing`,
-                );
+                this.logger.debug(`[Helix] Old API key deletion returned ${status}, continuing`);
             }
         } catch (error) {
             this.logger.debug(
                 `[Helix] Old API key deletion failed: ${(error as Error).message}, continuing`,
             );
         }
+    }
+
+    /**
+     * DELETE one key on admin.hlx.page, authenticated with the DA.live token.
+     * A 404 counts as gone: the key the caller wanted removed is not there.
+     * Throws when the token or the request fails; each caller decides what that means.
+     */
+    private async deleteKeyOnServer(
+        org: string,
+        site: string,
+        keyId: string,
+    ): Promise<{ gone: boolean; status: number }> {
+        const url = `${HELIX_ADMIN_URL}/config/${org}/sites/${site}/apiKeys/${keyStore.toUrlSafeKeyId(keyId)}.json`;
+        const imsToken = await this.getDaLiveToken();
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${imsToken}` },
+            signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
+        });
+        return { gone: response.ok || response.status === 404, status: response.status };
     }
 }

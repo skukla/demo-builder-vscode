@@ -2,19 +2,18 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import { getBundleUri } from '@/core/utils/bundleUri';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import {
@@ -22,8 +21,7 @@ import {
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
 import { addedDemoKey, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
-import { ComponentInstance, Project, type AppBuilderComponentState } from '@/types/base';
-import { HandlerContext } from '@/types/handlers';
+import { ComponentInstance, Project } from '@/types/base';
 import type { AddedDemo } from '@/types/projectFile';
 import type { Stack, StacksConfig } from '@/types/stacks';
 import {
@@ -33,15 +31,7 @@ import {
     getEdsDaLiveUrl,
 } from '@/types/typeGuards';
 import type {
-    AppBuilderComponentRowStatus,
-    AppBuilderComponentStatusUpdatePayload,
-    AppBuilderComponentsSnapshotPayload,
-    AuthoringExperienceUpdatePayload,
-    ComponentOperationProgressPayload,
     DashboardInitialData,
-    DestinationTitles,
-    MeshStatusUpdatePayload,
-    ProjectDestinationUpdatePayload,
 } from '@/types/webviewPayloads';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
@@ -89,6 +79,36 @@ export function shouldAutoReopenProjectsList(
     return true;
 }
 
+/**
+ * The screen to open after a Demo Builder screen closes, or undefined for none.
+ * Called from extension.ts's disposal callback, for screens that opt in through
+ * `shouldReopenWelcomeOnDispose`.
+ *
+ *  - The dashboard closes: the projects list, as `shouldAutoReopenProjectsList` decides.
+ *  - Configure closes with no other Demo Builder screen open: the project dashboard.
+ *    Configure used to open only beside the dashboard; since Edit can hand over to
+ *    it, it can be the last screen, and closing it left none (owner, 2026-10-17).
+ *    Same guards as the dashboard's: not mid-swap, and only in the projects folder.
+ *
+ * @param webviewId - the screen that closed
+ * @param ctx - the window's folder, whether a swap is under way, and how many
+ *        Demo Builder screens are still open
+ * @returns the command to run, if any
+ */
+export function screenAfterClose(
+    webviewId: string,
+    ctx: { workspaceFolderPath: string | undefined; transitionInProgress: boolean; openScreens: number },
+): string | undefined {
+    if (!shouldAutoReopenProjectsList(ctx.workspaceFolderPath, ctx.transitionInProgress)) {
+        return undefined;
+    }
+    if (webviewId === 'demoBuilder.projectDashboard') return 'demoBuilder.showProjectsList';
+    if (webviewId === 'demoBuilder.configureProject' && ctx.openScreens === 0) {
+        return 'demoBuilder.showProjectDashboard';
+    }
+    return undefined;
+}
+
 /** The demo package on the Welcome step reading from the project's source, by its card name, when there is one. */
 function demoPackageNameFor(demo: AddedDemo): { demoPackageName?: string } {
     const key = addedDemoKey(demo);
@@ -103,7 +123,9 @@ function demoPackageNameFor(demo: AddedDemo): { demoPackageName?: string } {
  * Refactored in Phase 3.8 to use BaseWebviewCommand pattern with HandlerRegistry.
  * Updated in Step 3 to use object literal handler maps with dispatchHandler.
  */
-export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<DashboardInitialData> {
+export class ProjectDashboardWebviewCommand extends BundledPanelCommand<DashboardInitialData> {
+    protected readonly bundleName = 'dashboard';
+
     // Static reference to active instance for refreshStatus
     private static activeInstance: ProjectDashboardWebviewCommand | null = null;
 
@@ -125,26 +147,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
 
     protected getWebviewTitle(): string {
         return 'Project Dashboard';
-    }
-
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'dashboard',
-        });
-
-        const nonce = this.getNonce();
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce,
-            cspSource: this.panel.webview.cspSource,
-            title: 'Project Dashboard',
-        });
     }
 
     protected async getInitialData(): Promise<DashboardInitialData> {
@@ -169,8 +171,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
         // Detect EDS projects and get URLs (using shared typeGuards functions)
         const isEds = isEdsProject(project);
         const edsLiveUrl = getEdsLiveUrl(project);
-        const authoringExperience = resolveProjectAuthoringExperience(project);
-        const edsDaLiveUrl = getEdsDaLiveUrl(project, authoringExperience, getEwCanvasBranch());
+        const edsDaLiveUrl = ProjectDashboardWebviewCommand.authoringUrlFor(project);
 
         // Get EDS storefront status for dynamic display
         const initialEdsStorefrontStatus = project?.edsStorefrontStatusSummary;
@@ -325,124 +326,13 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
         }
     }
 
-    /**
-     * Resolve whichever project-scoped panel is live for the live push channels.
-     *
-     * These pushes used to address the Project Dashboard alone. Opening the
-     * dedicated integrations surface is a tab REPLACEMENT — the dashboard panel
-     * is disposed — so a dashboard-only lookup would silently reach nobody and
-     * the grid would never flip status or land an added card.
-     *
-     * Dashboard wins when both are somehow live, so a push renders once.
-     */
-    private static getLiveProjectPanel(): vscode.WebviewPanel | undefined {
-        return (
-            BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard') ??
-            BaseWebviewCommand.getActivePanel('demoBuilder.integrations')
+    /** The Author Content URL for a project, resolved the way the dashboard resolves it on open. */
+    public static authoringUrlFor(project: Project | undefined): string | undefined {
+        return getEdsDaLiveUrl(
+            project,
+            resolveProjectAuthoringExperience(project),
+            getEwCanvasBranch(),
         );
-    }
-
-    /**
-     * Push the project's deploy destination after `setProjectDestination` writes it.
-     *
-     * The Integrations header's "project · workspace" crumb comes from the init
-     * payload, which is seeded ONCE — so a destination change left the header naming
-     * the OLD target while every card deployed to the new one (reported live
-     * 2026-08-07). Same shape as the sibling pushes above; no-op if neither project
-     * panel is open.
-     *
-     * @param destination - the titles the header renders, post-write
-     */
-    public static async sendProjectDestinationUpdate(destination: DestinationTitles): Promise<void> {
-        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
-        if (panel) {
-            const payload: ProjectDestinationUpdatePayload = { destination };
-            await panel.webview.postMessage({ type: 'projectDestinationUpdate', payload });
-        }
-    }
-
-    /**
-     * Public method to send mesh status updates (called by deployMesh command)
-     */
-    public static async sendMeshStatusUpdate(
-        status: 'deploying' | 'deployed' | 'config-changed' | 'error' | 'not-deployed',
-        message?: string,
-        endpoint?: string,
-    ): Promise<void> {
-        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
-        if (panel) {
-            const payload: MeshStatusUpdatePayload = { status, message, endpoint };
-            await panel.webview.postMessage({ type: 'meshStatusUpdate', payload });
-        }
-    }
-
-    /**
-     * Public method to push a per-appBuilderComponent row status update (called by the
-     * appBuilderComponent handlers). Modeled on sendMeshStatusUpdate but keyed by the
-     * appBuilderComponent `id` so the integrations list flips ONLY that row. No-op if no
-     * dashboard is open.
-     *
-     * `name` (optional) refreshes the row's display label on the same channel —
-     * the rename handler pushes the entry's CURRENT status (incl. the persisted
-     * 'stale') plus the new name, since the init-seeded map never re-delivers.
-     */
-    public static async sendAppBuilderComponentStatusUpdate(
-        id: string,
-        status: AppBuilderComponentRowStatus,
-        message?: string,
-        name?: string,
-    ): Promise<void> {
-        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
-        if (panel) {
-            const payload: AppBuilderComponentStatusUpdatePayload = { id, status, message, name };
-            await panel.webview.postMessage({ type: 'appBuilderComponentStatusUpdate', payload });
-        }
-    }
-
-    /**
-     * Push one integration operation's progress to the modal the SC opened by
-     * starting it (PL-59). Same live-panel lookup as the row status, so it reaches
-     * whichever of the dashboard or the integrations surface is open.
-     */
-    public static async sendComponentOperationProgress(
-        payload: ComponentOperationProgressPayload,
-    ): Promise<void> {
-        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
-        if (panel) {
-            await panel.webview.postMessage({ type: 'componentOperationProgress', payload });
-        }
-    }
-
-    /**
-     * Public method to push the FULL fresh persisted `appBuilderComponents`
-     * map (called by the appBuilderComponent handlers after terminal ops:
-     * add/deploy terminal, remove success, rename success). The webview's map
-     * is seeded once at init, so without this snapshot an added card never
-     * appears and a removed card lingers. Modeled on
-     * sendAppBuilderComponentStatusUpdate; no-op if neither project panel is open.
-     */
-    public static async sendAppBuilderComponentsSnapshot(
-        components: Record<string, AppBuilderComponentState>,
-    ): Promise<void> {
-        const panel = ProjectDashboardWebviewCommand.getLiveProjectPanel();
-        if (panel) {
-            const payload: AppBuilderComponentsSnapshotPayload = { components };
-            await panel.webview.postMessage({ type: 'appBuilderComponentsSnapshot', payload });
-        }
-    }
-
-    /**
-     * Public method to push the live DA URL after an authoring-experience flip
-     * (called by the Configure save handler) — no reopen required. The Author
-     * tile label is STATIC ("Author Content"), so only the URL rides on the
-     * message. No-op if no dashboard is open. Modeled on sendMeshStatusUpdate.
-     */
-    public static async sendAuthoringExperienceUpdate(edsDaLiveUrl?: string): Promise<void> {
-        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
-        if (panel) {
-            const payload: AuthoringExperienceUpdatePayload = { edsDaLiveUrl };
-            await panel.webview.postMessage({ type: 'authoringExperienceUpdate', payload });
-        }
     }
 
     /**
@@ -459,13 +349,27 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
         await dispatchHandler(dashboardHandlers, context, 'requestStatus', {});
     }
 
+    /**
+     * Post the open dashboard's status again, without the on-open checks. Wired to
+     * every project save in extension.ts, so a change made anywhere (an agent tool
+     * included) shows on an open dashboard; `refreshStatus` is too heavy for that.
+     */
+    public static async pushStatus(): Promise<void> {
+        const instance = ProjectDashboardWebviewCommand.activeInstance;
+        if (!instance) return;
+        const context = instance.createHandlerContext();
+        const project = await context.stateManager.getCurrentProject();
+        if (!context.panel || !project) return;
+        await postStatusUpdate(context, context.panel, project);
+    }
+
     // ============================================================================
     // Lifecycle Hooks
     // ============================================================================
 
     public async execute(): Promise<void> {
-        // Check for existing project
-        const project = await this.stateManager.getCurrentProject();
+        // The project this screen is for, kept after the current project moves (AI-15)
+        const project = await this.openForCurrentProject();
         if (!project) {
             this.logger.warn('[Dashboard] No project found');
             return;
@@ -507,21 +411,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
     // ============================================================================
     // Helper Methods
     // ============================================================================
-
-    /**
-     * Create handler context with all dependencies
-     */
-    private createHandlerContext(): HandlerContext {
-        // ONE complete context from the shared factory — no per-panel guessing about
-        // which managers its (possibly reused) handlers will reach for.
-        return createPanelHandlerContext({
-            context: this.context,
-            panel: this.panel,
-            stateManager: this.stateManager,
-            communicationManager: this.communicationManager,
-            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-        });
-    }
 
     /**
      * Initialize file hashes for a running demo

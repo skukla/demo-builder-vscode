@@ -4,8 +4,9 @@ kind: feature
 area: eds
 needs: []
 value: med
-status: backlog
+status: gated
 layer: F
+waiting-on: Mod Agent access
 ---
 # EDS site-scraping capability for Demo Builder
 
@@ -18,6 +19,7 @@ Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows. *
 ## Shipped so far
 
 - Six new Demo Builder skills — verified shipped; see the sub-part marked ✅ below
+- 2026-10-03  Parked 2026-10-03 (owner): stays waiting on Mod Agent access.
 
 ## Provenance
 

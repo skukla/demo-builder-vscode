@@ -16,7 +16,7 @@
  * place. There are three (verified 2026-08-17, not inherited — the plan warns its
  * own count was wrong within the hour):
  *
- *   `data-installer/services/commerceCredentials.ts`   extension host
+ *   `data-installer/services/commerceCredentials.ts`   extension host (removed 2026-10-28, DI-6)
  *   `eds/services/storeStructureReader.ts`             extension host
  *   `components/ui/hooks/useAutoStoreDetect.ts`        THE WEBVIEW
  *

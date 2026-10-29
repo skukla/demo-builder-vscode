@@ -23,7 +23,7 @@ describe('writeSharedDemoFile', () => {
         const ops = fileOps(null);
         const result = await writeSharedDemoFile(ops, TARGET, CONTENT, undefined);
         expect(result).toEqual({ outcome: 'written', sha: 'new-sha' });
-        expect(ops.createOrUpdateFile).toHaveBeenCalledWith('steve', 'shop', 'demo.demo-builder.json', CONTENT, 'Save as demo package: add the description file', undefined);
+        expect(ops.createOrUpdateFile).toHaveBeenCalledWith('steve', 'shop', 'demo.demo-builder.json', CONTENT, 'Share Demo: add the description file', undefined);
     });
 
     it('rewrites a file we wrote, passing its sha, and leaves an identical one alone', async () => {

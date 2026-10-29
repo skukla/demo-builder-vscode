@@ -40,11 +40,8 @@ const JWT_LITERAL = /eyJ[A-Za-z0-9_-]{12,}/g;
 
 const JWT_CEILINGS: Record<string, number> = {
     'tests/core/validation/securityValidation-network.test.ts': 6,
-    'tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStrict.test.ts': 2,
     'tests/features/eds/handlers/edsHelpers.test.ts': 3,
     'tests/features/eds/services/configService/configurationService.testUtils.ts': 1,
-    'tests/features/eds/services/daLive/daLiveAuthService-parseJwt.test.ts': 2,
-    'tests/features/eds/services/daLive/daLiveAuthService.security.test.ts': 1,
 };
 
 /**
@@ -76,9 +73,9 @@ const CREDENTIAL_CEILINGS: Record<string, number> = {
     'tests/core/logging/debugLogger-commandDetail.test.ts': 1,
     'tests/core/validation/securityValidation-githubUrl.test.ts': 1,
     'tests/features/ai/server/agentTraceSink.test.ts': 1,
-    'tests/features/authentication/services/adobeEntityFetcher-apiServices.test.ts': 2,
-    'tests/features/authentication/services/adobeEntityFetcher.credentials.test.ts': 2,
-    'tests/features/authentication/services/adobeEntityFetcher.teardown.test.ts': 3,
+    'tests/features/authentication/services/adobeEntityCollaborators-apiServices.test.ts': 2,
+    'tests/features/authentication/services/adobeEntityCollaborators.credentials.test.ts': 2,
+    'tests/features/authentication/services/adobeEntityCollaborators.teardown.test.ts': 3,
     'tests/features/authentication/services/adobeWorkspaceCredentials.s2s.test.ts': 1,
     'tests/features/authentication/services/adobeWorkspaceCredentials.testUtils.ts': 2,
     'tests/features/authentication/services/consoleProjectTeardown.test.ts': 2,
@@ -89,7 +86,6 @@ const CREDENTIAL_CEILINGS: Record<string, number> = {
     'tests/features/eds/services/toolManager.testUtils.ts': 1,
     'tests/features/project-creation/helpers/envFileGenerator-values.test.ts': 1,
     'tests/features/project-creation/ui/helpers/stackHelpers.test.ts': 4,
-    'tests/features/projects-dashboard/services/exportProjectSettingsToFile.test.ts': 1,
 };
 
 /**

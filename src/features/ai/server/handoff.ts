@@ -25,11 +25,9 @@
  * transcript could detect that. A handoff is the honest shape — it says the work
  * is not done and names the way to finish it.
  *
- * Fixed in Wave 3: the handler refuses that route with `blocked` and names the
- * missing vars, and `add_integration`'s preflight (`actionDescriptors.ts`)
- * returns the handoff before dispatch, so the panel never opens for an agent's
- * call. (An earlier version of this paragraph blamed a GUARD failure; guards
- * already returned `blocked`. The bucket-3 branch was the one reporting success.)
+ * Today the handler refuses such an entry with `blocked`, names the missing
+ * vars and opens nothing, so the agent's call needs no handoff: adding an
+ * integration that needs values is not supported yet (AB-22).
  */
 
 /** Why a person is required. Drives how an agent phrases the ask. */

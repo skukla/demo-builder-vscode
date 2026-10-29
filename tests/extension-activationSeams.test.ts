@@ -19,6 +19,8 @@ import {
     mockRefreshGlobalMcpIfPresent,
     mockMcpServerCtor,
     mockOnDidSignIn,
+    mockAdobeOnDidSignIn,
+    mockWatchForcedSignIns,
     mockGetAccessToken,
     mockGetGitHubToken,
     mockRegisterEwListener,
@@ -33,7 +35,13 @@ import {
     mockRegisterLifecycleTools,
     mockWatcherManagerCtor,
     mockEnvWatcherInitialize,
+    mockSendAuthoringExperienceUpdate,
+    mockOnProjectChanged,
 } from './extension.testUtils';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
+import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 
 const mockRegisterCommand = vscode.commands.registerCommand as jest.Mock;
 
@@ -128,6 +136,69 @@ describe('the seams activate() hands away', () => {
         });
     });
 
+    describe('the Adobe sign-in signal (2026-10-14, 2026-10-15)', () => {
+        it('says the sign-in worked and refreshes an open dashboard, whichever screen signed in', async () => {
+            const refresh = jest
+                .spyOn(ProjectDashboardWebviewCommand, 'refreshStatus')
+                .mockResolvedValue(undefined);
+            await activate(createActivationContext());
+            await settle();
+            (vscode.window.setStatusBarMessage as jest.Mock).mockClear();
+
+            const handler = mockAdobeOnDidSignIn.mock.calls[0][0];
+            handler();
+            await settle();
+
+            expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+                '✅ Signed in to Adobe',
+                TIMEOUTS.STATUS_BAR_SUCCESS,
+            );
+            expect(refresh).toHaveBeenCalledTimes(1);
+            refresh.mockRestore();
+        });
+    });
+
+    // 2026-10-28: a forced Adobe sign-in also ends the DA.live sign-in, so every forced
+    // sign-in is watched for it from activation on.
+    describe('the forced Adobe sign-in watch', () => {
+        it('is registered once, and released with the extension', async () => {
+            const context = createActivationContext();
+            await activate(context);
+            await settle();
+
+            expect(mockWatchForcedSignIns).toHaveBeenCalledTimes(1);
+            expect(typeof mockWatchForcedSignIns.mock.calls[0][0]).toBe('function');
+            const handle = mockWatchForcedSignIns.mock.results[0].value;
+            expect(context.subscriptions).toContain(handle);
+        });
+    });
+
+    // An agent's configure_project changed the store and the Republish tile stayed
+    // plain until the dashboard was reopened: only the Configure screen refreshed it
+    // (owner, 2026-10-17). A save from ANY surface now posts the status again.
+    describe('a project save', () => {
+        it('posts the status to an open dashboard, without rerunning its on-open checks', async () => {
+            const push = jest
+                .spyOn(ProjectDashboardWebviewCommand, 'pushStatus')
+                .mockResolvedValue(undefined);
+            const refresh = jest
+                .spyOn(ProjectDashboardWebviewCommand, 'refreshStatus')
+                .mockResolvedValue(undefined);
+            await activate(createActivationContext());
+            await settle();
+
+            for (const [listener] of mockOnProjectChanged.event.mock.calls) {
+                listener({ name: 'demo' });
+            }
+            await settle();
+
+            expect(push).toHaveBeenCalledTimes(1);
+            expect(refresh).not.toHaveBeenCalled();
+            push.mockRestore();
+            refresh.mockRestore();
+        });
+    });
+
     describe('the EW setting listener', () => {
         it('gets the state manager and the SHARED GitHub token service', async () => {
             const context = createActivationContext();
@@ -140,6 +211,67 @@ describe('the seams activate() hands away', () => {
             // SHARED: its validation cache is per-instance, so a fresh one
             // downstream costs a GitHub round trip.
             expect(args.githubTokenService).toBeDefined();
+        });
+
+        // The open dashboard shows ONE project's authoring link. A republish of
+        // some other project must not replace it with that project's link.
+        describe('once a project has been republished', () => {
+            const REPUBLISHED = { name: 'demo-a', path: '/projects/demo-a' };
+            const LINK = 'https://da.live/#/acme/demo-a/index';
+
+            async function onReapplied(): Promise<(project: unknown) => Promise<void>> {
+                await activate(createActivationContext());
+                return mockRegisterEwListener.mock.calls[0][0].onReapplied as (
+                    project: unknown,
+                ) => Promise<void>;
+            }
+
+            beforeEach(() => {
+                jest.spyOn(ProjectDashboardWebviewCommand, 'authoringUrlFor').mockReturnValue(LINK);
+            });
+
+            it("pushes that project's authoring link to the dashboard when it is the open one", async () => {
+                const reapplied = await onReapplied();
+                mockGetCurrentProject.mockResolvedValue({ name: 'demo-a', path: '/projects/demo-a' });
+
+                await reapplied(REPUBLISHED);
+
+                expect(ProjectDashboardWebviewCommand.authoringUrlFor).toHaveBeenCalledWith(REPUBLISHED);
+                expect(mockSendAuthoringExperienceUpdate.mock.calls).toStrictEqual([[LINK]]);
+            });
+
+            it('pushes nothing when a different project is the open one', async () => {
+                const reapplied = await onReapplied();
+                mockGetCurrentProject.mockResolvedValue({ name: 'demo-b', path: '/projects/demo-b' });
+
+                await reapplied(REPUBLISHED);
+
+                expect(mockSendAuthoringExperienceUpdate).not.toHaveBeenCalled();
+            });
+
+            it('pushes nothing, without failing, when no project is open', async () => {
+                const reapplied = await onReapplied();
+                mockGetCurrentProject.mockResolvedValue(undefined);
+
+                await expect(reapplied(REPUBLISHED)).resolves.toBeUndefined();
+
+                expect(mockSendAuthoringExperienceUpdate).not.toHaveBeenCalled();
+            });
+        });
+    });
+
+    describe('the agent-CLI probe the sidebar is given', () => {
+        it('asks the shared command executor whether the named command exists', async () => {
+            const commandExists = jest.fn().mockResolvedValue(true);
+            (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue({ commandExists });
+
+            await activate(createActivationContext());
+            const probe = (SidebarProvider as unknown as jest.Mock).mock.calls[0][3] as {
+                commandExists: (name: string) => Promise<boolean>;
+            };
+
+            await expect(probe.commandExists('claude')).resolves.toBe(true);
+            expect(commandExists).toHaveBeenCalledWith('claude');
         });
     });
 

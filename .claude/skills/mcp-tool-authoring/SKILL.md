@@ -23,6 +23,23 @@ with ~10 lines. The traps are in what qualifies and what else must move.
 3. Registered from `extension.ts` (descriptor modules import handler maps, so they stay
    out of the vscode-free server module).
 
+## A tool removes work; it does not add vocabulary (AI-1l, 2026-10-20)
+
+Before adding a constraint to an input, ask whether the agent could already say the right
+thing without it. In nine runs of a Commerce query the agent's first query was correct
+every time, and correct by hand before `run_commerce_query` existed. The tool's
+`endpoint` enum refused that correct reading ("catalogService") five times, and the
+agent abandoned a right query to discover our name for it.
+
+- Earn your keep on what the agent CANNOT do cheaply: store headers, credentials, round
+  trips saved. Not on naming things it already knows.
+- Prefer accepting the agent's natural form (a URL, a path, an HTTP verb) and resolving it,
+  over a closed list of our names for the same thing.
+- A closed list (`z.enum`, `z.literal`, `z.nativeEnum`) is allowed when the set IS the
+  agent's vocabulary: our screens, our states, a discriminator for which field follows.
+  Each one needs a row with that reason in `tests/sop/tool-input-constraints.ledger.json`;
+  `tests/sop/tool-input-constraints.test.ts` fails the build without it.
+
 ## Three things every tool declares (added 2026-08-25)
 
 None of these can be derived from the tool's NAME, and all three were derived from it
@@ -40,6 +57,11 @@ Gates the Evaluation Mode dry run, the chat's opening line and the phase sinks.
 
 Missing means "assume it writes" — over-blocked under a dry run, which is the safe
 direction. Set `destructiveHint` true when the tool is in `AGENT_ALERT_COPY`.
+
+**`readOnlyHint` also decides whether the AGENT asks.** Copilot (VS Code's chat and the
+CLI) puts its own approval prompt in front of every tool not marked read-only, at the SC's
+default permission level. A read tool wrongly declared writable becomes a prompt on every
+call; the annotation test is the guard (ADR-025).
 
 **Declare what the tool IS AS EXPOSED, not what the handler could do.**
 `check_github_app` declares `readOnly: true` even though its handler fires a Helix code
@@ -77,13 +99,22 @@ fields, and the dialog shows these and nothing else, because it answers one ques
 | `target` | argument keys naming WHICH thing, in reading order |
 
 `target` is `[]` when the tool acts on the open project and declares no argument naming
-it (`republish`, `sync_content`) — the dialog names the open project instead.
+it (`republish`) — the dialog names the open project instead.
 
 **Read the schema before writing `target`.** A key that does not exist renders a BLANK
 line, not an error, so the dialog quietly stops saying which thing it is about. Two of
 the first fifteen were wrong that way. `agentAlertTargets.test.ts` now catches it.
 And show what a human can CHECK: `delete_adobe_project` declares `projectId` first and
 must show only `projectName` — nobody can verify a 19-digit id.
+
+### The description is how the tool is FOUND
+
+Copilot hands our tools to the model deferred: the model sees the names and calls
+`tool_search` with a phrase, which matches against the descriptions; Claude Code's
+ToolSearch works the same way. So the 128-tools-per-request cap does not bind (measured
+2026-10-06, `.rptc/plans/copilot-first-agent-support/step-06-tool-budget.md`), but a tool
+whose description does not say what an SC would ask for is a tool nobody loads. Lead the
+description with the job in plain words, not the implementation.
 
 ## The response shape — never build it by hand
 

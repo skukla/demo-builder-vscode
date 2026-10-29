@@ -29,6 +29,8 @@ import { CHECK_IDS } from '@/types/messages';
 export interface AiVerifyCheckData {
     checks: AiCheckResult[];
     inventory: AiInventory;
+    /** Whether Claude Code (the command-line tool) is installed (AI-4a). */
+    agentCli?: { installed: boolean; name: string };
 }
 
 /**
@@ -46,6 +48,9 @@ export interface AiVerifyCheckDeps {
 }
 
 const FILE_CHECK_FAILED = 'AI context files are missing or invalid — Regenerate AI files';
+/** The agent's name comes with the answer — it is the engine the SC chose. */
+const cliMissing = (name: string): string =>
+    `${name} (the command-line tool) is not installed — the chat cannot start`;
 
 /** Name the first inventory inspector failure (the which + why), or undefined. */
 function firstInventoryFailure(inventory: AiInventory): string | undefined {
@@ -67,11 +72,19 @@ export function createAiVerifyCheck(deps: AiVerifyCheckDeps): OnOpenCheck {
 
             const result = await deps.verify(project.path, project.aiFileHashes);
             // Always carry the full result so the badge + modal render unchanged.
-            const data: AiVerifyCheckData = { checks: result.checks, inventory: result.inventory };
+            const data: AiVerifyCheckData = {
+                checks: result.checks,
+                inventory: result.inventory,
+                ...(result.agentCli ? { agentCli: result.agentCli } : {}),
+            };
 
             // A failed file-presence check is a hard "broken" — files missing/invalid.
             if (result.checks.some(c => c.status !== 'ok')) {
                 return { status: 'error', message: FILE_CHECK_FAILED, data };
+            }
+
+            if (result.agentCli?.installed === false) {
+                return { status: 'warning', message: cliMissing(result.agentCli.name), data };
             }
 
             // Files OK but an inventory inspector failed — surface WHICH and WHY (P2).

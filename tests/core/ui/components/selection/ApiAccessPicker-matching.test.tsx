@@ -207,7 +207,7 @@ describe('ApiAccessPicker — the locked reason line', () => {
         const { container } = renderPicker({
             apis: [{ code: 'MeshSDK', name: 'API Mesh', locked: true, ...over }],
         });
-        return container.querySelector('.intflow-api-reason')?.textContent ?? null;
+        return container.querySelector('.checkbox-row-reason')?.textContent ?? null;
     };
 
     it('lists three holders as A, B and C', () => {

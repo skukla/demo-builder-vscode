@@ -73,6 +73,43 @@ export async function publishLibraryPaths(
     paths: string[],
     logger: Logger,
 ): Promise<{ published: number; failed: number }> {
+    return publishOneByOne(helixService, { owner, repo }, paths, logger, 'library paths');
+}
+
+/**
+ * Publish copied sheets, one `.json` path at a time.
+ *
+ * The same single-page route as the block library, whose own sheet
+ * (`/.da/library/blocks.json`) is the proof it serves a sheet. The whole-site
+ * publish cannot do this: it lists `.html` documents only. Same contract as
+ * {@link publishLibraryPaths}; only what the log calls the paths differs.
+ *
+ * @param paths - sheet web paths (`/metadata.json`), as the content copy reports them
+ * @returns how many published and how many failed
+ */
+export async function publishSheetPaths(
+    helixService: LibraryPublishHelix,
+    owner: string,
+    repo: string,
+    paths: string[],
+    logger: Logger,
+): Promise<{ published: number; failed: number }> {
+    return publishOneByOne(helixService, { owner, repo }, paths, logger, 'sheets');
+}
+
+/** A rejected publish's reason, as one line for the log. */
+function reasonOf(reason: unknown): string {
+    return reason instanceof Error ? reason.message : String(reason);
+}
+
+/** The single-page publish loop; `what` names the paths in the log. */
+async function publishOneByOne(
+    helixService: LibraryPublishHelix,
+    { owner, repo }: { owner: string; repo: string },
+    paths: string[],
+    logger: Logger,
+    what: string,
+): Promise<{ published: number; failed: number }> {
     if (paths.length === 0) return { published: 0, failed: 0 };
 
     // Absolute, whatever the caller sent. The single-page endpoint normalises
@@ -80,10 +117,10 @@ export async function publishLibraryPaths(
     // consumes it.
     const absolute = paths.map((path) => (path.startsWith('/') ? path : `/${path}`));
 
-    logger.debug(`[EDS] Publishing ${absolute.length} library paths`);
+    logger.debug(`[EDS] Publishing ${absolute.length} ${what}`);
 
     let published = 0;
-    const failures: string[] = [];
+    const firstFailures: { path: string; reason: string }[] = [];
 
     for (let i = 0; i < absolute.length; i += LIBRARY_PUBLISH_BATCH) {
         const batch = absolute.slice(i, i + LIBRARY_PUBLISH_BATCH);
@@ -94,17 +131,33 @@ export async function publishLibraryPaths(
             if (result.status === 'fulfilled') {
                 published++;
             } else {
-                failures.push(batch[index]);
+                firstFailures.push({ path: batch[index], reason: reasonOf(result.reason) });
             }
         });
     }
 
+    // One retry each, one at a time. A sheet refused once with "400 Bad Request"
+    // in a reset was fine on the site afterwards (row 3.17, 2026-10-17); a one-off
+    // refusal clears on a second ask. The first reason is logged even when the
+    // retry works, so a recurring one can be explained rather than guessed at.
+    const failures: string[] = [];
+    for (const { path, reason } of firstFailures) {
+        try {
+            await helixService.previewAndPublishPage(owner, repo, path);
+            published++;
+            logger.info(`[EDS] ${path} published on the second try (first try: ${reason})`);
+        } catch (retryError) {
+            failures.push(`${path} (${reasonOf(retryError)}; first try: ${reason})`);
+        }
+    }
+
     if (failures.length > 0) {
-        // Name what was dropped. A count with no paths sends the reader back to
-        // the site to work out which blocks are missing.
+        // Name what was dropped, and why. A count with no paths sends the reader
+        // back to the site to work out which blocks are missing; a path with no
+        // reason leaves nothing to act on.
         const sample = failures.slice(0, 5).join(', ');
         logger.warn(
-            `[EDS] ${failures.length} of ${absolute.length} library paths failed to publish` +
+            `[EDS] ${failures.length} of ${absolute.length} ${what} failed to publish` +
                 ` (first: ${sample}${failures.length > 5 ? ', ...' : ''})`,
         );
     }

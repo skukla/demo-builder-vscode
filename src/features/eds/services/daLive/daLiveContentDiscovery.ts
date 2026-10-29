@@ -4,7 +4,7 @@
  * The two raw enumerators the content-copy pipeline builds on: the complete
  * DA.live list-API walk (`getContentPathsFromDaLive`) and the CDN content-index
  * read (`getContentPathsFromIndex`). Extracted from `DaLiveContentOperations`
- * as part of its decomposition; the facade constructs one and delegates.
+ * as part of its decomposition; DaLiveContentOperations constructs one (`discoveryOps`).
  *
  * Keep this module `vscode`-free (the MCP server constructs the DA.live stack
  * in a separate Node process).

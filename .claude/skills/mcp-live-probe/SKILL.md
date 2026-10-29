@@ -154,7 +154,7 @@ grep -c 'registerContentAuthoringTools' dist/extension.js   # 0 — esbuild RENA
 ```
 
 That zero looks exactly like a failed build. It cost a wrong "the build is broken" conclusion
-until a negative control (`not_a_real_tool` → 0) and a positive one (`sync_content` → 1) showed
+until a negative control (`not_a_real_tool` → 0) and a positive one (`republish` → 1) showed
 the check itself was wrong, not the build.
 
 A fresh worktree has an **empty `dist/`** — nothing is built until `npm run compile` or F5's
@@ -162,9 +162,15 @@ A fresh worktree has an **empty `dist/`** — nothing is built until `npm run co
 
 ## Only read-only tools run without `--force`
 
-`call` runs a tool unprompted only when its name reads as a query — `list_*`, `get_*`, `read_*`,
-`check_*`, `find_*`, `verify_*`, `inspect_*`, `show_*`, `describe_*`. Everything else needs
-`--force`. `info` prints which tools are gated.
+`call` runs a tool unprompted only when the SERVER declares it read-only —
+`annotations.readOnlyHint: true`, the same flag the Evaluation Mode dry run trusts and the
+one `mcp-tool-authoring` makes every tool author. Everything else needs `--force`. `info`
+prints which tools are gated (68 of 148 callable, 2026-09-30).
+
+Until 2026-09-30 the gate was a NAME regex (`list_*`, `get_*`, `read_*`, `check_*`…), which
+is the derivation the 2026-08-25 audit removed from the server, alive here: it refused
+`run_commerce_rest` — a GET that declares itself read-only — on four of the session's calls.
+The regex survives only as the fallback for a tool that declares nothing.
 
 This guard exists because two standing rules collide badly: **never call a state-changing tool
 merely to measure it**, and **8 tools take no required arguments** — so an enumerate-and-call

@@ -25,22 +25,47 @@ cd "$(git rev-parse --show-toplevel)" || exit 1
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
+# Fixture pids are above 99999, which no macOS process can have: the rule skips a pid
+# that is one of its own ancestors, and a made-up 99005 once matched a real one under a
+# full suite and read as "nothing running" (PL-74, 2026-10-12).
+#
 # A jest that is genuinely running. The rule keys on the resolved binary path, so a
 # snapshot line must carry node_modules/.bin/jest to count.
-printf '%s\n' "99001 node /repo/node_modules/.bin/jest --ci --no-coverage" > "$TMP/live"
+printf '%s\n' "900001 node /repo/node_modules/.bin/jest --ci --no-coverage" > "$TMP/live"
 # A machine with nothing running.
-printf '%s\n' "99002 /bin/zsh -l" > "$TMP/idle"
+printf '%s\n' "900002 /bin/zsh -l" > "$TMP/idle"
 # Watch mode is deliberately excluded: it is a long-lived editor companion, not a
 # competing run, so it must not block a one-shot suite.
-printf '%s\n' "99003 node /repo/node_modules/.bin/jest --watch" > "$TMP/watch"
+printf '%s\n' "900003 node /repo/node_modules/.bin/jest --watch" > "$TMP/watch"
+# A shell whose TEXT names the jest binary — a status watcher grepping ps for it.
+# Counted as a live run on 2026-10-08, with no jest anywhere on the machine.
+printf '%s\n' "900004 /bin/zsh -c while true; do ps -Ao args= | python3 -c \"import sys; print(any('node_modules/.bin/jest' in l for l in sys.stdin))\"; sleep 45; done" > "$TMP/mention"
+# A node binary named by full path still counts.
+printf '%s\n' "900005 /opt/homebrew/bin/node /repo/node_modules/.bin/jest --ci" > "$TMP/pathed"
 
 run() {
   local cmd="$1" snap="$2" label="$3" expect="$4"
   local payload out code got verdict
   payload=$(CMD="$cmd" python3 -c 'import json,os;print(json.dumps({"tool_name":"Bash","tool_input":{"command":os.environ["CMD"]},"session_id":"proof"}))')
-  out=$(printf '%s' "$payload" | DBV_JEST_PS="$snap" bash .claude/hooks/router.sh 2>&1); code=$?
+  # A payload that was not built, or a router that never reached its rules, is its own
+  # answer: the router exits 0 on both, which read as "pass" (PL-74, 2026-10-19).
+  if [ -z "$payload" ]; then
+    printf '%-56s expect=%-5s got=%-5s %s\n' "$label" "$expect" "none" "*** WRONG *** (payload not built)"
+    return
+  fi
+  out=$(printf '%s' "$payload" | DBV_HOOK_TRACE=1 DBV_JEST_PS="$snap" bash .claude/hooks/router.sh 2>&1); code=$?
   got="pass"; [ "$code" -ne 0 ] && got="BLOCK"
   verdict="OK"; [ "$got" != "$expect" ] && verdict="*** WRONG ***"
+  # Every case reaches the router; one whose command names jest passes its pre-filter, so
+  # it must reach the rules too, or the router gave up part-way and read as "pass".
+  case "$out" in *"router: started"*) ;; *) verdict="*** WRONG *** (the router did not run)" ;; esac
+  case "$cmd" in *jest*)
+    case "$out" in *"router: evaluating"*) ;; *) verdict="*** WRONG *** (the router stopped before its rules)" ;; esac ;;
+  esac
+  # A block counts only when it is THIS rule's: another rule's block is not this proof's answer.
+  if [ "$got" = "BLOCK" ]; then
+    case "$out" in *"jest run is already in flight"*) ;; *) verdict="*** WRONG *** (blocked, but not by this rule)" ;; esac
+  fi
   printf '%-56s expect=%-5s got=%-5s %s\n' "$label" "$expect" "$got" "$verdict"
 }
 
@@ -79,3 +104,5 @@ echo
 echo "=== nothing in flight, or nothing that competes ==="
 run "$NPX" "$TMP/idle"  'npx jest with an idle machine'               pass
 run "$NPX" "$TMP/watch" 'a --watch jest does not count as competing'  pass
+run "$NPX" "$TMP/mention" 'a shell whose text names the binary is not a run' pass
+run "$NPX" "$TMP/pathed"  'a node named by full path still counts'    BLOCK

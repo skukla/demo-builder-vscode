@@ -13,7 +13,7 @@
  *
  * WHAT MOVED HERE. The handler context both suites build, and the ACCS project
  * shape both drive the deps with. Nothing else: every remaining `jest.mock` in
- * these suites is for a module the SPEC itself imports — `commerceCredentials`,
+ * these suites is for a module the SPEC itself imports —
  * `dataInstallerHandlers`, `dataInstallerWriteClient`, `importJobRunner` — and a
  * `jest.mock` only hoists above the imports of the module it appears in. Moved
  * here they would apply too late and each spec would hold the real function it
@@ -25,6 +25,7 @@
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
 
 /**
  * A context with a real debug logger fake — the write client logs one line per
@@ -35,13 +36,13 @@ export function importHarness(overrides: Partial<HandlerContext> = {}): HandlerC
     return createMockHandlerContext({ debugLogger: createMockLogger(), ...overrides });
 }
 
-/** An ACCS project, in the shape the credential resolver dispatches on. */
-export const ACCS_PROJECT = {
+/** An ACCS project: the backend lives on `componentSelections`, where every real project keeps it. */
+export const ACCS_PROJECT = createMockProject({
     name: 'demo',
     adobe: { organization: '285361' },
     componentSelections: { backend: 'adobe-commerce-accs' },
     componentConfigs: {},
-};
+});
 
 /** The refusal both the write client and the poller give when access fails. */
 export const NOT_REACHABLE = 'The Data Installer is not reachable for this project.';

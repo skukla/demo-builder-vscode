@@ -1,0 +1,234 @@
+---
+id: AB-16
+kind: feature
+area: app-builder
+parent: AB-9
+needs: [AB-23]
+value: med
+status: built
+---
+
+# One integration, several ERPs
+
+Filed 2026-09-17 from the owner: demonstrating Commerce integrated with several ERPs is
+common, and a project can hold one ERP today.
+
+## Why it could not, and what shipped since
+
+**Superseded 2026-09-22/23: a project CAN hold two ERP pairs today.** AB-23 shipped the
+workspace-per-integration model and the copy machinery, and a second pair was added to a
+live project on 2026-09-22 (`erp-integration-2` with `demo-erp-2`, in its own Adobe
+workspace). AB-15's Commerce-side collision — two copies declaring the same app id — was
+fixed the same day: a copy now declares the name the SC gave it. The list below is kept as
+the record of what blocked it.
+
+Two collisions REMAIN, and they belong to the routing layer, not here (found while
+establishing the seam, `.rptc/research/multi-erp-order-routing/research.md`):
+
+- both installed copies subscribe to `observer.sales_order_save_commit_after`, and each
+  sends the WHOLE order to its own ERP;
+- both write Commerce's single `ext_order_id`, so the first writer wins.
+
+### The original list (2026-09-17)
+
+- The pair is added under fixed catalog ids (`erp-integration`, `demo-erp`); a second add of
+  the same tile is refused.
+- The ERP deploys under a fixed package name (`deriveOwPackage('demo-erp')`), into fixed
+  database collections, with one screen key per project, so a second ERP in the workspace
+  would replace the first.
+- The integration is an App Management app, and the ERP plan's decision 7 records one such
+  app per workspace (the AB-2 spike's finding). Its Commerce webhook and event subscription
+  names are fixed per app id, so two integrations on one Commerce collide (AB-15).
+
+## Why anyone runs several ERPs — and the open decision (owner, 2026-09-23)
+
+The reason, from a customer call: a company built by MERGERS AND ACQUISITIONS holds
+different product records in different ERPs, aggregates them into one online catalogue,
+and then has to decide how an order splits between those systems. They know a full order
+management system exists and may be needed one day; they are betting on native Adobe
+Commerce plus customization for now, and the owner thinks that bet is sound. So the demo's
+job is to SHOW what that looks like — native Commerce and App Builder, no OMS on stage.
+
+Two audiences, both real: the IT and architecture people who decide to integrate and own
+the routing rules, and the operations person who lives with the result (a part-shipped
+order, a line that went to the wrong system, a part that failed to send).
+
+**The order customization is its own integration, layered on the ERP one** (owner): the ERP
+integration stays one-ERP and generic. Which leaves the decision this item has to make:
+
+- **A — foundation plus add-on.** The ERP integration exposes a seam; a routing integration
+  sits above it when a project holds two ERPs. One codebase for ERP behaviour.
+- **B — a complete multi-ERP integration type** in the catalog: one card, everything wired.
+
+Leaning (not decided): **A underneath, B on the surface** — one ERP codebase and a separate
+routing layer, with a catalog card that adds all three at once (ERP A, ERP B, routing), so
+the SC picks one thing. A true B forks the ERP logic: the same order, price, stock and
+status behaviour living twice, with the second copy drifting. Two COPIES of one app already
+collided on one Commerce store (AB-15); two different codebases doing one job would be
+worse.
+
+What decides it is the SEAM — what the routing layer needs the ERP integration to expose so
+it never reaches inside it. Being established in
+`.rptc/research/multi-erp-order-routing/research.md`.
+
+## The shape, rewritten by AB-17 (2026-09-20)
+
+**Both limits above were limits of ONE SHARED WORKSPACE, and that is being removed**
+(AB-17 answered; AB-23 builds it). Each integration and each system gets its own
+workspace, so:
+
+- **Item 1 below comes free.** A second ERP has its own namespace, its own database and
+  its own static site. No package renaming, no collection prefixes, no per-project screen
+  key — the renaming work this item was carrying is deleted, not done.
+- **"One integration per ERP" is back on the table.** It was ruled out because one
+  workspace holds one App Management app; with a workspace each, a second integration is
+  possible. That makes it a real choice rather than a constraint, and it is now the first
+  owner decision below.
+
+The rest of this item — routing, tagging, per-ERP teardown, the cards — stands whichever
+shape wins, because it is about which ERP owns which work, not about where the code runs.
+
+### The two shapes now worth comparing
+
+| | One integration, several ERPs | One integration per ERP |
+|---|---|---|
+| Commerce-facing apps | one | one per ERP, each its own App Management app |
+| Routing | inside the integration (by website, store view, company) | by which app Commerce calls |
+| Webhook and event names | one app id, so no collision | per-copy `metadata.id` (AB-17 steps 1–2 showed it can vary per build) |
+| Resembles | middleware in front of several back ends | a separate connector per system |
+
+Deciding between them is the first thing this item needs; everything else follows.
+
+## What it needs
+
+1. **ERP instances with their own names:** package, database collections (or a prefix),
+   screen key and display name per instance; an "Add another ERP" path on an existing
+   integration; the integration's `ERP_BASE_URL` becomes a list.
+2. **Routing in the integration:** which ERP takes an order, receives price and stock
+   changes and owns a company. The likely rule is by website or store view, chosen on the
+   integration's Commerce Admin settings page (AB-10).
+3. **Events tagged with their ERP**, so a change from one ERP touches only its part of the
+   catalog, and the mirror sends each ERP only its share.
+4. **Reset, detach and removal per ERP:** the ledger records which ERP made each write;
+   removing the integration removes all of its ERPs.
+5. **Cards:** the integration's Uses row lists every ERP (the stored link is already a list,
+   `.rptc/plans/erp-linked-tiles/overview.md`).
+
+## Waiting on AB-23
+
+The workspace-per-integration build. This item cannot be planned before it lands, because
+which of the two shapes above is even possible depends on it.
+
+## Owner decisions before planning
+
+- **Which shape** (one integration routing to several ERPs, or one integration per ERP).
+- The routing rule (store view, website, product attribute, company).
+- How an SC adds the second ERP (from the integration's card, or the gallery tile again).
+- Whether each ERP keeps its own screen, or one screen switches between them.
+
+## Live checks before building
+
+Both of the old checks are gone: they asked whether two ERPs could live side by side in
+ONE workspace, which is no longer the plan. What replaces them belongs to the shape that
+wins — for one-integration-per-ERP, it is AB-17's step 6: two copies with different
+`metadata.id` on one Commerce, and the first copy's webhooks untouched.
+
+## Stored shapes the target list will move (read 2026-09-24, before the baseline release)
+
+Read once so the single-ERP baseline can ship knowing what a target list changes. Nothing
+here is built; the point is that every field below has an obvious one-target migration,
+so releasing the baseline first costs a mechanical migration and nothing more.
+
+**Extension side, per pair today.**
+
+| Where | Field | Under targets |
+|---|---|---|
+| `componentConfigs['erp-integration']` | `ERP_DISPLAY_NAME` (typed at add, else the catalog default) | one name per target |
+| `appBuilderComponents['demo-erp'].providesEnvVars` | `ERP_BASE_URL` (the ERP's deployed web base) | one address per target |
+| deploy env of the integration | `ERP_BASE_URL`, `ERP_DISPLAY_NAME` as single action params | a target list the actions read (a config the integration owns, not N env vars) |
+| `appBuilderComponents['erp-integration']` | `workspace` (own, shared with its ERP), `commerceAppId`, `name` ("<ERP> Integration"), `installation`, `updateAvailable` | unchanged; `name` reverts to the catalog's or names the targets |
+| the pair model | `boundTo` 1:1, `pairedInstanceId`, `findMissingProvider`, `linkBroughtSystem`, copy numbering (`erp-integration-2` ↔ `demo-erp-2`) | the ONE real shape change: several systems bound to one integration. Every helper above assumes one partner |
+| SecretStorage | the ERP's screen key; the ERP login the integration uses | one of each per target (the ERP side already keys them per ERP) |
+
+**Integration side, per Commerce scope (global, website, store view) through
+`@adobe/aio-commerce-lib-config`** (`app.commerce.config.ts` → `businessConfig.schema`,
+read by `src/lib/settings.js`):
+
+| Setting | Under targets |
+|---|---|
+| `orders_send`, `orders_hold_offline`, `orders_status_on_confirm` | integration-wide, unchanged |
+| `pricing_contract_prices`, `pricing_discount_ceiling` | per target (each ERP prices its own products) |
+| `structure_sales_org`, `structure_sales_org_name` | per target per scope (each ERP has its own structure) |
+| `structure_order_prefix` | per target — the number's owner |
+| `structure_owns`, `structure_owns_sources` (and the attribute rule) | per target — the routing rule IS the target's ownership |
+
+**ERP side** (appearance, numbering, currency, company structure): already per ERP in the
+ERP's own database. Nothing moves.
+
+**The migration for a project on the baseline:** its one pair becomes target #1 — address
+from `ERP_BASE_URL`, name from `ERP_DISPLAY_NAME`, its `structure_*` and `pricing_*` values
+at each scope copied under that target. One-to-one, no information lost, no user input.
+
+**Verdict:** release the baseline. The only structural change is the pair model going from
+one partner to several, and that is AB-16's own work either way.
+
+## Shipped so far
+
+- 2026-09-20  Rewritten around AB-17's answer: the renaming work is deleted (a workspace each gives every ERP its own namespace and database), and one-integration-per-ERP becomes a choice rather than an impossibility. Now waits on AB-23.
+- 2026-09-23  docs(backlog): AB-16, why several ERPs, and the layering decision it has to make (`201eb587e`)
+- 2026-09-23  docs(research): what the mock ERP lacks, and where multi-ERP routing belongs (`8d1c8d75e`)
+- 2026-09-23  docs(research): MSI is in the ACCS backend, so the ownership marker is a source (`425b233b6`)
+- 2026-09-24  2026-09-24, reopened by the owner: should multi-ERP be its own catalog item shaped as the customer would build it — ONE integration serving one or more ERP targets, the routing consumer inside it (pass-through with one target), the mock ERPs separate systems? Recommendation given: yes, decide this item as 'one integration, several ERPs'; it matches the customer, keeps one App Management app (two copies register the same totals-collector batch names, unverified whether Commerce runs both), one codebase (a target list, not a fork), and per-target reversibility via the ledger. Costs named: fixed target slots in the static business-config schema; rules M1–M5 rephrased from pair to target; 'add another ERP' on the card; the OMS-swap story becomes a module boundary. Awaiting the owner's word before the plan, research and walk-through are rewritten
+- 2026-09-24  docs(backlog): multi-ERP as one integration with targets — reopened, recommendation logged, awaiting the owner (`e1ee90feb`)
+- 2026-09-24  DECIDED 2026-09-24 (owner): one integration, several ERPs, shaped as the customer would build it. The ERP integration serves one or more configured targets (address, display name, prefix, ownership rule); the routing consumer is inside it and passes every order through with one target; the mock ERPs stay separate systems in their own workspaces with their own screens and looks. AB-26t folds in as the routing slice. Order of work: nail down the single-ERP skeleton first (merge the loop branches, prove it live with a credential, keep the record true), then grow the target list out of it. Rules M1–M5 keep their discipline with the boundary moved from pair to target
+- 2026-09-24  docs(rptc): decided — one ERP integration serving several targets; the routing item folds into AB-16 (`9aeca53a7`)
+- 2026-09-24  docs(rptc): AB-16 reads the stored shapes a target list moves; the report lists the validation still owed (`d3bf6b69e`)
+- 2026-09-26  Plan written (owner, 2026-09-26): .rptc/plans/several-erps/overview.md consolidates all remaining ERP work. Phase A finishes the one-ERP baseline (live proofs, API fixtures, filling by Demo Builder, shared-catalog contracts, sync validation, website scope); ERP feature growth freezes after contracts; Phase B is this item in eight slices (target model and migration, add another ERP from the card, per-target settings, routing, inbound per target, filling and pricing per target, surfaces, harness and live proof). Every ERP runs the same baseline code.
+- 2026-09-26  Owner, 2026-09-26: one integration PER ERP, superseding 2026-09-24's one integration with a list of ERPs. Each ERP has its own integration, settings and Commerce app; the second pair comes from the tile (built). No router: each integration sends only the lines its ERP owns; each ERP's number goes in its own custom order attribute. Plan Phase B rewritten (B1 to B7). Settings and mapping separate on a simplified Admin page (plan §5b).
+- 2026-09-26  docs(research): how Commerce can hold two ERPs' credit for one company (`74809f59c`)
+- 2026-09-26  docs(rptc): one integration per ERP, and a simplified Admin page with settings apart from the mapping (`2c93afb1e`)
+- 2026-09-26  docs(rptc): one plan for the remaining ERP work, and the freeze after contracts (`b5c4f4b6e`)
+- 2026-09-28  Phase B0 built (integration 21306ab, loop branch): the code layout of design v1 — router, adapter contract, demo-erp and example adapters, the ERP list keyed by id; every existing test unchanged and passing (455).
+- 2026-09-28  Phase B1 built (integration 639c888): the router splits each order by owning ERP (product attribute erp_owner holds the ERP id), sends each ERP only its lines, stores parts per order in App Builder State, holds unowned lines, records doubly-claimed SKUs as setup errors; one ERP unchanged. 460 tests. Open: the erp_owner attribute is a Demo Builder setup step for several ERPs.
+- 2026-09-28  Phase B2 built (integration a4c5373): part outcomes from the ERP's inbound messages through the adapter's readOutcome; the combined status rule (router holds/unholds only; Commerce moves Processing/Complete); an ERP cancel or invoice in a split order affects its part only. 506 tests, no existing test changed. B3 split into B3a (data) and B3b (Admin settings).
+- 2026-09-28  Phase B3a built (integration 950227d, demo-erp e1425f3): stored ERP list (erp/erps GET/PUT, validated), key map per ERP (erpId), a company saved in Commerce goes to every ERP, ERP events carry erpId (ERP_ID deploy input), contract v4. 533 + 262 tests. Not done: per-ERP cart pricing, lookup per ERP (B3b); Demo Builder sets ERP_ID and PUTs the list (B6).
+- 2026-09-28  Phase B3b built (integration 99581c0, 1ee27d6, 00daa68, 1a92346, 0ce05ff): cart price and discount checks ask each owning ERP for its own lines in parallel (a failed ERP leaves its lines at Commerce's price); Admin lookup per ERP; per-ERP settings (ownership, prefix, sales organisation) on each ERP's list entry, integration-wide settings in App Management; ERP switcher on the Admin Settings section (checked in the preview). B1's unstored ownership field removed. 558 tests. Leftover for B7: the page header's single-ERP wording.
+- 2026-09-28  Phase B4 built (integration f18927f): each ERP invoices (partial, items[]) and ships only its part's lines; a shipment before its invoice invoices first; invoice calls on one order serialised with a best-effort State lock (503 redelivery, never lost); Commerce-side shipments/invoices go to each ERP for its lines. 569 tests. To test live: simultaneous partial invoices (MDVA-40399, reported).
+- 2026-09-28  Phase B5 built (integration f739c94): with several ERPs an ERP's block holds only its parts of the company's open and new orders (company flag untouched); each ERP's limit/exposure/available in erp_<id>_* company custom attributes, Commerce limit = sum; detach undoes both. 585 tests. Open: one-ERP block still sets the company flag (owner); live test of setCustomAttributes replace vs merge; detach does not release block-held parts with several ERPs.
+- 2026-09-28  docs(erp): several ERPs on one integration, how to add and remove one (`709942027`)
+- 2026-09-28  feat(erp): "Add another ERP" on the ERP integration's card (`42cd5a73f`)
+- 2026-09-28  feat(erp): add another ERP to the ERP integration, and remove one on its own (`70e6bc91f`)
+- 2026-09-28  feat(erp): three setup steps for several ERPs, one checked by Demo Builder (`76d9489c5`)
+- 2026-09-28  docs(plan): the waiting-lines status is "Partially Held" (`59a8c5ae3`)
+- 2026-09-28  feat(erp): the fill sends Commerce's company status as the website account (`e97be8bb1`)
+- 2026-09-28  docs(plan): design v1, On Hold only when every part is held (`8331c2a22`)
+- 2026-09-28  docs(plan): design v1 lists the rules pending a client answer (`a0fa2d688`)
+- 2026-09-28  docs(plan): vignette 11, where an order line goes and who books it (`73f7d86c5`)
+- 2026-09-28  docs(erp): an ERP block holds the company's orders, never the company (`b954b53d5`)
+- 2026-09-28  docs(plan): brand, business unit, ERP and sales organisation defined (provisional) (`f322e3354`)
+- 2026-09-28  docs(plan): design v1 credit row records the per-ERP attributes as built (`d8a80a814`)
+- 2026-09-28  docs(plan): design v1, nothing is seeded; the SC creates brands and products (`fdaa6b51f`)
+- 2026-09-28  docs(plan): how a brand is made, in the design and a new vignette (`bc4611663`)
+- 2026-09-28  docs(plan): Phase B5 done, blocks and credit per brand (`273326dcd`)
+- 2026-09-27  docs(plan): Phase B4 done, shipments and invoices per part (`08eae73c6`)
+- 2026-09-27  docs(plan): Phase B3b done, per-ERP pricing, lookup and settings (`13ad5b469`)
+- 2026-09-27  docs(plan): Phase B3a done, several ERPs' data (`2329cac47`)
+- 2026-09-27  docs(plan): Phase B2 done, part outcomes and the combined status (`e1dc75cd9`)
+- 2026-09-27  docs(plan): design v1, "Add another ERP" on the integration card (`fcfa4db00`)
+- 2026-09-27  docs(plan): Phase B1 done, the router splits orders (`0df9ced98`)
+- 2026-09-27  docs(plan): design v1 demo scope, Commerce and the ERPs only (`62a5c18d3`)
+- 2026-09-27  docs(plan): Phase B0 done, the code layout (`e296e30a6`)
+- 2026-09-27  docs(plan): design v1, the credit limit depends on a client question (`11e53aa0a`)
+- 2026-09-27  docs(plan): Phase B rewritten from the locked design, one integration with a routing action (`159014ff2`)
+- 2026-09-27  docs(plan): ten deck vignettes drawn from the several-ERPs design v1 (`dd455e708`)
+- 2026-09-27  docs(plan): design v1 change, company block per brand and the code layout (`59b334191`)
+- 2026-09-27  docs(plan): the several-ERPs design is locked as v1 (`39e0131ae`)
+- 2026-09-27  docs(plan): products do not cross ERPs; a refused cancel is held for staff (`a16370df6`)
+- 2026-09-27  docs(plan): several ERPs, the reference design v1 draft (`70ffe26c5`)
+- 2026-09-27  docs(research): one multi-ERP integration with a routing action, or an app per ERP (`bbfd4675c`)
+- 2026-09-27  docs(plan): the routing action in one multi-ERP integration is the decision; per-ERP integrations withdrawn (`66f24f522`)
+- 2026-09-28  docs(handoff): the afternoon loop, in plain words (`9db50a41e`)
+- 2026-09-28  docs(handoff): AB-16h and AB-16i proven live; what remains under AB-16 (`a4f0b41f9`)
+- 2026-09-28  docs(handoff): the midday loop, AB-26z and AB-16a proven live (`35ea1b8e4`)
+- 2026-09-30  2026-09-29 Proven live on Bodea: a project holds two ERP pairs (Northwind + Contoso); a split order fans to the owning ERP, each reports only its part, write isolation holds, reset returns both to zero. Item's own 'superseded' note now demonstrated end-to-end.
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the body's 'Waiting on AB-23', 'Owner decisions before planning' and the one-integration-per-ERP comparison were replaced by the 2026-09-27 decision: one integration with a routing action.

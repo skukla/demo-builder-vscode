@@ -21,7 +21,6 @@ interface CommunicationConfig {
     messageTimeout?: number;
     maxRetries?: number;
     retryDelay?: number;
-    enableLogging?: boolean;
 }
 
 /**
@@ -30,11 +29,11 @@ interface CommunicationConfig {
  */
 const REQUEST_TIMEOUTS: Record<string, number> = {
     // Authentication
-    authenticate: TIMEOUTS.AUTH.BROWSER, // 60s - browser-based auth flow
+    authenticate: TIMEOUTS.AUTH.SIGN_IN + TIMEOUTS.AUTH.BROWSER, // the sign-in, then a minute to finish
     // Awaits the SAME browser sign-in as 'authenticate', then restores project context
     // and refreshes status — so it needs at least the same budget. Callers await it to
     // know when sign-in finished (the API picker re-fetches on success).
-    reAuthenticate: TIMEOUTS.AUTH.BROWSER, // 60s - browser sign-in + context restore
+    reAuthenticate: TIMEOUTS.AUTH.SIGN_IN + TIMEOUTS.AUTH.BROWSER, // the sign-in, then context restore
 
     // Data loading (wizard UI)
     // 30s was NOT enough and timed out on work that would have finished: each of
@@ -52,6 +51,16 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // while the extension logged a successful 96-service result (2026-07-31).
     listConsoleApis: TIMEOUTS.LONG, // 180s - same catalog fetch as list-org-console-apis
 
+    // A demo setup check: the first one in a session reads the workspace credential (three
+    // Adobe Console calls, ~12s, each with one retry — a retried read took the setup guide's
+    // first check past the 30s default on 2026-10-01) before its Commerce reads.
+    checkSetupSteps: TIMEOUTS.LONG, // 180s - credential read + up to three Commerce reads
+    prepareSetupChecks: TIMEOUTS.LONG, // 180s - the same credential read, done ahead of a check
+    // Add another ERP's store read: the same credential, then every product in the store.
+    // On Justrite it outran the 30s default and the dialog gave up while the read went on
+    // (2026-10-18).
+    getErpOwnershipOptions: TIMEOUTS.LONG, // 180s - credential + the whole product list
+
     addConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + union subscribe PUT
     setConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + reconcile subscribe PUT
 
@@ -66,12 +75,25 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
 
     // AEM Code Sync check. The fast path answers in about a second, but only
     // because the caller passed `skipTrigger`. "Check Again" does NOT, and when
-    // Helix has never heard of the repo the handler TRIGGERS a real code sync and
-    // polls it (`checkGitHubAppHandler.triggerAndWaitForCodeSync`, bounded by
-    // TIMEOUTS.LONG over 30 attempts). Unbudgeted, the frontend hung up at 30s and
-    // showed "couldn't verify" while the sync ran on for up to another 2.5 minutes
-    // and often succeeded — the 2026-07-31 failure above, in a different message.
-    'check-github-app': TIMEOUTS.LONG, // 180s - may trigger a code sync and poll it
+    // Helix has never heard of the repo the handler TRIGGERS a real code sync
+    // (`checkGitHubApp` → `triggerCodeSync`) and re-checks once. Unbudgeted, the
+    // frontend hung up at 30s and showed "couldn't verify" while the sync ran on
+    // for up to another 2.5 minutes and often succeeded — the 2026-07-31 failure
+    // above, in a different message.
+    'check-github-app': TIMEOUTS.LONG, // 180s - may trigger a code sync and re-check
+
+    // Site access: waits for an admin role granted on GitHub — four checks over ~105s.
+    waitForSiteAccess: TIMEOUTS.LONG, // 180s - polls the Configuration Service for the grant
+
+    // An integration's Settings (AB-21): the save redeploys what uses the change,
+    // up to two app deploys in a row (the ERP, then its integration).
+    saveIntegrationSettings: TIMEOUTS.EXTENDED, // 600s - store, then up to two redeploys
+
+    // The Updates modal (PL-80): the apply runs every ticked update, integration deploys
+    // among them.
+    applyUpdates: TIMEOUTS.UPDATES_APPLY, // 30min - the whole run, reported at its end
+    // "Back to updates": Check for Updates again, every project and the extension.
+    recheckUpdates: TIMEOUTS.LONG, // 180s - the whole check, then its notification
 
     // Project deletion (EDS cleanup involves multiple external APIs)
     deleteProject: TIMEOUTS.LONG, // 180s - DA.live + GitHub + local cleanup
@@ -137,7 +159,6 @@ export class WebviewCommunicationManager {
     // points below and read by nothing in src or tests, under a comment saying
     // they were "read indirectly". They were not. Removed 2026-09-05.
     private handshakeComplete = false;
-    private stateVersion = 0;
     private disposables: vscode.Disposable[] = [];
     private logger = getLogger();
     private config: Required<CommunicationConfig>;
@@ -150,7 +171,6 @@ export class WebviewCommunicationManager {
             messageTimeout: config.messageTimeout || TIMEOUTS.NORMAL,
             maxRetries: config.maxRetries || 3,
             retryDelay: config.retryDelay || TIMEOUTS.WEBVIEW_RETRY_DELAY,
-            enableLogging: config.enableLogging !== false,
         };
     }
 
@@ -179,7 +199,6 @@ export class WebviewCommunicationManager {
                     id: uuidv4(),
                     type: '__handshake_complete__',
                     timestamp: Date.now(),
-                    payload: { stateVersion: this.stateVersion },
                 });
 
                 this.handshakeComplete = true;
@@ -211,9 +230,7 @@ export class WebviewCommunicationManager {
         };
 
         if (!this.handshakeComplete) {
-            if (this.config.enableLogging) {
-                this.logger.debug(`[WebviewComm] Queuing message: ${type}`);
-            }
+            this.logger.debug(`[WebviewComm] Queuing message: ${type}`);
             this.messageQueue.push(message);
             return;
         }
@@ -262,20 +279,14 @@ export class WebviewCommunicationManager {
     /**
      * Register a message handler
      */
-    on<P = unknown, R = unknown>(
-        type: string,
-        handler: MessageHandlerFunction<P, R>,
-    ): void {
+    on<P = unknown, R = unknown>(type: string, handler: MessageHandlerFunction<P, R>): void {
         this.messageHandlers.set(type, handler as MessageHandlerFunction);
     }
 
     /**
      * Register a one-time message handler
      */
-    once<P = unknown, R = unknown>(
-        type: string,
-        handler: MessageHandlerFunction<P, R>,
-    ): void {
+    once<P = unknown, R = unknown>(type: string, handler: MessageHandlerFunction<P, R>): void {
         const wrappedHandler: MessageHandlerFunction = (payload: unknown) => {
             this.messageHandlers.delete(type);
             return handler(payload as P);
@@ -294,20 +305,6 @@ export class WebviewCommunicationManager {
         handler: MessageHandlerFunction<P, R>,
     ): void {
         this.on(type, handler);
-    }
-
-    /**
-     * Update state version (for consistency tracking)
-     */
-    incrementStateVersion(): number {
-        return ++this.stateVersion;
-    }
-
-    /**
-     * Get current state version
-     */
-    getStateVersion(): number {
-        return this.stateVersion;
     }
 
     /**
@@ -386,11 +383,9 @@ export class WebviewCommunicationManager {
                             timestamp: Date.now(),
                         }).catch((hintError) => {
                             // Timeout hint is non-critical, log and continue
-                            if (this.config.enableLogging) {
-                                this.logger.warn(
-                                    `[WebviewComm] Failed to send timeout hint (non-fatal): ${hintError}`,
-                                );
-                            }
+                            this.logger.warn(
+                                `[WebviewComm] Failed to send timeout hint (non-fatal): ${hintError}`,
+                            );
                         });
                     }
                 }
@@ -471,11 +466,9 @@ export class WebviewCommunicationManager {
             await this.sendRawMessage(message);
         } catch (error) {
             if (retryCount < this.config.maxRetries) {
-                if (this.config.enableLogging) {
-                    this.logger.debug(
-                        `[WebviewComm] Retrying message ${message.type} (attempt ${retryCount + 1})`,
-                    );
-                }
+                this.logger.debug(
+                    `[WebviewComm] Retrying message ${message.type} (attempt ${retryCount + 1})`,
+                );
 
                 await sleep(this.config.retryDelay);
                 await this.sendWithRetry(message, retryCount + 1);
@@ -497,9 +490,7 @@ export class WebviewCommunicationManager {
         try {
             await this.host.webview.postMessage(message);
         } catch (error) {
-            if (this.config.enableLogging) {
-                this.logger.error(`[WebviewComm] Failed to send message: ${error}`);
-            }
+            this.logger.error(`[WebviewComm] Failed to send message: ${error}`);
             throw error;
         }
     }
@@ -508,7 +499,7 @@ export class WebviewCommunicationManager {
      * Flush queued messages after handshake
      */
     private flushMessageQueue(): void {
-        if (this.config.enableLogging && this.messageQueue.length > 0) {
+        if (this.messageQueue.length > 0) {
             this.logger.debug(`[WebviewComm] Flushing ${this.messageQueue.length} queued messages`);
         }
 

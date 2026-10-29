@@ -6,9 +6,11 @@
  */
 
 import {
-    generateConfigJson,
     extractConfigParams,
     buildConfigGeneratorParams,
+} from "@/features/eds/services/storefrontConfigParams";
+import {
+    generateConfigJson,
     type ConfigGeneratorParams,
 } from "@/features/eds/services/configGenerator";
 import { COMPONENT_IDS } from "@/core/constants";

@@ -10,14 +10,38 @@
       "seed": true,
       "layout": "extension",
       "lifecycle": "app-management",
-      "nodeVersion": "24",
-      "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
-      "requiredApis": ["CloudIntegrationSDK", "commerceeventing"],
+      "compatibleBackends": [
+        "adobe-commerce-paas",
+        "adobe-commerce-accs"
+      ],
+      "requiredApis": [
+        "CloudIntegrationSDK",
+        "commerceeventing"
+      ],
       "source": {
         "owner": "adobe",
         "repo": "commerce-integration-starter-kit",
         "branch": "main"
-      }
+      },
+      "setupSteps": [
+        {
+          "id": "app-management-listing",
+          "optional": true,
+          "label": "App Management",
+          "title": "List the integration in App Management",
+          "why": "Only if you want it on Commerce's own list of apps: the integration works the same either way. Once it is listed, leave it associated: unassociating it there deletes its settings for this store, and that cannot be undone.",
+          "where": "Apps > App Management > Associate App: pick the integration's Adobe project, then its workspace.",
+          "path": [
+            "Apps",
+            "App Management"
+          ],
+          "enter": [
+            "<Adobe project>",
+            "<Adobe workspace>"
+          ],
+          "then": "Choose Associate App and pick the project, then the workspace. To remove the integration later, unassociate it here first."
+        }
+      ]
     },
     {
       "id": "app-builder-shell",
@@ -28,6 +52,338 @@
       "source": {
         "owner": "skukla",
         "repo": "app-builder-shell",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "demo-erp",
+      "name": "ERP",
+      "description": "A stand-in ERP with products, customers, prices and orders you can reset.",
+      "kind": "system",
+      "boundTo": "erp-integration",
+      "systemType": "ERP",
+      "requiredApis": [
+        "AppBuilderDataServicesSDK"
+      ],
+      "compatibleBackends": [
+        "adobe-commerce-paas",
+        "adobe-commerce-accs"
+      ],
+      "providesEnvVars": [
+        "ERP_BASE_URL"
+      ],
+      "envSchema": [
+        {
+          "name": "ERP_DISPLAY_NAME",
+          "type": "text",
+          "label": "ERP name",
+          "default": "Acme ERP"
+        }
+      ],
+      "source": {
+        "owner": "skukla",
+        "repo": "demo-erp",
+        "branch": "main"
+      },
+      "nameFromEnvVar": "ERP_DISPLAY_NAME",
+      "listedAs": {
+        "envVar": "ERP_ID",
+        "adapter": "demo-erp"
+      },
+      "screen": {
+        "action": "screen",
+        "keyEnvVar": "ERP_SCREEN_KEY"
+      },
+      "wipe": {
+        "action": "admin",
+        "path": "wipe"
+      }
+    },
+    {
+      "id": "erp-integration",
+      "name": "ERP Integration",
+      "nameFromEnvVar": "INTEGRATION_DISPLAY_NAME",
+      "setupSteps": [
+        {
+          "id": "confirmed-status",
+          "check": "erp-confirmed-status",
+          "label": "Confirmed status",
+          "title": "Create the \"Confirmed in ERP\" order status",
+          "why": "Without it, an order the ERP confirmed looks the same as one it never saw in the Orders grid.",
+          "where": "Stores > Settings > Order Status: create erp_confirmed, assign it to Pending (not as default), then pick it for \"Order status when the ERP confirms\" on the integration's Mapping tab.",
+          "path": [
+            "Stores",
+            "Settings",
+            "Order Status"
+          ],
+          "enter": [
+            "erp_confirmed",
+            "Confirmed in ERP"
+          ],
+          "then": "Assign it to Pending (not as default), then pick it on the integration's Mapping tab."
+        },
+        {
+          "id": "company-catalogs",
+          "label": "Shared catalogs",
+          "title": "Give each priced company its own shared catalog",
+          "why": "The ERP publishes each company's prices into that company's shared catalog. Companies that share a catalog would share prices.",
+          "where": "Catalog > Shared Catalogs > Add Shared Catalog, then Assign Companies.",
+          "path": [
+            "Catalog",
+            "Shared Catalogs",
+            "Add Shared Catalog"
+          ],
+          "then": "Assign the company under Assign Companies.",
+          "check": "companies-have-own-catalogs",
+          "fix": {
+            "kind": "handler",
+            "handler": "company-shared-catalogs"
+          }
+        },
+        {
+          "id": "price-scope-website",
+          "check": "price-scope-website",
+          "label": "Price scope",
+          "title": "Set the catalog price scope to Website",
+          "why": "The ERP publishes a company's prices per website. At the default scope, Global, every site would show the same prices.",
+          "where": "Stores > Configuration > Catalog > Catalog > Price > Catalog Price Scope: set to Website, Save Config. Catalog > Shared Catalogs > Set Pricing and Structure then shows a Website chooser above the prices.",
+          "path": [
+            "Stores",
+            "Configuration",
+            "Catalog",
+            "Catalog",
+            "Price",
+            "Catalog Price Scope"
+          ],
+          "enter": [
+            "Website"
+          ],
+          "then": "Save Config.",
+          "fix": {
+            "kind": "config",
+            "items": [
+              {
+                "path": "catalog/price/scope",
+                "value": "1",
+                "scope": "default",
+                "field": "Catalog Price Scope",
+                "values": { "0": "Global", "1": "Website" }
+              }
+            ]
+          }
+        },
+        {
+          "id": "second-source",
+          "label": "ERP warehouse",
+          "title": "Give each ERP a warehouse, and assign it to the website's stock",
+          "why": "Each ERP keeps its own stock, in its own warehouse. The website needs a stock of its own to sell from more than one.",
+          "where": "Stores > Inventory > Sources > Add New Source, one per ERP (for example Northwind Warehouse). Then Stores > Inventory > Stocks > Add New Stock, with the website as its sales channel and the warehouses assigned. Then move the website's products' quantities to the new source (Catalog > Products > Actions > Move stock between the ERP's warehouses) and save each product once, so the storefront's catalog reads the new stock.",
+          "path": [
+            "Stores",
+            "Inventory",
+            "Sources",
+            "Add New Source"
+          ],
+          "enter": [
+            "<ERP name> Warehouse"
+          ],
+          "then": "Add a stock for the website and assign the warehouses to it. Then move each product's quantity to them and save it.",
+          "check": "erp-source-in-website-stock",
+          "fix": {
+            "kind": "handler",
+            "handler": "erp-warehouse-in-website-stock"
+          }
+        },
+        {
+          "id": "erp-attributes",
+          "label": "Product attributes",
+          "title": "Create the erp_owner and brand product attributes",
+          "why": "erp_owner names the ERP a product belongs to (Accuform ERP is accuform). A product without one stays with the main ERP. Buyers filter on brand.",
+          "where": "Stores > Attributes > Product > Add New Attribute: erp_owner as a Text Field (a Dropdown sends a number, not the id) and brand. Then Stores > Attributes > Attribute Set, to add both to every set your products use (the check names any set erp_owner is missing from, and Demo Builder can add it). Give each additional ERP its products with Assign products on its card, and set brand on the products you sell.",
+          "path": [
+            "Stores",
+            "Attributes",
+            "Product",
+            "Add New Attribute"
+          ],
+          "enter": [
+            "erp_owner",
+            "brand"
+          ],
+          "then": "Make both Text Fields, and add erp_owner to every attribute set your products use, or Commerce drops it without an error. Then give each other ERP its products with Assign products on its card.",
+          "check": "erp-attributes-exist",
+          "fix": {
+            "kind": "handler",
+            "handler": "create-erp-attributes"
+          }
+        },
+        {
+          "id": "partially-held-status",
+          "check": "partially-held-status",
+          "label": "Partially Held status",
+          "title": "Create the \"Partially Held\" order status",
+          "why": "When one ERP holds its part of an order and another carries on, the order says so. Without it, the integration writes only a note.",
+          "where": "Stores > Settings > Order Status: create partially_held (label Partially Held), then assign it to Processing and to Pending (not as default, not visible on the storefront).",
+          "path": [
+            "Stores",
+            "Settings",
+            "Order Status"
+          ],
+          "enter": [
+            "partially_held",
+            "Partially Held"
+          ],
+          "then": "Assign it to Processing and Pending (not as default, not visible on the storefront)."
+        },
+        {
+          "id": "payment-on-account",
+          "check": "payment-on-account-enabled",
+          "label": "Payment on Account",
+          "title": "Switch on Payment on Account for the website",
+          "why": "Company buyers pay against the company's credit line, which the ERP credit story needs.",
+          "where": "Stores > Configuration > Sales > Payment Methods > Payment on Account, at the website's scope: untick Use Default beside Enabled, set Enabled to Yes, Save Config.",
+          "path": [
+            "Stores",
+            "Configuration",
+            "Sales",
+            "Payment Methods",
+            "Payment on Account"
+          ],
+          "enter": [
+            "Enabled: Yes"
+          ],
+          "then": "At the website's scope, untick Use Default first, then Save Config.",
+          "fix": {
+            "kind": "config",
+            "items": [
+              {
+                "path": "payment/companycredit/active",
+                "value": "1",
+                "scope": "website",
+                "field": "Payment on Account",
+                "values": { "0": "No", "1": "Yes" }
+              }
+            ]
+          }
+        },
+        {
+          "id": "storefront-returns",
+          "check": "storefront-returns-enabled",
+          "label": "Returns",
+          "title": "Switch on returns for the storefront",
+          "why": "A buyer asks for a return on the storefront, and the integration sends each ERP its lines of it. With returns off, staff can still enter a return in the Admin, but the buyer cannot ask for one.",
+          "where": "Stores > Settings > Configuration > Sales > Sales > RMA Settings: set Enable RMA on Storefront to Yes, Save Config.",
+          "path": [
+            "Stores",
+            "Configuration",
+            "Sales",
+            "Sales",
+            "RMA Settings"
+          ],
+          "enter": [
+            "Enable RMA on Storefront: Yes"
+          ],
+          "then": "Leave Enable RMA on Product Level at Yes so every product can be returned, and Save Config.",
+          "fix": {
+            "kind": "config",
+            "items": [
+              {
+                "path": "sales/magento_rma/enabled",
+                "value": "1",
+                "scope": "website",
+                "field": "Enable RMA on Storefront",
+                "values": { "0": "No", "1": "Yes" }
+              }
+            ]
+          }
+        },
+        {
+          "id": "card-payments",
+          "check": "card-payments-enabled",
+          "optional": true,
+          "label": "Card payments",
+          "title": "Switch on card payments for the storefront",
+          "why": "Only for a demo where the buyer pays by card. Payment Services is Commerce's own card payments, powered by PayPal, and needs its own sandbox onboarding with a PayPal sandbox business account before it can be switched on.",
+          "where": "Sales > Payment Services: click Sandbox onboarding and connect a PayPal sandbox business account, then under Settings > General Configuration, for the website, set Enable to Yes and Save.",
+          "path": [
+            "Sales",
+            "Payment Services",
+            "Settings"
+          ],
+          "enter": [
+            "Enable: Yes"
+          ],
+          "then": "Finish Sandbox onboarding first, and keep Payment mode at Sandbox so no real card is charged.",
+          "fix": {
+            "kind": "config",
+            "items": [
+              {
+                "path": "payment/payment_services/active",
+                "value": "1",
+                "scope": "website",
+                "field": "Payment Services",
+                "values": { "0": "No", "1": "Yes" }
+              }
+            ],
+            "manual": "Connect PayPal in Sales > Payment Services before cards work."
+          }
+        },
+        {
+          "id": "app-management-listing",
+          "optional": true,
+          "label": "App Management",
+          "title": "List the integration in App Management",
+          "why": "Only if you want it on Commerce's own list of apps: the integration works the same either way. Once it is listed, leave it associated: unassociating it there deletes its settings for this store, and that cannot be undone.",
+          "where": "Apps > App Management > Associate App: pick the integration's Adobe project, then its workspace.",
+          "path": [
+            "Apps",
+            "App Management"
+          ],
+          "enter": [
+            "<Adobe project>",
+            "<Adobe workspace>"
+          ],
+          "then": "Choose Associate App and pick the project, then the workspace. To remove the integration later, unassociate it here first."
+        }
+      ],
+      "description": "Connects Commerce to an ERP: orders, prices and stock stay in sync.",
+      "kind": "integration",
+      "layout": "extension",
+      "lifecycle": "app-management",
+      "fillsSystem": true,
+      "addOnce": true,
+      "compatibleBackends": [
+        "adobe-commerce-paas",
+        "adobe-commerce-accs"
+      ],
+      "requiredApis": [
+        "CloudIntegrationSDK",
+        "commerceeventing",
+        "ACCS-REST-API"
+      ],
+      "envSchema": [
+        {
+          "name": "ERP_BASE_URL",
+          "type": "text",
+          "label": "ERP address",
+          "providedBy": "demo-erp"
+        },
+        {
+          "name": "ERP_DISPLAY_NAME",
+          "type": "text",
+          "label": "ERP name",
+          "default": "Acme ERP"
+        },
+        {
+          "name": "INTEGRATION_DISPLAY_NAME",
+          "type": "text",
+          "label": "Integration name",
+          "default": "ERP Integration"
+        }
+      ],
+      "source": {
+        "owner": "skukla",
+        "repo": "commerce-erp-integration",
         "branch": "main"
       }
     }

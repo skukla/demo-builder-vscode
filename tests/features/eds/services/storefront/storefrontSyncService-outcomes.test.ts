@@ -23,6 +23,14 @@ import {
     previewMock,
     syncAndPublish,
 } from './storefrontSyncService.testUtils';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import {
+    clearKeptClash,
+    KEPT_CLASH_REFUSAL,
+    markKeptClash,
+} from '@/features/eds/services/storefront/keptClashMark';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -190,5 +198,36 @@ describe('the summary line', () => {
         });
 
         expect(result.summary).toBe('no changes to commit; push skipped');
+    });
+});
+
+describe('a kept clash (EDS-57)', () => {
+    // A real folder: the mark is a file inside the copy's .git, read from disk.
+    let copy: string;
+    beforeEach(() => {
+        copy = fs.mkdtempSync(path.join(os.tmpdir(), 'kept-clash-sync-'));
+        fs.mkdirSync(path.join(copy, '.git'));
+    });
+    afterEach(() => fs.rmSync(copy, { recursive: true, force: true }));
+
+    it('refuses to sync while a clash is kept in the copy, before running any git', async () => {
+        await markKeptClash(copy, { note: 'boilerplate update 71a67e0..48bed04: blocks/header/header.js', applied: {} });
+
+        const err = await syncAndPublish({ storefrontPath: copy, commitMessage: 'msg' }).catch((e: unknown) => e);
+
+        expect(err).toBeInstanceOf(GitOperationError);
+        expect((err as GitOperationError).operation).toBe('kept-clash');
+        expect((err as GitOperationError).message).toBe(KEPT_CLASH_REFUSAL);
+        expect(execFileMock).not.toHaveBeenCalled();
+    });
+
+    it('syncs again once the clash is finished or left', async () => {
+        await markKeptClash(copy, { note: 'note', applied: {} });
+        await clearKeptClash(copy);
+
+        await syncAndPublish({ storefrontPath: copy, commitMessage: 'msg' });
+
+        // Control: the same folder now reaches git.
+        expect(execFileMock.mock.calls.some((c) => c[1].includes('commit'))).toBe(true);
     });
 });

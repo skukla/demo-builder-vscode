@@ -6,14 +6,21 @@
  *
  * 1. Backend Data - Must clean up while tool config exists
  * 2. DA.live - Content can be removed independently
- * 3. GitHub - Most destructive, do last
+ * 3. GitHub - Most destructive, do last; a DELETE (not an archive) takes the site's
+ *    code on aem.live with it (EDS-67, `deleteStorefrontRepository`)
  *
  * All operations continue even if one fails, with detailed results returned.
  */
 
 import type { ConfigurationService } from './configService/configurationService';
 import type { DaLiveOrgOperations } from './daLive/daLiveOrgOperations';
-import type { GitHubRepoOperations } from './github/githubRepoOperations';
+import type { GitHubRepoLifecycle } from './github/githubRepoLifecycle';
+import {
+    deleteStorefrontRepository,
+    type CodeRemovalResult,
+    type StorefrontRepoDeletion,
+    type StorefrontRepoDeletionDeps,
+} from './storefront/storefrontCodeRemoval';
 import type { ToolManager } from './toolManager';
 import type {
     EdsMetadata,
@@ -25,6 +32,12 @@ import { getLogger } from '@/core/logging/debugLogger';
 import type { Logger } from '@/types/logger';
 
 /**
+ * What removing a deleted repository's code from aem.live needs, besides the delete and
+ * the logger the service already has: the file list read first, and the DA.live sign-in.
+ */
+export type CodeRemovalWiring = Omit<StorefrontRepoDeletionDeps, 'deleteRepository' | 'logger' | 'onStep'>;
+
+/**
  * Cleanup Service for EDS project resources
  *
  * Coordinates cleanup of all EDS-related resources in the correct order.
@@ -33,27 +46,33 @@ import type { Logger } from '@/types/logger';
  */
 export class CleanupService {
     private logger: Logger;
-    private githubRepoOps: GitHubRepoOperations;
+    private githubRepoOps: GitHubRepoLifecycle;
     private daLiveOrgOps: DaLiveOrgOperations;
     private configurationService?: ConfigurationService;
     private toolManager: ToolManager;
+    private codeRemoval: CodeRemovalWiring;
 
     /**
      * Create a CleanupService
      * @param githubRepoOps - GitHub repository operations for delete/archive
      * @param daLiveOrgOps - DA.live org operations for site deletion
      * @param toolManager - Tool manager for backend cleanup
+     * @param codeRemoval - How a deleted repository's code is removed from aem.live
+     *   (EDS-67). Required, so no delete through this service can leave the code behind
+     *   by being built without it.
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      * @param configurationService - Optional Configuration Service for site config deletion
      */
     constructor(
-        githubRepoOps: GitHubRepoOperations,
+        githubRepoOps: GitHubRepoLifecycle,
         daLiveOrgOps: DaLiveOrgOperations,
         toolManager: ToolManager,
+        codeRemoval: CodeRemovalWiring,
         logger?: Logger,
         configurationService?: ConfigurationService,
     ) {
         this.githubRepoOps = githubRepoOps;
+        this.codeRemoval = codeRemoval;
         this.daLiveOrgOps = daLiveOrgOps;
         this.configurationService = configurationService;
         this.toolManager = toolManager;
@@ -83,6 +102,7 @@ export class CleanupService {
             configService: this.createSkippedResult(),
             daLive: this.createSkippedResult(),
             github: this.createSkippedResult(),
+            siteCode: this.createSkippedResult(),
         };
 
         // 1. Backend Data Cleanup (FIRST - requires tool config)
@@ -102,7 +122,9 @@ export class CleanupService {
 
         // 4. GitHub Repository (LAST - most destructive)
         if (options.deleteGitHub && metadata.githubRepo) {
-            result.github = await this.cleanupGitHub(metadata, options);
+            const github = await this.cleanupGitHub(metadata, options);
+            result.github = github.result;
+            if (github.code) result.siteCode = this.siteCodeResult(github.code);
         }
 
         this.logger.debug('[Cleanup] EDS resource cleanup complete');
@@ -225,23 +247,26 @@ export class CleanupService {
     }
 
     /**
-     * Delete or archive GitHub repository
+     * Delete or archive GitHub repository. A delete removes the site's code from aem.live
+     * after it (`code`); an archive keeps the repository, and its code with it.
      */
     private async cleanupGitHub(
         metadata: EdsMetadata,
         options: EdsCleanupOptions,
-    ): Promise<CleanupOperationResult> {
+    ): Promise<{ result: CleanupOperationResult; code?: CodeRemovalResult }> {
         if (!metadata.githubRepo) {
-            return this.createSkippedResult();
+            return { result: this.createSkippedResult() };
         }
 
         const [owner, repo] = metadata.githubRepo.split('/');
 
         if (!owner || !repo) {
             return {
-                success: false,
-                skipped: false,
-                error: `Invalid repository name: ${metadata.githubRepo}`,
+                result: {
+                    success: false,
+                    skipped: false,
+                    error: `Invalid repository name: ${metadata.githubRepo}`,
+                },
             };
         }
 
@@ -249,23 +274,49 @@ export class CleanupService {
         this.logger.debug(`[Cleanup] ${action} GitHub repository: ${metadata.githubRepo}`);
 
         try {
+            let code: CodeRemovalResult | undefined;
             if (options.archiveInsteadOfDelete) {
                 await this.githubRepoOps.archiveRepository(owner, repo);
             } else {
-                await this.githubRepoOps.deleteRepository(owner, repo);
+                const deletion = await this.deleteRepository(owner, repo);
+                // No working DA.live sign-in: the repository stays, so its code can still go.
+                if (deletion.kept) return { result: { success: false, skipped: false, error: deletion.kept } };
+                code = deletion.code;
             }
 
             this.logger.debug(`[Cleanup] GitHub repository ${action}d successfully`);
-            return { success: true, skipped: false };
+            return { result: { success: true, skipped: false }, code };
         } catch (error) {
             const errorMessage = (error as Error).message;
             this.logger.error(`[Cleanup] GitHub ${action} failed`, error as Error);
             return {
-                success: false,
-                skipped: false,
-                error: errorMessage,
+                result: {
+                    success: false,
+                    skipped: false,
+                    error: errorMessage,
+                },
             };
         }
+    }
+
+    /**
+     * Delete the repository, then its code on aem.live (the files are listed first), or
+     * keep a storefront's repository when there is no working DA.live sign-in (`kept`).
+     */
+    private async deleteRepository(owner: string, repo: string): Promise<StorefrontRepoDeletion> {
+        return deleteStorefrontRepository(
+            { owner, repo },
+            {
+                ...this.codeRemoval,
+                deleteRepository: (o, r) => this.githubRepoOps.deleteRepository(o, r),
+                logger: this.logger,
+            },
+        );
+    }
+
+    /** The code's outcome as a cleanup row: done only when nothing may be left. */
+    private siteCodeResult(code: CodeRemovalResult): CleanupOperationResult {
+        return code.summary ? { success: false, skipped: false, error: code.summary } : { success: true, skipped: false };
     }
 
     // ==========================================================

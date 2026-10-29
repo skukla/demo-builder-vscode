@@ -54,7 +54,7 @@ export async function writeSharedDemoFile(
         target.repo,
         SHARED_DEMO_FILE_NAME,
         content,
-        current ? 'Update the demo package description' : 'Save as demo package: add the description file',
+        current ? 'Update the demo package description' : 'Share Demo: add the description file',
         current?.sha,
     );
     return { outcome: 'written', sha: written.sha };

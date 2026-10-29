@@ -15,16 +15,15 @@
  * @module features/dashboard/ui/configure/hooks/useConfigureFieldValues
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { UniqueField } from '../configureTypes';
-import { PAAS_URL, PAAS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { normalizeUrl } from '@/core/validation/Validator';
 import {
+    applyFieldUpdate,
     findFieldValue,
-    resolveWriteTargets,
-    writeToComponents,
+    writeFieldValue,
 } from '@/features/components/services/componentConfigWrites';
-import { deriveGraphqlEndpoint } from '@/features/components/services/envVarHelpers';
+import { diffConfigs } from '@/features/dashboard/services/configureConfigChanges';
 import type { Project } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
 import type { ComponentConfigs } from '@/types/webview';
@@ -37,8 +36,10 @@ export interface UseConfigureFieldValuesProps {
 }
 
 export interface UseConfigureFieldValuesReturn {
-    /** Every section's values, keyed by component id. Save sends this whole map. */
+    /** Every section's values, keyed by component id. */
     componentConfigs: ComponentConfigs;
+    /** Only the values that differ from what the screen loaded. Save sends this. */
+    configChanges: ComponentConfigs;
     /** Field keys the user has edited. */
     touchedFields: Set<string>;
     /** The value the form should DISPLAY for a field (defaults included). */
@@ -51,8 +52,8 @@ export interface UseConfigureFieldValuesReturn {
     updateField: (field: UniqueField, value: string | boolean) => void;
     /** Trim a URL field's trailing slash on blur. */
     normalizeUrlField: (field: UniqueField) => void;
-    /** Stage an App Builder component's value under its own component id. */
-    stageAppBuilderComponentValue: (componentId: string, varName: string, value: string) => void;
+    /** Record a successful save: what it sent becomes the new starting point. */
+    markSaved: (sent: ComponentConfigs) => void;
 }
 
 /**
@@ -66,6 +67,8 @@ export function useConfigureFieldValues({
     existingEnvValues,
 }: UseConfigureFieldValuesProps): UseConfigureFieldValuesReturn {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
+    // What the screen was seeded with: Save sends only what differs from it (PL-76).
+    const [loadedConfigs, setLoadedConfigs] = useState<ComponentConfigs>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
 
     // The backend owns the store-scope keys, so those writes land only there
@@ -73,15 +76,19 @@ export function useConfigureFieldValues({
     // that declares it.
     const backendId = project.componentSelections?.backend;
 
-    // Seed from whichever source has values. Re-opening Configure re-sends `init`
-    // without remounting React, so this runs again and resets the configs.
+    // Seed from whichever source has values. The screen is remounted on every
+    // `init` (the Configure entry keys it on the payload), so this seeds once.
     useEffect(() => {
-        if (hasEntries(existingEnvValues)) {
-            setComponentConfigs(existingEnvValues);
-        } else if (project.componentConfigs) {
-            setComponentConfigs(project.componentConfigs);
-        }
+        const seed = hasEntries(existingEnvValues) ? existingEnvValues : project.componentConfigs;
+        if (!seed) return;
+        setComponentConfigs(seed);
+        setLoadedConfigs(seed);
     }, [existingEnvValues, project.componentConfigs]);
+
+    const configChanges = useMemo(
+        () => diffConfigs(loadedConfigs, componentConfigs),
+        [loadedConfigs, componentConfigs],
+    );
 
     const getValueFromConfigs = useCallback(
         (field: UniqueField): string | number | boolean | undefined => {
@@ -150,35 +157,13 @@ export function useConfigureFieldValues({
         (field: UniqueField, value: string | boolean) => {
             setTouchedFields((prev) => new Set(prev).add(field.key));
 
-            setComponentConfigs((prev) => {
-                const writes: Record<string, string | boolean> = { [field.key]: value };
-
-                // Linked field: PAAS_URL → PAAS_GRAPHQL_ENDPOINT, unless the user has
-                // already typed a GraphQL endpoint of their own.
-                if (field.key === PAAS_URL && typeof value === 'string') {
-                    if (!touchedFields.has(PAAS_GRAPHQL_ENDPOINT)) {
-                        writes[PAAS_GRAPHQL_ENDPOINT] = deriveGraphqlEndpoint(value);
-                    }
-                }
-
-                return writeToComponents(prev, resolveWriteTargets(field, backendId), writes);
-            });
+            // The write, and the PAAS_URL -> GraphQL endpoint link, live in
+            // applyFieldUpdate; the wizard applies the same edit.
+            setComponentConfigs((prev) =>
+                applyFieldUpdate(prev, field, value, { backendId, touchedFields }),
+            );
         },
         [touchedFields, backendId],
-    );
-
-    // Stage an App Builder component's bucket-3 value under its own id. Text values flow
-    // through save-configuration → .env unchanged. Secret values ride the SAME payload
-    // transiently, but the backend (splitAppBuilderComponentSecrets) lifts them into
-    // SecretStorage and strips them before anything reaches the .env/manifest.
-    const stageAppBuilderComponentValue = useCallback(
-        (componentId: string, varName: string, value: string) => {
-            setComponentConfigs((prev) => ({
-                ...prev,
-                [componentId]: { ...(prev[componentId] ?? {}), [varName]: value },
-            }));
-        },
-        [],
     );
 
     // Trim a URL's trailing slash on blur for visual feedback. The backend normalizes
@@ -193,23 +178,33 @@ export function useConfigureFieldValues({
             const normalized = normalizeUrl(currentValue);
             if (normalized === currentValue) return;
 
-            setComponentConfigs((prev) =>
-                writeToComponents(prev, resolveWriteTargets(field, backendId), {
-                    [field.key]: normalized,
-                }),
-            );
+            setComponentConfigs((prev) => writeFieldValue(prev, field, normalized, backendId));
         },
         [componentConfigs, backendId],
     );
 
+    // The window stays open after Save, so what it saved is where the next change
+    // starts from. Left at what the screen opened with, putting a field back after a
+    // save diffed as "no change" and was never sent (owner, 2026-10-17).
+    const markSaved = useCallback((sent: ComponentConfigs) => {
+        setLoadedConfigs((prev) => {
+            const next: ComponentConfigs = { ...prev };
+            for (const [componentId, values] of Object.entries(sent)) {
+                next[componentId] = { ...prev[componentId], ...values };
+            }
+            return next;
+        });
+    }, []);
+
     return {
         componentConfigs,
+        configChanges,
         touchedFields,
         getFieldValue,
         getValueFromConfigs,
         isFieldComplete,
         updateField,
         normalizeUrlField,
-        stageAppBuilderComponentValue,
+        markSaved,
     };
 }

@@ -48,10 +48,6 @@
         "dependencies": { "$ref": "#/definitions/idList" },
         "integrations": { "$ref": "#/definitions/idList" }
       }
-    },
-    "presets": {
-      "type": "array",
-      "items": { "type": "object" }
     }
   },
   "definitions": {

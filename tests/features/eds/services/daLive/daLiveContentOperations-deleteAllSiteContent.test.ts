@@ -10,7 +10,8 @@
 import {
     mockFetch,
 } from './daLiveContentOperations.testUtils';
-import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -58,7 +59,7 @@ describe('deleteAllSiteContent', () => {
             // Phase 4: delete site root
             .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response);
 
-        const result = await service.deleteAllSiteContent('test-org', 'test-site');
+        const result = await service.sourceOps.deleteAllSiteContent('test-org', 'test-site');
 
         expect(result.success).toBe(true);
         expect(result.deletedCount).toBe(2); // 2 files (directories don't count)
@@ -84,7 +85,7 @@ describe('deleteAllSiteContent', () => {
         // Site root deletion (best-effort)
         .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response);
 
-        const result = await service.deleteAllSiteContent('test-org', 'test-site');
+        const result = await service.sourceOps.deleteAllSiteContent('test-org', 'test-site');
 
         expect(result.success).toBe(true);
         expect(result.deletedCount).toBe(0);
@@ -113,7 +114,7 @@ describe('deleteAllSiteContent', () => {
             .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK', headers: { get: () => null } } as unknown as Response);
 
         const progress: Array<{ deleted: number; current: string }> = [];
-        await service.deleteAllSiteContent('org', 'site', (info) => progress.push(info));
+        await service.sourceOps.deleteAllSiteContent('org', 'site', (info) => progress.push(info));
 
         expect(progress).toHaveLength(2);
         // Progress reports relative paths (prefix stripped)
@@ -128,7 +129,7 @@ describe('deleteAllSiteContent', () => {
             .mockRejectedValueOnce(new Error('Network error'))
             .mockRejectedValueOnce(new Error('Network error'));
 
-        const result = await service.deleteAllSiteContent('org', 'site');
+        const result = await service.sourceOps.deleteAllSiteContent('org', 'site');
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('Network error');

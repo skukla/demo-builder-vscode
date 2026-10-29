@@ -74,9 +74,8 @@
     outline-offset: 2px;
 }
 
-/* `min-height` pins the row to a Spectrum ActionButton, because otherwise the
-   row's height is set by a control you cannot see. The kebab is `opacity: 0` at
-   rest but still in flow at ~32px, so IT sizes the head — until a deploying card
+/* `min-height` pins the row to a Spectrum ActionButton. The kebab is ~32px, so IT
+   sizes the head — until a deploying card
    drops it from the DOM entirely (menuActions is [] while deploying, and
    IntegrationActionsMenu returns null on an empty list). The head then collapsed
    to the name's ~20px line box and the whole card shifted up mid-deploy
@@ -107,19 +106,6 @@
     overflow: hidden;
 }
 
-/* Revealed on card hover/focus like the rename pencil — a kebab on every card
-   at rest turns a calm grid into a row of controls. Always available to
-   keyboards via :focus-within. */
-.integration-card-menu-button {
-    opacity: 0;
-    transition: opacity var(--spectrum-global-animation-duration-100) ease;
-}
-
-.integration-card:hover .integration-card-menu-button,
-.integration-card:focus-within .integration-card-menu-button {
-    opacity: 1;
-}
-
 .integration-card-name {
     font-size: 15px;
     font-weight: 600;
@@ -128,6 +114,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* A long name gets two lines before it is cut, not one: beside the badge and the
+ * kebab a single line held about twelve characters ("Custom Integra…", release
+ * test 2026-10-28). The full name is the hover title. Two classes, to outrank
+ * `.inline-rename-text`'s one-line rule on a renamable card. */
+.integration-card .integration-card-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 /* `.integration-statusline` is the same row inside the detail flyout — one rule
@@ -156,6 +154,29 @@
     color: var(--spectrum-global-color-red-600);
 }
 
+/* A system card's type ("ERP") beside its name; never squeezed by a long name. */
+.integration-card-badge {
+    flex: 0 0 auto;
+}
+
+/* The linked card's name, on the status line so a linked card is no taller than
+   the rest. Pushed to the line's end; the name truncates, the icon does not. */
+.integration-card-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    margin-left: auto;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 11px;
+}
+
+.integration-card-link-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* One line, not two.
 
    `.integration-panel-row` ends with a border-bottom, guarded by a
@@ -172,7 +193,15 @@
     border-top: none;
 }
 
+/* One height whether or not the name can be edited. A renamable title carries the
+   rename pencil, which is hidden by width only, so it still makes the line as tall as
+   an action button (Spectrum sizes it from --spectrum-alias-single-line-height). A
+   plain title was shorter, so switching between an integration and its ERP moved the
+   whole flyout up and down (owner, 2026-10-01). */
 .integration-panel-title {
+    display: flex;
+    align-items: center;
+    min-height: var(--spectrum-alias-single-line-height);
     font-size: 15px;
     font-weight: 600;
     min-width: 0;
@@ -212,24 +241,8 @@
     overflow-wrap: anywhere;
 }
 
-.integration-panel-row-value--mono {
-    font-family: var(--spectrum-font-family-code, monospace);
-    font-size: 12px;
-}
-
-/* The kind prefix inside a mono Source row ("Pre-built · acme/repo"). It is prose,
-   so it opts back out of the code face its container sets. */
-.integration-panel-row-prefix {
-    font-family: var(--spectrum-font-family-base, sans-serif);
-    color: var(--spectrum-global-color-gray-600);
-}
-
-/* One API per line — a comma-joined run of long Adobe API names is unreadable
-   in a 352px column. */
-.integration-panel-api {
-    display: block;
-}
-
+/* One demo setup step in the flyout (AB-26x): title and state, why, where, what the last
+   check found, then its links, stacked; steps separated like the panel's rows. */
 /* Commerce scope: three sub-labelled lines inside ONE row's value column.
    Grid rather than flex so the codes align down a column no matter how the
    labels differ in width, and so a long code wraps inside its own cell instead
@@ -272,22 +285,6 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-/* Heading over a RUN of rows that share a kind (the deployed endpoints), as
-   opposed to `.integration-panel-row-key`, which labels one row's value. Without
-   it a list of N per-action URLs reads as N more metadata rows peered with Status
-   and Kind. Sits outside the row flex so it spans the full width instead of
-   taking the 88px key column. */
-.integration-panel-group-label {
-    /* NO border-top. The row above already draws a border-bottom, so a rule here
-       renders as a double line a few pixels apart. Separation is the margin. */
-    margin-top: 10px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--spectrum-global-color-gray-600);
-}
-
 /* Copyable values inside the flyout must WRAP.
  * `.copyable-text` is nowrap by design — it is a core component sized for short
  * inline snippets. A mesh endpoint runs ~70 chars, so in this 352px panel nowrap
@@ -316,8 +313,244 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
+/* The muted tail of the health line — "· installed in Commerce" after DEPLOYED. Deploy
+   and install are one answer to "is it working?" (owner, 2026-10-01). */
+.integration-panel-status-aside {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* The flyout, second redesign (owner, 2026-10-01, from three mockup passes): the health
+   line under the title, then "Connected to", then two titled sections — Demo setup and
+   Actions — with room between rows. */
+.integration-panel-head {
+    align-items: flex-start;
+}
+
+.integration-panel-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.integration-panel-health {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.integration-panel-rows > .integration-panel-row {
+    padding: 11px 0;
+}
+
+/* "Connected to": one name per line, so a long name never wraps into the next. */
+.integration-panel-linked {
+    display: flex;
+}
+
+.integration-panel-row-value:has(> .integration-panel-linked) {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.integration-panel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.integration-panel-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.integration-panel-setup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+}
+
+/* The summary, then the guide link: spaced apart, no dot between (owner: no dot separators). */
+.integration-panel-setup-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+}
+
+.integration-panel-setup-next {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.integration-panel-setup-next strong {
+    font-weight: 500;
+    color: var(--spectrum-global-color-gray-800);
+}
+
+/* The actions, as quiet rows: an icon and a plain label at the weight of the panel. */
+.integration-panel-actions {
+    list-style: none;
+    margin: 0 -8px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.integration-panel-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--spectrum-global-color-gray-800);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.integration-panel-action:hover {
+    background: var(--spectrum-global-color-gray-200);
+}
+
+.integration-panel-action:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: -2px;
+}
+
+.integration-panel-action-icon {
+    display: inline-flex;
+    width: 18px;
+    justify-content: center;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.integration-panel-action.is-danger,
+.integration-panel-action.is-danger .integration-panel-action-icon {
+    color: var(--spectrum-global-color-red-600);
+}
+
+.integration-panel-actions-divider {
+    height: 1px;
+    margin: 6px 8px;
+    background: var(--spectrum-global-color-gray-200);
+}
+
 /* Remove trails the row (the prototype separates it from the safe actions). */
 .integration-panel-danger {
     margin-left: auto;
+}
+
+/* ---- Rows: the list view of the same cards --------------------------------------
+ * The integrations screen's List view (owner, 2026-09-24), the twin of the projects
+ * list's `.project-row`: the same name, status line and kebab as the card, laid out
+ * as one full-width row per integration. Same gray-50 base, hover lift and focus
+ * ring as the card so switching views moves nothing but the shape. */
+.integration-row-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px;
+}
+
+.integration-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    padding: 14px 20px;
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all var(--spectrum-global-animation-duration-600) ease;
+}
+
+.integration-row:hover,
+.integration-row:focus {
+    background: var(--spectrum-global-color-gray-75);
+    border-color: var(--spectrum-global-color-gray-400);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    outline: none;
+}
+
+.integration-row:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+.integration-row-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.integration-row-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+/* The kind ("Pre-built", "API Mesh") as the projects row shows its components. */
+.integration-row-kind {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-500);
+    padding-left: 12px;
+    border-left: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.integration-row-trailing {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+}
+
+.integration-row-chevron {
+    color: var(--spectrum-global-color-gray-500);
+}
+
+/* "Demo setup · 3 of 7 done" (SetupStatus): demo setup left in Commerce Admin, on the
+   card below its status line and in the row beside it. A quiet link in the accent colour —
+   noticeable without alarm, and it opens the guide (owner, 2026-10-01). A <button>, so
+   the browser's button chrome is reset here. */
+.integration-card-setup {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    color: var(--spectrum-global-color-blue-600);
+    cursor: pointer;
+}
+
+.integration-card-setup:hover {
+    text-decoration: underline;
+}
+
+.integration-card-setup:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.integration-card .integration-card-setup {
+    margin-top: 6px;
 }
 }

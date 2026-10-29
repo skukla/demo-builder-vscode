@@ -6,20 +6,21 @@
  * - listProviders HAL parsing + defensive `_links.next` pagination with a hard cap
  * - listRegistrations id normalization (registration_id ?? id) and 404 → []
  * - DELETE semantics: 2xx/404 resolve, other statuses throw typed errors
- * - parseProviderBinding href parsing (absolute/relative/query, malformed → undefined)
  * - Sanitized errors: the access token never leaks into thrown messages
  *
  * All auth values are obviously fake — this repo is public.
  */
 
+import { THIRD_PARTY_PROVIDER_METADATA } from '@/features/authentication/services/eventProviderBinding';
 import {
     IoEventsClient,
     MAX_PROVIDER_PAGES,
-    THIRD_PARTY_PROVIDER_METADATA,
-    isEventsAccessDenied,
-    parseProviderBinding,
-    type EventsAuth,
+    type CreateEventMetadataBody,
 } from '@/features/authentication/services/ioEventsClient';
+import {
+    isEventsAccessDenied,
+    type EventsAuth,
+} from '@/features/authentication/services/ioEventsTransport';
 import { jsonResponse, nonJsonResponse } from './ioEventsClient.testUtils';
 
 const FAKE_TOKEN = 'fake-test-token-not-a-secret';
@@ -42,12 +43,6 @@ describe('ioEventsClient', () => {
 
     beforeEach(() => {
         mockFetch = jest.fn();
-    });
-
-    describe('THIRD_PARTY_PROVIDER_METADATA', () => {
-        it('matches the custom-events provider_metadata discriminator', () => {
-            expect(THIRD_PARTY_PROVIDER_METADATA).toBe('3rd_party_custom_events');
-        });
     });
 
     describe('listProviders', () => {
@@ -386,86 +381,52 @@ describe('ioEventsClient', () => {
         });
     });
 
-    describe('parseProviderBinding', () => {
-        it('parses an absolute rel:update href', () => {
-            const binding = parseProviderBinding(
-                'https://api.adobe.io/events/org-1/proj-1/ws-1/providers/prov-1',
+    describe('error messages name the operation and the status', () => {
+        const EVENT: CreateEventMetadataBody = {
+            event_code: 'demo.event',
+            label: 'Demo event',
+            description: 'A demo event',
+        };
+
+        const operations: Array<[string, (client: IoEventsClient) => Promise<unknown>]> = [
+            ['List providers', (client) => client.listProviders('org-1')],
+            ['List registrations', (client) => client.listRegistrations('org-1', 'p', 'w')],
+            ['Delete registration', (client) => client.deleteRegistration('org-1', 'p', 'w', 'r')],
+            ['Delete provider', (client) => client.deleteProvider('org-1', 'p', 'w', 'prov')],
+            [
+                'Delete event metadata',
+                (client) => client.deleteEventMetadata('org-1', 'p', 'w', 'prov', 'demo.event'),
+            ],
+            [
+                'Create event metadata',
+                (client) => client.createEventMetadata('org-1', 'p', 'w', 'prov', EVENT),
+            ],
+        ];
+
+        it.each(operations)('%s reports "<operation> failed (HTTP 500)"', async (label, call) => {
+            mockFetch.mockResolvedValueOnce(jsonResponse(500, {}));
+
+            await expect(call(makeClient(mockFetch))).rejects.toThrow(
+                `${label} failed (HTTP 500)`,
             );
-
-            expect(binding).toEqual({
-                providerId: 'prov-1',
-                projectId: 'proj-1',
-                workspaceId: 'ws-1',
-            });
         });
 
-        it('parses a relative rel:update href', () => {
-            const binding = parseProviderBinding('/events/org-1/proj-1/ws-1/providers/prov-1');
+        it('a non-JSON create body reports the operation and the status', async () => {
+            mockFetch.mockResolvedValueOnce(nonJsonResponse(201));
 
-            expect(binding).toEqual({
-                providerId: 'prov-1',
-                projectId: 'proj-1',
-                workspaceId: 'ws-1',
-            });
-        });
-
-        it('tolerates a query-string suffix', () => {
-            const binding = parseProviderBinding(
-                '/events/org-1/proj-1/ws-1/providers/prov-1?eventmetadata=true',
+            await expect(
+                makeClient(mockFetch).createEventMetadata('org-1', 'p', 'w', 'prov', EVENT),
+            ).rejects.toThrow(
+                'Create event metadata returned an unexpected non-JSON response (HTTP 201)',
             );
-
-            expect(binding).toEqual({
-                providerId: 'prov-1',
-                projectId: 'proj-1',
-                workspaceId: 'ws-1',
-            });
         });
 
-        it('returns undefined for a wrong path shape (missing workspace segment)', () => {
-            expect(parseProviderBinding('/events/org-1/proj-1/providers/prov-1')).toBeUndefined();
-        });
+        it('a non-JSON list body reports the operation and the status', async () => {
+            mockFetch.mockResolvedValueOnce(nonJsonResponse(200));
 
-        it('returns undefined for a path with trailing extra segments', () => {
-            expect(
-                parseProviderBinding('/events/org-1/proj-1/ws-1/providers/prov-1/extra'),
-            ).toBeUndefined();
-        });
-
-        it('returns undefined for an empty or missing href', () => {
-            expect(parseProviderBinding('')).toBeUndefined();
-            expect(parseProviderBinding(undefined as unknown as string)).toBeUndefined();
-        });
-
-        it('returns undefined for an unrelated URL', () => {
-            expect(
-                parseProviderBinding('https://api.adobe.io/console/organizations/org-1'),
-            ).toBeUndefined();
-        });
-
-        it('returns undefined when any segment is a traversal-shaped ".." (never deleted)', () => {
-            expect(parseProviderBinding('/events/org-1/../ws-1/providers/prov-1')).toBeUndefined();
-            expect(parseProviderBinding('/events/org-1/proj-1/../providers/prov-1')).toBeUndefined();
-            expect(parseProviderBinding('/events/org-1/proj-1/ws-1/providers/..')).toBeUndefined();
-        });
-
-        it('still parses UUID-shaped provider ids', () => {
-            const binding = parseProviderBinding(
-                '/events/org-1/proj-1/ws-1/providers/8a4f6a2e-1b3c-4d5e-9f0a-b1c2d3e4f5a6',
+            await expect(makeClient(mockFetch).listProviders('org-1')).rejects.toThrow(
+                'List providers returned an unexpected non-JSON response (HTTP 200)',
             );
-
-            expect(binding?.providerId).toBe('8a4f6a2e-1b3c-4d5e-9f0a-b1c2d3e4f5a6');
-        });
-    });
-
-    describe('isEventsAccessDenied', () => {
-        it('returns false for a plain Error', () => {
-            expect(isEventsAccessDenied(new Error('403'))).toBe(false);
-        });
-
-        it('returns false for non-error values', () => {
-            expect(isEventsAccessDenied(undefined)).toBe(false);
-            expect(isEventsAccessDenied('403')).toBe(false);
-            expect(isEventsAccessDenied({ status: 403 })).toBe(false);
         });
     });
 });

@@ -192,7 +192,7 @@ describe('handleGetProjects — ordering and running project', () => {
         vscode.workspace.getConfiguration.mockReturnValue({
             get: jest.fn().mockReturnValue('cards'),
         });
-        sessionUIState.viewModeOverride = 'rows';
+        sessionUIState.setViewModeOverride('projects', 'rows');
         const context = createProjectsDashboardContext([]);
 
         const result = await handleGetProjects(context);

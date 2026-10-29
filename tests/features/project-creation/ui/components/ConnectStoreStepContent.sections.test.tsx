@@ -384,3 +384,66 @@ describe('ConnectStoreStepContent - section filtering', () => {
         });
     });
 });
+
+describe('ConnectStoreStepContent - where the missing-structure warning shows', () => {
+    const DISCOVERED = {
+        websites: [{ id: 1, code: 'base', name: 'Main Website' }],
+        storeGroups: [{ id: 1, code: 'main_website_store', name: 'Main Store', website_id: 1, root_category_id: 2 }],
+        storeViews: [{ id: 1, code: 'default', name: 'Default Store View', store_group_id: 1, website_id: 1, is_active: 1 }],
+    };
+    const UNMET = { ACCS_WEBSITE_CODE: 'adobe', ACCS_STORE_CODE: 'main_website_store', ACCS_STORE_VIEW_CODE: 'usaistore' };
+    const MET = { ACCS_WEBSITE_CODE: 'base', ACCS_STORE_CODE: 'main_website_store', ACCS_STORE_VIEW_CODE: 'default' };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockUseComponentConfig.isLoading = false;
+        mockUseComponentConfig.loadError = null;
+        mockUseComponentConfig.serviceGroups = [paasServiceGroup];
+        mockUseComponentConfig.validationErrors = {};
+        mockUseComponentConfig.componentConfigs = {};
+        mockUseStoreDiscovery.isFetching = false;
+        mockUseStoreDiscovery.fetchError = null;
+        mockUseStoreDiscovery.hasStoreData = true;
+        configurePaasConnectionFilled();
+    });
+
+    it('stays off the Connection view, even when the backend lacks what the demo needs', () => {
+        // Only Business Structure says so: it is where the structure is known and chosen.
+        renderWithProvider(
+            <ConnectStoreStepContent
+                {...defaultProps}
+                section="connection"
+                storeDiscoveryData={DISCOVERED}
+                packageConfigDefaults={UNMET}
+            />
+        );
+
+        expect(screen.getByTestId(`config-field-${PAAS_URL}`)).toBeInTheDocument();
+        expect(screen.queryByTestId('business-structure-missing')).not.toBeInTheDocument();
+    });
+
+    it('goes away once the demo’s codes are ones the backend has', () => {
+        const view = renderWithProvider(
+            <ConnectStoreStepContent
+                {...defaultProps}
+                section="business-structure"
+                storeDiscoveryData={DISCOVERED}
+                packageConfigDefaults={UNMET}
+            />
+        );
+        expect(screen.getByTestId('business-structure-missing')).toBeInTheDocument();
+
+        view.rerender(
+            <Provider theme={defaultTheme}>
+                <ConnectStoreStepContent
+                    {...defaultProps}
+                    section="business-structure"
+                    storeDiscoveryData={DISCOVERED}
+                    packageConfigDefaults={MET}
+                />
+            </Provider>
+        );
+
+        expect(screen.queryByTestId('business-structure-missing')).not.toBeInTheDocument();
+    });
+});

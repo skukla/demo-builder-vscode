@@ -14,6 +14,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { nodeForInstall } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type {
     ComponentInstallOptions,
@@ -172,16 +173,11 @@ export class ComponentInstallation {
             );
         }
 
-        // Store Node version in metadata for runtime use
-        if (componentDef.configuration?.nodeVersion) {
-            componentInstance.metadata = {
-                ...componentInstance.metadata,
-                nodeVersion: componentDef.configuration.nodeVersion,
-            };
+        // Record the Node it was installed under, for Start and cleanup (PR-1a)
+        const installedUnder = options.nodeVersion ?? nodeForInstall(componentDef);
+        if (installedUnder) {
+            componentInstance.metadata = { ...componentInstance.metadata, nodeVersion: installedUnder };
         }
-
-        // Create .node-version file if configured (enables fnm auto-switching)
-        await this.createNodeVersionFile(componentDef, componentPath);
 
         return {
             success: true,
@@ -257,28 +253,6 @@ export class ComponentInstallation {
         }
 
         return detectedVersion;
-    }
-
-    /**
-     * Create .node-version file if configured (enables fnm auto-switching)
-     */
-    private async createNodeVersionFile(
-        componentDef: TransformedComponentDefinition,
-        componentPath: string,
-    ): Promise<void> {
-        const configuredNodeVersion = componentDef.configuration?.nodeVersion;
-        if (!configuredNodeVersion) {
-            return;
-        }
-
-        const nodeVersionFile = path.join(componentPath, '.node-version');
-        try {
-            // Check if file already exists
-            await fs.access(nodeVersionFile);
-        } catch {
-            // File doesn't exist, create it
-            await fs.writeFile(nodeVersionFile, `${configuredNodeVersion}\n`, 'utf-8');
-        }
     }
 
     /**

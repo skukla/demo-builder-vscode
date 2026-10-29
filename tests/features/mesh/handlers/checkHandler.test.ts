@@ -11,7 +11,10 @@ import * as _vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import {
+    createMockAuthenticationService,
+    poolUnits,
+} from '../../../helpers/authenticationServiceFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 // withOrgContext records the target then runs the callback (no global mutation).
@@ -45,11 +48,11 @@ describe('checkHandler - Security Tests (Step 2)', () => {
         jest.clearAllMocks();
 
         // Mock authentication service
-        mockAuthService = {
+        mockAuthService = poolUnits({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             // Org-context targeting reads the cached org to enrich code/name.
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        };
+        });
 
         // Mock command executor
         mockCommandExecutor = {

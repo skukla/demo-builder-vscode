@@ -31,8 +31,10 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // arrive through the `services` seam below, so the suite hands them in and can
 // assert on what reached the migration.
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: jest.fn() })),
     DaLiveContentOperations: jest.fn(),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
+    createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: jest.fn() })),
 }));
 
 jest.mock('@/features/eds/services/storefront/storefrontNameMigration', () => ({

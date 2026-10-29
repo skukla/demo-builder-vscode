@@ -306,6 +306,15 @@
     font-size: 12px;
     color: var(--vscode-descriptionForeground);
 }
+
+/* Edit's one line where a setting is Configure's (SetInConfigureNote): the quiet
+   note the name field uses ("Rename in Configure."), not an info box (owner,
+   2026-10-17). */
+.set-in-configure-note {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}
 }
 
 /* The pack grid. Same shape as the panel's `.datapack-grid` — this surface shows

@@ -39,7 +39,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
     let mockLogger: jest.Mocked<Logger>;
     let mockStepLogger: jest.Mocked<StepLogger>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
-    let mockFetcher: any;
+    let mockEntities: any;
     let mockResolver: any;
     let mockSelector: any;
 
@@ -61,7 +61,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
         mockSDKClient = createMockSDKClient();
 
         // Create mock entity sub-services
-        mockFetcher = {
+        mockEntities = {
             getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
             getProjects: jest.fn().mockResolvedValue([mockProject]),
             getWorkspaces: jest.fn().mockResolvedValue([mockWorkspace]),
@@ -87,8 +87,16 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
         (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(
             () => mockSDKClient
         );
+        // One pool behind every collaborator slot — routing a call to the right
+        // one is the compiler's job, so this fake only has to answer.
         (createEntityServices as jest.Mock).mockReturnValue({
-            fetcher: mockFetcher,
+            orgReads: mockEntities,
+            projectReads: mockEntities,
+            workspaceReads: mockEntities,
+            credentials: mockEntities,
+            orgServices: mockEntities,
+            projectOps: mockEntities,
+            workspaceOps: mockEntities,
             resolver: mockResolver,
             selector: mockSelector,
         });
@@ -117,88 +125,26 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             const result = await authService.getOrganizations();
 
             expect(result).toEqual([mockOrg]);
-            expect(mockFetcher.getOrganizations).toHaveBeenCalled();
+            expect(mockEntities.getOrganizations).toHaveBeenCalled();
         });
 
         it('should get projects', async () => {
             const result = await authService.getProjects();
 
             expect(result).toEqual([mockProject]);
-            expect(mockFetcher.getProjects).toHaveBeenCalled();
+            expect(mockEntities.getProjects).toHaveBeenCalled();
         });
 
-        it('should create a project (delegates to fetcher.createProject)', async () => {
-            const result = await authService.createProject('My Demo', 'A demo project');
+        // Callers take the unit that owns the job from here (the forty
+        // pass-throughs this file used to test left the class 2026-10-08).
+        it('hands back the entity services it wired, the same object each time', async () => {
+            const first = await authService.getEntityServices();
+            const second = await authService.getEntityServices();
 
-            expect(result).toEqual(mockProject);
-            // Third arg is the optional explicit target, threaded through for the
-            // agent surface (phase-4 defect 0a). Undefined here means "use the
-            // cached selection", which is what every webview caller wants.
-            expect(mockFetcher.createProject).toHaveBeenCalledWith(
-                'My Demo',
-                'A demo project',
-                undefined
-            );
-        });
-
-        it('should create a workspace (delegates to fetcher.createWorkspace)', async () => {
-            const result = await authService.createWorkspace('Stage', 'A workspace');
-
-            expect(result).toEqual(mockWorkspace);
-            expect(mockFetcher.createWorkspace).toHaveBeenCalledWith(
-                'Stage',
-                'A workspace',
-                undefined
-            );
-        });
-
-        it('ensures a workspace Runtime namespace (delegates to the fetcher)', async () => {
-            await authService.ensureWorkspaceRuntimeNamespace('org-x', 'proj-x', 'ws-x');
-
-            expect(mockFetcher.ensureWorkspaceRuntimeNamespace).toHaveBeenCalledWith(
-                'org-x',
-                'proj-x',
-                'ws-x'
-            );
-        });
-
-        it('should get workspaces', async () => {
-            const result = await authService.getWorkspaces();
-
-            expect(result).toEqual([mockWorkspace]);
-            expect(mockFetcher.getWorkspaces).toHaveBeenCalled();
-        });
-
-        it('should get current organization', async () => {
-            const result = await authService.getCurrentOrganization();
-
-            expect(result).toEqual(mockOrg);
-            expect(mockResolver.getCurrentOrganization).toHaveBeenCalled();
-        });
-
-        it('should get current project', async () => {
-            const result = await authService.getCurrentProject();
-
-            expect(result).toEqual(mockProject);
-            expect(mockResolver.getCurrentProject).toHaveBeenCalled();
-        });
-
-        it('should get current workspace', async () => {
-            const result = await authService.getCurrentWorkspace();
-
-            expect(result).toEqual(mockWorkspace);
-            expect(mockResolver.getCurrentWorkspace).toHaveBeenCalled();
-        });
-
-        it('should get current context', async () => {
-            const result = await authService.getCurrentContext();
-
-            expect(result).toEqual({
-                org: mockOrg,
-                project: mockProject,
-                workspace: mockWorkspace,
-            });
-            expect(mockResolver.getCurrentContext).toHaveBeenCalled();
+            expect(first.resolver).toBe(mockResolver);
+            expect(first.projectOps).toBe(mockEntities);
+            expect(second).toBe(first);
+            expect(createEntityServices).toHaveBeenCalledTimes(1);
         });
     });
 

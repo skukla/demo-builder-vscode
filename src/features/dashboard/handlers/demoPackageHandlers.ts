@@ -1,11 +1,12 @@
 /**
- * "Save as demo package" — the dashboard's three messages (Pattern B: answers
- * are RETURNED): `getDemoPackagePreview` (a read: the draft, the checks, the
- * link, whether the card is already on the SC's list), `saveDemoPackage`
- * (writes the description file into the project's own storefront repository
- * through the ownership rule, puts the card on the SC's own Welcome step,
- * records what it did on the project) and `removeDemoPackage` (removes only
- * what we wrote and takes the card off the list).
+ * The Share dialog's link form — the dashboard's three messages (Pattern B:
+ * answers are RETURNED): `getDemoPackagePreview` (a read: the draft, the
+ * checks, the link, whether the card is already on the SC's list),
+ * `saveDemoPackage` (writes the description file into the project's own
+ * storefront repository through the ownership rule, puts the card on the SC's
+ * own Welcome step or, with `addToWelcome: false`, keeps it off, records what
+ * it did on the project) and `removeDemoPackage` (removes only what we wrote
+ * and takes the card off the list).
  *
  * Edge Delivery projects only (decided 2026-09-11): a headless project is a
  * local clone with no repository of the SC's own; the how-to says how to hand
@@ -27,6 +28,8 @@ import {
     type PackageCheckDeps,
 } from '@/features/eds/services/demoPackage/demoPackageService';
 import { removeSharedDemoFile, writeSharedDemoFile } from '@/features/eds/services/demoPackage/sharedDemoFile';
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+import type { GitHubRepoOperations } from '@/features/eds/services/github/githubRepoOperations';
 import {
     addedDemoKey,
     forgetAddedDemo,
@@ -36,7 +39,7 @@ import {
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
-import type { AddedDemo, SharedDemoDescription } from '@/types/projectFile';
+import { SHARED_DEMO_FILE_NAME, type AddedDemo, type SharedDemoDescription } from '@/types/projectFile';
 import type {
     DemoPackagePreview,
     RemoveDemoPackageResult,
@@ -49,6 +52,40 @@ export const EDS_ONLY =
 
 function linkFor(storefront: OwnStorefront): string {
     return `https://github.com/${storefront.owner}/${storefront.repo}`;
+}
+
+/**
+ * The draft the dialog opens on. When the description file in the repository is
+ * the one we wrote, its own name and description: the brand's would bring back
+ * a name the SC already changed. Anything unreadable falls back to the brand.
+ */
+async function draftOf(
+    project: Project,
+    storefront: OwnStorefront,
+    fileOperations: Pick<GitHubFileOperations, 'getFileContent'>,
+): Promise<{ name: string; description: string }> {
+    const prefilled = packageDraftFor(project);
+    const recorded = project.demoPackage?.fileSha;
+    if (!recorded) return prefilled;
+    const current = await fileOperations
+        .getFileContent(storefront.owner, storefront.repo, SHARED_DEMO_FILE_NAME)
+        .catch(() => null);
+    if (!current || current.sha !== recorded) return prefilled;
+    const written = parsedDraft(current.content);
+    return written ?? prefilled;
+}
+
+function parsedDraft(text: string): { name: string; description: string } | undefined {
+    try {
+        const parsed = JSON.parse(text) as { name?: unknown; description?: unknown };
+        if (typeof parsed.name !== 'string' || parsed.name.trim() === '') return undefined;
+        return {
+            name: parsed.name,
+            description: typeof parsed.description === 'string' ? parsed.description : '',
+        };
+    } catch {
+        return undefined;
+    }
 }
 
 function isOnList(storefront: OwnStorefront): boolean {
@@ -105,8 +142,9 @@ export const handleGetDemoPackagePreview: MessageHandler = async (context) => {
     const { project, storefront } = ready;
     const own = await resolveOwnContentSource(storefront, { logger: context.logger });
     const checks = await packageChecks(project, storefront, own, checkDeps(context));
+    const { fileOperations } = getGitHubServices(context.context.secrets);
     const preview: DemoPackagePreview = {
-        draft: packageDraftFor(project),
+        draft: await draftOf(project, storefront, fileOperations),
         checks,
         link: linkFor(storefront),
         saved: Boolean(project.demoPackage?.fileSha),
@@ -128,6 +166,22 @@ function cardFor(
     };
 }
 
+/** Put the card on the SC's list, or keep it off; answers whether it is on. */
+async function placeCard(
+    wanted: boolean,
+    description: SharedDemoDescription,
+    storefront: OwnStorefront,
+    repoOperations: Pick<GitHubRepoOperations, 'getRepository'>,
+): Promise<boolean> {
+    if (!wanted) {
+        if (isOnList(storefront)) await forgetAddedDemo(storefront);
+        return false;
+    }
+    const repository = await repoOperations.getRepository(storefront.owner, storefront.repo).catch(() => undefined);
+    await rememberAddedDemo(cardFor(description, storefront, repository?.defaultBranch));
+    return true;
+}
+
 export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = async (context, data) => {
     const ready = await candidate(context);
     if ('response' in ready) return ready.response;
@@ -135,7 +189,10 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
     const draft = { name: data?.name ?? '', description: data?.description ?? '' };
 
     const own = await resolveOwnContentSource(storefront, { logger: context.logger });
-    const description = describeProject(project, draft, own.contentSource);
+    // The version that wrote it travels in `builtWith` (EDS-13f), so a receiver can say how old the record is.
+    const description = describeProject(project, draft, own.contentSource, {
+        extension: context.context.extension?.packageJSON?.version,
+    });
     const { fileOperations, repoOperations } = getGitHubServices(context.context.secrets);
     const written = await writeSharedDemoFile(
         fileOperations,
@@ -148,9 +205,9 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
     }
 
     // The card on the SC's own Welcome step: the same row a colleague's add builds,
-    // from the description just written (or meant to be), never re-read.
-    const repository = await repoOperations.getRepository(storefront.owner, storefront.repo).catch(() => undefined);
-    await rememberAddedDemo(cardFor(description, storefront, repository?.defaultBranch));
+    // from the description just written (or meant to be), never re-read. Unticked
+    // in the Share dialog, the card stays off, or comes off if it was there.
+    const onList = await placeCard(data?.addToWelcome !== false, description, storefront, repoOperations);
 
     // Record what is ours to undo: the file's sha when we wrote it (empty when the
     // file was not ours to write).
@@ -158,7 +215,7 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
     project.demoPackage = { fileSha, savedAt: new Date().toISOString() };
     await context.stateManager.saveProject(project);
     context.logger.info(
-        `[Demo package] ${project.name}: description file ${written.outcome} in ${storefront.owner}/${storefront.repo}, card on your Welcome step`,
+        `[Demo package] ${project.name}: description file ${written.outcome} in ${storefront.owner}/${storefront.repo}, card ${onList ? 'on' : 'off'} your Welcome step`,
     );
 
     const checks = await packageChecks(project, storefront, own, checkDeps(context));
@@ -166,7 +223,7 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
         link: linkFor(storefront),
         file: written.outcome,
         ...(written.outcome === 'skipped' ? { fileReason: written.reason } : {}),
-        onList: true,
+        onList,
         checks,
     };
     return { success: true, data: result };

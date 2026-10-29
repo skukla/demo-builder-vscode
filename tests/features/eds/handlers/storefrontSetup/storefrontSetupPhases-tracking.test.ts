@@ -1,10 +1,10 @@
 /**
  * Storefront Setup Phases - Block Library Install Tracking Tests
  *
- * Tests that block library install tracking data (commit SHA, blockIds)
- * is saved to project state after successful block collection installation.
- *
- * TDD RED Phase: Tests written BEFORE implementation.
+ * What storefront setup installed (commit SHA, blockIds per library) comes back
+ * ON THE RESULT, for project creation to save onto the project it is creating or
+ * editing. It used to be saved onto `getCurrentProject()` — in the wizard, the
+ * project that was open BEFORE it, not the one being made (fixed 2026-10-09).
  */
 
 // FIRST, before the family harness: that file re-exports the subject, so requiring
@@ -50,6 +50,7 @@ import {
 } from './storefrontSetupPhases.testUtils';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 // =============================================================================
 // Helpers
@@ -93,51 +94,39 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
         mockGetBlockLibraryName.mockImplementation((id: string) => id);
     });
 
-    it('should save installedBlockLibraries to project after successful install', async () => {
-        // Given: installBlockCollections returns success with libraryVersions
+    it('returns the records on the result and leaves the open project alone', async () => {
         mockInstallBlockCollections.mockResolvedValue({
             success: true,
             blocksCount: 4,
             blockIds: ['hero-cta', 'newsletter', 'search-bar', 'product-grid'],
             libraryVersions: LIBRARY_VERSIONS,
         });
-
-        const context = createSetupContext({
-            name: 'test-project',
-            path: '/path/to/test-project',
-            status: 'configuring',
-            created: new Date(),
-            lastModified: new Date(),
-        });
-        const edsConfig = createEdsConfig();
+        // The project open before the wizard: NOT the one this storefront is for.
+        const openProject = createMockProject({ name: 'justrite' });
+        const context = createSetupContext(openProject);
         const customLibs: CustomBlockLibrary[] = [
             { name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks', branch: 'v2' } },
         ];
 
-        // When: Executing storefront setup with block libraries
-        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {
-            selectedBlockLibraries: ['isle5'],
-            customBlockLibraries: customLibs,
-        });
-
-        // Then: stateManager.saveProject should have been called with installedBlockLibraries
-        const saveProjectMock = context.stateManager.saveProject as jest.Mock;
-        expect(saveProjectMock).toHaveBeenCalled();
-
-        // Find the call that saved installedBlockLibraries
-        const savedProject = saveProjectMock.mock.calls.find(
-            (call: unknown[]) =>
-                (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined
+        const result = await executeStorefrontSetupPhases(
+            context,
+            createEdsConfig(),
+            AbortSignal.timeout(30000),
+            { selectedBlockLibraries: ['isle5'], customBlockLibraries: customLibs },
         );
-        expect(savedProject).toBeDefined();
 
-        const project = savedProject![0] as Record<string, unknown>;
-        const installedLibs = project.installedBlockLibraries as Array<Record<string, unknown>>;
-        expect(installedLibs).toHaveLength(2);
+        expect(context.stateManager.saveProject).not.toHaveBeenCalledWith(openProject);
+        expect(openProject.installedBlockLibraries).toBeUndefined();
+        // The records ride the threaded repoInfo, which every result spreads; this
+        // harness stops short of a complete run (phase 3 is unmocked), and the
+        // success-path wire is pinned in storefrontSetupHandlers-outcomes.
+        expect(result.installedBlockLibraries?.map((lib) => lib.name)).toEqual([
+            'Isle5',
+            'Partner Blocks',
+        ]);
     });
 
-    it('should include correct commit SHA, blockIds, and installedAt per library', async () => {
-        // Given: installBlockCollections returns success with libraryVersions
+    it('carries commit SHA, blockIds and installedAt per library', async () => {
         mockInstallBlockCollections.mockResolvedValue({
             success: true,
             blocksCount: 4,
@@ -145,89 +134,51 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
             libraryVersions: LIBRARY_VERSIONS,
         });
 
-        const context = createSetupContext({
-            name: 'test-project',
-            path: '/path/to/test-project',
-            status: 'configuring',
-            created: new Date(),
-            lastModified: new Date(),
-        });
-        const edsConfig = createEdsConfig();
-
-        // When: Executing storefront setup
-        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {
-            selectedBlockLibraries: ['isle5'],
-            customBlockLibraries: [
-                {
-                    name: 'Partner Blocks',
-                    source: { owner: 'partner', repo: 'blocks', branch: 'v2' },
-                },
-            ],
-        });
-
-        // Then: Saved data should match expected structure
-        const saveProjectMock = context.stateManager.saveProject as jest.Mock;
-        const savedProject = saveProjectMock.mock.calls.find(
-            (call: unknown[]) =>
-                (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined
-        );
-        expect(savedProject).toBeDefined();
-
-        const installedLibs = (savedProject![0] as Record<string, unknown>)
-            .installedBlockLibraries as Array<{
-            name: string;
-            source: { owner: string; repo: string; branch: string };
-            commitSha: string;
-            blockIds: string[];
-            installedAt: string;
-        }>;
-
-        // Verify first library
-        expect(installedLibs[0].name).toBe('Isle5');
-        expect(installedLibs[0].source).toEqual({ owner: 'adobe', repo: 'isle5', branch: 'main' });
-        expect(installedLibs[0].commitSha).toBe('abc123def456');
-        expect(installedLibs[0].blockIds).toEqual(['hero-cta', 'newsletter', 'search-bar']);
-        expect(installedLibs[0].installedAt).toBeDefined();
-        // installedAt should be a valid ISO date string
-        expect(new Date(installedLibs[0].installedAt).toISOString()).toBe(
-            installedLibs[0].installedAt
+        const result = await executeStorefrontSetupPhases(
+            createSetupContext(),
+            createEdsConfig(),
+            AbortSignal.timeout(30000),
+            {
+                selectedBlockLibraries: ['isle5'],
+                customBlockLibraries: [
+                    { name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks', branch: 'v2' } },
+                ],
+            },
         );
 
-        // Verify second library
-        expect(installedLibs[1].name).toBe('Partner Blocks');
-        expect(installedLibs[1].commitSha).toBe('789xyz000aaa');
-        expect(installedLibs[1].blockIds).toEqual(['product-grid']);
+        const installedLibs = result.installedBlockLibraries ?? [];
+        expect(installedLibs[0]).toMatchObject({
+            name: 'Isle5',
+            source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+            commitSha: 'abc123def456',
+            blockIds: ['hero-cta', 'newsletter', 'search-bar'],
+        });
+        expect(new Date(installedLibs[0].installedAt).toISOString()).toBe(installedLibs[0].installedAt);
+        expect(installedLibs[1]).toMatchObject({
+            name: 'Partner Blocks',
+            commitSha: '789xyz000aaa',
+            blockIds: ['product-grid'],
+        });
     });
 
-    it('should not save tracking data when install fails', async () => {
-        // Given: installBlockCollections returns failure
+    it('returns no records and saves nothing when the install fails', async () => {
         mockInstallBlockCollections.mockResolvedValue({
             success: false,
             blocksCount: 0,
             blockIds: [],
             error: 'Network error',
         });
+        const openProject = createMockProject({ name: 'justrite' });
+        const context = createSetupContext(openProject);
 
-        const context = createSetupContext({
-            name: 'test-project',
-            path: '/path/to/test-project',
-            status: 'configuring',
-            created: new Date(),
-            lastModified: new Date(),
-        });
-        const edsConfig = createEdsConfig();
-
-        // When: Executing storefront setup with block libraries that fail to install
-        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {
-            selectedBlockLibraries: ['isle5'],
-        });
-
-        // Then: saveProject should NOT have been called with installedBlockLibraries
-        const saveProjectMock = context.stateManager.saveProject as jest.Mock;
-        const savedWithTracking = saveProjectMock.mock.calls.find(
-            (call: unknown[]) =>
-                (call[0] as Record<string, unknown>).installedBlockLibraries !== undefined
+        const result = await executeStorefrontSetupPhases(
+            context,
+            createEdsConfig(),
+            AbortSignal.timeout(30000),
+            { selectedBlockLibraries: ['isle5'] },
         );
-        expect(savedWithTracking).toBeUndefined();
+
+        expect(result.installedBlockLibraries).toBeUndefined();
+        expect(context.stateManager.saveProject).not.toHaveBeenCalledWith(openProject);
     });
 });

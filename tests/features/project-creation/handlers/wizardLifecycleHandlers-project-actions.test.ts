@@ -7,7 +7,11 @@
  */
 
 import * as vscode from 'vscode';
-import { handleOpenProject } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
+import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
+import {
+    handleBackToProject,
+    handleOpenProject,
+} from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 import { createWizardLifecycleContext } from './wizardLifecycleHandlers.testUtils';
 
 
@@ -24,6 +28,10 @@ jest.mock('@/core/base/baseWebviewCommand', () => ({
     },
 }));
 
+jest.mock('@/core/base/swapWebviewSurface', () => ({
+    swapWebviewSurface: jest.fn().mockResolvedValue(undefined),
+}));
+
 // Mock validation (handleBrowseFiles calls validateProjectPath)
 jest.mock('@/core/validation/PathSafetyValidator', () => ({
     validateProjectPath: jest.fn(),
@@ -35,6 +43,22 @@ jest.mock('@/core/validation/PathSafetyValidator', () => ({
 describe('lifecycleHandlers - Project Actions', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+    });
+
+    // Edit came from the project; its last button goes back to that project's
+    // dashboard rather than to the projects list (owner, 2026-10-17).
+    describe('handleBackToProject', () => {
+        it('replaces the wizard with the project dashboard', async () => {
+            const context = createWizardLifecycleContext();
+
+            const result = await handleBackToProject(context);
+
+            expect(swapWebviewSurface).toHaveBeenCalledWith(
+                'demoBuilderWizard',
+                'demoBuilder.showProjectDashboard',
+            );
+            expect(result).toEqual({ success: true });
+        });
     });
 
     describe('handleOpenProject', () => {

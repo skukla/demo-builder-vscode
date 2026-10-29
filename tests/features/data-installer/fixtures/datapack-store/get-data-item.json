@@ -1,0 +1,18 @@
+{
+    "count": 1,
+    "data": "[{\"category\":{\"id\":1,\"name\":\"Signs and Labels\"}}]",
+    "duration": 1,
+    "include_content": true,
+    "metadata": {
+        "_id": "6abe711099d2a5395a624b35",
+        "data_type": "categories",
+        "datapack_name": "fixture-capture",
+        "version": "v1"
+    },
+    "query": {
+        "data_type": "categories",
+        "datapack_name": "fixture-capture",
+        "version": "v1"
+    },
+    "success": true
+}

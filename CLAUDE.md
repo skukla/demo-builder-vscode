@@ -123,8 +123,7 @@ demo-builder-vscode/
 │   │   # ai, app-builder, authentication, components, dashboard, eds, lifecycle,
 │   │   # mesh, prerequisites, project-creation, projects-dashboard, sidebar, updates
 │   ├── mcp-server.ts      # MCP server exposed to Claude (→ docs/systems/mcp-server.md)
-│   ├── types/             # TypeScript definitions
-│   └── utils/             # Legacy location; only autoUpdater.ts remains
+│   └── types/             # TypeScript definitions
 ├── docs/                  # Documentation (→ docs/README.md index; ADRs in docs/architecture/adr/)
 ├── tests/                 # Jest suites mirroring src/ (→ tests/README.md)
 ├── dist/                  # Compiled output (never edit)
@@ -137,7 +136,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 
 1. `src/extension.ts` — entry point, command registration
 2. `src/features/project-creation/ui/wizard/WizardContainer.tsx` — wizard UI container
-3. `src/features/authentication/services/authenticationService.ts` (+ `adobeEntityFetcher.ts`, `ensureOrgContext.ts`) — Adobe auth, Console SDK, org-context handling
+3. `src/features/authentication/services/authenticationService.ts` (+ `adobeEntityService.ts`, which wires the entity services, and `ensureOrgContext.ts`) — Adobe auth, Console SDK, org-context handling
 4. `src/core/state/stateManager.ts` — project state persistence
 5. `src/features/updates/services/updateManager.ts` (+ `componentUpdater.ts`) — GitHub Releases updates with snapshot/rollback
 6. `src/features/prerequisites/config/prerequisites.json` — prerequisite definitions
@@ -168,7 +167,7 @@ Feature config lives per-feature in `src/features/*/config/*.json`.
 → Check "Demo Builder: Debug Logs" output channel
 → `docs/systems/debugging.md`
 
-## The quality instruments — one registry, four cadences
+## The quality instruments — one registry, five cadences
 
 `tests/sop/toolingRegistry.ts` lists every instrument this repo owns and how
 often it runs. `tests/sop/tooling-registry.test.ts` fails the build when the
@@ -178,10 +177,14 @@ red, and so is a registry entry for something deleted.
 | Cadence | What runs | Who triggers it |
 |---|---|---|
 | per-tool-call | 25 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 54 enforcer suites in `tests/sop/` | automatic |
+| per-jest-run | 62 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
-| periodic | 15 scripted checks + 10 guided reviews | **`npm run sweep`** |
+| periodic | 14 scripted checks + 10 guided reviews | **`npm run sweep`** |
+| overnight | 2 Stryker runs — the stale-row re-measure (`npm run test:mutation:sweep -- --stale --minutes 480`) and the pilot. Never inside the sweep | a person, when no other test run needs the machine |
+
+The sweep REPORTS and never starts Stryker: it lists stale mutation rows, and the
+overnight re-measure corrects them.
 
 Read a sweep by its labels, not its exit code: a `reported` row always exits 0
 and its OUTPUT is the result; a failing `gate` row is a real failure; `COULD NOT
@@ -216,7 +219,7 @@ without producing a signal.
 - `debug-log-triage` — parse a pasted Debug Logs dump: the structured stdout/stderr block above a blank error carries the truth; benign-noise catalog; channel→feature map
 - `adobe-docs-lookup` — route an Adobe docs question to the source that has it (App Builder concepts live on developer.adobe.com, which NO doc MCP indexes) + recover from `-32002` / 401 MCP session failures
 - `component-extraction-scan` — find UI markup duplicated across ≥3 sites that should be one component (inverse of the SOP God-file scan)
-- `webview-visual-baseline` — prove a CSS/webview change moved exactly what it meant to: a computed-style fingerprint of every element on all eight surfaces, before and after, compared by exact string equality (not screenshots). The safety net PL-21 is gated on, and the instrument that measured ADR-018
+- `webview-visual-baseline` — prove a CSS/webview change moved exactly what it meant to: a computed-style fingerprint of every element on all nine surfaces, before and after, compared by exact string equality (not screenshots). The safety net PL-21 is gated on, and the instrument that measured ADR-018
 - `ask-the-tool` — do a mechanical refactor over many files by letting the COMPILER decide which
   sites are real: change all of them, run `typecheck:tests` once, and the files that now error are
   the ones where the thing you removed was load-bearing. Then the suite catches what tsc cannot see
@@ -250,7 +253,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 121 of them, 121 with an enforcer that fails the build — and
+this codebase holds itself to — 131 of them, 129 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent
@@ -266,7 +269,7 @@ including 291 browser-bundle ones, in a document that mentions React zero times.
 Each has its own enforcer (`tests/sop/architecture-rules.test.ts` and
 `tests/sop/webview-architecture-rules.test.ts`) and its own ledger.
 
-**Webview side (ADR-017)**: the composition root is the bundle entry (8 of them);
+**Webview side (ADR-017)**: the composition root is the bundle entry (9 of them);
 dependencies arrive as props, not context; the message channel is a RATIFIED
 singleton (`acquireVsCodeApi()` is once-per-webview, so there is nothing to
 vary); hooks are the service layer; and a feature stylesheet reaches only the
@@ -335,11 +338,11 @@ works, and nothing anywhere fails for the paths you did not.
 Before calling a change done, walk this list and decide which entries apply. An
 entry that does not apply is a one-line statement, not a silence.
 
-**1. Eight webview bundles.** `WEBVIEW_ENTRIES` in `esbuild.config.js`: wizard,
+**1. Nine webview bundles.** `WEBVIEW_ENTRIES` in `esbuild.config.js`: wizard,
 dashboard, configure, sidebar, projectsList, aiOverview, integrations,
-dataInstaller. A feature stylesheet reaches only the bundles whose entry imports
+dataInstaller, siteAccess. A feature stylesheet reaches only the bundles whose entry imports
 it, so a class can be styled on one surface and absent on the next **with no error
-anywhere** (ADR-017). Shared UI touched → ask which of the eight render it.
+anywhere** (ADR-017). Shared UI touched → ask which of the nine render it.
 
 **2. Creation and regeneration must agree.** Anything project creation writes,
 "Regenerate AI Files" has to reproduce for a project that gains the qualifying

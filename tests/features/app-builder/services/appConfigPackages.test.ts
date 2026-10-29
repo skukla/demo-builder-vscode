@@ -5,19 +5,17 @@
  * shared workspace). Extension/malformed configs have nothing to isolate.
  */
 
-jest.mock('fs', () => ({ promises: { readFile: jest.fn(), writeFile: jest.fn() } }));
-
-import { promises as fsPromises } from 'fs';
+import { mockRead, mockWrite } from './appConfigPackages.testUtils';
 import * as yaml from 'yaml';
 import {
     applyIsolatedPackages,
+    declaresIncludeImsCredentials,
     detectAppLayout,
     isolatePackages,
+    listDeclaredActions,
     listDeclaredPackageNames,
 } from '@/features/app-builder/services/appConfigPackages';
 
-const mockRead = fsPromises.readFile as jest.Mock;
-const mockWrite = fsPromises.writeFile as jest.Mock;
 
 /** A standalone app.config.yaml with the given package map. */
 function config(packages: Record<string, unknown>): string {
@@ -326,5 +324,152 @@ describe('listDeclaredPackageNames — configs that name nothing attributable', 
             .mockResolvedValueOnce(':\n  - [not valid');
 
         await expect(listDeclaredPackageNames('/app')).resolves.toEqual(['ok']);
+    });
+});
+
+describe('declaresIncludeImsCredentials', () => {
+    /** The demo ERP's shape (skukla/demo-erp app.config.yaml, read 2026-09-15). */
+    const ERP_CONFIG = yaml.stringify({
+        application: {
+            runtimeManifest: {
+                database: { 'auto-provision': true, region: 'amer' },
+                packages: {
+                    'demo-erp': {
+                        actions: {
+                            health: { function: 'actions/health/index.js', annotations: { 'include-ims-credentials': true } },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    it('is true when an action of a standalone app asks for the credentials', async () => {
+        mockRead.mockResolvedValueOnce(ERP_CONFIG);
+
+        expect(await declaresIncludeImsCredentials('/c')).toBe(true);
+        expect(mockRead).toHaveBeenCalledWith('/c/app.config.yaml', 'utf-8');
+    });
+
+    it('follows an extension include to the file that declares it', async () => {
+        mockRead.mockImplementation(async (file: string) =>
+            file === '/c/app.config.yaml'
+                ? yaml.stringify({ extensions: { 'commerce/backend-ui/1': { $include: 'src/ext.config.yaml' } } })
+                : yaml.stringify({ runtimeManifest: { packages: { p: { actions: { a: { annotations: { 'include-ims-credentials': true } } } } } } }),
+        );
+
+        expect(await declaresIncludeImsCredentials('/c')).toBe(true);
+        expect(mockRead).toHaveBeenCalledWith('/c/src/ext.config.yaml', 'utf-8');
+    });
+
+    it('is false when no action asks, when it is set false, and when there is no config', async () => {
+        mockRead.mockResolvedValueOnce(config({ p: { actions: { a: { annotations: { 'require-adobe-auth': true } } } } }));
+        expect(await declaresIncludeImsCredentials('/c')).toBe(false);
+
+        mockRead.mockResolvedValueOnce(config({ p: { actions: { a: { annotations: { 'include-ims-credentials': false } } } } }));
+        expect(await declaresIncludeImsCredentials('/c')).toBe(false);
+
+        mockRead.mockRejectedValueOnce(new Error('ENOENT'));
+        expect(await declaresIncludeImsCredentials('/c')).toBe(false);
+    });
+});
+
+// =============================================================================
+// listDeclaredActions — every Runtime action an app declares, which is where an
+// extension-layout app's deployed URLs come from (the CLI cannot report them).
+//
+// The YAML keeps the real starter kit's spellings, read from a cloned copy on
+// 2026-09-16: an UNQUOTED `web: yes` inline, a QUOTED `web: 'yes'` behind an
+// action-level `$include`, and that include written relative to the
+// ext.config.yaml that names it. `yes` is a string under YAML 1.2, which is the
+// trap the web check exists for.
+// =============================================================================
+
+/** Serve `files` by absolute path; anything else is ENOENT. */
+function disk(files: Record<string, string>): void {
+    mockRead.mockImplementation((file: string) =>
+        file in files ? Promise.resolve(files[file]) : Promise.reject(new Error(`ENOENT ${file}`)),
+    );
+}
+
+const APP_CONFIG = `extensions:
+  commerce/extensibility/1:
+    $include: src/commerce-extensibility-1/ext.config.yaml
+`;
+
+const EXT_CONFIG = `runtimeManifest:
+  packages:
+    starter-kit:
+      license: Apache-2.0
+      actions:
+        $include: ./actions/starter-kit/actions.config.yaml
+    app-management:
+      license: Apache-2.0
+      actions:
+        installation:
+          function: .generated/actions/app-management/installation.js
+          web: yes
+          runtime: nodejs:24
+        consumer:
+          function: .generated/actions/app-management/consumer.js
+          runtime: nodejs:24
+`;
+
+const STARTER_KIT_ACTIONS = `info:
+  function: ./info/index.js
+  web: 'yes'
+  runtime: nodejs:24
+`;
+
+describe('listDeclaredActions', () => {
+    it('reads an extension app, resolving an action include beside the file that names it', async () => {
+        disk({
+            '/app/app.config.yaml': APP_CONFIG,
+            '/app/src/commerce-extensibility-1/ext.config.yaml': EXT_CONFIG,
+            '/app/src/commerce-extensibility-1/actions/starter-kit/actions.config.yaml': STARTER_KIT_ACTIONS,
+        });
+
+        await expect(listDeclaredActions('/app')).resolves.toStrictEqual([
+            { packageName: 'starter-kit', actionName: 'info', web: true },
+            { packageName: 'app-management', actionName: 'installation', web: true },
+            { packageName: 'app-management', actionName: 'consumer', web: false },
+        ]);
+    });
+
+    it('reads a standalone app, including a web-export flag and an explicit false', async () => {
+        disk({
+            '/app/app.config.yaml': `application:
+  runtimeManifest:
+    packages:
+      demo-erp:
+        actions:
+          health: { function: a.js, web-export: true }
+          events-retry: { function: b.js, web: false }
+          admin: { function: c.js, web: raw }
+`,
+        });
+
+        await expect(listDeclaredActions('/app')).resolves.toStrictEqual([
+            { packageName: 'demo-erp', actionName: 'health', web: true },
+            { packageName: 'demo-erp', actionName: 'events-retry', web: false },
+            { packageName: 'demo-erp', actionName: 'admin', web: true },
+        ]);
+    });
+
+    it('skips an include it cannot read and keeps the rest', async () => {
+        disk({
+            '/app/app.config.yaml': APP_CONFIG,
+            '/app/src/commerce-extensibility-1/ext.config.yaml': EXT_CONFIG,
+        });
+
+        const names = (await listDeclaredActions('/app')).map((a) => `${a.packageName}/${a.actionName}`);
+
+        expect(names).toStrictEqual(['app-management/installation', 'app-management/consumer']);
+    });
+
+    it('declares nothing when there is no config', async () => {
+        disk({});
+
+        await expect(listDeclaredActions('/app')).resolves.toStrictEqual([]);
     });
 });

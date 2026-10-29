@@ -10,10 +10,10 @@
  * hands-back to Commerce Admin when the call path fails.
  *
  * Input derivations (each measured, not assumed):
- * - Base URL: the `app-management` package's web-action URLs from
- *   `aio app get-url --json` (already persisted as `deployedUrls`), cut at the
- *   package segment — confirmed live 2026-08-27 (GET answered 401 at the
- *   predicted base).
+ * - Base URL: the `app-management` package's web-action URLs in the persisted
+ *   `deployedUrls` (derived from the app's config at deploy time — see
+ *   `deployedUrls.ts`), cut at the package segment — confirmed live 2026-08-27
+ *   (GET answered 401 at the predicted base).
  * - Commerce target: backend id → flavor (`adobe-commerce-accs` → `saas`,
  *   `adobe-commerce-paas` → `paas`); base URL = the backend's GraphQL endpoint
  *   with its trailing `/graphql` removed (the kit's own lib appends
@@ -26,29 +26,44 @@
  * @module features/app-builder/services/appManagementInstaller
  */
 
+import { buildAppData } from './appManagementAppData';
 import {
     AppManagementApiError,
     AppManagementClient,
     type AppData,
     type AppManagementAuth,
-    type CommerceEnv,
-    type InstallationState,
     type ReconcileResult,
+    type SetAssociationRequest,
 } from './appManagementClient';
+import {
+    CREDENTIAL_ACTIVATION_WAITS_MS,
+    isCredentialNotReadyFailure,
+    isRetryableInstallFailure,
+} from './appManagementInstallFailures';
+import {
+    isCallTimeout,
+    newPollBudget,
+    pollInstallation,
+    type PollBudget,
+} from './appManagementInstallPolling';
+import {
+    followUpgrade,
+    installedOutcome,
+    isRunningUpgrade,
+    isUpgradeRefusal,
+    plannedOnly,
+    REFUSED_UPGRADE,
+    settleNoOp,
+    type AppManagementInstallResult,
+} from './appManagementUpgrade';
 import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getBackendCommerceContract } from '@/features/components/services/backendCommerce';
-import type { Project } from '@/types/base';
+import type { CommerceSource, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /** The kit lib's own defaults (read from aio-commerce-lib-api source, 2026-08-27). */
 export const IO_EVENTS_URL = 'https://api.adobe.io/events';
 export const IO_EVENTS_ENV = 'prod';
-
-/** How often to re-read a queued (202) installation's state. */
-const POLL_INTERVAL_MS = 5000;
-/** Give a queued installation this long before handing back to the user. */
-const POLL_BUDGET_MS = TIMEOUTS.LONG;
 
 /** Where the user finishes the job when the automatic path cannot. */
 export const APP_MANAGEMENT_HANDS_BACK =
@@ -57,14 +72,11 @@ export const APP_MANAGEMENT_HANDS_BACK =
 /** The subset of {@link AppManagementClient} the installer drives (test seam). */
 export type InstallerClient = Pick<
     AppManagementClient,
-    'getInstallationState' | 'reconcileInstallation' | 'setAssociation'
+    | 'getInstallationState'
+    | 'getLatestLifecycleAttempt'
+    | 'reconcileInstallation'
+    | 'setAssociation'
 >;
-
-export interface AppManagementInstallResult {
-    status: 'installed' | 'skipped' | 'failed';
-    /** Human line — the no-op reason on skip, the hands-back on failure. */
-    detail?: string;
-}
 
 export interface AppManagementInstallDeps {
     /** Resolve IMS auth for the app's org; undefined = cannot authenticate. */
@@ -75,13 +87,17 @@ export interface AppManagementInstallDeps {
     clientFactory?: (baseUrl: string, auth: AppManagementAuth) => InstallerClient;
     /** Poll pacing (tests inject an instant resolver). */
     wait?: (ms: number) => Promise<void>;
+    /** The app version being installed (its manifest's `metadata.version`), when known. */
+    appVersion?: string;
+    /** When the deploy this pass follows started (ISO); an upgrade since then is this deploy's. */
+    since?: string;
 }
 
 /**
  * The App Management API base from the deployed action URLs: any URL containing
  * the reserved `app-management` package segment, cut just after it.
  *
- * @param deployedUrls - the per-action URL map `aio app get-url --json` yielded
+ * @param deployedUrls - the app's persisted per-action URL map
  * @returns the base URL, or undefined when no app-management action deployed
  */
 export function deriveAppManagementBaseUrl(
@@ -96,6 +112,13 @@ export function deriveAppManagementBaseUrl(
     return undefined;
 }
 
+/** What an install or uninstall call needs once every input has resolved. */
+export interface AppManagementCallInputs {
+    target: SetAssociationRequest;
+    appData: AppData;
+    auth: AppManagementAuth;
+}
+
 /**
  * The Commerce association target from the project's configured backend.
  *
@@ -106,12 +129,10 @@ export function deriveAppManagementBaseUrl(
  * components.json and code holding the old name finds nothing, with no error
  * pointing anywhere — owner audit, 2026-08-27).
  *
- * @param project - the current project
+ * @param project - the current project, or a wizard's choices before one exists
  * @returns the association body fields, or an error naming what is missing
  */
-export function deriveCommerceTarget(
-    project: Project,
-): { commerceBaseUrl: string; commerceEnv: CommerceEnv } | { error: string } {
+export function deriveCommerceTarget(project: CommerceSource): SetAssociationRequest | { error: string } {
     const backendId = project.componentSelections?.backend;
     const contract = getBackendCommerceContract(backendId);
     if (!contract) {
@@ -143,33 +164,34 @@ export function deriveCommerceTarget(
 }
 
 /**
- * The Console identity block the install API requires — every field from the
- * project's persisted `adobe` config, with an error naming the first gap
- * (all fields are optional in the manifest; the spec requires all eight).
+ * Resolve what an install or uninstall call needs, in the order its refusals are
+ * reported: the Commerce target, the app's Adobe context, then a sign-in. Both
+ * calls open with this; only the verb in the no-sign-in refusal differs.
  *
- * @param project - the current project
- * @returns the appData, or an error naming the missing field
+ * @param project - the current project (Commerce config + Adobe context)
+ * @param componentId - the app's component id; picks the workspace it lives in
+ * @param getAuth - resolves IMS auth for the app's org
+ * @param verb - names the call in the no-sign-in refusal
+ * @returns the target, appData and auth, or the first refusal as an error string
  */
-export function buildAppData(project: Project): AppData | { error: string } {
-    const adobe = project.adobe ?? {};
-    // Constructed as the declared type, empty-string for absent — then validated
-    // — rather than entries + a cast: a cast at this boundary would silence the
-    // one checker that can see a missing spec-required field.
-    const candidate: AppData = {
-        consumerOrgId: adobe.organization ?? '',
-        orgName: adobe.organizationName ?? '',
-        projectId: adobe.projectId ?? '',
-        projectName: adobe.projectName ?? '',
-        projectTitle: adobe.projectTitle ?? adobe.projectName ?? '',
-        workspaceId: adobe.workspace ?? '',
-        workspaceName: adobe.workspaceName ?? '',
-        workspaceTitle: adobe.workspaceTitle ?? adobe.workspaceName ?? '',
-    };
-    const missing = Object.entries(candidate).find(([, value]) => value === '');
-    if (missing) {
-        return { error: `The project's Adobe context is missing ${missing[0]}.` };
+export async function prepareAppManagementCall(
+    project: Project,
+    componentId: string,
+    getAuth: AppManagementInstallDeps['getAuth'],
+    verb: 'install' | 'uninstall',
+): Promise<AppManagementCallInputs | { error: string }> {
+    const target = deriveCommerceTarget(project);
+    if ('error' in target) {
+        return target;
     }
-    return candidate;
+    const appData = buildAppData(project, componentId);
+    if ('error' in appData) {
+        return appData;
+    }
+    const auth = await getAuth();
+    return auth
+        ? { target, appData, auth }
+        : { error: `No Adobe sign-in is available to authenticate the ${verb} call.` };
 }
 
 /**
@@ -189,75 +211,12 @@ function isBenignNoOp(error: unknown): boolean {
 }
 
 /**
- * Poll a queued (202) installation until it lands or the budget runs out.
- *
- * @param client - the app's client
- * @param deps - wait + progress
- * @returns the final state, or undefined when the budget ran out first
- */
-/**
- * The poll allowance for ONE WHOLE install — shared across retry rounds, so
- * five racy rounds can never stack five full budgets (audit finding: the
- * per-round budget made the worst case 5 × 3 minutes).
- */
-interface PollBudget {
-    roundsLeft: number;
-}
-
-function newPollBudget(): PollBudget {
-    return { roundsLeft: Math.ceil(POLL_BUDGET_MS / POLL_INTERVAL_MS) };
-}
-
-async function pollInstallation(
-    client: InstallerClient,
-    deps: AppManagementInstallDeps,
-    budget: PollBudget,
-): Promise<InstallationState | undefined> {
-    const wait = deps.wait ?? sleep;
-    while (budget.roundsLeft > 0) {
-        budget.roundsLeft--;
-        await wait(POLL_INTERVAL_MS);
-        const state = await client.getInstallationState();
-        if (state && state.status !== 'in-progress') {
-            return state;
-        }
-        deps.onProgress?.('Installing into Commerce');
-    }
-    return undefined;
-}
-
-/**
- * Failure signatures that mean "run the reconcile again", not "broken".
- *
- * The measured one: the installer creates its I/O Events registrations
- * concurrently and races itself on the Runtime binding package —
- * "HTTP 409 Conflict — Error 409 from upstream (…/runtime/namespaces/…/
- * packages?update=true)". Reconcile is idempotent desired-state, and retries
- * CONVERGE: measured live 2026-08-27, registrations climbed 6 → 8 → 19 → 23
- * across rounds and the fourth landed `succeeded` with every step green.
- */
-const RETRYABLE_INSTALL_PATTERNS: readonly RegExp[] = [/HTTP 409 Conflict/];
-
-/**
  * How many reconcile rounds to drive before handing back. The measured
  * convergence took 4 from a residue-laden state; a fresh install needs fewer.
  */
 const MAX_RECONCILE_ROUNDS = 5;
 
-/**
- * Does this landed-failed state carry a signature retrying can clear?
- * Exported for the uninstaller, whose runs hit the same self-race — the
- * uninstall deletes the registrations the install raced on creating.
- */
-export function isRetryableInstallFailure(state: InstallationState): boolean {
-    let text: string;
-    try {
-        text = JSON.stringify(state.error ?? '');
-    } catch {
-        return false;
-    }
-    return RETRYABLE_INSTALL_PATTERNS.some((pattern) => pattern.test(text));
-}
+type Settled = AppManagementInstallResult | 'retry' | 'credential-not-ready';
 
 /** Shape one reconcile answer (post-association) into the install result. */
 async function settleReconcile(
@@ -265,10 +224,15 @@ async function settleReconcile(
     client: InstallerClient,
     deps: AppManagementInstallDeps,
     budget: PollBudget,
-): Promise<AppManagementInstallResult | 'retry'> {
+): Promise<Settled> {
+    if (reconciled.operation === 'upgrade') {
+        return reconciled.accepted
+            ? followUpgrade(client, deps.onProgress, deps.wait)
+            : plannedOnly(deps.appVersion);
+    }
     // A 202 queued the work: poll until it lands. A 200 answered synchronously.
     if (!reconciled.id) {
-        return { status: 'installed', detail: reconciled.message };
+        return installedOutcome(deps.appVersion, reconciled.message);
     }
     const finalState = await pollInstallation(client, deps, budget);
     if (!finalState) {
@@ -281,12 +245,68 @@ async function settleReconcile(
         if (isRetryableInstallFailure(finalState)) {
             return 'retry';
         }
+        if (isCredentialNotReadyFailure(finalState)) {
+            return 'credential-not-ready';
+        }
         return {
             status: 'failed',
             detail: `The app's installer reported a failure. ${APP_MANAGEMENT_HANDS_BACK}`,
         };
     }
-    return { status: 'installed' };
+    return installedOutcome(deps.appVersion);
+}
+
+/**
+ * Run the reconcile until it lands, retrying what retrying can clear.
+ *
+ * Reconcile is idempotent desired-state, so a retry repeats the SAME call. The installer
+ * conflict (the 409 self-race) is retried at once, up to {@link MAX_RECONCILE_ROUNDS}; a
+ * credential Adobe has not yet activated is retried after each pause in
+ * {@link CREDENTIAL_ACTIVATION_WAITS_MS}. The two are counted separately.
+ */
+async function driveReconcile(
+    client: InstallerClient,
+    appData: AppData,
+    target: SetAssociationRequest,
+    deps: AppManagementInstallDeps,
+    fail: (detail: string) => AppManagementInstallResult,
+): Promise<AppManagementInstallResult> {
+    const budget = newPollBudget();
+    const wait = deps.wait ?? sleep;
+    let conflictRound = 1;
+    let credentialWaits = 0;
+    deps.onProgress?.('Installing into Commerce (App Management)');
+    for (;;) {
+        const reconciled = await client.reconcileInstallation({
+            appData,
+            ioEventsUrl: IO_EVENTS_URL,
+            ioEventsEnv: IO_EVENTS_ENV,
+            commerceBaseUrl: target.commerceBaseUrl,
+            commerceEnv: target.commerceEnv,
+        });
+        const settled = await settleReconcile(reconciled, client, deps, budget);
+        if (settled === 'retry') {
+            conflictRound++;
+            if (conflictRound > MAX_RECONCILE_ROUNDS) {
+                return fail('The install kept hitting a transient conflict.');
+            }
+            deps.onProgress?.(`Retrying the install (transient conflict, round ${conflictRound})`);
+        } else if (settled === 'credential-not-ready') {
+            const pause = CREDENTIAL_ACTIVATION_WAITS_MS[credentialWaits++];
+            if (pause === undefined) {
+                return fail(
+                    "Commerce could not sign in with the workspace's new credential yet; Adobe " +
+                        'can take several minutes to activate one. Press Install again in a few minutes.',
+                );
+            }
+            deps.onProgress?.(
+                `Waiting for Adobe to activate the new credential (next try in ${pause / 1000} seconds)`,
+            );
+            await wait(pause);
+        } else {
+            return settled;
+        }
+    }
 }
 
 /**
@@ -296,12 +316,14 @@ async function settleReconcile(
  * preceded this SUCCEEDED and must not be reported as broken.
  *
  * @param project - the current project (Commerce config + Adobe context)
+ * @param componentId - the app's component id; picks the workspace it lives in
  * @param deployedUrls - the app's persisted per-action URL map
  * @param deps - auth, logging, progress, and the test seams
  * @returns the outcome — installed / skipped (already current) / failed
  */
 export async function installAppManagementApp(
     project: Project,
+    componentId: string,
     deployedUrls: Record<string, string> | undefined,
     deps: AppManagementInstallDeps,
 ): Promise<AppManagementInstallResult> {
@@ -314,24 +336,12 @@ export async function installAppManagementApp(
     if (!baseUrl) {
         return fail('The deploy produced no app-management install API URL.');
     }
-    const target = deriveCommerceTarget(project);
-    if ('error' in target) {
-        return fail(target.error);
+    const inputs = await prepareAppManagementCall(project, componentId, deps.getAuth, 'install');
+    if ('error' in inputs) {
+        return fail(inputs.error);
     }
-    const appData = buildAppData(project);
-    if ('error' in appData) {
-        return fail(appData.error);
-    }
-
-    const auth = await deps.getAuth();
-    if (!auth) {
-        return fail('No Adobe sign-in is available to authenticate the install call.');
-    }
-
-    const factory =
-        deps.clientFactory ??
-        ((url: string, clientAuth: AppManagementAuth) => new AppManagementClient(url, clientAuth));
-    const client = factory(baseUrl, auth);
+    const { target, appData, auth } = inputs;
+    const client = deps.clientFactory?.(baseUrl, auth) ?? new AppManagementClient(baseUrl, auth);
 
     try {
         deps.onProgress?.('Associating the app with your Commerce instance');
@@ -340,36 +350,50 @@ export async function installAppManagementApp(
             commerceEnv: target.commerceEnv,
         });
 
-        // Reconcile is idempotent desired-state, and the app's installer races
-        // itself on registration creation (the 409 signature) — so a retryable
-        // failure re-runs the SAME reconcile until it converges or the rounds
-        // run out. Measured live: four rounds from a dirty state, all green.
-        const budget = newPollBudget();
-        for (let round = 1; round <= MAX_RECONCILE_ROUNDS; round++) {
-            deps.onProgress?.(
-                round === 1
-                    ? 'Installing into Commerce (App Management)'
-                    : `Retrying the install (transient conflict, round ${round})`,
-            );
-            const reconciled = await client.reconcileInstallation({
-                appData,
-                ioEventsUrl: IO_EVENTS_URL,
-                ioEventsEnv: IO_EVENTS_ENV,
-                commerceBaseUrl: target.commerceBaseUrl,
-                commerceEnv: target.commerceEnv,
-            });
-            const settled = await settleReconcile(reconciled, client, deps, budget);
-            if (settled !== 'retry') {
-                return settled;
-            }
+        // The deploy's post-deploy hook may already be upgrading the app; asking
+        // again while it runs fails, so follow it instead.
+        const running = await client.getLatestLifecycleAttempt().catch(() => undefined);
+        if (isRunningUpgrade(running)) {
+            return await followUpgrade(client, deps.onProgress, deps.wait);
         }
-        return fail('The install kept hitting a transient conflict.');
+
+        // Which failures are retried, and how: see driveReconcile.
+        return await driveReconcile(client, appData, target, deps, fail);
     } catch (error) {
         if (isBenignNoOp(error)) {
-            return { status: 'skipped', detail: 'Already installed and current.' };
+            return settleNoOp(client, deps.appVersion, deps.since);
+        }
+        if (isUpgradeRefusal(error)) {
+            return REFUSED_UPGRADE;
+        }
+        if (isCallTimeout(error)) {
+            return followAfterTimeout(client, deps, fail);
         }
         const message = error instanceof Error ? error.message : String(error);
         deps.logger.warn(`[AppManagement] install failed: ${message}`);
         return fail(`The install call failed (${message}).`);
     }
+}
+
+/**
+ * The CALL outran the client's wait; the install did not fail. Measured 2026-09-30 on the
+ * ERP integration: the reconcile call aborted at 23:17:59, the app's own install state
+ * said succeeded at 23:18:00 — one second later — and the record read "Not installed"
+ * for two hours. So a timeout is followed like a queued (202) install: poll the app's
+ * state and answer what it says, handing back only when it is still running.
+ */
+async function followAfterTimeout(
+    client: InstallerClient,
+    deps: AppManagementInstallDeps,
+    fail: (detail: string) => AppManagementInstallResult,
+): Promise<AppManagementInstallResult> {
+    deps.onProgress?.('The install call is taking long; following the installation instead');
+    const finalState = await pollInstallation(client, deps, newPollBudget()).catch(() => undefined);
+    if (finalState?.status === 'succeeded') {
+        return installedOutcome(deps.appVersion);
+    }
+    if (finalState?.status === 'failed') {
+        return fail("The app's installer reported a failure.");
+    }
+    return fail('The install call timed out and the installation is still running.');
 }

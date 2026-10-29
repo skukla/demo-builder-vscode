@@ -59,7 +59,6 @@
                 "dark": "nextjs-file-icon-dark.svg"
             },
             "configuration": {
-                "nodeVersion": "24",
                 "requiredEnvVars": [
                     "ADOBE_COMMERCE_URL",
                     "ADOBE_COMMERCE_ENVIRONMENT_ID",
@@ -142,7 +141,6 @@
                 }
             },
             "configuration": {
-                "nodeVersion": "20",
                 "buildScript": "build",
                 "requiresDeployment": true,
                 "deploymentTarget": "adobe-io",
@@ -176,7 +174,6 @@
                 }
             },
             "configuration": {
-                "nodeVersion": "20",
                 "buildScript": "build",
                 "requiresDeployment": true,
                 "deploymentTarget": "adobe-io",
@@ -207,7 +204,6 @@
                 }
             },
             "configuration": {
-                "nodeVersion": "20",
                 "buildScript": "build",
                 "requiresDeployment": true,
                 "deploymentTarget": "adobe-io",
@@ -274,7 +270,6 @@
                 }
             },
             "configuration": {
-                "nodeVersion": "18",
                 "requiredEnvVars": [
                     "ACO_API_URL",
                     "ACO_API_KEY",

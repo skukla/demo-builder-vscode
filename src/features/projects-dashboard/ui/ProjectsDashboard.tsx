@@ -7,9 +7,8 @@
  * - Rows: Full-width horizontal list
  */
 
-import { View, Flex, Text, Button, MenuTrigger, Menu, Item } from '@adobe/react-spectrum';
+import { View, Flex, Text, Menu, Item } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import Copy from '@spectrum-icons/workflow/Copy';
 import Import from '@spectrum-icons/workflow/Import';
 import React, { useState, useMemo, useEffect } from 'react';
@@ -18,11 +17,12 @@ import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { buildMenuItems } from './projectsDashboardHelpers';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
+import { AddCard } from '@/core/ui/components/ui/AddCard';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import type { Project } from '@/types/base';
@@ -91,7 +91,9 @@ export function ProjectsDashboard({
     // Focus trap for keyboard navigation (WCAG 2.1 AA)
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
-        autoFocus: true, // Focus first element on mount so Tab works immediately
+        // No focus on load (owner, 2026-10-01): a screen with a search filter takes
+        // none. The first Tab still lands on the first element — the trap sends a Tab
+        // pressed from outside it there.
         containFocus: true, // Prevent focus escape
     });
 
@@ -123,11 +125,7 @@ export function ProjectsDashboard({
     if (isLoading) {
         return (
             <div ref={containerRef}>
-                <View height="100vh" backgroundColor="gray-50">
-                    <Flex justifyContent="center" alignItems="center" height="100%">
-                        <LoadingDisplay size="L" message="Loading projects" />
-                    </Flex>
-                </View>
+                <FullScreenLoading message="Loading projects" backgroundColor="gray-50" />
             </div>
         );
     }
@@ -153,6 +151,25 @@ export function ProjectsDashboard({
         );
     }
 
+    // The "New project" card, last in the grid or the list (PL-62). It opens the
+    // menu the header's New button used to: adding a project is a choice of three.
+    // Hidden while a filter narrows the list — it is not a project and cannot match.
+    const addCard = (cardClassName: string): React.ReactElement | null =>
+        isFiltering ? null : (
+            <AddCard
+                name="New project"
+                cardClassName={cardClassName}
+                testId="projects-add-card"
+                menu={
+                    <NewProjectMenu
+                        onCreateProject={onCreateProject}
+                        onCopyFromExisting={onCopyFromExisting}
+                        onImportFromFile={onImportFromFile}
+                    />
+                }
+            />
+        );
+
     // Normal state with projects - uses PageLayout and PageHeader
     return (
         <div ref={containerRef}>
@@ -160,11 +177,11 @@ export function ProjectsDashboard({
                 header={<PageHeader title="Your Projects" constrainWidth />}
                 backgroundColor="var(--spectrum-global-color-gray-50)"
             >
-                {/* Sticky controls - search, view toggle, and new project button */}
+                {/* Sticky controls - search and view toggle. Adding is the card at the
+                    grid's end (PL-62), not a header button. */}
                 <FullScreenSurface
                     header={
                         <Flex alignItems="start" gap="size-300">
-                            {/* Search Header with view mode toggle */}
                             <View flex>
                                 <SearchHeader
                                     searchQuery={searchQuery}
@@ -183,34 +200,6 @@ export function ProjectsDashboard({
                                     alwaysShowCount={true}
                                 />
                             </View>
-                            {/* New Project dropdown menu */}
-                            <MenuTrigger>
-                                <Button variant="cta">
-                                    <Text>New</Text>
-                                    <ChevronDown size="S" />
-                                </Button>
-                                <Menu
-                                    onAction={(key) => {
-                                        if (key === 'new') {
-                                            onCreateProject();
-                                        } else if (key === 'copy' && onCopyFromExisting) {
-                                            onCopyFromExisting();
-                                        } else if (key === 'import' && onImportFromFile) {
-                                            onImportFromFile();
-                                        }
-                                    }}
-                                    items={buildMenuItems({ onCopyFromExisting, onImportFromFile })}
-                                >
-                                    {(item) => (
-                                        <Item key={item.key} textValue={item.label}>
-                                            {item.icon === 'add' && <Add size="S" />}
-                                            {item.icon === 'copy' && <Copy size="S" />}
-                                            {item.icon === 'import' && <Import size="S" />}
-                                            <Text>{item.label}</Text>
-                                        </Item>
-                                    )}
-                                </Menu>
-                            </MenuTrigger>
                         </Flex>
                     }
                 >
@@ -221,6 +210,7 @@ export function ProjectsDashboard({
                             runningProjectPath={runningProjectPath}
                             onSelectProject={onSelectProject}
                             actions={actions}
+                            addCard={addCard('project-card-spectrum')}
                         />
                     )}
                     {viewMode === 'rows' && (
@@ -229,6 +219,7 @@ export function ProjectsDashboard({
                             runningProjectPath={runningProjectPath}
                             onSelectProject={onSelectProject}
                             actions={actions}
+                            addCard={addCard('project-row')}
                         />
                     )}
 
@@ -247,5 +238,39 @@ export function ProjectsDashboard({
                 </FullScreenSurface>
             </PageLayout>
         </div>
+    );
+}
+
+/**
+ * The ways to start a project: new, copied from one on this computer, or imported
+ * from a file. Copy and Import appear only when the parent supplies them.
+ */
+function NewProjectMenu({
+    onCreateProject,
+    onCopyFromExisting,
+    onImportFromFile,
+}: Pick<ProjectsDashboardProps, 'onCreateProject' | 'onCopyFromExisting' | 'onImportFromFile'>) {
+    return (
+        <Menu
+            onAction={(key) => {
+                if (key === 'new') {
+                    onCreateProject();
+                } else if (key === 'copy' && onCopyFromExisting) {
+                    onCopyFromExisting();
+                } else if (key === 'import' && onImportFromFile) {
+                    onImportFromFile();
+                }
+            }}
+            items={buildMenuItems({ onCopyFromExisting, onImportFromFile })}
+        >
+            {(item) => (
+                <Item key={item.key} textValue={item.label}>
+                    {item.icon === 'add' && <Add size="S" />}
+                    {item.icon === 'copy' && <Copy size="S" />}
+                    {item.icon === 'import' && <Import size="S" />}
+                    <Text>{item.label}</Text>
+                </Item>
+            )}
+        </Menu>
     );
 }

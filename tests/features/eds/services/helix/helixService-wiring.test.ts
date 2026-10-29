@@ -128,10 +128,66 @@ describe('HelixService — the activation-registered fallback provider', () => {
     });
 });
 
+describe('HelixService — the credential its key service is built with', () => {
+    afterEach(async () => {
+        (await loadHelixServiceModule()).HelixService.clearApiKeyCache();
+        restoreFetch();
+    });
+
+    it('mints a publish key with the DA.live token of the provider it was given', async () => {
+        // The key service takes the token through a getter the constructor wires.
+        // A getter that answered nothing would send `Bearer undefined`, and Helix
+        // refuses that as an ordinary 401 — a missing key with no stated cause.
+        (await loadHelixServiceModule()).HelixService.clearApiKeyCache();
+        const mockFetch = installFetchMock();
+        mockFetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ value: 'minted-key' }),
+        });
+        const service = await createHelixService({
+            daLiveTokenProvider: makeDaLiveTokenProvider('da-token'),
+        });
+
+        const key = await service.createAdminApiKey('wiring-org', 'wiring-site');
+
+        const [url, init] = mockFetch.mock.calls.at(-1) as [string, { headers: unknown }];
+        expect(url).toBe('https://admin.hlx.page/config/wiring-org/sites/wiring-site/apiKeys.json');
+        expect(init.headers).toMatchObject({ Authorization: 'Bearer da-token' });
+        expect(key).toBe('minted-key');
+    });
+});
+
 describe('HelixService — thin delegations', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockListDirectory.mockReset();
+    });
+
+    afterEach(restoreFetch);
+
+    it('listPublishedPaths asks Helix about that site and pattern, and answers its paths', async () => {
+        const mockFetch = installFetchMock();
+        const answer = (status: number, body: unknown) => ({
+            ok: status < 300,
+            status,
+            statusText: String(status),
+            headers: { get: () => null },
+            json: async () => body,
+        });
+        mockFetch
+            .mockResolvedValueOnce(answer(202, { job: { name: 'job-1', topic: 'status' } }))
+            .mockResolvedValueOnce(
+                answer(200, { state: 'stopped', data: { resources: [{ path: '/products/a' }] } }),
+            );
+        const service = await createHelixService();
+
+        const paths = await service.listPublishedPaths('o', 's', 'main', '/products/*');
+
+        const [url, init] = mockFetch.mock.calls[0] as [string, { body: string }];
+        expect(url).toBe('https://admin.hlx.page/status/o/s/main/*');
+        expect(JSON.parse(init.body).paths).toStrictEqual(['/products/*']);
+        expect(paths).toStrictEqual(['/products/a']);
     });
 
     it('forgetApiKey drops the local copy for that org/site, with no server round trip', async () => {

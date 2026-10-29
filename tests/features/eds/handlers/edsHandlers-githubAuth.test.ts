@@ -53,9 +53,14 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 // Mock vscode authentication
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+
 jest.mock('vscode', () => ({
     authentication: {
         getSession: jest.fn(),
+    },
+    window: {
+        setStatusBarMessage: jest.fn(),
     },
 }));
 
@@ -198,6 +203,11 @@ describe('EDS Handlers', () => {
             const result = await handleGitHubOAuth(mockContext);
 
             expect(result.success).toBe(true);
+            // The same success line every sign-in shows (owner, 2026-10-15).
+            expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+                '✅ Signed in to GitHub as testuser',
+                TIMEOUTS.STATUS_BAR_SUCCESS,
+            );
             // VS Code session asked for exactly once — no force-reauth path.
             expect(vscode.authentication.getSession as jest.Mock).toHaveBeenCalledTimes(1);
             expect((vscode.authentication.getSession as jest.Mock).mock.calls[0][2]).toEqual({

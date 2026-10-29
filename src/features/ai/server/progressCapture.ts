@@ -12,7 +12,66 @@
  * Reusable across every long-running action tool (create, reset, deploy, …).
  */
 
+import { reportHandBack, reportPhase, type HandBack } from '@/core/utils/agentPhaseChannel';
+import { stageLine } from '@/core/utils/stageLine';
+import { CODE_SYNC_INSTALL_ACTION } from '@/features/eds/ui/helpers/codeSyncInstallContent';
 import type { HandlerContext } from '@/types/handlers';
+import type {
+    StorefrontGitHubAppRequiredPayload,
+    StorefrontSetupProgressPayload,
+} from '@/types/webviewPayloads';
+
+/**
+ * The one event a storefront setup sends when it needs a PERSON: the AEM Code Sync
+ * GitHub App is not on the new repository, and the run pauses (up to
+ * `TIMEOUTS.EDS_CODE_SYNC_INSTALL_WAIT`) until it is. The wizard opens its install
+ * dialog on it; headless, it reached nobody until 2026-10-08, when an agent-run
+ * creation sat on it for 27 minutes with the card reading "Creating the project".
+ */
+const GITHUB_APP_REQUIRED = 'storefront-setup-github-app-required';
+
+/**
+ * The storefront setup's own progress line. The creation executor reports its
+ * phases to the agent channel itself (`reportPhase` beside `creationProgress`);
+ * the storefront setup, which an EDS creation runs BEFORE the executor, only ever
+ * sent to the webview, so the agent's card showed nothing for the whole of it
+ * (2026-10-08: "Creating the project" and no phase, for 27 minutes). Forwarded
+ * here, and only this type: a handler that already reports its phases would
+ * narrate twice.
+ */
+const STOREFRONT_SETUP_PROGRESS = 'storefront-setup-progress';
+
+/**
+ * The phase line a storefront-setup progress event carries, or undefined. A push that
+ * names its step reads as the wizard shows it: the step with its place in the run,
+ * then what it is doing (progress vocabulary, owner 2026-10-16).
+ */
+function storefrontPhaseOf(type: string, data: unknown): string | undefined {
+    if (type !== STOREFRONT_SETUP_PROGRESS) return undefined;
+    const d = (data ?? {}) as Partial<StorefrontSetupProgressPayload>;
+    if (typeof d.message !== 'string' || !d.message) return undefined;
+    const step = stepLineOf(d);
+    if (step) return step;
+    return typeof d.subMessage === 'string' && d.subMessage ? `${d.message} — ${d.subMessage}` : d.message;
+}
+
+/** "Copying the content (4 of 7) — 40 of 103 files" for a push that names its step. */
+function stepLineOf(d: Partial<StorefrontSetupProgressPayload>): string | undefined {
+    if (typeof d.stage !== 'string' || !d.stage || typeof d.message !== 'string') return undefined;
+    return `${stageLine(d.stage, d.position)} — ${d.message}`;
+}
+
+/** The hand-back an event carries, or undefined when it is not one. */
+export function handBackOf(type: string, data: unknown): HandBack | undefined {
+    if (type !== GITHUB_APP_REQUIRED) return undefined;
+    const d = (data ?? {}) as Partial<StorefrontGitHubAppRequiredPayload>;
+    if (!d.owner || !d.repo || !d.installUrl) return undefined;
+    return {
+        title: `install the AEM Code Sync GitHub App on ${d.owner}/${d.repo}`,
+        detail: 'The run resumes by itself once it is installed.',
+        action: { label: CODE_SYNC_INSTALL_ACTION, url: d.installUrl },
+    };
+}
 
 /** A raw captured sendMessage event. */
 export interface CapturedEvent {
@@ -50,6 +109,10 @@ export function withCapturedProgress(base: HandlerContext, sink: CapturedEvent[]
         ...base,
         sendMessage: async (type: string, data?: unknown) => {
             sink.push({ type, data });
+            const phase = storefrontPhaseOf(type, data);
+            if (phase) reportPhase(phase);
+            const handBack = handBackOf(type, data);
+            if (handBack) reportHandBack(handBack);
             // Preserve any base behavior (e.g. the in-extension logging no-op).
             await base.sendMessage(type, data);
         },
@@ -65,11 +128,21 @@ export function toPhaseTimeline(events: CapturedEvent[]): PhaseEntry[] {
     for (const { type, data } of events) {
         const d = (data ?? {}) as Record<string, unknown>;
         if (type.endsWith('-progress')) {
+            const plain = typeof d.message === 'string' ? d.message : undefined;
             timeline.push({
                 phase: String(d.phase ?? d.operation ?? ''),
                 status: 'progress',
-                message: typeof d.message === 'string' ? d.message : undefined,
+                message: stepLineOf(d as Partial<StorefrontSetupProgressPayload>) ?? plain,
                 progress: typeof d.progress === 'number' ? d.progress : undefined,
+            });
+        } else if (type === GITHUB_APP_REQUIRED) {
+            const handBack = handBackOf(type, data);
+            timeline.push({
+                phase: String(d.phase ?? 'site-config'),
+                status: 'progress',
+                message: handBack
+                    ? `Waiting for the user to ${handBack.title} (asked in VS Code; the run resumes by itself)`
+                    : 'Waiting for the user to install the AEM Code Sync GitHub App',
             });
         } else if (type.endsWith('-complete')) {
             timeline.push({ phase: 'complete', status: 'complete' });

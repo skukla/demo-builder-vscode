@@ -33,7 +33,8 @@
  *   write code. "CDN" is fine — it is the right word and widely known. "Rebase"
  *   is not.
  * - **No identifiers.** These phrases take no arguments by design. The target
- *   belongs in the consent dialog, which asks about one specific thing.
+ *   belongs in the consent dialog, which asks about one specific thing. A call
+ *   handed a readable name gets a named form instead (`NAMED_NARRATION`, below).
  *
  * ## Reads get phrases too
  *
@@ -67,49 +68,51 @@
  * @module features/ai/server/toolNarration
  */
 
+import { withSystemWord } from '@/features/app-builder/services/pairNames';
+
 /** Every tool, and what it says while it runs. Keyed by MCP tool name. */
 export const TOOL_NARRATION: Record<string, string> = {
     // ── Reads: what is being found out ──────────────────────────────────
     check_datapack_service: 'Checking the sample-data service',
-    check_github_app: 'Checking the GitHub app on the repository',
+    check_github_app: 'Checking the GitHub app',
     check_mesh: 'Checking the API mesh',
     check_prerequisites: 'Checking the required tools',
-    check_repo_readiness: 'Checking whether the repository can serve a storefront',
-    discover_store_structure: 'Looking up the live store structure',
+    check_repo_readiness: 'Checking the storefront repo',
+    discover_store_structure: 'Reading the live store',
     find_datapacks: 'Looking up available sample data',
-    find_storefront_name_mismatches: 'Looking for storefronts whose names do not match',
-    get_auth_status: 'Checking who you are signed in as',
-    get_block_authoring_shape: 'Looking up how the block is authored',
-    get_commerce_endpoints: 'Looking up the Commerce endpoints',
+    find_storefront_name_mismatches: 'Finding mismatched storefronts',
+    get_auth_status: 'Checking your sign-ins',
+    get_block_authoring_shape: "Looking up a block's shape",
+    get_commerce_endpoints: 'Looking up Commerce endpoints',
     run_commerce_query: 'Querying the Commerce backend',
-    get_component_config: 'Reading the project configuration',
-    get_component_requirements: 'Looking up what the component needs',
+    get_component_config: 'Reading the project config',
+    get_component_requirements: 'Looking up component needs',
     get_current_project: 'Checking which project is open',
     get_datapack: 'Looking up the sample-data pack',
     get_datapack_activity: 'Reading the sample-data history',
-    get_datapack_import_status: 'Checking the sample-data progress',
-    get_datapack_import_target: 'Checking where the sample data would land',
+    get_datapack_import_status: 'Checking sample-data progress',
+    get_datapack_import_target: 'Checking the sample-data target',
     get_project: 'Reading the project',
-    get_project_status: 'Checking whether the demo is running',
+    get_project_status: 'Checking the demo is running',
     get_project_urls: 'Looking up the project URLs',
-    get_settings: 'Reading the Demo Builder settings',
-    get_site_access: 'Checking who can administer the site',
-    get_content_access: "Checking who can read the storefront's content",
-    get_store_structure: 'Reading the saved store structure',
-    list_adobe_projects: 'Listing your Adobe Console projects',
+    get_settings: 'Reading Demo Builder settings',
+    get_site_access: 'Checking the site admins',
+    get_store_structure: 'Reading the saved store',
+    list_adobe_projects: 'Listing your Adobe projects',
+    get_content_access: "Checking the content readers",
     list_ai_prompts: 'Listing your saved prompts',
     list_blocks: 'Listing the storefront blocks',
     list_components: 'Listing the available components',
-    list_console_apis: 'Listing the Adobe APIs you can subscribe to',
+    list_console_apis: 'Listing the Adobe APIs',
     list_content: 'Listing the storefront content',
-    list_runtime_packages: 'Listing what is deployed in the Adobe Runtime namespace',
+    list_runtime_packages: 'Listing the deployed packages',
     list_dalive_sites: 'Listing the DA.live sites',
     list_datapack_data_types: 'Listing the sample-data types',
     list_datapack_export_items: 'Listing what this store holds',
-    list_datapack_import_scopes: 'Listing where the sample data can go',
+    list_datapack_import_scopes: 'Listing sample-data targets',
     list_demo_packages: 'Listing the demo packages',
     list_github_repos: 'Listing your GitHub repositories',
-    list_installed_datapacks: 'Listing the installed sample data',
+    list_installed_datapacks: 'Listing installed sample data',
     list_orgs: 'Listing your Adobe organizations',
     list_projects: 'Listing your projects',
     list_stacks: 'Listing the available stacks',
@@ -118,30 +121,33 @@ export const TOOL_NARRATION: Record<string, string> = {
     read_page: 'Reading the page',
     read_published_page: 'Reading the published page',
     // Session targeting — these change nothing that outlives the session.
-    select_org: 'Switching to the Adobe organization',
-    select_project: 'Switching to the Adobe Console project',
+    select_org: 'Switching Adobe organization',
+    select_project: 'Switching Adobe project',
     select_workspace: 'Switching to the Adobe workspace',
     // Hands back to the user: "this call changes nothing by itself".
     set_setting: 'Asking you to change a setting',
-    validate_component_selection: 'Checking whether those components work together',
+    validate_component_selection: 'Checking the component choices',
     // "same request body as the real thing, without writing".
-    validate_datapack_import: 'Checking the sample-data import without running it',
+    validate_datapack_import: 'Checking the sample-data import',
     verify_ai_setup: 'Checking the AI setup',
 
     // ── Projects ────────────────────────────────────────────────────────
     create_project: 'Creating the project',
+    create_project_from_file: 'Creating a project from a file',
+    copy_project: 'Copying a project',
     delete_project: 'Deleting the project',
     rename_project: 'Renaming the project',
     // "Hands back to the user — the wizard is theirs to drive".
     edit_project: 'Opening the setup wizard',
     configure_project: 'Updating the project settings',
-    update_project_config: 'Writing the project configuration',
-    export_project_settings: 'Exporting the project settings to a file',
-    set_current_project: 'Switching project',
+    update_project_config: 'Writing the project config',
+    export_project_settings: 'Exporting the project settings',
+    set_current_project: 'Choosing a project to work on',
     // Pins OR unpins — so the phrase cannot say "Pinning".
     set_project_pinned: 'Pinning or unpinning the project',
-    set_project_destination: 'Moving the project to a different Adobe workspace',
+    set_project_destination: 'Moving the project',
     apply_updates: 'Applying available updates',
+    finish_storefront_update: 'Finishing the storefront update',
 
     // ── Demo lifecycle ──────────────────────────────────────────────────
     start_demo: 'Starting the demo',
@@ -149,14 +155,14 @@ export const TOOL_NARRATION: Record<string, string> = {
     restart_demo: 'Restarting the demo',
 
     // ── Adobe Console ───────────────────────────────────────────────────
-    create_adobe_project: 'Creating the Adobe Console project',
+    create_adobe_project: 'Creating the Adobe project',
     create_adobe_workspace: 'Creating the Adobe workspace',
-    delete_adobe_project: 'Deleting the Adobe Console project',
-    rename_adobe_project: 'Renaming the Adobe Console project',
+    delete_adobe_project: 'Deleting the Adobe project',
+    rename_adobe_project: 'Renaming the Adobe project',
     delete_adobe_workspace: 'Deleting the Adobe workspace',
     add_console_apis: 'Adding Adobe API access',
     // Replaces the list EXACTLY — anything unlisted is removed.
-    set_console_apis: 'Replacing the optional Adobe API subscriptions',
+    set_console_apis: 'Replacing the optional APIs',
 
     // ── API Mesh and integrations ───────────────────────────────────────
     deploy_mesh: 'Deploying the API mesh',
@@ -164,45 +170,85 @@ export const TOOL_NARRATION: Record<string, string> = {
     add_integration: 'Adding the integration',
     deploy_integration: 'Deploying the integration',
     redeploy_integration: 'Redeploying the integration',
+    delete_undeclared_runtime_code: 'Deleting left-behind code',
     remove_integration: 'Removing the integration',
+    save_app_to_github: 'Saving the app to GitHub',
+    delete_app_github_repo: "Deleting the app's GitHub repo",
     // Display name only — "nothing redeploys".
     rename_integration: 'Renaming the integration',
+    get_integration_settings: 'Reading integration settings',
+    set_integration_settings: 'Saving the integration settings',
+    get_setup_checklist: 'Reading the demo setup checklist',
+    set_setup_step: 'Marking a demo setup step',
+    check_setup_steps: 'Checking demo setup in Commerce',
 
     // ── I/O Events lifecycle (AB-6) ─────────────────────────────────────
+    list_event_providers: 'Listing the event providers',
+    delete_event_provider: 'Deleting the event provider',
     install_integration: 'Installing the app into Commerce',
-    get_integration_install_status: 'Reading the Commerce install state',
-    get_agent_trace: 'Reading the agent activity record',
+    reinstall_integration: 'Reinstalling the app in Commerce',
+    update_integration: 'Updating the integration',
+    check_integration_updates: 'Checking for updates',
+    get_integration_install_status: 'Reading the Commerce install',
+    // The ERP integration's pair (plan step 05).
+    run_commerce_rest: 'Reading Commerce records',
+    write_commerce_rest: 'Changing Commerce records',
+    get_erp_status: 'Reading the ERP status',
+    get_erp_settings: "Reading an ERP's settings",
+    set_erp_settings: "Changing an ERP's settings",
+    set_erp_appearance: "Changing the demo ERP's look",
+    start_erp_downtime: 'Simulating ERP downtime',
+    end_erp_downtime: 'Ending the ERP downtime',
+    run_erp_rest: 'Reading the ERP',
+    write_erp_rest: 'Changing the ERP',
+    list_runtime_activations: 'Reading what ran in Runtime',
+    read_runtime_activation: "Reading one activation's log",
+    invoke_runtime_action: 'Invoking a Runtime action',
+    get_erp_record: 'Comparing a record with the ERP',
+    get_erp_order_trace: 'Following an order into the ERP',
+    reset_erp_records: 'Resetting the ERP records',
+    add_erp: 'Adding another ERP',
+    load_erp_demo_data: 'Loading demo data into the ERP',
+    assign_erp_products: 'Assigning products to the ERP',
+    add_erp_owner_to_attribute_sets: 'Fixing product attribute sets',
+    undo_erp_assignment: "Undoing the ERP's assignment",
+    remove_erp_owner_from_attribute_sets: 'Restoring product attribute sets',
+    prepare_commerce_store: 'Applying the demo setup',
+    undo_commerce_store_preparation: 'Undoing the demo setup',
+    set_commerce_config: 'Changing Commerce settings',
+    open_erp_screen: "Opening the ERP's screen",
+    get_agent_trace: 'Reading the agent activity',
 
     // ── Storefront and content ──────────────────────────────────────────
-    republish: 'Republishing the storefront configuration',
-    sync_content: 'Publishing the storefront content',
-    sync_storefront: 'Pushing the storefront code to GitHub',
+    republish: 'Republishing the storefront',
+    get_storefront_report: 'Reading the storefront report',
+    sync_storefront: 'Pushing the storefront to GitHub',
     write_page: 'Writing the page',
     publish_page: 'Publishing the page',
     delete_page: 'Deleting the page',
-    promote_block_to_library: 'Adding the block to the authoring library',
-    remove_block_from_library: 'Removing the block from the authoring library',
+    promote_block_to_library: 'Adding a block to the library',
+    remove_block_from_library: 'Removing a library block',
     refresh_block_library: 'Rebuilding the block library',
     migrate_storefront_name: 'Renaming the storefront',
-    reset_eds_project: 'Resetting the storefront',
+    reset_project: 'Resetting the project',
     probe_shared_demo: "Reading the colleague's demo",
     add_shared_demo: 'Adding the demo to the list',
     forget_added_demo: 'Forgetting the added demo',
-    edit_added_demo: "Editing the added demo package's name and description",
-    change_demo_source: "Changing where the project's demo comes from",
-    get_demo_package_preview: 'Reading what the demo package would carry',
-    save_demo_package: 'Saving the storefront as a demo package',
+    edit_added_demo: "Editing the added demo's card",
+    change_demo_source: "Repointing the project's demo",
+    get_demo_package_preview: 'Reading the demo package draft',
+    save_demo_package: 'Saving the storefront as a demo',
     remove_demo_package: 'Removing the demo package',
-    export_demo_bundle: 'Saving the demo as a file to send',
+    export_demo_bundle: 'Saving the demo as a file',
     repair_site_configuration: 'Repairing the site configuration',
     // Grants OR revokes.
-    set_site_admin: 'Changing who can administer the site',
-    set_content_reader: "Changing who can read the storefront's content",
+    set_site_admin: 'Changing the site admins',
+    set_content_reader: "Changing the content readers",
 
     // ── GitHub and DA.live ──────────────────────────────────────────────
     create_github_repo: 'Creating the GitHub repository',
     delete_github_repo: 'Deleting the GitHub repository',
-    cleanup_dalive_site: 'Deleting the DA.live site content',
+    cleanup_dalive_site: 'Deleting the DA.live content',
     // "Hands back to the user — the credential comes from a bookmarklet".
     connect_dalive: 'Asking you to sign in to DA.live',
 
@@ -210,6 +256,11 @@ export const TOOL_NARRATION: Record<string, string> = {
     start_datapack_import: 'Importing the sample data',
     start_datapack_export: 'Capturing the sample data',
     reset_datapack: 'Removing the sample data',
+    save_datapack_zip: 'Saving the datapack as a file',
+    open_datapack_zip: 'Reading the datapack file',
+    load_datapack_zip: 'Loading a datapack file',
+    delete_library_datapack: 'Deleting a library datapack',
+    copy_library_datapack_to_installer: 'Copying a pack to the installer',
 
     // ── Environment and session ─────────────────────────────────────────
     install_prerequisite: 'Installing the required tool',
@@ -239,3 +290,79 @@ export const TOOL_NARRATION: Record<string, string> = {
 export function narrationFor(toolName: string): string | undefined {
     return TOOL_NARRATION[toolName];
 }
+
+/** An argument's value, trimmed, when it is a non-blank string. */
+function arg(args: Record<string, unknown> | undefined, key: string): string | undefined {
+    const value = args?.[key];
+    const trimmed = typeof value === 'string' ? value.trim() : '';
+    return trimmed || undefined;
+}
+
+/** A named form: the call's arguments, and the open project's name when one is known. */
+type NamedForm = (args: Record<string, unknown> | undefined, project?: string) => string | undefined;
+
+/** Build a phrase from named arguments, or nothing when any is missing. */
+function naming(keys: string[], phrase: (...values: string[]) => string): NamedForm {
+    return (args) => {
+        const values = keys.map((key) => arg(args, key));
+        return values.every(Boolean) ? phrase(...(values as string[])) : undefined;
+    };
+}
+
+/**
+ * "Adding Accuform ERP to JustRite": the ERP as the add will name it, and the project it goes
+ * into when one is open. "Agent · Adding another ERP" ran for fifteen minutes beside an action
+ * the SC started, and nothing said which was which (live release test, 2026-10-22).
+ */
+const addingErp: NamedForm = (args, project) => {
+    const name = arg(args, 'name');
+    if (!name) return undefined;
+    const erp = withSystemWord(name, 'ERP');
+    return project ? `Adding ${erp} to ${project}` : `Adding ${erp}`;
+};
+
+/**
+ * The phrase for a call that names what it acts on, when the name is readable.
+ *
+ * "Agent · Deleting the Adobe workspace" said everything but WHICH one (owner,
+ * 2026-09-21: "Should it not include the workspace's name?"). The consent dialog
+ * already names it; the notification now does too. Only tools handed a name a
+ * person reads — an internal id is not worth showing, so those keep their phrase.
+ */
+const NAMED_NARRATION: Readonly<Record<string, NamedForm>> = {
+    delete_adobe_workspace: naming(['workspaceName'], (name) => `Deleting the ${name} workspace`),
+    delete_adobe_project: naming(['projectName'], (name) => `Deleting the ${name} project`),
+    rename_adobe_project: naming(['projectName'], (name) => `Renaming ${name}`),
+    delete_project: naming(['name'], (name) => `Deleting the ${name} project`),
+    delete_github_repo: naming(['owner', 'repo'], (owner, repo) => `Deleting ${owner}/${repo}`),
+    cleanup_dalive_site: naming(['org', 'site'], (org, site) => `Deleting ${org}/${site} content`),
+    delete_page: naming(['path'], (path) => `Deleting ${path}`),
+    reset_datapack: naming(['datapackName'], (name) => `Resetting ${name}`),
+    start_datapack_import: naming(['datapackName'], (name) => `Importing ${name}`),
+    start_datapack_export: naming(['datapackName'], (name) => `Exporting ${name}`),
+    delete_library_datapack: naming(['datapackName'], (name) => `Deleting ${name}`),
+    copy_library_datapack_to_installer: naming(['datapackName'], (name) => `Copying ${name}`),
+    remove_block_from_library: naming(['blockId'], (block) => `Removing the ${block} block`),
+    set_site_admin: naming(['email'], (email) => `Changing ${email}'s access`),
+    add_erp: addingErp,
+};
+
+/**
+ * The phrase for this call: named for its target when the tool is handed a
+ * readable name, else the tool's phrase.
+ *
+ * @param toolName - MCP tool name
+ * @param args - the call's arguments
+ * @param project - the open project's name, for a named form that says where it acts
+ * @returns the phrase, or undefined when the tool has none
+ */
+export function narrationForCall(
+    toolName: string,
+    args: Record<string, unknown> | undefined,
+    project?: string,
+): string | undefined {
+    return NAMED_NARRATION[toolName]?.(args, project) ?? narrationFor(toolName);
+}
+
+/** The tools whose calls are named for their target (for the tests). */
+export const NAMED_NARRATION_TOOLS: readonly string[] = Object.keys(NAMED_NARRATION);

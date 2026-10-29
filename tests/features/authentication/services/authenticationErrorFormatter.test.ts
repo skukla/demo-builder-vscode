@@ -13,6 +13,10 @@ import {
     explainAdobeAccessFailure,
 } from '@/features/authentication/services/authenticationErrorFormatter';
 import { ErrorCode } from '@/types/errorCodes';
+import {
+    MISSING_LICENCE_REFUSAL,
+    READ_ONLY_PROJECT_REFUSAL,
+} from '../../../helpers/adobeConsoleRefusals';
 
 describe('AuthenticationErrorFormatter', () => {
     describe('formatError', () => {
@@ -252,10 +256,7 @@ describe('AuthenticationErrorFormatter', () => {
 
 // The two Adobe refusals a deploy reaches with no sentence of its own. Inputs are the
 // shapes read off real failures on 2026-09-17/18, with the user id replaced.
-const LICENCE_403 =
-    'App deployment failed: [CoreConsoleAPISDK:ERROR_GET_INTEGRATION_SECRETS] 403 - Forbidden ' +
-    '({"messages":[{"template":"ERR_MSG_OPERATION_NOT_ALLOWED","message":"The user ' +
-    "USER@AdobeID doesn't have the matching licenses for this application\"}]})";
+const LICENCE_403 = MISSING_LICENCE_REFUSAL;
 
 const LICENCE_504 =
     '[CoreConsoleAPISDK:ERROR_GET_INTEGRATION] 504 - Gateway Timeout ({"messages":[{"message":' +
@@ -267,6 +268,7 @@ describe('explainAdobeAccessFailure', () => {
 
         expect(message).toContain('not a developer on every product profile');
         expect(message).toContain('Admin Console');
+        expect(message).toMatch(/Details are in Debug Logs\.$/);
     });
 
     it('recognises the refusal by its template alone', () => {
@@ -286,7 +288,27 @@ describe('explainAdobeAccessFailure', () => {
         expect(explainAdobeAccessFailure('npm install: 504 Gateway Timeout')).toBeUndefined();
     });
 
+    // A Console timeout is a 504 AND a timeout wording, from Console. Any one of the
+    // three missing and it is some other failure, which must not be called Adobe's.
+    it.each([
+        ['a Console failure that is not a timeout', '[CoreConsoleAPISDK:ERROR_GET_INTEGRATION] 500 - Internal Server Error'],
+        ['a Console 504 with no timeout wording', '[CoreConsoleAPISDK:ERROR_GET_INTEGRATION] 504 - Bad Gateway'],
+        ['a licence read that timed out without a 504', 'I/O error on GET request for licenses: Read timed out'],
+    ])('leaves %s alone', (_label, text) => {
+        expect(explainAdobeAccessFailure(text)).toBeUndefined();
+    });
+
     it('leaves every other failure alone', () => {
         expect(explainAdobeAccessFailure('Build failed (exit 1): tsc: 3 errors')).toBeUndefined();
+    });
+
+    // AB-18: the same missing access makes the whole project read-only, and a teardown
+    // then meets "Read-only project cannot be deleted" — which said nothing about why.
+    it('explains a read-only project refusal as the same missing developer access', () => {
+        const message = explainAdobeAccessFailure(READ_ONLY_PROJECT_REFUSAL);
+
+        expect(message).toMatch(/read-only for you/);
+        expect(message).toContain('not a developer on every product profile');
+        expect(message).toContain('Admin Console');
     });
 });

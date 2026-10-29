@@ -68,6 +68,24 @@ describe('skill GROUPS run in two columns — the thing that stops the cut-off',
     });
 });
 
+describe('inside a section, the skill NAMES run in two columns', () => {
+    // Owner, 2026-10-22: sixteen Demo Builder skills in one column made a long,
+    // noisy list. Inside an integration section there is one set per section,
+    // so the group grid above has nothing to split; the names are the unit.
+    it('lays the names out in two equal tracks', () => {
+        const rule = ruleFor('.ai-skill-names');
+
+        expect(rule).toMatch(/display:\s*grid/);
+        expect(rule).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*1fr\)/);
+    });
+
+    it('separates the columns by a visible gutter', () => {
+        const m = ruleFor('.ai-skill-names').match(/gap:\s*\d+px\s+(\d+)px/);
+        expect(m).not.toBeNull();
+        expect(Number(m![1])).toBeGreaterThanOrEqual(16);
+    });
+});
+
 describe('the scroll region advertises that it scrolls', () => {
     // macOS paints overlay scrollbars only WHILE scrolling, so a bounded region
     // at rest looks like a complete list. That is how 10 of 21 skills went

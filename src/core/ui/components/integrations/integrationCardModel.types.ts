@@ -14,6 +14,7 @@
 
 import type { StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
 import type { DisplayStatus } from '@/core/ui/utils/statusVocabulary';
+import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 /**
  * Card status vocabulary — an alias for the shared {@link DisplayStatus}, not a
@@ -29,16 +30,48 @@ export type CardAction =
     | 'update'
     | 'retry'
     | 'install'
+    // Uninstall then install; offered only when Commerce refused an upgrade.
+    | 'reinstall'
     | 'open-admin'
     | 'manage-apis'
+    // Opens the integration's Settings modal (AB-21); only on one that has settings.
+    | 'settings'
+    // Opens the integration's demo setup guide (AB-26x); only on one that has setup steps.
+    | 'setup-guide'
     | 'remove'
     | 'sign-in'
-    | 'open';
+    // An integration: its Adobe workspace in the Developer Console. A system: its
+    // own screen.
+    | 'open'
+    // A system card's fill from Commerce, and its reset of its records (the ERP's;
+    // both run through the integration that uses it).
+    | 'load-demo-data'
+    | 'reset-records'
+    // A system card's simulated downtime (AB-59), moved off the mock ERP's own Settings screen
+    // so it never sits beside a real ERP setting.
+    | 'simulate-downtime'
+    // An ERP card's "Assign products" and its undo (AB-74).
+    | 'assign-products'
+    | 'undo-assignment'
+    // The ERP integration's: add another ERP beside the ones it serves (AB-16).
+    | 'add-erp'
+    // After a removal stopped on a clean-up that did not finish: go ahead.
+    | 'remove-anyway'
+    // A blank-starter app: save it to its own GitHub repository (AB-1c), and the undo,
+    // which deletes the repository Demo Builder made. Both confirm in the extension.
+    | 'save-to-github'
+    | 'delete-github-repo';
 
 /** Everything a card face, drawer body, and drawer action bar render. */
 export interface IntegrationCardModel {
     id: string;
+    /** Why the last removal stopped, when it did; the card offers Remove anyway. */
+    removalStopped?: string;
+    /** The demo setup steps its catalog entry declares, with where the SC is on each. */
+    setupChecklist?: SetupChecklistItem[];
     isMesh: boolean;
+    /** On the mesh card: the project's demo needs it, so its Remove says what that costs. */
+    neededByDemo?: boolean;
     name: string;
     kindLabel: string;
     /**
@@ -56,17 +89,13 @@ export interface IntegrationCardModel {
      * nothing to say here renders no line at all.
      */
     sourceLine?: string;
-    sourceIsAi: boolean;
     status: CardStatus;
     statusLabel: string;
     dotVariant: StatusDotVariant;
     message?: string;
     url?: string;
-    urlLabel: 'Endpoint' | 'App URL';
-    deployedUrls?: Record<string, string>;
+    urlLabel: 'Endpoint' | 'App URL' | 'Screen';
     apis?: string[];
-    /** Preformatted locale display string (already display-ready). */
-    lastDeployed?: string;
     /**
      * The card's own kebab menu. Kept OFF the face so the at-most-one-affordance
      * rule survives: the face carries the urgent verb (Deploy / Update / Retry),
@@ -94,16 +123,17 @@ export interface IntegrationCardModel {
      * The App Management install outcome (lifecycle 'app-management' apps
      * only) — the persisted `appBuilderComponents[id].installation` record,
      * display-ready. `failed` also drives the drawer's "Install into
-     * Commerce" retry action. Absent on every other card, so no row renders.
+     * Commerce" retry action, or "Reinstall in Commerce" when
+     * `needsReinstall`. Absent on every other card, so no row renders.
      */
     installation?: {
         /** Display label: 'Installed' or 'Not installed'. */
         label: string;
-        /** The no-op reason on skip, or the hands-back line on failure. */
+        /** The hands-back line — present only when the install failed. */
         detail?: string;
-        /** Preformatted locale display string of the attempt. */
-        at?: string;
         failed: boolean;
+        /** Commerce refused an in-place upgrade; only a reinstall applies the new version. */
+        needsReinstall?: boolean;
     };
     /**
      * The Commerce scope the mesh is DEPLOYED against, in display order.
@@ -114,6 +144,36 @@ export interface IntegrationCardModel {
      * (a mesh deployed before this shipped, or never deployed at all).
      */
     commerceScope?: CommerceScopePart[];
+    /**
+     * A SYSTEM card (the ERP an integration uses), not an integration. Its
+     * `url` is its screen, opened through the extension because the link needs a
+     * key the webview never holds.
+     */
+    isSystem?: boolean;
+    /** What kind of system it is ("ERP"), shown as a badge. System cards only. */
+    typeBadge?: string;
+    /**
+     * A system added from its integration's card ("Add another ERP", AB-16): removing it
+     * leaves the integration, which only stops sending it orders. System cards only.
+     */
+    removesAlone?: boolean;
+    /**
+     * The cards this one is connected to: the systems an integration connects, or the
+     * integration a system belongs to. One word both ways — "Connected to" (owner,
+     * 2026-10-01) — so it carries no label of its own. Absent when none.
+     */
+    linked?: { cards: LinkedCard[] };
+}
+
+/** A card this one is linked to, as the face and the flyout name it. */
+export interface LinkedCard {
+    id: string;
+    name: string;
+    /** What the other card is ("ERP"), when it says; names a count of several on a face. */
+    typeBadge?: string;
+    statusLabel: string;
+    dotVariant: StatusDotVariant;
+    status: CardStatus;
 }
 
 /** One sub-labelled line of the Commerce scope row. */

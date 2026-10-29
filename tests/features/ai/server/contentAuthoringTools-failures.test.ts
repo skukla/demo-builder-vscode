@@ -195,7 +195,7 @@ describe('write_page failures', () => {
         daOps.createSource.mockRejectedValueOnce(new Error('403 from DA admin'));
 
         expect(
-            await register().call('write_page', { path: '/about', content: '<p>x</p>' })
+            await register().call('write_page', { path: '/about', content: '<p>x</p>', confirm: true })
         ).toEqual({ written: false, path: '/about', error: '403 from DA admin' });
     });
 });
@@ -238,6 +238,18 @@ describe('list_content edges', () => {
 // ─── delete_page ─────────────────────────────────────────────────────────────
 
 describe('delete_page failures', () => {
+    it('a preview that cannot be removed is said, and the source is still deleted', async () => {
+        helix.deletePreview.mockRejectedValueOnce(new Error('preview 500'));
+
+        expect(await register().call('delete_page', { path: '/about', confirm: true })).toEqual({
+            deleted: true,
+            unpublished: true,
+            previewRemoved: false,
+            path: '/about',
+        });
+        expect(daOps.deleteSource).toHaveBeenCalled();
+    });
+
     it('marks the unconfirmed refusal as irreversible so a client can warn', async () => {
         expect(await register().call('delete_page', { path: '/about' })).toMatchObject({
             irreversible: true,
@@ -261,6 +273,7 @@ describe('delete_page failures', () => {
         expect(await register().call('delete_page', { path: '/about', confirm: true })).toEqual({
             deleted: false,
             unpublished: true,
+            previewRemoved: true,
             path: '/about',
             error: 'source is locked',
         });
@@ -272,6 +285,7 @@ describe('delete_page failures', () => {
         expect(await register().call('delete_page', { path: '/about', confirm: true })).toEqual({
             deleted: false,
             unpublished: true,
+            previewRemoved: true,
             path: '/about',
             error: '502 from DA admin',
         });
@@ -348,7 +362,7 @@ describe('the default Helix wiring', () => {
         registerContentAuthoringTools(s, ctxFactory);
         createDaLiveServiceTokenProviderMock.mockClear();
 
-        await s.call('publish_page', { path: '/about' });
+        await s.call('publish_page', { path: '/about', confirm: true });
 
         expect(createDaLiveServiceTokenProviderMock).toHaveBeenCalled();
     });

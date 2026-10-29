@@ -33,6 +33,8 @@ jest.setTimeout(5000);
 const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
 
@@ -40,10 +42,8 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import {
-    addAppBuilderComponent,
-    deployAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 import {
     MESH_ENTRY,
     INTEGRATION_ENTRY,
@@ -51,7 +51,7 @@ import {
     createDeps,
     createProject,
 } from './appBuilderComponentRunner.testUtils';
-import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -166,17 +166,34 @@ describe('addAppBuilderComponent (mesh)', () => {
         expect(entry?.providesEnvVars?.MESH_ENDPOINT).toBe('https://mesh/graphql');
     });
 
-    it('subscribes the UNION of all catalog appBuilderComponents (not just the one being added)', async () => {
+    // An add subscribes into the component's OWN workspace (AB-23), so it sends
+    // only its own APIs: an integration already in the project lives elsewhere, and
+    // its APIs do not belong on this credential. Nothing already on the credential
+    // is dropped either way — the PUT keeps what it finds (subscriptionList.ts).
+    it("subscribes only the component being added, into its own workspace", async () => {
+        const project = createProject({
+            appBuilderComponents: { [INTEGRATION_ENTRY.id]: { kind: 'integration', status: 'deployed', source: INTEGRATION_ENTRY.source } },
+        });
+        const deps = createDeps();
+
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
+
+        expect(deps.subscribeRequiredApis).toHaveBeenCalledWith(
+            [MESH_ENTRY],
+            project,
+            expect.any(Function),
+            { forComponent: MESH_ENTRY.id, adding: true },
+        );
+    });
+
+    it("leaves out a catalog integration the project does not have (its APIs are not this project's)", async () => {
         const project = createProject();
         const deps = createDeps();
 
         await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
-        const subscribedAppBuilderComponents = deps.subscribeRequiredApis.mock
-            .calls[0][0] as AppBuilderComponentCatalogEntry[];
-        expect(subscribedAppBuilderComponents).toEqual(
-            expect.arrayContaining([MESH_ENTRY, INTEGRATION_ENTRY])
-        );
+        const subscribed = deps.subscribeRequiredApis.mock.calls[0][0] as AppBuilderComponentCatalogEntry[];
+        expect(subscribed.map((e) => e.id)).not.toContain(INTEGRATION_ENTRY.id);
     });
 });
 
@@ -410,8 +427,11 @@ describe('addAppBuilderComponent partial-failure', () => {
 
         // The env-file write reports its own step ahead of the tail's — it runs
         // before the deploy and is otherwise silent time.
+        // Every add prepares its Node first (PR-1a).
         expect(seen).toEqual([
+            OPERATION_STAGES.preparingNode.label,
             OPERATION_STAGES.subscribingApis.label,
+            OPERATION_STAGES.gettingCode.label,
             OPERATION_STAGES.generatingMeshConfig.label,
             'Reading mesh configuration',
             'Deploying',
@@ -443,7 +463,8 @@ describe('addAppBuilderComponent partial-failure', () => {
             },
         });
 
-        expect(seen).toEqual(['Subscribing Adobe APIs', 'Building…']);
+        const { preparingNode, subscribingApis, gettingCode } = OPERATION_STAGES;
+        expect(seen).toEqual([preparingNode.label, subscribingApis.label, gettingCode.label, 'Building…']);
     });
 
     // BEHAVIOUR CHANGE (2026-08-04 consolidation): a redeploy used to REPLACE the

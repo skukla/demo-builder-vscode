@@ -15,7 +15,7 @@
  */
 
 import type { Project } from '@/types/base';
-import { getMeshEndpointUrl } from '@/types/typeGuards';
+import { getMeshEndpointUrl } from '@/core/state/appBuilderComponentState';
 import { createMockProject } from '../../../helpers/projectFake';
 
 describe('Executor - Edit Mode Mesh Reuse', () => {

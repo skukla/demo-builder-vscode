@@ -7,13 +7,16 @@
  * @module features/eds/handlers/storefrontSetup/storefrontSetupPhase1
  */
 
+import type { GitHubRepoLifecycle } from '../../services/github/githubRepoLifecycle';
 import type { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import { pinRepoToLkg } from '../../services/patches/lkgPinHelper';
 import type { PatchReport } from '../../services/patches/patchReportHelper';
 import type { GitHubRepo } from '../../services/types';
+import { seedIfEmpty } from './adoptEmptyRepo';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { checkGitHubAppForExistingRepo } from './storefrontSetupPhaseHelpers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import { STOREFRONT_JOBS, jobLine } from '@/core/utils/storefrontJobs';
 import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
@@ -51,8 +54,7 @@ export async function executePhaseGitHubRepo(
         );
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
-            message: 'Using repository',
-            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            message: `Using ${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 10,
             ...repoInfo,
         } satisfies StorefrontSetupProgressPayload);
@@ -61,7 +63,6 @@ export async function executePhaseGitHubRepo(
         // button creates the repo BEFORE storefront setup runs, so this branch
         // sees the repo at template HEAD with no canonical patches applied.
         // Without the pin step, canonical-phase patches (e.g., b2b's
-        // product-link-sku-encoding / product-link-sku-slash-encoding /
         // aem-assets-sku-sanitization) silently do NOT apply — only block-phase
         // patches (which run later in the pipeline) land. No-op for forked
         // storefronts (codePatchSource absent).
@@ -80,6 +81,7 @@ export async function executePhaseGitHubRepo(
             edsConfig,
             services,
             repoInfo,
+            signal,
             templateOwner,
             templateRepo,
             patchReport,
@@ -129,7 +131,6 @@ async function announcePinAndComplete(
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
             message: 'Pinning to verified canonical state',
-            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
             progress: 12,
         } satisfies StorefrontSetupProgressPayload);
     }
@@ -145,7 +146,6 @@ async function announcePinAndComplete(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Repository ready',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 15,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -221,6 +221,7 @@ async function executePhaseExistingRepo(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     services: SetupServices,
     repoInfo: RepoInfo,
+    signal: AbortSignal,
     templateOwner: string,
     templateRepo: string,
     patchReport?: PatchReport,
@@ -247,13 +248,13 @@ async function executePhaseExistingRepo(
         repoInfo.repoUrl = `https://github.com/${edsConfig.existingRepo}`;
     }
 
-    logger.info(
-        `[Storefront Setup] Using existing repository: ${repoInfo.repoOwner}/${repoInfo.repoName}`,
-    );
+    const made = edsConfig.createdRepo; // the wizard SELECTS what it creates: say "new" (2026-10-15)
+    const isNew = made?.owner === repoInfo.repoOwner && made?.name === repoInfo.repoName;
+    const usingMessage = isNew ? 'Using your new repository' : 'Using existing repository';
+    logger.info(`[Storefront Setup] ${usingMessage}: ${repoInfo.repoOwner}/${repoInfo.repoName}`);
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: 'Using existing repository',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+        message: jobLine(usingMessage, `${repoInfo.repoOwner}/${repoInfo.repoName}`),
         progress: 5,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -274,17 +275,32 @@ async function executePhaseExistingRepo(
     // When the user DECLINED the reset the repo is already a storefront, so the
     // check both works and still does its original job — stopping Phase 2 from
     // writing into a repo they asked to preserve. It stays here for them.
-    if (!edsConfig.resetToTemplate) {
-        const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo);
+    //
+    // An EMPTY repo is reset whatever the checkbox said: it has nothing to
+    // preserve, and the step already shows it as "set up from the template"
+    // (EDS-17 — an owner hands an SC an empty organization repository).
+    const adoptedEmpty = await seedIfEmpty(
+        services.githubFileOps,
+        repoInfo.repoOwner,
+        repoInfo.repoName,
+        logger,
+    );
+    const reset = edsConfig.resetToTemplate || adoptedEmpty;
+    if (!reset) {
+        const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo, {
+            signal,
+        });
         if (appGateResult) return appGateResult;
     }
 
-    if (edsConfig.resetToTemplate) {
+    if (reset) {
         logger.info('[Storefront Setup] Resetting repository to template');
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
-            message: 'Resetting repository to template',
-            subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            message: jobLine(
+                STOREFRONT_JOBS.resettingRepository,
+                `${repoInfo.repoOwner}/${repoInfo.repoName}`,
+            ),
             progress: 6,
         } satisfies StorefrontSetupProgressPayload);
 
@@ -321,6 +337,7 @@ async function executePhaseExistingRepo(
         // a missing App.
         const appGateResult = await checkGitHubAppForExistingRepo(context, services, repoInfo, {
             afterReset: true,
+            signal,
         });
         if (appGateResult) return appGateResult;
     }
@@ -328,7 +345,6 @@ async function executePhaseExistingRepo(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Repository ready',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 15,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -356,12 +372,13 @@ export interface NewRepoRequest {
 
 /** What creating a repository from its source calls: GitHub, and the shared template reset. */
 export interface NewRepoServices {
-    repoOps: Pick<GitHubRepoOperations, 'createFromTemplate' | 'createEmptyRepository' | 'getRepository'>;
+    repoOps: Pick<GitHubRepoOperations, 'getRepository'>;
+    repoLifecycle: Pick<GitHubRepoLifecycle, 'createFromTemplate' | 'createEmptyRepository'>;
     templateSync: Pick<TemplateSyncService, 'resetRepository'>;
 }
 
 export async function createRepoFromSource(
-    { repoOps, templateSync }: NewRepoServices,
+    { repoOps, repoLifecycle, templateSync }: NewRepoServices,
     request: NewRepoRequest,
     templateOwner: string,
     templateRepo: string,
@@ -369,17 +386,17 @@ export async function createRepoFromSource(
 ): Promise<GitHubRepo> {
     const { newRepoName, isPrivate, namespace } = request;
     if (!request.fromAddedDemo) {
-        return repoOps.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
+        return repoLifecycle.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
     }
     const source = await repoOps.getRepository(templateOwner, templateRepo);
     if (source.isTemplate) {
         logger.info(`[Storefront Setup] ${templateOwner}/${templateRepo} is a template — generating`);
-        return repoOps.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
+        return repoLifecycle.createFromTemplate(templateOwner, templateRepo, newRepoName, isPrivate, namespace);
     }
     logger.info(
         `[Storefront Setup] ${templateOwner}/${templateRepo} is not a template — creating an empty repository and resetting it onto the source`,
     );
-    const created = await repoOps.createEmptyRepository(newRepoName, isPrivate, namespace);
+    const created = await repoLifecycle.createEmptyRepository(newRepoName, isPrivate, namespace);
     const [owner, name] = created.fullName.split('/');
     const reset = await templateSync.resetRepository(
         {
@@ -414,8 +431,7 @@ async function executePhaseNewRepo(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: 'Creating GitHub repository from template',
-        subMessage: repoInfo.repoName,
+        message: jobLine(STOREFRONT_JOBS.creatingRepository, repoInfo.repoName),
         progress: 5,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -427,8 +443,9 @@ async function executePhaseNewRepo(
     // when daLiveOrg is empty preserves the legacy default of "create under
     // the authenticated user" — defensive against any state that escapes
     // the picker (e.g., direct invocation paths).
+    const { githubRepoOps: repoOps, githubRepoLifecycle: repoLifecycle, templateSync } = services;
     const repo = await createRepoFromSource(
-        { repoOps: services.githubRepoOps, templateSync: services.templateSync },
+        { repoOps, repoLifecycle, templateSync },
         {
             newRepoName: repoInfo.repoName,
             isPrivate: edsConfig.isPrivate ?? false,
@@ -454,12 +471,11 @@ async function executePhaseNewRepo(
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
         message: 'Waiting for repository content',
-        subMessage: `${repoInfo.repoOwner}/${repoInfo.repoName}`,
         progress: 10,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
 
-    await services.githubRepoOps.waitForContent(repoInfo.repoOwner, repoInfo.repoName, signal);
+    await services.githubRepoLifecycle.waitForContent(repoInfo.repoOwner, repoInfo.repoName, signal);
 
     // ADR-006 Step 4b: pin freshly-created thin-layer repos to LKG with
     // canonical-phase patches applied. `generate-from-template` produces at

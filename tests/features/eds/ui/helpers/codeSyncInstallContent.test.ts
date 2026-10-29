@@ -1,11 +1,13 @@
 /**
  * The AEM Code Sync install instructions have ONE source.
  *
- * Two surfaces walk the user through the same GitHub screens:
+ * One surface walks the user through the GitHub screens today:
  *
- *   - `CodeSyncStatusView` — the wizard's Code Sync sub-step (configure time)
- *   - `GitHubAppInstallDialog` — the mid-run recovery panel, shown when the setup
- *     pipeline or project creation stops on a missing app
+ *   - `GitHubAppInstallDialog` — the recovery panel, shown when the setup pipeline or
+ *     project creation stops on a missing app
+ *
+ * The wizard's Code Sync sub-step was the second reader until 2026-09-25, when it was
+ * removed: before setup the App question has no answer for a new repository.
  *
  * They had drifted into two different scripts with two different button names
  * ("Install App" / "Check Again" vs "Open Installation Page" / "Check
@@ -93,11 +95,10 @@ describe('codeSyncInstallContent', () => {
  * a rendering test passes happily while two components show two different
  * scripts. Same technique the repo uses in `flowStages.test.ts`.
  */
-describe('both surfaces use the shared script', () => {
-    const SURFACES = [
-        'src/features/eds/ui/steps/repoSelectionInline.helpers.tsx',
-        'src/features/eds/ui/components/GitHubAppInstallDialog.tsx',
-    ];
+describe('the install dialog uses the shared script', () => {
+    // One surface since 2026-09-25: the wizard's Code Sync sub-step, the other reader of
+    // this script, was removed (setup asks the App question where it can be answered).
+    const SURFACES = ['src/features/eds/ui/components/GitHubAppInstallDialog.tsx'];
 
     const read = (rel: string): string =>
         fs.readFileSync(path.join(process.cwd(), rel), 'utf8');

@@ -1,0 +1,155 @@
+/**
+ * the demo setup's Apply (AB-77): what Demo Builder recorded when it applied a catalog entry's
+ * setup steps to Commerce, so a step's Undo can put each one back, step by step.
+ *
+ * Shared between the extension and the webviews, so it imports nothing.
+ *
+ * @module types/storePreparation
+ */
+
+/** One setting as it was before a config fix wrote it. */
+export interface CommerceConfigPrevious {
+    path: string;
+    scope: 'default' | 'website';
+    /** The website code, for a website-scoped row. */
+    scopeCode?: string;
+    /**
+     * The value the scope stored before the write; `null` when it stored none (a website row
+     * inherited the default). The undo writes `effective` back, so a row that was inherited
+     * before is set explicitly after the undo, to the value it inherited.
+     */
+    stored: string | null;
+    /** The value in force at that scope before the write (own, else inherited, else Commerce's "0"). */
+    effective: string;
+}
+
+/** What a config fix recorded. */
+export interface ConfigStepRecord {
+    kind: 'config';
+    previous: CommerceConfigPrevious[];
+}
+
+/** What `create-erp-attributes` recorded: only what THIS run created or added. */
+export interface ErpAttributesStepRecord {
+    kind: 'erp-attributes';
+    /** The attribute codes this run created; a pre-existing attribute is never deleted. */
+    createdAttributes: string[];
+    /** The attribute sets this run added `erp_owner` to. */
+    sets: Array<{ id: number; name: string }>;
+}
+
+/** What `erp-warehouse-in-website-stock` recorded. */
+export interface WarehouseStepRecord {
+    kind: 'warehouse';
+    /** The sources this run created, by code. The undo DISABLES them: Commerce cannot delete a source. */
+    createdSources: string[];
+    /** The stock this run created for the website, when it did (absent = an existing stock was reused). */
+    createdStock?: { id: number; name: string };
+    /** The stock-source links this run added. */
+    links: Array<{ stockId: number; sourceCode: string }>;
+    /**
+     * Sources this run found switched off and switched back on, by code: an earlier undo
+     * switched off the source it had made, and applying again finds it there. The undo
+     * switches them off again. Absent on records written before 2026-10-26.
+     */
+    enabledSources?: string[];
+}
+
+/** What `company-shared-catalogs` recorded. */
+export interface SharedCatalogsStepRecord {
+    kind: 'shared-catalogs';
+    /** The catalogs this run created, each with the company it assigned. */
+    catalogs: Array<{ id: number; name: string; companyId: number; companyName: string }>;
+}
+
+export type StorePreparationStepRecord =
+    | ConfigStepRecord
+    | ErpAttributesStepRecord
+    | WarehouseStepRecord
+    | SharedCatalogsStepRecord;
+
+/**
+ * The record the demo setup's Apply leaves on the component: one entry per step applied, by
+ * step id. A step's entry is removed by its undo; the whole record goes with the last one, or
+ * with the component.
+ */
+export interface StorePreparationRecord {
+    /** ISO date string of the last apply. */
+    at: string;
+    steps: Record<string, StorePreparationStepRecord>;
+}
+
+/**
+ * What `set_commerce_config` recorded on the project (AB-77): the values the settings held
+ * before its last write. Replaced by the next write; removed by `undo: true`.
+ */
+export interface CommerceConfigChangeRecord {
+    at: string;
+    previous: CommerceConfigPrevious[];
+}
+
+/** Where one step stands for the demo setup's Apply. */
+export type PreparationStepState =
+    /** Its check, run fresh, found it done in the store: nothing to apply. Never from a saved answer. */
+    | 'done'
+    /** It declares a fix and is not done: the apply will write it. */
+    | 'applicable'
+    /** It declares no fix: the guide keeps its text. */
+    | 'manual'
+    /**
+     * Its check could not tell and it has no fix that could read for itself (or that read
+     * failed too): "could not check", with the reason in `note` or `rejected`. Never done,
+     * and not applied.
+     */
+    | 'unknown'
+    /** Demo Builder applied it and recorded what it changed. */
+    | 'applied'
+    /** Its check found it done before the apply wrote anything (a datapack did it): nothing written. */
+    | 'skipped'
+    /** Its undo put the recorded changes back. */
+    | 'undone'
+    /** Commerce refused some or all of it; `rejected` names which. */
+    | 'rejected';
+
+/** One step as the preview and the result list it. */
+export interface PreparationStepReport {
+    id: string;
+    label: string;
+    title: string;
+    state: PreparationStepState;
+    /** What would change (preview) or what changed (result), one line each. */
+    changes: string[];
+    /**
+     * A preview's one plain sentence of what the step will do, naming what `changes` lists
+     * exactly ("Add Test Warehouse to Justrite Stock"), for a person reading the preview.
+     * Absent when the step's title says it already.
+     */
+    summary?: string;
+    /** What Commerce refused, by item, in its words. */
+    rejected: string[];
+    /** What stays by hand after the step, if anything. */
+    manual?: string;
+    /** What the step's check found in the store just now, in its words: shown beside the state. */
+    note?: string;
+}
+
+/**
+ * What adding the ERP integration will change in the store, read when its confirm opens
+ * (owner, 2026-10-22): every step as the demo setup's Apply previews it, and the labels of the
+ * steps that will change something every website on the Commerce instance shares.
+ */
+export interface AddPreparationRead {
+    steps: PreparationStepReport[];
+    everyWebsite: string[];
+}
+
+/** The add's preview: what it read, or why the store could not be read now. */
+export type AddPreparationPreview = AddPreparationRead | { unread: string };
+
+/** The answer `addAppBuilderComponent` gives without `confirm` for an entry that prepares the store. */
+export interface AddPreparationAnswer {
+    confirmed: false;
+    adding: { id: string; name: string };
+    preparation: AddPreparationPreview;
+    next: string;
+}

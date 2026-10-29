@@ -407,7 +407,7 @@ substitution there still passes and silently changes what the test means.
 | 2 | `tests/sop/canonical-fakes.test.ts` (CONTROL, first string) | The detector's own positive control: `'const p = {} as unknown as Project;'`. A detector that cannot see its control proves nothing. |
 | 3 | `tests/sop/canonical-fakes.test.ts` (CONTROL, second string) | Same control, bare `as Project` spelling. |
 | 4 | `tests/features/eds/services/reset/edsResetUI-sampleData.test.ts` | The fixture is deliberately a project WITHOUT `adobe`; `resetEdsProjectWithUI` branches on `project.adobe?.organization` into the Adobe-auth + org-context pre-flight. The builder's default org would take that branch, and the suite's stubbed auth would let it pass silently. |
-| 5 | `tests/features/project-creation/handlers/executor-meshStatePopulation.test.ts` | Asserts `expect(mockProject.componentConfigs).toBeUndefined()` — "the project has no componentConfigs" IS the case under test. The builder supplies `{}`. |
+| 5 | `tests/features/project-creation/handlers/executor-meshStatePopulation.test.ts` | Asserts `expect(mockProject.componentConfigs).toBeUndefined()` — "the project has no componentConfigs" IS the case under test. The builder supplies `{}`. **Deleted 2026-10-09** (EDS-8): it only exercised its own mocks, so the floor is now 5. |
 | 6 | `tests/core/state/projectFileLoader-orphanConfigs.test.ts` | The test "is a no-op when componentConfigs is absent" exists to hit `if (!configs) return false` in `stripOrphanedComponentConfigs`. With the builder's `{}` the call still returns `false`, but through the loop, not the early return — the branch the test names would go unexercised. |
 
 Rows 1–3 are the instrument, not the corpus: the enforcer walks `tests/sop/`

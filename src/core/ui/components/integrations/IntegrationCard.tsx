@@ -22,6 +22,12 @@
  * than the mesh, so no two cards in a grid shared a baseline. A host that wants
  * it on the face puts it in `subline`.
  *
+ * A linked card (an integration and the system it uses) adds two things: a
+ * neutral type badge beside a system's name ("ERP" — the SC's own name does not
+ * say what the thing is), and the other card's name after the status, behind a
+ * link icon — or a count ("2 ERPs") when there are several. On the SAME line as the status, so a linked card is no taller than
+ * any other and the grid keeps one baseline.
+ *
  * The mesh peer card is visually IDENTICAL to an integration card — it is a
  * peer, identified by its name rather than chrome. Its behavioural asymmetry
  * (routing, actions, no rename) lives in the producer's derivation, never here.
@@ -29,10 +35,13 @@
  * @module core/ui/components/integrations/IntegrationCard
  */
 
+import { Badge } from '@adobe/react-spectrum';
+import LinkIcon from '@spectrum-icons/workflow/Link';
 import React, { useCallback } from 'react';
 import { IntegrationActionsMenu } from './IntegrationActionsMenu';
-import type { CardAction, IntegrationCardModel } from './integrationCardModel.types';
+import type { CardAction, IntegrationCardModel, LinkedCard } from './integrationCardModel.types';
 import { IntegrationStatusLabel } from './IntegrationStatusLabel';
+import { SetupStatus, setupStatusText } from './SetupStatus';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 
@@ -65,6 +74,31 @@ export interface IntegrationCardProps {
 }
 
 /**
+ * What the face says about several linked cards: "2 ERPs" when they share a type, else
+ * "2 connected". A count never grows with the names (owner, 2026-10-01: names in a row
+ * "won't work with long names"); the flyout's "Connected to" lists them one per line.
+ */
+function linkedCount(cards: LinkedCard[]): string {
+    const type = cards[0].typeBadge;
+    const shared = type !== undefined && cards.every((card) => card.typeBadge === type);
+    return shared ? `${cards.length} ${type}s` : `${cards.length} connected`;
+}
+
+/** The other card's name — or a count of several — behind a link icon. */
+function LinkedLine({ model }: { model: IntegrationCardModel }): React.ReactElement | null {
+    const cards = model.linked?.cards ?? [];
+    if (cards.length === 0) return null;
+    const names = cards.map((card) => card.name).join(', ');
+    const shown = cards.length === 1 ? cards[0].name : linkedCount(cards);
+    return (
+        <span className="integration-card-link" title={`Connected to ${names}`}>
+            <LinkIcon size="XS" aria-label="Connected to" />
+            <span className="integration-card-link-name">{shown}</span>
+        </span>
+    );
+}
+
+/**
  * One integration (or mesh) card.
  *
  * @param props - the card model, its action sinks, and an optional subline
@@ -85,7 +119,7 @@ export function IntegrationCard({
     // whole announcement — the subline is not read as a fallback. A host with no
     // status leaves `statusLabel` empty, and joining it anyway announced
     // "ERP Sync, ": a dangling comma naming half a thing.
-    const label = model.statusLabel ? `${model.name}, ${model.statusLabel}` : model.name;
+    const label = [model.name, model.statusLabel, setupStatusText(model)].filter(Boolean).join(', ');
 
     // Only a card that can OPEN something claims to be a control. Without
     // `onOpen` the div carries no role, no tab stop and no handlers, so nothing
@@ -115,14 +149,17 @@ export function IntegrationCard({
                         textClassName="integration-card-name"
                     />
                 ) : (
-                    <div className="integration-card-name">{model.name}</div>
+                    <div className="integration-card-name" title={model.name}>{model.name}</div>
                 )}
-                {/* CardActionsMenu contains its own clicks — no wrapper needed. */}
-                <IntegrationActionsMenu
-                    model={model}
-                    onAction={onAction}
-                    className="integration-card-menu-button"
-                />
+                {model.typeBadge && (
+                    <Badge variant="neutral" UNSAFE_className="integration-card-badge">
+                        {model.typeBadge}
+                    </Badge>
+                )}
+                {/* CardActionsMenu contains its own clicks — no wrapper needed. Always
+                    visible, never only on hover (owner, 2026-10-01: "hard to see and
+                    easy to miss"); the flyout lists the same actions in the open. */}
+                <IntegrationActionsMenu model={model} onAction={onAction} />
             </div>
             {/* The one quiet line: the host's own content when it gave us any,
                 otherwise the deploy status. Not a fallback on empty strings — an
@@ -133,8 +170,12 @@ export function IntegrationCard({
             ) : (
                 <div className="integration-card-statusline">
                     <IntegrationStatusLabel model={model} />
+                    <LinkedLine model={model} />
                 </div>
             )}
+            {/* Demo setup left to do (AB-26x): its own line, a link to the guide, only
+                while steps are open. */}
+            <SetupStatus model={model} onAction={onAction} />
         </div>
     );
 }

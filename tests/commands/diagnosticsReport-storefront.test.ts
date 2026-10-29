@@ -40,7 +40,7 @@ describe('a storefront that is serving', () => {
             TITLE,
             `  URL: ${URL}`,
             '  Site: reachable',
-            '  Smart 404 handler (delayed.js): installed (HTTP 200)',
+            '  Smart 404 handler (404.html): installed (HTTP 200)',
             '  Eager redirect (404.html): installed (HTTP 200)',
             // The SKU is printed so the reader can repeat the request by hand.
             '  PDP /products/blue-shoe (SKU SHOE-1): HTTP 200 (served)',
@@ -66,7 +66,7 @@ describe('a storefront that is serving', () => {
             `  URL: ${URL}`,
             '  Site: reachable',
             // A leg that was never probed is not a leg that failed.
-            '  Smart 404 handler (delayed.js): not checked',
+            '  Smart 404 handler (404.html): not checked',
             '  Eager redirect (404.html): MISSING (HTTP 404)',
             '  PDP /products/blue-shoe (SKU SHOE-1): HTTP 404 (NOT SERVED)',
             '  Overlay source template /products/default: HTTP 404 (NOT PUBLISHED)',
@@ -78,7 +78,7 @@ describe('a storefront that is serving', () => {
     it('reports an unreachable leg as unreachable, carrying the reason', () => {
         expect(
             linesFor({ ...healthy, smart404Snippet: { installed: false, error: 'timed out' } })[3],
-        ).toBe('  Smart 404 handler (delayed.js): unreachable (timed out)');
+        ).toBe('  Smart 404 handler (404.html): unreachable (timed out)');
     });
 
     // No SKU means the chain was never exercised. Saying so is the point: a
@@ -93,7 +93,7 @@ describe('a storefront that is serving', () => {
             TITLE,
             `  URL: ${URL}`,
             '  Site: reachable',
-            '  Smart 404 handler (delayed.js): installed (HTTP 200)',
+            '  Smart 404 handler (404.html): installed (HTTP 200)',
             '  Eager redirect (404.html): installed (HTTP 200)',
             '  PDP: not checked (no catalog SKU available)',
             `  → ${VERDICT}`,

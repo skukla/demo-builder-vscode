@@ -29,8 +29,18 @@ import '../styles/ai.css';
 // AddIntegrationFlowAdapter and on the wizard's Integrations area. Both entries
 // import it; neither owns it alone.
 import '@/features/project-creation/ui/styles/add-integration-flow.css';
+// CheckboxRow, the API picker's rows (ADR-017 §6).
+import '@/core/ui/styles/checkbox-row.css';
+// WorkRow, the demo setup's step rows (ADR-017 §6).
+import '@/core/ui/styles/work-row.css';
+// SectionLabel and LeadText (ADR-017 §6).
+import '@/core/ui/styles/modal-text.css';
+import '@/core/ui/styles/fact-list.css';
 // .integration-* — the card and its detail panel.
 import '@/core/ui/styles/integration-cards.css';
+// .add-card — the "Add an integration" card at the grid's end; after
+// integration-cards.css, whose card and row shapes it sits on. The wizard imports it too.
+import '@/core/ui/styles/add-card.css';
 // .modal-* — the shared Modal shell.
 import '@/core/ui/styles/modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.

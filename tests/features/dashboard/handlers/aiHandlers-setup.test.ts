@@ -19,6 +19,10 @@ import {
     verifyAiSetup,
     createAiHandlerContext,
 } from './aiHandlers.testUtils';
+import * as vscode from 'vscode';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { resetAgentCliCache } from '@/features/ai/engine/agentCli';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 
@@ -153,6 +157,22 @@ describe('aiHandlers — setup & verification', () => {
             // WHY a tool-driving skill is absent instead of omitting it silently.
             expect(Array.isArray((result.inventory as { gatedSkills?: unknown }).gatedSkills))
                 .toBe(true);
+        });
+
+        it("adds whether the SC's agent is installed, and its name, asked of the extension's command executor (AI-4a, AI-12)", async () => {
+            (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
+            resetAgentCliCache();
+            const commandExists = jest.fn().mockResolvedValue(true);
+            ServiceLocator.setCommandExecutor(createMockCommandExecutor({ commandExists }));
+
+            // A terminal engine is the one with a CLI to ask about.
+            jest.mocked(vscode.workspace.getConfiguration).mockReturnValue({
+                get: jest.fn((key: string) => (key === 'engine' ? 'claude-code' : undefined)),
+            } as unknown as vscode.WorkspaceConfiguration);
+            const result = await handleVerifyAiSetup(createAiHandlerContext());
+
+            expect(commandExists).toHaveBeenCalledWith('claude');
+            expect(result.agentCli).toEqual({ installed: true, name: 'Claude Code' });
         });
 
         it('returns error when stateManager has no current project', async () => {

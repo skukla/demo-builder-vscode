@@ -20,8 +20,14 @@
  * the account page embeds and discovery owns — see the coverage test.
  *
  * Several entries below were derived from the boilerplate code rather than added
- * from memory (ADR-008 prototype, `scripts/runtime-surfaces/`) — the derivation
- * surfaced surfaces this hand list had been missing.
+ * from memory (the ADR-008 prototype) — the derivation surfaced surfaces this hand
+ * list had been missing. That prototype was deleted 2026-10-12 when its logic moved
+ * into the extension: `storefrontCodePaths.ts` reads the paths out of the code of
+ * whichever storefront is being copied, at create and reset (EDS-40), and the copy
+ * asks the source for each. This list is what the copy asks for besides: the
+ * platform sheets no code names (`/metadata`, `/redirects`, `/sitemap`), the auth
+ * pages that get a stub when the source lacks them, and the floor for a copy whose
+ * storefront code could not be read.
  *
  * Keeping-it-accurate (ADR-008): a drift gate in `skukla/eds-demo-patches`
  * (`scripts/derive-surfaces.mjs`, PR #1) re-derives these surfaces from the pinned

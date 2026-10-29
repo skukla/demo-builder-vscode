@@ -12,6 +12,7 @@
 import type { ProgressTracker } from './shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
+import { getMeshEndpointUrl } from '@/core/state/appBuilderComponentState';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import {
     deployNewMesh,
@@ -24,7 +25,6 @@ import type { Logger } from '@/types/logger';
 import {
     getMeshComponentInstance,
     getMeshComponentId,
-    getMeshEndpointUrl,
 } from '@/types/typeGuards';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
@@ -224,7 +224,7 @@ export function buildDeployOrgTarget(
 ): OrgContextTarget {
     return buildOrgTargetFromProjectAdobe(
         typedConfig.adobe,
-        context.authManager?.getCachedOrganization(),
+        context.authManager?.getCacheManager().getCachedOrganization(),
     );
 }
 
@@ -276,7 +276,7 @@ export async function populateMeshComponentConfigs(
     const meshId = getMeshComponentId(project);
     if (!meshInstance?.path || !meshId) return;
 
-    const { readMeshEnvVarsFromFile } = await import('@/features/mesh/services/stalenessDetector');
+    const { readMeshEnvVarsFromFile } = await import('@/features/mesh/services/meshEnvVars');
     const meshEnvVars = await readMeshEnvVarsFromFile(meshInstance.path);
     const envVarCount = meshEnvVars ? Object.keys(meshEnvVars).length : 0;
     if (meshEnvVars && envVarCount > 0) {

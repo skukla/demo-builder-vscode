@@ -7,26 +7,20 @@
  * behind in a spec loads the real module before these mocks register.
  *
  * Extracted 2026-08-30 (lane C1) from byte-identical copies in:
- *   daLiveContentOperations-blockDocPages.test.ts
+ *   daLiveBlockLibraryOperations-blockDocPages.test.ts   (renamed 2026-10-10)
  *   daLiveContentOperations-enumeration.test.ts
- *   daLiveContentOperations-library-cdnCopy.test.ts
- *   daLiveContentOperations-library-creation.test.ts
+ *   daLiveBlockLibraryOperations-library-cdnCopy.test.ts   (renamed 2026-10-10)
+ *   daLiveBlockLibraryOperations-library-creation.test.ts   (renamed 2026-10-10)
  *   daLiveContentOperations-transform.test.ts
  *   daLiveContentOperations-utils.test.ts
  */
 
-// Mock the timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
 // Mock global fetch
 const mockFetch = jest.fn();
 
 
-import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { DaLiveContentDiscovery } from '@/features/eds/services/daLive/daLiveContentDiscovery';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';

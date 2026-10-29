@@ -12,12 +12,13 @@ import {
     type MeshSetupContext,
     type MeshApiConfig,
 } from '@/features/project-creation/services/meshSetupService';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
 
 // Mock dependencies
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
@@ -269,22 +270,22 @@ describe('meshSetupService', () => {
 
             await deployNewMesh(context, undefined);
 
+            // One step, the dashboard's 'Deploying the mesh'; what it is doing is the
+            // line under it, in the dashboard's words for the same work.
+            const deploying = OPERATION_STAGES.deployingMesh.label;
             expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Configuring API Mesh',
+                deploying,
                 70,
-                'Generating mesh configuration'
+                OPERATION_STAGES.generatingMeshConfig.label
             );
             // The pre-deploy API subscribe must be communicated to the user.
             expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Configuring API Mesh',
+                deploying,
                 72,
-                'Enabling API access'
+                OPERATION_STAGES.subscribingApis.label
             );
-            expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Deploying API Mesh',
-                75,
-                'Deploying mesh to Adobe I/O'
-            );
+            // Names nothing: the screen shows the step's own detail.
+            expect(mockProgressTracker).toHaveBeenCalledWith(deploying, 75);
         });
 
         it('should log debug message after env generation', async () => {
@@ -440,9 +441,9 @@ describe('meshSetupService', () => {
             await linkExistingMesh(context, meshConfig);
 
             expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Configuring API Mesh',
+                OPERATION_STAGES.deployingMesh.label,
                 75,
-                'Updating existing mesh configuration'
+                'Updating the existing mesh'
             );
         });
 

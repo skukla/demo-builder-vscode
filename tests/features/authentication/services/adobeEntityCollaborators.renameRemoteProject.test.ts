@@ -1,0 +1,73 @@
+/**
+ * AdobeEntityFetcher.renameRemoteProject Unit Tests
+ *
+ * Remote Adobe I/O project title sync (backlog 2026-07-15 item 5). Mirrors the
+ * createProject pattern: SDK-only, explicit org/project ids from the demo's
+ * persisted adobe config, never throws — callers treat it as best-effort.
+ *
+ * editProject is a PATCH (aio-lib-console: patch_console_organizations__orgId__
+ * projects__projectId_), so `{ title }` alone is the deliberate minimal payload
+ * — the machine `name` and description are never touched by a rename.
+ */
+
+import {
+    createEntityCollaborators,
+    type EntityCollaborators,
+    getLogger,
+} from './adobeEntityCollaborators.testUtils';
+import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
+import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import type { StepLogger } from '@/core/logging/stepLogger';
+import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+
+describe('entity collaborators.renameRemoteProject()', () => {
+    let entities: EntityCollaborators;
+    let mockSDKClient: jest.Mocked<AdobeSDKClient>;
+    let editProject: jest.Mock;
+
+    beforeEach(() => {
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
+
+        editProject = jest.fn().mockResolvedValue({ body: {} });
+        mockSDKClient = {
+            isInitialized: jest.fn().mockReturnValue(true),
+            getClient: jest.fn().mockReturnValue({ editProject }),
+            ensureInitialized: jest.fn().mockResolvedValue(true),
+        } as unknown as jest.Mocked<AdobeSDKClient>;
+
+        entities = createEntityCollaborators(
+            createMockCommandExecutor({ execute: jest.fn() }),
+            mockSDKClient,
+            {} as unknown as AuthCacheManager,
+            createMockLogger() as unknown as jest.Mocked<Logger>,
+            { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>,
+            {}
+        );
+    });
+
+    it('PATCHes only the title to the given org/project and reports success', async () => {
+        const result = await entities.projectOps.renameRemoteProject('org-1', 'proj-1', 'New Title');
+
+        expect(result).toStrictEqual({ ok: true });
+        expect(editProject).toHaveBeenCalledWith('org-1', 'proj-1', { title: 'New Title' });
+    });
+
+    it('reports why without calling the API when the SDK is unavailable', async () => {
+        (mockSDKClient.isInitialized as jest.Mock).mockReturnValue(false);
+
+        const result = await entities.projectOps.renameRemoteProject('org-1', 'proj-1', 'New Title');
+
+        expect(result).toStrictEqual({ ok: false, error: 'The Adobe Console SDK is not available.' });
+        expect(editProject).not.toHaveBeenCalled();
+    });
+
+    it("never throws — an API refusal (e.g. wrong org, 403) reports Adobe's own words", async () => {
+        editProject.mockRejectedValue(new Error('403 Forbidden'));
+
+        const result = await entities.projectOps.renameRemoteProject('org-1', 'proj-1', 'New Title');
+
+        expect(result).toStrictEqual({ ok: false, error: '403 Forbidden' });
+    });
+});

@@ -7,7 +7,6 @@
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import type { ToolDescriptor } from '@/features/ai/server/toolDescriptors';
 
@@ -34,10 +33,9 @@ describe('ACTION_DESCRIPTORS', () => {
         expect(d).toBeDefined();
         expect(d!.map).toBe(dashboardHandlers);
         expect(d!.type).toBe('exportProjectSettings');
-        // Optional path + includeSecrets inputs.
-        const keys = Object.keys(d!.inputSchema ?? {});
-        expect(keys).toContain('path');
-        expect(keys).toContain('includeSecrets');
+        // One optional input: where to write. No include-secrets option (D24, PL-56c).
+        expect(Object.keys(d!.inputSchema ?? {})).toStrictEqual(['path']);
+        expect(d!.description).not.toMatch(/includeSecrets|includesSecrets/);
         // Writing a local settings backup is idempotent — NOT confirm-gated.
         expect(d!.confirm).toBeUndefined();
     });
@@ -65,6 +63,37 @@ describe('ACTION_DESCRIPTORS', () => {
         expect(Object.keys(d!.inputSchema ?? {})).toContain('workspaceId');
     });
 
+    it("exposes the demo ERP's look and downtime as the card's own handlers (AB-59)", () => {
+        const look = row('set_erp_appearance');
+        const start = row('start_erp_downtime');
+        const end = row('end_erp_downtime');
+        expect([look?.map, look?.type, look?.confirm]).toEqual([
+            dashboardHandlers,
+            'setErpAppearance',
+            undefined,
+        ]);
+        expect([start?.map, start?.type, start?.confirm]).toEqual([
+            dashboardHandlers,
+            'startErpDowntime',
+            true,
+        ]);
+        expect([end?.map, end?.type, end?.confirm]).toEqual([
+            dashboardHandlers,
+            'endErpDowntime',
+            undefined,
+        ]);
+        // Only the ERP's own ids, and a window of whole minutes up to a day.
+        expect(look!.inputSchema!.theme.safeParse('foundry').success).toBe(true);
+        expect(look!.inputSchema!.theme.safeParse('neon').success).toBe(false);
+        expect(look!.inputSchema!.palette.safeParse('plum').success).toBe(true);
+        expect(look!.inputSchema!.palette.safeParse('pink').success).toBe(false);
+        expect(start!.inputSchema!.minutes.safeParse(undefined).success).toBe(true);
+        expect(start!.inputSchema!.minutes.safeParse(1440).success).toBe(true);
+        for (const minutes of [0, 1441, 2.5]) {
+            expect(start!.inputSchema!.minutes.safeParse(minutes).success).toBe(false);
+        }
+    });
+
     it('gates every destructive row (delete_*) on confirm', () => {
         for (const d of actionRows().filter((r) => r.tool.startsWith('delete_'))) {
             expect(d.confirm).toBe(true);
@@ -75,21 +104,75 @@ describe('ACTION_DESCRIPTORS', () => {
     // have caught refresh_block_library or promote_block_to_library, both of
     // which published to a live site ungated. Pinning the exact set means adding
     // a destructive tool forces a deliberate edit here rather than sliding in.
+    // The tools whose HANDLER is the gate: a call without confirm:true previews and writes
+    // nothing, so the descriptor must not refuse it, and must offer `confirm` to pass.
+    it('previewWithoutConfirm: these rows take confirm and leave the gate to the handler', () => {
+        const PREVIEWING = [
+            'add_erp',
+            'add_erp_owner_to_attribute_sets',
+            'assign_erp_products',
+            'remove_erp_owner_from_attribute_sets',
+            'undo_erp_assignment',
+            // AB-77: the same shape — a call without confirm previews.
+            'prepare_commerce_store',
+            'undo_commerce_store_preparation',
+            'set_commerce_config',
+        ];
+        for (const tool of PREVIEWING) {
+            const row = actionRows().find((d) => d.tool === tool);
+            expect({ tool, gatedByDescriptor: row?.confirm ?? false, takesConfirm: Boolean(row?.inputSchema?.confirm) }).toEqual({
+                tool,
+                gatedByDescriptor: false,
+                takesConfirm: true,
+            });
+        }
+    });
+
     it('pins the exact confirm-gated set', () => {
-        const gated = actionRows().filter((d) => d.confirm).map((d) => d.tool);
+        const gated = actionRows()
+            .filter((d) => d.confirm)
+            .map((d) => d.tool);
+        // add_erp left this list on 2026-10-09 (AB-75): without confirm it PREVIEWS what every ERP
+        // will own and deploys nothing, so the gate moved into its handler, as it is for the
+        // four AB-74 Assign products tools. A write still needs confirm:true; see
+        // previewWithoutConfirm below.
         expect(gated.sort()).toEqual([
             'delete_ai_prompt',
+            // Deletes the repository Demo Builder made for an app, for good (AB-1c).
+            'delete_app_github_repo',
             'delete_mesh',
+            // Deletes deployed Runtime code; a redeploy of an older version is the only undo.
+            'delete_undeclared_runtime_code',
             // Not destructive, and gated anyway: it runs package managers (fnm,
             // npm, brew) on the user's machine and can take minutes. The rule
             // this row stretches is that a confirm gate is about SURPRISE as much
             // as about loss.
             'install_prerequisite',
+            // Runs a deployed action with a payload; the action may write to Commerce or the ERP.
+            'invoke_runtime_action',
+            // Sets ERP values changed by hand back to Commerce's (AB-26y step 1).
+            'load_erp_demo_data',
+            // Opens a browser window — gated for the same surprise reason as open_url.
+            'open_erp_screen',
             'refresh_block_library',
+            // Uninstalls from Commerce first; its settings may reset (AB-13).
+            'reinstall_integration',
             'remove_integration',
+            // Wipes the ERP and undoes what it wrote into Commerce companies
+            // (plan step 05, 2026-09-14).
+            'reset_erp_records',
+            // Creates a PUBLIC repository on the user's account (AB-1c).
+            'save_app_to_github',
             // Says "set", not "delete", and removes on a live workspace credential
             // — exactly the case the delete_* rule above cannot see.
             'set_console_apis',
+            // Changes an ERP's own settings on the deployed integration (AB-16j).
+            'set_erp_settings',
+            // The demo ERP answers as if down until it is ended: the integration's orders
+            // wait meanwhile (AB-59).
+            'start_erp_downtime',
+            // Acts on the ERP as its screens do; the ERP then writes into Commerce.
+            'write_erp_rest',
         ]);
     });
 
@@ -101,25 +184,6 @@ describe('ACTION_DESCRIPTORS', () => {
             expect(d!.type).toBe('restartDemo');
             expect(d!.inputSchema).toBeUndefined();
             expect(d!.confirm).toBeUndefined();
-        });
-
-        it('set_current_project FORCES forceNewWindow off', () => {
-            const d = row('set_current_project');
-            expect(d).toBeDefined();
-            expect(d!.map).toBe(projectsListHandlers);
-            expect(d!.type).toBe('selectProject');
-            expect(Object.keys(d!.inputSchema ?? {})).toEqual(['projectPath']);
-
-            // The load-bearing half. `forceNewWindow: true` is the shift-click
-            // gesture — it opens a SECOND VS Code window and leaves the current one
-            // on the projects list, so an agent could both take over the screen and
-            // then act on a window the user is not looking at. Forced, not
-            // defaulted: `runHandler` applies argDefaults LAST, so a caller sending
-            // `true` cannot win.
-            expect(d!.argDefaults).toEqual({ forceNewWindow: false });
-            // And it must not be offered as an argument either, or the force above
-            // would just be silently overriding something the schema advertised.
-            expect(Object.keys(d!.inputSchema ?? {})).not.toContain('forceNewWindow');
         });
 
         it('set_project_pinned takes a path and a boolean, no confirm', () => {
@@ -240,51 +304,18 @@ describe('ACTION_DESCRIPTORS', () => {
             // NOT confirm-gated, same as deploy_integration.
             expect(d!.confirm).toBeUndefined();
         });
-    });
 
-    /**
-     * The preflight against the REAL catalog.
-     *
-     * Its handoff content is asserted in actionDescriptors-preflight.test.ts, which
-     * mocks the loader — because MEASURED 2026-08-17, no entry in the shipped
-     * catalog declares a user-supplied env var: 5 ids across all 4 stacks
-     * (`headless-commerce-mesh`, `eds-commerce-mesh`, `eds-accs-mesh`,
-     * `app-builder-shell`) plus a custom GitHub source, all with empty
-     * `userText`/`userSecret`. So the bucket-3 branch cannot fire today.
-     *
-     * That is exactly why this test is here rather than being folded into the
-     * mocked one: it pins the CURRENT state, so the day someone authors a
-     * pre-built integration with an `ERP_API_KEY`-style var, it fails and points
-     * at the tool that now has a handoff to return.
-     */
-    describe('add_integration preflight — against the shipped catalog', () => {
-        const preflight = (args: Record<string, unknown>) =>
-            row('add_integration')!.preflight!(args);
-
-        it('dispatches every real catalog id — none needs user inputs today', () => {
-            const ids = getAvailableAppBuilderComponents('', '').map((e) => e.id);
-            // Control: an empty list would make the loop below vacuously true.
-            expect(ids.length).toBeGreaterThan(0);
-            for (const id of ids) {
-                expect(preflight({ id })).toBeUndefined();
-            }
-        });
-
-        it('dispatches an unknown id so the HANDLER reports it, not the preflight', () => {
-            // A preflight that swallowed unknown ids would answer "enter values"
-            // for a component that does not exist.
-            expect(preflight({ id: 'no-such-component' })).toBeUndefined();
-        });
-
-        it('resolves a custom GitHub source the same way an add payload does', () => {
-            // A custom source has no envSchema, so it dispatches — but it must
-            // RESOLVE without throwing, which is the half a catalog-only
-            // preflight would get wrong.
-            expect(preflight({ source: { owner: 'acme', repo: 'widget' } })).toBeUndefined();
-        });
-
-        it('dispatches an empty payload rather than throwing', () => {
-            expect(preflight({})).toBeUndefined();
+        // AB-67: the handler already names the ERP pair's first ERP from `name`
+        // (now recordPairNames, which names both), but the tool said `name` was only for a custom
+        // instance, so agents never passed it and every agent-added ERP was "Acme ERP"
+        // — a name that cannot change afterwards.
+        it("add_integration tells an agent that `name` names the ERP integration's first ERP, for good", () => {
+            const d = row('add_integration')!;
+            expect(d.description).toMatch(/first ERP/);
+            expect(d.description).toMatch(/cannot be changed/);
+            const nameHelp = (d.inputSchema!.name as { description?: string }).description;
+            expect(nameHelp).toMatch(/ERP integration/);
+            expect(nameHelp).toMatch(/first ERP/);
         });
     });
 });

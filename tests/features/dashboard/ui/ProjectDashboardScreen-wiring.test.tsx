@@ -166,6 +166,20 @@ describe('ProjectDashboardScreen - screen-owned wiring', () => {
             expect(screen.getByText('Headless + PaaS')).toBeInTheDocument();
         });
 
+        it('hands the status\'s "Needs reset" to the Reset tile', () => {
+            renderDashboard({ isEds: true });
+            expect(screen.queryByTestId('reset-tile-dot')).not.toBeInTheDocument();
+
+            ctx.triggerMessage('statusUpdate', {
+                name: 'Test Project',
+                path: '/test/path',
+                status: 'ready',
+                storefrontNeedsReset: true,
+            });
+
+            expect(screen.getByTestId('reset-tile-dot')).toBeInTheDocument();
+        });
+
         it('ignores mesh health entirely when the project has no mesh', () => {
             renderDashboard({ hasAdobeContext: true, appBuilderComponents: {} });
 

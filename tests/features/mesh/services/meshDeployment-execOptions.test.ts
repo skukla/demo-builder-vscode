@@ -149,7 +149,7 @@ describe('MeshDeployment — translating CLI output into progress', () => {
 
         await deployEmitting(['Deploying mesh to the workspace'], { onProgress });
 
-        expect(subMessages(onProgress)).toContain('Deploying mesh');
+        expect(subMessages(onProgress)).toContain('Adobe is deploying it');
     });
 
     // The verb follows the command actually running, so an update never
@@ -159,7 +159,7 @@ describe('MeshDeployment — translating CLI output into progress', () => {
 
         await deployEmitting(['Success!'], { onProgress, existingMeshId: 'mesh-1' });
 
-        expect(subMessages(onProgress)).toContain('Mesh updated successfully');
+        expect(subMessages(onProgress)).toContain('Mesh updated');
     });
 
     it('says the mesh was CREATED when there was no existing mesh id', async () => {
@@ -167,7 +167,7 @@ describe('MeshDeployment — translating CLI output into progress', () => {
 
         await deployEmitting(['Success!'], { onProgress });
 
-        expect(subMessages(onProgress)).toContain('Mesh created successfully');
+        expect(subMessages(onProgress)).toContain('Mesh created');
     });
 
     it('names the right infrastructure verb while the mesh is being built', async () => {
@@ -187,7 +187,7 @@ describe('MeshDeployment — translating CLI output into progress', () => {
 
         await deployEmitting(['Reticulating splines'], { onProgress });
 
-        expect(subMessages(onProgress)).not.toContain('Mesh created successfully');
+        expect(subMessages(onProgress)).not.toContain('Mesh created');
     });
 
     /**

@@ -28,8 +28,12 @@ import * as path from 'path';
 
 const SRC = path.join(__dirname, '..', '..', 'src');
 
-/** How `core/ui/Modal` is imported, by either spelling. */
-const IMPORTS_MODAL = /from\s+['"](?:@\/core\/ui\/components\/ui\/Modal|.*\/ui\/Modal)['"]/;
+/**
+ * How `core/ui/Modal` is imported, by either spelling. Not `import type`: a file that takes
+ * only Modal's `ActionButton` type renders no Modal, so it has nothing to host
+ * (`setupGuideFooter.ts`, 2026-10-26).
+ */
+const IMPORTS_MODAL = /^import\s+(?!type\b)[^;]*from\s+['"](?:@\/core\/ui\/components\/ui\/Modal|.*\/ui\/Modal)['"]/m;
 
 /** Either valid host for a Spectrum Dialog. */
 const HOSTS = /DialogContainer|DialogTrigger/;
@@ -43,7 +47,7 @@ const HOSTS = /DialogContainer|DialogTrigger/;
  * become folklore the first time nobody could remember why it was listed.
  */
 const HOSTED_BY_PARENT: Record<string, string> = {
-    'AiCapabilitiesModal.tsx': 'ProjectDashboardScreen.tsx',
+    'AiCapabilitiesModal.tsx': 'DashboardDialogs.tsx',
     'PromptEditDialog.tsx': 'AiOverviewScreen.tsx',
 };
 

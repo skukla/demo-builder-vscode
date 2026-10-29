@@ -75,3 +75,37 @@ export function formatMinutes(minutes: number): string {
         ? `${days}d ${remainingHours}h`
         : `${days}d`;
 }
+
+/**
+ * A running clock, for a wait a person is WATCHING: "8 seconds", "45 seconds",
+ * "1 minute, 12 seconds".
+ *
+ * Written out rather than abbreviated (owner, 2026-09-20). It sits beside prose —
+ * "Usually a few seconds · 2 seconds" — and "2s" beside a sentence reads as a
+ * measurement rather than as how long this has been going.
+ *
+ * Whole units only, and a unit is dropped when it is zero: one minute exactly is
+ * "1 minute", not "1 minute, 0 seconds". Singular where it should be.
+ *
+ * Distinct from {@link formatDuration}, which is written for a log line after
+ * the fact and renders a decimal ("12.4s") — a tenth of a second ticking beside
+ * a spinner reads as noise, and the point of this one is only to prove the
+ * operation is still moving.
+ *
+ * @param ms Elapsed milliseconds
+ * @returns The elapsed time in whole seconds, written out
+ */
+export function formatElapsed(ms: number): string {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes === 0) return plural(seconds, 'second');
+    if (seconds === 0) return plural(minutes, 'minute');
+    return `${plural(minutes, 'minute')}, ${plural(seconds, 'second')}`;
+}
+
+/** "1 second", "2 seconds" — the count and its unit, agreeing. */
+function plural(count: number, unit: string): string {
+    return `${count} ${unit}${count === 1 ? '' : 's'}`;
+}

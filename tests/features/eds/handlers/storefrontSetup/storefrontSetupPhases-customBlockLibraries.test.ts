@@ -16,6 +16,7 @@ import {
     mockInstallBlockCollections,
 } from './storefrontSetupPhases.blockLibraries.testUtils';
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 
 // =============================================================================
@@ -171,7 +172,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         );
     });
 
-    it('should send progress message mentioning library count', async () => {
+    it('should send a progress line naming the library it adds', async () => {
         // Given: Custom block libraries with specific names
         const context = createSetupContext();
         const edsConfig = createEdsConfig();
@@ -184,12 +185,13 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
             customBlockLibraries: customLibs,
         });
 
-        // Then: Progress message should mention the library count
+        // Then: under the code step, the line names the library it adds
         expect(context.sendMessage).toHaveBeenCalledWith(
             'storefront-setup-progress',
             expect.objectContaining({
                 phase: 'storefront-code',
-                message: expect.stringContaining('1'),
+                stage: OPERATION_STAGES.settingUpCode.label,
+                message: 'Adding block libraries: My Fancy Blocks',
             })
         );
 

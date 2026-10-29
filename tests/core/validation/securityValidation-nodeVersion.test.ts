@@ -61,8 +61,8 @@ describe('securityValidation - validateNodeVersion', () => {
     });
 
     describe('valid special keywords', () => {
-        it('should accept "auto" keyword', () => {
-            expect(() => validateNodeVersion('auto')).not.toThrow();
+        it('should reject "auto", which was removed (PR-1a)', () => {
+            expect(() => validateNodeVersion('auto')).toThrow(/invalid Node.js version format/i);
         });
 
         it('should accept "current" keyword', () => {
@@ -370,19 +370,19 @@ describe('securityValidation - validateNodeVersion', () => {
     describe('error message guidance', () => {
         it('should provide helpful error message for invalid format', () => {
             expect(() => validateNodeVersion('v20')).toThrow(
-                /invalid Node.js version format.*valid formats.*18.*18\.20\.0.*auto.*current/i
+                /invalid Node.js version format.*valid formats.*18.*18\.20\.0.*current/i
             );
         });
 
         it('should provide helpful error message for injection attempt', () => {
             expect(() => validateNodeVersion('20; rm -rf /')).toThrow(
-                /invalid Node.js version format.*valid formats.*18.*18\.20\.0.*auto.*current/i
+                /invalid Node.js version format.*valid formats.*18.*18\.20\.0.*current/i
             );
         });
 
         it('should provide helpful error message for empty string', () => {
             expect(() => validateNodeVersion('')).toThrow(
-                /invalid Node.js version format.*valid formats.*18.*18\.20\.0.*auto.*current/i
+                /invalid Node.js version format.*valid formats.*18.*18\.20\.0.*current/i
             );
         });
     });

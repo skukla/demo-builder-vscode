@@ -24,9 +24,11 @@ updates/             auto-update for the extension and components
 
 ## Import rules
 
-Features import `@/core/*` and `@/types`. **A feature does not import another
-feature** — if two need the same thing it moves to `core/`. Commands are the
-exception, because orchestrating features is their job. Enforced by eslint.
+Features import `@/core/*` and `@/types`. **A feature uses another feature through its
+`services/`, types and config**; code no single feature owns goes in `core/`. Handlers,
+commands and the MCP server compose features and import across them freely. **Not
+enforced** (owner's choice, PL-68, 2026-10-19): the old rule, "a feature does not import
+another feature", was broken by 857 imports and checked by nothing.
 
 **Deep imports are the convention for features.** Import the module that defines the
 symbol (`@/features/authentication/services/authenticationService`), not a feature
@@ -71,7 +73,7 @@ which is the single persisted authority. The mesh is one component kind in that 
 The singular `meshState`/`appState` fields are legacy-read-only — manifests migrate
 on load and forward-migrate on first save.
 
-Add and remove are additive and per-id (`appBuilderComponentRunner.ts`): add leaves
+Add and remove are additive and per-id (`appBuilderAddRun.ts`, `appBuilderRemoveRun.ts`): add leaves
 siblings untouched, keys the entry, and reconciles the selection lists; remove
 undeploys remotely, then cleans up only that integration's files and keyed state.
 

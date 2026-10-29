@@ -137,8 +137,9 @@ describe('get_commerce_endpoints', () => {
         // Both come from `generateHeaders`, so an agent and the site it is
         // debugging cannot be querying two different stores. If these ever
         // diverge, the agent's answer stops describing the running demo.
-        const { generateHeaders, buildConfigGeneratorParams } = await import(
-            '@/features/eds/services/configGenerator'
+        const { generateHeaders } = await import('@/features/eds/services/configGenerator');
+        const { buildConfigGeneratorParams } = await import(
+            '@/features/eds/services/storefrontConfigParams'
         );
         getCurrentProject.mockResolvedValue(ACCS_PROJECT);
 

@@ -1,0 +1,53 @@
+/**
+ * .disclosure-toggle — the line that opens a part of a modal (`ui/DisclosureToggle`).
+ *
+ * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `projectsList` (the Updates modal's
+ * groups). A new host bundle imports it in its entry, or the toggle renders as a bare grey
+ * button with no error.
+ *
+ * Moved unchanged on 2026-10-23 from the projects list's updates-modal.css
+ * (.updates-group-toggle, -note, -chevron) and project-cards.css (.project-row-name,
+ * .project-row-chevron), in the same layer.
+ */
+
+@layer theme {
+    /* The rest of the line opens the part: the name, its note, the chevron at the end. */
+    .disclosure-toggle {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        padding: 8px 0;
+        background: none;
+        border: 0;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .disclosure-toggle:focus-visible {
+        outline: 2px solid var(--spectrum-global-color-blue-400);
+        outline-offset: 2px;
+    }
+
+    /* The projects list's row name: the SC's own words, as written. */
+    .disclosure-toggle-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--spectrum-global-color-gray-900);
+    }
+
+    /* "1 waiting for you" beside the name, at body size: small grey type made it read as
+       a footnote when it is the one thing a closed part must not hide. */
+    .disclosure-toggle-note {
+        margin-left: 8px;
+        font-size: 14px;
+        color: var(--spectrum-global-color-gray-800);
+    }
+
+    .disclosure-toggle-chevron {
+        margin-left: auto;
+        color: var(--spectrum-global-color-gray-500);
+    }
+}

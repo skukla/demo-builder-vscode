@@ -8,11 +8,21 @@
         "The reversal need not share a verb stem. `deploy_mesh` is undone by `delete_mesh`, `publish_page` by `delete_page`. A naming rule was measured and REJECTED - it wrongly flags at least three - see PL-55's design section."
     ],
     "_measured": "2026-09-10: 109 tools across both registration forms, read via tests/sop/tool.testUtils.ts (`src/features/ai/server/*.ts`, `src/mcp-server.ts`, `src/mcp/*.ts`). 15 create-shaped. An earlier hand-rolled walk read only one directory and found 100 - the shared helper exists because that mistake has now been made twice.",
-    "openReasonCeiling": 3,
+    "openReasonCeiling": 4,
     "entries": [
         {
             "tool": "add_integration",
             "reverses": "remove_integration"
+        },
+        {
+            "tool": "add_erp",
+            "reverses": "remove_integration",
+            "note": "An ERP added from the integration's card is removed on its own: the integration stops listing it, its records are wiped, it is undeployed and its workspace deleted (AB-16)."
+        },
+        {
+            "tool": "add_erp_owner_to_attribute_sets",
+            "reverses": "remove_erp_owner_from_attribute_sets",
+            "note": "The sets it added erp_owner to are recorded on the ERP integration (erpOwnerSets); the removal takes it out of exactly those, and waits until no product in them is tagged (AB-74)."
         },
         {
             "tool": "add_shared_demo",
@@ -28,7 +38,22 @@
         },
         {
             "tool": "create_project",
-            "reverses": "delete_project"
+            "reverses": "delete_project",
+            "note": "Category pages (EDS-61) are published through the product page overlay at /categories/{url path}, by setup and by a shopper's first visit, and have no DA.live document. delete_project's whole-site unpublish takes them down with every other path Helix lists; reset_project and republish take down every one (reset) or those of categories the store no longer has (republish), through removeCategoryPages and its shared-repository refusal. add_category_pages was removed 2026-10-22 with the per-category DA.live pages it wrote."
+        },
+        {
+            "tool": "create_project_from_file",
+            "reverses": "delete_project",
+            "note": "Added 2026-10-03. The same creation as create_project, seeded from an exported file, so the same tool undoes it. It deploys the integrations the file names, which delete_project tears down with the project."
+        },
+        {
+            "tool": "copy_project",
+            "reverses": "delete_project",
+            "note": "Added 2026-10-04 (PL-56f). The same creation as create_project_from_file, seeded from the source project's own file, so the same tool undoes it; the source project is only read. The copy's repository and DA.live site are its own, which delete_project's deleteGithubRepo and deleteDaLiveSite remove."
+        },
+        {
+            "tool": "reset_project",
+            "reason": "Added 2026-10-03, when the tool grew to cover headless projects (it was reset_eds_project). A reset IS the return to zero this property asks for, so nothing undoes it: what it discards - hand edits to the storefront repository, its DA.live content, or a headless project's component folders - exists nowhere else to restore from. That is why it asks first (confirm:true and the consent dialog) and why integrations, whose code may be the SC's own, are left alone. Not create-shaped, so the enforcer would not have asked; written down because the owner did. Snapshot-before-reset would be the reversal, and whether to build one is an owner decision."
         },
         {
             "tool": "start_demo",
@@ -79,6 +104,21 @@
             "tool": "start_datapack_import",
             "reverses": "reset_datapack",
             "note": "Corrected 2026-09-11, same mistake: reset_datapack removes a datapack's data from the Commerce instance so the project can be reused, which is precisely what the import put there. The first pass called it 'adjacent' without reading its description."
+        },
+        {
+            "tool": "start_erp_downtime",
+            "reverses": "end_erp_downtime",
+            "note": "The demo ERP's simulated downtime also ends by itself when its minutes are up (AB-59)."
+        },
+        {
+            "tool": "delete_event_provider",
+            "reverses": "reinstall_integration",
+            "note": "Added 2026-10-03 with the tool (AB-6), at the owner's ask - not create-shaped, so the enforcer would not have asked. The providers it can delete are the open workspace's own 3rd-party custom providers, which in practice an App Management app (the Commerce starter kit) created at install; reinstall_integration uninstalls and installs the app again, and the install finds-or-creates every provider the app declares (.rptc/research/event-provider-lifecycle/research.md section 1.4 - read from the kit's source, not yet seen live). A provider made any other way (a hand-run aio onboarding, a custom app) has no reversal in this extension: the create tools were removed with the rest of the pulled surface in 4a3889049 and did not come back. Consent-gated for that reason."
+        },
+        {
+            "tool": "prepare_commerce_store",
+            "reverses": "undo_commerce_store_preparation",
+            "note": "Not create-shaped by name, listed because it creates: what each step changed is recorded per step on the integration (storePreparation); the undo puts settings back, deletes the attributes, stock and shared catalogs the run created, and DISABLES a source it created, since Commerce cannot delete one (AB-77)."
         }
     ]
 }

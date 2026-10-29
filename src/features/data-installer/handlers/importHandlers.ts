@@ -13,65 +13,34 @@
  * `TransientStateManager`. Closing the panel does not abandon an import, and the
  * webview request is not held open for the ten minutes a long install can take.
  *
- * **Credentials are checked before anything is sent.** A missing pair is a
- * reason, not a failed request.
+ * **Access is checked before anything is sent.** A dry run first asks whether the
+ * service can sign in to the instance; a refusal is a reason, not a failed request.
  *
- * Reuses `resolveDataInstallerAccess` for the config/auth half rather than
- * repeating it, so a new write handler cannot skip a check.
+ * Opens through `resolveDatapackWriteAccess` (config/auth, project, backend),
+ * the gate the export handlers share, so a new write handler cannot skip a check.
  *
  * @module features/data-installer/handlers/importHandlers
  */
 
-import { provisionAccsCredentials } from '../services/accsCredentialProvisioner';
-import { canProvisionAccsCredentials } from '../services/accsProvisionEligibility';
-import { resolveProjectCredentials } from '../services/commerceCredentialBroker';
-import {
-    DataInstallerWriteClient,
-    type ImportRequest,
-    type ImportTarget,
-} from '../services/dataInstallerWriteClient';
-import { deriveImportInstance } from '../services/importInstance';
-import { watchImportJob } from '../services/importJobRunner';
-import {
-    buildScopeDiscoveryParams,
-    groupStoreViewsByWebsite,
-} from '../services/importScopeDiscovery';
+import { buildDatapackEngine, engineThatInstalled } from '../services/buildDatapackEngine';
+import { selectedDatapackEngine } from '../services/dataInstallerConfig';
+import type { ImportRequest, ImportTarget } from '../services/dataInstallerWriteClient';
+import type { DatapackEngine } from '../services/datapackEngine';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
-import { downloadWorkspaceConfigJson } from '../services/workspaceConfigDownload';
-import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
+import type { DatapackId, DatapackStoreName, ImportJobRecord } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { datapackLibraryHandlers } from './datapackLibraryHandlers';
+import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
+import { datapackZipHandlers } from './datapackZipHandlers';
 import { exportHandlers } from './exportHandlers';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { PollingService } from '@/core/shell/pollingService';
+import { JOB_KEY, runAndWatch } from './importJobWatch';
+import { importTargetHandlers } from './importTargetHandlers';
 import { TransientStateManager } from '@/core/state/transientStateManager';
-import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
-import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
-import type { Project } from '@/types/base';
+import { handleBackgroundOperation } from '@/core/vscode/operationProgress';
+import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
+import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
-
-/** Where the in-flight/last import is recorded. One per extension host. */
-const JOB_KEY = 'dataInstaller.import.current';
-
-/** Wording for each credential gap. The service module returns reasons only. */
-const CREDENTIAL_MESSAGES: Record<string, string> = {
-    'missing-paas-admin':
-        'This project has no Commerce admin username and password saved, so an import cannot authenticate.',
-    // "Add them" was the whole story when the user was the only source. There
-    // are now two, and on a project with no Adobe workspace the OTHER one
-    // failing is the likelier cause — so the message says both what did not
-    // happen and the two ways forward. The service is never named: this repo is
-    // public and the string ships in the VSIX.
-    'needs-accs-credentials':
-        'ACCS imports need an Adobe OAuth Server-to-Server client id and secret, and the shared credential service did not supply one. Add the pair to this project, or ask an administrator for access to the shared credential.',
-    'unsupported-backend':
-        'This project has no Adobe Commerce backend, so there is nothing to import into.',
-    // Distinct from the gap above because the remedy is: the extension has no
-    // shared credential service to fall back on, and that is a setting the user
-    // can add. Naming the setting is safe; naming its value would not be.
-    'no-credential-service':
-        'ACCS imports need an Adobe OAuth Server-to-Server client id and secret, and no shared credential service is configured to supply one. Add a service under demoBuilder.accsDiscovery.services, or add the pair to this project.',
-};
 
 /** Payload for a start request. */
 interface StartImportPayload {
@@ -87,12 +56,26 @@ interface StartImportPayload {
     storeCode?: string;
     /** Reset only: must be true. Nothing removes data by default. */
     confirm?: boolean;
+    /** Which store holds the pack: `installer` (absent) or `library` (DI-5). */
+    source?: string;
 }
 
 export const importHandlers = defineHandlers({
+    // Closing a running import hands it to a notification that keeps narrating
+    // (PL-59 R8); this is the channel that says so.
+    backgroundOperation: handleBackgroundOperation,
+    // The SC answered a question the work was paused on — a sign-in that expired,
+    // a prerequisite missing, a merge needing a decision (PL-59, owner 2026-09-20).
+    answerOperationPrompt: handleAnswerOperationPrompt,
     // Stage 3 lives in its own module; merged here so the panel and the tests
-    // keep ONE handler map to reach for.
+    // keep ONE handler map to reach for. The modal's prefill reads were split out
+    // the same way (2026-10-08).
     ...exportHandlers,
+    ...importTargetHandlers,
+    // Datapack files (save a pack to a zip, load one back), same reason.
+    ...datapackZipHandlers,
+    // Library pack actions: remove your own, copy one into the Data Installer.
+    ...datapackLibraryHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,
@@ -101,13 +84,13 @@ export const importHandlers = defineHandlers({
         if ('response' in prepared) {
             return prepared.response;
         }
-        const { writeClient, request } = prepared;
+        const { engine, request } = prepared;
 
         // The sync twin is the only thing that will tell us this request is
         // malformed. A 202 from the async entry point would not.
-        return runAndWatch(context, writeClient, request, {
+        return runAndWatch(context, engine, request, {
             operation: 'import',
-            begin: () => writeClient.startImport(request),
+            begin: () => engine.startImport(request),
             rejected: 'The Data Installer rejected this import request.',
             failed: 'The import could not be started.',
         });
@@ -116,7 +99,7 @@ export const importHandlers = defineHandlers({
     /**
      * The dry run — validate and stop.
      *
-     * Same guard, same credentials, same request body as a real start; it simply
+     * Same guard, same request body as a real start; it simply
      * does not go on to `startImport`. This exists because there was otherwise NO
      * way to check a request without writing: the start handler chains validate
      * and start, so a passing validation went straight to a real import.
@@ -133,23 +116,23 @@ export const importHandlers = defineHandlers({
             return prepared.response;
         }
         try {
-            // Credentials first. If the pair cannot reach the instance, whether
+            // Access first. If the service cannot sign in to the instance, whether
             // the request is well-formed is not the answer anyone needs — and
             // `get-websites-and-stores` answers it without going near
             // process-datapack, so it cannot start work by accident.
-            const access = await prepared.writeClient.checkCredentials(prepared.request);
+            const access = await prepared.engine.checkCredentials(prepared.request);
             if (!access.usable) {
                 return {
                     success: true,
                     data: {
                         valid: false,
-                        reason: access.reason ?? 'These credentials did not reach that Commerce instance.',
+                        reason: access.reason ?? 'The Data Installer could not sign in to that Commerce instance.',
                     },
                 };
             }
             return {
                 success: true,
-                data: await prepared.writeClient.validateImport(prepared.request),
+                data: await prepared.engine.validateImport(prepared.request),
             };
         } catch (error) {
             return {
@@ -183,200 +166,18 @@ export const importHandlers = defineHandlers({
             };
         }
 
-        const prepared = await prepareImport(context, payload);
+        const prepared = await prepareImport(context, payload, 'remove');
         if ('response' in prepared) {
             return prepared.response;
         }
-        const { writeClient, request } = prepared;
+        const { engine, request } = prepared;
 
-        return runAndWatch(context, writeClient, request, {
+        return runAndWatch(context, engine, request, {
             operation: 'reset',
-            begin: () => writeClient.startDelete(request),
+            begin: () => engine.startDelete(request),
             rejected: 'The Data Installer rejected this reset request.',
             failed: 'The reset could not be started.',
         });
-    },
-
-    /**
-     * What the import modal should prefill as the target, and where it came from.
-     *
-     * The field started empty because a spike could not PROVE the target was
-     * derivable — none of the instances with Data Installer history matched a local
-     * project, so a derived value had nothing to be checked against, and guessing a
-     * write target with no undo was the wrong trade.
-     *
-     * Both halves of that reasoning have since expired. `checkCredentials` tests an
-     * instance read-only, so a derived value is now verifiable before anything is
-     * written. And the derivation already existed: `ACCS_ENDPOINT_PATTERN` has been
-     * pulling the tenant id out of `ACCS_GRAPHQL_ENDPOINT` all along to build the
-     * admin URL, and that id is a 21–22 character base62 nanoid — the shape the
-     * spike measured for `commerce_instance`.
-     *
-     * **This answers; it does not decide.** It reports the instance the project
-     * implies and nothing else — the field stays editable, and a dry run is what
-     * checks a seeded value before an import writes with it.
-     */
-    'get-datapack-import-target': async (context: HandlerContext): Promise<HandlerResponse> => {
-        // No guard and no client: this reads project state only. A missing project
-        // is not a failure — the catalog is browsable without one, and the modal
-        // simply asks the user to type the target.
-        const project: Project | undefined = await context.stateManager.getCurrentProject();
-        const configs = project?.componentConfigs ?? {};
-        // The id is what the service needs and what nobody can read. The project
-        // name is the only human-recognisable handle on the same target, so it
-        // rides along for the modal to lead with.
-        const projectName = project?.name;
-        // The sample data this project was CREATED to hold, recorded by the
-        // wizard's Sample Data area and never imported there. Reported here so
-        // the panel can offer it directly instead of making the user re-find it
-        // in a 25-name catalog.
-        const datapack = project?.datapack;
-
-        // The website/store view the project recorded, from the SAME resolver the
-        // build path uses. The modal used to seed its pickers from live discovery
-        // instead, preferring a website named `base` — which is simply wrong on a
-        // project configured for another one, and made a modal-driven reset
-        // target a different scope than the project reset. The project is the
-        // definitive source; this is where it gets asked.
-        //
-        // `resolveInstallTarget` returns the store VIEW code, not the store group:
-        // the service's `store_code` is a view code. Both codes or neither.
-        const scope = resolveInstallTarget({
-            componentSelections: project?.componentSelections,
-            componentConfigs: configs,
-        });
-
-        // Shared with the build's sample-data phase — see `deriveImportInstance`.
-        // Two derivations would let the same pack land in different places
-        // depending on which surface asked, with nothing to report the difference.
-        const instance = deriveImportInstance(configs);
-        if (instance) {
-            return {
-                success: true,
-                data: { instance, projectName, datapack, ...(scope && { scope }) },
-            };
-        }
-
-        return { success: true, data: { datapack, ...(scope && { scope }) } };
-    },
-
-    /**
-     * The websites and store views a pack can be imported onto.
-     *
-     * Targeting is the INTENDED path (the service author, 2026-08-14: create the
-     * website first, "then you can specify site and store on the data pack
-     * import"). This is what fills that picker.
-     *
-     * **Discovery runs here, not in the webview.** The wizard's
-     * `useStoreDiscovery` posts PaaS admin credentials from the panel because
-     * the wizard holds them in form state; this feature deliberately keeps the
-     * pair extension-side. So the structure is discovered where the credentials
-     * already live and only the codes travel back.
-     *
-     * Optional by design: no project, no credentials or a failed discovery all
-     * leave the user with a manual import onto the service's default. Only a
-     * discovery that actively failed is worth an error — the rest is an empty
-     * list.
-     */
-    'list-datapack-import-scopes': async (context: HandlerContext): Promise<HandlerResponse> => {
-        const project = await context.stateManager.getCurrentProject();
-        if (!project) {
-            return { success: true, data: { websites: [] } };
-        }
-
-        const credentials = await resolveProjectCredentials(context, project);
-        if (!credentials.ok) {
-            // Not an error: the import still works, it just lands on the default.
-            return { success: true, data: { websites: [] } };
-        }
-
-        const params = await buildScopeDiscoveryParams(context, project, credentials.credentials);
-        if (!params) {
-            return { success: true, data: { websites: [] } };
-        }
-
-        const result = await discoverStoreStructure(params);
-        if (!result.success) {
-            return { success: false, error: result.error };
-        }
-        return { success: true, data: { websites: groupStoreViewsByWebsite(result.data) } };
-    },
-
-    /**
-     * Console-free ACCS credential provisioning — the loop proven live
-     * 2026-08-13, wired to THIS project's own Adobe binding.
-     *
-     * On success the pair lands in `componentConfigs['adobe-commerce-accs']` —
-     * the DECLARED fields, exactly where a hand-pasted pair lives — and the
-     * project is saved. One storage path, not two. The response never carries
-     * the values; the next dry run reads them where everything else does.
-     *
-     * Panel-only by construction (never in the MCP maps): it creates a
-     * credential in the user's Console workspace.
-     */
-    'provision-accs-credentials': async (context: HandlerContext): Promise<HandlerResponse> => {
-        const project = await context.stateManager.getCurrentProject();
-        if (!project) {
-            return { success: false, error: 'Open a project first.', code: ErrorCode.PROJECT_NOT_FOUND };
-        }
-        if (project.componentSelections?.backend !== 'adobe-commerce-accs') {
-            return {
-                success: false,
-                error: 'Automatic setup applies to ACCS backends only — PaaS uses the admin username and password.',
-                code: ErrorCode.INVALID_OPERATION,
-            };
-        }
-        const adobe = project.adobe;
-        // Same predicate the OFFER uses. Kept shared so the button and the
-        // guard behind it cannot disagree — they did, and the disagreement was
-        // a button that could only ever refuse.
-        if (!canProvisionAccsCredentials(adobe)) {
-            return {
-                success: false,
-                error: 'This project has no Adobe project binding, so there is no workspace to provision in.',
-                code: ErrorCode.INVALID_OPERATION,
-            };
-        }
-        if (!context.authManager) {
-            return { success: false, error: 'Adobe sign-in is required.', code: ErrorCode.AUTH_REQUIRED };
-        }
-
-        const executor = ServiceLocator.getCommandExecutor();
-        const result = await provisionAccsCredentials(
-            {
-                auth: context.authManager,
-                downloadWorkspaceJson: (target) => downloadWorkspaceConfigJson(executor, target),
-                log: (line) => context.debugLogger.debug(`[Data Installer] provisioning: ${line}`),
-            },
-            { orgId: adobe.organization, projectId: adobe.projectId, workspaceId: adobe.workspace },
-        );
-        if (!result.ok) {
-            return { success: false, error: result.reason, code: ErrorCode.UNKNOWN };
-        }
-
-        project.componentConfigs = project.componentConfigs ?? {};
-        project.componentConfigs['adobe-commerce-accs'] = {
-            ...project.componentConfigs['adobe-commerce-accs'],
-            ACCS_OAUTH_CLIENT_ID: result.clientId,
-            ACCS_OAUTH_CLIENT_SECRET: result.clientSecret,
-        };
-
-        // Route the freshly-provisioned secret to SecretStorage before the project
-        // is saved. Without this the one path that CREATES a credential is the one
-        // path that writes it to the manifest in the clear — the migration would
-        // only clean it up on some later save, and until then a public-repo
-        // manifest holds an org-wide Commerce write credential.
-        const migration = await migrateDeclaredSecrets(
-            project.componentConfigs,
-            project.path,
-            context.context?.secrets,
-            (line: string) => context.debugLogger.debug(`[Data Installer] ${line}`),
-        );
-        project.componentConfigs = migration.sanitizedConfigs as typeof project.componentConfigs;
-
-        await context.stateManager.saveProject(project);
-
-        return { success: true };
     },
 
     'get-datapack-import-status': async (context: HandlerContext): Promise<HandlerResponse> => {
@@ -390,63 +191,39 @@ export const importHandlers = defineHandlers({
  * Everything both write handlers need, or the response to return instead.
  *
  * Extracted at the SECOND caller rather than the third: the two paths have to
- * agree on the guard, the credentials and the request body byte for byte, or a
+ * agree on the guard and the request body byte for byte, or a
  * dry run would check something other than what a start would send — which is the
  * one thing that would make a dry run worse than useless.
  */
 async function prepareImport(
     context: HandlerContext,
     payload: StartImportPayload | undefined,
+    // A removal goes through the engine that installed the pack; anything else through the
+    // one the setting chooses (DI-5).
+    write: 'install' | 'remove' = 'install',
 ): Promise<
-    { writeClient: DataInstallerWriteClient; request: ImportRequest } | { response: HandlerResponse }
+    { engine: DatapackEngine; request: ImportRequest } | { response: HandlerResponse }
 > {
     const input = readInput(payload);
     if ('error' in input) {
         return { response: { success: false, error: input.error } };
     }
 
-    const access = await resolveDataInstallerAccess(context);
-    if (!access.ok) {
-        return { response: access.response };
+    const gate = await resolveDatapackWriteAccess(context, 'import');
+    if ('response' in gate) {
+        return gate;
     }
 
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { response: { success: false, error: 'Open a project before importing a datapack.' } };
+    const pack = { name: input.datapackName, version: input.version };
+    const engine = await engineFor(context, gate, { pack, write, source: input.source });
+    if ('response' in engine) {
+        return engine;
     }
-
-    const credentials = await resolveProjectCredentials(context, project);
-    if (!credentials.ok) {
-        return {
-            response: {
-                success: false,
-                error: CREDENTIAL_MESSAGES[credentials.reason] ?? 'Commerce credentials are missing.',
-                code: ErrorCode.INVALID_OPERATION,
-                // The UI offers console-free provisioning on exactly this gap —
-                // matching a message string would be the brittle version of
-                // this. The Adobe-binding half is what makes the offer
-                // honourable: without a workspace the button has nowhere to
-                // create the pair and can only refuse a second time.
-                data: {
-                    needsAccsCredentials:
-                        credentials.reason === 'needs-accs-credentials' &&
-                        canProvisionAccsCredentials(project.adobe),
-                },
-            },
-        };
-    }
-
     return {
-        writeClient: new DataInstallerWriteClient({
-            baseUrl: access.baseUrl,
-            getToken: access.getToken,
-            orgCode: access.orgCode,
-            // One line per service call in Debug Logs. The first live dry run
-            // refused with an EMPTY channel — undebuggable for the user and us.
-            log: (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
-        }),
+        engine: engine.engine,
         request: {
-            id: { name: input.datapackName, version: input.version },
+            id: pack,
+            source: input.source,
             commerceInstance: input.commerceInstance,
             dataTypes: input.dataTypes,
             // A caller that names a scope means it. One that names NONE gets the
@@ -460,200 +237,61 @@ async function prepareImport(
             // Half a pair never reaches here — `readTarget` refuses it — so this
             // cannot complete a partial specification into something the caller
             // did not ask for.
-            target: input.target ?? resolveInstallTarget(project) ?? undefined,
-            credentials: credentials.credentials,
+            target: input.target ?? resolveInstallTarget(gate.project) ?? undefined,
         },
     };
 }
 
-/**
- * Watch to a terminal outcome and record it.
- *
- * Runs after its caller has returned, so nothing is awaiting it and a throw could
- * only become an unhandled rejection.
- *
- * **Every exit writes the record.** This used to return silently when the guard
- * refused, and warn to a log channel when the runner threw — and in both cases the
- * record stayed `watching`, so the panel showed "Importing…" forever for a job
- * nobody was watching. A failure that reaches no one is also a failure no test can
- * catch: exactly that shape hid a logger fault which killed every watch through
- * five green gates. The import itself is unaffected — it is already running
- * server-side — so this reports a lost WATCH, never a failed import.
- */
-async function watchAndRecord(
-    context: HandlerContext,
-    transient: TransientStateManager,
-    record: ImportJobRecord,
-): Promise<void> {
-    const access = await resolveDataInstallerAccess(context);
-    if (!access.ok) {
-        await stopWatching(
-            transient,
-            record,
-            'The Data Installer could not be reached to watch this job.',
-        );
-        return;
-    }
-    try {
-        const result = await watchImportJob({
-            client: access.client,
-            activationId: record.activationId,
-            requestedTypes: record.dataTypes,
-            polling: new PollingService(),
-            ...(record.operation ? { operation: record.operation } : {}),
-            // Each poll goes straight to the modal. Without this the webview
-            // learns nothing until the job ends, which on a fourteen-type pack
-            // is minutes of an unexplained spinner.
-            onProgress: (perType) => {
-                void context.sendMessage(IMPORT_PROGRESS_MESSAGE, {
-                    activationId: record.activationId,
-                    operation: record.operation,
-                    perType,
-                });
-            },
-        });
-        await transient.set(JOB_KEY, {
-            ...record,
-            outcome: result.outcome,
-            perType: result.perType,
-            ...(result.reason ? { reason: result.reason } : {}),
-            ...(result.processingTimeMs !== undefined
-                ? { processingTimeMs: result.processingTimeMs }
-                : {}),
-        });
-    } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        context.logger.warn(
-            `[Data Installer] Stopped watching import ${record.activationId}: ${reason}`,
-        );
-        await stopWatching(transient, record, reason);
-    }
-}
 
 /**
- * Record that the watch ended without an answer.
- *
- * The reason IS the payload: "we stopped looking" is not actionable without
- * saying why, and this is the only place the cause exists.
+ * The engine for one write: for a removal the one that installed the pack, otherwise the one
+ * the setting chooses (DI-5). The service installs only from its own catalog, so a library pack
+ * with the service chosen is refused with what to do instead.
  */
-async function stopWatching(
-    transient: TransientStateManager,
-    record: ImportJobRecord,
-    reason: string,
-): Promise<void> {
-    await transient.set(JOB_KEY, { ...record, outcome: 'unwatchable', reason });
-}
-
-/**
- * Validate, begin, record, and detach the watch — the half import and reset share.
- *
- * These two handlers were a verbatim 35-line copy of each other, differing only
- * in which client method they call and two message strings. `prepareImport` was
- * already extracted at the second caller because "the two paths have to agree
- * byte for byte"; the RECORDING half was not, and it is the half that already
- * drifted once — `operation` was added to `ImportJobRecord` precisely because a
- * reset announced itself as "Import finished" in front of a user.
- *
- * The watch is DETACHED on purpose: awaiting it would hold the webview request
- * open for the ten minutes a long install can take, and tie the job's life to
- * the panel's.
- */
-async function runAndWatch(
+async function engineFor(
     context: HandlerContext,
-    writeClient: DataInstallerWriteClient,
-    request: ImportRequest,
-    spec: {
-        operation: ImportJobRecord['operation'];
-        begin: () => Promise<{ activationId: string }>;
-        /** Wording when the service refuses the request shape. */
-        rejected: string;
-        /** Wording when the call itself fails. */
-        failed: string;
-    },
-): Promise<HandlerResponse> {
-    try {
-        const verdict = await writeClient.validateImport(request);
-        if (!verdict.valid) {
-            return { success: false, error: verdict.reason ?? spec.rejected };
+    gate: DatapackWriteAccess,
+    write: { pack: DatapackId; write: 'install' | 'remove'; source: DatapackStoreName },
+): Promise<{ engine: DatapackEngine } | { response: HandlerResponse }> {
+    const engineId =
+        write.write === 'remove' ? await engineThatInstalled(gate.project.path, write.pack) : selectedDatapackEngine();
+    // Demo Builder's engine writes into the project's own store with the project's credential, so
+    // the sign-in must be in the org that owns that store. Checked before anything is written, with
+    // the extension's one org guard (adobe-org-context): a mismatch says "Switch IMS Org" rather
+    // than failing half way through with Commerce's refusal (owner, 2026-10-28).
+    if (engineId === 'demo-builder' && context.authManager) {
+        const orgFailure = await orgGuard(context, gate.project, context.authManager);
+        if (orgFailure) {
+            return { response: { success: false, error: orgFailure.error, code: ErrorCode.ORG_MISMATCH } };
         }
-
-        const started = await spec.begin();
-        const record: ImportJobRecord = {
-            activationId: started.activationId,
-            datapackName: request.id.name,
-            operation: spec.operation,
-            version: request.id.version,
-            commerceInstance: request.commerceInstance,
-            dataTypes: request.dataTypes,
-            startedAt: new Date().toISOString(),
-            outcome: 'watching',
-            perType: {},
-        };
-        const transient = new TransientStateManager(context.context);
-        await transient.set(JOB_KEY, record);
-
-        await recordDatapackOnProject(context, spec.operation, request);
-
-        void watchAndRecord(context, transient, record);
-
-        return { success: true, data: { activationId: started.activationId } };
-    } catch (error) {
+    }
+    if (engineId === 'service' && write.source === 'library') {
         return {
-            success: false,
-            error: error instanceof Error ? error.message : spec.failed,
-            code: ErrorCode.UNKNOWN,
+            response: {
+                success: false,
+                error:
+                    'The Data Installer service installs only packs in its own catalog. Copy this one to the Data Installer first, ' +
+                    'or set demoBuilder.dataInstaller.engine to demo-builder.',
+            },
         };
     }
+    return {
+        engine: buildDatapackEngine(
+            engineId,
+            {
+                ...gate,
+                authManager: context.authManager,
+                secrets: context.context?.secrets,
+                libraryCatalog: async () => {
+                    const library = await resolveDataInstallerAccess(context, 'library');
+                    if (!library.ok) throw new Error('The datapack library is not reachable.');
+                    return library.client;
+                },
+            },
+            (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
+        ),
+    };
 }
-
-/**
- * Record on the PROJECT which datapack its instance now holds — or no longer does.
- *
- * `project.datapack` was written only by the wizard's Sample Data step, so a pack
- * imported from this modal left no trace on the project. `confirmSampleDataRemoval`
- * gates on exactly that field, so reset silently never offered to remove data the
- * user had just imported. Found live 2026-08-16: an import succeeded, and the
- * following reset asked nothing.
- *
- * **Recorded when the service ACCEPTS, not when the job finishes.** A partial
- * import still puts data on the instance, and a record written only on full
- * success would leave that data with nothing pointing at it — the failure mode
- * worth avoiding. The opposite error (recording a pack whose import then failed
- * entirely) costs one removal that reports nothing to remove.
- *
- * A reset CLEARS it: the manifest is rebuilt from the project on every write
- * (`projectConfigWriter`, "no merging needed"), so `undefined` genuinely removes
- * the field rather than leaving the old value behind.
- *
- * Never fatal. The import has already been accepted by the service by this point,
- * and failing the handler over a bookkeeping write would report a started job as
- * a failed one.
- */
-async function recordDatapackOnProject(
-    context: HandlerContext,
-    operation: ImportJobRecord['operation'],
-    request: ImportRequest,
-): Promise<void> {
-    try {
-        const project = await context.stateManager.getCurrentProject();
-        if (!project) {
-            return;
-        }
-        project.datapack =
-            operation === 'reset' ? undefined : { name: request.id.name, version: request.id.version };
-        await context.stateManager.saveProject(project);
-        context.debugLogger.debug(
-            `[Data Installer] project datapack ${operation === 'reset' ? 'cleared' : `recorded as ${request.id.name}@${request.id.version}`}`,
-        );
-    } catch (error) {
-        context.debugLogger.debug(
-            `[Data Installer] could not record the datapack on the project: ${
-                error instanceof Error ? error.message : String(error)
-            }`,
-        );
-    }
-}
-
 
 /** Validate the payload, returning either usable input or the reason it is not. */
 function readInput(
@@ -665,6 +303,7 @@ function readInput(
           commerceInstance: string;
           dataTypes: string[];
           target: ImportTarget | undefined;
+          source: DatapackStoreName;
       }
     | { error: string } {
     const datapackName = payload?.datapackName;
@@ -687,7 +326,11 @@ function readInput(
     if ('error' in target) {
         return target;
     }
-    return { datapackName, version, commerceInstance, dataTypes, target: target.target };
+    const source = payload?.source ?? 'installer';
+    if (source !== 'installer' && source !== 'library') {
+        return { error: `There is no datapack store called ${source}: it is installer or library.` };
+    }
+    return { datapackName, version, commerceInstance, dataTypes, target: target.target, source };
 }
 
 /**

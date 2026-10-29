@@ -16,7 +16,8 @@
  * All auth values are obviously fake — this repo is public.
  */
 
-import { IoEventsClient, type EventsAuth } from '@/features/authentication/services/ioEventsClient';
+import { IoEventsClient } from '@/features/authentication/services/ioEventsClient';
+import type { EventsAuth } from '@/features/authentication/services/ioEventsTransport';
 import { jsonResponse, nonJsonResponse } from './ioEventsClient.testUtils';
 
 const FAKE_TOKEN = 'fake-test-token-not-a-secret';

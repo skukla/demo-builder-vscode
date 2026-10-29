@@ -55,9 +55,10 @@
           "type": "string",
           "enum": [
             "mesh",
-            "integration"
+            "integration",
+            "system"
           ],
-          "description": "AppBuilderComponent kind"
+          "description": "AppBuilderComponent kind. 'system' = a stand-in for an external system an integration talks to (the demo ERP): a plain App Builder app, no Commerce install, no card of its own; comes and goes with the integration named in boundTo."
         },
         "source": {
           "$ref": "#/definitions/gitHubSource"
@@ -117,7 +118,7 @@
             "standalone",
             "extension"
           ],
-          "description": "App Builder app layout. Omitted = standalone (app.config.yaml declares application.runtimeManifest.packages at the root). 'extension' = the config declares extensions: (e.g. commerce/extensibility/1) with the runtime manifest in an ext.config.yaml \u2014 the App Management generation's shape; the deploy path branches on this and skips the ow-package rewrite."
+          "description": "App Builder app layout. Omitted = standalone (app.config.yaml declares application.runtimeManifest.packages at the root). 'extension' = the config declares extensions: (e.g. commerce/extensibility/1) with the runtime manifest in an ext.config.yaml — the App Management generation's shape; the deploy path branches on this and skips the ow-package rewrite."
         },
         "lifecycle": {
           "type": "string",
@@ -127,11 +128,6 @@
           ],
           "description": "What happens after aio app deploy. Omitted = deploy-only (deployed = done). 'app-management' = the app must also be installed/associated with a Commerce instance via its own generated App Management API before events flow."
         },
-        "nodeVersion": {
-          "type": "string",
-          "pattern": "^[0-9]+$",
-          "description": "Node.js MAJOR version this app's install/build/deploy must run under (e.g. \"24\"). The add door ensures it via fnm before installing (measured 2026-08-27: the starter kit is engine-strict node ^24 and npm refuses to install under anything older). Omitted = the executor's default node."
-        },
         "blank": {
           "type": "boolean",
           "description": "A blank/starter app (the Build-custom default), NOT a finished pre-built integration. Excluded from the pre-built gallery."
@@ -139,6 +135,186 @@
         "seed": {
           "type": "boolean",
           "description": "SEED scaffolding a custom app starts from (e.g. the Commerce integration starter kit), NOT a finished pre-built integration. Excluded from the pre-built gallery; offered beside 'Blank' on the Build-custom naming stage."
+        },
+        "boundTo": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "kind 'system' only: the id of the integration this system brings. Added before it, removed with it."
+        },
+        "systemType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 12,
+          "description": "kind 'system' only: what kind of system it is (e.g. ERP, CRM, OMS), shown as the badge on its card."
+        },
+        "nameFromEnvVar": {
+          "type": "string",
+          "description": "The env var whose value names this component's row: the ERP's display name, the ERP integration's own name. Omitted = the entry's name."
+        },
+        "setupSteps": {
+          "type": "array",
+          "description": "What an SC prepares in Commerce by hand for this component's demo, shown as a checklist on its tile. Demo setup; the integration carries none.",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "why", "where"],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string",
+                "description": "Two or three words for the step list; the title stays the instruction.",
+                "minLength": 1
+              },
+              "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+              "title": { "type": "string", "minLength": 1 },
+              "why": { "type": "string", "minLength": 1 },
+              "where": { "type": "string", "minLength": 1 },
+              "path": {
+                "type": "array",
+                "description": "The Admin menu path, one segment per entry; the guide draws it as breadcrumbs.",
+                "items": { "type": "string", "minLength": 1 },
+                "minItems": 1
+              },
+              "enter": {
+                "type": "array",
+                "description": "The exact values the SC types or picks, each a copyable pill in the guide.",
+                "items": { "type": "string", "minLength": 1 },
+                "minItems": 1
+              },
+              "then": {
+                "type": "string",
+                "description": "What to do after the values are in, in one sentence.",
+                "minLength": 1
+              },
+              "icon": {
+                "type": "string",
+                "enum": ["status", "catalog", "price", "stock", "attributes", "hold", "credit"]
+              },
+              "check": {
+                "type": "string",
+                "enum": [
+                  "companies-have-own-catalogs",
+                  "erp-source-in-website-stock",
+                  "erp-attributes-exist",
+                  "erp-confirmed-status",
+                  "partially-held-status",
+                  "price-scope-website",
+                  "payment-on-account-enabled",
+                  "storefront-returns-enabled",
+                  "card-payments-enabled"
+                ]
+              },
+              "fix": {
+                "description": "What Demo Builder can do itself when the check finds the step undone, offered as a confirmed, previewed and reversible action (AB-74, AB-77): settings declared as data, or a named handler.",
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": ["kind", "items"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": { "const": "config" },
+                      "items": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "type": "object",
+                          "required": ["path", "value", "scope"],
+                          "additionalProperties": false,
+                          "properties": {
+                            "path": { "type": "string", "pattern": "^[a-z0-9_]+(/[a-z0-9_]+)+$" },
+                            "value": { "type": "string" },
+                            "scope": { "type": "string", "enum": ["default", "website"] },
+                            "field": { "type": "string", "minLength": 1, "description": "The setting as the Admin names it, for the lines the SC reads." },
+                            "values": {
+                              "type": "object",
+                              "description": "Each stored value as the Admin shows it.",
+                              "additionalProperties": { "type": "string", "minLength": 1 }
+                            }
+                          }
+                        }
+                      },
+                      "manual": { "type": "string", "minLength": 1, "description": "What stays by hand after the settings are written." }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": ["kind", "handler"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": { "const": "handler" },
+                      "handler": {
+                        "type": "string",
+                        "enum": ["create-erp-attributes", "erp-warehouse-in-website-stock", "company-shared-catalogs"]
+                      }
+                    }
+                  }
+                ]
+              },
+              "optional": {
+                "type": "boolean",
+                "description": "Only some demos need this step: listed and checkable, but an open optional step is not left to do."
+              }
+            }
+          }
+        },
+        "screen": {
+          "type": "object",
+          "required": [
+            "action",
+            "keyEnvVar"
+          ],
+          "additionalProperties": false,
+          "description": "A screen served by one of the component's own web actions, opened by a link carrying a key Demo Builder generates.",
+          "properties": {
+            "action": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "description": "The web action that serves the page."
+            },
+            "keyEnvVar": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]*$",
+              "description": "The deploy-time input that carries the key."
+            }
+          }
+        },
+        "wipe": {
+          "type": "object",
+          "required": [
+            "action",
+            "path"
+          ],
+          "additionalProperties": false,
+          "description": "kind 'system' only: the web action call that deletes the system's records, made before it is undeployed so nothing is left in the workspace's database.",
+          "properties": {
+            "action": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "description": "The web action, e.g. admin."
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "description": "The path under it that wipes, POSTed with no body, e.g. wipe."
+            }
+          }
+        },
+        "addOnce": {
+          "type": "boolean",
+          "description": "kind 'integration' only: a project holds this integration once. Adding it again is refused rather than made a numbered copy; its card adds more of the system it serves instead (the system's listedAs)."
+        },
+        "listedAs": {
+          "type": "object",
+          "required": ["envVar", "adapter"],
+          "additionalProperties": false,
+          "description": "kind 'system' only: its integration serves a LIST of these systems, keyed by id. The deploy tells the system its id: the id derived from its name when it was added (listId on its record, AB-51).",
+          "properties": {
+            "envVar": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$", "description": "The deploy-time input that carries the id, e.g. ERP_ID." },
+            "adapter": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "Which of the integration's adapters talks to it, e.g. demo-erp." }
+          }
+        },
+        "fillsSystem": {
+          "type": "boolean",
+          "description": "lifecycle 'app-management' only: Demo Builder fills the system this integration serves from Commerce once the Commerce install succeeds on an add, and on Load demo data."
         }
       }
     },
@@ -161,7 +337,7 @@
             "text",
             "secret"
           ],
-          "description": "secret \u2192 masked + SecretStorage; text \u2192 Configure UI \u2192 .env"
+          "description": "secret → masked + SecretStorage; text → Configure UI → .env"
         },
         "label": {
           "type": "string",
@@ -175,6 +351,10 @@
         "providedBy": {
           "type": "string",
           "description": "Provided by another appBuilderComponent that declares it in providesEnvVars"
+        },
+        "default": {
+          "type": "string",
+          "description": "The value used when nobody typed one. A text var with a default does not block the add; Configure lets the user change it later."
         }
       }
     },

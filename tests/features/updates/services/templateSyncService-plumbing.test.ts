@@ -32,6 +32,7 @@ import {
     service,
 } from './templateSyncService.testUtils';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { LABEL_SHEET_FILES } from '@/features/updates/services/templateSyncMessages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -40,8 +41,10 @@ const opts = (cwd: string, timeout: number) => ({ cwd, timeout, shell: DEFAULT_S
 const TEMPLATE_URL = 'https://github.com/adobe/aem-boilerplate-commerce.git';
 const MISSING = 'Missing required metadata: githubRepo, templateOwner, or templateRepo';
 const NO_EDS = 'No EDS metadata found in project';
-/** The base..head range and the pathspec that leaves the default preserved files out. */
-const RANGE_AND_SPEC = `${BASE_SHA} ${TEMPLATE_HEAD} -- . ":(exclude)fstab.yaml" ":(exclude)config.json"`;
+/** The default preserved files: the site config, then every label sheet (EDS-53). */
+const DEFAULT_PRESERVED = ['fstab.yaml', 'config.json', ...LABEL_SHEET_FILES];
+/** The base..head range and the pathspec that leaves `.github` and the default preserved files out. */
+const RANGE_AND_SPEC = `${BASE_SHA} ${TEMPLATE_HEAD} -- . ":(exclude).github" ${DEFAULT_PRESERVED.map((f) => `":(exclude)${f}"`).join(' ')}`;
 
 /** The steps both strategies share once the user repo is on disk. */
 const FETCH_STEPS = [
@@ -51,7 +54,7 @@ const FETCH_STEPS = [
 /** The merge checks the recorded version is a commit on the template's main. */
 const BASE_CHECK_STEPS = [
     [`git cat-file -e "${BASE_SHA}^{commit}"`, opts(REPO_DIR, TIMEOUTS.QUICK)],
-    [`git merge-base --is-ancestor ${BASE_SHA} template/main`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
+    [`git merge-base ${BASE_SHA} template/main`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
 ];
 const RESET_STEPS = [
     ['git rev-parse template/main', opts(REPO_DIR, TIMEOUTS.QUICK)],
@@ -155,13 +158,20 @@ describe('before touching git', () => {
         }
     );
 
-    it('backs up the two default files, and only those, when no extras are asked for', async () => {
+    it('backs up the default files, and only those, when no extras are asked for', async () => {
         await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
 
-        expect(mockReadFile.mock.calls.map((c) => c[0])).toEqual([
-            `${REPO_DIR}/fstab.yaml`,
-            `${REPO_DIR}/config.json`,
-        ]);
+        expect(mockReadFile.mock.calls.map((c) => c[0])).toEqual(
+            DEFAULT_PRESERVED.map((file) => `${REPO_DIR}/${file}`),
+        );
+    });
+
+    // Label text lives in DA.live. A label file in the repository hides the sheet at
+    // its path, so a template update must never bring one in or change ours (EDS-53:
+    // the B2B template's placeholders/checkout.json hid CitiSignal's checkout sheet).
+    it('counts the label sheets among the files a template update leaves alone', () => {
+        expect(LABEL_SHEET_FILES).toContain('placeholders/checkout.json');
+        expect(LABEL_SHEET_FILES).toContain('placeholders/cart.json');
     });
 
     it('backs up the extra files after the defaults', async () => {
@@ -171,8 +181,7 @@ describe('before touching git', () => {
         });
 
         expect(mockReadFile.mock.calls.map((c) => c[0])).toEqual([
-            `${REPO_DIR}/fstab.yaml`,
-            `${REPO_DIR}/config.json`,
+            ...DEFAULT_PRESERVED.map((file) => `${REPO_DIR}/${file}`),
             `${REPO_DIR}/custom.txt`,
         ]);
     });
@@ -205,11 +214,22 @@ describe('merge strategy — the exact git conversation', () => {
         expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: TEMPLATE_HEAD });
     });
 
+    // Measured 2026-10-20: a repository generated from the B2B template has none of
+    // Adobe's CI workflows (the template's cleanup-on-create deletes them; skukla/
+    // my-commerce-demo keeps only sync-from-upstream.yml), and Adobe's change from
+    // 71a67e0 to the tested 48bed04 edits 14 of them. Applied, every one stops the
+    // update on a file the storefront does not have.
+    it("leaves the template's .github out of every template change", async () => {
+        await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(gitCalls()).toContainEqual(expect.stringMatching(/^git diff-tree -r --name-only \S+ \S+ -- \. ":\(exclude\)\.github" /));
+    });
+
     it('leaves the extra preserved files out of the template change too', async () => {
         await service().syncWithTemplate(edsProject(), { strategy: 'merge', preserveFiles: ['custom.txt'] });
 
         expect(gitCalls()).toContainEqual(
-            expect.stringMatching(/^git diff-tree -r --name-only .* ":\(exclude\)config.json" ":\(exclude\)custom.txt"$/),
+            expect.stringMatching(/^git diff-tree -r --name-only .* ":\(exclude\)config.json" .* ":\(exclude\)custom.txt"$/),
         );
     });
 
@@ -293,7 +313,13 @@ describe('merge strategy — the exact git conversation', () => {
             strategy: 'merge',
             syncedCommit: '',
             conflicts: ['blocks/hero/hero.js'],
-            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
+            clash: {
+                source: { owner: 'adobe', repo: 'aem-boilerplate-commerce' },
+                base: BASE_SHA,
+                target: TEMPLATE_HEAD,
+                preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
+            },
+            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
         });
         expect(mockRm).toHaveBeenCalledWith(TEMP_DIR, { recursive: true, force: true });
     });
@@ -503,7 +529,8 @@ describe('temp dir and preserved-file plumbing', () => {
         const result = await service(logger).syncWithTemplate(edsProject(), { strategy: 'reset' });
 
         expect(result.success).toBe(true);
-        expect(logger.warn).toHaveBeenCalledTimes(2);
+        // One warning per preserved file it could not write back.
+        expect(logger.warn).toHaveBeenCalledTimes(DEFAULT_PRESERVED.length);
     });
 });
 

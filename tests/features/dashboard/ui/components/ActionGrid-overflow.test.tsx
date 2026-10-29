@@ -1,233 +1,163 @@
 /**
- * The "More" overflow menu — contents, per-item gating, and Delete isolation.
+ * Reset and Delete, and the Share row.
  *
- * Split from ActionGrid.test.tsx when that file crossed the 500-line warning.
+ * The overflow used to hold ten items, everyday doors beside Delete. On
+ * 2026-10-06 (owner) it shrank to the two rare, destructive actions, and once
+ * the two-tier layout freed the room it went entirely: Reset and Delete are
+ * tiles at the foot of Build, set apart from the everyday ones. These specs pin
+ * that, and that each item that left the menu became a tile with the same gating.
+ *
  * Mocks and fixtures come from the shared harness; see ActionGrid.testUtils for
  * why the SUT is imported from there.
  */
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { ActionGrid, defaultProps, edsProps } from './ActionGrid.testUtils';
+import { ActionGrid, defaultProps, edsProps, getZone } from './ActionGrid.testUtils';
 
-describe('ActionGrid — overflow menu', () => {
+const tile = (container: HTMLElement, action: string): HTMLElement | null =>
+    container.querySelector(`[data-action="${action}"]`);
+
+describe('ActionGrid — Reset and Delete tiles', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    describe('Overflow Menu', () => {
-        it('should render a More overflow trigger with an accessible label', () => {
-            render(<ActionGrid {...defaultProps} />);
+    it('renders no menu at all — nothing is hidden behind a More', () => {
+        const { container } = render(<ActionGrid {...edsProps} />);
 
-            expect(screen.getByLabelText('More actions')).toBeInTheDocument();
-        });
-
-        it('should expose Dev Console inside the overflow menu', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Dev Console')).toBeInTheDocument();
-        });
-
-        it('should call handleOpenDevConsole when Dev Console menu item clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Dev Console'));
-
-            expect(defaultProps.handleOpenDevConsole).toHaveBeenCalled();
-        });
-
-        it('should expose Export in the overflow menu', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Export')).toBeInTheDocument();
-        });
-
-        it('should expose Delete as the LAST overflow item (destructive-last convention)', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            const items = within(menu).getAllByRole('menuitem');
-            expect(items[items.length - 1]).toHaveTextContent('Delete');
-            expect(items[items.length - 2]).toHaveTextContent('Reset');
-        });
-
-        it('offers Change Demo Source, before Reset, only for a project built on an added demo', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            const handleChangeDemoSource = jest.fn();
-            const first = render(<ActionGrid {...defaultProps} />);
-            expect(screen.queryByText('Change Demo Source')).not.toBeInTheDocument();
-            first.unmount();
-
-            const { container } = render(
-                <ActionGrid {...defaultProps} handleChangeDemoSource={handleChangeDemoSource} />
-            );
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
-            expect(labels.indexOf('Change Demo Source')).toBe(labels.indexOf('Reset') - 1);
-
-            await user.click(screen.getByText('Change Demo Source'));
-
-            expect(handleChangeDemoSource).toHaveBeenCalled();
-        });
-
-        it('offers Save as demo package, right after Export, for an EDS project only', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            const handleSaveDemoPackage = jest.fn();
-            const headless = render(<ActionGrid {...defaultProps} handleSaveDemoPackage={handleSaveDemoPackage} />);
-            expect(screen.queryByText('Save as demo package')).not.toBeInTheDocument();
-            headless.unmount();
-
-            const { container } = render(<ActionGrid {...edsProps} handleSaveDemoPackage={handleSaveDemoPackage} />);
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            const labels = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
-            expect(labels.indexOf('Save as demo package')).toBe(labels.indexOf('Export') + 1);
-
-            await user.click(screen.getByText('Save as demo package'));
-            expect(handleSaveDemoPackage).toHaveBeenCalled();
-        });
-
-        it('should call handleExportProject when Export clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Export'));
-
-            expect(defaultProps.handleExportProject).toHaveBeenCalled();
-        });
-
-        it('should call handleResetProject when Reset clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
-
-            await user.click(screen.getByText('Reset'));
-
-            expect(defaultProps.handleResetProject).toHaveBeenCalled();
-        });
+        expect(container.querySelector('[role="menu"]')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Reset or Delete')).not.toBeInTheDocument();
     });
 
-    describe('Overflow Menu - No Rename item', () => {
-        it('offers no Rename anywhere — renaming is inline on the dashboard title', () => {
-            const { container } = render(<ActionGrid {...defaultProps} isRunning={false} />);
+    it.each([
+        ['non-EDS', () => defaultProps],
+        ['EDS', () => edsProps],
+    ])('ends the Build row with Reset then Delete for a %s project', (_label, props) => {
+        const { container } = render(<ActionGrid {...props()} />);
 
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Rename')).not.toBeInTheDocument();
-            expect(screen.queryByText('Rename')).not.toBeInTheDocument();
-        });
+        const actions = Array.from(getZone(container, 'build').querySelectorAll('[data-action]')).map(
+            (el) => el.getAttribute('data-action')
+        );
+        expect(actions.slice(-2)).toEqual(['reset', 'delete']);
     });
 
-    /**
-     * Edit is a TILE now, not a menu item — it applies to every project type and
-     * changes what the demo contains, which earns a place in the row. Its
-     * running-state gating moved with it: the tile disables rather than
-     * disappears, so the grid does not reshuffle. Covered in
-     * ActionGrid-zoneStatus.test.tsx.
-     */
-    describe('Overflow Menu - no Edit item', () => {
-        it.each([
-            ['stopped non-EDS', () => defaultProps],
-            ['EDS', () => edsProps],
-        ])('offers no Edit for a %s project', (_label, props) => {
-            const { container } = render(<ActionGrid {...props()} />);
+    it('sets the two apart from the everyday tiles', () => {
+        const { container } = render(<ActionGrid {...defaultProps} />);
 
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Edit')).not.toBeInTheDocument();
-        });
+        const group = container.querySelector('.dashboard-compact-danger') as HTMLElement;
+        expect(group.contains(tile(container, 'reset'))).toBe(true);
+        expect(group.contains(tile(container, 'delete'))).toBe(true);
+        expect(group.querySelectorAll('[data-action]')).toHaveLength(2);
     });
 
-    describe('Overflow Menu - no per-component deploy actions', () => {
-        it.each([
-            ['EDS', () => edsProps],
-            ['non-EDS', () => defaultProps],
-        ])('offers no Republish Content for a %s project', (_label, props) => {
-            const { container } = render(<ActionGrid {...props()} />);
+    it('marks Delete, and only Delete, as destructive', () => {
+        const { container } = render(<ActionGrid {...defaultProps} />);
 
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Republish Content')).not.toBeInTheDocument();
-        });
+        expect(tile(container, 'delete')).toHaveClass('dashboard-action-button--danger');
+        expect(tile(container, 'reset')).not.toHaveClass('dashboard-action-button--danger');
     });
 
-    /**
-     * Refresh Block Library needs BOTH halves: block libraries are an EDS
-     * concept, and the item is a door to a handler the host only wires for
-     * projects that have one. Neither half was driven before — no fixture in
-     * these suites passed the handler at all, so the item never rendered and
-     * the whole gate was free to say anything.
-     */
-    describe('Refresh Block Library — EDS AND wired, not either', () => {
-        it('appears for an EDS project whose host wired the handler', () => {
-            const { container } = render(
-                <ActionGrid {...edsProps} handleRefreshBlockLibrary={jest.fn()} />
-            );
+    it.each([
+        ['reset', 'handleResetProject'],
+        ['delete', 'handleDeleteProject'],
+    ] as const)('runs its handler when %s is pressed', async (action, prop) => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        const { container } = render(<ActionGrid {...defaultProps} />);
 
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Refresh Block Library')).toBeInTheDocument();
-        });
+        await user.click(tile(container, action) as HTMLElement);
 
-        it('is absent for a non-EDS project even when the handler is passed', () => {
-            const { container } = render(
-                <ActionGrid {...defaultProps} handleRefreshBlockLibrary={jest.fn()} />
-            );
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Refresh Block Library')).not.toBeInTheDocument();
-        });
-
-        it('is absent for an EDS project with no handler wired', () => {
-            // An item with nothing behind it is a dead menu entry, and the
-            // dispatcher would have nothing to call.
-            const { container } = render(<ActionGrid {...edsProps} />);
-
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).queryByText('Refresh Block Library')).not.toBeInTheDocument();
-        });
-
-        it('runs the refresh when the item is clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            const handleRefreshBlockLibrary = jest.fn();
-            render(
-                <ActionGrid {...edsProps} handleRefreshBlockLibrary={handleRefreshBlockLibrary} />
-            );
-
-            await user.click(screen.getByText('Refresh Block Library'));
-
-            expect(handleRefreshBlockLibrary).toHaveBeenCalled();
-        });
+        expect(defaultProps[prop]).toHaveBeenCalledTimes(1);
     });
 
-    describe('Delete (destructive, in the More overflow)', () => {
-        it('renders NO isolated delete footer zone (Delete moved into More)', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
+    it('offers no Rename anywhere — renaming is inline on the dashboard title', () => {
+        render(<ActionGrid {...defaultProps} />);
 
-            expect(container.querySelector('[data-zone="delete"]')).not.toBeInTheDocument();
-        });
+        expect(screen.queryByText('Rename')).not.toBeInTheDocument();
+    });
 
-        it('renders Delete inside the overflow menu, not as a tile', () => {
-            const { container } = render(<ActionGrid {...defaultProps} />);
+    it('renders no separate delete footer zone', () => {
+        const { container } = render(<ActionGrid {...defaultProps} />);
 
-            const menu = container.querySelector('[role="menu"]') as HTMLElement;
-            expect(within(menu).getByText('Delete')).toBeInTheDocument();
-            // Not a standalone action tile anywhere outside the menu.
-            expect(screen.getByText('Delete').closest('[role="menu"]')).toBe(menu);
-        });
+        expect(container.querySelector('[data-zone="delete"]')).not.toBeInTheDocument();
+    });
+});
 
-        it('marks the Delete menu item with the destructive text class', () => {
-            render(<ActionGrid {...defaultProps} />);
+describe('ActionGrid — the Share row', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
 
-            expect(screen.getByText('Delete').className).toContain('menu-item-destructive');
-        });
+    // One Share tile since 2026-10-22: Export and Save as Package were two
+    // tiles for one job, and Save as Package is gone rather than hidden.
+    it('offers Share Demo for every project type, and no Export or Save as Package tile', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        const headless = render(<ActionGrid {...defaultProps} />);
+        expect(tile(headless.container, 'share-demo')).toBeInTheDocument();
+        headless.unmount();
 
-        it('should call handleDeleteProject when Delete clicked', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            render(<ActionGrid {...defaultProps} />);
+        const { container } = render(<ActionGrid {...edsProps} />);
+        const share = tile(container, 'share-demo');
+        expect(getZone(container, 'share').contains(share)).toBe(true);
+        expect(share).toHaveTextContent('Share Demo');
+        expect(tile(container, 'export')).not.toBeInTheDocument();
+        expect(tile(container, 'save-demo-package')).not.toBeInTheDocument();
+        await user.click(share!);
+        expect(edsProps.handleShareDemo).toHaveBeenCalled();
+    });
 
-            await user.click(screen.getByText('Delete'));
+    it('offers Change Source only for a project built on an added demo', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        const first = render(<ActionGrid {...defaultProps} />);
+        expect(tile(first.container, 'change-demo-source')).not.toBeInTheDocument();
+        first.unmount();
 
-            expect(defaultProps.handleDeleteProject).toHaveBeenCalled();
-        });
+        const handleChangeDemoSource = jest.fn();
+        const { container } = render(
+            <ActionGrid {...defaultProps} handleChangeDemoSource={handleChangeDemoSource} />
+        );
+        const change = tile(container, 'change-demo-source')!;
+        expect(getZone(container, 'share').contains(change)).toBe(true);
+        await user.click(change);
+        expect(handleChangeDemoSource).toHaveBeenCalled();
+    });
+});
+
+/**
+ * The EDS-only Storefront tiles need BOTH halves: each is an EDS concept, and a
+ * door to a handler the host only wires for projects that have one.
+ */
+describe.each([
+    ['Refresh Blocks', 'refresh-block-library', 'handleRefreshBlockLibrary'],
+    ['Site Access', 'site-access', 'handleOpenSiteAccess'],
+] as const)('%s tile — EDS AND wired, not either', (_label, action, prop) => {
+    it('appears in the Storefront row for an EDS project whose host wired the handler', () => {
+        const { container } = render(<ActionGrid {...edsProps} {...{ [prop]: jest.fn() }} />);
+
+        expect(getZone(container, 'storefront').contains(tile(container, action))).toBe(true);
+    });
+
+    it('is absent for a non-EDS project even when the handler is passed', () => {
+        const { container } = render(<ActionGrid {...defaultProps} {...{ [prop]: jest.fn() }} />);
+
+        expect(tile(container, action)).not.toBeInTheDocument();
+    });
+
+    it('is absent for an EDS project with no handler wired', () => {
+        const { container } = render(<ActionGrid {...edsProps} />);
+
+        expect(tile(container, action)).not.toBeInTheDocument();
+    });
+
+    it('runs its handler when pressed', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        const handler = jest.fn();
+        const { container } = render(<ActionGrid {...edsProps} {...{ [prop]: handler }} />);
+
+        await user.click(tile(container, action)!);
+
+        expect(handler).toHaveBeenCalled();
     });
 });

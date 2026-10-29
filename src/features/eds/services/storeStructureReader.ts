@@ -18,7 +18,7 @@
 
 import { selectDiscoveryService } from './accsDiscoveryConfig';
 import { discoverStoreStructure } from './commerceStoreDiscovery';
-import { extractConfigParams } from './configGenerator';
+import { extractConfigParams } from './storefrontConfigParams';
 import {
     ACCS_GRAPHQL_ENDPOINT,
     PAAS_URL,

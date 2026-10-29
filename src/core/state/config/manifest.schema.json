@@ -148,6 +148,26 @@
             },
             "declinedAt": {
               "type": "string"
+            },
+            "catalogPagesPending": {
+              "type": "object",
+              "properties": {
+                "fromWebsiteCode": {
+                  "type": "string"
+                },
+                "fromStoreCode": {
+                  "type": "string"
+                },
+                "fromStoreViewCode": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fromWebsiteCode",
+                "fromStoreCode",
+                "fromStoreViewCode"
+              ],
+              "description": "Set when a published config.json changed the store (website, store or store view code) and the storefront's product and category pages are still the previous store's (EDS-44). Names that previous store. Cleared once a republish has replaced the pages (`storeScopePages.ts`)."
             }
           },
           "required": [
@@ -207,6 +227,12 @@
             "$ref": "#/definitions/CustomBlockLibrary"
           }
         },
+        "installedBlockLibraries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InstalledBlockLibrary"
+          }
+        },
         "aiPrompts": {
           "type": "array",
           "items": {
@@ -263,6 +289,26 @@
         },
         "authenticated": {
           "type": "boolean"
+        },
+        "commerceProfile": {
+          "type": "object",
+          "properties": {
+            "tenant": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "productId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "tenant",
+            "id",
+            "productId"
+          ],
+          "description": "The Adobe product profile this project's credentials use for Commerce (ACCS-REST-API), with the Commerce tenant it was chosen for.\n\nAdobe's org catalog answers that service with no profiles at all now and then — twenty minutes of it on 2026-09-21, and a whole failed add on 2026-09-22 — while the entitlement is intact. Remembering what was chosen lets a later workspace subscribe anyway. The TENANT is what makes it safe: a project pointed at another Commerce instance must never be handed this."
         }
       }
     },
@@ -623,6 +669,10 @@
         "kind": {
           "$ref": "#/definitions/AppBuilderComponentKind"
         },
+        "nodeVersion": {
+          "type": "string",
+          "description": "The Node this component installs and deploys on, recorded only when it is NOT Demo Builder's own: a custom integration whose `engines.node` range excludes it (PR-1a). Redeploy, update, teardown and cleanup read it back."
+        },
         "status": {
           "type": "string",
           "enum": [
@@ -634,9 +684,40 @@
           ],
           "description": "`'deploying'` is TRANSIENT: written when a deploy starts so pollers (agents reading get_project, the grid) can tell an in-flight run from a stale prior outcome — the previous error used to sit there looking current for the whole deploy (measured 2026-08-27, seven minutes of misleading polling). Always overwritten by the final outcome; a crash mid-deploy leaves it behind, which reads as \"still deploying\" until the next deploy or verify corrects it."
         },
+        "commerceAppId": {
+          "type": "string",
+          "description": "The id this component declares to Commerce (App Management apps only, and only for a COPY — the first of a kind keeps the id its app ships with).\n\nWritten the first time the copy deploys and never rewritten: Commerce names its webhooks and events from it and refuses to change it on an upgrade, so a later rename moves the label and leaves this alone (`commerceAppId.ts`)."
+        },
+        "listId": {
+          "type": "string",
+          "description": "For a system its integration serves in a list (`listedAs`): its id in that list, derived from its name when it was added (`northwind` for \"Northwind ERP\") and never rewritten — it is on every product it owns, every key-map row and every event, so a later rename moves the label and leaves this alone (`erpListId.ts`, AB-51)."
+        },
         "name": {
           "type": "string",
           "description": "Display name for the integration (durable home for the user-facing name)."
+        },
+        "setupSteps": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/SetupStepRecord"
+          },
+          "description": "Where the SC is with each of the catalog entry's `setupSteps` (AB-26x), by step id. Absent = open. Removed with the component."
+        },
+        "erpAssignment": {
+          "$ref": "#/definitions/ErpAssignmentRecord",
+          "description": "An ERP's last \"Assign products\" (AB-74): the value written and each product's `erp_owner` before it, so \"Undo last assignment\" can put them back. Replaced by the next assignment, removed by the undo, and removed with the component."
+        },
+        "erpOwnerSets": {
+          "$ref": "#/definitions/ErpOwnerSetsRecord",
+          "description": "The ERP integration's record of the attribute sets Demo Builder added `erp_owner` to (AB-74), so the addition can be undone. Removed by the undo and with the component."
+        },
+        "storePreparation": {
+          "$ref": "#/definitions/StorePreparationRecord",
+          "description": "What the demo setup's Apply changed in Commerce for this component's setup steps (AB-77), by step id, so each can be undone. A step's entry goes with its undo; the record goes with the component."
+        },
+        "catalogId": {
+          "type": "string",
+          "description": "The catalog entry this component was made from, when its id is not that entry's id: a second copy of a kind the project already holds (`demo-erp-2`). ABSENT means the id IS the catalog id — every component before this, and the first of each kind. Read through `catalogEntryFor`."
         },
         "source": {
           "type": "object",
@@ -655,6 +736,38 @@
             "owner",
             "repo"
           ]
+        },
+        "promotion": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "object",
+              "properties": {
+                "owner": {
+                  "type": "string"
+                },
+                "repo": {
+                  "type": "string"
+                },
+                "branch": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "owner",
+                "repo"
+              ]
+            },
+            "at": {
+              "type": "string",
+              "description": "ISO date string of the save."
+            }
+          },
+          "required": [
+            "from",
+            "at"
+          ],
+          "description": "Set when Demo Builder saved this app to a repository of its own (AB-1c): `source` is then that repository, and `from` is where the app came from (the blank starter). Its presence is the proof the undo needs to delete the repository; the undo restores `from` and removes this."
         },
         "endpoint": {
           "type": "string"
@@ -695,6 +808,7 @@
               "type": "string",
               "enum": [
                 "installed",
+                "upgraded",
                 "skipped",
                 "failed"
               ]
@@ -705,12 +819,83 @@
             "at": {
               "type": "string",
               "description": "ISO date string of the attempt."
+            },
+            "version": {
+              "type": "string",
+              "description": "The app version installed in Commerce (its manifest's `metadata.version`), when known."
+            },
+            "needsReinstall": {
+              "type": "boolean",
+              "description": "The installed app cannot be upgraded in place; a reinstall would apply the new version."
             }
           },
           "required": [
             "status"
           ],
           "description": "App Management install outcome (lifecycle 'app-management' apps only). Written after every deploy's automatic install/associate pass; `detail` carries the no-op reason on skip or the hands-back line on failure. A failed install does NOT mark the deploy failed — the app is deployed, merely dormant until installed (Commerce Admin > Apps > App Management)."
+        },
+        "updateAvailable": {
+          "type": "object",
+          "properties": {
+            "commit": {
+              "type": "string",
+              "description": "The commit an update would put live: the branch head, or a fetched commit never deployed."
+            },
+            "version": {
+              "type": "string",
+              "description": "The version in the clone, when it differs from the installed one."
+            },
+            "checkedAt": {
+              "type": "string",
+              "description": "ISO date string of the check."
+            }
+          },
+          "required": [
+            "checkedAt"
+          ],
+          "description": "Newer code is available: the source branch on GitHub has commits the clone lacks, the clone is at a commit the last good deploy did not ship (`deployedCommit`), or the clone's app version differs from the one installed in Commerce. Set by the integrations screen's check, removed by a successful update (integrationUpdateCheck)."
+        },
+        "deployedCommit": {
+          "type": "string",
+          "description": "The commit the last SUCCESSFUL deploy shipped: the clone's HEAD when the deploy ran. Written by every app deploy (add, redeploy, update) that succeeds, never by one that fails, so it names the code that is running (AB-71). Update and the update check compare the clone with it: a clone an earlier update moved, whose deploy then failed, is current while the running app is not.\n\nABSENT means \"trust the clone\", which is what every component deployed before this field existed has: such a record is current when its clone is. An update that moves such a clone records the commit it moved from first, so a deploy that then fails is still retried."
+        },
+        "workspace": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ],
+          "description": "The Adobe workspace this component is deployed into.\n\n**ABSENT means the project's own workspace** (`project.adobe`), which is what every component created before AB-23 has and what every component still gets until the add path starts creating one. That default is the whole reason this is optional: existing projects keep working with no migration.\n\nThe `id` is what deploys target. The `name` is Adobe's machine name, which an App Management install sends (`buildAppData`) and which CANNOT be changed after the workspace is created — Adobe answers `400 \"Workspace name can not be changed\"` — so it is recorded here rather than looked up or derived."
+        },
+        "systems": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The systems this integration uses (their `appBuilderComponents` ids), written when the pair is added. Read through `appBuilderComponentLinks`."
+        },
+        "usedBy": {
+          "type": "string",
+          "description": "The integration this system belongs to (its `appBuilderComponents` id)."
+        },
+        "removalStopped": {
+          "type": "string",
+          "description": "Why the last removal stopped, in plain words: a clean-up only the deployed code can do did not finish (before the undeploy), or Runtime still held some of the app after every attempt to delete it (after). The card offers Remove anyway. Gone with the record when a removal finishes."
+        },
+        "removalCleanedUp": {
+          "type": "boolean",
+          "description": "Set when a removal stopped AFTER its clean-up and undeploy ran: the retry goes straight to the undeploy and the leftover check, because the ERP's own actions that the clean-up calls are gone. Cleared by a deploy, which brings them back."
         },
         "envVars": {
           "type": "object",
@@ -739,9 +924,353 @@
       "type": "string",
       "enum": [
         "mesh",
-        "integration"
+        "integration",
+        "system"
       ],
-      "description": "An App Builder component's kind: a mesh artifact or a custom App Builder integration."
+      "description": "An App Builder component's kind: a mesh artifact, an App Builder integration, or a SYSTEM — a stand-in for an external system an integration talks to (the demo ERP). A system is a plain App Builder app with no Commerce install; it never gets a card of its own and comes and goes with the integration it is bound to (`AppBuilderComponentCatalogEntry.boundTo`; decision 13, 2026-09-14)."
+    },
+    "SetupStepRecord": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "done",
+            "dismissed"
+          ],
+          "description": "Absent = still to do."
+        },
+        "note": {
+          "type": "string",
+          "description": "What the last automatic check found, in words (e.g. which companies share a group)."
+        },
+        "lastCheck": {
+          "$ref": "#/definitions/SetupCheckOutcome",
+          "description": "What that check concluded: set up, not set up, or it could not tell (the state is then left as it was, so the state alone cannot say). Absent on records saved before 2026-10-01; `setupChecklistOf` infers it from the state for those."
+        },
+        "checkedAt": {
+          "type": "string",
+          "description": "When that check ran (ISO)."
+        }
+      },
+      "description": "One setup step's saved state: marked done or dismissed, and what its last check said."
+    },
+    "SetupCheckOutcome": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed",
+        "unknown"
+      ],
+      "description": "What a setup check concluded."
+    },
+    "ErpAssignmentRecord": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "string",
+          "description": "ISO date string of the write."
+        },
+        "value": {
+          "type": "string",
+          "description": "The value written."
+        },
+        "previous": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sku": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sku",
+              "value"
+            ]
+          }
+        }
+      },
+      "required": [
+        "at",
+        "value",
+        "previous"
+      ],
+      "description": "What an assignment recorded so it can be undone: each product's `erp_owner` BEFORE the write, the empty string for a product that had none. Kept on the ERP's component record until the next assignment replaces it, the undo runs, or the ERP is removed."
+    },
+    "ErpOwnerSetsRecord": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "string",
+          "description": "ISO date string of the addition."
+        },
+        "sets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "at",
+        "sets"
+      ],
+      "description": "The attribute sets Demo Builder added `erp_owner` to, so the addition can be undone. Kept on the ERP integration's component record until the undo runs or the integration is removed."
+    },
+    "StorePreparationRecord": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "string",
+          "description": "ISO date string of the last apply."
+        },
+        "steps": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/StorePreparationStepRecord"
+          }
+        }
+      },
+      "required": [
+        "at",
+        "steps"
+      ],
+      "description": "The record the demo setup's Apply leaves on the component: one entry per step applied, by step id. A step's entry is removed by its undo; the whole record goes with the last one, or with the component."
+    },
+    "StorePreparationStepRecord": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ConfigStepRecord"
+        },
+        {
+          "$ref": "#/definitions/ErpAttributesStepRecord"
+        },
+        {
+          "$ref": "#/definitions/WarehouseStepRecord"
+        },
+        {
+          "$ref": "#/definitions/SharedCatalogsStepRecord"
+        }
+      ]
+    },
+    "ConfigStepRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "config"
+        },
+        "previous": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CommerceConfigPrevious"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "previous"
+      ],
+      "description": "What a config fix recorded."
+    },
+    "CommerceConfigPrevious": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "default",
+            "website"
+          ]
+        },
+        "scopeCode": {
+          "type": "string",
+          "description": "The website code, for a website-scoped row."
+        },
+        "stored": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The value the scope stored before the write; `null` when it stored none (a website row inherited the default). The undo writes `effective` back, so a row that was inherited before is set explicitly after the undo, to the value it inherited."
+        },
+        "effective": {
+          "type": "string",
+          "description": "The value in force at that scope before the write (own, else inherited, else Commerce's \"0\")."
+        }
+      },
+      "required": [
+        "path",
+        "scope",
+        "stored",
+        "effective"
+      ],
+      "description": "One setting as it was before a config fix wrote it."
+    },
+    "ErpAttributesStepRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "erp-attributes"
+        },
+        "createdAttributes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The attribute codes this run created; a pre-existing attribute is never deleted."
+        },
+        "sets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "description": "The attribute sets this run added `erp_owner` to."
+        }
+      },
+      "required": [
+        "kind",
+        "createdAttributes",
+        "sets"
+      ],
+      "description": "What `create-erp-attributes` recorded: only what THIS run created or added."
+    },
+    "WarehouseStepRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "warehouse"
+        },
+        "createdSources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The sources this run created, by code. The undo DISABLES them: Commerce cannot delete a source."
+        },
+        "createdStock": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "number"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ],
+          "description": "The stock this run created for the website, when it did (absent = an existing stock was reused)."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "stockId": {
+                "type": "number"
+              },
+              "sourceCode": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "stockId",
+              "sourceCode"
+            ]
+          },
+          "description": "The stock-source links this run added."
+        },
+        "enabledSources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Sources this run found switched off and switched back on, by code: an earlier undo switched off the source it had made, and applying again finds it there. The undo switches them off again. Absent on records written before 2026-10-26."
+        }
+      },
+      "required": [
+        "kind",
+        "createdSources",
+        "links"
+      ],
+      "description": "What `erp-warehouse-in-website-stock` recorded."
+    },
+    "SharedCatalogsStepRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "shared-catalogs"
+        },
+        "catalogs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              },
+              "companyId": {
+                "type": "number"
+              },
+              "companyName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "companyId",
+              "companyName"
+            ]
+          },
+          "description": "The catalogs this run created, each with the company it assigned."
+        }
+      },
+      "required": [
+        "kind",
+        "catalogs"
+      ],
+      "description": "What `company-shared-catalogs` recorded."
     },
     "AddedDemo": {
       "type": "object",
@@ -804,6 +1333,10 @@
         "contentSource": {
           "$ref": "#/definitions/DaLiveContentSource"
         },
+        "builtWith": {
+          "$ref": "#/definitions/SharedDemoBuiltWith",
+          "description": "What the storefront was built from, written by Share Demo's link save (EDS-13f decision 2). Present means a Demo Builder storefront: starting a project from it applies the ledger's fixes where they fit. Absent (a colleague who did not build with Demo Builder, or a version-1 file) behaves as before."
+        },
         "source": {
           "type": "object",
           "properties": {
@@ -825,6 +1358,14 @@
         "storefrontKind": {
           "$ref": "#/definitions/StorefrontKind",
           "description": "Read from the repository when the demo was added, never from the description file."
+        },
+        "boilerplate": {
+          "$ref": "#/definitions/StorefrontBoilerplate",
+          "description": "The `package.json` name and version read when the demo was added (EDS-13f). Absent on older rows."
+        },
+        "lineage": {
+          "$ref": "#/definitions/StorefrontLineage",
+          "description": "The template or fork parent GitHub recorded when the demo was added (EDS-13f). Absent when none."
         }
       },
       "required": [
@@ -913,6 +1454,105 @@
         "indexPath"
       ]
     },
+    "SharedDemoBuiltWith": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string",
+          "description": "The shipped package id, when the storefront was a shipped brand."
+        },
+        "template": {
+          "$ref": "#/definitions/RepositoryRef",
+          "description": "The template the storefront was generated from and pinned to."
+        },
+        "lkg": {
+          "type": "string",
+          "description": "The last-known-good commit of that template the storefront was pinned to."
+        },
+        "codePatchSource": {
+          "$ref": "#/definitions/CodePatchSource",
+          "description": "The patch ledger the storefront was patched from."
+        },
+        "codePatches": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The ledger's patch ids the storefront carries."
+        },
+        "boilerplate": {
+          "$ref": "#/definitions/StorefrontBoilerplate",
+          "description": "Its `package.json` name and version when it was saved."
+        },
+        "extension": {
+          "type": "string",
+          "description": "The Demo Builder version that saved it."
+        }
+      },
+      "required": [
+        "extension"
+      ],
+      "description": "A saved package's record of what its storefront was built from (EDS-13f decision 2)."
+    },
+    "RepositoryRef": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner",
+        "repo"
+      ],
+      "description": "A GitHub repository by its coordinates."
+    },
+    "CodePatchSource": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "description": "GitHub owner/organization of the patch repository"
+        },
+        "repo": {
+          "type": "string",
+          "description": "GitHub repository name"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path within repo to the patch family directory (contains code-patches.json)"
+        },
+        "lkgFile": {
+          "type": "string",
+          "description": "Repo-relative path to the LKG file when this ledger tracks a non-default canonical (multi-canonical patches repos). Omitted = the default root `last-known-good`. Every current package entry (citisignal-b2b, b2b, bodea) tracks adobe-commerce/boilerplate-b2b-template and sets `lkgFile: \"b2b/last-known-good\"`. The root default is still read by older projects that recorded no `lkgFile` (see `LkgSource` in lkgReader.ts)."
+        }
+      },
+      "required": [
+        "owner",
+        "repo",
+        "path"
+      ],
+      "description": "CodePatchSource - External repository for code patches.\n\nSibling of  {@link  ContentPatchSource } . Code patches are file-level edits applied to a cloned storefront repo during create/reset, after reset-to-template and after block install. The engine knows no canonical file by name; everything comes from the external ledger fetched here.\n\nPer ADR-006 D3 the canonical home is `skukla/eds-demo-patches` (the generalized successor to `eds-demo-content-patches`); a path of e.g. `citisignal-b2b` selects the patch family for a storefront."
+    },
+    "StorefrontBoilerplate": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "description": "What a storefront's code was built on (EDS-13f decision 1): the `name` and `version` of its `package.json`. Both Adobe Commerce canonicals call themselves `@adobe/aem-boilerplate-commerce`; the B2B line is 6.x, the B2C line 10.x."
+    },
     "StorefrontKind": {
       "type": "string",
       "enum": [
@@ -920,6 +1560,20 @@
         "headless"
       ],
       "description": "The two kinds of storefront a repository can hold."
+    },
+    "StorefrontLineage": {
+      "type": "object",
+      "properties": {
+        "templateRepository": {
+          "$ref": "#/definitions/RepositoryRef",
+          "description": "GitHub's `template_repository`: the template it was generated from."
+        },
+        "forkParent": {
+          "$ref": "#/definitions/RepositoryRef",
+          "description": "GitHub's `parent`: the repository it is a fork of."
+        }
+      },
+      "description": "Where a storefront's repository came from, as GitHub records it (EDS-13f decision 1). Both absent is the common case: a repository created empty and pushed, or reset onto a source, carries no record."
     },
     "CustomBlockLibrary": {
       "type": "object",
@@ -961,6 +1615,111 @@
         "branch"
       ],
       "description": "AddonSource - GitHub repository source for an addon\n\nUsed by addons that fetch content from an external repository (e.g., the Commerce Block Collection fetches blocks from isle5)."
+    },
+    "InstalledBlockLibrary": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Library display name"
+        },
+        "source": {
+          "$ref": "#/definitions/AddonSource",
+          "description": "Source repository (owner/repo/branch)"
+        },
+        "commitSha": {
+          "type": "string",
+          "description": "Commit SHA of the source repo at installation time"
+        },
+        "blockIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Block IDs whose folders this library copied into the storefront (at install, and by an update that copies a new one). A block in here whose folder is gone was removed by hand, so an update does not copy it back."
+        },
+        "addedEntries": {
+          "$ref": "#/definitions/AddedComponentEntries",
+          "description": "The authoring entries the extension itself added to the storefront's three authoring files from this library. Absent when it added none, and on records written before 2026-10-09."
+        },
+        "installedAt": {
+          "type": "string",
+          "description": "ISO date string when blocks were installed"
+        },
+        "syncDisabledMarker": {
+          "type": "object",
+          "properties": {
+            "upstreamSha": {
+              "type": "string",
+              "description": "Latest upstream commit SHA we know about (but did not install)"
+            },
+            "lastCheckedAt": {
+              "type": "string",
+              "description": "ISO date string of the last update check that set this marker"
+            }
+          },
+          "required": [
+            "upstreamSha",
+            "lastCheckedAt"
+          ],
+          "description": "Set when `demoBuilder.blockLibraries.syncBehavior` is `disabled` (or `ask` + user chose Skip) and update detection found newer upstream commits. Files in the storefront stay at `commitSha`; this records what we know about upstream so the AI Overview screen can show \"Sync disabled — N commits behind upstream\" without lying about which files are present.\n\nCleared when the user re-enables sync and a successful update runs."
+        }
+      },
+      "required": [
+        "blockIds",
+        "commitSha",
+        "installedAt",
+        "name",
+        "source"
+      ],
+      "description": "Persisted tracking data with installation timestamp"
+    },
+    "AddedComponentEntries": {
+      "type": "object",
+      "properties": {
+        "definition": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "`component-definition.json`: ids of `groups[].components[]` entries."
+        },
+        "sectionFilter": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "`component-filters.json`: block ids added to the `section` filter's `components`."
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "`component-filters.json`: ids of whole filter entries (e.g. `tabs`)."
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "`component-models.json`: ids of model entries."
+        },
+        "htmlExamples": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "`component-definition.json`: ids of entries whose HTML example (`plugins.da.unsafeHTML`) the extension filled in. Absent when it filled none, and on records written before the field existed."
+        }
+      },
+      "required": [
+        "definition",
+        "sectionFilter",
+        "filters",
+        "models"
+      ],
+      "description": "Entry ids the extension added to a storefront's authoring files, one list per kind of entry. An id in here that is no longer in its file was removed by hand, so an install or update leaves it out instead of putting it back."
     },
     "AiPrompt": {
       "type": "object",

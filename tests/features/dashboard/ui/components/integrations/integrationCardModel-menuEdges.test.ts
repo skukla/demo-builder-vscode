@@ -1,0 +1,170 @@
+/**
+ * integrationCardModel — the edges of each card's menu, and what a card says it is.
+ *
+ * The sibling suites walk the common statuses. These are the cases between them:
+ * a menu item that belongs to a DEPLOYED card showing up on one that is not, a
+ * verb offered to an integration that only half qualifies for it, and the fields a
+ * card or its link is recognised by.
+ */
+
+import {
+    buildIntegrationCards,
+    deriveIntegrationCard,
+    deriveSystemCard,
+    integration,
+    type IdentifiedAppBuilderComponent,
+} from './integrationCardModel.testUtils';
+
+function erp(over: Partial<IdentifiedAppBuilderComponent> = {}): IdentifiedAppBuilderComponent {
+    return {
+        id: 'demo-erp',
+        kind: 'system',
+        status: 'deployed',
+        name: 'Nordwind ERP',
+        source: { owner: 'skukla', repo: 'demo-erp' },
+        ...over,
+    };
+}
+
+describe('an integration card that is not deployed', () => {
+    // Its install record outlives the deployment it describes. The Admin entry and
+    // the reinstall both act on a running app, so neither is offered without one.
+    it('offers no Commerce Admin entry and no reinstall, whatever its install record says', () => {
+        const card = deriveIntegrationCard(
+            integration({ status: 'error', installation: { status: 'installed' } }),
+        );
+
+        // A custom app keeps Manage APIs: its own code can use what is added.
+        expect(card.menuActions).toStrictEqual(['retry', 'manage-apis', 'open', 'remove']);
+    });
+});
+
+describe('a system card that is not deployed and serves no screen', () => {
+    it('offers only its status verb and its removal', () => {
+        const card = deriveSystemCard(erp({ status: 'error' }), undefined, undefined, []);
+
+        expect(card.menuActions).toStrictEqual(['retry', 'remove']);
+    });
+
+    it('is a system card, never a mesh card', () => {
+        const card = deriveSystemCard(erp(), undefined, undefined, []);
+
+        expect(card.isSystem).toBe(true);
+        expect(card.isMesh).toBe(false);
+    });
+});
+
+describe("the integration's own ERP verbs", () => {
+    // Both halves are needed: it is added once (so its card is the only way to a
+    // second ERP) AND a system lists itself under it (so there is an ERP to add).
+    it('are not offered to an add-once integration that no system lists itself under', () => {
+        const card = deriveIntegrationCard(
+            integration({ id: 'solo', catalogId: 'solo-with-setup', status: 'deployed' }),
+        );
+
+        // A pre-built app has no Manage APIs: its fixed code uses no extra API (owner, 2026-10-19).
+        expect(card.menuActions).toStrictEqual(['redeploy', 'open', 'remove']);
+    });
+
+    // "Prepare this store" (AB-77) goes before them: it shows only while a setup step is
+    // open, so when it is there it is what the card needs (owner, 2026-10-19).
+    it('lead the ERP integration\'s menu, in the order an SC uses them', () => {
+        const card = deriveIntegrationCard(
+            integration({ id: 'erp-integration', status: 'deployed' }),
+        );
+
+        expect(card.menuActions).toStrictEqual([
+            'add-erp',
+            'load-demo-data',
+            'reset-records',
+            'redeploy',
+            'open',
+            'remove',
+        ]);
+    });
+});
+
+// The order an SC reaches for them (owners, 2026-10-18 and 2026-10-19): an open setup step
+// first, then the demo, back to the start (the reset, then the preparation's undo),
+// configuration, the repairs and the developer's link, and Remove last.
+describe('the installed ERP integration, as Justrite has it', () => {
+    it('lists its verbs in use order', () => {
+        const card = deriveIntegrationCard(
+            integration({
+                id: 'erp-integration',
+                status: 'deployed',
+                installation: { status: 'installed' },
+                storePreparation: { at: '2026-10-10T10:00:00Z', steps: {} },
+            }),
+        );
+
+        expect(card.menuActions).toStrictEqual([
+            'open-admin',
+            'add-erp',
+            'load-demo-data',
+            'reset-records',
+            'redeploy',
+            'reinstall',
+            'open',
+            'remove',
+        ]);
+    });
+});
+
+describe('the setup checklist on an integration card', () => {
+    it('is absent when the catalog entry declares no steps', () => {
+        expect(deriveIntegrationCard(integration())).not.toHaveProperty('setupChecklist');
+    });
+
+    // A value entered once per ERP is spelled out per ERP, by the short name of each
+    // system card the integration uses.
+    it('carries the declared steps, with a per-ERP value named for each ERP it uses', () => {
+        const card = deriveIntegrationCard(
+            integration({ id: 'solo', catalogId: 'solo-with-setup' }),
+            undefined,
+            [
+                { id: 'erp-1', name: 'Nordwind ERP', status: 'deployed', statusLabel: 'Deployed', dotVariant: 'success' },
+                { id: 'erp-2', name: 'Acme', status: 'deployed', statusLabel: 'Deployed', dotVariant: 'success' },
+            ],
+        );
+
+        expect(card.setupChecklist).toHaveLength(1);
+        expect(card.setupChecklist?.[0]).toMatchObject({
+            id: 'second-source',
+            state: 'open',
+            enter: ['Nordwind warehouse', 'Acme warehouse'],
+        });
+    });
+});
+
+describe('what linked cards call each other', () => {
+    it("carries each card's type badge across the link", () => {
+        const [own, system] = buildIntegrationCards(
+            [integration({ id: 'erp-integration', name: 'ERP integration' }), erp()],
+            {},
+        );
+
+        expect(own.linked?.cards).toStrictEqual([
+            expect.objectContaining({ id: 'demo-erp', typeBadge: 'ERP' }),
+        ]);
+        expect(system.linked?.cards).toStrictEqual([
+            expect.objectContaining({ id: 'erp-integration', typeBadge: 'Integration' }),
+        ]);
+    });
+});
+
+describe('a card for a component still being added', () => {
+    it('is an integration card when the catalog says the id is an integration', () => {
+        const [card] = buildIntegrationCards([], { 'sfdc-connector': { status: 'deploying' } });
+
+        expect(card.typeBadge).toBe('Integration');
+        expect(card).not.toHaveProperty('isSystem');
+    });
+
+    it('is a system card when the catalog says the id is a system', () => {
+        const [card] = buildIntegrationCards([], { 'demo-erp': { status: 'deploying' } });
+
+        expect(card.typeBadge).toBe('ERP');
+        expect(card.isSystem).toBe(true);
+    });
+});

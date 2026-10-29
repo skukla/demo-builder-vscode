@@ -130,14 +130,35 @@ describe('the IMS Org badge lifecycle', () => {
         expect(result.current.imsOrgDisplay).toEqual({ color: 'red', text: 'Wrong org' });
     });
 
-    it('degrades an UNKNOWN outcome to the quiet sign-in affordance', () => {
+    it('shows a signed-out UNKNOWN outcome as "Signed out" in yellow', () => {
+        const { result } = renderWithOrg();
+
+        deliverOrgCheck('unknown', { signedOut: true });
+        elapseMinDisplay();
+
+        expect(result.current.orgCheckState).toBe('signed-out');
+        expect(result.current.imsOrgDisplay).toEqual({ color: 'yellow', text: 'Signed out' });
+    });
+
+    it('shows a signed-in UNKNOWN outcome as "Not verified" in yellow, not "Signed out"', () => {
         const { result } = renderWithOrg();
 
         deliverOrgCheck('unknown');
         elapseMinDisplay();
 
-        expect(result.current.orgCheckState).toBe('unknown');
-        expect(result.current.imsOrgDisplay).toEqual({ color: 'gray', text: 'Not checked' });
+        expect(result.current.orgCheckState).toBe('unverified');
+        expect(result.current.imsOrgDisplay).toEqual({ color: 'yellow', text: 'Not verified' });
+    });
+
+    it('drops "Signed out" once a re-check goes pending and resolves unverified', () => {
+        const { result } = renderWithOrg();
+        deliverOrgCheck('unknown', { signedOut: true });
+        elapseMinDisplay();
+
+        deliverOrgCheck('pending');
+        deliverOrgCheck('unknown');
+
+        expect(result.current.orgCheckState).toBe('unverified');
     });
 
     it('degrades an ERROR outcome the same way — never a red badge', () => {
@@ -148,8 +169,8 @@ describe('the IMS Org badge lifecycle', () => {
 
         // An unexpected error is not evidence of a mismatch; showing red would
         // accuse a project that may be perfectly fine.
-        expect(result.current.orgCheckState).toBe('unknown');
-        expect(result.current.imsOrgDisplay).toEqual({ color: 'gray', text: 'Not checked' });
+        expect(result.current.orgCheckState).toBe('unverified');
+        expect(result.current.imsOrgDisplay).toEqual({ color: 'yellow', text: 'Not verified' });
     });
 
     it('re-renders the badge as the org state moves, rather than freezing the first value', () => {

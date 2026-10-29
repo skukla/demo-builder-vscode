@@ -19,6 +19,7 @@
  * @module features/project-creation/ui/steps/commerceSections
  */
 
+import { isSetInConfigure } from './editLocks';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { CommerceSectionId, WizardState } from '@/types/webview';
@@ -202,6 +203,15 @@ export function commerceSectionStates(
         );
     }
 
+    if (isSetInConfigure(state)) {
+        // Edit leaves these to Configure, so they are not in the strip: three steps
+        // that each said only "Changed in Configure" took three Continues to pass
+        // (owner, 2026-10-17). The summary still shows them (buildSummary.ts), and
+        // they come back once the backend or package changes (editLocks.ts).
+        sections.push(sampleDataSection(state));
+        return sections;
+    }
+
     const signinReason = gated ? 'Sign in to Adobe first' : undefined;
     sections.push(configSection('connection', connectionDone, gated, signinReason, 'Connected'));
 
@@ -232,18 +242,21 @@ export function commerceSectionStates(
     // wizard at all. Locking it behind a reachable backend would gate a choice
     // that has no dependency on one — and picking a demo before the instance
     // exists is the ordinary case.
-    sections.push({
-        id: 'sample-data',
-        status: 'done',
-        value: state.datapack?.name ?? 'None',
-    });
+    sections.push(sampleDataSection(state));
 
     return sections;
 }
 
+/** The Datapacks sub-step: never gated, always done. */
+function sampleDataSection(state: WizardState): CommerceSectionState {
+    return { id: 'sample-data', status: 'done', value: state.datapack?.name ?? 'None' };
+}
+
 /**
  * The section to open first: the first `current` section, else the first
- * openable (non-done, non-locked) one, else the last section.
+ * openable (non-done, non-locked) one, else the FIRST section. Edit opens on a
+ * project whose every step is done; the last one dropped the SC on Datapacks, past
+ * everything they came to review (owner, 2026-10-17).
  *
  * @param sectionStates - Ordered section states from commerceSectionStates
  * @returns the id of the section to open
@@ -253,7 +266,7 @@ export function firstOpenSection(sectionStates: CommerceSectionState[]): Commerc
     if (current) return current.id;
     const openable = sectionStates.find((s) => s.status !== 'done' && s.status !== 'locked');
     if (openable) return openable.id;
-    return sectionStates[sectionStates.length - 1].id;
+    return sectionStates[0].id;
 }
 
 /**

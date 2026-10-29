@@ -4,7 +4,7 @@ kind: question
 area: ai
 needs: []
 value: med
-status: open
+status: built
 ---
 
 # Should an agent's project delete also clean up the cloud, as a person's does?
@@ -44,6 +44,38 @@ Answers it could have:
 Whichever is chosen, PL-59 phase 2 gives the agent's delete the same stage names as the
 button's, so it can show its steps.
 
+## Answered 2026-09-19: mirror the choice the button already offers
+
+The question assumed the button does a full teardown. It does not. Reading
+`showCleanupConfirmation`, a person deleting an EDS project gets a checklist with
+**both boxes unticked** — "Delete Repository" (`owner/repo`) and "Delete DA.live Site"
+(`org/site`, which is also what unpublishes the CDN content) — over the setting
+`demoBuilder.cleanupBehavior` (`ask` by default; `deleteAll` ticks both, `localOnly`
+never asks). Press Enter without ticking anything and the button deletes locally,
+which is exactly what the agent does today.
+
+So the difference was never policy. It was that the agent had no way to say "and those
+two as well". The decision (owner, 2026-09-19) is to mirror the checklist:
+
+- `delete_project` takes `deleteGithubRepo` and `deleteDaLiveSite`, both defaulting to
+  false — the same two choices, unticked, behind the existing `confirm` + `confirmName`
+  gate.
+- Both honour `demoBuilder.cleanupBehavior`: `deleteAll` makes them default true,
+  `localOnly` refuses them. One setting governs both surfaces.
+- An unasked-for delete therefore does what it does today, and a full teardown is one
+  call rather than three.
+
+**The gap this search DID find, and it is a defect rather than a design question:**
+`cleanup_dalive_site` calls `deleteAllSiteContent`, which deletes DA.live SOURCE
+documents only. The CDN unpublish lives in `projectDeletionService` alone
+(`helixService.unpublishPages`). So an agent can delete the repo, the DA.live content
+and the local project and still leave the storefront live on aem.live — its only other
+route is `delete_page`, one page at a time. The unpublish moves into the shared DA.live
+teardown so both surfaces do it.
+
 ## Shipped so far
 
 - 2026-09-19  docs(backlog): AI-9, should an agent's project delete also clean up the cloud (`6f8315213`)
+- 2026-09-20  Answered: mirror the button's checklist as two args on delete_project; the CDN unpublish gap is a defect to fix (merge 7f69e91cc)
+- 2026-09-20  feat(delete): the project delete narrates, and an agent can finish the job (`41fe0fc86`)
+- 2026-10-12  fix(ai): an agent's project delete takes the storefront's pages down (`0d0dbfd13`)

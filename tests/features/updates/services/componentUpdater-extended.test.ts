@@ -9,9 +9,6 @@
  * - parseEnvFile edge cases
  */
 
-import type { Logger } from '@/types/logger';
-import type { Project } from '@/types/base';
-
 import {
     CommandExecutor,
     ComponentUpdater,
@@ -19,8 +16,10 @@ import {
     vscode,
     setupUpdater,
 } from './componentUpdater.testUtils';
+import type { Logger } from '@/types/logger';
+import type { Project } from '@/types/base';
+
 import { createMockProject } from '../../../helpers/projectFake';
-jest.mock('@/core/validation/URLValidator');
 
 describe('ComponentUpdater - Extended Coverage', () => {
     let updater: ComponentUpdater;

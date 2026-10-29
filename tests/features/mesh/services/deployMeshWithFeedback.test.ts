@@ -19,10 +19,8 @@
  */
 
 const mockSendMeshStatusUpdate = jest.fn();
-jest.mock('@/features/dashboard/commands/showDashboard', () => ({
-    ProjectDashboardWebviewCommand: {
-        sendMeshStatusUpdate: (...args: unknown[]) => mockSendMeshStatusUpdate(...args),
-    },
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendMeshStatusUpdate: (...args: unknown[]) => mockSendMeshStatusUpdate(...args),
 }));
 
 const mockDeployMeshHeadless = jest.fn();
@@ -31,7 +29,9 @@ jest.mock('@/features/mesh/services/deployMeshHeadless', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
+import { deployMeshWithFeedback, MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { startModalRun } from '@/core/vscode/operationProgress';
 import type { DeployMeshWithFeedbackDeps } from '@/features/mesh/services/deployMeshWithFeedback';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -70,20 +70,20 @@ beforeEach(() => {
 });
 
 describe('progress register', () => {
-    it('sends the step detail to the notification', async () => {
+    // PL-59 phase 2: a notification shows the STAGE, the short set; the step is the
+    // progress modal's long set (owner, 2026-09-19).
+    it('sends the stage to the notification, never the step under it', async () => {
         const { report } = stubWithProgress();
         mockDeployMeshHeadless.mockImplementation(
             async ({ onProgress }: { onProgress?: (m: string, s?: string) => void }) => {
-                onProgress?.('Reading mesh configuration');
+                onProgress?.(OPERATION_STAGES.deployingMesh.label, 'Validating configuration');
                 return { success: true };
             }
         );
 
         await deployMeshWithFeedback(deps());
 
-        expect(report).toHaveBeenCalledWith(
-            expect.objectContaining({ message: 'Reading mesh configuration' })
-        );
+        expect(report).toHaveBeenCalledWith({ message: OPERATION_STAGES.deployingMesh.label });
     });
 
     it('keeps the operation name on the notification title', async () => {
@@ -203,5 +203,197 @@ describe('progress register', () => {
             'Done',
             'https://mesh/graphql'
         );
+    });
+});
+
+// PL-59 phase 2, slice 1: started from a button, the mesh deploy reports to the
+// screen's progress modal (rule R1) and opens no notification.
+describe('started from a button on a screen', () => {
+    const screen = jest.fn(async (_type: string, _payload?: unknown): Promise<void> => undefined);
+    const modal = (): Array<Record<string, unknown>> =>
+        screen.mock.calls
+            .filter(([type]) => type === 'operationProgress')
+            .map(([, p]) => p as Record<string, unknown>);
+
+    beforeEach(() => {
+        startModalRun('eds-accs-mesh', screen);
+    });
+
+    it('reports each stage to the modal and opens no notification', async () => {
+        mockDeployMeshHeadless.mockImplementation(
+            async ({ onProgress }: { onProgress?: (m: string, s?: string) => void }) => {
+                onProgress?.(OPERATION_STAGES.deployingMesh.label, 'Validating configuration');
+                return { success: true };
+            }
+        );
+
+        await deployMeshWithFeedback(deps(), { progress: 'modal', operationId: 'eds-accs-mesh' });
+
+        expect(vscode.window.withProgress).not.toHaveBeenCalled();
+        expect(modal()).toContainEqual(
+            expect.objectContaining({
+                stage: OPERATION_STAGES.deployingMesh.label,
+                step: 'Validating configuration',
+            })
+        );
+        expect(modal().at(-1)).toEqual({
+            id: 'eds-accs-mesh',
+            state: 'succeeded',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
+        });
+    });
+
+    it('ends the modal with a reason a person can act on, not a tool instruction', async () => {
+        mockDeployMeshHeadless.mockResolvedValue({ success: false, blockedBy: 'no-mesh' });
+
+        const result = await deployMeshWithFeedback(deps(), {
+            progress: 'modal',
+            operationId: 'eds-accs-mesh',
+        });
+
+        expect(result.error).toBe('This project does not have an API Mesh component.');
+        expect(modal().at(-1)).toEqual({
+            id: 'eds-accs-mesh',
+            state: 'failed',
+            error: 'This project does not have an API Mesh component.',
+        });
+    });
+
+    // A screen with no mesh component id to name follows the operation by the
+    // module's own id, so the modal it opened is the one this run closes.
+    it('reports under the mesh operation id when the screen named none', async () => {
+        startModalRun(MESH_OPERATION_ID, screen);
+
+        await deployMeshWithFeedback(deps(), { progress: 'modal' });
+
+        expect(MESH_OPERATION_ID).toBe('mesh');
+        expect(modal().at(-1)).toStrictEqual({ id: 'mesh', state: 'succeeded' });
+    });
+
+    it("leaves the core's own error for callers that are not a modal (the agent words its own)", async () => {
+        stubWithProgress();
+        mockDeployMeshHeadless.mockResolvedValue({ success: false, blockedBy: 'no-mesh' });
+
+        const result = await deployMeshWithFeedback(deps());
+
+        expect(result.error).toBeUndefined();
+    });
+});
+
+// A redeploy that moved the mesh left the live storefront on its dead old address
+// until someone republished by hand (owner, 2026-09-21): a deploy republishes.
+describe('republishing the storefront after a deploy', () => {
+    /** A project whose storefront reads the mesh address. */
+    function withStorefront(): DeployMeshWithFeedbackDeps {
+        const base = deps();
+        base.project = createMockProject({
+            name: 'p',
+            path: '/p',
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-mesh' },
+                    providesEnvVars: { MESH_ENDPOINT: 'https://edge-graph.adobe.io/api/m/graphql' },
+                },
+            },
+        });
+        return base;
+    }
+
+    it('republishes after a successful deploy, as its own stage', async () => {
+        const { report } = stubWithProgress();
+        const republishStorefront = jest
+            .fn()
+            .mockResolvedValue({ success: true, cdnPublished: true });
+        const input = { ...withStorefront(), republishStorefront };
+
+        const result = await deployMeshWithFeedback(input);
+
+        expect(republishStorefront).toHaveBeenCalledWith(input.project);
+        expect(report).toHaveBeenCalledWith(
+            expect.objectContaining({ message: OPERATION_STAGES.publishingSettings.label })
+        );
+        // Strict: a republish that landed adds NO `storefrontNotRepublished` key.
+        // `toEqual` reads an undefined one as absent, and callers test for the key.
+        expect(result).toStrictEqual({ success: true });
+    });
+
+    it('says so when the republish does not reach the CDN — the mesh still counts as deployed', async () => {
+        stubWithProgress();
+        const republishStorefront = jest
+            .fn()
+            .mockResolvedValue({ success: true, cdnPublished: false });
+
+        const result = await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
+
+        expect(result).toEqual({
+            success: true,
+            storefrontNotRepublished: 'the CDN still serves the previous config',
+        });
+    });
+
+    // A republish that ANSWERS a failure is a third outcome, distinct from one that
+    // throws and one that lands short of the CDN: the mesh is deployed, the
+    // storefront is not, and the reason is the republish's own.
+    it('reports a republish that answered a failure, with the reason it gave', async () => {
+        stubWithProgress();
+        const republishStorefront = jest
+            .fn()
+            .mockResolvedValue({ success: false, error: 'config.json could not be written' });
+
+        const result = await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
+
+        expect(result).toStrictEqual({
+            success: true,
+            storefrontNotRepublished: 'config.json could not be written',
+        });
+    });
+
+    it('still says the storefront was not republished when the failure carries no reason', async () => {
+        stubWithProgress();
+        // cdnPublished: false as well — the failure outranks it, so the CDN wording
+        // must not be what the SC reads about a republish that never finished.
+        const republishStorefront = jest
+            .fn()
+            .mockResolvedValue({ success: false, cdnPublished: false });
+
+        const result = await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
+
+        expect(result).toStrictEqual({
+            success: true,
+            storefrontNotRepublished: 'the republish did not finish',
+        });
+    });
+
+    it('reports a republish that throws, in its own words', async () => {
+        stubWithProgress();
+        const republishStorefront = jest
+            .fn()
+            .mockRejectedValue(new Error('GitHub sign-in expired'));
+
+        const result = await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
+
+        expect(result.storefrontNotRepublished).toBe('GitHub sign-in expired');
+    });
+
+    it('does not republish a project whose storefront does not read the mesh', async () => {
+        stubWithProgress();
+        const republishStorefront = jest.fn();
+
+        await deployMeshWithFeedback({ ...deps(), republishStorefront });
+
+        expect(republishStorefront).not.toHaveBeenCalled();
+    });
+
+    it('does not republish after a failed deploy', async () => {
+        stubWithProgress();
+        mockDeployMeshHeadless.mockResolvedValue({ success: false, error: 'boom' });
+        const republishStorefront = jest.fn();
+
+        await deployMeshWithFeedback({ ...withStorefront(), republishStorefront });
+
+        expect(republishStorefront).not.toHaveBeenCalled();
     });
 });

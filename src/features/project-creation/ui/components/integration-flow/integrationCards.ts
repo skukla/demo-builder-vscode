@@ -56,6 +56,10 @@ export function isApiEditable(kind: IntegrationRow['kind']): boolean {
  */
 function menuActionsFor(row: IntegrationRow): CardAction[] {
     const actions: CardAction[] = isApiEditable(row.kind) ? ['manage-apis'] : [];
+    // The ERP's name, the one thing about the pair that is fixed once it is deployed.
+    if (row.companionRenamable) {
+        actions.push('settings');
+    }
     if (!row.required) {
         actions.push('remove');
     }
@@ -77,7 +81,7 @@ const KIND_LABELS: Record<IntegrationRow['kind'], string> = {
     // later, and calling a freshly-added one AI-built describes the intended
     // workflow as though it had happened (reported 2026-07-31, fixed there).
     // `Record<IntegrationRow['kind'], …>` makes a new kind a compile error here.
-    blank: 'Custom · blank starter',
+    blank: 'Custom (blank starter)',
     custom: 'Imported repo',
 };
 
@@ -94,7 +98,6 @@ export function toIntegrationCards(rows: IntegrationRow[]): IntegrationCardModel
         name: row.name,
         kindLabel: KIND_LABELS[row.kind],
         sourceLine: row.sourceLine,
-        sourceIsAi: row.kind === 'blank',
         // Shape-satisfying, never rendered by THIS surface: the wizard passes
         // `subline` to the card, which takes the status line's place entirely,
         // and it has no detail view to show a url in. `kindLabel` above is a real
@@ -112,28 +115,29 @@ export function toIntegrationCards(rows: IntegrationRow[]): IntegrationCardModel
 }
 
 /**
- * The card's one quiet line: where the integration came from, and how many APIs
- * it will provision.
+ * The card's quiet lines under its name, one fact per line: where the
+ * integration came from, what comes with it, and why it cannot be removed.
  *
- * The count replaces the old row's collapsible "APIs in use · N" list. The count
- * is the part worth keeping on the face — it is the only pre-build signal that an
- * integration provisions anything. The NAMES are one click away behind the
- * kebab's Manage APIs, which opens the picker that lists them.
+ * One line each rather than one line joined by separators (owner, 2026-10-07):
+ * the ERP's name is the fact the SC must check before building, since it cannot
+ * change afterwards, so it gets a line of its own. No API count: the APIs are
+ * one click away behind the kebab's Manage APIs.
  *
- * Each segment is dropped when it has nothing to say, so the line never reads
- * "· 0 APIs" or opens with a stray separator.
+ * A line with nothing to say is dropped.
  *
  * @param card - a card model from {@link toIntegrationCards}
- * @returns the subline text
+ * @param companion - the name of the system that comes with it (the ERP), if any
+ * @returns the lines, in order
  */
-export function sublineFor(card: IntegrationCardModel): string {
-    const count = card.apis?.length ?? 0;
-    const segments = [
+export function sublineFor(card: IntegrationCardModel, companion?: string): string[] {
+    const lines = [
         card.sourceLine,
-        count > 0 ? `${count} ${count === 1 ? 'API' : 'APIs'}` : undefined,
+        // The system that comes with this integration (the ERP): the wizard has
+        // no second card for it, so the pair is said here (decision 2).
+        companion ? `Comes with ${companion}` : undefined,
         // A required card has no kebab (no Remove to offer) — the subline is
         // where the missing affordance gets its explanation.
         card.required ? 'Required by this package' : undefined,
     ];
-    return segments.filter(Boolean).join(' · ');
+    return lines.filter((line): line is string => Boolean(line));
 }

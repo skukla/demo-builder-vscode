@@ -33,9 +33,10 @@
  * @module features/ai/server/commerceQueryTool
  */
 
+import { createHash } from 'crypto';
 import { z } from 'zod';
 import { buildCommerceEndpoints } from './commerceEndpointsTool';
-import { asRawText, asText } from './mcpToolResult';
+import { asRawTextMarkingErrors, asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import type { StateManager } from '@/types/state';
 
@@ -65,7 +66,111 @@ function isReadOnlyQuery(query: string): boolean {
     return !/^\s*(mutation|subscription)\b/i.test(stripped);
 }
 
-type EndpointKey = 'commerceGraphQl' | 'catalogService' | 'mesh';
+export type EndpointKey = 'commerceGraphQl' | 'catalogService' | 'mesh';
+
+/**
+ * The `Magento-Customer-Group` value for a customer group: the SHA-1 of its numeric id.
+ *
+ * Adobe's productSearch reference calls the value "the customer group code", which does not
+ * work. Measured 2026-09-26 on an ACCS sandbox: a company's shared-catalog price (49 against
+ * a catalog 55) came back only for SHA-1("16"); the id `16`, the group's name and an empty
+ * header all returned 55.
+ */
+function customerGroupHeader(groupId: number): string {
+    return createHash('sha1').update(String(groupId)).digest('hex');
+}
+
+/**
+ * The headers for one request, or the refusal when a customer group is asked of an endpoint
+ * that does not read it.
+ *
+ * WHICH HEADERS, and why it is not "cs only for the catalogService endpoint": that was the
+ * first implementation and the live backend refused it (`productSearch` on bodea came back
+ * "Missing Magento-Website-Code Header"). ACCS serves Commerce Core AND Catalog Service from
+ * ONE endpoint, so an endpoint-driven rule can never send the `cs` headers there. The rule is
+ * about what the endpoint SERVES: send `cs` when the chosen endpoint is the Catalog Service
+ * one, or when the project has no separate one and this endpoint is therefore both. Sending
+ * them to a Core query is harmless; omitting them is a hard error or a silent empty result.
+ */
+function requestHeaders(
+    facts: ReturnType<typeof buildCommerceEndpoints>,
+    chosen: EndpointKey,
+    groupId: number | undefined,
+): Record<string, string> | string {
+    const hasSeparateCatalogService = Boolean(facts.endpoints.catalogService);
+    const needsCatalogHeaders = chosen === 'catalogService' || !hasSeparateCatalogService;
+    if (groupId !== undefined && !needsCatalogHeaders) {
+        return (
+            `Error: customerGroupId applies to Catalog Service queries only; \`${chosen}\` ` +
+            "takes the group from a signed-in customer, not a header. Use endpoint 'catalogService'."
+        );
+    }
+    return {
+        'Content-Type': 'application/json',
+        ...(facts.headers.all ?? {}),
+        ...(needsCatalogHeaders ? (facts.headers.cs ?? {}) : {}),
+        ...(groupId !== undefined ? { 'Magento-Customer-Group': customerGroupHeader(groupId) } : {}),
+    };
+}
+
+/** Where one Commerce query goes and what it carries, or the refusal to answer instead. */
+export interface CommerceRequest {
+    url: string;
+    headers: Record<string, string>;
+    chosen: EndpointKey;
+}
+
+/**
+ * Pick the endpoint and build the headers for one query — `run_commerce_query`'s rule,
+ * shared so another caller (the catalog menu's category reader) cannot assemble a
+ * second, different request for the same store.
+ *
+ * @param facts - `buildCommerceEndpoints(project)`
+ * @param requested - the endpoint asked for; defaults to the one the storefront uses
+ * @param groupId - a customer group to ask Catalog Service as
+ * @returns the request, or a refusal sentence beginning "Error:"
+ */
+export function resolveCommerceRequest(
+    facts: ReturnType<typeof buildCommerceEndpoints>,
+    requested: EndpointKey | undefined,
+    groupId: number | undefined,
+): CommerceRequest | string {
+    // Default to what the storefront queries: an agent reproducing what the
+    // site does must hit the same endpoint, and `storefrontUses` is already
+    // the answer to that.
+    let chosen: EndpointKey =
+        requested ?? (facts.storefrontUses === 'none' ? 'commerceGraphQl' : facts.storefrontUses);
+
+    // Asking for `catalogService` on ACCS is CORRECT, not a mistake.
+    //
+    // ACCS serves Commerce Core and Catalog Service from one endpoint, so
+    // there is no separate `catalogService` to name — and the first version
+    // answered "this project has no catalogService endpoint", which is true
+    // of the NAME and false of the capability. Measured 2026-08-26: an agent
+    // asked for the catalog service (the obvious read of "how many products
+    // are in the catalog"), was refused, and spent a round trip recovering
+    // from an error that should never have been one.
+    //
+    // Same shape as the header rule, and I fixed that one and not this one:
+    // route by what an endpoint SERVES, not by what it is called.
+    if (chosen === 'catalogService' && !facts.endpoints.catalogService && facts.endpoints.commerceGraphQl) {
+        chosen = 'commerceGraphQl';
+    }
+
+    const url = facts.endpoints[chosen];
+    if (!url) {
+        const have = Object.keys(facts.endpoints);
+        return (
+            `Error: this project has no \`${chosen}\` endpoint. ` +
+            (have.length ? `Available: ${have.join(', ')}.` : 'It has no Commerce endpoints configured at all.')
+        );
+    }
+
+    // Which headers: see requestHeaders.
+    const headers = requestHeaders(facts, chosen, groupId);
+    if (typeof headers === 'string') return headers;
+    return { url, headers, chosen };
+}
 
 /**
  * Register `run_commerce_query`.
@@ -100,16 +205,24 @@ export function registerCommerceQueryTool(
                     .describe(
                         'Which endpoint to query. Defaults to the one the storefront itself uses, so results match the live site.',
                     ),
+                customerGroupId: z
+                    .number()
+                    .int()
+                    .nonnegative()
+                    .optional()
+                    .describe(
+                        "Ask Catalog Service as this customer group (its numeric id, e.g. a company's shared-catalog group from GET company/{id}), so prices come back as that company sees them. Omit for the guest view.",
+                    ),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
             const query = String(args?.query ?? '');
             if (!query.trim()) {
-                return asRawText('Error: `query` is required.');
+                return asRawTextMarkingErrors('Error: `query` is required.');
             }
             if (!isReadOnlyQuery(query)) {
-                return asRawText(
+                return asRawTextMarkingErrors(
                     'Error: run_commerce_query is read-only and this looks like a mutation. ' +
                         'It runs queries against a demo backend; changing data is deliberately not ' +
                         'available here.',
@@ -118,7 +231,7 @@ export function registerCommerceQueryTool(
 
             const project = await stateManager.getCurrentProject();
             if (!project) {
-                return asRawText(
+                return asRawTextMarkingErrors(
                     'Error: no current project. Use list_projects then set the current project.',
                 );
             }
@@ -126,68 +239,14 @@ export function registerCommerceQueryTool(
             // The SAME assembly `get_commerce_endpoints` reports, so the endpoint an
             // agent is told about and the one queried cannot disagree. If they ever
             // do, that is one bug rather than two.
-            const facts = buildCommerceEndpoints(project);
-
-            // Default to what the storefront queries: an agent reproducing what the
-            // site does must hit the same endpoint, and `storefrontUses` is already
-            // the answer to that.
             const requested: EndpointKey | undefined = args?.endpoint;
-            let chosen: EndpointKey =
-                requested ??
-                (facts.storefrontUses === 'none' ? 'commerceGraphQl' : facts.storefrontUses);
-
-            // Asking for `catalogService` on ACCS is CORRECT, not a mistake.
-            //
-            // ACCS serves Commerce Core and Catalog Service from one endpoint, so
-            // there is no separate `catalogService` to name — and the first version
-            // answered "this project has no catalogService endpoint", which is true
-            // of the NAME and false of the capability. Measured 2026-08-26: an agent
-            // asked for the catalog service (the obvious read of "how many products
-            // are in the catalog"), was refused, and spent a round trip recovering
-            // from an error that should never have been one.
-            //
-            // Same shape as the header rule, and I fixed that one and not this one:
-            // route by what an endpoint SERVES, not by what it is called.
-            if (chosen === 'catalogService' && !facts.endpoints.catalogService
-                && facts.endpoints.commerceGraphQl) {
-                chosen = 'commerceGraphQl';
-            }
-
-            const url = facts.endpoints[chosen];
-            if (!url) {
-                const have = Object.keys(facts.endpoints);
-                return asRawText(
-                    `Error: this project has no \`${chosen}\` endpoint. ` +
-                        (have.length
-                            ? `Available: ${have.join(', ')}.`
-                            : 'It has no Commerce endpoints configured at all.'),
-                );
-            }
-
-            // WHICH HEADERS, and why it is not "cs only for the catalogService
-            // endpoint".
-            //
-            // That was the first implementation and the live backend refused it:
-            // `productSearch` on bodea came back "Missing Magento-Website-Code
-            // Header" while every unit test passed. The reason is a shape no
-            // fixture showed — **ACCS serves Commerce Core AND Catalog Service from
-            // ONE endpoint**, so there is no separate `catalogService` to target and
-            // an endpoint-driven rule can never send the `cs` headers at all. PaaS
-            // has two endpoints; ACCS has one.
-            //
-            // So the rule is about what the endpoint SERVES, not what it is called:
-            // send `cs` when the chosen endpoint is the Catalog Service one, or when
-            // the project has no separate one and this endpoint is therefore both.
-            // Sending them to a Commerce Core query that does not need them is
-            // harmless; omitting them is a hard error on one path and a silent empty
-            // result on the other.
-            const hasSeparateCatalogService = Boolean(facts.endpoints.catalogService);
-            const needsCatalogHeaders = chosen === 'catalogService' || !hasSeparateCatalogService;
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                ...(facts.headers.all ?? {}),
-                ...(needsCatalogHeaders ? (facts.headers.cs ?? {}) : {}),
-            };
+            const request = resolveCommerceRequest(
+                buildCommerceEndpoints(project),
+                requested,
+                args?.customerGroupId,
+            );
+            if (typeof request === 'string') return asRawTextMarkingErrors(request);
+            const { url, headers, chosen } = request;
 
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), QUERY_TIMEOUT_MS);
@@ -204,7 +263,7 @@ export function registerCommerceQueryTool(
                 });
             } catch (err) {
                 const why = err instanceof Error ? err.message : String(err);
-                return asRawText(`Error: the request to ${chosen} failed — ${why}`);
+                return asRawTextMarkingErrors(`Error: the request to ${chosen} failed — ${why}`);
             } finally {
                 clearTimeout(timer);
             }
@@ -213,13 +272,13 @@ export function registerCommerceQueryTool(
             if (!res.ok) {
                 // Status first: a 401 here is an expired session, not a bad query,
                 // and the two need completely different fixes.
-                return asRawText(
+                return asRawTextMarkingErrors(
                     `Error: ${chosen} returned HTTP ${res.status}. ${body.slice(0, 500)}`,
                 );
             }
 
             if (body.length > MAX_RESPONSE_CHARS) {
-                return asRawText(
+                return asRawTextMarkingErrors(
                     `[truncated: ${body.length} chars, showing the first ${MAX_RESPONSE_CHARS}. ` +
                         'Narrow the query — ask for fewer fields or a smaller pageSize.]\n' +
                         body.slice(0, MAX_RESPONSE_CHARS),
@@ -231,7 +290,7 @@ export function registerCommerceQueryTool(
                 // lets the agent see `errors` and fix its own query.
                 return asText(JSON.parse(body));
             } catch {
-                return asRawText(body);
+                return asRawTextMarkingErrors(body);
             }
         },
     );

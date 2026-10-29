@@ -19,6 +19,9 @@ import stacksConfig from '../config/stacks.json';
 import type { DemoPackage, DemoPackagesConfig, Storefront } from '@/types/demoPackages';
 import type { Stack, StacksConfig } from '@/types/stacks';
 
+/** The bundled packages, typed once for every default below. */
+const BUNDLED_PACKAGES = demoPackagesConfig as unknown as DemoPackagesConfig;
+
 /**
  * Storefront with package and stack context
  *
@@ -47,7 +50,7 @@ export interface StorefrontWithContext {
  * console.log(`Found ${packages.length} packages`);
  */
 export async function loadDemoPackages(
-    config: DemoPackagesConfig = demoPackagesConfig as unknown as DemoPackagesConfig,
+    config: DemoPackagesConfig = BUNDLED_PACKAGES,
 ): Promise<DemoPackage[]> {
     // Import is synchronous, but we return Promise for consistency
     // and to support future async loading scenarios (e.g., remote config)
@@ -207,14 +210,54 @@ export async function getAutoSelectedOptionalDependencies(
     packages?: DemoPackage[],
 ): Promise<string[]> {
     const pkg = await getPackageById(packageId, packages);
-    const meshRequirement = getResolvedMeshRequirement(pkg, stackId);
-    if (meshRequirement !== true) {
+    if (!isMeshRequired(pkg, stackId)) {
         return [];
     }
 
     const config = stacksConfig as unknown as StacksConfig;
     const stack = config.stacks.find(s => s.id === stackId);
     return stack?.optionalDependencies ?? [];
+}
+
+/**
+ * What removing the API Mesh does to a demo that needs it. Said before the click
+ * (the Integrations screen's Remove dialog) and in the removal's answer, which is
+ * what an agent removing it reads.
+ */
+export const MESH_NEEDED_NOTE =
+    "This demo needs the API Mesh. Without it, the storefront won't work.";
+
+/**
+ * Whether a project's demo needs the API Mesh: its package requires one for its
+ * stack. The wizard locks such a mesh in; an existing project may still remove it
+ * (it can be added again), and is told what that does.
+ *
+ * @param packageId - the project's demo package
+ * @param stackId - the project's stack
+ * @param packages - injectable package list; defaults to the bundled config
+ * @returns true only when the requirement resolves to `true`
+ */
+export function isMeshNeededByPackage(
+    packageId: string | undefined,
+    stackId: string | undefined,
+    packages: DemoPackage[] = BUNDLED_PACKAGES.packages,
+): boolean {
+    if (!packageId) return false;
+    return isMeshRequired(packages.find((candidate) => candidate.id === packageId), stackId);
+}
+
+/**
+ * Whether a package requires the API Mesh on a stack: its requirement resolves to
+ * `true` (`'optional'` and `false` do not). The one reading of that question, for
+ * the wizard's seeding, the gallery's lock, the agent's create and the
+ * Integrations screen's Remove.
+ *
+ * @param pkg - the demo package
+ * @param stackId - the stack
+ * @returns true only when the mesh is required
+ */
+export function isMeshRequired(pkg: DemoPackage | undefined, stackId: string | undefined): boolean {
+    return stackId !== undefined && getResolvedMeshRequirement(pkg, stackId) === true;
 }
 
 /**

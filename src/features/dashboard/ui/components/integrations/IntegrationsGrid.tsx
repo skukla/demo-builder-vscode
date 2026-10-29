@@ -1,20 +1,20 @@
 /**
- * IntegrationsGrid — the dashboard integrations surface (integrations grid,
- * Step 7). Supersedes AppBuilderComponentsList + AppBuilderComponentRow +
- * MeshComponentRow: a calm card per integration with the mesh as a peer card
- * FIRST, the add tile as the last cell (it IS the empty state), and all detail
- * plus every non-face action in the slide-in detail drawer.
+ * IntegrationsGrid — the dashboard integrations surface: a calm card per
+ * integration, the mesh as a peer card FIRST, the shared add card as the last cell
+ * when the screen hands `onAdd` (PL-62), and all detail plus every non-face action
+ * in the detail drawer.
  *
- * The grid owns exactly one instance each of the drawer, the remove-confirm
- * dialog and the Manage-APIs modal (no per-card dialogs, no cross-card state
- * leak), and ONE `handleAction` switch — the single place a card model turns into
- * an operation or a mesh callback. The operation progress modal is the SCREEN's,
- * because it must also open for an Add on a screen with no grid yet:
+ * The grid owns exactly one instance each of the drawer, the add modal, the
+ * remove, reset, reinstall and remove-anyway confirms, the Manage-APIs, Settings and
+ * ERP downtime modals (no per-card dialogs, no cross-card state leak), and ONE
+ * `handleAction` switch — the single place a card model turns into an operation
+ * or a mesh callback. The operation progress modal is the SCREEN's, because it
+ * must also open for an Add on a screen with no grid yet:
  *   - mesh card    → onDeployMesh / onReAuthenticate (never keyed messages)
  *   - integration  → an operation through the screen's `operations` (deploy,
  *                    redeploy, update, install, and remove once confirmed), which
  *                    opens the progress modal; or the Manage-APIs modal
- *   - open         → openLiveSite {url} (both card face and drawer link)
+ *   - open         → an integration's Developer Console workspace, or a system's own screen
  *
  * Card models come from {@link buildIntegrationCards} / {@link deriveMeshCard}
  * and are re-derived every render, so an open drawer stays live as pushes
@@ -25,12 +25,27 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ComponentOperationControls } from '../../hooks/useComponentOperation';
+import { AddErpDialog, type AddErpDialogProps } from '../AddErpDialog';
 import { AppBuilderComponentRemoveDialog } from '../AppBuilderComponentRemoveDialog';
+import { ErpDowntimeDialog, type ErpDemoControlTarget } from '../ErpDowntimeDialog';
+import { IntegrationSettingsModal } from '../IntegrationSettingsModal';
 import { ManageApisModal } from '../ManageApisModal';
+import type { ErpAssignControls } from './ErpAssignDialogs';
+import { ErpConfirmDialogs, useErpConfirms } from './ErpConfirmDialogs';
+import { FlaggedCardDialogs, needsReinstall, removalStopped } from './FlaggedCardDialogs';
 import { type CardAction, type IntegrationCardModel } from './integrationCardModel';
 import { IntegrationDetailPanel } from './IntegrationDetailPanel';
+import { removalConsequence } from './removalConsequence';
+import { requestRename } from './requestRename';
+import { routeOwnDialogs } from './systemCardActions';
+import { useFlaggedCardDialog } from './useFlaggedCardDialog';
+import { useIntegrationSettings } from './useIntegrationSettings';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
+import { IntegrationRow } from '@/core/ui/components/integrations/IntegrationRow';
+import type { ViewMode } from '@/core/ui/components/navigation/SearchHeader';
+import { AddCard } from '@/core/ui/components/ui/AddCard';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { ComponentSettings } from '@/types/appBuilderComponents';
 
 export interface IntegrationsGridProps {
     /**
@@ -40,47 +55,46 @@ export interface IntegrationsGridProps {
      * without a second source of truth.
      */
     cards: IntegrationCardModel[];
+    /** Cards (the default) or rows: same models, drawer and actions; only each item's shape changes. */
+    viewMode?: ViewMode;
     /** Mesh callbacks — the mesh card routes here, never to the keyed messages. */
     onDeployMesh?: () => void;
     /** User-initiated re-auth for the mesh needs-auth state. */
     onReAuthenticate?: () => void;
-    /**
-     * Shared deploy destination ("<project> · <workspace>"), shown as a row in
-     * the detail panel. The page header names it once above the grid.
-     */
-    destinationLabel?: string;
+    /** Each component's Settings (AB-21), from the init payload. */
+    componentSettings?: Record<string, ComponentSettings>;
     /**
      * The screen's operation controls (PL-59). The screen owns them because its Add
      * flow starts operations too, and both must open the same progress modal.
      */
     operations: ComponentOperationControls;
+    /** Opens a card's setup guide (AB-26x); the screen holds it, for its progress modal too. */
+    onOpenGuide?: (cardId: string) => void;
+    /**
+     * Opens the screen's add flow. Given → the grid ends with the add card (PL-62).
+     * The screen withholds it while a filter is on: the card is not a result.
+     */
+    onAdd?: () => void;
+    /** "Assign products" on an ERP's card and its undo (AB-74); the screen holds the dialogs. */
+    erpAssign?: Pick<ErpAssignControls, 'openAssign' | 'confirmUndoAssignment'>;
 }
 
-/**
- * Commit an in-drawer rename. Mirrors the InlineRenameField contract
- * (null = success, string = inline error); the payload `name` makes the
- * handler skip its input box and round-trip validation errors.
- */
-async function requestRename(id: string, name: string): Promise<string | null> {
-    try {
-        const response = await webviewClient.request<{ success: boolean; error?: string }>(
-            'renameAppBuilderComponent',
-            { id, name },
-        );
-        return response?.success ? null : (response?.error ?? 'Rename failed');
-    } catch (error) {
-        return error instanceof Error ? error.message : 'Rename failed';
-    }
-}
+const NO_SETTINGS: Record<string, ComponentSettings> = {};
 
 /** The integrations card grid + its hosted drawer, modals, and confirm dialog. */
 export function IntegrationsGrid({
-    cards,
+    cards: derivedCards,
+    viewMode = 'cards',
     onDeployMesh,
     onReAuthenticate,
-    destinationLabel,
+    componentSettings = NO_SETTINGS,
     operations,
+    onOpenGuide,
+    onAdd,
+    erpAssign,
 }: IntegrationsGridProps): React.ReactElement {
+    const settings = useIntegrationSettings(derivedCards, componentSettings);
+    const { cards, open: openSettings } = settings;
     const [selectedId, setSelectedId] = useState<string | null>(null);
     // One dialog/modal instance for the whole grid; the pending id identifies
     // the card awaiting confirmation (no per-card dialog, no state leak).
@@ -89,6 +103,18 @@ export function IntegrationsGrid({
     // used to hold the id alone and pass it as `componentName`, so the modal read
     // "Manage Adobe API access for erp-sync".
     const [manageApis, setManageApis] = useState<{ id: string; name: string } | null>(null);
+    // The ERP reset and fill, each asking first (ErpConfirmDialogs).
+    const erpConfirms = useErpConfirms(operations);
+    const { askReset, askFill } = erpConfirms;
+    // The integration "Add another ERP" names a new ERP for (AB-16); an ERP's downtime (AB-59).
+    const [addingErpTo, setAddingErpTo] = useState<IntegrationCardModel | null>(null);
+    const [downtime, setDowntime] = useState<ErpDemoControlTarget | null>(null);
+    // Confirms that open by themselves when a card gains their flag, and from
+    // the card's menu: an upgrade Commerce refused, a removal that stopped.
+    const reinstall = useFlaggedCardDialog(cards, needsReinstall);
+    const removeAnyway = useFlaggedCardDialog(cards, removalStopped);
+    const { open: openReinstall } = reinstall;
+    const { open: openRemoveAnyway } = removeAnyway;
 
     // Looked up fresh each render: the open drawer tracks live pushes, and a
     // card that left the map closes it.
@@ -115,10 +141,20 @@ export function IntegrationsGrid({
 
     const handleAction = useCallback(
         (model: IntegrationCardModel, action: CardAction): void => {
+            const own = {
+                confirmReset: askReset,
+                loadErpData: askFill,
+                openDowntime: setDowntime,
+                openAssign: erpAssign?.openAssign,
+                confirmUndoAssignment: erpAssign?.confirmUndoAssignment,
+            };
+            if (routeOwnDialogs(model, action, own)) return;
+            // Open: the integration's Adobe workspace in the Developer Console
+            // (owner, 2026-09-21).
             if (action === 'open') {
-                if (model.url) {
-                    webviewClient.postMessage('openLiveSite', { url: model.url });
-                }
+                webviewClient.postMessage('openDevConsole', {
+                    componentId: model.componentId ?? model.id,
+                });
                 return;
             }
             // The Commerce-install row's link. Reuses the dashboard tile's own
@@ -140,29 +176,50 @@ export function IntegrationsGrid({
                 handleMeshAction(action);
                 return;
             }
+            if (action === 'settings') {
+                openSettings(model);
+                return;
+            }
+            if (action === 'setup-guide') {
+                onOpenGuide?.(model.id);
+                return;
+            }
             if (action === 'manage-apis') {
                 setManageApis({ id: model.componentId ?? model.id, name: model.name });
                 return;
             }
+            if (action === 'reinstall') {
+                openReinstall(model);
+                return;
+            }
+            if (action === 'remove-anyway') {
+                openRemoveAnyway(model);
+                return;
+            }
+            if (action === 'add-erp') {
+                setAddingErpTo(model);
+                return;
+            }
             operations.run(model.id, model.name, action);
         },
-        [handleMeshAction, operations],
+        [askFill, askReset, erpAssign, handleMeshAction, onOpenGuide, openReinstall, openRemoveAnyway, openSettings, operations],
     );
 
     // A tile whose operation started here and is still running reopens its progress
     // modal; any other tile opens its flyout.
     const openCard = useCallback(
         (id: string): void => {
-            // An operation is keyed by the COMPONENT id; the mesh card's own id is
-            // 'mesh', so the lookup goes through componentId.
+            // An integration's operation is keyed by the COMPONENT id, so the
+            // lookup goes through componentId. The MESH deploy is keyed by the
+            // card's own id ('mesh') — it is started before any component of that
+            // name has to exist (MESH_OPERATION, useIntegrationsScreenActions).
             const card = cards.find((candidate) => candidate.id === id);
-            const componentId = card?.componentId ?? id;
-            if (card?.status === 'deploying' && operations.reopen(componentId)) return;
+            const operationId = card?.isMesh ? card.id : (card?.componentId ?? id);
+            if (card?.status === 'deploying' && operations.reopen(operationId)) return;
             setSelectedId(id);
         },
         [cards, operations],
     );
-
 
     // The mesh's teardown reaches past itself: removeAppBuilderComponent
     // regenerates the storefront config WITHOUT the MESH_ENDPOINT it provided, so
@@ -172,10 +229,32 @@ export function IntegrationsGrid({
         () => cards.find((card) => (card.componentId ?? card.id) === pendingRemoveId),
         [cards, pendingRemoveId],
     );
-    const removeConsequence = pendingRemove?.isMesh
-        ? 'Your storefront loses its API Mesh endpoint until you deploy a new mesh.'
-        : undefined;
+    const removeConsequence = removalConsequence(pendingRemove);
 
+    const closeAddErp = useCallback((): void => setAddingErpTo(null), []);
+    const addErp = useCallback<AddErpDialogProps['onAdd']>(
+        (name, owns): void => {
+            if (addingErpTo) operations.addErp(addingErpTo.id, name, owns);
+            setAddingErpTo(null);
+        },
+        [addingErpTo, operations],
+    );
+    // An ERP already added that owns nothing: Add another ERP offers Assign products on its
+    // line, which closes that dialog and opens this one for the ERP (owner, 2026-10-19).
+    const assignFromAdd = useCallback(
+        (erpName: string): void => {
+            const erp = cards.find((card) => card.isSystem && card.name === erpName);
+            if (addingErpTo && erp) erpAssign?.openAssign({ id: addingErpTo.id, erp: erp.id, name: erp.name });
+            setAddingErpTo(null);
+        },
+        [addingErpTo, cards, erpAssign],
+    );
+    const systemNames = useMemo(
+        () => cards.filter((card) => card.isSystem).map((card) => card.name),
+        [cards],
+    );
+
+    const Item = viewMode === 'rows' ? IntegrationRow : IntegrationCard;
     const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);
     const confirmRemove = useCallback((): void => {
         if (pendingRemoveId) {
@@ -185,16 +264,17 @@ export function IntegrationsGrid({
     }, [operations, pendingRemove, pendingRemoveId]);
 
     return (
-        // No section heading, count, or Add button here: the SCREEN's page header
-        // and sticky action band own those (the same division ProjectsDashboard
-        // uses). This component is the card surface only.
+        // No section heading or count here: the SCREEN's page header and sticky
+        // action band own those (the same division ProjectsDashboard uses). Adding
+        // is the last cell of the grid itself — a card, not a header button (PL-62).
         <div className="integrations-surface">
             {/* The grid owns the full width; the detail FLYOUT overlays it rather
                 than taking a column beside it. Plain divs — a Spectrum Flex caps
                 at 450px (utilities.css). */}
-            <div className="integrations-grid">
+            {/* Cards or rows: the same models and handlers, one item component or the other. */}
+            <div className={viewMode === 'rows' ? 'integration-row-list' : 'integrations-grid'}>
                 {cards.map((model) => (
-                    <IntegrationCard
+                    <Item
                         key={model.id}
                         model={model}
                         onOpen={openCard}
@@ -202,14 +282,21 @@ export function IntegrationsGrid({
                         onRename={requestRename}
                     />
                 ))}
+                {onAdd ? (
+                    <AddCard
+                        name="Add an integration"
+                        onOpen={onAdd}
+                        cardClassName={viewMode === 'rows' ? 'integration-row' : 'integration-card'}
+                    />
+                ) : null}
             </div>
 
             <IntegrationDetailPanel
                 model={selected}
                 onClose={() => setSelectedId(null)}
+                onOpenLinked={setSelectedId}
                 onAction={handleAction}
                 onRename={requestRename}
-                destinationLabel={destinationLabel}
             />
 
             <AppBuilderComponentRemoveDialog
@@ -226,6 +313,25 @@ export function IntegrationsGrid({
                 componentName={manageApis?.name ?? ''}
                 onClose={() => setManageApis(null)}
             />
+
+            <IntegrationSettingsModal
+                target={settings.target}
+                onClose={settings.close}
+                onSaved={settings.saved}
+            />
+
+            <ErpConfirmDialogs {...erpConfirms.dialogs} />
+
+            <AddErpDialog
+                target={addingErpTo ?? undefined}
+                takenNames={systemNames}
+                onAdd={addErp}
+                onClose={closeAddErp}
+                onAssign={erpAssign ? assignFromAdd : undefined}
+            />
+
+            <ErpDowntimeDialog target={downtime} onClose={() => setDowntime(null)} />
+            <FlaggedCardDialogs reinstall={reinstall} removeAnyway={removeAnyway} onRun={operations.run} />
         </div>
     );
 }

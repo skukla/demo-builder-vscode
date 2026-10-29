@@ -8,10 +8,11 @@
  * @module features/eds/handlers/probeSharedDemoHandler
  */
 
+import { authoredAccessWarning, probeAuthoredContentAccess } from '../services/daLive/authoredContentAccess';
 import { publicRepoReaders } from '../services/github/publicGitHubReads';
 import { probeSharedDemo } from '../services/storefront/sharedDemoProbe';
 import { adoptExistingGitHubSession } from './edsGitHubHandlers';
-import { getGitHubServices } from './edsHelpers';
+import { getDaLiveAuthService, getGitHubServices } from './edsHelpers';
 import { gitHubSourceProblem, parseStorefrontLink } from '@/core/utils/githubUrlParser';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { ProbeSharedDemoRequest, SharedDemoProbeResult } from '@/types/webviewRequests';
@@ -78,5 +79,30 @@ export async function handleProbeSharedDemo(
         repo,
         context.logger,
     );
-    return { success: true, result };
+    return { success: true, result: await withContentAccess(context, result) };
+}
+
+/**
+ * Add whether the SC can read the content site's AUTHORED tree on DA.live, or
+ * only its published pages (EDS-22), and when only the latter, the sentence that
+ * names who must grant what. A read with no content site is returned unchanged.
+ */
+async function withContentAccess(
+    context: HandlerContext,
+    result: SharedDemoProbeResult,
+): Promise<SharedDemoProbeResult> {
+    if (result.outcome !== 'read' || !result.contentSource) return result;
+    const target = { org: result.contentSource.org, site: result.contentSource.site };
+    const auth = getDaLiveAuthService(context.context);
+    const contentAccess = await probeAuthoredContentAccess(
+        target,
+        { getAccessToken: () => auth.getAccessToken(), getUserEmail: () => auth.getUserEmail() },
+        context.logger,
+    );
+    const warning = authoredAccessWarning(contentAccess, target);
+    return {
+        ...result,
+        contentAccess,
+        ...(warning ? { warnings: [...result.warnings, warning] } : {}),
+    };
 }

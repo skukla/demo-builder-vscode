@@ -4,7 +4,7 @@ kind: question
 area: app-builder
 needs: []
 value: med
-status: open
+status: shipped
 ---
 
 # Where does event-provider management belong, and what does an SC do with it?
@@ -45,7 +45,8 @@ would go looking.
 - **Does a person need to see providers at all**, or only to know that teardown
   will remove them? `ioEventsClient` still cleans them up on project delete
   (kept deliberately when the rest was pulled), so the capability exists without
-  any surface.
+  any surface. (Since 2026-10-08 the ownership filter it applies lives in
+  `eventProviderBinding.ts` and its wire layer in `ioEventsTransport.ts`.)
 - **If a surface is needed, where?** The integrations screen, the project
   dashboard, a Console deep-link, or nowhere — a command that reports rather
   than a panel that renders.
@@ -68,3 +69,4 @@ the point" — which would resolve it without building anything.
 
 - 2026-09-09  docs(app-builder): ioEventsClient no longer cites a deleted service (`8d1045e0d`)
 - 2026-09-09  docs(backlog): AB-8 — where event-provider management belongs, as a question (`b8bfaaefe`)
+- 2026-10-20  Answered by the owner (2026-10-19): no screen for event providers. They stay invisible; project delete and teardown remove them and say what they removed (ioEventsClient). Closed.

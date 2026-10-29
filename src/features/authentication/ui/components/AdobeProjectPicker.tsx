@@ -182,7 +182,7 @@ export function AdobeProjectPicker({
                         adobeProject: {
                             id: project.id,
                             name: project.name,
-                            title: title.trim(),
+                            title,
                             description: project.description,
                             org_id: project.org_id,
                         },
@@ -201,11 +201,16 @@ export function AdobeProjectPicker({
             const title = item.title || item.name;
             return (
                 <>
-                    <InlineRenameField
-                        name={title}
-                        label={`New name for ${title}`}
-                        onRename={(next) => handleRename(item, next)}
-                    />
+                    {/* Text slot: ListView's row grid places only slotted children. */}
+                    <Text>
+                        <span className="inline-rename-row">
+                            <InlineRenameField
+                                name={title}
+                                label={`New name for ${title}`}
+                                onRename={(next) => handleRename(item, next)}
+                            />
+                        </span>
+                    </Text>
                     {item.deletable === true && (
                         <ActionButton
                             isQuiet

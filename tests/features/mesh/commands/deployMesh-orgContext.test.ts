@@ -30,11 +30,13 @@ const mockRefreshStatus = jest.fn().mockResolvedValue(undefined);
 const mockSendMeshStatusUpdate = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendMeshStatusUpdate: mockSendMeshStatusUpdate,
         refreshStatus: mockRefreshStatus,
     },
 }));
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendMeshStatusUpdate: mockSendMeshStatusUpdate,
+}));
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
 

@@ -53,7 +53,12 @@ export function paasProject(overrides: Partial<Project> = {}): Project {
 export function makeInstallerClient(overrides: Partial<jest.Mocked<InstallerClient>> = {}) {
     return {
         getInstallationState: jest.fn().mockResolvedValue({ id: 'i1', status: 'succeeded' }),
-        reconcileInstallation: jest.fn().mockResolvedValue({ operation: 'install', message: 'ok' }),
+        getLatestLifecycleAttempt: jest.fn().mockResolvedValue(undefined),
+        reconcileInstallation: jest.fn().mockResolvedValue({
+            operation: 'install',
+            message: 'ok',
+            accepted: false,
+        }),
         setAssociation: jest.fn().mockResolvedValue(undefined),
         ...overrides,
     } as jest.Mocked<InstallerClient>;

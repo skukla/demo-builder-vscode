@@ -99,6 +99,33 @@ describe('DaLiveBlockLibraryOperations.createBlockLibraryFromTemplate', () => {
             expect(h.deleteSource).not.toHaveBeenCalled();
             expect(h.updateSiteConfig).not.toHaveBeenCalled();
         });
+
+        it('asks DA.live for nothing, not even a token, when the definition declares no blocks', async () => {
+            // The return value cannot show this: carrying on with an empty list
+            // ends in the same "no blocks" answer, but only after requesting a
+            // DA.live token to probe for doc pages that cannot exist. A template
+            // with no blocks must stay usable by someone not signed in to DA.live.
+            h.getImsToken.mockRejectedValue(new Error('DA.live session expired'));
+            getFileContent.mockResolvedValue(
+                componentDefinition([{ id: 'blocks', components: [] }])
+            );
+
+            const result = await run([{ org: 'lib-org', site: 'lib-site' }]);
+
+            expect(result).toStrictEqual({ success: true, blocksCount: 0, paths: [] });
+            expect(h.getImsToken).not.toHaveBeenCalled();
+            expect(h.fetchWithRetry).not.toHaveBeenCalled();
+        });
+
+        it('asks DA.live for nothing when the definition has no groups key at all', async () => {
+            getFileContent.mockResolvedValue({ content: JSON.stringify({}), sha: 'abc' });
+
+            const result = await run();
+
+            expect(result).toStrictEqual({ success: true, blocksCount: 0, paths: [] });
+            expect(h.getImsToken).not.toHaveBeenCalled();
+            expect(h.createSource).not.toHaveBeenCalled();
+        });
     });
 
     describe('flattening groups into blocks', () => {

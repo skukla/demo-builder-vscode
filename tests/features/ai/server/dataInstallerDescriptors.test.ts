@@ -11,9 +11,6 @@
  *   consistency with its siblings.
  * - **The export item page size.** `listExportItems` asks the service for 1,000
  *   rows; unpaged, that is phase 2's 25KB finding all over again.
- * - **`provision_accs_credentials` is absent**, because its handler docstring
- *   says panel-only. A test states it so the next person adding "the missing
- *   ninth handler" finds the reason instead of the gap.
  */
 
 import {
@@ -24,25 +21,22 @@ import type { HandlerResponse } from '@/types/handlers';
 
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
 
-it('registers the eight tools, and only those', () => {
+it('registers the thirteen tools, and only those', () => {
     expect(DATA_INSTALLER_DESCRIPTORS.map((d) => d.tool).sort()).toEqual([
+        'copy_library_datapack_to_installer',
+        'delete_library_datapack',
         'get_datapack_import_status',
         'get_datapack_import_target',
         'list_datapack_export_items',
         'list_datapack_import_scopes',
+        'load_datapack_zip',
+        'open_datapack_zip',
         'reset_datapack',
+        'save_datapack_zip',
         'start_datapack_export',
         'start_datapack_import',
         'validate_datapack_import',
     ]);
-});
-
-it('omits provision_accs_credentials, which its handler declares panel-only', () => {
-    // "Panel-only by construction (never in the MCP maps): it creates a
-    // credential in the user's Console workspace." — importHandlers.ts
-    expect(row('provision_accs_credentials')).toBeUndefined();
-    // The handler still exists; it is the EXPOSURE that is withheld.
-    expect(importHandlers['provision-accs-credentials']).toBeDefined();
 });
 
 it('every row dispatches to a handler that actually exists', () => {
@@ -55,9 +49,13 @@ it('every row dispatches to a handler that actually exists', () => {
 });
 
 describe('gates', () => {
-    it('gates exactly the three writes', () => {
+    // Saving a file into the project is not gated: it changes no store and no instance.
+    it('gates exactly the six writes that reach a store or an instance', () => {
         const gated = DATA_INSTALLER_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
+            'copy_library_datapack_to_installer',
+            'delete_library_datapack',
+            'load_datapack_zip',
             'reset_datapack',
             'start_datapack_export',
             'start_datapack_import',
@@ -170,15 +168,16 @@ describe('list_datapack_export_items paging', () => {
 // any handler runs — which sign-in is required, whether the tool is exposed as a
 // read, and what a caller may send. Nothing else checks them.
 describe('what each row declares', () => {
-    it('requires an Adobe sign-in on every row', () => {
+    // open_datapack_zip only reads a local file, so it is the one row with no sign-in.
+    it('requires an Adobe sign-in on every row that reaches a service', () => {
         for (const d of DATA_INSTALLER_DESCRIPTORS) {
-            expect(d.needsAuth).toStrictEqual(['adobe']);
+            expect(d.needsAuth).toStrictEqual(d.tool === 'open_datapack_zip' ? [] : ['adobe']);
         }
     });
 
     // readOnly is what the write-gating machinery reads. The dry run is a read;
     // the three that touch a live instance or the shared catalog are not.
-    it('exposes five reads and three writes', () => {
+    it('exposes six reads and seven writes', () => {
         const byFlag = (readOnly: boolean) =>
             DATA_INSTALLER_DESCRIPTORS.filter((d) => d.readOnly === readOnly)
                 .map((d) => d.tool)
@@ -189,10 +188,15 @@ describe('what each row declares', () => {
             'get_datapack_import_target',
             'list_datapack_export_items',
             'list_datapack_import_scopes',
+            'open_datapack_zip',
             'validate_datapack_import',
         ]);
         expect(byFlag(false)).toEqual([
+            'copy_library_datapack_to_installer',
+            'delete_library_datapack',
+            'load_datapack_zip',
             'reset_datapack',
+            'save_datapack_zip',
             'start_datapack_export',
             'start_datapack_import',
         ]);
@@ -209,6 +213,8 @@ describe('what each row accepts', () => {
             'commerceInstance',
             'dataTypes',
             'datapackName',
+            // Which store holds the pack, installer or library (DI-5).
+            'source',
             'storeCode',
             'version',
             'websiteCode',

@@ -75,22 +75,14 @@ export async function reKeyProjectSecrets(
 
     for (const componentId of componentIds) {
         for (const varName of declaredSecretKeys()) {
-            const from = commerceSecretKey(oldProjectId, componentId, varName);
-            try {
-                const value = await secrets.get(from);
-                if (!value) continue;
-
-                const to = commerceSecretKey(newProjectId, componentId, varName);
-                await secrets.store(to, value);
-                if ((await secrets.get(to)) !== value) {
-                    log?.(`secret ${varName}: re-key not verified, left at the old key`);
-                    continue;
-                }
-                await secrets.delete(from);
-                rekeyed.push(varName);
-            } catch {
-                log?.(`secret ${varName}: re-key failed, left at the old key`);
-            }
+            const moved = await moveSecret(
+                secrets,
+                commerceSecretKey(oldProjectId, componentId, varName),
+                commerceSecretKey(newProjectId, componentId, varName),
+                varName,
+                log,
+            );
+            if (moved) rekeyed.push(varName);
         }
     }
 
@@ -98,6 +90,38 @@ export async function reKeyProjectSecrets(
         log?.(`re-keyed ${rekeyed.length} secret(s) after a path change`);
     }
     return rekeyed;
+}
+
+/**
+ * Move one secret to a new key: copy, verify, then delete the old one. An interrupted or
+ * unverified move leaves the value at the old key, never nowhere. Shared by every re-key
+ * a project rename runs (this module's and `componentSettingSecrets`'). Logs the var name
+ * only, never the value.
+ *
+ * @returns true when the value now lives at `to` alone; false when there was nothing to
+ *   move, or it stayed at `from`
+ */
+export async function moveSecret(
+    secrets: SecretWriter,
+    from: string,
+    to: string,
+    varName: string,
+    log?: (line: string) => void,
+): Promise<boolean> {
+    try {
+        const value = await secrets.get(from);
+        if (!value) return false;
+        await secrets.store(to, value);
+        if ((await secrets.get(to)) !== value) {
+            log?.(`secret ${varName}: re-key not verified, left at the old key`);
+            return false;
+        }
+        await secrets.delete(from);
+        return true;
+    } catch {
+        log?.(`secret ${varName}: re-key failed, left at the old key`);
+        return false;
+    }
 }
 
 /**
@@ -274,4 +298,26 @@ export async function migrateDeclaredSecrets(
         log?.(`cleared ${cleared.length} secret(s): ${cleared.join(', ')}`);
     }
     return { sanitizedConfigs: sanitized, moved, retained, cleared };
+}
+
+/**
+ * Delete a project's Commerce secrets, under every component it configured. Run when the
+ * project is deleted (owner, 2026-10-01); the counterpart of {@link reKeyProjectSecrets},
+ * which moves the same keys when the project's path changes. Never logs a value.
+ *
+ * @returns how many keys were asked to be deleted
+ */
+export async function forgetProjectCommerceSecrets(
+    projectId: string,
+    componentIds: string[],
+    secrets: Pick<SecretWriter, 'delete'>,
+): Promise<number> {
+    let asked = 0;
+    for (const componentId of componentIds) {
+        for (const varName of declaredSecretKeys()) {
+            await secrets.delete(commerceSecretKey(projectId, componentId, varName));
+            asked += 1;
+        }
+    }
+    return asked;
 }

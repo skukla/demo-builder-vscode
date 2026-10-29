@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { resetAiOnboardingState } from './openInClaude';
 import { BaseCommand } from '@/core/base/baseCommand';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 
 /**
  * Dev-only convenience command for testing the first-run AI experience
@@ -39,9 +40,8 @@ export class ResetAiOnboardingCommand extends BaseCommand {
             await resetAiOnboardingState(this.context);
             this.logger.info('[ResetAiOnboarding] AI onboarding state cleared (flags + settings)');
 
-            vscode.window.showInformationMessage(
-                'AI onboarding state reset. Click an AI prompt to see the first-run flow again.',
-            );
+            // A success: a ✅ line that goes by itself (owner, 2026-10-15).
+            showSuccessInStatusBar('AI onboarding reset. Click an AI prompt to see the first run again');
         } catch (error) {
             await this.showError('Failed to reset AI onboarding', error as Error);
         }

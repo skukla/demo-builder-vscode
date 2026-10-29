@@ -2,12 +2,17 @@
  * Moving a project's App Builder components when its Adobe destination changes.
  *
  * The destination is PROJECT-scoped — one `organization`/`projectId`/`workspace`
- * for every integration — so a change moves them all rather than leaving some
- * behind in a Console project the project no longer points at.
+ * for every component that lives in the project's workspace — so a change moves
+ * them all rather than leaving some behind in a Console project the project no
+ * longer points at. A component in a workspace of its own (AB-23) is not moved by
+ * a change of the project's workspace within the same Adobe project; into a
+ * DIFFERENT Adobe project it is removed from the old one and added in the new one,
+ * after everything else has moved (`componentRelocation`, owner 2026-09-21). That is
+ * the one part of a move that deletes, and the handler confirms it first.
  *
- * ## It deploys, and it never deletes
+ * ## What lives in the project's workspace is deployed, never deleted
  *
- * A move deploys each component to the new destination and LEAVES the old
+ * A move deploys each such component to the new destination and LEAVES the old
  * deployment serving. Undeploy is the only irreversible step in the operation,
  * nobody asked for cleanup, and the previous namespace is a free rollback when the
  * new destination turns out wrong — worth more to a demo tool than tidiness. Idle
@@ -27,10 +32,10 @@
  * @module features/app-builder/services/appBuilderComponentMigration
  */
 
-import {
-    deployAppBuilderComponent,
-    type AppBuilderComponentRunnerDeps,
-} from './appBuilderComponentRunner';
+import { entriesThatNeedApis } from './apiSubscriber';
+import type { AppBuilderComponentRunnerDeps } from './appBuilderComponentRunner';
+import { deployAppBuilderComponent } from './appBuilderRedeployRun';
+import { ownWorkspaceGroups, relocateGroup, type WorkspaceGroup } from './componentRelocation';
 import type { ProjectAdobeRef } from '@/core/shell/orgContextEnv';
 import { cardInFlightLabel } from '@/core/vscode/progressRegister';
 import type { Project } from '@/types/base';
@@ -86,8 +91,11 @@ export async function moveAppBuilderComponentsToDestination(
     deps: AppBuilderComponentRunnerDeps,
     onRowStatus?: OnMigrationRowStatus,
 ): Promise<MigrationResult> {
-    const ids = Object.keys(project.appBuilderComponents ?? {});
-    if (ids.length === 0 || sameDestination(previous, project.adobe)) {
+    const ids = projectWorkspaceIds(project);
+    // A component in a workspace of its own moves only when the Adobe project
+    // changes: its workspace belongs to the Adobe project being left (AB-23).
+    const groups = previous && !sameAdobeProject(previous, project.adobe) ? ownWorkspaceGroups(project) : [];
+    if ((ids.length === 0 && groups.length === 0) || sameDestination(previous, project.adobe)) {
         return { success: true, moved: [], failed: [] };
     }
 
@@ -96,7 +104,7 @@ export async function moveAppBuilderComponentsToDestination(
     // subscribe round trip returned — reported live 2026-08-07 as "I see the move
     // happening, but the cards still just say Deployed". The move is in flight for
     // all of them from this point, so saying so is accurate as well as faster.
-    for (const id of ids) {
+    for (const id of [...ids, ...groups.flatMap((group) => group.members)]) {
         const entry = project.appBuilderComponents?.[id];
         if (entry) await onRowStatus?.(id, 'deploying', inFlightLabelFor(entry.kind));
     }
@@ -112,12 +120,33 @@ export async function moveAppBuilderComponentsToDestination(
         components: structuredClone(project.appBuilderComponents ?? {}),
         instances: structuredClone(project.componentInstances ?? {}),
     };
+    // Abort. Nothing was destroyed remotely, so undoing is bookkeeping: point the
+    // project back and restore every record the deploys wrote. No redeploy, no
+    // teardown. The restored values are TRUE, not merely older: the previous
+    // deployment was never removed, so its endpoint is still serving.
+    const rollBack = async (failure: { id: string; error: string }, moved: string[]) => {
+        if (previous) {
+            project.adobe = previous as Project['adobe'];
+            project.appBuilderComponents = before.components;
+            project.componentInstances = before.instances;
+            await deps.saveProject(project);
+            await restoreStorefront(project, deps);
+        }
+        return { success: false, moved, failed: [failure], rolledBack: Boolean(previous) };
+    };
 
     // Before any deploy: the subscribe PUT sets the workspace's APIs to EXACTLY
     // the union it is given, and this is the first reconcile against the NEW
     // workspace. Skip it and every moved component deploys into a workspace
     // subscribed to nothing it needs.
-    await deps.subscribeRequiredApis(deps.catalog, project);
+    //
+    // Only what runs in the project's workspace: a component with a workspace of
+    // its own is subscribed there, and its APIs on this credential would be
+    // entitlements nothing here uses (AB-23).
+    const onProjectWorkspace = entriesThatNeedApis(deps.catalog, project).filter(
+        (entry) => !project.appBuilderComponents?.[entry.id]?.workspace,
+    );
+    await deps.subscribeRequiredApis(onProjectWorkspace, project);
 
     const moved: string[] = [];
     for (const id of ids) {
@@ -126,25 +155,7 @@ export async function moveAppBuilderComponentsToDestination(
         const deployed = await deployAppBuilderComponent(project, id, deps);
         if (!deployed.success) {
             await onRowStatus?.(id, 'error', deployed.error);
-            // Abort. Nothing was destroyed remotely, so undoing is bookkeeping: point
-            // the project back and restore every record the deploys wrote. No
-            // redeploy, no teardown, and the "gone from both" state cannot occur.
-            //
-            // The restored values are TRUE, not merely older: the previous
-            // deployment was never removed, so its endpoint is still serving.
-            if (previous) {
-                project.adobe = previous as Project['adobe'];
-                project.appBuilderComponents = before.components;
-                project.componentInstances = before.instances;
-                await deps.saveProject(project);
-                await restoreStorefront(project, deps);
-            }
-            return {
-                success: false,
-                moved,
-                failed: [{ id, error: deployed.error ?? 'Deploy to the new destination failed.' }],
-                rolledBack: Boolean(previous),
-            };
+            return rollBack({ id, error: deployed.error ?? 'Deploy to the new destination failed.' }, moved);
         }
         // Settle this card as it lands rather than batching at the end — that
         // per-component sequencing IS the feedback a project-scoped notification
@@ -153,7 +164,66 @@ export async function moveAppBuilderComponentsToDestination(
         moved.push(id);
     }
 
-    return { success: true, moved, failed: [] };
+    return relocateAll(project, groups, previous as ProjectAdobeRef, { deps, onRowStatus, moved, rollBack });
+}
+
+/**
+ * Move each own-workspace group into the new Adobe project, after everything in the
+ * project's workspace has landed.
+ *
+ * Until a group's old side is gone the whole move can still be rolled back, and is
+ * when the first group cannot be cleaned up. After that there is nothing to go back
+ * to, so a failure is reported against its component and the move carries on.
+ */
+async function relocateAll(
+    project: Project,
+    groups: WorkspaceGroup[],
+    previous: ProjectAdobeRef,
+    run: {
+        deps: AppBuilderComponentRunnerDeps;
+        onRowStatus?: OnMigrationRowStatus;
+        moved: string[];
+        rollBack: (failure: { id: string; error: string }, moved: string[]) => Promise<MigrationResult>;
+    },
+): Promise<MigrationResult> {
+    const { deps, onRowStatus, moved } = run;
+    const failed: MigrationResult['failed'] = [];
+    let anyReleased = false;
+    for (const group of groups) {
+        const result = await relocateGroup(project, group, previous, deps);
+        moved.push(...result.moved);
+        for (const id of result.moved) await onRowStatus?.(id, 'deployed');
+        if (!result.failed) {
+            anyReleased = true;
+            continue;
+        }
+        await onRowStatus?.(result.failed.id, 'error', result.failed.error);
+        if (!result.released && !anyReleased) return run.rollBack(result.failed, moved);
+        anyReleased ||= result.released;
+        failed.push(result.failed);
+    }
+    return failed.length > 0
+        ? { success: false, moved, failed, rolledBack: false }
+        : { success: true, moved, failed: [] };
+}
+
+/**
+ * The components that live in the project's workspace — every one without a
+ * workspace of its own (AB-23), which a change of the project's workspace does not
+ * touch.
+ *
+ * @param project - the project
+ * @returns their ids
+ */
+function projectWorkspaceIds(project: Project): string[] {
+    return Object.entries(project.appBuilderComponents ?? {})
+        .filter(([, state]) => !state.workspace)
+        .map(([id]) => id);
+}
+
+/** Whether two destinations are in the same Adobe project. */
+function sameAdobeProject(a: ProjectAdobeRef, b: ProjectAdobeRef | undefined): boolean {
+    return a.projectId === b?.projectId;
 }
 
 /**

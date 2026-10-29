@@ -9,7 +9,9 @@
 
 import { ProgressTracker } from '../handlers/shared';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { jobLine } from '@/core/utils/storefrontJobs';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
@@ -76,7 +78,7 @@ async function fetchMeshInfoFromDescribe(
         const describeResult = await commandManager.execute('aio api-mesh:describe', {
             timeout: TIMEOUTS.NORMAL,
             configureTelemetry: false,
-            useNodeVersion: getMeshNodeVersion(),
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
         });
 
@@ -163,6 +165,12 @@ async function handleMeshDeploySuccess(params: {
     logger.info(`[Project Creation] Phase 3 complete: Mesh deployed${endpoint ? ' at ' + endpoint : ''}`);
 }
 
+/** Line 2 under creation's one mesh step: "Checking the mesh is live: Waiting for Adobe". */
+function underDeploy(stage: string, step?: string): string {
+    if (!step) return stage;
+    return stage === S.deployingMesh.label ? step : jobLine(stage, step);
+}
+
 /**
  * Deploy a new mesh and update project state
  *
@@ -190,7 +198,7 @@ export async function deployNewMesh(
     }
 
     // Generate mesh .env BEFORE deployment (mesh needs commerce URLs from .env)
-    progressTracker('Configuring API Mesh', 70, 'Generating mesh configuration');
+    progressTracker(S.deployingMesh.label, 70, S.generatingMeshConfig.label);
     logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh');
 
     await generateComponentEnvFile(
@@ -206,7 +214,7 @@ export async function deployNewMesh(
     // of this brand-new project. Runs once (idempotent), before the retry loop.
     // Surfaced to the user: this is where the mesh's API access is provisioned
     // now that the Add-Integration modal defers all subscription to the build.
-    progressTracker('Configuring API Mesh', 72, 'Enabling API access');
+    progressTracker(S.deployingMesh.label, 72, S.subscribingApis.label);
     const { ensureMeshApiSubscribed } = await import(
         '@/features/app-builder/services/ensureMeshApiSubscribed'
     );
@@ -248,7 +256,7 @@ export async function deployNewMesh(
         const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
 
         // Update progress and mesh phase
-        progressTracker('Deploying API Mesh', 75, 'Deploying mesh to Adobe I/O');
+        progressTracker(S.deployingMesh.label, 75);
         updateMeshPhase({
             status: 'deploying',
             attempt,
@@ -264,7 +272,7 @@ export async function deployNewMesh(
                 logger,
                 (message: string, subMessage?: string) => {
                     const elapsed = Math.floor((Date.now() - startTime) / 1000);
-                    progressTracker('Deploying API Mesh', 80, subMessage || message);
+                    progressTracker(S.deployingMesh.label, 80, underDeploy(message, subMessage));
                     updateMeshPhase({
                         status: 'verifying',
                         attempt,
@@ -281,7 +289,12 @@ export async function deployNewMesh(
                     commandManager: context.commandManager,
                     meshDeployResult, apiMeshConfig, startTime, attempt,
                     setupContext, project, meshComponent, meshComponentId,
-                    onMeshCreated, updateMeshPhase, logger,
+                    // "Created" only when it was: an update of a mesh already in the
+                    // workspace is not this creation's to delete if creation then fails.
+                    // The wizard also guards this (meshExistedBeforeSession); the
+                    // agent's create_project has no such check (2026-10-16).
+                    onMeshCreated: existingMeshId ? undefined : onMeshCreated,
+                    updateMeshPhase, logger,
                 });
                 return; // Success, exit the retry loop
             } else {
@@ -350,7 +363,7 @@ export async function linkExistingMesh(
     const meshComponent = getMeshComponentInstance(project);
     const meshComponentId = getMeshComponentId(project);
 
-    progressTracker('Configuring API Mesh', 75, 'Updating existing mesh configuration');
+    progressTracker(S.deployingMesh.label, 75, 'Updating the existing mesh');
     logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh');
 
     // Generate mesh .env file (needed for deployment)
@@ -373,7 +386,7 @@ export async function linkExistingMesh(
             context.commandManager,
             logger,
             (message: string, subMessage?: string) => {
-                progressTracker('Deploying API Mesh', 78, subMessage || message);
+                progressTracker(S.deployingMesh.label, 78, underDeploy(message, subMessage));
             },
             meshConfig.meshId, // Pass existing mesh ID to enable update strategy
         );
@@ -436,7 +449,7 @@ export async function linkExistingMesh(
  * @param endpoint - The mesh endpoint URL (optional)
  */
 async function updateProjectMeshState(project: Project, logger: Logger, endpoint?: string): Promise<void> {
-    const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
+    const { updateMeshState } = await import('@/features/mesh/services/meshDeployBaseline');
 
     await updateMeshState(project, endpoint);
     logger.debug('[Project Creation] Updated mesh state after deployment');

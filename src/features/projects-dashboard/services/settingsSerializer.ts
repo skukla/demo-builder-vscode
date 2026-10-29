@@ -1,95 +1,25 @@
 /**
- * Settings Serializer Service
+ * The project file's writer: a project in, the version-2 project file out.
  *
- * Handles serialization, parsing, and validation of project settings files.
- * Used for import/export functionality to share settings between projects.
+ * ONE writer (PL-56c). Every export door writes {@link createExportSettings}, and
+ * every door into the wizard reads it back through ONE reader, `readProjectFile`
+ * (`core/state/projectFileReader.ts`), which also migrates the version-1 files
+ * written before 2026-10 (PL-56e): Import reads a file from disk, Copy reads
+ * {@link copySeedFromProject}, and Edit reads {@link extractSettingsFromProject},
+ * the same file with the SC's own values and storefront put back.
  */
 
 import { stripSecretValues } from '@/core/config/envVarKeys';
+import {
+    readProjectFile,
+    storefrontProvenance,
+    type ReadProjectFileResult,
+} from '@/core/state/projectFileReader';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { Project } from '@/types/base';
-import {
-    SETTINGS_FILE_VERSION,
-    type SettingsFile,
-    type SettingsEdsConfig,
-} from '@/types/settingsFile';
-
-/**
- * Result of parsing a settings file
- */
-export interface ParseResult {
-    success: true;
-    settings: SettingsFile;
-}
-
-/**
- * Error result from parsing a settings file
- */
-export interface ParseError {
-    success: false;
-    error: string;
-}
-
-/**
- * Parse and validate a JSON string as a settings file
- *
- * @param jsonString - Raw JSON string to parse
- * @returns ParseResult on success, ParseError on failure
- */
-export function parseSettingsFile(jsonString: string): ParseResult | ParseError {
-    // Parse JSON
-    let parsed: unknown;
-    try {
-        parsed = JSON.parse(jsonString);
-    } catch {
-        return {
-            success: false,
-            error: "This file couldn't be read. It may have been corrupted.",
-        };
-    }
-
-    // Validate structure
-    if (!isValidSettingsFile(parsed)) {
-        return {
-            success: false,
-            error: "This doesn't appear to be a Demo Builder settings file.",
-        };
-    }
-
-    return {
-        success: true,
-        settings: parsed as SettingsFile,
-    };
-}
-
-/**
- * Validate that an object has the required settings file structure
- *
- * @param obj - Object to validate
- * @returns True if valid settings file structure
- */
-export function isValidSettingsFile(obj: unknown): boolean {
-    if (!obj || typeof obj !== 'object') {
-        return false;
-    }
-
-    // Must have version field
-    if (!('version' in obj) || typeof obj.version !== 'number') {
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * Check if settings file version is newer than supported
- *
- * @param settings - Settings file to check
- * @returns True if version is newer than supported
- */
-export function isNewerVersion(settings: SettingsFile): boolean {
-    return settings.version > SETTINGS_FILE_VERSION;
-}
+import { PROJECT_FILE_SUFFIX, PROJECT_FILE_VERSION, type ProjectFile } from '@/types/projectFile';
+import type { SettingsAdobeContext, SettingsEdsConfig } from '@/types/settingsFile';
+import type { ProjectSeed } from '@/types/wizard';
 
 /**
  * Derive the wizard's custom-source map from the keyed `appBuilderComponents`
@@ -105,11 +35,15 @@ export function isNewerVersion(settings: SettingsFile): boolean {
  */
 function deriveAppBuilderComponentSources(
     project: Project,
-): SettingsFile['appBuilderComponentSources'] {
-    const derived: NonNullable<SettingsFile['appBuilderComponentSources']> = {};
+): ProjectFile['appBuilderComponentSources'] {
+    const derived: NonNullable<ProjectFile['appBuilderComponentSources']> = {};
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
         if (state.kind !== 'integration') continue;
         if (getAppBuilderComponentEntry(id) !== undefined) continue;
+        // A second copy of a pre-built kind (AB-23) is not an imported repo: exported
+        // as one, a new project would add it bare, without its ERP. Creation cannot
+        // make copies yet, so it stays out of the file.
+        if (state.catalogId) continue;
         if (!state.source) continue; // defensive: malformed persisted entry
         derived[id] = state.name ? { ...state.source, name: state.name } : { ...state.source };
     }
@@ -117,117 +51,151 @@ function deriveAppBuilderComponentSources(
 }
 
 /**
- * Extract settings from an existing project
+ * The project's own storefront, read from the `eds-storefront` instance.
  *
- * Creates a SettingsFile from a project's current state.
- * Used for "Copy from Existing" functionality.
- *
- * @param project - Source project to extract settings from
- * @param includeSecrets - Whether to write credential VALUES into the file.
- *   REQUIRED, no default: this used to default `true` here and `false` in
- *   `createExportSettings`, so the same operation carried secrets or not
- *   depending on which door the caller came through. Every caller states intent.
- * @returns SettingsFile with extracted settings
+ * Edit reopens it; an export carries it only as provenance (where the project
+ * lived), because the receiver creates their own.
  */
-export function extractSettingsFromProject(
-    project: Project,
-    includeSecrets: boolean,
-): SettingsFile {
-    // Extract EDS config from eds-storefront component metadata (if present)
-    let edsConfig: SettingsEdsConfig | undefined;
-    const edsStorefront = project.componentInstances?.['eds-storefront'];
-    if (edsStorefront?.metadata) {
-        const metadata = edsStorefront.metadata as Record<string, unknown>;
-        // Parse "owner/repo" format from githubRepo metadata
-        const githubRepoParts = metadata.githubRepo?.toString().split('/');
-
-        // Only include project-specific EDS fields
-        // templateOwner, templateRepo, contentSource, patches are derived from brand+stack
-        edsConfig = {
-            daLiveOrg: metadata.daLiveOrg as string | undefined,
-            daLiveSite: metadata.daLiveSite as string | undefined,
-            githubOwner: githubRepoParts?.[0], // Extract owner from "owner/repo"
-            repoName: githubRepoParts?.[1], // Extract repo name from "owner/repo"
-            repoUrl: metadata.repoUrl as string | undefined,
-        };
-    }
-
+function storefrontOf(project: Project): SettingsEdsConfig | undefined {
+    const metadata = project.componentInstances?.['eds-storefront']?.metadata as
+        | Record<string, unknown>
+        | undefined;
+    if (!metadata) return undefined;
+    // Parse "owner/repo" format from githubRepo metadata
+    const githubRepoParts = metadata.githubRepo?.toString().split('/');
+    // Only project-specific fields: templateOwner, templateRepo, contentSource and
+    // patches are derived from brand + stack.
     return {
-        version: SETTINGS_FILE_VERSION,
-        exportedAt: new Date().toISOString(),
-        source: {
-            project: project.name,
-        },
-        includesSecrets: includeSecrets,
-        selections: project.componentSelections || {},
-        // `includeSecrets` used to be consumed ONLY by the line above — the label —
-        // while configs went out whole. So `includeSecrets: false` produced a file
-        // containing ADOBE_COMMERCE_ADMIN_PASSWORD and stamped it
-        // `includesSecrets: false`: not a leak so much as a file that asserts it is
-        // safe to share when it is not, against an MCP description promising "a
-        // secret-free copy". The flag now actually removes them.
-        configs: includeSecrets
-            ? project.componentConfigs || {}
-            : stripSecretValues(project.componentConfigs),
-        adobe: project.adobe
-            ? {
-                  // Include IDs for pre-selection in wizard
-                  // Note: project.adobe stores IDs in organization/workspace fields
-                  orgId: project.adobe.organization,
-                  projectId: project.adobe.projectId,
-                  workspaceId: project.adobe.workspace,
-                  // Include names for display and fallback matching
-                  projectName: project.adobe.projectName,
-                  projectTitle: project.adobe.projectTitle,
-                  workspaceTitle: project.adobe.workspaceTitle,
-              }
-            : undefined,
-        // Package/Stack/Addons selections for import/copy retention
-        selectedPackage: project.selectedPackage,
-        demo: project.demo,
-        selectedStack: project.selectedStack,
-        selectedAddons: project.selectedAddons,
-        selectedBlockLibraries: project.selectedBlockLibraries,
-        customBlockLibraries: project.customBlockLibraries,
-        installedBlockLibraries: project.installedBlockLibraries,
-        // EDS configuration (for Edge Delivery Services stacks)
-        edsConfig,
-        // App Builder integration round-trip: custom/instance sources are
-        // DERIVED from the keyed appBuilderComponents map (§E); the Console API
-        // picks beyond requiredApis persist on the project (manifest field)
-        appBuilderComponentSources: deriveAppBuilderComponentSources(project),
-        // BOTH forms. The keyed map is the one that survives step 07 — exporting the
-        // flat field alone meant a settings file would carry nothing once the flat
-        // write is retired, and an edit round-trip collapsed every pick into the
-        // unattributed bucket even before then.
-        componentApiPicks: project.componentApiPicks,
+        // Derived too, and for the same reason as the site below: republish
+        // and the agent's storefront tools both read `daLiveOrg || repoOwner`,
+        // because the DA.live org IS the GitHub namespace. A project without a
+        // stored one would reach the edit wizard's last step with an
+        // incomplete config, exactly as a missing site did.
+        daLiveOrg: (metadata.daLiveOrg as string | undefined) ?? githubRepoParts?.[0],
+        // DERIVED, not read raw. `daLiveSite` is legacy metadata the loader
+        // STRIPS on load (projectFileLoader), because the DA site name IS the
+        // repo name; only unmigrated projects still carry one. Reading it raw
+        // gave every migrated project an undefined site, and the edit wizard's
+        // last step refused with "Storefront configuration is incomplete" after
+        // the SC had walked the whole wizard with nothing wrong on screen
+        // (owner, 2026-09-20). Same derivation as `getEdsDaLiveTarget`.
+        daLiveSite: (metadata.daLiveSite as string | undefined) ?? githubRepoParts?.[1],
+        githubOwner: githubRepoParts?.[0],
+        repoName: githubRepoParts?.[1],
+        repoUrl: metadata.repoUrl as string | undefined,
+    };
+}
+
+/** The Adobe org, project and workspace: ids for pre-selection, names for display and matching. */
+function adobeContextOf(project: Project): SettingsAdobeContext | undefined {
+    const adobe = project.adobe;
+    if (!adobe) return undefined;
+    // project.adobe stores the org and workspace IDS in `organization`/`workspace`.
+    return {
+        orgId: adobe.organization,
+        orgName: adobe.organizationName,
+        projectId: adobe.projectId,
+        projectName: adobe.projectName,
+        projectTitle: adobe.projectTitle,
+        workspaceId: adobe.workspace,
+        workspaceName: adobe.workspaceName,
+        workspaceTitle: adobe.workspaceTitle,
     };
 }
 
 /**
- * Create a SettingsFile for export to disk
+ * The version-2 project file for a project: everything the contract's
+ * "travels" column names, values as they are (credentials included; the
+ * export strips them).
+ */
+function projectFileOf(project: Project, extensionVersion: string): ProjectFile {
+    const storefront = storefrontOf(project);
+    return {
+        kind: 'project',
+        version: PROJECT_FILE_VERSION,
+        exportedAt: new Date().toISOString(),
+        source: {
+            project: project.name,
+            ...(project.title ? { title: project.title } : {}),
+            extension: extensionVersion,
+            ...(storefront ? { storefront: storefrontProvenance(storefront) } : {}),
+        },
+        title: project.title,
+        selectedPackage: project.selectedPackage,
+        selectedStack: project.selectedStack,
+        selectedAddons: project.selectedAddons,
+        selectedBlockLibraries: project.selectedBlockLibraries,
+        customBlockLibraries: project.customBlockLibraries,
+        demo: project.demo,
+        selections: project.componentSelections || {},
+        configs: project.componentConfigs || {},
+        commerce: project.commerce,
+        commerceStoreStructure: project.commerceStoreStructure,
+        datapack: project.datapack,
+        adobe: adobeContextOf(project),
+        // Custom/instance sources are DERIVED from the keyed appBuilderComponents
+        // map (§E); the attributed API picks are the manifest field as it is.
+        appBuilderComponentSources: deriveAppBuilderComponentSources(project),
+        componentApiPicks: project.componentApiPicks,
+        aiPrompts: project.aiPrompts,
+    };
+}
+
+/**
+ * What Copy from Existing opens the wizard with: the file Export writes, read back
+ * by the reader Import uses (PL-56e). So copying a project and importing its
+ * export are the same file and the same creation wire: no credential (D24; they
+ * move keychain to keychain or are entered again, never through the file), and
+ * the source's storefront only as provenance, because the copy gets its own
+ * repository and DA.live site.
+ *
+ * @param project - The project being copied
+ * @returns The reader's answer: the file, or the sentence it refused with
+ */
+export function copySeedFromProject(project: Project): ReadProjectFileResult {
+    return readProjectFile(JSON.stringify(createExportSettings(project, '')));
+}
+
+/**
+ * What Edit opens the wizard with: {@link copySeedFromProject}'s file, plus the
+ * two things only Edit keeps because it edits the SC's OWN project — the setting
+ * values as they are (credentials included; Finish writes them back) and the
+ * project's storefront, which Edit reopens already signed in.
+ *
+ * @param project - The project being edited
+ * @returns The wizard's seed
+ * @throws Error naming the project when the reader refuses its file; Edit then
+ *   says so rather than opening on a seed Import would not accept
+ */
+export function extractSettingsFromProject(project: Project): ProjectSeed {
+    const read = copySeedFromProject(project);
+    if (!read.ok) throw new Error(`${project.name} can't be opened for editing: ${read.error}`);
+    return { ...read.file, configs: project.componentConfigs ?? {}, edsConfig: storefrontOf(project) };
+}
+
+/**
+ * Create the file an export writes: the project, and never a credential.
+ *
+ * The ONE function every export door goes through (the save dialog, the
+ * headless `export_project_settings` tool, the demo bundle's setup part). There
+ * is no include-secrets option and no stamp saying whether credentials are in
+ * (owner decision D24): they are not. `SECRET_ENV_KEYS` is the register of what
+ * a credential is.
  *
  * @param project - Source project
  * @param extensionVersion - Current extension version
- * @param includeSecrets - Whether to write credential VALUES into the file.
- *   REQUIRED, no default — see {@link extractSettingsFromProject}.
- * @returns SettingsFile ready for JSON serialization
+ * @returns The version-2 project file, ready for JSON serialization
  */
-export function createExportSettings(
-    project: Project,
-    extensionVersion: string,
-    includeSecrets: boolean,
-): SettingsFile {
-    const settings = extractSettingsFromProject(project, includeSecrets);
-    settings.source.extension = extensionVersion;
-    return settings;
+export function createExportSettings(project: Project, extensionVersion: string): ProjectFile {
+    const file = projectFileOf(project, extensionVersion);
+    return { ...file, configs: stripSecretValues(file.configs) };
 }
 
 /**
  * Generate a suggested filename for exported settings
  *
  * @param projectName - Name of the project
- * @returns Suggested filename (e.g., "my-project.demo-builder.json")
+ * @returns Suggested filename (e.g., "my-project.project.demo-builder.json")
  */
 export function getSuggestedFilename(projectName: string): string {
     // Sanitize project name for filename
@@ -237,5 +205,5 @@ export function getSuggestedFilename(projectName: string): string {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 
-    return `${sanitized || 'project'}.demo-builder.json`;
+    return `${sanitized || 'project'}${PROJECT_FILE_SUFFIX}`;
 }

@@ -33,19 +33,51 @@ import * as os from 'os';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
 import type { ExecuteOptions } from '@/core/shell/types';
+import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { Project } from '@/types/base';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { githubAccessFor } from '../../../helpers/githubAccessFake';
+import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
+import { gitEnv } from '../../../helpers/realGit';
 
-// The service reads its GitHub token through the shared service cache; only getToken is called.
-jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
-    getGitHubServices: () => ({ tokenService: { getToken: async () => ({ token: 'gh-token' }) } }),
+
+// A thin-layer storefront's network reads (EDS-51), faked; none is reached by a
+// storefront with no lkgSource, so the cases above run exactly as before.
+// The tested (LKG) version the patches repo names.
+const mockReadLkgSha = jest.fn();
+jest.mock('@/features/eds/services/patches/lkgReader', () => ({
+    readLkgSha: (...args: unknown[]) => mockReadLkgSha(...args),
+}));
+// The patch ledger: the REAL engine applies it to the checkout's files.
+const mockLedger = jest.fn();
+jest.mock('@/features/eds/services/patches/externalPatchFetcher', () => ({
+    fetchExternalPatches: async () => mockLedger(),
+}));
+// The project's storefront settings: which patches it carries, and its reset params.
+const mockStorefront = jest.fn();
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    resolveStorefrontConfig: () => mockStorefront(),
+    extractResetParams: () => ({
+        success: true,
+        params: { repoOwner: 'skukla', repoName: 'demo-storefront', daLiveOrg: 'skukla', daLiveSite: 'demo-storefront' },
+    }),
+}));
+// The 404 handling and Quick Edit write through GitHub's API; asserted, not run.
+const mockInstall404 = jest.fn().mockResolvedValue({ smart404: { installed: true }, current: true });
+const mockInstallQuickEdit = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/eds/services/storefront/storefrontUpToDate', () => ({
+    bringStorefrontUpToDate: (...args: unknown[]) => mockInstall404(...args),
+}));
+jest.mock('@/features/eds/services/quickEditPublisher', () => ({
+    installQuickEdit: (...args: unknown[]) => mockInstallQuickEdit(...args),
 }));
 
 const REAL_GIT_TIMEOUT_MS = 60_000;
+const LKG_SOURCE = { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' };
+const PATCH_SOURCE = { ...LKG_SOURCE, path: 'b2b' };
 const SC_REPO = 'skukla/demo-storefront';
 const TEMPLATE = { owner: 'adobe', repo: 'aem-boilerplate-commerce' };
 /** A GitHub https URL, with or without credentials in it, as the service builds it. */
@@ -56,20 +88,6 @@ const TEMPLATE_A = 'line 1\nline 2 from the template\nline 3\n';
 const SC_CONFLICTING_A = 'line 1\nline 2 from the SC\nline 3\n';
 const BINARY_B = Buffer.from([0, 1, 2, 255, 254, 0, 7]);
 const SC_CONFIG = '{"commerce-endpoint":"the SC\'s own"}\n';
-
-/** This process's environment with every GIT_* variable removed, plus a fixed identity. */
-function gitEnv(home: string): NodeJS.ProcessEnv {
-    const inherited = Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'));
-    return {
-        ...Object.fromEntries(inherited),
-        HOME: home,
-        XDG_CONFIG_HOME: home,
-        GIT_AUTHOR_NAME: 'test',
-        GIT_AUTHOR_EMAIL: 'test@example.com',
-        GIT_COMMITTER_NAME: 'test',
-        GIT_COMMITTER_EMAIL: 'test@example.com',
-    };
-}
 
 interface Fixture {
     root: string;
@@ -165,7 +183,7 @@ function realGitExecutor(fx: Fixture) {
     return createMockCommandExecutor({ execute });
 }
 
-function storefrontProject(lastSyncedCommit: string | undefined): Project {
+function storefrontProject(lastSyncedCommit: string | undefined, thinLayer = false): Project {
     return createMockProject({
         name: 'demo',
         componentInstances: {
@@ -178,19 +196,26 @@ function storefrontProject(lastSyncedCommit: string | undefined): Project {
                     templateOwner: TEMPLATE.owner,
                     templateRepo: TEMPLATE.repo,
                     lastSyncedCommit,
+                    ...(thinLayer ? { lkgSource: LKG_SOURCE } : {}),
                 },
             },
         },
     });
 }
 
-function merge(fx: Fixture, lastSyncedCommit: string | undefined, strategy: 'merge' | 'reset' = 'merge') {
+function merge(
+    fx: Fixture,
+    lastSyncedCommit: string | undefined,
+    strategy: 'merge' | 'reset' = 'merge',
+    thinLayer = false,
+) {
+    const logger = createMockLogger();
     const svc = new TemplateSyncService(
-        createMockSecretStorage({ githubToken: 'gh-token' }).secrets,
-        createMockLogger(),
+        githubAccessFor(createMockSecretStorage(githubTokenSecret('gh-token')).secrets, logger),
+        logger,
         realGitExecutor(fx),
     );
-    return svc.syncWithTemplate(storefrontProject(lastSyncedCommit), { strategy });
+    return svc.syncWithTemplate(storefrontProject(lastSyncedCommit, thinLayer), { strategy });
 }
 
 const originHead = (fx: Fixture): string => git(fx, fx.scBare, 'rev-parse', 'main');
@@ -243,7 +268,14 @@ describe('merging a template update from the recorded version (real git)', () =>
             strategy: 'merge',
             syncedCommit: '',
             conflicts: ['A.txt'],
-            error: 'Merge conflicts in 1 file (A.txt); the template update was not applied.',
+            // The change that clashed, so it can be applied again where the clash is kept (EDS-57).
+            clash: {
+                source: TEMPLATE,
+                base: fx.t1,
+                target: fx.t2,
+                preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
+            },
+            error: 'Merge conflicts in 1 file (A.txt); the update was not applied.',
         });
         expect(originHead(fx)).toBe(before);
     }, REAL_GIT_TIMEOUT_MS);
@@ -298,6 +330,39 @@ describe('merging a template update from the recorded version (real git)', () =>
         expect(originHead(fx)).toBe(before);
     }, REAL_GIT_TIMEOUT_MS);
 
+    it('(g) the template rewrote the recorded commit: applies the change from it anyway', async () => {
+        // adobe-commerce/boilerplate-b2b-template re-creates its top two commits on
+        // every upstream sync (2026-10-14: "Restore sync workflow" e3f979b became
+        // b3bdb016b). The recorded commit is still fetchable but no longer on main,
+        // and refusing it told every SC on that template to reset their storefront.
+        fx = buildFixture();
+        const work = path.join(fx.root, 'template-work');
+        const rewritten = fx.t2;
+        git(fx, work, 'reset', '-q', '--hard', fx.t1);
+        write(work, 'A.txt', TEMPLATE_A);
+        write(work, 'B.bin', BINARY_B);
+        write(work, 'config.json', '{"template":2}\n');
+        git(fx, work, 'add', '-A');
+        git(fx, work, 'commit', '-q', '-m', 'T2 again, rewritten');
+        write(work, 'D.txt', 'd from the template\n');
+        git(fx, work, 'add', '-A');
+        git(fx, work, 'commit', '-q', '-m', 'T3');
+        const t3 = git(fx, work, 'rev-parse', 'HEAD');
+        const bare = path.join(fx.root, 'github', TEMPLATE.owner, `${TEMPLATE.repo}.git`);
+        git(fx, work, 'push', '-q', '--force', bare, 'main');
+        // GitHub serves a commit by its id after a force-push; a local bare needs telling.
+        git(fx, bare, 'config', 'uploadpack.allowAnySHA1InWant', 'true');
+        expect(spawnSync('git', ['merge-base', '--is-ancestor', rewritten, 'main'], {
+            cwd: bare, env: gitEnv(fx.home),
+        }).status).toBe(1);
+
+        const result = await merge(fx, rewritten);
+
+        expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: t3 });
+        expect(originFile(fx, 'D.txt')).toBe('d from the template');
+        expect(originFile(fx, 'C.txt')).toBe('c edited by the SC');
+    }, REAL_GIT_TIMEOUT_MS);
+
     it('reset (the explicit alternative) records the template commit too, not the storefront head', async () => {
         // Same reason as (a): the update checker compares the record against the
         // TEMPLATE's latest commit, so recording the storefront's own head after a
@@ -309,5 +374,118 @@ describe('merging a template update from the recorded version (real git)', () =>
         expect(result).toEqual({ success: true, strategy: 'reset', syncedCommit: fx.t2 });
         expect(originFile(fx, 'A.txt')).toBe(TEMPLATE_A.trim());
         expect(originFile(fx, 'config.json')).toBe(SC_CONFIG.trim());
+    }, REAL_GIT_TIMEOUT_MS);
+});
+
+/** Adobe moves on past the tested version: T3 adds D.txt, which nothing has checked. */
+function templateMovesOn(fx: Fixture): string {
+    const work = path.join(fx.root, 'template-work');
+    write(work, 'D.txt', 'd from an untested commit\n');
+    git(fx, work, 'add', '-A');
+    git(fx, work, 'commit', '-q', '-m', 'T3, not yet tested');
+    git(fx, work, 'push', '-q', path.join(fx.root, 'github', TEMPLATE.owner, `${TEMPLATE.repo}.git`), 'main');
+    return git(fx, work, 'rev-parse', 'HEAD');
+}
+
+const commitsOnOrigin = (fx: Fixture): number => Number(git(fx, fx.scBare, 'rev-list', '--count', 'main'));
+
+describe('a thin-layer storefront updates to the TESTED version, with its fixes (EDS-51, real git)', () => {
+    let fx: Fixture;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockLedger.mockResolvedValue([]);
+        mockStorefront.mockReturnValue({ codePatches: [], codePatchSource: PATCH_SOURCE });
+    });
+
+    afterEach(() => {
+        if (fx) fs.rmSync(fx.root, { recursive: true, force: true });
+    });
+
+    it('stops at the tested version, not Adobe\'s latest, and records the tested version', async () => {
+        fx = buildFixture();
+        const t3 = templateMovesOn(fx);
+        mockReadLkgSha.mockResolvedValue(fx.t2);
+
+        const result = await merge(fx, fx.t1, 'merge', true);
+
+        expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: fx.t2 });
+        expect(originFile(fx, 'A.txt')).toBe(TEMPLATE_A.trim());
+        expect(() => originFile(fx, 'D.txt')).toThrow();
+        expect(result.syncedCommit).not.toBe(t3);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('CONTROL: the same storefront with no tested version recorded goes to the latest', async () => {
+        fx = buildFixture();
+        const t3 = templateMovesOn(fx);
+
+        const result = await merge(fx, fx.t1);
+
+        expect(result.syncedCommit).toBe(t3);
+        expect(originFile(fx, 'D.txt')).toBe('d from an untested commit');
+        expect(mockReadLkgSha).not.toHaveBeenCalled();
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('re-applies a fix in the SAME commit as the update, and says which it could not', async () => {
+        // Patch targets must sit under scripts/ or blocks/ (patchTargetPolicy).
+        fx = buildFixture((work) => {
+            fs.mkdirSync(path.join(work, 'scripts'));
+            write(work, 'scripts/app.js', 'const shown = false;\n');
+        });
+        mockReadLkgSha.mockResolvedValue(fx.t2);
+        mockLedger.mockResolvedValue([
+            { id: 'fix-a', target: 'scripts/app.js', description: '', precondition: 'const shown = false;', replacement: 'const shown = true;' },
+            { id: 'fix-gone', target: 'scripts/app.js', description: '', precondition: 'not in the file', replacement: 'x' },
+        ]);
+        mockStorefront.mockReturnValue({ codePatches: ['fix-a', 'fix-gone'], codePatchSource: PATCH_SOURCE });
+        const before = commitsOnOrigin(fx);
+
+        const result = await merge(fx, fx.t1, 'merge', true);
+
+        expect(result.success).toBe(true);
+        expect(originFile(fx, 'A.txt')).toBe(TEMPLATE_A.trim());
+        expect(originFile(fx, 'scripts/app.js')).toBe('const shown = true;');
+        expect(commitsOnOrigin(fx)).toBe(before + 1);
+        expect(result.notes).toEqual([
+            expect.stringMatching(/^A Demo Builder fix could not be put back: fix-gone \(/),
+        ]);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('puts back the 404 handling and Quick Edit after the update', async () => {
+        fx = buildFixture();
+        mockReadLkgSha.mockResolvedValue(fx.t2);
+
+        await merge(fx, fx.t1, 'merge', true);
+
+        expect(mockInstall404).toHaveBeenCalledWith(
+            expect.any(GitHubFileOperations), 'skukla', 'demo-storefront', undefined, expect.anything(), 'skukla', 'demo-storefront',
+        );
+        expect(mockInstallQuickEdit).toHaveBeenCalledWith(
+            expect.any(GitHubFileOperations), 'skukla', 'demo-storefront', expect.anything(),
+        );
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('refuses a reset to the bare template, which would drop the fixes, and pushes nothing', async () => {
+        fx = buildFixture();
+        const before = originHead(fx);
+
+        const result = await merge(fx, fx.t1, 'reset', true);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/Reset the project instead/);
+        expect(originHead(fx)).toBe(before);
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('changes nothing when the tested version cannot be read, rather than use the latest', async () => {
+        fx = buildFixture();
+        templateMovesOn(fx);
+        mockReadLkgSha.mockResolvedValue(undefined);
+        const before = originHead(fx);
+
+        const result = await merge(fx, fx.t1, 'merge', true);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/Could not read the tested boilerplate version/);
+        expect(originHead(fx)).toBe(before);
     }, REAL_GIT_TIMEOUT_MS);
 });

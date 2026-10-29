@@ -28,10 +28,9 @@ export const ALL_DONE = state({
     commerceStoreViewChosen: true,
 });
 
-/** A storefront with both accounts connected, a repo picked and code sync valid. */
+/** A storefront with both accounts connected and a repo picked. */
 export const CONFIGURED_STOREFRONT = {
     storefrontRepoValid: true,
-    storefrontCodeSyncValid: true,
     edsConfig: {
         repoName: 'my-repo',
         githubAuth: { isAuthenticated: true },

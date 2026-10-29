@@ -68,6 +68,14 @@ describe('Storefront zone — the Republish tile', () => {
         expect(screen.getByTestId('republish-tile-dot')).toHaveAttribute('data-variant', 'warning');
     });
 
+    it('says "Needed" beside the label, so the dot is not left to explain itself', () => {
+        const { container } = render(<ActionGrid {...edsProps} demoStatus={stale} />);
+
+        const status = within(getZone(container, 'storefront')).getByText('Needed');
+        expect(status).toHaveClass('dashboard-tile-status-text');
+        expect(status).toHaveAttribute('data-variant', 'warning');
+    });
+
     it('wears NO dot when the storefront is current', () => {
         render(<ActionGrid {...edsProps} demoStatus={published} />);
 
@@ -86,7 +94,8 @@ describe('Storefront zone — the Republish tile', () => {
         // other tiles carry tooltips too.
         const { container } = render(<ActionGrid {...edsProps} demoStatus={stale} />);
 
-        expect(within(getZone(container, 'storefront')).getByRole('tooltip')).toHaveTextContent(
+        // Republish leads the row, so its tooltip is the zone's first.
+        expect(within(getZone(container, 'storefront')).getAllByRole('tooltip')[0]).toHaveTextContent(
             /Republish needed/
         );
     });
@@ -94,7 +103,7 @@ describe('Storefront zone — the Republish tile', () => {
     it('explains the tile rather than echoing its label when idle', () => {
         const { container } = render(<ActionGrid {...edsProps} demoStatus={published} />);
 
-        expect(within(getZone(container, 'storefront')).getByRole('tooltip')).toHaveTextContent(
+        expect(within(getZone(container, 'storefront')).getAllByRole('tooltip')[0]).toHaveTextContent(
             'Push config and authored content to the CDN'
         );
     });
@@ -106,13 +115,13 @@ describe('Storefront zone — the Republish tile', () => {
     });
 });
 
-describe('Primary zone — the Restart tile', () => {
+describe('Open zone — the Restart tile', () => {
     it('appears whenever the demo is running', () => {
         const { container } = render(
             <ActionGrid {...defaultProps} isRunning demoStatus={running} />
         );
 
-        expect(within(getZone(container, 'primary')).getByText('Restart')).toBeInTheDocument();
+        expect(within(getZone(container, 'open')).getByText('Restart')).toBeInTheDocument();
     });
 
     it('is absent while the demo is stopped — nothing to restart', () => {
@@ -121,7 +130,7 @@ describe('Primary zone — the Restart tile', () => {
         );
 
         expect(
-            within(getZone(container, 'primary')).queryByText('Restart')
+            within(getZone(container, 'open')).queryByText('Restart')
         ).not.toBeInTheDocument();
     });
 
@@ -136,7 +145,7 @@ describe('Primary zone — the Restart tile', () => {
             />
         );
 
-        within(getZone(container, 'primary')).getByText('Restart').click();
+        within(getZone(container, 'open')).getByText('Restart').click();
         expect(handleRestartDemo).toHaveBeenCalledTimes(1);
     });
 
@@ -159,7 +168,7 @@ describe('Primary zone — the Restart tile', () => {
             <ActionGrid {...defaultProps} isRunning demoStatus={needsRestart} />
         );
 
-        const tips = within(getZone(container, 'primary'))
+        const tips = within(getZone(container, 'open'))
             .getAllByRole('tooltip')
             .map((n) => n.textContent);
         expect(tips.some((t) => t?.includes('Restart needed'))).toBe(true);
@@ -174,7 +183,7 @@ describe('Primary zone — the Restart tile', () => {
         );
 
         expect(container.querySelector('.dashboard-zone-status')).not.toBeInTheDocument();
-        const onSurface = within(getZone(container, 'primary'))
+        const onSurface = within(getZone(container, 'open'))
             .getAllByText('Running on port 3000')
             .filter((n) => n.getAttribute('role') !== 'tooltip');
         expect(onSurface).toHaveLength(0);
@@ -184,7 +193,7 @@ describe('Primary zone — the Restart tile', () => {
         const { container } = render(<ActionGrid {...edsProps} demoStatus={published} />);
 
         expect(
-            within(getZone(container, 'primary')).queryByText('Restart')
+            within(getZone(container, 'open')).queryByText('Restart')
         ).not.toBeInTheDocument();
     });
 });
@@ -201,7 +210,7 @@ describe('Primary zone — the Restart tile', () => {
  * So the dot appears only where the tile is ambiguous, and the tooltip carries
  * the words that used to be on screen.
  */
-describe('Primary zone — the lifecycle dot', () => {
+describe('Open zone — the lifecycle dot', () => {
     const status = (color: 'blue' | 'red' | 'green' | 'gray', text: string) => ({ color, text });
 
     it.each([
@@ -230,7 +239,7 @@ describe('Primary zone — the lifecycle dot', () => {
             <ActionGrid {...defaultProps} demoStatus={status('blue', 'Starting')} />
         );
 
-        expect(within(getZone(container, 'primary')).getAllByRole('tooltip')[0]).toHaveTextContent(
+        expect(within(getZone(container, 'open')).getAllByRole('tooltip')[0]).toHaveTextContent(
             'Starting'
         );
     });
@@ -246,7 +255,7 @@ describe('Primary zone — the lifecycle dot', () => {
             />
         );
 
-        expect(within(getZone(container, 'primary')).getAllByRole('tooltip')[0]).toHaveTextContent(
+        expect(within(getZone(container, 'open')).getAllByRole('tooltip')[0]).toHaveTextContent(
             'Running on port 3000'
         );
     });
@@ -254,8 +263,8 @@ describe('Primary zone — the lifecycle dot', () => {
     it('gives an EDS project no lifecycle tile at all', () => {
         const { container } = render(<ActionGrid {...edsProps} demoStatus={published} />);
 
-        expect(within(getZone(container, 'primary')).queryByText('Start')).not.toBeInTheDocument();
-        expect(within(getZone(container, 'primary')).queryByText('Stop')).not.toBeInTheDocument();
+        expect(within(getZone(container, 'open')).queryByText('Start')).not.toBeInTheDocument();
+        expect(within(getZone(container, 'open')).queryByText('Stop')).not.toBeInTheDocument();
     });
 });
 
@@ -283,7 +292,6 @@ describe('ActionGrid — every dot has words', () => {
             {
                 ...edsProps,
                 demoStatus: published,
-                hasAdobeContext: true,
                 appBuilderComponents: {
                     a: { kind: 'integration', status: 'error', source: { owner: 'o', repo: 'r' } },
                 },
@@ -328,34 +336,21 @@ describe('ActionGrid — every dot has words', () => {
  * and is the highest-value manual change after Configure — which sits beside it.
  * Configure changes VALUES; Edit changes what exists.
  */
-describe('Edit tile / Sync Storefront demotion', () => {
-    /**
-     * Query tiles by `data-action`, never by text alone: the More MenuTrigger
-     * renders INSIDE the build zone, so `getByText('Edit')` scoped to that zone
-     * matches the menu item too and passes whether or not a tile exists.
-     */
+describe('Edit and Sync Storefront tiles', () => {
+    /** Query tiles by `data-action`: it names the tile, not just some matching text. */
     const tile = (container: HTMLElement, action: string) =>
         container.querySelector(`[data-action="${action}"]`);
 
-    it('gives Edit a tile, and places it BEFORE Republish in the row', () => {
-        // Zones render Primary -> Storefront -> Build, so an Edit tile in Build
-        // would land after the storefront's Republish. Edit belongs earlier:
-        // changing what the demo contains precedes fixing how it is published.
+    it('puts Edit in the Build row — what the demo contains (owner, 2026-10-06)', () => {
         const { container } = render(<ActionGrid {...edsProps} demoStatus={stale} />);
 
-        const edit = tile(container, 'edit');
-        const republish = tile(container, 'republish-tile');
-        expect(edit).toBeInTheDocument();
-        expect(republish).toBeInTheDocument();
-        // Node.compareDocumentPosition: 4 === edit precedes republish.
-        expect(edit!.compareDocumentPosition(republish!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        expect(getZone(container, 'build').contains(tile(container, 'edit'))).toBe(true);
     });
 
-    it('takes Edit out of the More menu — one door, not two', () => {
-        const { container } = render(<ActionGrid {...defaultProps} />);
+    it('offers Edit through exactly one door', () => {
+        render(<ActionGrid {...defaultProps} />);
 
-        const menu = container.querySelector('[role="menu"]') as HTMLElement;
-        expect(within(menu).queryByText('Edit')).not.toBeInTheDocument();
+        expect(screen.getAllByText('Edit')).toHaveLength(1);
     });
 
     it('disables the Edit tile while a non-EDS demo runs, rather than hiding it', () => {
@@ -373,38 +368,30 @@ describe('Edit tile / Sync Storefront demotion', () => {
         expect(tile(container, 'edit')).not.toBeDisabled();
     });
 
-    it('moves Sync Storefront into the More menu', () => {
+    it('gives Sync Storefront a tile in the Storefront row', () => {
         const { container } = render(<ActionGrid {...edsProps} />);
 
-        const menu = container.querySelector('[role="menu"]') as HTMLElement;
-        expect(within(menu).getByText('Sync Storefront')).toBeInTheDocument();
-        expect(container.querySelector('[data-action="sync-storefront"]')).not.toBeInTheDocument();
+        expect(getZone(container, 'storefront').contains(tile(container, 'sync-storefront'))).toBe(
+            true
+        );
+        expect(screen.getAllByText('Sync Storefront')).toHaveLength(1);
     });
 
     it('keeps Sync Storefront EDS-only', () => {
-        const { container } = render(<ActionGrid {...defaultProps} />);
+        const { container } = render(
+            <ActionGrid {...defaultProps} handleSyncStorefront={jest.fn()} />
+        );
 
-        const menu = container.querySelector('[role="menu"]') as HTMLElement;
-        expect(within(menu).queryByText('Sync Storefront')).not.toBeInTheDocument();
+        expect(tile(container, 'sync-storefront')).not.toBeInTheDocument();
     });
 
-    it('still fires the sync from the menu', () => {
+    it('fires the sync from the tile', () => {
         const handleSyncStorefront = jest.fn();
         const { container } = render(
             <ActionGrid {...edsProps} handleSyncStorefront={handleSyncStorefront} />
         );
 
-        const menu = container.querySelector('[role="menu"]') as HTMLElement;
-        within(menu).getByText('Sync Storefront').click();
+        (tile(container, 'sync-storefront') as HTMLElement).click();
         expect(handleSyncStorefront).toHaveBeenCalledTimes(1);
-    });
-
-    it('leaves Republish alone in the storefront zone', () => {
-        // The zone survives with one tile: Republish is the remedy that carries
-        // the drift dot, and it must stay next to the status it reports.
-        const { container } = render(<ActionGrid {...edsProps} demoStatus={stale} />);
-
-        expect(tile(getZone(container, 'storefront'), 'republish-tile')).toBeInTheDocument();
-        expect(screen.getByTestId('republish-tile-dot')).toBeInTheDocument();
     });
 });

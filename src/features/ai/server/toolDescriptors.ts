@@ -80,8 +80,8 @@ export interface ToolDescriptor {
      * Arguments forced onto every call, overriding anything the agent sends.
      *
      * Exists because a handler's default can be a WRITE. `checkGitHubApp` fires
-     * `triggerAndWaitForCodeSync` against the repo when Helix 404s, unless
-     * `skipTrigger` is set (`checkGitHubAppHandler.ts:202-228`) — so exposing it
+     * `triggerCodeSync` against the repo when Helix 404s, unless `skipTrigger`
+     * is set (`checkGitHubAppHandler.ts`) — so exposing it
      * as `check_github_app` without forcing that flag ships a read tool that
      * mutates a repo, and an agent enumerating checks would trip it.
      *
@@ -156,7 +156,9 @@ export function defaultShape(res: HandlerResponse): string {
     const keys = Object.keys(rest);
     const payload =
         keys.length === 1 && keys[0] === 'data' ? (rest as { data: unknown }).data : rest;
-    return JSON.stringify(payload);
+    // A success with nothing to say (`data: undefined`) stringifies to undefined, and the
+    // MCP SDK rejects a text item without text (redeploy_integration, 2026-09-27).
+    return JSON.stringify(payload) ?? 'Done.';
 }
 
 const confirmField = z

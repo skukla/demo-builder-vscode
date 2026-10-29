@@ -16,7 +16,8 @@
 
 import './executorComponentLoading.testUtils';
 import * as meshDeployment from '@/features/mesh/services/meshDeployment';
-import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
+import { updateMeshState } from '@/features/mesh/services/meshDeployBaseline';
+import { readMeshEnvVarsFromFile } from '@/features/mesh/services/meshEnvVars';
 import { HandlerContext } from '@/types/handlers';
 
 // Track getComponentById calls to verify fallback is being used
@@ -108,9 +109,8 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 
 // Cast mocked modules for type safety
 const mockDeployMeshComponent = meshDeployment.deployMeshComponent as jest.Mock;
-const mockUpdateMeshState = stalenessDetector.updateMeshState as jest.Mock;
-const mockFetchDeployedMeshConfig = stalenessDetector.fetchDeployedMeshConfig as jest.Mock;
-const mockReadMeshEnvVarsFromFile = stalenessDetector.readMeshEnvVarsFromFile as jest.Mock;
+const mockUpdateMeshState = jest.mocked(updateMeshState);
+const mockReadMeshEnvVarsFromFile = jest.mocked(readMeshEnvVarsFromFile);
 
 // Import executor AFTER mocks are set up (top-level import gets mocked modules)
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
@@ -150,9 +150,6 @@ describe('Executor - Mesh Component Loading', () => {
         // Default mock implementations for mesh services
         mockDeployMeshComponent.mockResolvedValue({ success: true });
         mockUpdateMeshState.mockResolvedValue(undefined);
-        mockFetchDeployedMeshConfig.mockResolvedValue({
-            ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
-        });
         mockReadMeshEnvVarsFromFile.mockResolvedValue({
             ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
         });

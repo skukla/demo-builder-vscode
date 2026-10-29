@@ -98,7 +98,7 @@ export function renderTargetForConsent(args: unknown, keys: string[]): string {
  * @param toolName - the tool asking
  * @param args - the call's arguments; only authored target keys are read
  * @param fallbackTarget - names the open project, for tools that take no
- *   argument identifying what they act on (`republish`, `sync_content`)
+ *   argument identifying what they act on (`republish`)
  * @returns the title and the detail beneath it, or undefined for a tool with no
  *   authored copy — which cannot happen, since copy membership IS the gate
  */

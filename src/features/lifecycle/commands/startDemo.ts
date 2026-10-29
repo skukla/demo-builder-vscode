@@ -5,6 +5,8 @@ import { BaseCommand } from '@/core/base/baseCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import { fnmTerminalCommand } from '@/core/shell/nodeFolder';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { updateFrontendState } from '@/core/state/projectStateSync';
 import { ExecutionLock } from '@/core/utils/executionLock';
@@ -151,7 +153,9 @@ export class StartDemoCommand extends BaseCommand {
         this.logger.warn(`[Start Demo] Port ${port} still in use after killing processes`);
         return false;
     }
-    public async execute(): Promise<void> {
+    public async execute(projectPath?: unknown): Promise<void> {
+        // The project a screen or agent named, else the current one (AI-15).
+        const state = this.stateFor(projectPath);
         // Prevent duplicate concurrent execution
         if (StartDemoCommand.lock.isLocked()) {
             this.logger.debug('[Start Demo] Already in progress');
@@ -160,7 +164,7 @@ export class StartDemoCommand extends BaseCommand {
 
         await StartDemoCommand.lock.run(async () => {
             try {
-            const project = await this.stateManager.getCurrentProject();
+            const project = await state.getCurrentProject();
             if (!project) {
                 await this.showWarning('No project found. Create a project first.');
                 const create = await vscode.window.showInformationMessage(
@@ -273,7 +277,7 @@ export class StartDemoCommand extends BaseCommand {
                 const frontendPath = frontendComponent.path;
                 // Extract nodeVersion from metadata with proper type coercion
                 const rawNodeVersion = frontendComponent.metadata?.nodeVersion;
-                const nodeVersion = typeof rawNodeVersion === 'string' ? rawNodeVersion : '20';
+                const nodeVersion = typeof rawNodeVersion === 'string' ? rawNodeVersion : demoBuilderNode();
 
                 // SECURITY: Validate nodeVersion before using in terminal command
                 // Prevents command injection (CWE-77) if project state is corrupted
@@ -292,7 +296,7 @@ export class StartDemoCommand extends BaseCommand {
                 project.status = 'starting';
                 frontendComponent.status = 'starting';
                 frontendComponent.port = port;
-                await this.stateManager.saveProject(project);
+                await state.saveProject(project);
 
                 // Create project-specific terminal name (allows us to identify which project is running)
                 const terminalName = `${project.name} - Frontend`;
@@ -300,7 +304,7 @@ export class StartDemoCommand extends BaseCommand {
                 
                 // Navigate to frontend directory and start
                 terminal.sendText(`cd "${frontendPath}"`);
-                terminal.sendText(`eval "$(fnm env)" && fnm use ${nodeVersion} && npm run dev`);
+                terminal.sendText(fnmTerminalCommand(nodeVersion, 'npm run dev'));
 
                 // Wait for demo to actually start (poll until port is in use)
                 const started = await this.waitForPortInUse(port);
@@ -320,7 +324,7 @@ export class StartDemoCommand extends BaseCommand {
                 // Capture frontend env vars for change detection
                 updateFrontendState(project);
 
-                await this.stateManager.saveProject(project);
+                await state.saveProject(project);
                 
                 // Notify extension to suppress env change notifications during startup
                 await vscode.commands.executeCommand('demoBuilder._internal.demoStarted');

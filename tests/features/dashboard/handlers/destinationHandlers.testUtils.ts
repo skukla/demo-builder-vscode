@@ -9,6 +9,7 @@
  */
 
 export const mockProgressReport = jest.fn();
+export const mockShowWarningMessage = jest.fn();
 export const mockWithProgress = jest.fn(async (_o: unknown, task: (p: unknown) => unknown) =>
     task({ report: mockProgressReport })
 );
@@ -18,6 +19,7 @@ jest.mock(
         window: {
             withProgress: (...a: unknown[]) =>
                 (mockWithProgress as (...x: unknown[]) => unknown)(...a),
+            showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a),
         },
         ProgressLocation: { Notification: 15 },
     }),
@@ -33,16 +35,18 @@ export const mockRunGuards = jest.fn();
 /** Typed with rest args so a suite can read the progress relay it is handed. */
 export const mockBuildDefaultRunnerDeps = jest.fn((..._a: unknown[]) => ({ catalog: [] }));
 export const mockBuildRunnerDepsContext = jest.fn(async (..._a: unknown[]) => ({}));
-export const mockPostRowStatus = jest.fn(async () => undefined);
+export const mockSendRowStatus = jest.fn(async () => undefined);
 export const mockPostComponentsSnapshot = jest.fn(async () => undefined);
-export const mockPostDestination = jest.fn(async () => undefined);
-export const mockPostMeshStatus = jest.fn(async () => undefined);
+export const mockSendDestination = jest.fn(async () => undefined);
+export const mockSendMeshStatus = jest.fn(async () => undefined);
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     runGuards: (...a: unknown[]) => mockRunGuards(...a),
-    postRowStatus: (...a: unknown[]) => mockPostRowStatus(...(a as [])),
     postComponentsSnapshot: (...a: unknown[]) => mockPostComponentsSnapshot(...(a as [])),
-    postDestination: (...a: unknown[]) => mockPostDestination(...(a as [])),
-    postMeshStatus: (...a: unknown[]) => mockPostMeshStatus(...(a as [])),
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAppBuilderComponentStatusUpdate: (...a: unknown[]) => mockSendRowStatus(...(a as [])),
+    sendProjectDestinationUpdate: (...a: unknown[]) => mockSendDestination(...(a as [])),
+    sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatus(...(a as [])),
 }));
 jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
@@ -73,8 +77,12 @@ export const NEW_DESTINATION = {
     workspace: { id: 'new-workspace-id', name: 'Production', title: 'Production' },
 };
 
-/** A handler context over a project carrying the given `adobe` binding. */
-export function makeDestinationContext(adobe: Record<string, unknown> | undefined = EXISTING_ADOBE) {
+/**
+ * A handler context over a project carrying the given `adobe` binding.
+ * `null` means a project with no binding at all (an explicit `undefined` would
+ * take the default, which is the opposite of what that caller means).
+ */
+export function makeDestinationContext(adobe: Record<string, unknown> | null = EXISTING_ADOBE) {
     const project = { name: 'demo', path: '/p/demo', adobe: adobe ? { ...adobe } : undefined };
     const saveProject = jest.fn().mockResolvedValue(undefined);
     const context = createMockHandlerContext({
@@ -83,13 +91,19 @@ export function makeDestinationContext(adobe: Record<string, unknown> | undefine
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
         }),
+        // Nobody signed in unless a suite says so: the handler resolves the org
+        // through the auth manager only when the project has none recorded.
+        authManager: createMockAuthenticationService(),
     });
     return { context, project, saveProject };
 }
 
 /** A handler context over a project whose keyed map holds the given components. */
 export function makeContextWithComponents(
-    components: Record<string, { kind: string; status?: string }>
+    components: Record<
+        string,
+        { kind: string; status?: string; workspace?: { id: string; name: string; title?: string } }
+    >
 ) {
     const project = {
         name: 'demo',
@@ -120,16 +134,20 @@ export function reportedSteps(): string[] {
  */
 export function seedServiceLocator(): void {
     ServiceLocator.setAuthenticationService(
-        createMockAuthenticationService({
-            getTokenManager: jest.fn(
-                () =>
-                    ({
-                        inspectToken: jest.fn(async () => ({ valid: false })),
-                    }) as unknown as TokenManager
-            ),
-            getCachedOrganization: jest.fn(),
-            getS2SDeployCredentials: jest.fn(),
-        })
+        createMockAuthenticationService(
+            {
+                getTokenManager: jest.fn(
+                    () =>
+                        ({
+                            inspectToken: jest.fn(async () => ({ valid: false })),
+                        }) as unknown as TokenManager
+                ),
+            },
+            {
+                cache: { getCachedOrganization: jest.fn() },
+                entities: { credentials: { getS2SDeployCredentials: jest.fn() } },
+            }
+        )
     );
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
 }

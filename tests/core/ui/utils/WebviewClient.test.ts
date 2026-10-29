@@ -107,7 +107,6 @@ describe('WebviewClient - Handshake Reversal', () => {
                     id: 'hc-1',
                     type: '__handshake_complete__',
                     timestamp: Date.now(),
-                    payload: { stateVersion: 1 },
                 },
             } as MessageEvent;
 

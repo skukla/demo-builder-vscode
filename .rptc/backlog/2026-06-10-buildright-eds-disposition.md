@@ -53,3 +53,7 @@ Related input: `.rptc/backlog/2026-06-09-dropin-version-coupling.md` noted build
 - ADR-006 (`docs/architecture/adr/006-thin-layer-storefront-customization.md`) — the model buildright would converge to under option 1.
 - `.rptc/complete/2026-06-09-storefront-template-sync.md` — dropped sync project whose Phase 3 covered buildright.
 - `.rptc/backlog/2026-06-09-dropin-version-coupling.md` — buildright's missing `@dropins/*` pins.
+
+## Shipped so far
+
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the body contradicts itself: one paragraph says ADR-006 shipped and this is unblocked, the next says it is still gated; ADR-006 itself says 'Implementer: In progress'. Gated reading stands.

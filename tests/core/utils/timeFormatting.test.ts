@@ -2,7 +2,7 @@
  * Tests for time formatting utilities
  */
 
-import { formatDuration, formatMinutes } from '@/core/utils/timeFormatting';
+import { formatDuration, formatElapsed, formatMinutes } from '@/core/utils/timeFormatting';
 
 describe('timeFormatting', () => {
     describe('formatDuration', () => {
@@ -75,6 +75,42 @@ describe('timeFormatting', () => {
 
             // From: "Token valid, expires in 939 minutes"
             expect(formatMinutes(939)).toBe('15h 39m');
+        });
+    });
+
+    // A clock a person is WATCHING, so whole seconds: a ticking tenth beside a
+    // spinner is noise, and the point is only to show the operation is alive.
+    describe('formatElapsed', () => {
+        // Written out, because it sits beside prose: "Usually a few seconds ·
+        // 2 seconds" (owner, 2026-09-20).
+        it('counts whole seconds under a minute, in words', () => {
+            expect(formatElapsed(0)).toBe('0 seconds');
+            expect(formatElapsed(1400)).toBe('1 second');
+            expect(formatElapsed(45000)).toBe('45 seconds');
+        });
+
+        it('reads as minutes and seconds past a minute', () => {
+            expect(formatElapsed(62000)).toBe('1 minute, 2 seconds');
+            expect(formatElapsed(72000)).toBe('1 minute, 12 seconds');
+            expect(formatElapsed(125000)).toBe('2 minutes, 5 seconds');
+            expect(formatElapsed(605000)).toBe('10 minutes, 5 seconds');
+        });
+
+        // A unit at zero is left out rather than written: "1 minute, 0 seconds"
+        // is a clock reading, not a sentence.
+        it('drops a unit that is zero', () => {
+            expect(formatElapsed(60000)).toBe('1 minute');
+            expect(formatElapsed(120000)).toBe('2 minutes');
+        });
+
+        it('agrees with its count, both ways', () => {
+            expect(formatElapsed(1000)).toBe('1 second');
+            expect(formatElapsed(2000)).toBe('2 seconds');
+            expect(formatElapsed(61000)).toBe('1 minute, 1 second');
+        });
+
+        it('never counts backwards from a clock that jumped', () => {
+            expect(formatElapsed(-500)).toBe('0 seconds');
         });
     });
 });

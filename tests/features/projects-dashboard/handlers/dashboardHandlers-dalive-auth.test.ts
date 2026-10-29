@@ -9,7 +9,6 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { fakeExtractResetParams } from '../../../helpers/edsResetParamsFake';
 import { Project } from '@/types/base';
 
 // Explicit test timeout to prevent hanging
@@ -108,17 +107,21 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // Note: copyMediaFromContent is no longer called - Admin API downloads images during preview
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        copyContentFromSource: jest.fn().mockResolvedValue({
-            success: true,
-            totalFiles: 10,
-            copiedFiles: ['file1', 'file2'],
-            failedFiles: [],
-        }),
-        createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
-            success: true,
-            blocksCount: 0,
-            paths: [],
-        }),
+        copyOps: {
+            copyContentFromSource: jest.fn().mockResolvedValue({
+                success: true,
+                totalFiles: 10,
+                copiedFiles: ['file1', 'file2'],
+                failedFiles: [],
+            }),
+        },
+        blockLibOps: {
+            createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
+                success: true,
+                blocksCount: 0,
+                paths: [],
+            }),
+        },
     })),
 }));
 
@@ -143,15 +146,6 @@ jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
 // GitHubAppService is NOT mocked. Measured 2026-08-31: removing the mock changes
 // nothing this suite observes — it was silencing a construction with no side effects.
 
-// Mock configGenerator (dynamically imported for config.json generation)
-jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn().mockResolvedValue({
-        success: true,
-        content: '{"host":"example.com"}',
-    }),
-    extractConfigParams: jest.fn().mockReturnValue({}),
-}));
-
 // Mock configSyncService for CDN verification
 jest.mock('@/features/eds/services/configSyncService', () => ({
     verifyCdnResources: jest.fn().mockResolvedValue({
@@ -163,18 +157,13 @@ jest.mock('@/features/eds/services/configSyncService', () => ({
 // Mock global fetch for code sync verification
 global.fetch = jest.fn();
 
-// Mock edsResetService (dynamically imported) - the shared service for EDS resets
+// Mock edsResetUI (dynamically imported). The handler calls only this entry point,
+// so parameter extraction and the reset itself never run in this suite; they are
+// covered against the real function in tests/features/eds/services/reset/.
 // resetEdsProjectWithUI is the consolidated entry point used by handlers
-// extractResetParams and executeEdsReset are internal to the service
 const mockResetEdsProjectWithUI = jest.fn();
-const mockExtractResetParams = jest.fn();
-const mockExecuteEdsReset = jest.fn();
 jest.mock('@/features/eds/services/reset/edsResetUI', () => ({
     resetEdsProjectWithUI: (...args: unknown[]) => mockResetEdsProjectWithUI(...args),
-}));
-jest.mock('@/features/eds/services/reset/edsResetService', () => ({
-    extractResetParams: (...args: unknown[]) => mockExtractResetParams(...args),
-    executeEdsReset: (...args: unknown[]) => mockExecuteEdsReset(...args),
 }));
 
 // =============================================================================
@@ -324,17 +313,6 @@ describe('handleResetProject DA.live auth (confirmation-first flow)', () => {
         mockQuickPick.onDidHide.mockClear();
         mockQuickPick.selectedItems = [];
 
-        // Setup edsResetService mocks
-        // Default: extractResetParams returns success with valid params
-        mockExtractResetParams.mockImplementation(fakeExtractResetParams);
-
-        // Default: executeEdsReset returns success
-        mockExecuteEdsReset.mockResolvedValue({
-            success: true,
-            filesReset: 100,
-            contentCopied: 10,
-        });
-
         // Default: resetEdsProjectWithUI returns success
         // This is the consolidated function that the handler delegates to
         mockResetEdsProjectWithUI.mockResolvedValue({
@@ -393,6 +371,9 @@ describe('handleResetProject DA.live auth (confirmation-first flow)', () => {
             includeBlockLibrary: true,
             verifyCdn: true,
             showLogsOnError: true,
+            // Where it reports, and the id whose modal follows it (PL-59).
+            progress: undefined,
+            operationId: expect.stringContaining('reset:'),
         });
     });
 

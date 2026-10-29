@@ -19,11 +19,7 @@ import {
     type CommerceSectionValidity,
     type ConnectStoreSection,
 } from './commerceSectionValidity';
-import {
-    ACCS_OAUTH_CLIENT_ID,
-    ACCS_STORE_VIEW_CODE,
-    PAAS_STORE_VIEW_CODE,
-} from '@/core/config/envVarKeys';
+import { ACCS_STORE_VIEW_CODE, PAAS_STORE_VIEW_CODE } from '@/core/config/envVarKeys';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
@@ -36,7 +32,6 @@ import {
     useComponentConfig,
     type ServiceGroup,
 } from '@/features/components/ui/hooks/useComponentConfig';
-import { useCredentialService } from '@/features/components/ui/hooks/useCredentialService';
 import { useStoreDiscovery } from '@/features/components/ui/hooks/useStoreDiscovery';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { ComponentConfigs } from '@/types/webview';
@@ -152,25 +147,13 @@ export function ConnectStoreStepContent({
     // to avoid a one-render-cycle delay from the parent round-trip.
     // -----------------------------------------------------------------------
 
-    const { autoDetectKey, forceFetch } = useAutoStoreDetect({
+    const { autoDetectKey, accsEndpoint, forceFetch } = useAutoStoreDetect({
         configs: liveConfigs ?? {},
         orgId: adobeOrg?.id,
         fetchStores,
         hasStoreData,
         isFetching,
     });
-
-    // Only ACCS uses the shared OAuth pair, and only when the catalog actually
-    // declares the field — keyed off the rendered fields rather than the backend id,
-    // so the probe fires exactly when the UI it feeds is on screen.
-    const hasBrokeredCredentialField = useMemo(
-        () =>
-            serviceGroups.some((group) =>
-                group.fields.some((field) => field.key === ACCS_OAUTH_CLIENT_ID),
-            ),
-        [serviceGroups],
-    );
-    const credentialService = useCredentialService(hasBrokeredCredentialField, adobeOrg?.id);
 
     // Report each sub-step's own verdict. Whole-form validity was the deadlock:
     // Catalog's required fields kept Connection from ever completing, and Catalog
@@ -316,7 +299,7 @@ export function ConnectStoreStepContent({
                             getStoreGroupItems={getStoreGroupItems}
                             getStoreViewItems={getStoreViewItems}
                             onRefresh={forceFetch}
-                            credentialService={credentialService}
+                            accsEndpoint={accsEndpoint}
                         />
                     )}
                 />

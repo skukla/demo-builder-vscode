@@ -16,6 +16,8 @@
 
 import * as vscode from 'vscode';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { STOREFRONT_JOBS, countLine, jobLine } from '@/core/utils/storefrontJobs';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { LibraryPublishHelix } from '@/features/eds/handlers/blockLibraryPublish';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
@@ -25,7 +27,10 @@ import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOper
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { SitePublishProgress } from '@/features/eds/services/helix/helixSiteContent';
 import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';
+import { readStorefrontCodePaths } from '@/features/eds/services/storefrontCodeReader';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 interface EdsContentConfig {
     repoUrl: string;
@@ -73,6 +78,11 @@ interface EdsContentDeps {
     secrets: import('vscode').SecretStorage;
     extensionContext: import('vscode').ExtensionContext;
     /**
+     * Receives the copy's broken links (links to pages the source lacks too), so
+     * the caller can record them on the project.
+     */
+    onBrokenLinks?: (links: StorefrontBrokenLink[]) => void;
+    /**
      * Helix seam. Defaults to a service built from this call's logger and the
      * GitHub/DA.live credentials it derives; production never passes it.
      *
@@ -86,6 +96,27 @@ interface EdsContentDeps {
         githubTokenService: GitHubTokenService,
         daLiveTokenProvider: TokenProvider,
     ) => EdsContentHelix;
+    /**
+     * The site paths the storefront's code loads, or undefined when it cannot be read.
+     * Defaults to downloading the SC's repository, as the shared pipeline does.
+     */
+    readCodePaths?: (repo: { owner: string; repo: string }) => Promise<string[] | undefined>;
+    /**
+     * Runs after the content copy and right before the bulk publish: the project's
+     * authored-pages sheet refresh (EDS-61, `authoredSheetRefresh.ts`). Non-fatal.
+     */
+    beforeContentPublish?: () => Promise<void>;
+}
+
+/** The pipeline's own read of the storefront's code, through a GitHub client built here. */
+async function readCodePathsFromGitHub(
+    secrets: import('vscode').SecretStorage,
+    repo: { owner: string; repo: string },
+    logger: Logger,
+): Promise<string[] | undefined> {
+    const { GitHubFileOperations } = await import('@/features/eds/services/github/githubFileOperations');
+    const fileOps = new GitHubFileOperations(getGitHubServices(secrets).tokenService, logger);
+    return readStorefrontCodePaths(fileOps.repoArchive, repo, logger);
 }
 
 /**
@@ -99,6 +130,8 @@ async function nonFatal(label: string, logger: Logger, run: () => Promise<void>)
     try {
         await run();
     } catch (error) {
+        // An expired DA.live sign-in fails every step after this one too (EDS-54).
+        if (error instanceof DaLiveAuthError) throw error;
         logger.warn(`[EDS Content] ${label} failed: ${(error as Error).message}`);
     }
 }
@@ -146,7 +179,8 @@ async function contentExistsInDaLive(
 export async function ensureEdsContent(
     config: EdsContentConfig,
     deps: EdsContentDeps,
-    onProgress?: (message: string, subMessage?: string) => void,
+    /** A step from the stage table (Reset's, for the same work) and the job under it. */
+    onProgress?: (stage: string, step?: string) => void,
 ): Promise<boolean> {
     const { logger } = deps;
 
@@ -158,8 +192,11 @@ export async function ensureEdsContent(
 
     // Create DA.live services upfront — all DA.live API calls require the DA.live token
     // (separate IMS auth from Adobe Console, see storefrontSetupHandlers.ts:440)
-    const { DaLiveContentOperations, createDaLiveServiceTokenProvider } = await import(
+    const { DaLiveContentOperations } = await import(
         '@/features/eds/services/daLive/daLiveContentOperations'
+    );
+    const { createDaLiveServiceTokenProvider } = await import(
+        '@/features/eds/services/daLive/daLiveTokenProviders'
     );
     const { getDaLiveAuthService } = await import('@/features/eds/handlers/edsHelpers');
 
@@ -175,7 +212,10 @@ export async function ensureEdsContent(
     }
 
     logger.info('[EDS Content] Content not found in DA.live, copying from template source');
-    onProgress?.('Setting up storefront content', 'Copying content from template');
+    // Reset's steps for the same work, each job on the line under its step
+    // (progress vocabulary, owner 2026-10-16).
+    const { org: sourceOrg, site: sourceSite } = config.contentSource;
+    onProgress?.(S.copyingContent.label, `From ${sourceOrg}/${sourceSite}`);
 
     const contentSource = config.contentSource;
 
@@ -185,7 +225,14 @@ export async function ensureEdsContent(
     // would silent-debug-log here and the import path would miss the user signal.
     const patchReport = createPatchReport();
 
-    const contentResult = await daLiveContentOps.copyContentFromSource(
+    // The paths the storefront's own code loads, read as the shared pipeline reads them,
+    // so this copy carries the same pages a reset would (EDS-40). Until 2026-10-19 it
+    // used the fixed lists only. Code that cannot be read falls back to them, as there.
+    const codePaths = await (deps.readCodePaths
+        ? deps.readCodePaths(repoInfo)
+        : readCodePathsFromGitHub(deps.secrets, repoInfo, logger));
+
+    const contentResult = await daLiveContentOps.copyOps.copyContentFromSource(
         {
             org: contentSource.org,
             site: contentSource.site,
@@ -194,12 +241,15 @@ export async function ensureEdsContent(
         config.daLiveOrg,
         config.daLiveSite,
         (progress) => {
-            const msg = progress.message || `Copying content (${progress.processed}/${progress.total})`;
-            onProgress?.('Setting up storefront content', msg);
+            const count = countLine(progress.processed, progress.total, 'file');
+            const msg = progress.message || jobLine(STOREFRONT_JOBS.copyingContent, count);
+            onProgress?.(S.copyingContent.label, msg);
         },
         config.contentPatches,
         config.contentPatchSource,
         patchReport,
+        undefined,
+        codePaths,
     );
 
     if (!contentResult.success) {
@@ -211,8 +261,8 @@ export async function ensureEdsContent(
     // Hybrid packages: overlay the B2B account chrome (/customer/* + /customer/nav)
     // from the canonical B2B content site on top of the brand content.
     if (config.accountContentSource) {
-        onProgress?.('Setting up storefront content', 'Adding B2B account experience');
-        const overlay = await daLiveContentOps.overlayAccountChrome(
+        onProgress?.(S.copyingContent.label, 'Adding the B2B account pages');
+        const overlay = await daLiveContentOps.copyOps.overlayAccountChrome(
             config.accountContentSource, config.daLiveOrg, config.daLiveSite, patchReport,
         );
         logger.info(`[EDS Content] Account-chrome overlay: ${overlay.totalFiles} file(s) from ${config.accountContentSource.org}/${config.accountContentSource.site}`);
@@ -224,6 +274,7 @@ export async function ensureEdsContent(
         configureDaLivePermissions,
         applyDaLiveOrgConfigSettings,
         publishLibraryPaths,
+        publishSheetPaths,
         verifyLibraryPreviewed,
     } =
         await import('@/features/eds/handlers/edsHelpers');
@@ -237,7 +288,7 @@ export async function ensureEdsContent(
     const helixService = makeHelix(logger, githubTokenService, daLiveTokenProvider);
 
     // DA.live permissions (non-fatal)
-    onProgress?.('Configuring site permissions', 'Granting DA.live access');
+    onProgress?.(S.settingUpAuthoring.label, STOREFRONT_JOBS.settingSitePermissions);
     await nonFatal('Permissions setup', logger, async () => {
         const userEmail = await daLiveAuthService.getUserEmail();
         if (!userEmail) {
@@ -252,11 +303,11 @@ export async function ensureEdsContent(
     // Block library from template (non-fatal, skip if no template info)
     let libraryPaths: string[] = [];
     if (config.templateOwner && config.templateRepo) {
-        onProgress?.('Configuring block library', 'Setting up block library from template');
+        onProgress?.(S.settingUpAuthoring.label, STOREFRONT_JOBS.buildingBlockLibrary);
         await nonFatal('Block library setup', logger, async () => {
             const { GitHubFileOperations } = await import('@/features/eds/services/github/githubFileOperations');
             const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
-            const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
+            const libResult = await daLiveContentOps.blockLibOps.createBlockLibraryFromTemplate(
                 config.daLiveOrg,
                 config.daLiveSite,
                 config.templateOwner as string,
@@ -267,33 +318,50 @@ export async function ensureEdsContent(
                 logger.info(`[EDS Content] Block library: ${libResult.blocksCount} blocks configured`);
                 libraryPaths = libResult.paths;
             }
+            if (!libResult.success && libResult.error) logger.warn(`[EDS Content] ${libResult.error}`);
         });
     }
 
     // EDS settings — AEM Assets / Universal Editor (non-fatal)
-    onProgress?.('Applying EDS settings', 'Configuring AEM Assets and Universal Editor');
+    onProgress?.(S.settingUpAuthoring.label, STOREFRONT_JOBS.applyingDaLiveSettings);
     await nonFatal('EDS settings', logger, () =>
         applyDaLiveOrgConfigSettings(daLiveContentOps, config.daLiveOrg, config.daLiveSite, logger),
     );
 
     // Cache purge before publishing (non-fatal)
-    onProgress?.('Publishing storefront content', 'Purging stale cache');
+    onProgress?.(S.publishingPages.label, STOREFRONT_JOBS.clearingCache);
     await nonFatal('Cache purge', logger, () =>
         helixService.purgeCacheAll(repoInfo.owner, repoInfo.repo, 'main'),
     );
 
-    // Publish content to CDN (preview + live)
-    onProgress?.('Publishing storefront content', 'Making content available on CDN');
+    // Publish content to CDN (preview + live) — after a live authored-pages sheet is
+    // current, so the overlay replaces no authored page at a category address (EDS-61).
+    onProgress?.(S.publishingPages.label);
+    const { beforeContentPublish } = deps;
+    if (beforeContentPublish) await nonFatal('Authored-pages sheet', logger, beforeContentPublish);
 
     await helixService.publishAllSiteContent(
         `${repoInfo.owner}/${repoInfo.repo}`,
         'main',
         config.daLiveOrg,
         config.daLiveSite,
+        (info) => onProgress?.(S.publishingPages.label, info.message),
     );
+
+    // Publish the sheets the copy wrote, by path (non-fatal). publishAllSiteContent
+    // publishes pages only, so a copied sheet is served only once this runs.
+    if (contentResult.sheetPaths.length > 0) {
+        onProgress?.(S.publishingPages.label, STOREFRONT_JOBS.publishingSheets);
+        await nonFatal('Sheet publish', logger, async () => {
+            await publishSheetPaths(
+                helixService, repoInfo.owner, repoInfo.repo, contentResult.sheetPaths, logger,
+            );
+        });
+    }
 
     // Publish block library paths (non-fatal, may be missed by publishAllSiteContent)
     if (libraryPaths.length > 0) {
+        onProgress?.(S.publishingPages.label, STOREFRONT_JOBS.publishingBlockList);
         await nonFatal('Block library publish', logger, async () => {
             await publishLibraryPaths(helixService, repoInfo.owner, repoInfo.repo, libraryPaths, logger);
             // The publish reporting success proves nothing — see verifyLibraryPreviewed.
@@ -306,6 +374,7 @@ export async function ensureEdsContent(
     // Surface unapplied content patches via the unified toast — same D1 contract
     // as the create/reset pipeline. No-op when nothing failed precondition.
     await reportUnapplied(patchReport, logger, vscode.window.showWarningMessage);
+    deps.onBrokenLinks?.(patchReport.brokenLinks ?? []);
 
     return true;
 }

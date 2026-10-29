@@ -44,6 +44,19 @@ describe('REQUEST_TIMEOUTS', () => {
     });
 
     // The three that shipped un-budgeted, named so the regression is legible.
+    // The setup guide's check: its first request reads the workspace credential, and one
+    // retried read put it past 30s while the extension went on to save the result (2026-10-01).
+    it('budgets the demo setup check checkSetupSteps', () => {
+        expect([...budgetedTypes()]).toContain('checkSetupSteps');
+    });
+
+    // Add another ERP's store read: a credential plus every product in the store. On
+    // Justrite it outran 30s, and the dialog said the store could not be read while the
+    // extension was still reading it (2026-10-18).
+    it('budgets the Add another ERP store read getErpOwnershipOptions', () => {
+        expect([...budgetedTypes()]).toContain('getErpOwnershipOptions');
+    });
+
     it.each(['listConsoleApis', 'addConsoleApis', 'setConsoleApis'])(
         'budgets the dashboard console-API message %s',
         (type) => {

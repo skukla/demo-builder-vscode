@@ -15,340 +15,43 @@
  * 8. Clear + copy demo content to DA.live
  * 9. Create block library in DA.live
  * 10. Apply EDS settings
- * 11. Purge cache + publish content
+ * 11. Purge cache + publish content; then unpublish the pages left over from before
+ *     (EDS-33: nothing is unpublished until the republish is done, so the site stays up);
+ *     category pages + catalog menu re-written (EDS-24)
  * 12. (Optional) Redeploy API Mesh
+ *
+ * This file is the orchestration only. The steps live beside it: the repo reset
+ * (`edsResetRepoHelper`), steps 4-5 (`edsResetCodeSyncStep`), 6-7
+ * (`edsResetConfigStep`), 8-11 (`edsResetContentStep`) and the last steps with
+ * the result (`edsResetFinalize`).
  *
  * @module features/eds/services/reset/edsResetService
  */
 
-import {
-    getGitHubServices,
-    configureDaLivePermissions,
-    getDaLiveAuthService,
-} from '../../handlers/edsHelpers';
+import { getGitHubServices } from '../../handlers/edsHelpers';
 import { ConfigurationService } from '../configService/configurationService';
 import { lostGrantsMessage } from '../configService/lostGrantsMessage';
-import { verifyCdnResources } from '../configSyncService';
-import { withDaLiveAuthRetry } from '../daLive/daLiveAuthRetry';
 import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
-import { executeEdsPipeline } from '../edsPipeline';
-import type { GitHubFileOperations } from '../github/githubFileOperations';
-import type { GitHubTokenService } from '../github/githubTokenService';
-import { HelixService } from '../helix/helixService';
-import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/patchReportHelper';
+import { brokenLinksSentence } from '../storefront/brokenLinksRecord';
+import { recordStorefrontBuilt } from '../storefront/storefrontChanges';
 import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
-import { updateStorefrontState } from '../storefront/storefrontStalenessDetector';
 import { GitHubAppNotInstalledError } from '../types';
+import { putBackCatalogMenu, takeOutCatalogMenu } from './edsResetCatalogMenu';
+import { confirmResetCodeServed, republishCodeIfMissed, syncCodeAndPermissions } from './edsResetCodeSyncStep';
 import {
     publishConfigAndRegisterSite,
     type ConfigStepServices,
 } from './edsResetConfigStep';
-import { redeployApiMesh, type MeshRedeployDeps } from './edsResetMeshHelper';
-import {
-    extractResetParams,
-    type EdsResetParams,
-    type EdsResetProgress,
-    type EdsResetResult,
-    type ExtractParamsResult,
-} from './edsResetParams';
+import { runContentPipeline } from './edsResetContentStep';
+import { finalizeReset, recordBoilerplate, recordSyncedCommit } from './edsResetFinalize';
+import type { MeshRedeployDeps } from './edsResetMeshHelper';
+import type { EdsResetParams, EdsResetProgress, EdsResetResult } from './edsResetParams';
+import { takeOutProductPages, withLeftoverPages, withPageSentences } from './edsResetProductPages';
 import { resetRepoToTemplate } from './edsResetRepoHelper';
-import { COMPONENT_IDS } from '@/core/constants';
-import type { Project } from '@/types/base';
+import { RESET_BASE_STEPS } from '@/core/utils/resetStages';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-
-// ==========================================================
-// Re-exports for backward compatibility
-// ==========================================================
-
-// Re-exports from the consolidated import above — kept here for the long-standing
-// downstream-consumer API. Splitting the import/re-export means the no-duplicate-imports
-// rule sees a single `from './edsResetParams'` statement.
-export { extractResetParams };
-export type { EdsResetParams, EdsResetProgress, EdsResetResult, ExtractParamsResult };
-
-// ==========================================================
-// Constants
-// ==========================================================
-
-/** Maps EDS pipeline operation names to wizard step numbers for progress reporting. */
-const PIPELINE_STEP_MAP: Record<string, number> = {
-    'content-clear': 8,
-    'content-copy': 8,
-    'block-library': 9,
-    'eds-settings': 10,
-    'cache-purge': 11,
-    'content-publish': 11,
-    'library-publish': 11,
-    'catalog-prewarm': 11,
-};
-
-// ==========================================================
-// Core Reset Implementation
-// ==========================================================
-
-/**
- * Steps 4-5: Sync code to CDN and configure DA.live permissions.
- */
-async function syncCodeAndPermissions(
-    params: EdsResetParams,
-    context: HandlerContext,
-    githubTokenService: GitHubTokenService,
-    tokenProvider: TokenProvider,
-    report: (step: number, message: string) => void,
-): Promise<void> {
-    const { repoOwner, repoName, daLiveOrg, daLiveSite } = params;
-    // Step 4: Sync code to CDN
-    report(4, 'Syncing code to CDN');
-    // tokenProvider required: DA.live auth headers needed for unpublish during bulk sync
-    const helixServiceForCodeSync = new HelixService(
-        context.logger,
-        githubTokenService,
-        tokenProvider,
-    );
-    try {
-        await helixServiceForCodeSync.previewCode(repoOwner, repoName, '/*');
-        context.logger.info('[EdsReset] Code synced to CDN');
-        report(4, 'Code synchronized');
-    } catch (codeSyncError) {
-        context.logger.warn(
-            `[EdsReset] Code sync request failed: ${(codeSyncError as Error).message}, continuing anyway`,
-        );
-        report(4, 'Code sync pending');
-    }
-
-    // Step 5: Configure site permissions
-    report(5, 'Configuring site permissions');
-    const daLiveAuthService = getDaLiveAuthService(context.context);
-    const userEmail = await daLiveAuthService.getUserEmail();
-    if (userEmail) {
-        await configureDaLivePermissions(
-            tokenProvider,
-            daLiveOrg,
-            daLiveSite,
-            userEmail,
-            context.logger,
-        );
-    } else {
-        context.logger.warn('[EdsReset] No user email available for permissions');
-    }
-}
-
-/**
- * Handle a DA.live authentication failure mid-pipeline by prompting re-authentication.
- * Returns on success (caller should continue the pipeline loop); throws on cancellation.
- */
-/** Map a pipeline progress event to the wizard step number and format the message. */
-function mapPipelineProgress(
-    info: { operation: string; message: string; current?: number; total?: number },
-    report: (step: number, message: string) => void,
-): void {
-    let message = info.message;
-    if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
-        message = `Publishing to CDN (${info.current}/${info.total} pages)`;
-    }
-    report(PIPELINE_STEP_MAP[info.operation] ?? 8, message);
-}
-
-/**
- * Steps 8-11: Run the EDS content pipeline with automatic DA.live re-auth retry.
- * Returns the number of content files copied.
- */
-async function runContentPipeline(
-    params: EdsResetParams,
-    repoResetResult: {
-        blockCollectionIds?: string[];
-        libraryContentSources: Array<{ org: string; site: string }>;
-        canonicalCodePatchResults?: import('../patches/codePatchRegistry').CodePatchResult[];
-    },
-    daLiveContentOps: DaLiveContentOperations,
-    githubFileOps: GitHubFileOperations,
-    githubTokenService: GitHubTokenService,
-    tokenProvider: TokenProvider,
-    context: HandlerContext,
-    report: (step: number, message: string) => void,
-): Promise<number> {
-    const {
-        repoOwner,
-        repoName,
-        daLiveOrg,
-        daLiveSite,
-        templateOwner,
-        templateRepo,
-        contentSource: contentSourceConfig,
-        accountContentSource: accountContentSourceConfig,
-        includeBlockLibrary = false,
-        contentPatches,
-        contentPatchSource,
-        codePatches,
-        codePatchSource,
-        brandAssets,
-        byomOverlayUrl,
-        project,
-    } = params;
-
-    // Seed the pipeline's patch report with the canonical-phase code-patch
-    // results from `resetRepoToTemplate`. The pipeline appends block-phase
-    // results and (eventually) content-patch results to the same report so
-    // the final aggregate carries everything the UI surface needs.
-    const patchReport = createPatchReport();
-    for (const r of repoResetResult.canonicalCodePatchResults ?? []) {
-        addCodeResult(patchReport, r);
-    }
-
-    // tokenProvider required: DA.live content operations (copy, publish) need IMS token
-    const helixService = new HelixService(context.logger, githubTokenService, tokenProvider);
-    // The SHARED recovery, not a third hand-rolled copy. Reset, storefront setup
-    // and (until 2026-08-16) nothing else each had their own loop; they must agree
-    // on when a refusal is retryable, and a divergence there is invisible until a
-    // pipeline fails in the field.
-    return withDaLiveAuthRetry(
-        context,
-        async () => {
-            const pipelineResult = await executeEdsPipeline(
-                {
-                    repoOwner,
-                    repoName,
-                    daLiveOrg,
-                    daLiveSite,
-                    templateOwner,
-                    templateRepo,
-                    // Keep-my-current-content: an added demo's content site is gone,
-                    // the SC chose to reset the code only (content is not forkable).
-                    clearExistingContent: !params.keepContent,
-                    skipContent: Boolean(params.keepContent) || !contentSourceConfig,
-                    contentSource: contentSourceConfig,
-                    accountContentSource: accountContentSourceConfig,
-                    contentPatches,
-                    contentPatchSource,
-                    includeBlockLibrary,
-                    codePatches,
-                    codePatchSource,
-                    brandAssets,
-                    patchReport,
-                    blockCollectionIds: repoResetResult.blockCollectionIds,
-                    libraryContentSources: repoResetResult.libraryContentSources,
-                    purgeCache: true,
-                    skipPublish: false,
-                    byomOverlayUrl,
-                    project,
-                },
-                { daLiveContentOps, githubFileOps, helixService, logger: context.logger },
-                (info) => mapPipelineProgress(info, report),
-            );
-
-            if (!pipelineResult.success) {
-                throw new Error(pipelineResult.error || 'Content pipeline failed');
-            }
-
-            // Surface unapplied patches (if any) via the unified toast helper.
-            // Headless callers (MCP/AI reset) get warn-level logging only; UI
-            // callers can wrap this function and inject `showWarning` later.
-            await reportUnapplied(patchReport, context.logger);
-
-            context.logger.info('[EdsReset] Content pipeline completed successfully');
-            return pipelineResult.contentFilesCopied;
-        },
-        {
-            logPrefix: '[EdsReset]',
-            operationLabel: 'Reset',
-            onExpired: async () => report(8, 'DA.live session expired. Please re-authenticate'),
-            onBeforeRetry: async () => report(8, 'Resuming content pipeline'),
-        },
-    );
-}
-
-/**
- * Record the template commit the repository was reset onto as the storefront's
- * `lastSyncedCommit` — the commit "Check for Updates" compares against. Called only
- * once the reset's own work has succeeded; the save that persists it is the one the
- * reset already makes. An unresolved commit leaves the old record in place rather
- * than writing `undefined` over it.
- */
-function recordSyncedCommit(project: Project, commitSha: string | undefined, logger: Logger): void {
-    const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
-    if (!commitSha || !metadata) {
-        logger.warn('[EdsReset] Synced template commit not recorded — update checks may be stale');
-        return;
-    }
-    metadata.lastSyncedCommit = commitSha;
-}
-
-/**
- * Final steps: optional CDN verification, optional mesh redeploy, and state persistence.
- */
-async function finalizeReset(
-    params: EdsResetParams,
-    context: HandlerContext,
-    report: (step: number, message: string) => void,
-    filesReset: number,
-    contentCopied: number,
-    deps: MeshRedeployDeps,
-    /** False when step 7 could not write the site config — see below. */
-    configWritten: boolean,
-    /** The dry check's caveats for an added demo, from the repo reset. */
-    demoCaveats?: string[],
-): Promise<EdsResetResult> {
-    const { repoOwner, repoName, project, verifyCdn = false, redeployMesh = false } = params;
-
-    if (verifyCdn) {
-        report(11, 'Verifying configuration');
-        const verification = await verifyCdnResources(repoOwner, repoName, context.logger);
-        if (verification.configVerified) {
-            report(11, 'Configuration verified');
-            context.logger.info('[EdsReset] config.json verified on CDN');
-        } else {
-            report(11, 'Configuration propagating');
-            context.logger.warn(
-                '[EdsReset] config.json CDN verification timed out - may need more time to propagate',
-            );
-        }
-    }
-
-    if (redeployMesh) {
-        const meshResult = await redeployApiMesh(
-            project,
-            repoOwner,
-            repoName,
-            context,
-            report,
-            filesReset,
-            contentCopied,
-            deps,
-        );
-        if (meshResult) return meshResult; // Partial success
-    }
-
-    // NOTE: passes the project's CURRENT configs, not a snapshot from when
-    // config.json was generated earlier in this run. Same latent pattern the
-    // republish path hit on 2026-08-10 (see updateStorefrontState) — narrower
-    // window here, but fixing it means threading the snapshot through the
-    // pipeline. Tracked in .rptc/plans/pdp-prerender-validation/.
-    updateStorefrontState(project, project.componentConfigs || {});
-    project.edsStorefrontStatusSummary = 'published';
-    await context.stateManager.saveProject(project);
-    context.logger.info('[EdsReset] EDS project reset successfully');
-    // Rides out on a SUCCESSFUL result, like MESH_REDEPLOY_FAILED: the reset did
-    // the rest of its work, and calling it a failure would send the user to re-run
-    // something that mostly worked. But it must not be silent — the storefront
-    // cannot serve product pages until this one write lands.
-    return {
-        success: true,
-        filesReset,
-        contentCopied,
-        meshRedeployed: redeployMesh,
-        ...(demoCaveats?.length ? { demoCaveats } : {}),
-        ...(configWritten
-            ? {}
-            : {
-                  errorType: 'CONFIG_WRITE_FAILED',
-                  error:
-                      'The site configuration could not be written, so product detail pages ' +
-                      'will not load. Run "Demo Builder: Repair Site Configuration" to finish it.',
-              }),
-    };
-}
 
 /** Map an unknown caught error to a structured EdsResetResult. */
 function handleResetError(error: unknown, logger: Logger): EdsResetResult {
@@ -393,7 +96,7 @@ export async function executeEdsReset(
 ): Promise<EdsResetResult> {
     const { redeployMesh = false } = params;
 
-    const baseSteps = 11;
+    const baseSteps = RESET_BASE_STEPS;
     const totalSteps = redeployMesh ? baseSteps + 1 : baseSteps;
     const report = (step: number, message: string) => {
         onProgress?.({ step, totalSteps, message });
@@ -442,7 +145,13 @@ export async function executeEdsReset(
         filesReset = repoResetResult.filesReset;
 
         // Steps 4-5: Sync code to CDN + configure permissions
-        await syncCodeAndPermissions(params, context, githubTokenService, tokenProvider, report);
+        const { codeError } = await syncCodeAndPermissions(
+            params,
+            context,
+            githubTokenService,
+            tokenProvider,
+            report,
+        );
 
         const { configWritten } = await publishConfigAndRegisterSite(
             params,
@@ -452,9 +161,26 @@ export async function executeEdsReset(
             report,
             services,
         );
+        // The first publish failed; the site is registered now (owner, 2026-10-22).
+        const codeNotPublished = await republishCodeIfMissed(
+            params,
+            codeError,
+            { githubTokenService, tokenProvider, logger: context.logger },
+            report,
+        );
+
+        // Out before the content is re-copied: category pages (EDS-24), product pages (EDS-26).
+        const clients = { daLiveContentOps, githubFileOps, githubTokenService, tokenProvider };
+        const catalogMenuSite = await takeOutCatalogMenu(params, context, clients, report);
+        const productPages = await takeOutProductPages(
+            params,
+            context,
+            { ...clients, daLiveContentOps: daLiveContentOps.sourceOps },
+            report,
+        );
 
         // Steps 8-11: Content Pipeline (with DA.live re-auth retry)
-        contentCopied = await runContentPipeline(
+        const content = await runContentPipeline(
             params,
             repoResetResult,
             daLiveContentOps,
@@ -464,10 +190,23 @@ export async function executeEdsReset(
             context,
             report,
         );
+        contentCopied = content.contentCopied;
+        const catalogMenu = await putBackCatalogMenu(params, catalogMenuSite, context.logger, report);
+        // After the content copy, so AEM has had minutes to catch up with the last commits.
+        const codeNotServed = await confirmResetCodeServed(
+            params,
+            repoResetResult.resetCommitSha,
+            { githubFileOps, githubTokenService, tokenProvider, logger: context.logger },
+            report,
+        );
         recordSyncedCommit(params.project, repoResetResult.templateCommitSha, context.logger);
+        recordBoilerplate(params.project, repoResetResult.boilerplate);
+        // Built the way Demo Builder builds storefronts now: no "Needs reset" (saved below).
+        // Code the site does not serve is not built, whatever the repository says.
+        recordStorefrontBuilt(params.project, repoResetResult.buildComplete && !codeNotServed);
 
         // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
-        return await finalizeReset(
+        const result = await finalizeReset(
             params,
             context,
             report,
@@ -475,8 +214,18 @@ export async function executeEdsReset(
             contentCopied,
             deps,
             configWritten,
-            repoResetResult.demoCaveats,
         );
+        const sentences = { catalogMenu, productPages };
+        const withSentences = withPageSentences(result, sentences);
+        // The same object when there is nothing to add, as withPageSentences keeps it.
+        const warned = content.pipelineWarnings.length > 0
+            ? { ...withSentences, pipelineWarnings: content.pipelineWarnings }
+            : withSentences;
+        const notOnSite = [codeNotPublished, codeNotServed].filter(Boolean).join(' ');
+        const withCode = notOnSite ? { ...warned, codeNotPublished: notOnSite } : warned;
+        const linksNote = brokenLinksSentence(content.brokenLinks);
+        const withLinks = linksNote ? { ...withCode, brokenLinks: linksNote } : withCode;
+        return withLeftoverPages(withLinks, content.leftoverPages);
     } catch (error) {
         return handleResetError(error, context.logger);
     }

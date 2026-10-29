@@ -22,6 +22,8 @@ import type { AppBuilderComponentRequirement } from '../../../services/appBuilde
 import { isMeshSelected } from '../../steps/tileStatus';
 import { BASELINE_CODE } from './apiAccessConstants';
 import { RESERVED_EXISTING_KEY, type IntegrationKind } from './flowStages';
+import { pairedSystemOf } from '@/features/app-builder/services/pairNames';
+import { systemBoundTo } from '@/features/components/services/appBuilderComponentLinks';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeAuthSessionState } from '@/types/webview';
 
@@ -43,12 +45,24 @@ export interface IntegrationRow {
      */
     apis: string[];
     /**
-     * True only for AI-built instance rows (shell-template source with a source
-     * record to carry the display name) — enables the wizard Rename affordance.
-     * Absent on mesh/catalog/import rows and on the legacy fixed-id blank row
-     * (which has no source record to rename).
+     * Enables the wizard Rename affordance. True for AI-built instance rows
+     * (shell-template source with a source record to carry the display name)
+     * and for a catalog integration that brings a named system (the ERP pair),
+     * whose names live in `componentConfigs`. Absent on mesh/import rows, other
+     * catalog rows, and the legacy fixed-id blank row.
      */
     renamable?: boolean;
+    /**
+     * The name of the SYSTEM that comes with this integration (the ERP with the
+     * ERP integration; catalog `boundTo`). The card's subline says so; the
+     * review step lists it as its own row. Absent for every other row.
+     */
+    companion?: string;
+    /**
+     * True when the companion's name can still be changed (the ERP, before the
+     * project is created) — the card's Settings opens it. Absent otherwise.
+     */
+    companionRenamable?: boolean;
     /**
      * True when the package's resolved mesh requirement locks this row in the
      * build (mesh rows only; `requiresMesh` with the storefront override
@@ -92,6 +106,37 @@ function isShellInstanceSource(
     return (
         template !== undefined && source.owner === template.owner && source.repo === template.repo
     );
+}
+
+/** The bound system's name for an integration id, when the caller's list carries one. */
+function companionOf(
+    integrationId: string,
+    components: AppBuilderComponentCatalogEntry[],
+): string | undefined {
+    return systemBoundTo(integrationId, components)?.name;
+}
+
+/**
+ * The names a pair was given (the integration's own and its system's), read
+ * from the inputs `pairNameInputs` wrote. Undefined for an entry with no named
+ * system; each name falls back to the catalog name when its input is unset.
+ */
+function pairRowNames(
+    state: AdobeAuthSessionState,
+    entry: AppBuilderComponentCatalogEntry,
+    components: AppBuilderComponentCatalogEntry[],
+): { name: string; companion: string } | undefined {
+    const system = pairedSystemOf(entry, components);
+    if (!system?.nameFromEnvVar) return undefined;
+    const inputs = state.componentConfigs?.[entry.id] ?? {};
+    const read = (key: string | undefined): string | undefined => {
+        const value = key ? inputs[key] : undefined;
+        return typeof value === 'string' && value.trim() ? value : undefined;
+    };
+    return {
+        name: read(entry.nameFromEnvVar) ?? entry.name,
+        companion: read(system.nameFromEnvVar) ?? system.name,
+    };
 }
 
 /** Whether the shared Adobe I/O destination (project + workspace) is committed. */
@@ -197,10 +242,12 @@ export function resolveIntegrationRows(
             });
             continue;
         }
+        const pair = pairRowNames(state, entry, components);
+        const companion = pair?.companion ?? companionOf(id, components);
         catalogRows.push({
             id,
             kind: 'catalog',
-            name: entry.name,
+            name: pair?.name ?? entry.name,
             sourceLine: entry.description || `Catalog · ${entry.name}`,
             needsSetup,
             apis: apiCodesFor(state, id, entry.requiredApis),
@@ -208,6 +255,8 @@ export function resolveIntegrationRows(
             // requirement:'required' in the selection model and gets the same
             // row/card lock the required mesh does.
             required: entry.requirement === 'required',
+            ...(companion ? { companion } : {}),
+            ...(pair ? { renamable: true, companionRenamable: true } : {}),
         });
     }
 

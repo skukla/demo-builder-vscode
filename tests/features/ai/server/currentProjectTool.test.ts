@@ -1,10 +1,10 @@
 /**
- * get_current_project tests — resolves the persisted current-project pointer
- * via stateManager.getCurrentProject, returning { name, path } or null. No
- * inputs, no confirm gate (read-only).
+ * get_current_project and set_current_project — which project an agent connection works
+ * on, and choosing one without moving the person's current project (AI-15).
  */
 
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
+import type { AgentWorkingProject } from '@/types/handlers';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { expectWithinCeiling } from './responseCeilings';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -27,8 +27,8 @@ function fakeServer() {
             tools.set(name, handler);
             definitions.set(name, def);
         },
-        async call(args?: unknown): Promise<any> {
-            return JSON.parse((await tools.get('get_current_project')!(args)).content[0].text);
+        async call(args?: unknown, tool = 'get_current_project'): Promise<any> {
+            return JSON.parse((await tools.get(tool)!(args)).content[0].text);
         },
     };
 }
@@ -40,6 +40,17 @@ const ctxFactory = () =>
         context: createMockExtensionContext(),
         logger: createMockLogger(),
     });
+
+/** A connection's context, sharing one working project across calls as extension.ts does. */
+function connection(working: AgentWorkingProject, stateManager = createMockStateManager({ getCurrentProject })) {
+    return () =>
+        createMockHandlerContext({
+            stateManager,
+            context: createMockExtensionContext(),
+            logger: createMockLogger(),
+            agentWorkingProject: working,
+        });
+}
 
 describe('get_current_project', () => {
     beforeEach(() => {
@@ -97,7 +108,7 @@ describe('get_current_project', () => {
         // dashboard points at". Nothing else in the response distinguishes them.
         getCurrentProject.mockResolvedValue({ name: 'alpha', path: '/p/alpha', status: 'ready' });
         const s = fakeServer();
-        registerCurrentProjectTool(s, ctxFactory, '/p/alpha');
+        registerCurrentProjectTool(s, connection({ path: '/p/alpha' }), '/p/alpha');
 
         expect((await s.call({})).scope).toBe('session-directory');
     });
@@ -125,7 +136,58 @@ describe('get_current_project', () => {
             },
         };
         registerCurrentProjectTool(s, ctxFactory);
-        expect(registered).toEqual(['get_current_project']);
+        expect(registered).toEqual(['get_current_project', 'set_current_project']);
+    });
+});
+
+// AI-15: an agent picking a project used to run the projects list's "open project", which
+// made it the PERSON's current project and opened its dashboard on their screen.
+describe('set_current_project', () => {
+    const ALPHA = { name: 'alpha', path: '/p/alpha', status: 'ready' };
+
+    function server(working: AgentWorkingProject) {
+        const stateManager = createMockStateManager({
+            getCurrentProject,
+            getAllProjects: jest.fn().mockResolvedValue([{ name: 'alpha', path: '/p/alpha', lastModified: new Date() }]),
+            loadProjectFromPath: jest.fn().mockResolvedValue(ALPHA),
+        });
+        const s = fakeServer();
+        registerCurrentProjectTool(s, connection(working, stateManager));
+        return { s, stateManager };
+    }
+
+    it("points this agent at the project and leaves the person's current project alone", async () => {
+        const working: AgentWorkingProject = {};
+        const { s, stateManager } = server(working);
+
+        const res = await s.call({ projectPath: '/p/alpha' }, 'set_current_project');
+
+        expect(res).toEqual({ currentProject: { name: 'alpha', path: '/p/alpha' }, scope: 'agent-chosen' });
+        expectWithinCeiling('set_current_project', JSON.stringify(res));
+        expect(working.path).toBe('/p/alpha');
+        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/alpha', undefined, { persistAfterLoad: false });
+        expect(stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('then answers get_current_project as the project the agent chose', async () => {
+        getCurrentProject.mockResolvedValue(ALPHA);
+        const { s } = server({});
+
+        await s.call({ projectPath: '/p/alpha' }, 'set_current_project');
+
+        expect((await s.call({})).scope).toBe('agent-chosen');
+    });
+
+    // The path comes from an agent: only a project the projects list shows is accepted.
+    it('refuses a path that is not a project', async () => {
+        const working: AgentWorkingProject = {};
+        const { s, stateManager } = server(working);
+
+        const res = await s.call({ projectPath: '/etc' }, 'set_current_project');
+
+        expect(res.error).toMatch(/No project at \/etc/);
+        expect(working.path).toBeUndefined();
+        expect(stateManager.loadProjectFromPath).not.toHaveBeenCalled();
     });
 });
 

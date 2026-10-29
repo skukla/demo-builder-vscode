@@ -15,7 +15,7 @@ and three things read them:
 |---|---|
 | `ui/steps/reviewStepHelpers.tsx` | a backend that PROVIDES a service shows it as "(built-in)" rather than listing it as required |
 | `components/ui/hooks/useComponentConfig.ts` | drives Configure's field list |
-| `project-creation/helpers/envFileGenerator.ts` | drives `.env` generation |
+| `project-creation/helpers/envVarResolution.ts` | drives the keys in a generated `.env` and json config |
 
 The `component_requirements` MCP tool exposes the same declarations to agents.
 

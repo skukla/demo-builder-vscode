@@ -11,11 +11,11 @@
 
 import {
     APP_MANAGEMENT_HANDS_BACK,
-    buildAppData,
     deriveAppManagementBaseUrl,
     deriveCommerceTarget,
     installAppManagementApp,
 } from '@/features/app-builder/services/appManagementInstaller';
+import { buildAppData } from '@/features/app-builder/services/appManagementAppData';
 import { AppManagementApiError } from '@/features/app-builder/services/appManagementClient';
 import {
     DEPLOYED_URLS,
@@ -78,7 +78,7 @@ describe('deriveCommerceTarget', () => {
 
 describe('buildAppData', () => {
     it('maps the persisted Adobe context onto the spec-required eight fields', () => {
-        expect(buildAppData(paasProject())).toEqual({
+        expect(buildAppData(paasProject(), 'app')).toEqual({
             consumerOrgId: '285361',
             orgName: 'Kukla Org',
             projectId: 'p-1',
@@ -94,17 +94,53 @@ describe('buildAppData', () => {
         const project = paasProject();
         delete project.adobe?.projectTitle;
         delete project.adobe?.workspaceTitle;
-        const data = buildAppData(project);
+        const data = buildAppData(project, 'app');
         expect(data).toMatchObject({
             projectTitle: 'KuklaBodeaMesh5NgV',
             workspaceTitle: 'Stage',
         });
     });
 
+    // AB-23: an app is deployed into its own workspace, so that is the one Commerce
+    // must be told about. The project's workspace is only a fallback, for apps
+    // added before AB-23 that have none recorded.
+    it("names the component's OWN workspace when it has one", () => {
+        const project = paasProject({
+            appBuilderComponents: {
+                app: {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'o', repo: 'r' },
+                    workspace: { id: 'w-own', name: 'demo-erp', title: 'Northwind ERP' },
+                },
+            },
+        });
+        expect(buildAppData(project, 'app')).toMatchObject({
+            projectId: 'p-1',
+            workspaceId: 'w-own',
+            workspaceName: 'demo-erp',
+            workspaceTitle: 'Northwind ERP',
+        });
+    });
+
+    it("titles the component's workspace by its name when it recorded no title", () => {
+        const project = paasProject({
+            appBuilderComponents: {
+                app: {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'o', repo: 'r' },
+                    workspace: { id: 'w-own', name: 'demo-erp' },
+                },
+            },
+        });
+        expect(buildAppData(project, 'app')).toMatchObject({ workspaceTitle: 'demo-erp' });
+    });
+
     it('a missing field is an error NAMING it, not a silent partial body', () => {
         const project = paasProject();
         delete project.adobe?.workspaceName;
-        expect(buildAppData(project)).toEqual({
+        expect(buildAppData(project, 'app')).toEqual({
             error: expect.stringContaining('workspaceName'),
         });
     });
@@ -115,6 +151,7 @@ describe('installAppManagementApp', () => {
         const client = makeInstallerClient();
         const result = await installAppManagementApp(
             paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -145,6 +182,7 @@ describe('installAppManagementApp', () => {
         });
         const result = await installAppManagementApp(
             paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -162,6 +200,7 @@ describe('installAppManagementApp', () => {
         });
         const result = await installAppManagementApp(
             paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -191,6 +230,7 @@ describe('installAppManagementApp', () => {
         });
         const result = await installAppManagementApp(
             paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -212,6 +252,7 @@ describe('installAppManagementApp', () => {
         });
         const result = await installAppManagementApp(
             paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -234,6 +275,7 @@ describe('installAppManagementApp', () => {
         });
         const result = await installAppManagementApp(
             paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -241,6 +283,96 @@ describe('installAppManagementApp', () => {
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('transient conflict');
         expect(client.reconcileInstallation).toHaveBeenCalledTimes(5);
+    });
+
+    // Measured live 2026-09-26 on a fresh add: the install stopped here minutes after the
+    // new workspace credential was created, three immediate retries failed the same way, and
+    // the same install succeeded 20 minutes later. Verbatim from the installer's state.
+    const credentialNotReady = {
+        key: 'STEP_EXECUTION_FAILED',
+        message:
+            "Failed to create Adobe Commerce event subscription for 'observer.catalog_product_delete_commit_after': " +
+            'HTTP 400 Bad Request — The event subscription has been saved, but event metadata has not been created. ' +
+            'Check your configuration and synchronize the event metadata. Event metadata creation error: ' +
+            'Could not login to Adobe IMS.',
+        path: ['installation', 'eventing', 'commerce'],
+    };
+
+    it('waits for a new credential before retrying, then installs', async () => {
+        const wait = jest.fn().mockResolvedValue(undefined);
+        const onProgress = jest.fn();
+        const client = makeInstallerClient({
+            reconcileInstallation: jest
+                .fn()
+                .mockResolvedValue({ operation: 'install', message: 'queued', id: 'job-1' }),
+            getInstallationState: jest
+                .fn()
+                .mockResolvedValueOnce({ id: 'job-1', status: 'failed', error: credentialNotReady })
+                .mockResolvedValueOnce({ id: 'job-2', status: 'succeeded' }),
+        });
+        const result = await installAppManagementApp(
+            paasProject(),
+            'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client, { wait, onProgress })
+        );
+
+        expect(result.status).toBe('installed');
+        expect(client.reconcileInstallation).toHaveBeenCalledTimes(2);
+        expect(wait).toHaveBeenCalledWith(30_000);
+        expect(onProgress.mock.calls.map((c) => c[0])).toContain(
+            'Waiting for Adobe to activate the new credential (next try in 30 seconds)'
+        );
+    });
+
+    it('waits longer each time, then hands back saying a later Install will work', async () => {
+        const wait = jest.fn().mockResolvedValue(undefined);
+        const client = makeInstallerClient({
+            reconcileInstallation: jest
+                .fn()
+                .mockResolvedValue({ operation: 'install', message: 'queued', id: 'j' }),
+            getInstallationState: jest
+                .fn()
+                .mockResolvedValue({ id: 'j', status: 'failed', error: credentialNotReady }),
+        });
+        const result = await installAppManagementApp(
+            paasProject(),
+            'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client, { wait })
+        );
+
+        const pauses = wait.mock.calls.map((c) => c[0]).filter((ms) => ms >= 30_000);
+        expect(pauses).toEqual([30_000, 60_000, 120_000]);
+        expect(client.reconcileInstallation).toHaveBeenCalledTimes(4);
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('new credential');
+        expect(result.detail).toContain('Install again');
+    });
+
+    it('never waits before retrying the installer conflict', async () => {
+        const wait = jest.fn().mockResolvedValue(undefined);
+        const client = makeInstallerClient({
+            reconcileInstallation: jest
+                .fn()
+                .mockResolvedValue({ operation: 'install', message: 'queued', id: 'j' }),
+            getInstallationState: jest
+                .fn()
+                .mockResolvedValueOnce({
+                    id: 'j',
+                    status: 'failed',
+                    error: { message: 'HTTP 409 Conflict — Error 409 from upstream' },
+                })
+                .mockResolvedValue({ id: 'j', status: 'succeeded' }),
+        });
+        await installAppManagementApp(
+            paasProject(),
+            'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client, { wait })
+        );
+
+        expect(wait.mock.calls.map((c) => c[0]).filter((ms) => ms >= 30_000)).toStrictEqual([]);
     });
 
     it('a 409 already-current reconcile is a SKIP, not a failure', async () => {
@@ -253,6 +385,7 @@ describe('installAppManagementApp', () => {
         });
         const result = await installAppManagementApp(
             paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -279,11 +412,53 @@ describe('installAppManagementApp', () => {
         });
         const result = await installAppManagementApp(
             paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
 
         expect(result.status).toBe('skipped');
+    });
+
+    it('a reconcile call that times out is FOLLOWED, not failed: the app finishing is the outcome', async () => {
+        // Measured 2026-09-30: the call aborted at 23:17:59, the app's install state said
+        // succeeded at 23:18:00, and the record read "Not installed" for two hours.
+        const timeout = Object.assign(new Error('The operation was aborted due to timeout'), {
+            name: 'TimeoutError',
+        });
+        const client = makeInstallerClient({
+            reconcileInstallation: jest.fn().mockRejectedValue(timeout),
+            getInstallationState: jest.fn().mockResolvedValue({ id: 'i1', status: 'succeeded' }),
+        });
+        const result = await installAppManagementApp(
+            paasProject(),
+            'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client)
+        );
+
+        expect(result.status).toBe('installed');
+        expect(client.getInstallationState).toHaveBeenCalled();
+    });
+
+    it('a timed-out call whose installation then FAILS hands back, naming the installer', async () => {
+        const timeout = Object.assign(new Error('The operation was aborted due to timeout'), {
+            name: 'TimeoutError',
+        });
+        const client = makeInstallerClient({
+            reconcileInstallation: jest.fn().mockRejectedValue(timeout),
+            getInstallationState: jest.fn().mockResolvedValue({ id: 'i1', status: 'failed' }),
+        });
+        const result = await installAppManagementApp(
+            paasProject(),
+            'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client)
+        );
+
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('installer reported a failure');
+        expect(result.detail).toContain(APP_MANAGEMENT_HANDS_BACK);
     });
 
     it('an association failure fails WITH the hands-back line, never throws', async () => {
@@ -296,6 +471,7 @@ describe('installAppManagementApp', () => {
         });
         const result = await installAppManagementApp(
             paasProject(),
+            'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -309,7 +485,7 @@ describe('installAppManagementApp', () => {
     it('no auth available → failed with the hands-back, and no client call at all', async () => {
         const client = makeInstallerClient();
         const deps = makeInstallerDeps(client, { getAuth: jest.fn().mockResolvedValue(undefined) });
-        const result = await installAppManagementApp(paasProject(), DEPLOYED_URLS, deps);
+        const result = await installAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
 
         expect(result.status).toBe('failed');
         expect(client.setAssociation).not.toHaveBeenCalled();
@@ -319,6 +495,7 @@ describe('installAppManagementApp', () => {
         const client = makeInstallerClient();
         const result = await installAppManagementApp(
             paasProject(),
+            'app',
             { 'starter-kit/info': `${NS_BASE}/starter-kit/info` },
             makeInstallerDeps(client)
         );

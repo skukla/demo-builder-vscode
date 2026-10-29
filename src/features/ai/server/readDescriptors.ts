@@ -292,9 +292,155 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             "Read an App Management integration's Commerce install state: the persisted " +
             'outcome plus the LIVE state from the app’s own install API (failed step names ' +
             'included). Use after deploy_integration to answer "did it install, and which step ' +
-            'failed" — a failed install is retried with install_integration, not a redeploy.',
+            'failed" — a failed install is retried with install_integration, not a redeploy; ' +
+            'a persisted needsReinstall (Commerce refused an in-place upgrade) needs reinstall_integration, ' +
+            "which is also the repair when Commerce has lost the app's webhooks or events while the " +
+            'app still reports itself installed (install_integration then answers skipped). ' +
+            'Installed does not mean listed in Commerce Admin under Apps > App Management: that listing ' +
+            'is optional, and exists only once the user chooses Associate App there and picks the ' +
+            "integration's project and workspace. Unassociating there deletes its settings for that store " +
+            'and cannot be undone.',
         map: dashboardHandlers,
         type: 'getAppBuilderInstallStatus',
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+        },
+    },
+    {
+        tool: 'get_erp_status',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read the ERP integration's state: the ERP's health as the integration sees it " +
+            '(reachable, its base URL, how many company writes it holds in its ledger) plus the ' +
+            "persisted rows of the integration and its ERPs (name, status, the ERP screen's URL; " +
+            '`erps` lists every ERP it serves, by component id, each with its listId — the value ' +
+            "a product's erp_owner takes to route to it). " +
+            'Use before reset_erp_records, or to answer "is the ERP up". Takes the integration id; ' +
+            'with several ERPs, `erp` names which one the live health is for (default the first).',
+        map: dashboardHandlers,
+        type: 'getErpStatus',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from this tool's erps); default the first",
+                ),
+        },
+    },
+    {
+        tool: 'get_erp_settings',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read one ERP's own settings in force: which products it owns (ownership) and, per " +
+            'website, the sales organisation it sells through, as the integration resolves them. ' +
+            'Use before set_erp_settings, or to see how a website or order is routed to an ERP. ' +
+            'Takes the integration id and the ERP (its component id, from get_erp_status); with ' +
+            "`website`, that website's scope, else the ERP's Default-Config settings.",
+        map: dashboardHandlers,
+        type: 'getErpSettings',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default the first",
+                ),
+            website: z
+                .string()
+                .optional()
+                .describe("A Commerce website code; omit for the ERP's Default-Config settings"),
+        },
+    },
+    {
+        tool: 'get_erp_record',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            'Read one product (by SKU) or one B2B company (by Commerce id) as BOTH Commerce and ' +
+            'the ERP hold it, field by field: name, status, price and availability, credit limit ' +
+            'and blocking. Use to check the two systems agree, or whether a company or product ' +
+            'exists in Commerce at all. Name exactly one of sku or company.',
+        map: dashboardHandlers,
+        type: 'lookupErpRecord',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            sku: z.string().optional().describe('The product SKU to look up'),
+            company: z.string().optional().describe('The Commerce company id to look up'),
+        },
+    },
+    {
+        tool: 'run_erp_rest',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "GET one of the ERP's own routes as its screens read them: partners, partners/<id>, " +
+            'products, products/<sku>, pricing, orders, orders/<number>, shipments, invoices, ' +
+            'settings, health, search?q=. Use to see what the ERP holds (credit exposure, held ' +
+            'orders, open lines) beside get_erp_record, which compares one record across both ' +
+            'systems. Takes the ERP integration id and the route.',
+        map: dashboardHandlers,
+        type: 'readErpApi',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            erp: z
+                .string()
+                .optional()
+                .describe(
+                    "Which ERP, by its component id (from get_erp_status's erps); default the first",
+                ),
+            path: z.string().describe('The ERP route, e.g. "partners/C21" or "orders"'),
+        },
+    },
+    {
+        tool: 'get_erp_order_trace',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read one Commerce order's whole life across Commerce, the ERP integration and the " +
+            'ERP, oldest step first: placed, sent to the ERP (or held, and why), confirmed, ' +
+            'shipped, invoiced, held or cancelled there, and each ERP event applied back to ' +
+            'Commerce. Use to answer "where is order 1042" or to see whether the two sides agree.',
+        map: dashboardHandlers,
+        type: 'followErpOrder',
+        inputSchema: {
+            id: z.string().describe('The ERP integration id (from get_project)'),
+            orderNumber: z
+                .string()
+                .describe('The Commerce order number (increment id, e.g. 000000123)'),
+        },
+    },
+    {
+        tool: 'get_integration_settings',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read one integration's Settings: each setting's current value, whether each secret " +
+            'is stored (never its value), and the settings another app provides. Use before ' +
+            'set_integration_settings. An integration with nothing to set returns empty lists.',
+        map: dashboardHandlers,
+        type: 'getIntegrationSettings',
+        inputSchema: {
+            id: z.string().describe('The integration id (from get_project)'),
+        },
+    },
+    {
+        tool: 'get_setup_checklist',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read an integration's demo setup checklist: what the SC prepares by hand in Commerce " +
+            'Admin for its demo (e.g. the "Confirmed in ERP" order status, a shared catalog per ' +
+            'priced company), where, why, and whether each is done, dismissed or still to do. As ' +
+            'saved: runs no check (check_setup_steps does). Only integrations that declare steps have one. ' +
+            'A step with optional: true is only for some demos (e.g. card payments): while open it is ' +
+            'not left to do.',
+        map: dashboardHandlers,
+        type: 'getSetupChecklist',
         inputSchema: {
             id: z.string().describe('The integration id (from get_project)'),
         },
@@ -328,15 +474,89 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         shape: shapeConsoleApis,
     },
     {
+        tool: 'list_runtime_activations',
+        needsAuth: ['adobe'],
+        readOnly: true,
+        description:
+            "List what RAN in this project's Adobe I/O Runtime namespace, newest first: each " +
+            'activation with its action, start time, duration and status code (0 ok, 1 app error). ' +
+            'Use to see when a timer job or an event handler ran and how it ended. CAVEAT (Adobe ' +
+            'Runtime): a SUCCESSFUL blocking web-action call is not recorded unless it was sent with ' +
+            'X-OW-EXTRA-LOGGING on; failures and timer/async runs always are. So a missing row means ' +
+            '"no failure recorded", never "did not run" — invoke_runtime_action replays a run and ' +
+            'answers its record. Pass componentId to read the workspace that integration deploys ' +
+            'into, action to filter (e.g. "erp/refresh-job"), limit up to 50, skip to page past 50, ' +
+            'since (ISO time), failedOnly to keep only runs that did not succeed. The timer firings ' +
+            'themselves are hidden unless includeTriggers is true.',
+        map: dashboardHandlers,
+        type: 'listRuntimeActivations',
+        inputSchema: {
+            componentId: z
+                .string()
+                .min(1)
+                .optional()
+                .describe('An integration id, to read its own workspace'),
+            action: z.string().optional().describe('Only this action, e.g. "erp/refresh-job"'),
+            limit: z
+                .number()
+                .int()
+                .min(1)
+                .max(50)
+                .optional()
+                .describe('How many, newest first (default 30, max 50)'),
+            skip: z
+                .number()
+                .int()
+                .min(0)
+                .optional()
+                .describe('Skip this many newest rows, to page past 50'),
+            since: z.string().optional().describe('Only activations after this ISO 8601 time'),
+            failedOnly: z
+                .boolean()
+                .optional()
+                .describe('Only runs that did not succeed (status other than 0)'),
+            includeTriggers: z
+                .boolean()
+                .optional()
+                .describe('Keep the timer firings themselves; hidden by default'),
+        },
+    },
+    {
+        tool: 'read_runtime_activation',
+        needsAuth: ['adobe'],
+        readOnly: true,
+        description:
+            "Read one Runtime activation's log lines and result, by the id list_runtime_activations " +
+            'gives. Use to see why a handler or timer job failed in its own words.',
+        map: dashboardHandlers,
+        type: 'readRuntimeActivation',
+        inputSchema: {
+            componentId: z
+                .string()
+                .min(1)
+                .optional()
+                .describe('An integration id, to read its own workspace'),
+            activationId: z.string().describe('The 32-character activation id'),
+        },
+    },
+    {
         tool: 'list_runtime_packages',
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            "List the packages deployed in this project's Adobe I/O Runtime namespace (its " +
-            'Developer Console workspace), with the namespace name. Use to check what an ' +
-            'integration left running after a removal, or what is deployed before a redeploy.',
+            "List the packages, triggers (timers) and rules deployed in this project's Adobe I/O " +
+            'Runtime namespace (its Developer Console workspace), with the namespace name. Use to check what an ' +
+            'integration left running after a removal, or what is deployed before a redeploy. ' +
+            'Pass componentId to read the workspace that integration deploys into.',
         map: dashboardHandlers,
         type: 'listRuntimePackages',
+        inputSchema: {
+            componentId: z
+                .string()
+                .min(1)
+                .optional()
+                .describe("An integration id (from get_project); omit for the project's workspace"),
+        },
     },
     {
         tool: 'get_store_structure',
@@ -366,7 +586,9 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             link: z
                 .string()
                 .optional()
-                .describe('Instead of owner+repo: a GitHub link, or the site address (main--repo--owner.aem.live)'),
+                .describe(
+                    'Instead of owner+repo: a GitHub link, or the site address (main--repo--owner.aem.live)',
+                ),
         },
         shape: shapeProbeResult,
     },
@@ -376,8 +598,9 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: true,
         description:
             "The current project's useful URLs as data (no browser opened): local storefront " +
-            '(while running), EDS live site + DA.live authoring, Commerce admin, and the Developer ' +
-            'Console deep link. Absent URLs are omitted.',
+            '(while running), EDS live site + DA.live authoring, Commerce admin, the Developer ' +
+            "Console deep link, and the bound AEM author in Assets View (when " +
+            'demoBuilder.daLive.aemAuthorUrl is set). Absent URLs are omitted.',
         map: dashboardHandlers,
         type: 'getProjectUrls',
     },
@@ -426,8 +649,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         description:
             'List Adobe Commerce sample-data datapacks the Data Installer holds. Returns one row ' +
             'per (name, version) pair — the same pack appears once per version. Curated packs ' +
-            'only unless includeCommunity is set. This endpoint reports no total, so ' +
-            'count === limit means there may be more — page with skip.',
+            'only unless includeCommunity is set. store:"library" lists the team datapack ' +
+            'library instead (shared packs plus your own, mine:true on yours); includeLibrary ' +
+            'adds those rows after the Data Installer ones, each tagged store:"library". This ' +
+            'endpoint reports no total, so count === limit means there may be more — page with skip.',
         map: dataInstallerHandlers,
         type: 'find-datapacks',
         shape: (res) => shapeRows(res, leanDatapackRow),
@@ -436,6 +661,14 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
                 .boolean()
                 .optional()
                 .describe('Include non-shared developer packs (default: curated only)'),
+            store: z
+                .enum(['installer', 'library'])
+                .optional()
+                .describe('Which catalog to list (default: the Data Installer)'),
+            includeLibrary: z
+                .boolean()
+                .optional()
+                .describe('With the Data Installer list, add the library rows too'),
             ...PAGING,
         },
     },
@@ -453,6 +686,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
             // on, so a lookup by name alone has no answer.
             datapackName: z.string().describe('Datapack name, e.g. "bodea"'),
             version: z.string().describe('Version, e.g. "main" or "eds-compatible"'),
+            store: z
+                .enum(['installer', 'library'])
+                .optional()
+                .describe('The catalog holding it, as find_datapacks names it (default installer)'),
         },
     },
     {

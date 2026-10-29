@@ -12,7 +12,7 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockAuthenticationService, poolUnits } from '../../../helpers/authenticationServiceFake';
 
 /** The workspace `getCurrentProject` reports unless a test overrides it. */
 export const PROJECT_ADOBE = {
@@ -45,10 +45,10 @@ export const MESH_SERVICE = { name: 'API Mesh', code: 'MeshAPI' };
 /** The ServiceLocator doubles the handler fetches at its boundary. */
 export function createMeshServiceDoubles() {
     return {
-        authService: {
+        authService: poolUnits({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        },
+        }),
         commandExecutor: {
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
         },

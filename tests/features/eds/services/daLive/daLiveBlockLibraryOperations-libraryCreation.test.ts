@@ -113,7 +113,10 @@ describe('DaLiveBlockLibraryOperations.createBlockLibrary', () => {
             ]);
         });
 
-        it('still writes the sheet and reports success when the config update fails', async () => {
+        // EDS-38: the palette lists blocks only through the site config's "Blocks" row, so
+        // a sheet without it is never shown. The sheet is still written (a later run's
+        // registration finds it); the result says the palette will be empty.
+        it('still writes the sheet, and reports the empty palette when the config update fails', async () => {
             h.fetchWithRetry.mockImplementation(docPageProbe(['cards']));
             h.updateSiteConfig.mockResolvedValue({ success: false, error: 'config 403' });
             withBlocks([{ title: 'Cards', id: 'cards' }]);
@@ -121,8 +124,11 @@ describe('DaLiveBlockLibraryOperations.createBlockLibrary', () => {
             const result = await run();
 
             expect(await writtenSheetRows()).toHaveLength(1);
-            expect(result.success).toBe(true);
-            expect(result.blocksCount).toBe(1);
+            expect(result).toMatchObject({
+                success: false,
+                blocksCount: 1,
+                error: 'The block palette in DA.live will be empty: the site configuration did not take the Blocks list (config 403).',
+            });
         });
     });
 

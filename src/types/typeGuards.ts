@@ -8,7 +8,6 @@
 import { Project, ComponentInstance } from './base';
 import { ADMIN_PANEL_URL, ACCS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
 import { COMPONENT_IDS } from '@/core/constants';
-import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import {
     deriveAccsAdminUrl,
     lookupComponentConfigValue,
@@ -306,6 +305,23 @@ export function isEdsProject(project: Project | undefined | null): boolean {
 }
 
 /**
+ * The EDS storefront's component instance, or undefined when the project is not
+ * an EDS project or has none.
+ *
+ * Every EDS accessor below starts here. Each used to repeat the same two lines —
+ * an `isEdsProject` return, then an optional-chained read — and because that
+ * guard does not narrow the parameter's type, the read carried a `project?.`
+ * no input could reach. One function states the rule once, with nothing
+ * unreachable in it.
+ */
+function getEdsStorefrontInstance(
+    project: Project | undefined | null,
+): ComponentInstance | undefined {
+    if (!project || !isEdsStackId(project.selectedStack)) return undefined;
+    return project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+}
+
+/**
  * The DA.live org/site pair for an EDS project, or undefined when absent.
  *
  * This addresses CONTENT — `content.da.live/{org}/{site}` and the DA.live
@@ -322,9 +338,14 @@ export function isEdsProject(project: Project | undefined | null): boolean {
 export function getEdsDaLiveTarget(
     project: Project | undefined | null,
 ): { org: string; site: string } | undefined {
-    if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const org = edsInstance?.metadata?.daLiveOrg as string | undefined;
+    const edsInstance = getEdsStorefrontInstance(project);
+    // Legacy-first, repo fallback — the same rule the site below uses, and the
+    // one republish and the agent's storefront tools already apply: the DA.live
+    // org IS the GitHub namespace, so a project with no stored one is not a
+    // project with no DA.live (owner sweep, 2026-09-20).
+    const org =
+        (edsInstance?.metadata?.daLiveOrg as string | undefined) ??
+        (edsInstance?.metadata?.githubRepo as string | undefined)?.split('/')[0];
     // `daLiveSite` is legacy metadata: present only on unmigrated projects
     // (where it points at where the DA content actually lives) — everywhere
     // else the DA site name IS the repo name, and the loader strips the
@@ -365,8 +386,7 @@ export function getEdsRepoParts(
  * @returns `owner/repo`, or undefined when absent, malformed, or not an EDS project
  */
 export function getEdsGithubRepo(project: Project | undefined | null): string | undefined {
-    if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const edsInstance = getEdsStorefrontInstance(project);
     const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
 
     if (!githubRepo) return undefined;
@@ -386,8 +406,7 @@ export function getEdsGithubRepo(project: Project | undefined | null): string | 
  * @returns The live URL, or undefined if not available
  */
 export function getEdsLiveUrl(project: Project | undefined | null): string | undefined {
-    if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const edsInstance = getEdsStorefrontInstance(project);
 
     // Return stored URL if available
     const storedUrl = edsInstance?.metadata?.liveUrl as string | undefined;
@@ -438,8 +457,7 @@ export function getAdminPanelUrl(project: Project | undefined | null): string | 
  * @returns The preview URL, or undefined if not available
  */
 export function getEdsPreviewUrl(project: Project | undefined | null): string | undefined {
-    if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
+    const edsInstance = getEdsStorefrontInstance(project);
 
     // Return stored URL if available
     const storedUrl = edsInstance?.metadata?.previewUrl as string | undefined;
@@ -489,9 +507,10 @@ export function getEdsDaLiveUrl(
     experience: 'da-live-classic' | 'experience-workspace' = 'da-live-classic',
     ewCanvasBranch: string = '',
 ): string | undefined {
-    if (!isEdsProject(project)) return undefined;
-    const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
+    const edsInstance = getEdsStorefrontInstance(project);
+    const daLiveOrg =
+        (edsInstance?.metadata?.daLiveOrg as string | undefined) ??
+        (edsInstance?.metadata?.githubRepo as string | undefined)?.split('/')[0];
     // Legacy-first, repo fallback — see getEdsDaLiveTarget.
     const daLiveSite =
         (edsInstance?.metadata?.daLiveSite as string | undefined) ??
@@ -570,21 +589,6 @@ export function getMeshComponentId(project: Project | undefined | null): string 
  */
 export function hasMeshComponent(project: Project | undefined | null): boolean {
     return getMeshComponentInstance(project) !== undefined;
-}
-
-/**
- * Get the mesh endpoint from a project
- *
- * Keyed-first (ADR-011 D3 Step 06): reads the keyed mesh appBuilderComponents
- * entry, falling back to the legacy `meshState` (whose write-side is retired
- * in Step 07). Every endpoint caller migrates through this one accessor.
- *
- * @param project - The project to check (can be undefined/null)
- * @returns The mesh endpoint URL, or undefined if not available
- */
-export function getMeshEndpointUrl(project: Project | undefined | null): string | undefined {
-    if (!project) return undefined;
-    return getMeshAppBuilderComponent(project)?.endpoint;
 }
 
 // =====================================================================

@@ -25,8 +25,14 @@ import {
     setGitHubTokenServiceReturns,
     syncAndPublishMock,
     SyncStorefrontCommand,
+    type SyncStorefrontOutcome,
 } from './syncStorefront.testUtils';
 import type { StateManager } from '@/core/state/stateManager';
+import {
+    answerOperationPrompt,
+    isAwaitingAnswer,
+    withModalAsking,
+} from '@/core/vscode/operationPrompt';
 import type { Project } from '@/types/base';
 
 const STOREFRONT = '/projects/demo/components/eds-storefront';
@@ -44,7 +50,7 @@ function projectWithMetadata(metadata: Record<string, unknown> | undefined): Pro
     return project;
 }
 
-function runCommand(project: Project = makeSyncTargetProject()): Promise<void> {
+function runCommand(project: Project = makeSyncTargetProject()): Promise<SyncStorefrontOutcome> {
     return new SyncStorefrontCommand(
         makeSyncStorefrontContext(),
         makeStateManager(project) as unknown as StateManager,
@@ -88,6 +94,29 @@ describe('execute — the inputs it gathers', () => {
         });
     });
 
+    it('asks for the commit message in the progress modal when one is showing', async () => {
+        const done = withModalAsking('sync', () => runCommand());
+        for (let i = 0; i < 200 && !isAwaitingAnswer('sync'); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        answerOperationPrompt('sync', 'Sync', { message: 'New hero copy' });
+        await done;
+
+        expect(vscode.window.showInputBox).not.toHaveBeenCalled();
+        expect(syncAndPublishMock.mock.calls[0][0].commitMessage).toBe('New hero copy');
+    });
+
+    it('syncs nothing when the modal question is dismissed', async () => {
+        const done = withModalAsking('sync', () => runCommand());
+        for (let i = 0; i < 200 && !isAwaitingAnswer('sync'); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        answerOperationPrompt('sync', undefined, { message: 'x' });
+
+        expect(await done).toEqual({ success: false, cancelled: true });
+        expect(syncAndPublishMock).not.toHaveBeenCalled();
+    });
+
     it('forwards NO GitHub token when the token service has none', async () => {
         setGitHubTokenServiceReturns(undefined);
 
@@ -104,7 +133,7 @@ describe('execute — the inputs it gathers', () => {
 
         await runCommand();
 
-        expect(report).toHaveBeenCalledWith({ message: 'Saving your storefront changes' });
+        expect(report).toHaveBeenCalledWith({ message: 'Saving your changes' });
     });
 
     it('lets an unexpected sync failure escape — it is not a push rejection', async () => {
@@ -253,6 +282,8 @@ describe('the push that follows a clean rebase', () => {
             daLiveToken: 'dalive-token',
             githubRepo: { owner: 'demo-org', site: 'demo-repo', branch: undefined },
             skipCommit: true,
+            // The service names the push and the code publish through it.
+            onStep: expect.any(Function),
         });
         // A clean rebase never opens the conflict prompt.
         expect(showWarningMessage).not.toHaveBeenCalled();
@@ -324,7 +355,6 @@ describe('the push that follows a clean rebase', () => {
 
         expect(showWarningMessage).toHaveBeenCalledWith(
             expect.stringContaining('found conflicts'),
-            { modal: true },
             'Continue',
             'Cancel and Reset'
         );

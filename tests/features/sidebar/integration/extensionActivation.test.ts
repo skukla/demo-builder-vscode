@@ -12,7 +12,10 @@
  */
 
 import * as vscode from 'vscode';
+import type { CommandProbe } from '@/features/ai/engine/agentCli';
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
+
+const noAgentCli: CommandProbe = { commandExists: async () => false };
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
@@ -69,26 +72,26 @@ describe('SidebarProvider Registration', () => {
 
     describe('SidebarProvider Instantiation', () => {
         it('should have correct view ID', () => {
-            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger, noAgentCli);
 
             expect(provider.viewId).toBe('demoBuilder.sidebar');
         });
 
         it('should be a WebviewViewProvider', () => {
-            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger, noAgentCli);
 
             // Verify it has the required method
             expect(typeof provider.resolveWebviewView).toBe('function');
         });
 
         it('should have sendMessage method for communication', () => {
-            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger, noAgentCli);
 
             expect(typeof provider.sendMessage).toBe('function');
         });
 
         it('should have updateContext method for sidebar context updates', () => {
-            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger, noAgentCli);
 
             expect(typeof provider.updateContext).toBe('function');
         });
@@ -96,7 +99,7 @@ describe('SidebarProvider Registration', () => {
 
     describe('Provider Registration', () => {
         it('should be registerable with VS Code', () => {
-            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger, noAgentCli);
 
             // Register the provider
             const disposable = vscode.window.registerWebviewViewProvider(provider.viewId, provider);
@@ -109,7 +112,7 @@ describe('SidebarProvider Registration', () => {
         });
 
         it('should add to subscriptions for cleanup', () => {
-            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger, noAgentCli);
 
             // Register and add to subscriptions (as extension.ts would do)
             const disposable = vscode.window.registerWebviewViewProvider(provider.viewId, provider);

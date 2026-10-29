@@ -16,7 +16,8 @@
  *
  *   **No credentials, no network.** The gap is reported before anything is sent.
  *
- * Strict TDD: written BEFORE the handlers exist.
+ * Strict TDD: written BEFORE the handlers exist. The watch half (`runAndWatch`)
+ * is pinned in `importJobWatch.test.ts` since the 2026-10-08 split.
  */
 
 import {
@@ -45,77 +46,6 @@ describe('start-datapack-import', () => {
             expect.anything(),
             expect.objectContaining({ operation: 'import' })
         );
-    });
-
-    /**
-     * The push that turns a bare "Importing" into live progress.
-     *
-     * The runner already saw every poll; nothing forwarded them. These pin the
-     * forwarding rather than the polling — the runner's own suite covers when
-     * the callback fires, this covers what reaches the webview when it does.
-     */
-    describe('progress push', () => {
-        /**
-         * The handler returns as soon as the job is REGISTERED; the watch runs
-         * fire-and-forget behind it and awaits access resolution first. So the
-         * call to watchImportJob has not happened yet when the handler's promise
-         * settles, and asserting straight away reads an empty mock.
-         */
-        const settleWatch = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
-
-        it('forwards each poll to the webview as it arrives', async () => {
-            happyClient();
-            const { context } = makeImportHarness();
-
-            await importHandlers['start-datapack-import'](context, PAYLOAD);
-            await settleWatch();
-
-            const onProgress = mockedWatch.mock.calls[0]?.[0]?.onProgress;
-            expect(onProgress).toBeInstanceOf(Function);
-
-            onProgress?.({ categories: 'processing' });
-
-            expect(context.sendMessage).toHaveBeenCalledWith(
-                'datapack-import-progress',
-                expect.objectContaining({ perType: { categories: 'processing' } })
-            );
-        });
-
-        /**
-         * The modal must be able to tell ITS job's progress from another's. The
-         * activation id is the only thing that distinguishes them, and a reset
-         * started while an import watches would otherwise drive the wrong ring.
-         */
-        it('stamps the push with the activation it belongs to', async () => {
-            happyClient();
-            const { context } = makeImportHarness();
-
-            await importHandlers['start-datapack-import'](context, PAYLOAD);
-            await settleWatch();
-            mockedWatch.mock.calls[0]?.[0]?.onProgress?.({ categories: 'success' });
-
-            expect(context.sendMessage).toHaveBeenCalledWith(
-                'datapack-import-progress',
-                expect.objectContaining({ activationId: 'act-1' })
-            );
-        });
-
-        /** A reset watches the same way and must say so, for the wording. */
-        it('names the operation, so a reset is not worded as an import', async () => {
-            happyClient();
-            const { context } = makeImportHarness();
-
-            // `confirm` is the destructive-action guard; without it the reset
-            // refuses before it ever reaches the watch.
-            await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: true });
-            await settleWatch();
-            mockedWatch.mock.calls[0]?.[0]?.onProgress?.({ categories: 'success' });
-
-            expect(context.sendMessage).toHaveBeenCalledWith(
-                'datapack-import-progress',
-                expect.objectContaining({ operation: 'reset' })
-            );
-        });
     });
 
     it('validates BEFORE starting', async () => {
@@ -196,37 +126,6 @@ describe('start-datapack-import', () => {
 
             expect(result.success).toBe(false);
             expect(result.code).toBeDefined();
-        });
-    });
-
-    describe('the detached watch', () => {
-        it('does NOT await the watch — the request returns while the job runs', async () => {
-            happyClient();
-            const { context } = makeImportHarness();
-            let settled = false;
-            mockedWatch.mockImplementation(
-                () =>
-                    new Promise((resolve) =>
-                        setTimeout(() => {
-                            settled = true;
-                            resolve({ outcome: 'success', perType: {} });
-                        }, 50)
-                    )
-            );
-
-            const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
-
-            expect(result.success).toBe(true);
-            expect(settled).toBe(false);
-        });
-
-        it('records the job so a closed panel does not lose it', async () => {
-            happyClient();
-            const { context, stores } = makeImportHarness();
-
-            await importHandlers['start-datapack-import'](context, PAYLOAD);
-
-            expect(stores.globalState.update).toHaveBeenCalled();
         });
     });
 
@@ -508,88 +407,6 @@ describe('reset-datapack', () => {
         await importHandlers['reset-datapack'](context, CONFIRMED);
 
         expect(stores.globalState.update).toHaveBeenCalled();
-    });
-});
-
-/**
- * The watch is detached, so when it cannot run there is nobody to tell.
- *
- * It used to return silently if the guard refused, and warn to a log channel if
- * the runner threw. Either way the record stayed `outcome: 'watching'` forever and
- * the modal showed "Importing this can take several minutes" indefinitely — a
- * failure invisible to the user AND to this suite, which is how a logger bug that
- * killed every watch survived five green gates.
- *
- * A failure that reaches nobody cannot be tested for. So it lands in the record.
- */
-describe('a watch that cannot run', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        setupSettings();
-    });
-
-    /** Let the detached watch get past its own setup before asserting. */
-    const settle = () => new Promise((r) => setTimeout(r, 25));
-
-    /** The record written by the LAST transient set. */
-    function lastRecord(
-        stores: ReturnType<typeof makeImportHarness>['stores']
-    ): Record<string, unknown> {
-        const calls = stores.globalState.update.mock.calls;
-        return calls[calls.length - 1]?.[1] as Record<string, unknown>;
-    }
-
-    it('records that it stopped watching when the runner throws', async () => {
-        happyClient();
-        mockedWatch.mockRejectedValue(new Error('the service went away'));
-        const { context, stores } = makeImportHarness();
-
-        await importHandlers['start-datapack-import'](context, PAYLOAD);
-        await settle();
-
-        expect(lastRecord(stores).outcome).toBe('unwatchable');
-    });
-
-    // The reason IS the payload: "we stopped looking" is not actionable without
-    // saying why, and this is the only place the cause exists.
-    it('keeps the reason so the panel can say what went wrong', async () => {
-        happyClient();
-        mockedWatch.mockRejectedValue(new Error('the service went away'));
-        const { context, stores } = makeImportHarness();
-
-        await importHandlers['start-datapack-import'](context, PAYLOAD);
-        await settle();
-
-        expect(lastRecord(stores)).toMatchObject({
-            outcome: 'unwatchable',
-            reason: expect.stringContaining('the service went away'),
-        });
-    });
-
-    // NOT 'stopped'. That means the user chose to stop looking; this means we
-    // could not look, and they never asked for that.
-    it('does not disguise a broken watch as the user stopping one', async () => {
-        happyClient();
-        mockedWatch.mockRejectedValue(new Error('boom'));
-        const { context, stores } = makeImportHarness();
-
-        await importHandlers['start-datapack-import'](context, PAYLOAD);
-        await settle();
-
-        expect(lastRecord(stores).outcome).not.toBe('stopped');
-    });
-
-    // The import is unaffected — it is already running server-side. Only the
-    // watching failed, and the handler had already returned success.
-    it('still reports the import as started', async () => {
-        happyClient();
-        mockedWatch.mockRejectedValue(new Error('boom'));
-        const { context } = makeImportHarness();
-
-        const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
-        await settle();
-
-        expect(result.success).toBe(true);
     });
 });
 

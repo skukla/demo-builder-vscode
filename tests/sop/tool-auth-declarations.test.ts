@@ -47,27 +47,85 @@ const EXPECTED: Record<string, number> = {
     // 35 -> 36 when develop added delete_adobe_workspace (merged 2026-09-15).
     // 36 -> 37 when develop added rename_adobe_project (picked 2026-09-21).
     // 37 -> 38 when develop added list_runtime_packages (picked 2026-09-21).
-    adobe: 38,
-    // 21 -> 23 on 2026-09-30 (hotfix beta.149): get_content_access and set_content_reader
-    // read and write the DA.live org permissions sheet (EDS-22).
-    dalive: 23,
+    // 38 -> 42 on 2026-09-24, develop merged into the ERP branch: the branch's
+    // ERP, settings, update and runtime tools join develop's shared-demo tools.
+    // 42 -> 43 on 2026-09-24: run_commerce_rest signs with the workspace credential,
+    // which it can only fetch through the Adobe sign-in.
+    // 43 -> 44 the same day: write_commerce_rest signs with the same credential.
+    // 44 -> 46 the same day: list_runtime_activations and read_runtime_activation read a
+    // Runtime namespace through the Console credential, like list_runtime_packages.
+    // 47 -> 48 on 2026-09-25: check_setup_steps reads Commerce with the workspace credential.
+    // 48 -> 49 on 2026-09-27: delete_undeclared_runtime_code reads and deletes in a Runtime
+    // namespace through the Console credential, like list_runtime_packages.
+    // 49 -> 50 on 2026-09-27: load_erp_demo_data reads Commerce with the workspace credential
+    // and calls the ERP and its integration as the signed-in user.
+    // 50 -> 51 on 2026-09-28: add_erp deploys another ERP into a workspace of its own (AB-16).
+    // 51 -> 52 on 2026-09-29: set_erp_settings writes an ERP's own settings to the deployed
+    // integration through the Adobe sign-in (AB-16j).
+    // 52 -> 55 on 2026-10-02: set_erp_appearance, start_erp_downtime and end_erp_downtime
+    // change the demo ERP through the Adobe sign-in, like set_erp_settings (AB-59).
+    // 55 -> 56 on 2026-10-03: reset_project (was reset_eds_project) also resets a headless
+    // project, whose mesh redeploy needs the Adobe sign-in.
+    // 56 -> 58 on 2026-10-03: list_event_providers and delete_event_provider read and
+    // delete a workspace's I/O event providers through the Adobe sign-in (AB-6).
+    // 58 -> 62 on 2026-10-09: assign_erp_products, undo_erp_assignment,
+    // add_erp_owner_to_attribute_sets and remove_erp_owner_from_attribute_sets read and write
+    // Commerce with the workspace credential and read the ERPs' rules through the sign-in (AB-74).
+    // 62 -> 65 on 2026-10-10: prepare_commerce_store, undo_commerce_store_preparation and
+    // set_commerce_config read and write Commerce with the workspace credential (AB-77).
+    // 65 -> 69 on 2026-10-27, merging feature/datapack-zip: save_datapack_zip, load_datapack_zip,
+    // delete_library_datapack and copy_library_datapack_to_installer (built 2026-10-01).
+    adobe: 69,
+    // 21 -> 23 on 2026-09-30 (hotfix beta.149 merged): get_content_access and
+    // set_content_reader read and write the DA.live org permissions sheet (EDS-22).
+    // 23 -> 24 on 2026-10-03: create_project_from_file, the same creation as create_project.
+    // 24 -> 26 on 2026-10-04: build_catalog_menu and remove_catalog_menu write, publish and
+    // delete DA.live pages (EDS-24).
+    // 26 -> 27 on 2026-10-04: copy_project, the same creation as create_project_from_file.
+    // 27 -> 25 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed — storefront
+    // setup, reset and republish write the category pages now (EDS-24 redesign).
+    // 25 -> 27 on 2026-10-05: check_category_pages and add_category_pages read, write and
+    // publish DA.live pages for categories added after setup (EDS-27).
+    // 27 -> 25 on 2026-10-22: check_category_pages and add_category_pages removed (EDS-61:
+    // category pages come from the product page overlay, published by setup and first visits).
+    dalive: 24,
     // 10 -> 12 on 2026-09-12: forget_added_demo and change_demo_source (step 06
     // of the shareable-demo program) both read and write GitHub; 12 -> 14 the
     // same day for probe_shared_demo and add_shared_demo (step 07).
     // 14 -> 17 on 2026-09-13: get_demo_package_preview, save_demo_package and
     // remove_demo_package (step 09) read and write the SC's own storefront repository.
     // 17 -> 18 on 2026-09-13: export_demo_bundle reads the SC's own repository archive.
-    github: 18,
+    // 18 -> 19 on 2026-10-03: create_project_from_file, likewise.
+    // 20 -> 22 on 2026-10-04: build_catalog_menu and remove_catalog_menu publish through
+    // Helix, which sends the GitHub token, and the build reads the repository for its block.
+    // 22 -> 23 on 2026-10-04: copy_project, likewise.
+    // 23 -> 21 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed (EDS-24).
+    // 21 -> 23 on 2026-10-05: check_category_pages and add_category_pages read the
+    // repository for the block, and the add publishes through Helix (EDS-27).
+    // 23 -> 25 on 2026-10-18: save_app_to_github and delete_app_github_repo create and
+    // delete a repository on the SC's own account (AB-1c, the agent door).
+    // 25 -> 26 on 2026-10-21: finish_storefront_update pushes the fixed update (EDS-57).
+    // 26 -> 24 on 2026-10-22: check_category_pages and add_category_pages removed (EDS-61).
+    github: 23,
     commerce: 2,
     // 45 -> 46 on 2026-09-14: edit_added_demo renames a card in a user setting,
     // and needs no sign-in.
-    none: 46,
+    // 46 -> 50 on 2026-09-24, the same merge.
+    // 50 -> 52 on 2026-09-24: get_erp_record and get_erp_order_trace declare
+    // no sign-in the way get_erp_status does — the handler resolves the IMS
+    // identity itself and answers a typed AUTH_REQUIRED when there is none.
+    // 52 -> 54 on 2026-09-24: run_erp_rest and write_erp_rest declare like get_erp_status.
+    // 54 -> 56 on 2026-09-25: get_setup_checklist and set_setup_step touch saved state only.
+    // 56 -> 57 on 2026-09-29: get_erp_settings declares no sign-in like get_erp_status (AB-16j).
+    // 57 -> 58 on 2026-10-27, the same merge: open_datapack_zip reads a local file.
+    none: 58,
 };
 
 /**
- * 121 tools, and the counts above sum to 125 provider slots — a difference of FOUR,
- * which is exactly the four tools the original commit says need two sign-ins each
- * (check_github_app, create_project, republish, sync_content). That arithmetic is the
+ * 137 tools, and the counts above sum to 141 provider slots — a difference of FOUR,
+ * which is exactly the four tools the original commit said needed two sign-ins each
+ * (check_github_app, create_project, republish, and sync_content, removed 2026-10-23
+ * when republish took its job, EDS-63). That arithmetic is the
  * cross-check: the derivation below reproduces both numbers from the source without
  * being told either.
  *
@@ -75,8 +133,24 @@ const EXPECTED: Record<string, number> = {
  * files. That counts text, not declarations, and was roughly double. The CONTROL below
  * caught it — which is the argument for having one.)
  */
-// 121 -> 123 on 2026-09-30 (hotfix beta.149): the content-access pair (EDS-22).
-const EXPECTED_TOOLS = 123;
+const EXPECTED_TOOLS = 170; // 165 -> 170 on 2026-10-27: the five datapack file and library tools, merged from feature/datapack-zip (built 2026-10-01). 166 -> 165 on 2026-10-23: sync_content removed, its job now republish's (EDS-63). 168 -> 166 on 2026-10-22: check_category_pages and add_category_pages removed (EDS-61). 167 -> 168 on 2026-10-21: finish_storefront_update (EDS-57). 165 -> 167 on 2026-10-18: save_app_to_github and delete_app_github_repo (AB-1c). 162 -> 165 on 2026-10-10: the three AB-77 store-preparation tools. 158 -> 162 on 2026-10-09: the four AB-74 tools. Earlier: 138 -> 141 on 2026-09-25: the three demo setup checklist tools (AB-26x); 144 with add_erp (AB-16).
+// 141 -> 142 on 2026-09-27: delete_undeclared_runtime_code.
+// 142 -> 143 on 2026-09-27: load_erp_demo_data.
+// 144 -> 146 on 2026-09-29: get_erp_settings and set_erp_settings (AB-16j).
+// 144 -> 146 on 2026-09-30: the content-access pair (EDS-22, hotfix beta.149 merged).
+// 148 -> 151 on 2026-10-02: the demo ERP's look and simulated downtime (AB-59).
+// 151 -> 152 on 2026-10-03: create_project_from_file (reset_eds_project was renamed
+// reset_project, which does not change the count).
+// 152 -> 154 on 2026-10-03: list_event_providers and delete_event_provider (AB-6).
+// 154 -> 155 on 2026-10-03: get_storefront_report (EDS-13f), which needs GitHub.
+// 155 -> 157 on 2026-10-04: build_catalog_menu and remove_catalog_menu (EDS-24).
+// 157 -> 158 on 2026-10-04: copy_project (PL-56f).
+// 158 -> 156 on 2026-10-05: build_catalog_menu and remove_catalog_menu removed (EDS-24:
+// the category pages are written by storefront setup, reset and republish, not a button).
+// 156 -> 158 on 2026-10-05: check_category_pages and add_category_pages (EDS-27).
+// 146 -> 149 on 2026-10-01: save_datapack_zip, open_datapack_zip, load_datapack_zip.
+// 149 -> 150 the same day: delete_library_datapack.
+// 150 -> 151 the same day: copy_library_datapack_to_installer.
 
 interface Declaration {
     name: string;
@@ -128,7 +202,13 @@ describe('every tool declares real sign-ins', () => {
     });
 
     it('the per-provider totals match the pin', () => {
-        const counts: Record<string, number> = { adobe: 0, dalive: 0, github: 0, commerce: 0, none: 0 };
+        const counts: Record<string, number> = {
+            adobe: 0,
+            dalive: 0,
+            github: 0,
+            commerce: 0,
+            none: 0,
+        };
         for (const d of decls) {
             const p = d.providers ?? [];
             if (p.length === 0) counts.none += 1;
@@ -137,3 +217,4 @@ describe('every tool declares real sign-ins', () => {
         expect(counts).toEqual(EXPECTED);
     });
 });
+// 146 -> 148 on 2026-09-30, develop merged: both pairs above are in this branch.

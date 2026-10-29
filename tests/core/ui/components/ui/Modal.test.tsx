@@ -86,6 +86,14 @@ describe('Modal', () => {
 
             expect(onClose).toHaveBeenCalledTimes(1);
         });
+
+        it('is left out when hidden, so the action buttons are the only way on', () => {
+            const actionButtons: ActionButton[] = [{ label: 'Skip', variant: 'secondary', onPress: jest.fn() }];
+            renderWithProvider(<Modal {...defaultProps} hideClose actionButtons={actionButtons} />);
+
+            expect(screen.queryByRole('button', { name: /close/i })).toBeNull();
+            expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
+        });
     });
 
     describe('action buttons', () => {

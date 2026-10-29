@@ -13,11 +13,11 @@ import type {
     TeardownTarget,
     TeardownEventsClient,
 } from '@/features/authentication/services/consoleProjectTeardown';
+import { THIRD_PARTY_PROVIDER_METADATA } from '@/features/authentication/services/eventProviderBinding';
 import {
     IoEventsApiError,
-    THIRD_PARTY_PROVIDER_METADATA,
     type RawProvider,
-} from '@/features/authentication/services/ioEventsClient';
+} from '@/features/authentication/services/ioEventsTransport';
 import type { WorkspaceS2SCredentialIds } from '@/features/authentication/services/types';
 
 /** Canonical teardown target used across the suites. */

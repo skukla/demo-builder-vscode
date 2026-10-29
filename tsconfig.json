@@ -28,8 +28,7 @@
       "@/services/*": ["src/services/*"],
       "@/types": ["src/types"],
       "@/types/*": ["src/types/*"],
-      "@/providers/*": ["src/providers/*"],
-      "@/utils/*": ["src/utils/*"]
+      "@/providers/*": ["src/providers/*"]
     }
   },
   "include": ["src/**/*"],

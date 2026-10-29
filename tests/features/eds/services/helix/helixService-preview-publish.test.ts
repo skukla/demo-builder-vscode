@@ -134,6 +134,22 @@ describe('HelixService - Preview/Publish', () => {
                 'Failed to publish page: 500 Server Error'
             );
         });
+
+        // A bare "400 Bad Request" could not be explained after the fact (release
+        // row 3.17). Helix says why in x-error and the body, so the error carries both.
+        it('carries the reason Helix gave (x-error and body) on any other failure', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 400,
+                statusText: 'Bad Request',
+                headers: new Headers({ 'x-error': 'unable to preview sheet' }),
+                text: async () => 'sheet has no default tab',
+            });
+            await expect(service.previewPage('testuser', 'my-site', '/placeholders/checkout.json'))
+                .rejects.toThrow(
+                    'Failed to preview page: 400 Bad Request (unable to preview sheet — sheet has no default tab)',
+                );
+        });
     });
 
     describe('Bulk Preview/Publish', () => {
@@ -388,11 +404,13 @@ describe('HelixService - Preview/Publish', () => {
                     Promise.resolve({ state: 'stopped', progress: { processed: 3, total: 3 } }),
             });
 
-            await service.publishAllSiteContent('testuser/my-site');
+            const published = await service.publishAllSiteContent('testuser/my-site');
             expect(mockFetch).toHaveBeenCalledTimes(4);
             expect(mockLogger.info).toHaveBeenCalledWith(
                 expect.stringContaining('Successfully published 3 pages using bulk API')
             );
+            // The pages it published, which a reset compares Helix's listing against (EDS-33).
+            expect(published).toEqual(['/', '/about', '/customer/account/confirm']);
         });
 
         it('should fall back to page-by-page when bulk API returns 404', async () => {
@@ -406,7 +424,8 @@ describe('HelixService - Preview/Publish', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
 
-            await service.publishAllSiteContent('testuser/my-site');
+            const published = await service.publishAllSiteContent('testuser/my-site');
+            expect(published).toEqual(['/', '/about']);
             expect(mockFetch).toHaveBeenCalledTimes(5);
             expect(mockLogger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('falling back to page-by-page')

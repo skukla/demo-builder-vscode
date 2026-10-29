@@ -33,11 +33,6 @@ export interface DataInstallerFailure {
     message: string;
     /** `ErrorCode` the guard set, when the failure came back as an envelope. */
     code?: string;
-    /**
-     * Structured data the refusal carried (e.g. `needsAccsCredentials`), so the
-     * UI can branch on facts instead of matching message strings.
-     */
-    data?: unknown;
 }
 
 export interface DataInstallerRequest<T> {
@@ -85,7 +80,6 @@ export function useDataInstallerRequest<T>(
             return {
                 message: data.error ?? UNSTATED_FAILURE,
                 ...(typeof data.code === 'string' ? { code: data.code } : {}),
-                ...(data.data !== undefined ? { data: data.data } : {}),
             };
         }
         return null;

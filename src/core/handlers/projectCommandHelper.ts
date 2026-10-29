@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import { surfaceShowsItself } from '@/core/vscode/surfaceShowsItself';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /**
@@ -36,8 +37,28 @@ export async function executeCommandForProject(
     // Set as current project so the command knows which project to operate on
     await context.stateManager.saveProject(project);
 
-    // Execute the command
-    await vscode.commands.executeCommand(commandId);
+    // Execute the command. The CARD that started it already shows the
+    // transition, so the command's own notification would be a second, slower
+    // copy of it (PL-59 R5) — under an agent the sinks stay live and it still
+    // narrates.
+    await surfaceShowsItself(async () => {
+        await vscode.commands.executeCommand(commandId);
+    });
 
     return { success: true };
+}
+
+/**
+ * Run a VS Code command for the project this context works on: a screen's own, or an
+ * agent session's (AI-15). The lifecycle commands read the CURRENT project unless they
+ * are handed a path, so a dashboard shown for project A started whichever project had
+ * become current since. Unlike {@link executeCommandForProject} this never makes the
+ * project current: an agent's start must not move the person's project.
+ *
+ * @param context - the handler's context; its stateManager answers for the working project
+ * @param commandId - a command that takes a project path first (`demoBuilder.startDemo`)
+ */
+export async function executeCommandForWorkingProject(context: HandlerContext, commandId: string): Promise<void> {
+    const project = await context.stateManager.getCurrentProject();
+    await vscode.commands.executeCommand(commandId, project?.path);
 }

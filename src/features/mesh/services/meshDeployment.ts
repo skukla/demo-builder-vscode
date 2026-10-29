@@ -6,8 +6,9 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { buildComponent } from '@/core/shell/buildComponent';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { Logger } from '@/types/logger';
 import { parseJSON, toError } from '@/types/typeGuards';
@@ -38,7 +39,7 @@ async function buildMeshComponent(
         componentPath,
         commandManager,
         {
-            nodeVersion: getMeshNodeVersion(),
+            nodeVersion: demoBuilderNode(),
             kind: 'mesh',
             buildArgs: '-- --force',
             logPrefix: '[Mesh Deployment]',
@@ -59,7 +60,7 @@ async function validateMeshConfig(
     const meshConfigPath = path.join(componentPath, 'mesh.json');
     await fsPromises.access(meshConfigPath);
 
-    onProgress?.('Reading mesh configuration', '');
+    onProgress?.(OPERATION_STAGES.readingMeshConfig.label);
 
     const meshConfigContent = await fsPromises.readFile(meshConfigPath, 'utf-8');
     const config = parseJSON<Record<string, unknown>>(meshConfigContent);
@@ -150,8 +151,8 @@ export async function deployMeshComponent(
         }
 
         onProgress?.(
-            'Deploying API Mesh',
-            existingMeshId ? 'Updating existing mesh' : 'Creating mesh',
+            OPERATION_STAGES.deployingMesh.label,
+            existingMeshId ? 'Updating the existing mesh' : 'Creating the mesh',
         );
 
         const runMeshCommand = (command: 'create' | 'update') =>
@@ -166,20 +167,22 @@ export async function deployMeshComponent(
                         const output = data.toLowerCase();
                         const verb = command === 'update' ? 'updated' : 'created';
                         if (output.includes('validating')) {
-                            onProgress?.('Deploying', 'Validating configuration');
+                            onProgress?.(OPERATION_STAGES.deployingMesh.label, 'Validating configuration');
                         } else if (output.includes('updating') || output.includes('creating')) {
                             onProgress?.(
-                                'Deploying',
+                                OPERATION_STAGES.deployingMesh.label,
                                 `${command === 'update' ? 'Updating' : 'Creating'} mesh infrastructure`,
                             );
                         } else if (output.includes('deploying')) {
-                            onProgress?.('Deploying', 'Deploying mesh');
+                            // Not "Deploying mesh": row 1 already says that, and a
+                            // row 2 repeating it is a line that tells the SC nothing.
+                            onProgress?.(OPERATION_STAGES.deployingMesh.label, 'Adobe is deploying it');
                         } else if (output.includes('success')) {
-                            onProgress?.('Deploying', `Mesh ${verb} successfully`);
+                            onProgress?.(OPERATION_STAGES.deployingMesh.label, `Mesh ${verb}`);
                         }
                     },
                     configureTelemetry: false,
-                    useNodeVersion: getMeshNodeVersion(),
+                    useNodeVersion: demoBuilderNode(),
                     enhancePath: true,
                 },
             );
@@ -198,7 +201,7 @@ export async function deployMeshComponent(
             meshAlreadyExists(deployResult)
         ) {
             logger.info('[Mesh Deployment] Workspace already has a mesh — retrying as update');
-            onProgress?.('Deploying API Mesh', 'Existing mesh found — updating instead');
+            onProgress?.(OPERATION_STAGES.deployingMesh.label, 'Existing mesh found, updating it');
             meshCommand = 'update';
             deployResult = await runMeshCommand('update');
         } else if (
@@ -207,7 +210,7 @@ export async function deployMeshComponent(
             meshNotFound(deployResult)
         ) {
             logger.info('[Mesh Deployment] Remote mesh no longer exists — retrying as create');
-            onProgress?.('Deploying API Mesh', 'Mesh not found — creating instead');
+            onProgress?.(OPERATION_STAGES.deployingMesh.label, 'Mesh not found, creating it');
             meshCommand = 'create';
             deployResult = await runMeshCommand('create');
         }
@@ -226,8 +229,19 @@ export async function deployMeshComponent(
             // this function's own parameter — so the verifier receives it
             // rather than fetching a second one.
             commandManager,
+            // The step says WHAT is being waited on; the surface says how long.
+            // This used to count the seconds itself, from when polling started,
+            // beside the modal's own clock, which counts from when the STAGE
+            // started — two clocks for one wait, disagreeing by the few seconds
+            // between those two moments (owner, 2026-09-20, watching a deploy
+            // read "Waiting for Adobe — 1 second · 4 seconds").
+            //
+            // The 2026-09-19 note this replaces was right that a line which never
+            // changes for two minutes reads as a hang. What has changed since is
+            // that something else now moves: the modal ticks the stage, and a
+            // notification carries the stage rather than this step.
             onProgress: () => {
-                onProgress?.('Verifying deployment', 'Checking deployment status');
+                onProgress?.(OPERATION_STAGES.verifyingMesh.label, 'Waiting for Adobe');
             },
             logger: logger,
         });
@@ -240,7 +254,7 @@ export async function deployMeshComponent(
         logger.debug(
             `[Mesh Deployment] Verification result: meshId=${verificationResult.meshId}, endpoint=${verificationResult.endpoint}`,
         );
-        onProgress?.('✓ Deployment Complete', 'Mesh deployed successfully');
+        onProgress?.(OPERATION_STAGES.verifyingMesh.label, 'Mesh deployed');
 
         return {
             success: true,

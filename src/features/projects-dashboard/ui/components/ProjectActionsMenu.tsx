@@ -33,7 +33,6 @@ import { Text, Section, Item } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo } from 'react';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
-import { hasIntegrations } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -132,7 +131,6 @@ export function ProjectActionsMenu({
         onEdit,
         onExport,
         onOpenAi,
-        onPinToggle,
         onDelete,
     } = actions;
 
@@ -154,7 +152,6 @@ export function ProjectActionsMenu({
             edit: onEdit,
             export: onExport,
             openAi: onOpenAi,
-            pinToggle: onPinToggle,
             delete: onDelete,
         }),
         [
@@ -169,7 +166,6 @@ export function ProjectActionsMenu({
             onEdit,
             onExport,
             onOpenAi,
-            onPinToggle,
             onDelete,
         ],
     );
@@ -228,15 +224,9 @@ export function ProjectActionsMenu({
         // grew with N. Those predate the dedicated Integrations page; now that it
         // exists, per-integration actions belong there and this is the route —
         // the projects list otherwise has none (project → dashboard → Integrations).
-        if (onOpenIntegrations && hasIntegrations(project)) {
+        // Offered with none yet too: the page is where the first one gets added.
+        if (onOpenIntegrations) {
             manage.push({ key: 'openIntegrations', label: 'Integrations', icon: 'apiAccess' });
-        }
-        if (onPinToggle) {
-            manage.push({
-                key: 'pinToggle',
-                label: project.pinned ? 'Unpin' : 'Pin',
-                icon: project.pinned ? 'pinOff' : 'pinOn',
-            });
         }
         if (onResetProject) {
             manage.push({ key: 'resetProject', label: 'Reset', icon: 'reset' });
@@ -267,10 +257,12 @@ export function ProjectActionsMenu({
         onEdit,
         onExport,
         onOpenAi,
-        onPinToggle,
     ]);
 
-    // Nothing to show — render no trigger at all.
+    // Nothing to show — render no trigger at all. A project still being created has
+    // nothing to act on yet, and deleting it mid-run would pull the folder out from
+    // under the creation (PL-82).
+    if (project.status === 'creating') return null;
     if (groups.use.length === 0 && groups.manage.length === 0 && !onDelete) {
         return null;
     }

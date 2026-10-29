@@ -23,12 +23,10 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
     return {
         ...actual,
         getNodeVersionMapping: jest.fn(),
-        getNodeVersionIdMapping: jest.fn(),
         checkPerNodeVersionStatus: jest.fn(),
         areDependenciesInstalled: jest.fn(),
         hasNodeVersions: jest.fn(),
         getNodeVersionKeys: jest.fn(),
-        getPluginNodeVersions: jest.fn(),
     };
 });
 

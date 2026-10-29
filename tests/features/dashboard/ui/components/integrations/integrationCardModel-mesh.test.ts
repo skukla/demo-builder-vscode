@@ -204,7 +204,6 @@ describe('deriveMeshCard — identity + propagation', () => {
         expect(model.isMesh).toBe(true);
         expect(model.name).toBe('API Mesh');
         expect(model.kindLabel).toBe('API Mesh');
-        expect(model.sourceIsAi).toBe(false);
         expect(model.canRename).toBe(false);
     });
 
@@ -301,7 +300,7 @@ describe('deriveMeshCard — identity + propagation', () => {
         }
     });
 
-    it('endpoint rides url with the "Endpoint" label; lastDeployed comes from the mesh entry', () => {
+    it('endpoint rides url with the "Endpoint" label', () => {
         const iso = '2026-07-15T14:04:00.000Z';
         const model = deriveMeshCard(
             display(),
@@ -312,10 +311,9 @@ describe('deriveMeshCard — identity + propagation', () => {
 
         expect(model.url).toBe('https://graph.adobe.io/api/demo/graphql');
         expect(model.urlLabel).toBe('Endpoint');
-        expect(model.lastDeployed).toBe(new Date(iso).toLocaleString());
     });
 
-    it('no mesh entry: url and lastDeployed are undefined', () => {
+    it('no mesh entry: url is undefined', () => {
         const model = deriveMeshCard(
             display({ color: 'gray', text: 'Not deployed' }),
             'not-deployed',
@@ -323,7 +321,6 @@ describe('deriveMeshCard — identity + propagation', () => {
             false,
         );
         expect(model.url).toBeUndefined();
-        expect(model.lastDeployed).toBeUndefined();
     });
 });
 

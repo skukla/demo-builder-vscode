@@ -15,13 +15,11 @@
  * returns.
  */
 
-import * as fs from 'fs/promises';
 import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
+import * as fs from 'fs/promises';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import { createMockProject } from '../../helpers/projectFake';
 
-jest.mock('fs/promises');
-jest.mock('os');
 jest.mock('@/core/state/projectFileLoader');
 
 describe('StateManager.loadProjectFromPath', () => {

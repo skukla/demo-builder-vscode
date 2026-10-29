@@ -17,6 +17,7 @@ import { clearAdobeTarget } from './adobeTargetStore';
 import { agentNotice } from './agentNotice';
 import { asRawText, asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
+import { collectSignInNotices } from '@/core/auth/signInNotices';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
@@ -29,8 +30,12 @@ import { GITHUB_SCOPES } from '@/features/eds/services/types';
 import type { HandlerContext } from '@/types/handlers';
 
 interface ProviderStatus {
-    authenticated: boolean;
-    /** Minutes until the Adobe token expires (negative if expired). Adobe only. */
+    /**
+     * Whether the sign-in works now. `'unknown'` only for DA.live, when IMS could not be
+     * reached to check the stored token: neither signed in nor signed out (`note` says so).
+     */
+    authenticated: boolean | 'unknown';
+    /** Minutes until the token expires (negative if expired). Adobe and DA.live. */
     expiresInMinutes?: number;
     /** GitHub only: the authenticated username. */
     login?: string;
@@ -39,7 +44,7 @@ interface ProviderStatus {
     /** GitHub only: where the credential lives — 'stored-token' (extension storage) or
      * 'vscode-session' (VS Code's account system; adopted by GitHub operations on use). */
     via?: 'stored-token' | 'vscode-session';
-    /** GitHub only, when unauthenticated: why `false` may not mean "signed out". */
+    /** GitHub when unauthenticated: why `false` may not mean "signed out". DA.live when `'unknown'`. */
     note?: string;
     /** DA.live only: the pinned namespace every DA.live write targets. */
     orgName?: string;
@@ -95,7 +100,7 @@ async function githubStatus(ctx: HandlerContext): Promise<ProviderStatus> {
  * out" and recommended a needless sign-in; VS Code holding the session is the
  * common case, so the answer must say where the credential actually lives.
  */
-async function githubVsCodeSessionStatus(storedTokenRejected = false): Promise<ProviderStatus> {
+async function githubVsCodeSessionStatus(storedTokenRejected: boolean): Promise<ProviderStatus> {
     let session: vscode.AuthenticationSession | undefined;
     try {
         session = await vscode.authentication.getSession('github', [...GITHUB_SCOPES], {
@@ -126,6 +131,19 @@ async function githubVsCodeSessionStatus(storedTokenRejected = false): Promise<P
     };
 }
 
+/** What an agent offers after a notice that DA.live was signed out. */
+const DA_LIVE_SIGN_IN_NEXT =
+    'Tell the user, and offer to sign in to DA.live again (sign_in with provider "dalive") ' +
+    'before any DA.live, storefront or delete work.';
+
+/** Why a stored DA.live sign-in reads as not signed in. */
+const DA_LIVE_REFUSED = 'Adobe no longer accepts the stored DA.live sign-in: sign in to DA.live again.';
+
+/** Why the DA.live answer is neither yes nor no. */
+const DA_LIVE_UNCHECKED =
+    'Adobe could not be reached to check the stored DA.live sign-in, so whether it still works ' +
+    'is not known. Ask again, or go ahead: the first DA.live call will say if it is refused.';
+
 /**
  * DA.live status plus the pinned namespace.
  *
@@ -145,9 +163,22 @@ async function githubVsCodeSessionStatus(storedTokenRejected = false): Promise<P
  */
 async function daLiveStatus(ctx: HandlerContext): Promise<ProviderStatus> {
     const service = getDaLiveAuthService(ctx.context);
-    const authenticated = await service.isAuthenticated();
     const orgName = service.getOrgName();
-    return { authenticated, ...(orgName ? { orgName } : {}) };
+    const org = orgName ? { orgName } : {};
+    // Absent, expired, or within five minutes of it: `none`, with no network call.
+    // Otherwise IMS says whether it still accepts the token: a local expiry check cannot
+    // see one IMS has cancelled, and the DA.live HEAD this used to make read DA.live's
+    // 403 for a cancelled token as accepted (EDS-30, still saying yes on 2026-10-28).
+    const signIn = await service.checkSignIn();
+    if (signIn.state === 'none') return { authenticated: false, ...org };
+    const expiresInMinutes = Math.floor((signIn.token.expiresAt - Date.now()) / 60_000);
+    if (signIn.state === 'refused') {
+        return { authenticated: false, expiresInMinutes, ...org, error: DA_LIVE_REFUSED };
+    }
+    if (signIn.state === 'unknown') {
+        return { authenticated: 'unknown', expiresInMinutes, ...org, note: DA_LIVE_UNCHECKED };
+    }
+    return { authenticated: true, expiresInMinutes, ...org };
 }
 
 async function adobeStatus(ctx: HandlerContext): Promise<ProviderStatus> {
@@ -177,7 +208,7 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Auth Status',
             description:
-                'Report Adobe / GitHub / DA.live authentication status, with the GitHub user + orgs a repo can be created in, and the pinned DA.live namespace. No side effects.',
+                'Report Adobe / GitHub / DA.live authentication status, with the GitHub user + orgs a repo can be created in, and the pinned DA.live namespace. dalive.authenticated is "unknown" when Adobe could not be reached to check the stored sign-in. No side effects.',
             inputSchema: {},
         },
         async () => {
@@ -198,7 +229,9 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
             title: 'Sign In',
             description:
                 'Open an interactive sign-in to refresh an expired session (opens a browser). ' +
-                'Requires confirm:true. For provider "dalive" it returns immediately after ' +
+                'Requires confirm:true. For provider "adobe", notices in the result say what the ' +
+                'sign-in ended elsewhere (a forced Adobe sign-in also signs out of DA.live). ' +
+                'For provider "dalive" it returns immediately after ' +
                 'opening the prompts — poll get_auth_status until dalive.authenticated is true.',
             inputSchema: {
                 provider: z
@@ -225,8 +258,18 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
                 // identity's MCP target — otherwise list/select tools would keep
                 // targeting the previous account's org/project/workspace.
                 clearAdobeTarget();
-                const ok = (await ctx.authManager?.login()) ?? false;
-                return asText({ provider, success: ok });
+                // What the sign-in did besides signing in, for the agent to say: a forced
+                // sign-in (the retry a normal one falls back to) also ends the DA.live
+                // sign-in (measured 2026-10-28), and here that reaches this result rather
+                // than a dialog (`signInNotices`, `daLiveSignedOutNotice`).
+                const { result: ok, notices } = await collectSignInNotices(
+                    async () => (await ctx.authManager?.login()) ?? false,
+                );
+                return asText({
+                    provider,
+                    success: ok,
+                    ...(notices.length > 0 ? { notices, next: DA_LIVE_SIGN_IN_NEXT } : {}),
+                });
             }
             if (provider === 'github') {
                 const res = await dispatchHandler(edsHandlers, ctx, 'github-oauth', {});

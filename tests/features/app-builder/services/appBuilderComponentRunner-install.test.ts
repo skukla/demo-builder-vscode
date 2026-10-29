@@ -8,10 +8,8 @@
  * entries never invoke it.
  */
 
-import {
-    addAppBuilderComponent,
-    deployAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import {
     INTEGRATION_ENTRY,
@@ -53,6 +51,8 @@ function kitDeps(overrides: Partial<Record<string, unknown>> = {}) {
 // agree with the entry so the door admits it.
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: jest.fn(async () => 'extension'),
 }));
 
@@ -65,7 +65,7 @@ describe('S2S deploy-env wiring', () => {
 
         await addAppBuilderComponent(project, KIT_ENTRY, deps);
 
-        expect(resolveAppManagementEnv).toHaveBeenCalledWith(project);
+        expect(resolveAppManagementEnv).toHaveBeenCalledWith(project, KIT_ENTRY.id);
         expect(deps.deployApp).toHaveBeenCalledWith(
             expect.any(String),
             expect.any(String),
@@ -134,7 +134,14 @@ describe('S2S deploy-env wiring', () => {
 
         await deployAppBuilderComponent(project, KIT_ENTRY.id, deps);
 
-        expect(deps.subscribeRequiredApis).toHaveBeenCalledWith([KIT_ENTRY], project);
+        // The third argument is the step reporter the subscribe narrates through; the
+        // fourth names the component, so the subscribe targets its own workspace.
+        expect(deps.subscribeRequiredApis).toHaveBeenCalledWith(
+            [KIT_ENTRY],
+            project,
+            expect.any(Function),
+            { forComponent: KIT_ENTRY.id },
+        );
     });
 
     it('redeploy: a deploy-only entry still skips the subscribe (adds own it)', async () => {
@@ -171,9 +178,35 @@ describe('install-after-deploy wiring', () => {
         const result = await addAppBuilderComponent(project, KIT_ENTRY, deps);
 
         expect(result.success).toBe(true);
-        expect(installAppManagement).toHaveBeenCalledWith(project, KIT_URLS, expect.any(Function));
+        expect(installAppManagement).toHaveBeenCalledWith(project, KIT_ENTRY.id, expect.any(Function), {
+            appVersion: undefined,
+            since: expect.any(String),
+        });
         expect(project.appBuilderComponents?.[KIT_ENTRY.id]?.installation).toMatchObject({
             status: 'installed',
+        });
+    });
+
+    it('add: the manifest version read from the clone goes to the install pass and onto the record', async () => {
+        const { deps, installAppManagement } = kitDeps();
+        installAppManagement.mockResolvedValue({
+            status: 'installed',
+            version: '0.2.0',
+            detail: 'Installed in Commerce at version 0.2.0.',
+        });
+        const readAppVersion = jest.fn().mockResolvedValue('0.2.0');
+        const project = createProject();
+        const before = Date.now();
+
+        await addAppBuilderComponent(project, KIT_ENTRY, { ...deps, readAppVersion });
+
+        const [, , , options] = installAppManagement.mock.calls[0];
+        expect(options.appVersion).toBe('0.2.0');
+        expect(Date.parse(options.since)).toBeGreaterThanOrEqual(before - 1);
+        expect(project.appBuilderComponents?.[KIT_ENTRY.id]?.installation).toMatchObject({
+            status: 'installed',
+            version: '0.2.0',
+            detail: 'Installed in Commerce at version 0.2.0.',
         });
     });
 
@@ -266,5 +299,148 @@ describe('install-after-deploy wiring', () => {
         await deployAppBuilderComponent(project, 'my-app', deps);
 
         expect(installAppManagement).not.toHaveBeenCalled();
+    });
+});
+
+describe('the ERP filled after the install (AB-26y)', () => {
+    // The ERP integration: its install stands, so Demo Builder fills the ERP it serves
+    // from Commerce (fillErpForProject), where the integration used to copy it itself.
+    const ERP_ENTRY: AppBuilderComponentCatalogEntry = {
+        ...KIT_ENTRY,
+        id: 'erp-integration',
+        name: 'ERP Integration',
+        fillsSystem: true,
+    };
+
+    function erpDeps(overrides: Partial<Record<string, unknown>> = {}) {
+        const fillSystem =
+            (overrides.fillSystem as jest.Mock | undefined) ?? jest.fn().mockResolvedValue({ status: 'filled' });
+        const { deps, installAppManagement } = kitDeps({ ...overrides, fillSystem });
+        return { deps, installAppManagement, fillSystem };
+    }
+
+    it('add: an INSTALLED entry that fills its system fills it for this project (args pinned)', async () => {
+        const { deps, fillSystem } = erpDeps();
+        const project = createProject();
+
+        const result = await addAppBuilderComponent(project, ERP_ENTRY, deps);
+
+        expect(result.success).toBe(true);
+        expect(fillSystem).toHaveBeenCalledWith(project, ERP_ENTRY, expect.any(Function));
+    });
+
+    it('add: an install that FAILED or was skipped fills nothing', async () => {
+        for (const status of ['failed', 'skipped'] as const) {
+            const { deps, fillSystem } = erpDeps({
+                installAppManagement: jest.fn().mockResolvedValue({ status, detail: 'reason' }),
+            });
+
+            await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+            expect(fillSystem).not.toHaveBeenCalled();
+        }
+    });
+
+    it('add: an entry that fills no system never touches it, installed or not', async () => {
+        const { deps, fillSystem } = erpDeps();
+
+        await addAppBuilderComponent(createProject(), KIT_ENTRY, deps);
+
+        expect(fillSystem).not.toHaveBeenCalled();
+    });
+
+    it("add: the fill's steps show under the demo-data stage", async () => {
+        const onProgress = jest.fn();
+        const fillSystem = jest.fn(async (_project: unknown, _entry: unknown, onStep: (step: string) => void) => {
+            onStep('Sent 25 of 182 products');
+            return { status: 'filled' };
+        });
+        const { deps } = erpDeps({ onProgress, fillSystem });
+
+        await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+        expect(onProgress).toHaveBeenCalledWith('Loading demo data', 'Sent 25 of 182 products');
+    });
+
+    it('add: a fill that stops keeps the deploy AND the install green, and says why', async () => {
+        const onProgress = jest.fn();
+        const { deps } = erpDeps({
+            onProgress,
+            fillSystem: jest.fn().mockResolvedValue({ status: 'failed', detail: 'Commerce answered 401 for products' }),
+        });
+        const project = createProject();
+
+        const result = await addAppBuilderComponent(project, ERP_ENTRY, deps);
+
+        expect(result.success).toBe(true);
+        expect(project.appBuilderComponents?.[ERP_ENTRY.id]?.installation).toMatchObject({ status: 'installed' });
+        expect(onProgress).toHaveBeenCalledWith('Loading demo data', 'Demo data did not load: Commerce answered 401 for products');
+    });
+
+    // Owner, 2026-10-22: adding the ERP integration prepares the store first, because the fill
+    // relies on erp_owner being in the attribute sets and on the ERP's warehouse existing.
+    it('add: an INSTALLED entry that fills its system prepares the store first, then fills (args pinned)', async () => {
+        const prepareStore = jest.fn().mockResolvedValue({ status: 'prepared' });
+        const { deps, fillSystem } = erpDeps({ prepareStore });
+        const project = createProject();
+
+        await addAppBuilderComponent(project, ERP_ENTRY, deps);
+
+        expect(prepareStore).toHaveBeenCalledWith(project, ERP_ENTRY, expect.any(Function));
+        expect(prepareStore.mock.invocationCallOrder[0]).toBeLessThan(fillSystem.mock.invocationCallOrder[0]);
+    });
+
+    it("add: the preparation's steps show under the preparing stage", async () => {
+        const onProgress = jest.fn();
+        const prepareStore = jest.fn(async (_project: unknown, _entry: unknown, onStep: (step: string) => void) => {
+            onStep('ERP attributes: Applying');
+            return { status: 'prepared' };
+        });
+        const { deps } = erpDeps({ onProgress, prepareStore });
+
+        await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+        expect(onProgress).toHaveBeenCalledWith('Applying the demo setup', 'ERP attributes: Applying');
+    });
+
+    it('add: a preparation that stops keeps the add green, still fills, and says why', async () => {
+        const onProgress = jest.fn();
+        const prepareStore = jest.fn().mockResolvedValue({ status: 'failed', detail: 'Commerce answered 403' });
+        const { deps, fillSystem } = erpDeps({ onProgress, prepareStore });
+
+        const result = await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+        expect(result.success).toBe(true);
+        expect(fillSystem).toHaveBeenCalled();
+        expect(onProgress).toHaveBeenCalledWith(
+            'Applying the demo setup',
+            'The demo setup was not applied: Commerce answered 403. Use Apply all in the demo setup.',
+        );
+    });
+
+    it('add: an install that FAILED or was skipped prepares nothing', async () => {
+        for (const status of ['failed', 'skipped'] as const) {
+            const prepareStore = jest.fn().mockResolvedValue({ status: 'prepared' });
+            const { deps } = erpDeps({
+                prepareStore,
+                installAppManagement: jest.fn().mockResolvedValue({ status, detail: 'reason' }),
+            });
+
+            await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+            expect(prepareStore).not.toHaveBeenCalled();
+        }
+    });
+
+    it('add: what Commerce refused during the preparation is said, and the fill still runs', async () => {
+        const onProgress = jest.fn();
+        const warning = 'Prices per website: Commerce refused catalog/price/scope.';
+        const prepareStore = jest.fn().mockResolvedValue({ status: 'prepared', warning });
+        const { deps, fillSystem } = erpDeps({ onProgress, prepareStore });
+
+        await addAppBuilderComponent(createProject(), ERP_ENTRY, deps);
+
+        expect(onProgress).toHaveBeenCalledWith('Applying the demo setup', warning);
+        expect(fillSystem).toHaveBeenCalled();
     });
 });

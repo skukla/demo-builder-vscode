@@ -8,15 +8,13 @@
  */
 
 import * as vscode from 'vscode';
-import {
-    applyUpdatesHeadless,
-    type UpdateSelections,
-} from '@/features/updates/services/updateApplyService';
+import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
+import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import {
     applyBlockLibraryUpdateResolved,
     updateCommitShaWithRollback,
 } from '@/features/updates/services/updateCore';
-import { shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
+import { shouldSkipBlockLibrary } from '@/features/updates/services/updateSources';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -53,6 +51,10 @@ jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', (
     // "the single source of truth" for that location.
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
 }));
+// The tools' Node via fnm (AI-13): stubbed, or it runs a real `fnm install`.
+jest.mock('@/core/shell/ensureNodeVersion', () => ({
+    ensureFnmNodeVersion: jest.fn(async () => undefined),
+}));
 /**
  * CONVERTED 2026-08-28 (ADR-015): the executor arrives in the context, so this
  * suite no longer mocks the service registry.
@@ -62,21 +64,9 @@ jest.mock('@/features/updates/services/updateCore', () => ({
     applyBlockLibraryUpdateResolved: jest.fn(),
     updateCommitShaWithRollback: jest.fn(),
 }));
-jest.mock('@/features/updates/commands/updateTypes', () => ({
-    getTemplateSource: jest.fn(),
+jest.mock('@/features/updates/services/updateSources', () => ({
     shouldSkipBlockLibrary: jest.fn(() => false),
 }));
-// Checkers are imported at module top (used by computeProjectUpdateSelections).
-jest.mock('@/features/updates/services/templateUpdateChecker', () => ({
-    TemplateUpdateChecker: jest.fn(),
-}));
-jest.mock('@/features/updates/services/addonUpdateChecker', () => ({
-    AddonUpdateChecker: jest.fn(),
-}));
-jest.mock('@/features/updates/services/adobeMcpUpdateChecker', () => ({
-    AdobeMcpUpdateChecker: jest.fn(),
-}));
-jest.mock('@/features/updates/services/updateManager', () => ({ UpdateManager: jest.fn() }));
 
 const applyBlockResolvedMock = applyBlockLibraryUpdateResolved as jest.Mock;
 const updateShaRollbackMock = updateCommitShaWithRollback as jest.Mock;
@@ -127,10 +117,14 @@ function emptySelections(): UpdateSelections {
     return {
         forkSync: [],
         template: [],
+        boilerplate: [],
+        finish: [],
         component: [],
         adobeMcp: [],
         blockLibrary: [],
+        blockLibraryInstall: [],
         inspector: [],
+        integration: [],
     };
 }
 
@@ -146,7 +140,7 @@ describe('applyUpdatesHeadless', () => {
         });
         updateComponentMock.mockResolvedValue(undefined);
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
-        applyBlockResolvedMock.mockResolvedValue(undefined);
+        applyBlockResolvedMock.mockResolvedValue([]);
         updateShaRollbackMock.mockResolvedValue(undefined);
         shouldSkipMock.mockReturnValue(false);
     });
@@ -230,6 +224,23 @@ describe('applyUpdatesHeadless', () => {
         expect(shouldSkipMock).toHaveBeenCalledWith(expect.anything(), project, expect.any(Set));
         expect(applyBlockResolvedMock).not.toHaveBeenCalled();
         expect(res.template.successCount).toBe(1);
+    });
+
+    it("tells the agent, in plain lines, which fix a template update could not put back (EDS-51)", async () => {
+        syncWithTemplateMock.mockResolvedValue({
+            success: true,
+            syncedCommit: 'c1',
+            strategy: 'merge',
+            notes: ['A Demo Builder fix could not be put back: fix-gone (gone).'],
+        });
+        const sel = emptySelections();
+        sel.template = [{ project }];
+
+        const res = await applyUpdatesHeadless(sel, ctx);
+
+        expect(res.template.successCount).toBe(1);
+        // Read under the project's own heading, so no name in front (owner, 2026-10-22).
+        expect(res.template.applied).toEqual(['A Demo Builder fix could not be put back: fix-gone (gone).']);
     });
 
     it('updates the inspector SDK via the rollback-guarded helper', async () => {

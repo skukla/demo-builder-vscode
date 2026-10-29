@@ -14,7 +14,6 @@ import { formatDuration } from '@/core/utils/timeFormatting';
  */
 const EXPECTED_TIMES: Record<string, number> = {
     'isAuthenticated': 3000,
-    'isFullyAuthenticated': 4000,
     'getOrganizations': 5000,
     'getProjects': 5000,
     'getWorkspaces': 5000,

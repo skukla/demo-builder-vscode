@@ -41,6 +41,8 @@ describe('the mutation ratchet still tells padding from real work', () => {
         expect(out).toContain('A-padding-must-flag');
         expect(out).toContain('B-real-branch-must-pass');
         expect(out).toContain('C-comparator-must-pass');
+        // The stamp `mutationStaleRows.mjs` depends on to see a same-numbers re-measure.
+        expect(out).toContain('I-write-stamps-measured-rows-only');
         // And it distinguishes the two verdicts rather than always printing the good one:
         // breaking the rule under test makes control C print FAIL and exit non-zero,
         // which is how this file's own value was checked on 2026-09-02.

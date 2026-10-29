@@ -33,13 +33,14 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     resolveByomOverlayConfig: (...a: unknown[]) => mockResolveByomOverlayConfig(...a),
     getDaLiveAuthService: (...a: unknown[]) => mockGetDaLiveAuthService(...a),
 }));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: (...a: unknown[]) => mockCreateTokenProvider(...a),
 }));
 jest.mock('@/features/eds/services/catalogPrewarmService', () => ({
     prewarmCatalog: (...a: unknown[]) => mockPrewarmCatalog(...a),
 }));
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -86,7 +87,8 @@ describe('executeCatalogPrewarmPhase', () => {
             'skukla',
             'bodea',
             expect.anything(),
-            expect.anything()
+            expect.anything(),
+            expect.any(Function)
         );
     });
 
@@ -95,13 +97,27 @@ describe('executeCatalogPrewarmPhase', () => {
 
         await executeCatalogPrewarmPhase(makeContext(), PROJECT, progress, makeHelix);
 
-        expect(progress).toHaveBeenCalledWith(
-            'Pre-warming Catalog',
-            96,
-            'Publishing product pages'
-        );
+        expect(progress).toHaveBeenCalledWith(OPERATION_STAGES.warmingProductPages.label, 96);
         expect(progress.mock.invocationCallOrder[0]).toBeLessThan(
             mockPrewarmCatalog.mock.invocationCallOrder[0]
+        );
+    });
+
+    // The same job Reset and Republish run, with its count on the line under the step.
+    it("shows the warm's own count under the step as it goes", async () => {
+        const progress = jest.fn();
+        mockPrewarmCatalog.mockImplementation(async (...args: unknown[]) => {
+            const onProgress = args[6] as (info: { operation: string; message: string }) => void;
+            onProgress({ operation: 'catalog-prewarm', message: 'Warming product pages: 10 of 49 pages' });
+            return { skipped: false, succeeded: 49, attempted: 49 };
+        });
+
+        await executeCatalogPrewarmPhase(makeContext(), PROJECT, progress, makeHelix);
+
+        expect(progress).toHaveBeenLastCalledWith(
+            OPERATION_STAGES.warmingProductPages.label,
+            96,
+            'Warming product pages: 10 of 49 pages'
         );
     });
 

@@ -27,6 +27,7 @@ import {
     resetEdsProjectWithUI,
     vscode,
 } from './edsResetUI.testUtils';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import type { GitHubAppService } from '@/features/eds/services/github/githubAppService';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -35,6 +36,9 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn().mockResolvedValue({ success: true }),
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
     extractResetParams: jest.fn().mockReturnValue({
         success: true,
         params: {
@@ -51,7 +55,8 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 // The App resolver retries an inconclusive answer after a real 2s delay.
 jest.mock('@/core/utils/sleep');
 
-import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
+import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
+import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -195,15 +200,13 @@ describe('resetEdsProjectWithUI — before the progress window', () => {
 });
 
 describe('resetEdsProjectWithUI — inside the progress window', () => {
-    it('opens a non-cancellable notification titled for the reset', async () => {
+    // Titled for the PROJECT: the same words the modal shows and the
+    // notification it hands over to, rather than the feature's name.
+    it('opens a non-cancellable notification titled for the project', async () => {
         await run(createProject());
 
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: 'Resetting EDS Project',
-                cancellable: false,
-            },
+            expect.objectContaining({ title: 'Resetting test-project', cancellable: false }),
             expect.any(Function),
         );
     });
@@ -211,16 +214,20 @@ describe('resetEdsProjectWithUI — inside the progress window', () => {
     it('narrates the four pre-flight checks in order, then each pipeline step', async () => {
         await run(createProject());
 
+        // Four checks under ONE stage, each naming what it is asking about, and
+        // then the pipeline's own steps with the count they know up front.
         expect(report.mock.calls.map((c) => c[0])).toEqual([
-            { message: 'Checking authentication' },
-            { message: 'Checking Adobe I/O authentication' },
-            { message: 'Checking Adobe organization' },
-            { message: 'Checking GitHub App' },
+            { message: 'Checking requirements' },
+            { message: 'Checking requirements' },
+            { message: 'Checking requirements' },
+            { message: 'Checking requirements' },
         ]);
 
         const onProgress = mockedReset.mock.calls[0][4]!;
-        onProgress({ step: 3, totalSteps: 11, message: 'Syncing repository' });
-        expect(report).toHaveBeenLastCalledWith({ message: 'Step 3/11: Syncing repository' });
+        onProgress({ step: RESET_STEP.publishingCodeAndSettings, totalSteps: 11, message: 'Publishing the code' });
+        // The notification's one line is the step's own name and position (since
+        // 2026-10-16); the step's passing messages are for the modal's second row.
+        expect(report).toHaveBeenLastCalledWith({ message: 'Publishing code, settings (2 of 11)' });
     });
 
     it('hands the org gate the auth manager, the project and the logger', async () => {
@@ -334,6 +341,17 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
         );
     });
 
+    // EDS-23: an inner 400 cannot say the App is missing, so the reset goes on
+    // without the install prompt.
+    it('continues WITHOUT the install prompt on an inner 400', async () => {
+        isAppInstalled.mockResolvedValue({ isInstalled: false, codeStatus: 400, transient: true });
+
+        await run(createProject(), createContext());
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(mockedReset).toHaveBeenCalled();
+    });
+
     describe('when the App is NOT installed', () => {
         beforeEach(() => {
             isAppInstalled.mockResolvedValue({ isInstalled: false });
@@ -350,10 +368,13 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
         });
 
         it('Install App opens the install URL for THIS repo, then continues on Continue', async () => {
+            // Three questions in order: the reset confirm, the App warning, and the
+            // after-install Continue — which is a question now, so it arrives on the
+            // same channel rather than as an information message.
             (vscode.window.showWarningMessage as jest.Mock)
                 .mockResolvedValueOnce(RESET)
-                .mockResolvedValueOnce('Install App');
-            (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Continue');
+                .mockResolvedValueOnce('Install App')
+                .mockResolvedValueOnce('Continue');
 
             const result = await run(createProject());
 
@@ -362,8 +383,10 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
                 'https://github.com/apps/aem-code-sync/new?o=test-owner&r=test-repo',
             );
             expect(vscode.env.openExternal).toHaveBeenCalledTimes(1);
-            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-                expect.stringContaining('click Continue'),
+            // Through askDuringOperation now, so it reaches the progress modal when
+            // one is narrating the reset; with none up it is this notification.
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+                expect.stringContaining('choose Continue'),
                 'Continue',
                 'Cancel',
             );

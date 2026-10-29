@@ -9,24 +9,6 @@ import { createMockAuthenticationService } from '../../../helpers/authentication
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-// Mock dependencies setup
-export const setupMocks = () => {
-    jest.mock('@/core/di/serviceLocator');
-    jest.mock('@/core/validation/validators/AdobeResourceValidator');
-    jest.mock('@/types/typeGuards', () => ({
-        toError: jest.fn((error: any) => error instanceof Error ? error : new Error(String(error))),
-        parseJSON: jest.fn((str: string) => JSON.parse(str))
-    }));
-    jest.mock('@/core/utils/timeoutConfig', () => ({
-        TIMEOUTS: {
-            NORMAL: 30000 // Standard API calls (replaces PROJECT_LIST, WORKSPACE_LIST)
-        }
-    }));
-    jest.mock('@/core/utils/promiseUtils', () => ({
-        withTimeout: jest.fn((promise) => promise)
-    }));
-};
-
 /**
  * The canonical AuthenticationService fake (ADR-016).
  *

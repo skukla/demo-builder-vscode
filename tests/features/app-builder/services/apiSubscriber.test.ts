@@ -18,6 +18,7 @@ import { BASELINE_API } from '@/core/constants';
 import {
     computeRequiredApis,
     resolveServiceInfos,
+    entriesThatNeedApis,
     partitionByPlatform,
     subscribeRequiredApis,
     type ServiceInfo,
@@ -35,6 +36,45 @@ import {
 } from './apiSubscriber.testUtils';
 
 describe('apiSubscriber', () => {
+    describe('entriesThatNeedApis (whose APIs a project subscribes)', () => {
+        // Owner, 2026-09-15: an integration's APIs belong to projects that have it.
+        // The stack-wide catalog subscribed every compatible integration's APIs on
+        // any add, so a project without the ERP got its database API too.
+        const shell: AppBuilderComponentCatalogEntry = { ...integrationAppBuilderComponent(['ShellSDK']), id: 'shell' };
+        const erp = integrationAppBuilderComponent(['AppBuilderDataServicesSDK']);
+        const catalog = [meshAppBuilderComponent(), shell, erp];
+
+        it('keeps the stack meshes and the integrations the project has; drops the rest', () => {
+            const project = {
+                appBuilderComponents: {
+                    shell: { kind: 'integration' as const, status: 'deployed' as const, source: { owner: 'o', repo: 'shell' } },
+                },
+            };
+
+            expect(entriesThatNeedApis(catalog, project).map((e) => e.id)).toEqual(['mesh', 'shell']);
+        });
+
+        it('adds the entry being added, before the project records it', () => {
+            expect(entriesThatNeedApis(catalog, {}, [erp]).map((e) => e.id)).toEqual(['mesh', 'erp']);
+        });
+
+        it('carries an entry being added that the catalog does not list, such as a custom integration', () => {
+            const custom = { ...integrationAppBuilderComponent(['CustomSDK']), id: 'custom-1' };
+
+            expect(entriesThatNeedApis(catalog, {}, [custom]).map((e) => e.id)).toEqual(['mesh', 'custom-1']);
+        });
+
+        it("so a project without the ERP never asks for the ERP's database API", () => {
+            const project = {
+                appBuilderComponents: {
+                    shell: { kind: 'integration' as const, status: 'deployed' as const, source: { owner: 'o', repo: 'shell' } },
+                },
+            };
+
+            expect(computeRequiredApis(entriesThatNeedApis(catalog, project))).not.toContain('AppBuilderDataServicesSDK');
+        });
+    });
+
     describe('computeRequiredApis (union + baseline)', () => {
         it('should union every appBuilderComponent requiredApis plus the baseline', () => {
             const result = computeRequiredApis([
@@ -116,6 +156,17 @@ describe('apiSubscriber', () => {
             expect(mgmtInfo.platformList).toEqual(['oauth_server_to_server']);
         });
 
+        it('App Builder Data Services subscribes onto the S2S credential when the catalog is silent', () => {
+            // The ERP's database needs its token to carry the adobeio.abdata scopes, which
+            // come from this subscription. The spike subscribed it onto the S2S credential
+            // and the database answered (2026-09-14).
+            const [dataServices] = resolveServiceInfos(
+                ['AppBuilderDataServicesSDK'],
+                [{ code: 'AppBuilderDataServicesSDK', name: 'App Builder Data Services', platformList: null as unknown as string[] }],
+            );
+            expect(dataServices.platformList).toEqual(['oauth_server_to_server']);
+        });
+
         it('the S2S override fills catalog SILENCE only — a DECLARED platform wins', () => {
             // The override exists because the live catalog declares platforms for
             // only 25 of 98 services. A row that DOES declare one is authoritative:
@@ -133,6 +184,116 @@ describe('apiSubscriber', () => {
             const services = [...SERVICES_FOR_ORG, { code: 'MysterySDK' }];
             const [mystery] = resolveServiceInfos(['MysterySDK'], services);
             expect(mystery.platformList).toStrictEqual([]);
+        });
+
+        describe('a service Adobe marks server-to-server only (ACCS-REST-API)', () => {
+            // The two rows the org catalog returned for this code on 2026-09-16, as
+            // read: a user-login row listed FIRST, then the server-to-server row.
+            // Picking the first and reading only platformList dropped the service
+            // from every subscribe, and Commerce refused the credential (401).
+            const ACCS_ROWS = [
+                {
+                    code: 'ACCS-REST-API',
+                    name: 'Adobe Commerce as a Cloud Service',
+                    platformList: ['SinglePageApp', 'NativeApp', 'WebApp'],
+                    oauthServerToServerOnly: true,
+                },
+                {
+                    code: 'ACCS-REST-API',
+                    name: 'Adobe Commerce as a Cloud Service',
+                    platformList: null as unknown as string[],
+                    oauthServerToServerOnly: true,
+                    properties: { licenseConfigs: [{ id: '880', productId: 'P0', name: 'Default - Cloud Manager' }] },
+                },
+            ];
+
+            it('resolves onto the server-to-server credential', () => {
+                const [accs] = resolveServiceInfos(['ACCS-REST-API'], ACCS_ROWS);
+                expect(partitionByPlatform([accs])).toEqual({ apiKey: [], oauthS2S: [accs], unmatched: [] });
+            });
+
+            it('is subscribed, not silently skipped, and reported as taken', async () => {
+                const client = {
+                    getServicesForOrg: jest.fn().mockResolvedValue([...SERVICES_FOR_ORG, ...ACCS_ROWS]),
+                    getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
+                    getSubscribedServices: jest.fn().mockResolvedValue([]),
+                    ensureOAuthCredentialId: jest.fn().mockResolvedValue('s2s-int-id'),
+                    createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int-id'),
+                    subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                    subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                } as unknown as jest.Mocked<ApiSubscriberClient>;
+                const target: OrgTarget = { orgId: 'org1', projectId: 'proj1', workspaceId: 'ws1' };
+
+                const result = await subscribeRequiredApis([], target, client, undefined, ['ACCS-REST-API']);
+
+                // Only the codes this subscribe needs, never the ~99-row catalog that
+                // runs past Adobe's gateway limit when cold (60.2s → 504 vs 1.3s,
+                // measured 2026-09-21).
+                expect(client.getServicesForOrg).toHaveBeenCalledWith('org1', [
+                    'AdobeIOManagementAPISDK',
+                    'ACCS-REST-API',
+                ]);
+                const [, , sent] = (client.subscribeOAuthServerToServerIntegrationToServices as jest.Mock).mock.calls[0];
+                // Adobe refuses this service without a product ("requires selection of
+                // a product", 2026-09-16); the org's one profile is named, as the aio
+                // CLI names it.
+                expect(sent).toContainEqual({
+                    sdkCode: 'ACCS-REST-API',
+                    licenseConfigs: [{ op: 'add', id: '880', productId: 'P0' }],
+                    roles: null,
+                });
+                expect(result.map((api) => api.code)).toContain('ACCS-REST-API');
+            });
+
+            it('with several profiles and no Commerce instance configured, nothing is sent', async () => {
+                const several = {
+                    ...ACCS_ROWS[1],
+                    properties: {
+                        licenseConfigs: [
+                            { id: '1', productId: 'P', name: 'Tenant A' },
+                            { id: '2', productId: 'P', name: 'Tenant B' },
+                        ],
+                    },
+                };
+                const client = {
+                    getServicesForOrg: jest.fn().mockResolvedValue([...SERVICES_FOR_ORG, several]),
+                    getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
+                    getSubscribedServices: jest.fn().mockResolvedValue([]),
+                    ensureOAuthCredentialId: jest.fn().mockResolvedValue('s2s-int-id'),
+                    createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int-id'),
+                    subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                    subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                } as unknown as jest.Mocked<ApiSubscriberClient>;
+                const target: OrgTarget = { orgId: 'org1', projectId: 'proj1', workspaceId: 'ws1' };
+
+                await expect(subscribeRequiredApis([], target, client, undefined, ['ACCS-REST-API'])).rejects.toThrow(
+                    /no Commerce instance configured/,
+                );
+                expect(client.subscribeOAuthServerToServerIntegrationToServices).not.toHaveBeenCalled();
+
+                // With the project's instance known, its profile — and only it — is sent.
+                await subscribeRequiredApis(
+                    [],
+                    { ...target, commerceTenant: 'tenant b' },
+                    client,
+                    undefined,
+                    ['ACCS-REST-API'],
+                );
+                const [, , sent] = (client.subscribeOAuthServerToServerIntegrationToServices as jest.Mock).mock.calls[0];
+                expect(sent).toContainEqual({
+                    sdkCode: 'ACCS-REST-API',
+                    licenseConfigs: [{ op: 'add', id: '2', productId: 'P' }],
+                    roles: null,
+                });
+            });
+
+            it('a row that is not server-to-server only keeps its declared platforms', () => {
+                const [spa] = resolveServiceInfos(
+                    ['AdobeCommerceWithAdobeID'],
+                    [{ code: 'AdobeCommerceWithAdobeID', platformList: ['SinglePageApp'], oauthServerToServerOnly: false }],
+                );
+                expect(spa.platformList).toStrictEqual(['SinglePageApp']);
+            });
         });
 
         it('should carry the org service display name through', () => {
@@ -194,6 +355,14 @@ describe('apiSubscriber', () => {
                     .mockResolvedValue(undefined),
                 subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
             } as unknown as jest.Mocked<ApiSubscriberClient>;
+            // The current list WITH profiles follows the codes each test sets, so a
+            // test controlling the credential's state keeps controlling it.
+            client.getSubscribedServices = jest.fn(async (org: string, id: string) =>
+                (await client.getSubscribedServiceCodes(org, id)).map((sdkCode) => ({
+                    sdkCode,
+                    licenseConfigs: [],
+                })),
+            );
         });
 
         it('should subscribe the s2s baseline with id_integration and free-service shape', async () => {

@@ -18,127 +18,42 @@
  *    directory removed, and the final status/result
  */
 
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import type { Project } from '@/types/base';
-
-const mockRm = jest.fn();
-jest.mock('fs/promises', () => ({ rm: (...a: unknown[]) => mockRm(...a) }));
-
-const mockGetFrontends = jest.fn();
-const mockGetDependencies = jest.fn();
-const mockGetComponentById = jest.fn();
-const mockLoadRegistry = jest.fn();
-const mockGetComponentRegistryManager = jest.fn((..._a: unknown[]) => ({
-    loadRegistry: mockLoadRegistry,
-    getFrontends: mockGetFrontends,
-    getDependencies: mockGetDependencies,
-    getComponentById: mockGetComponentById,
-}));
-jest.mock('@/features/components/services/componentRegistryInstance', () => ({
-    getComponentRegistryManager: (...a: unknown[]) => mockGetComponentRegistryManager(...a),
-}));
-
-const mockGetStackById = jest.fn();
-jest.mock('@/features/components/services/demoPackageLoader', () => ({
-    getStackById: (...a: unknown[]) => mockGetStackById(...a),
-}));
-
-const mockCloneAllComponents = jest.fn();
-const mockInstallAllComponents = jest.fn();
-jest.mock('@/features/project-creation/services/componentInstallationOrchestrator', () => ({
-    cloneAllComponents: (...a: unknown[]) => mockCloneAllComponents(...a),
-    installAllComponents: (...a: unknown[]) => mockInstallAllComponents(...a),
-}));
-
-const mockRegenerateProjectEnvFiles = jest.fn();
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
-    regenerateProjectEnvFiles: (...a: unknown[]) => mockRegenerateProjectEnvFiles(...a),
-}));
-
-// No mesh component by default: the mesh leg has its own suite
-// (projectResetService-meshContext). One test here flips it on to pin the
-// early return and the success wording.
-const mockGetMeshComponentInstance = jest.fn();
-jest.mock('@/types/typeGuards', () => ({
-    getMeshComponentInstance: (...a: unknown[]) => mockGetMeshComponentInstance(...a),
-}));
-const mockEnsureProjectAdobeContext = jest.fn();
-jest.mock('@/features/authentication/services/ensureProjectAdobeContext', () => ({
-    ensureProjectAdobeContext: (...a: unknown[]) => mockEnsureProjectAdobeContext(...a),
-}));
-const mockWithOrgContext = jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell/orgContextEnv', () => ({
-    ...jest.requireActual('@/core/shell/orgContextEnv'),
-    withOrgContext: (t: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(t, fn),
-}));
-const mockDeployMeshCreateOrUpdate = jest.fn();
-jest.mock('@/features/mesh/services/meshRedeploy', () => ({
-    deployMeshCreateOrUpdate: (...a: unknown[]) => mockDeployMeshCreateOrUpdate(...a),
-}));
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    updateMeshState: jest.fn(),
-}));
-
-const mockSleep = jest.fn(async (..._a: unknown[]) => undefined);
-jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));
-
-import * as vscode from 'vscode';
-import { resetProjectWithUI } from '@/features/lifecycle/services/projectResetService';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     FRONTEND_DEF,
     MESH_DEF,
-    DECOY_FRONTEND,
-    DECOY_DEP,
     REGISTRY,
     STACK,
     authManager,
     commandManager,
     createResetHandlerContext,
     createResetProject,
-} from './projectResetService.testUtils';
+    executeCommand,
+    executeProjectReset,
+    handedDefinitions,
+    installResetDefaults,
+    mockCloneAllComponents,
+    mockDeployMeshCreateOrUpdate,
+    mockGetComponentById,
+    mockGetComponentRegistryManager,
+    mockGetDependencies,
+    mockGetFrontends,
+    mockGetMeshComponentInstance,
+    mockGetStackById,
+    mockInstallAllComponents,
+    mockReaddir,
+    mockRegenerateProjectEnvFiles,
+    mockRm,
+    mockSleep,
+    progressReport,
+    run,
+    showErrorMessage,
+    showWarningMessage,
+    withProgress,
+} from './projectResetService-resetWithUI.testUtils';
 
-const showWarningMessage = vscode.window.showWarningMessage as jest.Mock;
-const showErrorMessage = vscode.window.showErrorMessage as jest.Mock;
-const withProgress = vscode.window.withProgress as jest.Mock;
-const executeCommand = vscode.commands.executeCommand as jest.Mock;
-
-function run(project = createResetProject(), context = createResetHandlerContext(), logPrefix?: string) {
-    return resetProjectWithUI({ project, context, logPrefix, commandManager, authManager });
-}
-
-/** The definitions the orchestrator was handed, as a plain object for `toEqual`. */
-function handedDefinitions(): Record<string, unknown> {
-    const ctx = mockCloneAllComponents.mock.calls[0][0] as {
-        componentDefinitions: Map<string, unknown>;
-    };
-    return Object.fromEntries(ctx.componentDefinitions);
-}
-
-let progressReport: jest.Mock;
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    progressReport = jest.fn();
-    withProgress.mockImplementation(async (_o: unknown, task: (p: unknown) => Promise<unknown>) =>
-        task({ report: progressReport }),
-    );
-    showWarningMessage.mockResolvedValue('Reset Project');
-    mockRm.mockResolvedValue(undefined);
-    mockLoadRegistry.mockResolvedValue(REGISTRY);
-    mockGetStackById.mockReturnValue(STACK);
-    mockGetFrontends.mockResolvedValue([DECOY_FRONTEND, FRONTEND_DEF]);
-    mockGetDependencies.mockResolvedValue([DECOY_DEP, MESH_DEF]);
-    mockGetComponentById.mockResolvedValue(undefined);
-    mockCloneAllComponents.mockResolvedValue(undefined);
-    mockInstallAllComponents.mockResolvedValue(undefined);
-    mockRegenerateProjectEnvFiles.mockResolvedValue(undefined);
-    mockGetMeshComponentInstance.mockReturnValue(undefined);
-    mockEnsureProjectAdobeContext.mockResolvedValue({ ready: true });
-    mockDeployMeshCreateOrUpdate.mockResolvedValue({
-        success: true,
-        data: { endpoint: 'https://mesh.example/graphql' },
-    });
-});
+beforeEach(installResetDefaults);
 
 describe('resetProjectWithUI — the gate and the demo stop', () => {
     it('asks the SC with a modal naming the project, and does nothing when they decline', async () => {
@@ -196,8 +111,10 @@ describe('resetProjectWithUI — the gate and the demo stop', () => {
         expect((context.stateManager.saveProject as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
             withProgress.mock.invocationCallOrder[0],
         );
+        // Titled for the project, not for the feature: the same title the modal
+        // carries and the notification it hands over to (PL-59 wording).
         expect(withProgress).toHaveBeenCalledWith(
-            { location: vscode.ProgressLocation.Notification, title: 'Resetting Project', cancellable: false },
+            expect.objectContaining({ title: 'Resetting demo' }),
             expect.any(Function),
         );
     });
@@ -316,40 +233,41 @@ describe('resetProjectWithUI — rebuilding the component definitions', () => {
         );
     });
 
-    it('rebuilds a dashboard-added App Builder app from its saved instance instead of dropping it', async () => {
+    // AB-23 slice 7 (owner, 2026-09-21): reset never touches an integration. Its
+    // code may be the SC's own work — one built with AI exists only on disk, and
+    // downloading it again gave back the blank starter it came from — and its app
+    // keeps running in Adobe either way. It also used to delete the ERP half of a
+    // pair and never download it again: only `appBuilder` selections were rebuilt,
+    // and the ERP comes with its integration rather than being selected.
+    it('leaves integrations alone: no download, their folders and records kept', async () => {
+        const instance = (id: string) => ({
+            id,
+            name: id,
+            status: 'ready' as const,
+            path: `/projects/demo/components/${id}`,
+            repoUrl: `https://github.com/skukla/${id}.git`,
+        });
         const project = createResetProject({
-            componentSelections: { dependencies: [], appBuilder: ['my-app'] },
+            componentSelections: { dependencies: [], appBuilder: ['erp-integration'] },
+            appBuilderComponents: {
+                'erp-integration': { kind: 'integration', status: 'deployed', source: { owner: 'o', repo: 'r' } },
+                'demo-erp': { kind: 'system', status: 'deployed', source: { owner: 'o', repo: 'r' } },
+            },
             componentInstances: {
-                'my-app': {
-                    id: 'my-app',
-                    name: 'My App',
-                    status: 'ready',
-                    subType: 'app',
-                    repoUrl: 'https://github.com/acme/my-app.git',
-                    branch: 'main',
-                },
+                citisignal: instance('citisignal'),
+                'erp-integration': instance('erp-integration'),
+                'demo-erp': instance('demo-erp'),
             },
         });
+        mockReaddir.mockResolvedValue(['citisignal', 'erp-integration', 'demo-erp']);
 
         await run(project);
 
-        expect(handedDefinitions()).toEqual({
-            citisignal: expect.anything(),
-            'my-app': {
-                definition: {
-                    id: 'my-app',
-                    name: 'My App',
-                    type: 'app-builder',
-                    subType: 'app',
-                    source: { type: 'git', url: 'https://github.com/acme/my-app.git', branch: 'main' },
-                },
-                type: 'app-builder',
-                installOptions: { skipDependencies: true },
-            },
-        });
-        // An App Builder app is never looked for among frontends or dependencies.
-        expect(mockGetDependencies).not.toHaveBeenCalled();
-        expect(mockGetComponentById).not.toHaveBeenCalled();
+        expect(Object.keys(handedDefinitions())).toEqual(['citisignal']);
+        expect(mockRm.mock.calls).toEqual([
+            ['/projects/demo/components/citisignal', { recursive: true, force: true }],
+        ]);
+        expect(Object.keys(project.componentInstances ?? {})).toEqual(['erp-integration', 'demo-erp']);
     });
 
     it('does NOT rebuild a missing DEPENDENCY from its saved instance — only App Builder apps are', async () => {
@@ -490,7 +408,10 @@ describe('resetProjectWithUI — the rebuild itself', () => {
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
 
         installContext.progressTracker('clone', 40, 'Cloning citisignal…');
-        expect(progressReport).toHaveBeenCalledWith({ message: 'Cloning citisignal…' });
+        // The clone's own line rides under the step, which keeps its position.
+        expect(progressReport).toHaveBeenCalledWith({
+            message: `${S.downloadingComponents.label} (3 of 5)`,
+        });
     });
 
     it('a missing components directory is not an error — it is noted once, at debug', async () => {
@@ -520,21 +441,44 @@ describe('resetProjectWithUI — the rebuild itself', () => {
         );
     });
 
-    it('reports each phase to the notification in order', async () => {
+    // Steps from the stage table, named as creation names the same jobs (progress
+    // vocabulary slice 6, owner 2026-10-16), numbered from a list known up front.
+    it('reports each step to the notification in order, numbered from the run it is', async () => {
         await run();
 
         expect(progressReport.mock.calls.map((c) => c[0].message)).toEqual([
-            'Loading component definitions',
-            'Removing existing components',
-            'Downloading components',
-            'Installing dependencies',
-            'Regenerating configuration files',
+            `${S.loadingComponents.label} (1 of 5)`,
+            `${S.removingComponents.label} (2 of 5)`,
+            `${S.downloadingComponents.label} (3 of 5)`,
+            `${S.installingComponents.label} (4 of 5)`,
+            `${S.writingConfigFiles.label} (5 of 5)`,
+        ]);
+    });
+
+    // With a mesh the run is two steps longer, and N says so from the start: it read
+    // "(5 of 6)" at the end of a reset with no mesh.
+    it('adds the access check and the mesh redeploy as steps when there is a mesh', async () => {
+        mockGetMeshComponentInstance.mockReturnValue({ path: '/projects/demo/components/mesh' });
+
+        await run();
+
+        expect(progressReport.mock.calls.map((c) => c[0].message)).toEqual([
+            `${S.loadingComponents.label} (1 of 7)`,
+            `${S.removingComponents.label} (2 of 7)`,
+            `${S.downloadingComponents.label} (3 of 7)`,
+            `${S.installingComponents.label} (4 of 7)`,
+            `${S.writingConfigFiles.label} (5 of 7)`,
+            `${S.checkingRequirements.label} (6 of 7)`,
+            `${S.redeployingMesh.label} (7 of 7)`,
         ]);
     });
 });
 
 describe('resetProjectWithUI — the ending', () => {
-    it('lands on ready, saves it, and shows a self-dismissing success notice', async () => {
+    // R6: a success ends the progress and says "— done" where it was being
+    // watched. The toast that used to sit here held the screen for its own timer
+    // after the work had already finished.
+    it('lands on ready, saves it, and raises no success toast of its own', async () => {
         const project = createResetProject();
         const context = createResetHandlerContext();
 
@@ -542,24 +486,17 @@ describe('resetProjectWithUI — the ending', () => {
 
         expect(project.status).toBe('ready');
         expect(context.stateManager.saveProject).toHaveBeenLastCalledWith(project);
-        const notice = withProgress.mock.calls[1];
-        expect(notice[0]).toEqual({
-            location: vscode.ProgressLocation.Notification,
-            title: '"demo" reset successfully',
-        });
-        await notice[1]();
-        expect(mockSleep).toHaveBeenCalledWith(TIMEOUTS.UI.NOTIFICATION);
+        expect(withProgress).toHaveBeenCalledTimes(1);
+        expect(mockSleep).not.toHaveBeenCalled();
     });
 
-    it('says the mesh was redeployed when it was', async () => {
+    it('raises no second notice when the mesh was redeployed too', async () => {
         mockGetMeshComponentInstance.mockReturnValue({ path: '/projects/demo/components/mesh' });
 
         await expect(run()).resolves.toEqual({ success: true });
 
-        expect(withProgress.mock.calls[1][0]).toEqual({
-            location: vscode.ProgressLocation.Notification,
-            title: '"demo" reset and mesh redeployed successfully',
-        });
+        // One progress for the whole reset, mesh leg included.
+        expect(withProgress).toHaveBeenCalledTimes(1);
     });
 
     it('returns the mesh leg’s early result when the redeploy failed', async () => {
@@ -601,5 +538,83 @@ describe('resetProjectWithUI — the ending', () => {
         await run(project, context);
 
         expect(statuses).toEqual(['resetting', 'ready']);
+    });
+});
+
+// The agent's door (reset_project). Same rebuild, none of the SC's surfaces: an
+// agent has no dialog to answer and no notification to watch, so the core must
+// run with neither and say what the mesh did in its answer.
+describe('executeProjectReset — the same reset with no dialog and no notification', () => {
+    function runCore(project = createResetProject(), context = createResetHandlerContext()) {
+        const report = jest.fn();
+        const outcome = executeProjectReset({ project, context, commandManager, authManager }, report);
+        return { outcome, report, project, context };
+    }
+
+    it('asks nothing, opens no notification, and rebuilds the components', async () => {
+        const { outcome } = runCore();
+
+        await expect(outcome).resolves.toEqual({ success: true, meshRedeployed: false });
+
+        expect(showWarningMessage).not.toHaveBeenCalled();
+        expect(withProgress).not.toHaveBeenCalled();
+        expect(executeCommand).not.toHaveBeenCalled();
+        expect(mockRm).toHaveBeenCalledWith('/projects/demo/components', { recursive: true, force: true });
+        expect(mockCloneAllComponents).toHaveBeenCalledTimes(1);
+        expect(mockInstallAllComponents).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports each stage to the caller with its position', async () => {
+        const { outcome, report } = runCore();
+        await outcome;
+
+        expect(report.mock.calls.map((c) => [c[0], c[2]])).toEqual([
+            [S.loadingComponents.label, { index: 1, total: 5 }],
+            [S.removingComponents.label, { index: 2, total: 5 }],
+            [S.downloadingComponents.label, { index: 3, total: 5 }],
+            [S.installingComponents.label, { index: 4, total: 5 }],
+            [S.writingConfigFiles.label, { index: 5, total: 5 }],
+        ]);
+    });
+
+    it('marks the project resetting while it runs and lands on ready', async () => {
+        const seen: string[] = [];
+        const context = createResetHandlerContext();
+        (context.stateManager.saveProject as jest.Mock).mockImplementation(async (p: Project) => {
+            seen.push(p.status);
+        });
+        const { outcome, project } = runCore(createResetProject({ status: 'stopped' }), context);
+        await outcome;
+
+        expect(seen[0]).toBe('resetting');
+        expect(project.status).toBe('ready');
+    });
+
+    it('says the mesh was redeployed when it was', async () => {
+        mockGetMeshComponentInstance.mockReturnValue({ path: '/projects/demo/components/mesh' });
+
+        await expect(runCore().outcome).resolves.toEqual({ success: true, meshRedeployed: true });
+    });
+
+    it('says the mesh was NOT redeployed when the redeploy failed, with the reason', async () => {
+        mockGetMeshComponentInstance.mockReturnValue({ path: '/projects/demo/components/mesh' });
+        mockDeployMeshCreateOrUpdate.mockResolvedValue({ success: false, error: 'aio exploded' });
+
+        await expect(runCore().outcome).resolves.toEqual({
+            success: true,
+            error: 'Reset completed but mesh redeployment failed: aio exploded',
+            meshRedeployed: false,
+        });
+    });
+
+    it('lets a failure reach the caller, with the original status restored and no toast', async () => {
+        mockCloneAllComponents.mockRejectedValue(new Error('git clone failed'));
+        const { outcome, project, context } = runCore(createResetProject({ status: 'stopped' }));
+
+        await expect(outcome).rejects.toThrow('git clone failed');
+
+        expect(project.status).toBe('stopped');
+        expect(context.stateManager.saveProject).toHaveBeenLastCalledWith(project);
+        expect(showErrorMessage).not.toHaveBeenCalled();
     });
 });

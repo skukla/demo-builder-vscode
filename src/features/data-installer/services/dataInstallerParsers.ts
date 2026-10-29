@@ -106,6 +106,9 @@ function summary(value: unknown): DatapackSummary | undefined {
         ...(owner ? { owner } : {}),
         ...(createdAt ? { createdAt } : {}),
         ...(updatedAt ? { updatedAt } : {}),
+        // Only the datapack library sends it. Present only when true, so a row that
+        // does not say is never treated as the caller's — the safe direction.
+        ...(row.mine === true ? { mine: true } : {}),
     };
 }
 

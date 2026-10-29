@@ -47,7 +47,7 @@ domain error goes beside the code that throws it.
 | | For |
 |---|---|
 | `features/authentication/services/authenticationErrorFormatter.ts` | Adobe IMS and Console |
-| `features/eds/services/errorFormatters.ts` | GitHub, DA.live, Helix |
+| `features/eds/services/errorFormatters.ts` | GitHub and Helix (one table each); `github/githubWriteRejection.ts` describes a refused GitHub write |
 | `features/mesh/utils/errorFormatter.ts` | `aio api-mesh` |
 
 They are **deliberately not one generic formatter.** That was tried and removed: a

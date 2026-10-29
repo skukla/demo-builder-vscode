@@ -24,9 +24,12 @@
 
 import * as childProcess from 'child_process';
 import { promisify } from 'util';
-import { isRulesetRejection } from '../errorFormatters';
 import { injectTokenIntoUrl } from '../github/githubHelpers';
+import { isRulesetRejection } from '../github/githubWriteRejection';
 import { previewAndPublishPage } from '../helix/helixApiClient';
+import { hasKeptClash, KEPT_CLASH_REFUSAL } from './keptClashMark';
+import { SECRET_FILES_PATHSPEC_EXCLUDE } from './neverShippedFiles';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 const execFile = promisify(childProcess.execFile);
 
@@ -81,6 +84,12 @@ export interface SyncAndPublishInput {
      * head. With this flag, the service starts directly at `push`.
      */
     skipCommit?: boolean;
+    /**
+     * Named as each step after the save begins: the push, then the code publish.
+     * Without it a caller narrating progress kept showing "Saving your changes"
+     * over both (progress vocabulary slice 2, owner 2026-10-16).
+     */
+    onStep?: (step: string) => void;
 }
 
 export interface SyncAndPublishResult {
@@ -131,6 +140,11 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
         summary: '',
     };
 
+    // A kept clash means the copy holds a half-applied update; syncing would push it (EDS-57).
+    if (await hasKeptClash(input.storefrontPath)) {
+        throw new GitOperationError(KEPT_CLASH_REFUSAL, 'kept-clash');
+    }
+
     if (!input.skipCommit) {
         await fetchAndFastForward(input.storefrontPath, input.githubToken);
         await stageAll(input.storefrontPath);
@@ -147,11 +161,13 @@ export async function syncAndPublish(input: SyncAndPublishInput): Promise<SyncAn
         }
     }
 
+    input.onStep?.(OPERATION_STAGES.pushingToGitHub.label);
     await push(input.storefrontPath, input.githubToken);
     result.pushed = true;
     result.commitSha = await readHeadSha(input.storefrontPath);
 
     if (isHelixPublishableInput(input)) {
+        input.onStep?.(OPERATION_STAGES.publishingCode.label);
         await previewAndPublishPage(
             input.githubRepo.owner,
             input.githubRepo.site,
@@ -251,9 +267,18 @@ async function remoteArgs(storefrontPath: string, githubToken?: string): Promise
     return [injectTokenIntoUrl(remoteRaw.trim(), githubToken), 'HEAD'];
 }
 
+/** Stage every change except a `.env*` file at any depth: a secret never reaches GitHub. */
 async function stageAll(storefrontPath: string): Promise<void> {
     try {
-        await execFile('git', ['-C', storefrontPath, 'add', '-A']);
+        await execFile('git', [
+            '-C',
+            storefrontPath,
+            'add',
+            '-A',
+            '--',
+            '.',
+            SECRET_FILES_PATHSPEC_EXCLUDE,
+        ]);
     } catch (err) {
         throw wrapGitError(err, 'add');
     }

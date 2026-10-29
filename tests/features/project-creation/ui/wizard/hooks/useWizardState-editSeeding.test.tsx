@@ -5,13 +5,14 @@
  * (`extractSettingsFromProject`) into initial wizard state:
  *   - `selections.appBuilder`            → `selectedAppBuilderComponents`
  *   - `appBuilderComponentSources`       → `appBuilderComponentSources`
- *   - `additionalConsoleApis`            → `selectedConsoleApis['__existing__']`
- *     (reserved key: joins the serialization union, never shown per-row)
+ *   - `componentApiPicks`                → `selectedConsoleApis` (the unattributed
+ *     `__existing__` key joins the serialization union, never shown per-row)
  *
  * Written BEFORE the seeding exists (strict RED).
  */
 
 import { renderHook } from '@testing-library/react';
+import { COMPONENT_IDS } from '@/core/constants';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import { isMeshSelected } from '@/features/project-creation/ui/steps/tileStatus';
 import type { EditProjectConfig, ImportedSettings } from '@/types/wizard';
@@ -67,18 +68,6 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
         expect(state.appBuilderComponentSources).toEqual(sources);
     });
 
-    it('seeds selectedConsoleApis.__existing__ from additionalConsoleApis', () => {
-        const state = renderWizardState(
-            makeEditProject({
-                additionalConsoleApis: ['AssetComputeSDK', 'CCAPI'],
-            })
-        );
-
-        expect(state.selectedConsoleApis).toEqual({
-            __existing__: ['AssetComputeSDK', 'CCAPI'],
-        });
-    });
-
     /**
      * Step 07 precondition, import side. The flat field lands everything under the
      * unattributed key, so an edit round-trip USED to destroy attribution even when
@@ -90,7 +79,6 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
         const state = renderWizardState(
             makeEditProject({
                 componentApiPicks: { 'erp-sync': ['CCAPI'], 'firefly-app': ['AssetComputeSDK'] },
-                additionalConsoleApis: ['CCAPI', 'AssetComputeSDK'],
             })
         );
 
@@ -100,22 +88,21 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
         });
     });
 
-    it('falls back to the flat field when a settings file predates the keyed form', () => {
-        // An older export has only the flat field; it must still seed something,
-        // under the unattributed key, rather than importing as no picks at all.
-        const state = renderWizardState(makeEditProject({ additionalConsoleApis: ['CCAPI'] }));
+    it('seeds the unattributed picks under their reserved key, never as a row', () => {
+        // A version-1 file's flat list arrives here already folded (readProjectFile).
+        const state = renderWizardState(makeEditProject({ componentApiPicks: { __existing__: ['CCAPI'] } }));
 
         expect(state.selectedConsoleApis).toEqual({ __existing__: ['CCAPI'] });
     });
 
-    it('does not set selectedConsoleApis when additionalConsoleApis is absent', () => {
+    it('does not set selectedConsoleApis when there are no picks', () => {
         const state = renderWizardState(makeEditProject({}));
 
         expect(state.selectedConsoleApis).toBeUndefined();
     });
 
-    it('does not set selectedConsoleApis when additionalConsoleApis is empty', () => {
-        const state = renderWizardState(makeEditProject({ additionalConsoleApis: [] }));
+    it('does not set selectedConsoleApis when the picks object is empty', () => {
+        const state = renderWizardState(makeEditProject({ componentApiPicks: {} }));
 
         expect(state.selectedConsoleApis).toBeUndefined();
     });
@@ -245,5 +232,67 @@ describe('useWizardState - edit-mode backend seeding', () => {
         const state = renderWizardState(undefined);
 
         expect(state.selectedBackend).toBeUndefined();
+    });
+});
+
+// PL-56d: an import used to open the wizard with no integrations and no mesh,
+// whatever the file said — only edit mode ran the seeding above. One function now
+// feeds both, and the agent's create_project_from_file reads the same one.
+describe('useWizardState - import mode seeds the same App Builder state edit mode does', () => {
+    function renderImport(importedSettings: ImportedSettings) {
+        const { result } = renderHook(() =>
+            useWizardState({ wizardSteps: WIZARD_STEPS, importedSettings }),
+        );
+        return result.current.state;
+    }
+
+    it('carries the integrations, the mesh, the custom sources and the API picks', () => {
+        const sources = { 'owner-custom-app': { owner: 'owner', repo: 'custom-app' } };
+        const state = renderImport({
+            source: { project: 'sent-demo', extension: '1.0.0' },
+            selections: {
+                dependencies: [COMPONENT_IDS.HEADLESS_COMMERCE_MESH, 'demo-inspector'],
+                appBuilder: ['erp-sync', 'owner-custom-app'],
+            },
+            appBuilderComponentSources: sources,
+            componentApiPicks: { 'erp-sync': ['CCAPI'] },
+        });
+
+        expect(state.wizardMode).toBe('import');
+        expect(state.selectedAppBuilderComponents).toEqual([
+            'erp-sync',
+            'owner-custom-app',
+            COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
+        ]);
+        expect(state.appBuilderComponentSources).toEqual(sources);
+        expect(state.selectedConsoleApis).toEqual({ 'erp-sync': ['CCAPI'] });
+    });
+
+    it('seeds nothing for an import that names no integrations', () => {
+        const state = renderImport({ source: { project: 'plain', extension: '1.0.0' }, selections: {} });
+
+        expect(state.selectedAppBuilderComponents ?? []).toStrictEqual([]);
+        expect(state.appBuilderComponentSources).toBeUndefined();
+        expect(state.selectedConsoleApis).toBeUndefined();
+    });
+});
+
+/**
+ * The project being edited was built with its repository. Opened without it marked,
+ * the Build Your Project summary read "Not set" for it (owner, 2026-10-17): the
+ * Repository row shows only a checked repository. The Commerce rows read the project
+ * directly in Edit (buildSummary.test.tsx).
+ */
+describe('useWizardState - edit mode opens with the project as built', () => {
+    it('counts the repository it was built with as checked', () => {
+        const state = renderWizardState(makeEditProject({ selections: {} }));
+
+        expect(state.storefrontRepoValid).toBe(true);
+    });
+
+    it('leaves it alone when creating a project', () => {
+        const state = renderWizardState();
+
+        expect(state.storefrontRepoValid).not.toBe(true);
     });
 });

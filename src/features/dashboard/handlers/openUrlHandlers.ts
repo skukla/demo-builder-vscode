@@ -10,9 +10,14 @@
 
 import * as vscode from 'vscode';
 import { hasAdobeWorkspaceContext, hasAdobeProjectContext } from './meshStatusHelpers';
-import { openInIncognito } from '@/core/utils/browserUtils';
+import { openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
 import { validateURL } from '@/core/validation/URLValidator';
-import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
+import {
+    validateOrgId,
+    validateProjectId,
+    validateWorkspaceId,
+} from '@/core/validation/validators/AdobeResourceValidator';
+import { deployWorkspaceId } from '@/features/app-builder/services/componentWorkspace';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -69,23 +74,10 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
         return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
     }
 
-    // Show progress notification while browser is opening
-    // Incognito mode can take a moment to launch
-    await vscode.window.withProgress(
-        {
-            location: vscode.ProgressLocation.Notification,
-            title: 'Opening in private browser',
-            cancellable: false,
-        },
-        async () => {
-            // Open in incognito mode for clean demo experience (no cached content/cookies)
-            // Falls back to normal browser if incognito mode is not available
-            const openedIncognito = await openInIncognito(url);
-            context.logger.debug(
-                `[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`,
-            );
-        },
-    );
+    // Incognito keeps the demo clean — no cached content, nobody signed in — and
+    // falls back to the normal browser where it is not available.
+    const openedIncognito = await openPrivateBrowser(url);
+    context.logger.debug(`[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`);
 
     return { success: true };
 };
@@ -134,7 +126,7 @@ export const handleOpenAdminPanel: MessageHandler = async (context) => {
             .then((selection) => {
                 if (selection === 'Open Configure') {
                     // Returned (not voided) so a rejection reaches the handler below.
-                    return vscode.commands.executeCommand('demoBuilder.configureProject');
+                    return vscode.commands.executeCommand('demoBuilder.configureProject', project?.path);
                 }
                 return undefined;
             })
@@ -162,16 +154,124 @@ export const handleOpenAdminPanel: MessageHandler = async (context) => {
 
     // No URL in the log — the stored value is user-supplied and may embed credentials.
     context.logger.debug('[Dashboard] Opening admin panel');
-    await vscode.env.openExternal(vscode.Uri.parse(url));
+    // A private window, like the live site: Commerce Admin rejects a request whose
+    // adobe.com cookies have grown too large ("400 Request Header Or Cookie Too
+    // Large"), and a normal profile collects them.
+    await openInIncognito(url);
 
     return { success: true };
 };
 
 /**
- * Handle 'openDevConsole' message - Open Adobe Developer Console
+ * The bound AEM author in Assets View on experience.adobe.com (EDS-21) — the same
+ * place the DA.live asset picker's "Open in AEM Assets" goes, not the classic
+ * `assets.html` console. `demoBuilder.daLive.aemAuthorUrl` is the AEM host the Assets
+ * panel is bound to — the same value `daLiveSiteConfig.ts` writes as
+ * `aem.repositoryId` — stored as a bare host, though a full origin is tolerated; it
+ * becomes `?repoId=`. `demoBuilder.daLive.IMSOrgId` is the Unified Shell tenant
+ * (`#/@<org>`); without it the shell uses the signed-in org.
+ * Undefined when the author is unset: there is no AEM to open.
  */
-export const handleOpenDevConsole: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
+export function resolveAemAssetsUrl(
+    aemAuthorUrl: string | undefined,
+    imsOrg?: string,
+): string | undefined {
+    const host = (aemAuthorUrl ?? '')
+        .trim()
+        .replace(/^https?:\/\//iu, '')
+        .replace(/\/+$/u, '');
+    if (!host) return undefined;
+    const org = (imsOrg ?? '').trim();
+    const tenant = org ? `@${encodeURIComponent(org)}/` : '';
+    return `https://experience.adobe.com/?repoId=${encodeURIComponent(host)}#/${tenant}assets/browse/content/dam`;
+}
+
+/** The settings, read where the handler runs (the webview cannot read settings). */
+function configuredAemAssetsUrl(): string | undefined {
+    const daLive = vscode.workspace.getConfiguration('demoBuilder.daLive');
+    return resolveAemAssetsUrl(daLive.get<string>('aemAuthorUrl'), daLive.get<string>('IMSOrgId'));
+}
+
+/**
+ * Handle 'openAemAssets' message - Open the bound AEM author in Assets View.
+ *
+ * Mirrors {@link handleOpenAdminPanel}: when nothing is bound, a notification offers
+ * the setting instead of failing.
+ */
+export const handleOpenAemAssets: MessageHandler = async (context) => {
+    const url = configuredAemAssetsUrl();
+
+    if (!url) {
+        // Fire-and-forget — the notification must not block the handler response.
+        void vscode.window
+            .showInformationMessage(
+                'No AEM author is bound to this Demo Builder — demoBuilder.daLive.aemAuthorUrl names whose Assets to open.',
+                'Open Settings',
+            )
+            .then((selection) => {
+                if (selection === 'Open Settings') {
+                    return vscode.commands.executeCommand(
+                        'workbench.action.openSettings',
+                        'demoBuilder.daLive.aemAuthorUrl',
+                    );
+                }
+                return undefined;
+            })
+            .then(undefined, (error) => {
+                context.logger.error(
+                    '[Dashboard] Failed to open Settings from the AEM Assets prompt',
+                    error as Error,
+                );
+            });
+        return { success: true };
+    }
+
+    // Validate URL before opening (security: prevents malicious URL injection).
+    try {
+        validateURL(url);
+    } catch (validationError) {
+        context.logger.error(
+            '[Dashboard] AEM Assets URL validation failed',
+            validationError as Error,
+        );
+        return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
+    }
+
+    context.logger.debug('[Dashboard] Opening AEM Assets');
+    await vscode.env.openExternal(vscode.Uri.parse(url));
+    return { success: true };
+};
+
+/**
+ * The project as seen from one integration: its Adobe workspace is the one that
+ * integration deploys into (its own since AB-23, else the project's). Unchanged
+ * when no integration is named, or the project has no such integration.
+ */
+function scopedToComponent(
+    project: Project | undefined,
+    componentId: string | undefined,
+): Project | undefined {
+    if (!project?.adobe || !componentId || !project.appBuilderComponents?.[componentId])
+        return project;
+    return {
+        ...project,
+        adobe: { ...project.adobe, workspace: deployWorkspaceId(project, componentId) },
+    };
+}
+
+/**
+ * Handle 'openDevConsole' message - Open Adobe Developer Console. Given a
+ * `componentId`, opens THAT integration's workspace: "Open" on an integration
+ * card goes to its Adobe I/O project in the Console (owner, 2026-09-21).
+ */
+export const handleOpenDevConsole: MessageHandler<{ componentId?: string }> = async (
+    context,
+    payload,
+) => {
+    const project = scopedToComponent(
+        await context.stateManager.getCurrentProject(),
+        payload?.componentId,
+    );
     let consoleUrl = 'https://developer.adobe.com/console';
 
     if (hasAdobeWorkspaceContext(project)) {
@@ -299,6 +399,10 @@ export const handleGetProjectUrls: MessageHandler = async (context) => {
 
     // Developer Console — always resolvable (deep link or generic fallback).
     urls.devConsole = resolveDevConsoleUrl(project, context);
+
+    // AEM Assets — the bound AEM author's console; absent when no AEM is bound (setting unset).
+    const aemAssets = configuredAemAssetsUrl();
+    if (aemAssets) urls.aemAssets = aemAssets;
 
     return { success: true, data: { urls } };
 };

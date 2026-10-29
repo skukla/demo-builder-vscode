@@ -28,6 +28,7 @@ describe('projectCreationHandlers', () => {
             expect(hasHandler(projectCreationHandlers, 'ready')).toBe(true);
             expect(hasHandler(projectCreationHandlers, 'cancel')).toBe(true);
             expect(hasHandler(projectCreationHandlers, 'openProject')).toBe(true);
+            expect(hasHandler(projectCreationHandlers, 'backToProject')).toBe(true);
         });
 
         it('should register prerequisite handlers', () => {
@@ -59,10 +60,32 @@ describe('projectCreationHandlers', () => {
             expect(hasHandler(projectCreationHandlers, 'check-dalive-auth')).toBe(true);
         });
 
+        it('should register the store-view product check (EDS-46)', () => {
+            // The Business Structure pickers ask it once all three codes are chosen.
+            expect(hasHandler(projectCreationHandlers, 'check-store-view-products')).toBe(true);
+        });
+
         it('should register the console API handler', () => {
             expect(hasHandler(projectCreationHandlers, 'list-org-console-apis')).toBe(true);
         });
 
+        // Removed 2026-10-03: no webview sent any of these, no MCP tool dispatched
+        // them, and no command called them. A registered handler nothing sends is
+        // a capability that reads as live; these stay out.
+        it.each([
+            'loadPreset',
+            'loadComponents',
+            'update-component-selection',
+            'update-components-data',
+            'ensure-org-selected',
+            'check-project-apis',
+        ])('does not register %s, which nothing sends', (type) => {
+            expect(hasHandler(projectCreationHandlers, type)).toBe(false);
+        });
+
+        it('CONTROL: a message the wizard does send is registered', () => {
+            expect(hasHandler(projectCreationHandlers, 'get-components-data')).toBe(true);
+        });
     });
 
 });

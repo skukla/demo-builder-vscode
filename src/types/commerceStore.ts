@@ -138,3 +138,36 @@ export interface StoreDiscoveryParams {
 export type StoreDiscoveryResult =
     | { success: true; data: CommerceStoreStructure }
     | { success: false; error: string };
+
+// ==========================================================
+// Store View Product Check (EDS-46)
+// ==========================================================
+
+/** The three codes that name one store view, as Catalog Service headers read them. */
+export interface StoreViewCodes {
+    websiteCode: string;
+    storeCode: string;
+    storeViewCode: string;
+}
+
+/**
+ * What an anonymous Catalog Service search found for one store view.
+ *
+ * - `found` — at least one product a guest can see
+ * - `none` — the search ran and returned no products
+ * - `no-index` — the scope has no search index, so a guest sees nothing
+ * - `unknown` — the check could not answer (not ACCS, no endpoint, timeout,
+ *   network or HTTP error). Never shown as a claim.
+ */
+export type StoreViewProducts = 'found' | 'none' | 'no-index' | 'unknown';
+
+/**
+ * The one sentence both surfaces say when a store view will show guests nothing:
+ * the store pickers (wizard and Configure) and `create_project`'s answer.
+ */
+export const NO_GUEST_PRODUCTS_WARNING = "Guests won't see any products in this store view.";
+
+/** Whether a check's answer is one that warrants the warning. `unknown` never does. */
+export function warnsOfNoProducts(verdict: StoreViewProducts | undefined): boolean {
+    return verdict === 'none' || verdict === 'no-index';
+}

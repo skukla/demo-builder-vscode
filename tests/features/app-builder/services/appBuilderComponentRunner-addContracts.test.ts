@@ -26,6 +26,8 @@ jest.setTimeout(5000);
 const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
 
@@ -33,8 +35,9 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
-import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {
     MESH_ENTRY,
     INTEGRATION_ENTRY,
@@ -145,6 +148,52 @@ describe('addAppBuilderComponent — the definition handed to the installer', ()
             branch: 'release/2026-09',
         });
     });
+
+    it("installs on the entry's own Node, the one its deploy runs on (PR-1a)", async () => {
+        const deps = createDeps();
+
+        await addAppBuilderComponent(createProject(), { ...INTEGRATION_ENTRY, nodeVersion: '26' }, deps);
+
+        expect(deps.componentManager.installComponent.mock.calls[0][2]).toStrictEqual({ nodeVersion: '26' });
+    });
+
+    it("installs on Demo Builder's Node when the entry has none of its own", async () => {
+        const deps = createDeps();
+
+        await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, deps);
+
+        expect(deps.componentManager.installComponent.mock.calls[0][2]).toStrictEqual({ nodeVersion: demoBuilderNode() });
+    });
+});
+
+// =============================================================================
+// A custom integration that needs another Node (PR-1a step 8)
+// =============================================================================
+
+describe("addAppBuilderComponent — a custom integration's Node", () => {
+    it('ensures, installs on and records the Node the repo needs', async () => {
+        const ensureNodeVersion = jest.fn().mockResolvedValue(undefined);
+        const deps = createDeps({
+            resolveCustomIntegrationNode: jest.fn().mockResolvedValue({ ok: true, major: '26' }),
+            ensureNodeVersion,
+        });
+        const project = createProject();
+
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
+
+        expect(ensureNodeVersion).toHaveBeenCalledWith('26');
+        expect(deps.componentManager.installComponent.mock.calls[0][2]).toStrictEqual({ nodeVersion: '26' });
+        expect(project.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.nodeVersion).toBe('26');
+    });
+
+    it("refuses the add before anything runs when no Node meets the repo's range", async () => {
+        const deps = createDeps({ resolveCustomIntegrationNode: jest.fn().mockResolvedValue({ ok: false, range: '>=99' }) });
+
+        const result = await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, deps);
+
+        expect(result).toStrictEqual({ success: false, error: expect.stringContaining('asks for Node >=99') });
+        expect(deps.componentManager.installComponent).not.toHaveBeenCalled();
+    });
 });
 
 // =============================================================================
@@ -222,9 +271,10 @@ describe('addAppBuilderComponent — a deploy tail that returns no data', () => 
         expect(entry?.deployedUrls).toBeUndefined();
     });
 
-    // The catalog decides what a component provides. A mesh that declares nothing
-    // must persist nothing and leave the storefront alone.
-    it('a mesh entry declaring no providesEnvVars provides none and never republishes', async () => {
+    // The catalog decides what a component RECORDS as provided. A mesh that declares
+    // nothing persists nothing, and the storefront is still republished: it reads the
+    // mesh's endpoint whatever the record says (`providesStorefrontVar`).
+    it('a mesh entry declaring no providesEnvVars records none, and still republishes', async () => {
         const entry: AppBuilderComponentCatalogEntry = {
             ...MESH_ENTRY,
             providesEnvVars: undefined,
@@ -235,7 +285,7 @@ describe('addAppBuilderComponent — a deploy tail that returns no data', () => 
 
         expect(result.success).toBe(true);
         expect(persistedEntry(deps, entry.id)?.providesEnvVars).toBeUndefined();
-        expect(deps.republishStorefront).not.toHaveBeenCalled();
+        expect(deps.republishStorefront).toHaveBeenCalledTimes(1);
     });
 });
 
@@ -384,7 +434,7 @@ describe('addAppBuilderComponent — the app-management install pass reports bac
             installAppManagement: jest.fn(
                 async (
                     _p: Project,
-                    _urls: Record<string, string> | undefined,
+                    _id: string,
                     report?: (message: string) => void
                 ) => {
                     report?.('Associating with Commerce...');
@@ -406,7 +456,7 @@ describe('addAppBuilderComponent — the app-management install pass reports bac
             installAppManagement: jest.fn(
                 async (
                     _p: Project,
-                    _urls: Record<string, string> | undefined,
+                    _id: string,
                     report?: (message: string) => void
                 ) => {
                     report?.('Associating with Commerce...');
@@ -470,5 +520,16 @@ describe('addAppBuilderComponent — the app-management install pass reports bac
         expect(persistedEntry(deps, APP_MGMT.id)?.installation).toMatchObject({
             status: 'installed',
         });
+    });
+});
+
+describe('addAppBuilderComponent — where a failed deploy leaves its whole output', () => {
+    it("hands the deploy the project's own logs folder", async () => {
+        const deps = createDeps();
+
+        await addAppBuilderComponent(createProject(), INTEGRATION_ENTRY, deps);
+
+        const options = (deps.deployApp as jest.Mock).mock.calls[0][4];
+        expect(options.failureLogFile).toBe(`/proj/logs/${INTEGRATION_ENTRY.id}-deploy.log`);
     });
 });

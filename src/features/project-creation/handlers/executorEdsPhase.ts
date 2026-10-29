@@ -15,14 +15,51 @@ import * as vscode from 'vscode';
 import type { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { catalogMenuSiteFor } from '@/features/ai/server/storefrontPages';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
-import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
+import { authoredSheetRefresh } from '@/features/eds/services/catalogMenu/authoredSheetRefresh';
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
+import { writeBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
+import { recordStorefrontBuilt } from '@/features/eds/services/storefront/storefrontChanges';
+import { readRepoBoilerplate } from '@/features/eds/services/storefront/storefrontOrigin';
+import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
+
+/**
+ * The import path's hook before its bulk publish: refresh a live authored-pages sheet
+ * (EDS-61, `authoredSheetRefresh.ts`), so a site whose published sheet is still live gets
+ * it current before every page is previewed. Nothing without a project or a storefront.
+ */
+function authoredSheetHookFor(
+    context: HandlerContext,
+    project: import('@/types/base').Project | undefined,
+): { beforeContentPublish?: () => Promise<void> } {
+    const site = project ? catalogMenuSiteFor(context, project) : null;
+    return project && site
+        ? { beforeContentPublish: authoredSheetRefresh(project, site, context.logger, '[EDS Content]') }
+        : {};
+}
+
+/**
+ * What the wizard's storefront setup found, recorded on the project it made. Each only when
+ * setup reported it: an edit runs no setup, and must not wipe the record.
+ */
+function recordWhatSetupFound(
+    project: import('@/types/base').Project,
+    edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
+): void {
+    // Links to pages the source lacks too, kept on the project.
+    if (edsConfig.brokenLinks?.length) writeBrokenLinks(project, edsConfig.brokenLinks);
+    // Built the way Demo Builder builds storefronts now: the "Needs reset" status reads it.
+    if (typeof edsConfig.storefrontBuildComplete === 'boolean') {
+        recordStorefrontBuilt(project, edsConfig.storefrontBuildComplete);
+    }
+}
 
 /**
  * Populate EDS-specific metadata on the component instance after cloning.
@@ -74,11 +111,20 @@ export async function populateEdsMetadata(
     // code may live on a branch other than main; the update check and the
     // baseline commit both read that branch.
     const templateBranch = typedConfig.demo?.source.branch;
+    const { fileOperations } = getGitHubServices(context.context.secrets);
     const lastSyncedCommit = await resolveTemplateCommitSha(
         { ...typedConfig.edsConfig, ...(templateBranch ? { templateBranch } : {}) },
-        getGitHubServices(context.context.secrets).fileOperations,
+        fileOperations,
         context.logger,
     );
+    // What the new repository was built on (EDS-13f), read from the repository
+    // itself, so a shipped brand, a saved package and a colleague's demo all
+    // answer the same way. A failed read records nothing rather than a guess.
+    const [owner, repo] = (githubRepo ?? '').split('/');
+    const boilerplateRead = owner && repo
+        ? await readRepoBoilerplate(fileOperations, { owner, repo }, context.logger)
+        : undefined;
+    const boilerplate = boilerplateRead?.status === 'read' ? boilerplateRead.value : undefined;
 
     const templateOwner = typedConfig.edsConfig.templateOwner;
     const templateRepo = typedConfig.edsConfig.templateRepo;
@@ -105,7 +151,9 @@ export async function populateEdsMetadata(
         ...(templateBranch ? { templateBranch } : {}),
         lastSyncedCommit,
         ...(lkgSource ? { lkgSource } : {}),
+        ...(boilerplate ? { boilerplate } : {}),
     };
+    recordWhatSetupFound(project, typedConfig.edsConfig);
     await context.stateManager.saveProject(project);
     context.logger.debug(
         `[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`,
@@ -130,7 +178,8 @@ export async function syncEdsConfigToRemote(
         return;
     }
 
-    progressTracker('Syncing Config', 92, 'Pushing config.json to GitHub');
+    // Republish's step for the same job (progress vocabulary, owner 2026-10-16).
+    progressTracker(OPERATION_STAGES.publishingSettings.label, 92, 'Pushing config.json to GitHub');
 
     const repoUrl = typedConfig.edsConfig?.repoUrl;
     if (!repoUrl) {
@@ -155,7 +204,8 @@ export async function syncEdsConfigToRemote(
         logger: context.logger,
         secrets: context.context.secrets,
         authManager: context.authManager,
-        onProgress: (message) => progressTracker('Syncing Config', 94, message),
+        onProgress: (message) =>
+            progressTracker(OPERATION_STAGES.publishingSettings.label, 94, message),
         verifyBlockLibrary: true,
     });
 
@@ -233,6 +283,8 @@ export async function setupEdsContent(
     typedConfig: ProjectCreationConfig,
     isEdsStack: boolean,
     progressTracker: ProgressTracker,
+    /** Receives the copy's broken links, recorded on the project. */
+    project?: import('@/types/base').Project,
 ): Promise<void> {
     if (!isEdsStack || !typedConfig.edsConfig?.contentSource || !typedConfig.edsConfig?.repoUrl) {
         return;
@@ -243,7 +295,7 @@ export async function setupEdsContent(
     // builder cannot enable B2B (no API — it's a backend prerequisite), so warn
     // only on a definitive negative; 'unknown' (older/SaaS schema) stays silent.
     if (typedConfig.edsConfig.templateRepo === 'boilerplate-b2b-template') {
-        // Reuse the canonical config reader (same one envFileGenerator /
+        // Reuse the canonical config reader (same one componentConfigFiles /
         // catalogPrewarmService use) — the GraphQL endpoint is already collected
         // as a project config setting; don't re-derive it. meshEndpoint omitted so
         // we probe the raw Commerce GraphQL the backend exposes.
@@ -281,13 +333,19 @@ export async function setupEdsContent(
                 logger: context.logger,
                 secrets: context.context.secrets,
                 extensionContext: context.context,
+                onBrokenLinks: (links) => {
+                    if (project) writeBrokenLinks(project, links);
+                },
+                ...authoredSheetHookFor(context, project),
             },
-            (message, subMessage) =>
-                progressTracker('Setting Up Content', 95, subMessage || message),
+            // Reset's steps for the same work; they have no place in creation's own
+            // count, because they run only when the storefront has no content yet.
+            (stage, step) => progressTracker(stage, 95, step),
         );
 
         if (contentCopied) {
             context.logger.info('[Phase 5b] Storefront content populated and published');
+            if (project) await context.stateManager.saveProject(project);
         }
     } catch (error) {
         context.logger.warn(`[Phase 5b] Content setup failed: ${(error as Error).message}`);

@@ -60,14 +60,15 @@ jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
 
 const ADOBE_TOKEN_PROVIDER = { kind: 'adobe-token-provider' };
 const DA_LIVE_TOKEN_PROVIDER = { kind: 'da-live-token-provider' };
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveTokenProvider: jest.fn(() => ADOBE_TOKEN_PROVIDER),
     createDaLiveServiceTokenProvider: jest.fn(() => DA_LIVE_TOKEN_PROVIDER),
 }));
 
 const REPO_OPERATIONS = { kind: 'repo-operations' };
+const FILE_OPERATIONS = { kind: 'file-operations' };
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
-    getGitHubServices: jest.fn(() => ({ repoOperations: REPO_OPERATIONS })),
+    getGitHubServices: jest.fn(() => ({ repoLifecycle: REPO_OPERATIONS, fileOperations: FILE_OPERATIONS })),
 }));
 
 const DA_LIVE_AUTH_SERVICE = { kind: 'da-live-auth-service' };
@@ -97,7 +98,7 @@ import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import {
     createDaLiveTokenProvider,
     createDaLiveServiceTokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+} from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
@@ -113,7 +114,7 @@ const CONFIRM = 'Yes, Cancel';
 /** Every operation succeeded and none was skipped — the ordinary cleanup answer. */
 function cleanupSucceeded(): EdsCleanupResult {
     const ok = { success: true, skipped: false };
-    return { backendData: ok, configService: ok, daLive: ok, github: ok };
+    return { backendData: ok, configService: ok, daLive: ok, github: ok, siteCode: ok };
 }
 
 const AUTH_MANAGER = createMockAuthenticationService();
@@ -426,10 +427,13 @@ describe('the cleanup service cancel builds', () => {
             context.logger
         );
         expect(mockToolManagerCtor).toHaveBeenCalledWith(COMMAND_EXECUTOR, context.logger);
+        // The repository's files, read before it is deleted, and the DA.live sign-in
+        // that removes its code from aem.live after (EDS-67).
         expect(mockCleanupServiceCtor).toHaveBeenCalledWith(
             REPO_OPERATIONS,
             expect.any(Object),
             expect.any(Object),
+            { files: FILE_OPERATIONS, tokenProvider: DA_LIVE_TOKEN_PROVIDER },
             context.logger,
             expect.any(Object)
         );

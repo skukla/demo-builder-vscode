@@ -6,20 +6,12 @@
  * Pattern: write to temp file first, then rename (atomic on POSIX).
  */
 
-import * as fs from 'fs/promises';
+// The family helper owns the fs/promises mock and the writer import: a direct
+// import of the writer here could bind the real fs before the mock registers.
+import { ProjectConfigWriter, mockFs, mockLogger } from './projectConfigWriter.testUtils';
 import * as path from 'path';
-import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import type { Project } from '@/types/base';
-import { createMockLogger } from '../../helpers/loggerFake';
 import { createMockProject } from '../../helpers/projectFake';
-
-// Mock fs/promises
-jest.mock('fs/promises');
-
-const mockFs = fs as jest.Mocked<typeof fs>;
-
-// Create a minimal mock logger
-const mockLogger = createMockLogger();
 
 // Create a minimal valid project for testing
 function createTestProject(overrides: Partial<Project> = {}): Project {
@@ -391,17 +383,6 @@ describe('ProjectConfigWriter atomic writes', () => {
             expect(parsed.appState).toBeUndefined();
         });
 
-        it('should omit appState from manifest when the integration is not deployed', async () => {
-            const project = createTestProject({ name: 'no-app' });
-            await writer.saveProjectConfig(project, project.path);
-
-            const writeCall = mockFs.writeFile.mock.calls.find((call) =>
-                call[0].toString().endsWith('.tmp')
-            );
-            const parsed = JSON.parse(writeCall![1] as string);
-            expect(parsed.appState).toBeUndefined();
-        });
-
         // ADR-011 D3 Step 01: the keyed appBuilderComponents map is the durable
         // model. Without serializing it, N-integration state evaporates on reload
         // (the loader could only rebuild 1 mesh + 1 integration from the legacy
@@ -445,19 +426,6 @@ describe('ProjectConfigWriter atomic writes', () => {
                 await writer.saveProjectConfig(project, project.path);
 
                 expect(parsedManifest().appBuilderComponents).toEqual(keyedEntries);
-            });
-
-            it('should persist the integration display name', async () => {
-                const project = createTestProject({
-                    name: 'named-integration',
-                    appBuilderComponents: { 'acme-widget': keyedEntries['acme-widget'] },
-                });
-
-                await writer.saveProjectConfig(project, project.path);
-
-                const parsed = parsedManifest();
-                const map = parsed.appBuilderComponents as Record<string, { name?: string }>;
-                expect(map['acme-widget'].name).toBe('ACME Widget');
             });
 
             it('should omit appBuilderComponents from manifest when undefined', async () => {

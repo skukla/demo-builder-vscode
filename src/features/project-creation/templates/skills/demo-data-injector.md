@@ -22,7 +22,7 @@ Walk through the scraped content and identify each "live data" category:
 
 | Category | Examples | Replacement source |
 |---|---|---|
-| Product names | "ANT-LTE-CER-T", "MULTI-BAND SMT ANTENNA" | Demo catalog (via `get_component_config`) |
+| Product names | "ANT-LTE-CER-T", "MULTI-BAND SMT ANTENNA" | Demo catalog (via `run_commerce_query`) |
 | SKUs | Real part numbers from the reference | Mock SKUs from demo catalog |
 | Prices | Real list prices, tier pricing | Mock prices (use round numbers for clean demo display) |
 | Stock indicators | Real inventory counts | Mock indicators ("In Stock", "Limited", "Backorder") |
@@ -42,7 +42,7 @@ Walk through the scraped content and identify each "live data" category:
 
 ## Process
 
-1. **Get the demo catalog config.** Use `get_component_config` to read the demo's Commerce instance. Note the available product mix, the catalog endpoint, and any sample SKUs the demo backend ships with.
+1. **Get the demo catalog.** Use `run_commerce_query` to read the products the demo's Commerce instance holds. Note the available product mix and the sample SKUs to feature.
 
 2. **For commerce sections**: don't substitute data into the drop-in markup. The drop-in fetches live from Catalog Service. Instead:
    - Make sure the demo's Commerce instance has the right products loaded.

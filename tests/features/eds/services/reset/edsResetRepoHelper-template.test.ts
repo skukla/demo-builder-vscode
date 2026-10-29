@@ -36,17 +36,13 @@ beforeEach(installDefaults);
 
 describe('resetRepoToTemplate — the bulk template reset', () => {
     it('hands GitHub the template, the repo, fstab for the DA.live site and both config files', async () => {
-        mocks.generateConfigJson.mockReturnValue({ success: true, content: '{"cfg":1}' });
+        mocks.generateProjectConfigJson.mockReturnValue({ success: true, content: '{"cfg":1}' });
         const params = buildParams();
 
         const { resetMock, overrides, report, context, githubFileOps } = await runReset(params);
 
         expect(mocks.generateFstabContent).toHaveBeenCalledWith({ daLiveOrg: 'acme', daLiveSite: 'shop' });
-        expect(mocks.buildConfigGeneratorParams).toHaveBeenCalledWith(params.project);
-        expect(mocks.generateConfigJson).toHaveBeenCalledWith(
-            mocks.buildConfigGeneratorParams.mock.results[0].value,
-            context.logger,
-        );
+        expect(mocks.generateProjectConfigJson).toHaveBeenCalledWith(params.project, context.logger);
         expect(resetMock).toHaveBeenCalledWith(
             'tpl-owner',
             'tpl-repo',
@@ -90,12 +86,14 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
         // A project built FROM an added demo takes the source's file with the rest of the tree.
         const { overrides, getFileContent } = await runReset(buildParams());
 
-        expect(getFileContent).not.toHaveBeenCalled();
+        // Narrowed 2026-10-03 (EDS-13f): the reset now reads package.json back to record
+        // the boilerplate, so "no read at all" no longer stands in for "no description read".
+        expect(getFileContent.mock.calls.map((call: unknown[]) => call[2])).not.toContain('demo.demo-builder.json');
         expect(overrides?.has('demo.demo-builder.json')).toBe(false);
     });
 
     it('leaves config.json out of the commit when generation fails, even if stale content is returned', async () => {
-        mocks.generateConfigJson.mockReturnValue({
+        mocks.generateProjectConfigJson.mockReturnValue({
             success: false,
             content: '{"stale":1}',
             error: 'no backend',
@@ -108,7 +106,7 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
     });
 
     it('leaves config.json out when generation succeeds without content', async () => {
-        mocks.generateConfigJson.mockReturnValue({ success: true });
+        mocks.generateProjectConfigJson.mockReturnValue({ success: true });
 
         const { overrides } = await runReset(buildParams());
 
@@ -197,7 +195,10 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
             ['p1', 'p2'],
             PATCH_SOURCE,
             context.logger,
+            expect.any(String),
         );
+        // Targets read at the SAME ref the reset commits, never Adobe's latest (EDS-51).
+        expect(mocks.applyCanonicalCodePatches.mock.calls[0][6]).toBe(resetMock.mock.calls[0][5]);
         // The SAME map, so patched canonical files land in the one atomic commit.
         expect(mocks.applyCanonicalCodePatches.mock.calls[0][0]).toBe(resetMock.mock.calls[0][4]);
         expect(mocks.applyCanonicalCodePatches.mock.invocationCallOrder[0]).toBeLessThan(
@@ -207,7 +208,10 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
             filesReset: RESET_RESULT.fileCount,
             blockCollectionIds: undefined,
             libraryContentSources: [],
+            resetCommitSha: RESET_RESULT.commitSha,
             canonicalCodePatchResults: [PATCH_RESULT],
+            // Whether the build step's fixes landed is storefrontUpToDate.test's to say.
+            buildComplete: expect.any(Boolean),
         });
     });
 
@@ -228,42 +232,63 @@ describe('resetRepoToTemplate — the bulk template reset', () => {
     });
 
     it('surfaces a skipped smart-404 install through report when BYOM is on', async () => {
-        mocks.installSmart404Handler.mockResolvedValue({
-            installed: false,
-            reason: 'scripts/delayed.js not found',
-        });
-
-        const { report, githubFileOps, context } = await runReset(
-            buildParams({ byomOverlayUrl: 'https://overlay.example.test/render-pdp' }),
-        );
-
-        expect(mocks.installSmart404Handler).toHaveBeenCalledWith(
-            githubFileOps,
-            'me',
-            'shop',
-            'https://overlay.example.test/render-pdp',
-            context.logger,
-            'acme',
-            'shop',
-        );
-        expect(report).toHaveBeenCalledWith(1, SMART_404_WARNING);
-    });
-
-    it('says nothing when the smart-404 handler installed', async () => {
-        mocks.installSmart404Handler.mockResolvedValue({ installed: true });
-
+        // No 404.html in this storefront: the script has nowhere to go.
         const { report } = await runReset(
             buildParams({ byomOverlayUrl: 'https://overlay.example.test/render-pdp' }),
         );
 
+        expect(report).toHaveBeenCalledWith(1, SMART_404_WARNING);
+    });
+
+    it('says nothing when the smart-404 handler installed', async () => {
+        const notFound = '<html><head><script nonce="aem">window.isErrorPage = true;</script></head><body></body></html>';
+        const head = '<script nonce="aem" src="/scripts/aem.js" type="module"></script>\n';
+
+        const { report, githubFileOps } = await runReset(
+            buildParams({ byomOverlayUrl: 'https://overlay.example.test/render-pdp' }),
+            undefined,
+            undefined,
+            { '404.html': notFound, 'head.html': head },
+        );
+
         expect(report).not.toHaveBeenCalledWith(1, SMART_404_WARNING);
+        // Against the configured overlay and the project's DA.live site, and, since reset has
+        // just installed inspector tagging, with the Inspector loader in head.html.
+        expect(githubFileOps.createOrUpdateFile).toHaveBeenCalledWith(
+            'me', 'shop', '404.html',
+            expect.stringContaining('https://overlay.example.test/prepublish-pdp?org=acme&site=shop&path='),
+            expect.any(String), '404.html-sha',
+        );
+        expect(githubFileOps.createOrUpdateFile).toHaveBeenCalledWith(
+            'me', 'shop', 'head.html', expect.stringContaining('Demo Inspector loader (Demo Builder)'),
+            expect.any(String), 'head.html-sha',
+        );
     });
 
     it('says nothing about smart-404 when BYOM is off', async () => {
-        mocks.installSmart404Handler.mockResolvedValue({ installed: false, reason: 'BYOM disabled' });
-
         const { report } = await runReset(buildParams());
 
         expect(report).not.toHaveBeenCalledWith(1, SMART_404_WARNING);
+    });
+
+    it('carries no boilerplate when the repository has no package.json to read it from', async () => {
+        const { result, getFileContent } = await runReset(buildParams());
+
+        expect(getFileContent).toHaveBeenCalledWith('me', 'shop', 'package.json', undefined);
+        expect('boilerplate' in result).toBe(false);
+    });
+});
+
+describe('resetRepoToTemplate — patched files are the version the reset commits (EDS-51)', () => {
+    it('reads patch targets at the resolved commit, not the branch', async () => {
+        mockGetLatestCommitSha.mockResolvedValue(HEAD_SHA);
+        mocks.applyCanonicalCodePatches.mockResolvedValue([]);
+
+        const { resetMock } = await runReset(
+            buildParams({ codePatches: ['p1'], codePatchSource: PATCH_SOURCE }),
+        );
+
+        expect(resetMock.mock.calls[0][5]).toBe(HEAD_SHA);
+        expect(mocks.applyCanonicalCodePatches.mock.calls[0][6]).toBe(HEAD_SHA);
     });
 });

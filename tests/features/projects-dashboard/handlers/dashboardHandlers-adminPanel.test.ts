@@ -5,6 +5,11 @@
  * repo's file-size limit (see docs/testing/test-file-splitting-playbook.md).
  */
 
+const mockOpenInIncognito = jest.fn().mockResolvedValue(true);
+jest.mock('@/core/utils/browserUtils', () => ({
+    openInIncognito: (...args: unknown[]) => mockOpenInIncognito(...args),
+}));
+
 import { handleOpenAdminPanel } from './dashboardHandlers.testUtils';
 import { createProjectsDashboardProject, createProjectsDashboardContext } from '../testUtils';
 
@@ -43,18 +48,16 @@ describe('dashboardHandlers', () => {
 
         it('returns error when projectPath is missing', async () => {
             const context = createProjectsDashboardContext([]);
-            const vscode = require('vscode');
 
             const result = await handleOpenAdminPanel(context, undefined);
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/path is required/i);
-            expect(vscode.env.openExternal).not.toHaveBeenCalled();
+            expect(mockOpenInIncognito).not.toHaveBeenCalled();
         });
 
         it('rejects a path outside the projects directory before loading', async () => {
             const context = createProjectsDashboardContext([]);
-            const vscode = require('vscode');
 
             const result = await handleOpenAdminPanel(context, {
                 projectPath: '/nonexistent/path',
@@ -62,12 +65,11 @@ describe('dashboardHandlers', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/invalid project path/i);
-            expect(vscode.env.openExternal).not.toHaveBeenCalled();
+            expect(mockOpenInIncognito).not.toHaveBeenCalled();
         });
 
         it('returns error when the project cannot be loaded', async () => {
             const context = createProjectsDashboardContext([]);
-            const vscode = require('vscode');
             const os = require('os');
             const path = require('path');
             const validButEmptyPath = path.join(
@@ -83,7 +85,7 @@ describe('dashboardHandlers', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/not found/i);
-            expect(vscode.env.openExternal).not.toHaveBeenCalled();
+            expect(mockOpenInIncognito).not.toHaveBeenCalled();
         });
 
         it('opens the configured admin URL externally when set', async () => {
@@ -96,8 +98,8 @@ describe('dashboardHandlers', () => {
             });
 
             expect(result.success).toBe(true);
-            expect(vscode.Uri.parse).toHaveBeenCalledWith(ADMIN_URL);
-            expect(vscode.env.openExternal).toHaveBeenCalledTimes(1);
+            expect(mockOpenInIncognito).toHaveBeenCalledTimes(1);
+            expect(mockOpenInIncognito).toHaveBeenCalledWith(ADMIN_URL);
             // No configure prompt when the URL exists.
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
         });
@@ -107,7 +109,6 @@ describe('dashboardHandlers', () => {
             // allowed protocol (the Configure field accepts http and https).
             const project = projectWithAdminUrl('http://localhost:8080/admin');
             const context = createProjectsDashboardContext([project]);
-            const vscode = require('vscode');
 
             const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
@@ -115,22 +116,21 @@ describe('dashboardHandlers', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/invalid/i);
-            expect(vscode.env.openExternal).not.toHaveBeenCalled();
+            expect(mockOpenInIncognito).not.toHaveBeenCalled();
         });
 
         it('opens an http admin URL (Configure accepts http, so open-time must too)', async () => {
             const httpUrl = 'http://my-instance.example.com/admin';
             const project = projectWithAdminUrl(httpUrl);
             const context = createProjectsDashboardContext([project]);
-            const vscode = require('vscode');
 
             const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
 
             expect(result.success).toBe(true);
-            expect(vscode.Uri.parse).toHaveBeenCalledWith(httpUrl);
-            expect(vscode.env.openExternal).toHaveBeenCalledTimes(1);
+            expect(mockOpenInIncognito).toHaveBeenCalledTimes(1);
+            expect(mockOpenInIncognito).toHaveBeenCalledWith(httpUrl);
         });
 
         it('shows a notification with an Open Configure action when no URL is set', async () => {
@@ -148,7 +148,7 @@ describe('dashboardHandlers', () => {
                 'No Admin Panel URL is set for this project.',
                 'Open Configure'
             );
-            expect(vscode.env.openExternal).not.toHaveBeenCalled();
+            expect(mockOpenInIncognito).not.toHaveBeenCalled();
             // Toast dismissed (no selection) — no pointer write, no navigation.
             expect(context.stateManager.saveProject).not.toHaveBeenCalled();
             expect(vscode.commands.executeCommand).not.toHaveBeenCalled();

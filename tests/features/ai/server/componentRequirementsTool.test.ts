@@ -73,7 +73,7 @@ describe('get_component_requirements', () => {
     });
 
     it('treats a missing componentId as a miss, not a crash', async () => {
-        expect((await serve().call(undefined)).error).toMatch(/No component/);
+        expect((await serve().call(undefined)).error).toBe('No component "".');
     });
 
     it('treats a call with no arguments object at all as a miss, not a crash', async () => {

@@ -207,6 +207,10 @@ describe('describeScope', () => {
     it('marks absent codes rather than printing undefined', () => {
         expect(describeScope({ websiteCode: 'w' })).toBe('w / — / —');
     });
+
+    it('marks an absent website code too', () => {
+        expect(describeScope({ storeCode: 's', storeViewCode: 'v' })).toBe('— / s / v');
+    });
 });
 
 describe('parseStorefrontConfigJson', () => {
@@ -232,5 +236,16 @@ describe('parseStorefrontConfigJson', () => {
     it('is undefined for JSON that is not a storefront config', () => {
         expect(parseStorefrontConfigJson({ hello: 'world' })).toBeUndefined();
         expect(parseStorefrontConfigJson(null)).toBeUndefined();
+    });
+
+    // A `public.default` that is present but not an object is still not a
+    // storefront config. Read as one, it would come back as a storefront serving
+    // an empty scope with no flags, which a caller reports as drift.
+    it.each<[string, unknown]>([
+        ['a non-empty string', 'yes'],
+        ['a number', 42],
+        ['true', true],
+    ])('is undefined when public.default is %s', (_label, value) => {
+        expect(parseStorefrontConfigJson({ public: { default: value } })).toBeUndefined();
     });
 });

@@ -32,6 +32,9 @@ import {
     addContentResult,
     addCodeResult,
     addReferenceResult,
+    addLinkedFrom,
+    addMissingOnSource,
+    addBrokenLink,
     getUnapplied,
     formatUnappliedToast,
     logUnapplied,
@@ -437,5 +440,97 @@ describe('reportUnapplied obsolescence escalation', () => {
         // The per-patch line only. An escalation line here would make the
         // durable drift signal fire before the patch is actually stale.
         expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('formatUnappliedToast — several obsolete patches, and obsolete ones alone', () => {
+    it('separates each obsolete patch with a semicolon', () => {
+        const r = createPatchReport();
+        addCodeResult(r, { patchId: 'p1', target: 'a.js', applied: false, reason: 'X' });
+        expect(formatUnappliedToast(getUnapplied(r), { p1: 3, p2: 4 })).toBe(
+            `Demo Builder: 1 patch didn't apply (p1); ` +
+                'p1 has not applied in 3 consecutive runs — likely obsolete, retire it from the ledger; ' +
+                `p2 has not applied in 4 consecutive runs — likely obsolete, retire it from the ledger${TAIL}`
+        );
+    });
+
+    // No patch missed THIS run, but one has been missing for runs on end: the
+    // closing line still has to blame the patch, not the content site.
+    it('blames the patch when only a missing document is listed but a patch is obsolete', () => {
+        const r = createPatchReport();
+        addReferenceResult(r, '/customer/nav', 'missing');
+        expect(formatUnappliedToast(getUnapplied(r), { p1: 3 })).toBe(
+            `Demo Builder: 1 referenced document couldn't be copied (/customer/nav); ` +
+                `p1 has not applied in 3 consecutive runs — likely obsolete, retire it from the ledger${TAIL}`
+        );
+    });
+});
+
+// ==========================================================================
+// Where a broken link is: the pages carrying it, and what the source lacks
+// ==========================================================================
+
+describe('addLinkedFrom', () => {
+    it('starts the record on a report that has none', () => {
+        const r = createPatchReport();
+        addLinkedFrom(r, '/customer/nav', '/index');
+        expect(r.linkedFrom).toStrictEqual(new Map([['/customer/nav', new Set(['/index'])]]));
+    });
+
+    it('gathers every page carrying the same link, and keeps other links apart', () => {
+        const r = createPatchReport();
+        addLinkedFrom(r, '/customer/nav', '/index');
+        addLinkedFrom(r, '/customer/nav', '/about');
+        addLinkedFrom(r, '/customer/footer', '/index');
+        expect(r.linkedFrom).toStrictEqual(
+            new Map([
+                ['/customer/nav', new Set(['/index', '/about'])],
+                ['/customer/footer', new Set(['/index'])],
+            ])
+        );
+    });
+});
+
+describe('addMissingOnSource', () => {
+    it('starts the record on a report that has none, then adds to it', () => {
+        const r = createPatchReport();
+        addMissingOnSource(r, '/customer/nav');
+        expect(r.missingOnSource).toStrictEqual(new Set(['/customer/nav']));
+        addMissingOnSource(r, '/customer/footer');
+        expect(r.missingOnSource).toStrictEqual(new Set(['/customer/nav', '/customer/footer']));
+    });
+});
+
+describe('addBrokenLink', () => {
+    it('records the link with the pages carrying it, sorted', () => {
+        const r = createPatchReport();
+        addLinkedFrom(r, '/gone', '/zebra');
+        addLinkedFrom(r, '/gone', '/apple');
+        addLinkedFrom(r, '/other', '/index');
+        addBrokenLink(r, '/gone');
+        expect(r.brokenLinks).toStrictEqual([{ link: '/gone', pages: ['/apple', '/zebra'] }]);
+    });
+
+    it('records a link no copied page was seen carrying with no pages', () => {
+        const r = createPatchReport();
+        addLinkedFrom(r, '/other', '/index');
+        addBrokenLink(r, '/gone');
+        expect(r.brokenLinks).toStrictEqual([{ link: '/gone', pages: [] }]);
+    });
+
+    it('records a link on a report that tracked no links at all', () => {
+        const r = createPatchReport();
+        addBrokenLink(r, '/gone');
+        expect(r.brokenLinks).toStrictEqual([{ link: '/gone', pages: [] }]);
+    });
+
+    it('adds to the links already recorded rather than starting over', () => {
+        const r = createPatchReport();
+        addBrokenLink(r, '/gone');
+        addBrokenLink(r, '/also-gone');
+        expect(r.brokenLinks).toStrictEqual([
+            { link: '/gone', pages: [] },
+            { link: '/also-gone', pages: [] },
+        ]);
     });
 });

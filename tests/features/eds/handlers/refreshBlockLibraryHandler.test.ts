@@ -15,6 +15,7 @@ jest.mock('@/types/typeGuards', () => ({
     isEdsProject: (project: unknown) => mockIsEds(project),
 }));
 
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { handleRefreshBlockLibraryHeadless } from '@/features/eds/handlers/refreshBlockLibraryHandler';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
@@ -55,7 +56,7 @@ describe('handleRefreshBlockLibraryHeadless', () => {
         expect(mockRefresh).not.toHaveBeenCalled();
     });
 
-    it('runs the core headlessly (no UI callbacks) and returns libraryPaths', async () => {
+    it('runs the core with no notification of its own and returns libraryPaths', async () => {
         mockRefresh.mockResolvedValue({
             success: true,
             libraryPaths: ['/.da/library/blocks/hero'],
@@ -76,6 +77,24 @@ describe('handleRefreshBlockLibraryHeadless', () => {
             success: true,
             data: { libraryPaths: ['/.da/library/blocks/hero'] },
         });
+    });
+
+    // Every flow names its steps the same way (owner, 2026-10-16). Under an agent the
+    // steps reach the agent's notification and the chat through the phase channel;
+    // anywhere else reporting a phase does nothing.
+    it("tells an agent's notification each step, by its table name", async () => {
+        mockRefresh.mockImplementation(async (deps: { onStep?: (stage: string, message: string) => void }) => {
+            deps.onStep?.('Building block library', 'Building block library: 5 blocks');
+            deps.onStep?.('Publishing the block list', 'Publishing the block list: 2 pages');
+            return { success: true, libraryPaths: [] };
+        });
+        const phases: string[] = [];
+
+        await withPhaseSinks([(m) => phases.push(m)], () =>
+            handleRefreshBlockLibraryHeadless(ctx({ name: 'p', path: '/p' })),
+        );
+
+        expect(phases).toEqual(['Building block library', 'Publishing the block list']);
     });
 
     it('reports an empty path list, not undefined, when nothing was published', async () => {

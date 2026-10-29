@@ -47,7 +47,6 @@ export function createMockRegistryManager(): jest.Mocked<ComponentRegistryManage
         getDependencies: jest.fn(),
         getMesh: jest.fn(),
         loadRegistry: jest.fn(),
-        getPresets: jest.fn(),
         checkCompatibility: jest.fn(),
     } as unknown as jest.Mocked<ComponentRegistryManager>;
 }

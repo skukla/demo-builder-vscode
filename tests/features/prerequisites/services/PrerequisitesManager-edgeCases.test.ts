@@ -3,9 +3,6 @@
  * Tests perNodeVersion detection consistency and edge cases
  */
 
-// Mock debugLogger FIRST to prevent "Logger not initialized" errors
-jest.mock('@/core/config/ConfigurationLoader');
-
 // Mock the shared module's checkPerNodeVersionStatus function
 const mockCheckPerNodeVersionStatus = jest.fn();
 jest.mock('@/features/prerequisites/handlers/shared', () => ({
@@ -13,7 +10,6 @@ jest.mock('@/features/prerequisites/handlers/shared', () => ({
     checkPerNodeVersionStatus: mockCheckPerNodeVersionStatus,
 }));
 
-import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import {
     setupMocks,
     setupConfigLoader,
@@ -21,6 +17,7 @@ import {
     createStandardPrerequisite,
     type TestMocks,
 } from './PrerequisitesManager.testUtils';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 
 describe('PrerequisitesManager - Edge Cases and Errors', () => {

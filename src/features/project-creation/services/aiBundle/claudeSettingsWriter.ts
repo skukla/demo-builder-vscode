@@ -20,6 +20,7 @@
 
 import { projectNeedsAppBuilderTooling } from './aiToolingGate';
 import { COMPONENT_IDS } from '@/core/constants';
+import { KEPT_CLASH_MARK } from '@/features/eds/services/storefront/keptClashMark';
 import type { Project } from '@/types/base';
 
 // ─── Claude Settings types ────────────────────────────────────────────────────
@@ -62,11 +63,32 @@ const AIO_GUARD_MATCHER =
     '^mcp__commerce-extensibility__(aio-configure-global|aio-app-use|aio-where)$';
 
 /**
- * The PreToolUse guard entry. Deliberately STATIC — no interpolated paths, no
- * stdin parsing, no conditional that can silently no-op (the governing lesson
- * of the git-sync hook: a hook that fails silently is worse than none). Exit 2
- * blocks the call; stderr tells the agent which Demo Builder tools do the job
- * without touching the CLI's global selection.
+ * The guarded tool, as either agent names it, matched against the payload's tool
+ * NAME field only.
+ *
+ * Claude Code names an MCP tool `mcp__<server>__<tool>`; Copilot names the same
+ * tool `<server>-<tool>`. The field is `tool_name` in Claude's payload and may be
+ * `toolName` in Copilot's (its exact keys are unverified, so both spellings are
+ * accepted). Anchoring on the FIELD rather than anywhere in the payload is what
+ * keeps an edit that merely writes about these tools from being refused.
+ */
+const AIO_GUARD_PAYLOAD_RE =
+    '"tool_?[nN]ame"[[:space:]]*:[[:space:]]*"(mcp__commerce-extensibility__|commerce-extensibility-)' +
+    '(aio-configure-global|aio-app-use|aio-where)"';
+
+/**
+ * The PreToolUse guard entry: exit 2 blocks the call, and stderr tells the agent
+ * which Demo Builder tools do the job without touching the CLI's global selection.
+ *
+ * The command READS THE PAYLOAD AND DECIDES FOR ITSELF, and its default answer is
+ * "not mine" (exit 0). It used to be a bare `echo; exit 2` that trusted its
+ * matcher, which is safe only where matchers are honoured:
+ *   - VS Code's Local agent reads Claude-format hooks and ignores matchers, so the
+ *     bare form denied EVERY tool call in the project;
+ *   - Copilot CLI honours neither the matcher nor `mcp__server__tool`, so the guard
+ *     never fired at all and the incident it exists to prevent came back.
+ * It still interpolates no path and needs no Node, so there is nothing
+ * project-specific to get wrong, and an empty or unparseable payload passes.
  */
 function buildAioGlobalGuardHook(): HookMatcher {
     const message =
@@ -74,9 +96,12 @@ function buildAioGlobalGuardHook(): HookMatcher {
         'tool touches is not used by Demo Builder and desyncs its deploys. Use the ' +
         'demo-builder MCP tools instead: get_project_status for org/project context, ' +
         'deploy_mesh / deploy_integration for deploys.';
+    const command =
+        `IN=$(cat); printf '%s' "$IN" | grep -Eq '${AIO_GUARD_PAYLOAD_RE}' || exit 0; ` +
+        `echo "${message}" >&2; exit 2`;
     return {
         matcher: AIO_GUARD_MATCHER,
-        hooks: [{ type: 'command', command: `echo "${message}" >&2; exit 2` }],
+        hooks: [{ type: 'command', command }],
     };
 }
 
@@ -283,9 +308,10 @@ const SHELL_METACHAR_RE = /["`$;|&<>\n\r\\'*?[\](){}]/;
  * cascade. The Node one-liner:
  *   - reads fd 0 to end (defaulting to `"{}"` when empty),
  *   - `JSON.parse`s it inside try/catch (parse failure ⇒ prints nothing),
- *   - recursively finds the FIRST string-valued `file_path` at any nesting depth
- *     (parity with the old `.. | .file_path` recursion; Claude passes it at
- *     `tool_input.file_path`),
+ *   - recursively finds the FIRST string-valued `file_path` (or `filePath`) at any
+ *     nesting depth (parity with the old `.. | .file_path` recursion; Claude passes
+ *     it at `tool_input.file_path`, and Copilot's own key spelling is unverified, so
+ *     the camelCase spelling is accepted too),
  *   - writes that path (or empty string) to stdout with NO trailing newline.
  *
  * The JS contains NO single-quote characters, so the whole `-e '…'` is wrapped
@@ -303,6 +329,7 @@ function buildToolFileExtraction(nodePath: string): string {
         `var f=function(v){` +
         `if(v&&typeof v==="object"){` +
         `if(typeof v.file_path==="string")return v.file_path;` +
+        `if(typeof v.filePath==="string")return v.filePath;` +
         `for(var k in v){var r=f(v[k]);if(typeof r==="string")return r}` +
         `}` +
         `return null` +
@@ -340,7 +367,9 @@ function buildGitSyncCommand(storefrontPath: string, nodePath: string): string {
 
     return (
         buildToolFileExtraction(nodePath) +
-        `if [[ "$TOOL_FILE" == ${quoted}* ]]; then ` +
+        // Not while a storefront update's clash is kept in the copy for fixing: the copy
+        // holds the half-applied update, and the first edit pushed all of it (2026-10-21).
+        `if [[ "$TOOL_FILE" == ${quoted}* ]] && [ ! -e ${quoted}/.git/${KEPT_CLASH_MARK} ]; then ` +
         `git -C ${quoted} add -A && ` +
         `git -C ${quoted} commit -m "${GIT_SYNC_SIGNATURE}" && ` +
         `git -C ${quoted} push; fi`
@@ -404,7 +433,11 @@ function buildOwnStorefrontGuard(quotedRoot: string, nodePath: string): string {
  *      SOURCE, a shared repository, and without this guard an agent's edit there
  *      was committed and pushed to that source with no confirmation (found
  *      2026-09-15). No manifest, or no storefront in it, means no push.
- *   7. Commit + push the resolved repo top.
+ *   7. KEPT-CLASH guard: no commit while the copy holds a storefront update's clash kept
+ *      for fixing (`keptClashMark`). The copy then holds the whole half-applied update,
+ *      and an agent's first edit to the clashed file committed and pushed all of it,
+ *      past `finish_storefront_update`'s check (2026-10-21, JustRite).
+ *   8. Commit + push the resolved repo top.
  *
  * The root is double-quoted everywhere it is interpolated. The metachar guard
  * already rejects quotes, so quoting is purely to preserve spaces in the path.
@@ -427,6 +460,8 @@ export function buildHomeGitSyncCommand(projectsRoot: string, nodePath: string):
         `case "$TOP" in ${quotedRoot}/*) ;; *) exit 0 ;; esac; ` +
         `git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0; ` +
         buildOwnStorefrontGuard(quotedRoot, nodePath) +
+        // 7. KEPT-CLASH guard: see buildGitSyncCommand.
+        `[ -e "$TOP/.git/${KEPT_CLASH_MARK}" ] && exit 0; ` +
         `git -C "$TOP" add -A && ` +
         `git -C "$TOP" commit -m "${GIT_SYNC_SIGNATURE}" && ` +
         `git -C "$TOP" push`

@@ -3,11 +3,11 @@
  * what it recomputes when its inputs move.
  *
  * The other three suites render and read the DOM. The decisions below are only
- * visible in the arguments two hooks receive and in what happens on the SECOND
+ * visible in the arguments a hook receives and in what happens on the SECOND
  * render: a memo whose dependency list is empty still produces the right answer
  * on mount and the wrong one forever after, which no single-render test can
- * see. So `useAutoStoreDetect` and `useCredentialService` are mocked here (they
- * are real in the other suites) and asserted on their arguments.
+ * see. So `useAutoStoreDetect` is mocked here (it is real in the other suites)
+ * and asserted on its arguments.
  *
  * `lookupComponentConfigValue` is wired to actually READ the configs it is
  * handed, because `liveConfigs ?? {}` is indistinguishable from `{}` when the
@@ -34,14 +34,9 @@ import {
 import { ACCS_OAUTH_CLIENT_ID } from '@/core/config/envVarKeys';
 
 const mockUseAutoStoreDetect = jest.fn();
-const mockUseCredentialService = jest.fn();
 
 jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
     useAutoStoreDetect: (...args: unknown[]) => mockUseAutoStoreDetect(...args),
-}));
-
-jest.mock('@/features/components/ui/hooks/useCredentialService', () => ({
-    useCredentialService: (...args: unknown[]) => mockUseCredentialService(...args),
 }));
 
 jest.mock('@/features/components/ui/components/ConfigFieldRenderer', () => ({
@@ -54,11 +49,11 @@ jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
     LoadingDisplay: ({ message }: any) => <div data-testid="loading-display">{message}</div>,
 }));
 
-// The OAuth pair renders as ONE unit from the id row (the "use my own instead"
-// disclosure covers both halves), so it never reaches ConfigFieldRenderer.
-jest.mock('@/features/components/ui/components/BrokeredCredentialFields', () => ({
-    BrokeredCredentialFields: ({ idField }: any) => (
-        <div data-testid={`brokered-credentials-${idField.key}`}>{idField.label}</div>
+// Surfaces the endpoint it was handed: whether the row passes it on is the
+// assertion here. The notice's own behaviour is StoreConfigFieldRow-productCheck's.
+jest.mock('@/features/components/ui/components/StoreViewProductsNotice', () => ({
+    StoreViewProductsNotice: ({ accsEndpoint }: { accsEndpoint?: string }) => (
+        <div data-testid="store-view-products-notice" data-endpoint={accsEndpoint ?? ''} />
     ),
 }));
 
@@ -68,7 +63,7 @@ jest.mock('@/features/components/ui/components/BrokeredCredentialFields', () => 
 
 const ORG_ID = 'org-1234@AdobeOrg';
 
-/** The ACCS group with the brokered OAuth pair's client id alongside the endpoint. */
+/** The ACCS group with the OAuth client id alongside the endpoint. */
 const accsGroupWithOauth: MockServiceGroup = {
     ...accsServiceGroup,
     fields: [
@@ -126,9 +121,9 @@ beforeEach(() => {
     // rows stay hidden behind a falsy one, credential row included.
     mockUseAutoStoreDetect.mockReturnValue({
         autoDetectKey: ACCS_ENDPOINT_KEY,
+        accsEndpoint: undefined,
         forceFetch: jest.fn(),
     });
-    mockUseCredentialService.mockReturnValue({ loading: false });
     mockUseComponentConfig.isLoading = false;
     mockUseComponentConfig.loadError = null;
     mockUseComponentConfig.serviceGroups = [accsGroupWithoutOauth];
@@ -157,39 +152,22 @@ describe('what the auto-detect hook is told', () => {
     });
 });
 
-describe('when the credential-service probe fires', () => {
-    it('is enabled only when a rendered field is the brokered OAuth client id', () => {
-        mockUseComponentConfig.serviceGroups = [accsGroupWithOauth, catalogServiceGroup];
+describe('the store-view product check (EDS-46)', () => {
+    it('hands the store pickers the ACCS endpoint detection keyed on', () => {
+        const endpoint = 'https://accs.example.com/graphql';
+        mockUseAutoStoreDetect.mockReturnValue({
+            autoDetectKey: `accs:${endpoint}`,
+            accsEndpoint: endpoint,
+            forceFetch: jest.fn(),
+        });
+        mockUseStoreDiscovery.hasStoreData = true;
 
-        renderContent();
+        renderContent({ section: 'business-structure' });
 
-        expect(mockUseCredentialService).toHaveBeenLastCalledWith(true, ORG_ID);
-    });
-
-    it('stays disabled when the catalog declares no credential field', () => {
-        mockUseComponentConfig.serviceGroups = [accsGroupWithoutOauth, catalogServiceGroup];
-
-        renderContent();
-
-        expect(mockUseCredentialService).toHaveBeenLastCalledWith(false, ORG_ID);
-    });
-
-    it('turns on when the rendered fields gain the credential field', () => {
-        // The probe is keyed off the RENDERED fields, so it has to follow them
-        // when the catalog answers late — an empty dependency list pins the
-        // mount-time answer forever.
-        mockUseComponentConfig.serviceGroups = [accsGroupWithoutOauth];
-        const { rerender } = renderContent();
-        expect(mockUseCredentialService).toHaveBeenLastCalledWith(false, ORG_ID);
-
-        mockUseComponentConfig.serviceGroups = [accsGroupWithOauth];
-        rerender(
-            <Provider theme={defaultTheme}>
-                <ConnectStoreStepContent {...defaultProps} selectedStackId="eds-accs-2" />
-            </Provider>
+        expect(screen.getByTestId('store-view-products-notice')).toHaveAttribute(
+            'data-endpoint',
+            endpoint,
         );
-
-        expect(mockUseCredentialService).toHaveBeenLastCalledWith(true, ORG_ID);
     });
 });
 
@@ -287,9 +265,7 @@ describe('the Connection slice carries its credentials', () => {
         renderContent({ section: 'connection' });
 
         expect(screen.getByTestId(`config-field-${ACCS_ENDPOINT_KEY}`)).toBeInTheDocument();
-        expect(
-            screen.getByTestId(`brokered-credentials-${ACCS_OAUTH_CLIENT_ID}`)
-        ).toBeInTheDocument();
+        expect(screen.getByTestId(`config-field-${ACCS_OAUTH_CLIENT_ID}`)).toBeInTheDocument();
         expect(screen.getAllByText(accsGroupWithOauth.label)).toHaveLength(1);
     });
 });

@@ -27,6 +27,19 @@ branch-protection notice, **not** a failure.
 3. `gh` is authenticated (as `skukla`). `gh auth status` if in doubt.
 4. Determine `<N>`: current `package.json` version is `1.0.0-beta.<prev>`; the new
    one is `<prev>+1` unless the user says otherwise.
+5. **The Node Demo Builder ships on is current:** `npm run node:resolve -- --check`. It
+   re-reads every shipped component's own `engines.node` and fails if the generated
+   `node-version.generated.json` no longer matches, or if the ranges stopped overlapping
+   (it names the components that block). Out of date: run `npm run node:resolve`, review
+   the changed Node and its sources, and commit it before cutting. A conflict is fixed in
+   the component's own repo, never by editing the generated file (PR-1a).
+6. **Storefronts build from a current boilerplate:** `npm run patches:released` (seconds, no
+   credentials). The extension reads the patches repo at its latest RELEASE, and since
+   2026-10-16 its daily drift gate publishes one after every green run. A FAIL means that
+   stopped: open the gate's latest run in `skukla/eds-demo-patches` and fix what it names.
+   Do not cut a release by hand to make this pass; that hides a broken gate. Until this
+   step existed, no patches release was cut for seven weeks and nothing noticed (ADR-006,
+   amended 2026-10-16).
 
 ## Out-of-band passes (offer BEFORE cutting, once the tree is clean)
 
@@ -35,11 +48,13 @@ whole thing rather than the thing you just changed" is cheap. Both passes PROPOS
 and never apply, so neither blocks the cut; run them, show the user, and let them
 decide what (if anything) to fix before tagging.
 
-- **`npm run sweep`** — every scripted periodic check in one command (~25s), driven by
+- **`npm run sweep`** — every scripted periodic check in one command (~15 min measured 2026-10-09,
+  about 12 of them `validate:convention-proofs`), driven by
   `tests/sop/toolingRegistry.ts` so it cannot silently omit one. Read the labels: a
   `reported` row ALWAYS exits 0 and its output is the result; a failing `gate` row is a
   real failure; `COULD NOT RUN` is a broken instrument, not a finding. It closes by
-  naming the guided reviews it did NOT run, so a skipped one is a stated decision.
+  naming the guided reviews it did NOT run, so a skipped one is a stated decision, and
+  the mutation runs it never starts (they are the `overnight` cadence, started by hand).
 - **`codebase-sweep`** — the judgement half of the above: triage the sweep's hits against
   measured baselines and decide what to fix. The sweep gathers; this decides.
 - **`dream`** — memory / skills / CLAUDE.md staleness across recent sessions.
@@ -109,6 +124,12 @@ Let `N` = new beta number, `PREV` = current one.
 
 4. **Merge to master:**
    `git checkout master && git merge --no-ff develop -m "Merge branch 'develop' for v1.0.0-beta.<N>"`
+
+   Then check which branch the patch canary builds the extension's update code from:
+   `gh variable list --repo skukla/eds-demo-patches` (`EXTENSION_REF`). It should be
+   `master`. If it names a branch this release just merged, set it back:
+   `gh variable set EXTENSION_REF --repo skukla/eds-demo-patches --body master`
+   (EDS-49; a deleted branch makes every canary run fail at checkout).
 
 5. **Annotated tag:**
    `git tag -a v1.0.0-beta.<N> -m "v1.0.0-beta.<N>"`

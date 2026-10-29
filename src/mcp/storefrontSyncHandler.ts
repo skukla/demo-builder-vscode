@@ -163,7 +163,7 @@ export const storefrontSyncHandler = {
             }
             return (
                 `Storefront synced successfully${at} — pushed to GitHub, not published. ` +
-                `Call sync_content (or the dashboard's Republish) to publish it to the CDN.`
+                `Call republish (the dashboard's Republish) to publish it to the CDN.`
             );
         } catch (err) {
             if (err instanceof PushRejectedError && err.reason === 'ruleset') {

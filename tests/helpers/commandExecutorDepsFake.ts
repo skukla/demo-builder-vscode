@@ -45,11 +45,9 @@ export function createFakeCommandExecutorDeps(
         // straight through instead of swallowing their callback.
         environmentSetup: {
             ...fns('resetSession'),
-            findAdobeCLINodeVersion: jest.fn().mockResolvedValue('18'),
             findFnmPath: jest.fn().mockReturnValue('/usr/local/bin/fnm'),
             findNpmGlobalPaths: jest.fn().mockReturnValue(['/usr/local/lib/node_modules/.bin']),
             ensureAdobeCLIConfigured: jest.fn().mockResolvedValue(undefined),
-            ensureAdobeCLINodeVersion: jest.fn().mockResolvedValue(undefined),
         },
         retryManager: {
             // PASS-THROUGH: a retry manager that does not invoke its callback

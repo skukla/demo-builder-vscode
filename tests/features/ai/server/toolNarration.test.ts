@@ -18,7 +18,12 @@
  */
 
 import { readdirSync, readFileSync } from 'fs';
-import { TOOL_NARRATION, narrationFor } from '@/features/ai/server/toolNarration';
+import {
+    NAMED_NARRATION_TOOLS,
+    TOOL_NARRATION,
+    narrationFor,
+    narrationForCall,
+} from '@/features/ai/server/toolNarration';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
@@ -114,5 +119,137 @@ describe('the phrases read as English, not as schema', () => {
 
     it('checks a non-empty table', () => {
         expect(phrases.length).toBeGreaterThan(95);
+    });
+});
+
+// The phrase is an agent notification's title ("Agent · <phrase>"), with the
+// current step after it. "Republishing the storefront configuration" plus a step
+// ran off the card (owner, 2026-09-21), the same wrap the 2026-08-27 feedback was
+// about. 32 characters keeps title and a short step on one line.
+describe('every phrase fits a notification title', () => {
+    it.each(Object.entries(TOOL_NARRATION))('%s is 32 characters or fewer', (_tool, phrase) => {
+        expect(phrase.length).toBeLessThanOrEqual(32);
+    });
+});
+
+// "Agent · Deleting the Adobe workspace" said everything but which one (owner,
+// 2026-09-21). A call handed a readable name is narrated with it.
+describe('a call is narrated with the name it acts on', () => {
+    it('names the workspace being deleted', () => {
+        expect(narrationForCall('delete_adobe_workspace', { workspaceId: '4566', workspaceName: 'Stage' })).toBe(
+            'Deleting the Stage workspace'
+        );
+    });
+
+    it('needs every name it uses — a partial one keeps the tool phrase', () => {
+        expect(narrationForCall('delete_github_repo', { owner: 'skukla' })).toBe(
+            narrationFor('delete_github_repo')
+        );
+        expect(narrationForCall('delete_github_repo', { owner: 'skukla', repo: 'kukla-bodea' })).toBe(
+            'Deleting skukla/kukla-bodea'
+        );
+    });
+
+    it('keeps the tool phrase when the name is missing or blank', () => {
+        expect(narrationForCall('delete_adobe_workspace', { workspaceName: '  ' })).toBe(
+            narrationFor('delete_adobe_workspace')
+        );
+        expect(narrationForCall('delete_adobe_workspace', undefined)).toBe(narrationFor('delete_adobe_workspace'));
+    });
+
+    it('leaves a tool without a named form to its phrase', () => {
+        expect(narrationForCall('republish', { confirm: true })).toBe(narrationFor('republish'));
+    });
+
+    it.each(NAMED_NARRATION_TOOLS)('%s is a real tool with a phrase to fall back to', (tool) => {
+        expect(TOOL_NARRATION[tool]).toBeDefined();
+    });
+
+    it('trims the name it shows', () => {
+        expect(narrationForCall('delete_adobe_workspace', { workspaceName: '  Stage \n' })).toBe(
+            'Deleting the Stage workspace'
+        );
+    });
+
+    it('keeps the tool phrase when the name is not text', () => {
+        // An agent can send any JSON. A number or an object is not a name a person reads.
+        expect(narrationForCall('delete_adobe_workspace', { workspaceName: 4566 })).toBe(
+            narrationFor('delete_adobe_workspace')
+        );
+        expect(narrationForCall('delete_page', { path: { toString: () => '/x' } })).toBe(narrationFor('delete_page'));
+    });
+});
+
+// Each named form reads its OWN argument and has its own words. Until 2026-10-10 only
+// two of the twelve were ever called by a test, so ten could have read the wrong
+// argument, or said nothing, with the suite green.
+describe('every named form says what it acts on, from the argument that names it', () => {
+    /** tool, the arguments a real call carries, what the notification says. */
+    const NAMED: Array<[string, Record<string, unknown>, string]> = [
+        ['delete_adobe_workspace', { workspaceId: '4566', workspaceName: 'Stage' }, 'Deleting the Stage workspace'],
+        ['delete_adobe_project', { projectId: '77', projectName: 'Bodea Demo' }, 'Deleting the Bodea Demo project'],
+        ['rename_adobe_project', { projectId: '77', projectName: 'Bodea Demo' }, 'Renaming Bodea Demo'],
+        ['delete_project', { name: 'bodea-b2b', confirm: true }, 'Deleting the bodea-b2b project'],
+        ['delete_github_repo', { owner: 'skukla', repo: 'kukla-bodea' }, 'Deleting skukla/kukla-bodea'],
+        ['cleanup_dalive_site', { org: 'skukla', site: 'kukla-bodea' }, 'Deleting skukla/kukla-bodea content'],
+        ['delete_page', { path: '/drafts/spring-sale' }, 'Deleting /drafts/spring-sale'],
+        ['reset_datapack', { datapackName: 'Bodea B2B' }, 'Resetting Bodea B2B'],
+        ['delete_library_datapack', { datapackName: 'Bodea B2B' }, 'Deleting Bodea B2B'],
+        ['copy_library_datapack_to_installer', { datapackName: 'Bodea B2B' }, 'Copying Bodea B2B'],
+        ['start_datapack_import', { datapackName: 'Bodea B2B' }, 'Importing Bodea B2B'],
+        ['start_datapack_export', { datapackName: 'Bodea B2B' }, 'Exporting Bodea B2B'],
+        ['remove_block_from_library', { blockId: 'hero-banner' }, 'Removing the hero-banner block'],
+        ['set_site_admin', { email: 'fake-user@example.com' }, "Changing fake-user@example.com's access"],
+        // Named as the ERP will be: the add makes the name end in "ERP" (pairNames).
+        ['add_erp', { name: 'Accuform' }, 'Adding Accuform ERP'],
+    ];
+
+    it('covers every tool that has a named form', () => {
+        // A thirteenth named form added without a row here is the gap this suite closes.
+        expect(NAMED.map(([tool]) => tool).sort()).toStrictEqual([...NAMED_NARRATION_TOOLS].sort());
+    });
+
+    it.each(NAMED)('%s names its target', (tool, args, expected) => {
+        expect(narrationForCall(tool, args)).toBe(expected);
+    });
+
+    it.each(NAMED)('%s keeps its tool phrase when ANY one name it uses is missing', (tool, args) => {
+        // Proves which arguments the form reads: dropping one it uses must fall back.
+        const named = Object.keys(args).filter((key) => !['workspaceId', 'projectId', 'confirm'].includes(key));
+        expect(named.length).toBeGreaterThan(0);
+
+        for (const dropped of named) {
+            const partial = { ...args, [dropped]: undefined };
+            expect(narrationForCall(tool, partial)).toBe(narrationFor(tool));
+        }
+    });
+
+    it.each(NAMED)('%s is not named from an argument it does not read', (tool, args, expected) => {
+        // The ids travel with the names in a real call; they are never what is shown.
+        const idsOnly = { workspaceId: '4566', projectId: '77', confirm: true };
+        expect(narrationForCall(tool, idsOnly)).toBe(narrationFor(tool));
+        expect(narrationForCall(tool, { ...idsOnly, ...args })).toBe(expected);
+    });
+});
+
+// Live release test, 2026-10-22: "Agent · Adding another ERP: Loading demo data" showed for
+// fifteen minutes beside an action the SC ran, and nothing said which was which.
+describe('a call that acts in the open project can name it', () => {
+    it('names the ERP being added and the project it goes into', () => {
+        expect(narrationForCall('add_erp', { id: 'erp-integration', name: 'Accuform ERP' }, 'JustRite')).toBe(
+            'Adding Accuform ERP to JustRite'
+        );
+    });
+
+    it('names the ERP alone when no project is open', () => {
+        expect(narrationForCall('add_erp', { name: 'Accuform' }, undefined)).toBe('Adding Accuform ERP');
+    });
+
+    it('keeps the tool phrase when the ERP has no name, whatever the project', () => {
+        expect(narrationForCall('add_erp', { id: 'erp-integration' }, 'JustRite')).toBe(narrationFor('add_erp'));
+    });
+
+    it('does not add the project to a tool whose named form does not use it', () => {
+        expect(narrationForCall('delete_page', { path: '/x' }, 'JustRite')).toBe('Deleting /x');
     });
 });

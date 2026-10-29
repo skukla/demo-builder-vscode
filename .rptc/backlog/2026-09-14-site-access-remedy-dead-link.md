@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # The "no admin role" remedy sent people to a page that cannot grant anything

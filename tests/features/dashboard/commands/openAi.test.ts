@@ -185,5 +185,18 @@ describe('ShowAiCommand', () => {
 
             expect(html).toContain('<title>Prompt Library</title>');
         });
+
+        it('serves local media from dist/ through a base URI', async () => {
+            (command as unknown as { panel: vscode.WebviewPanel }).panel = mockPanel;
+            await (
+                command as unknown as { getWebviewContent(): Promise<string> }
+            ).getWebviewContent();
+
+            const uris = (mockPanel.webview.asWebviewUri as jest.Mock).mock.calls.map(
+                ([u]) => (u as vscode.Uri).fsPath,
+            );
+            expect(uris).toHaveLength(2);
+            expect(uris[1]).toMatch(/dist$/);
+        });
     });
 });

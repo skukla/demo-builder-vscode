@@ -15,6 +15,20 @@
  */
 
 import { fsPromises } from './aiBundleFsMock';
+
+/**
+ * Where fnm is, for the ai-defaults launch line (AI-13). Faked for every spec so
+ * no suite reads the test machine's own fnm: a found fnm turns `node` into
+ * `fnm exec --using=24 node`, and a missing one leaves it alone. Defaults to a
+ * found fnm; a spec sets `mockFindFnmPath.mockReturnValue(null)` for the other.
+ */
+export const FAKE_FNM = '/fake/bin/fnm';
+export const mockFindFnmPath = jest.fn((): string | null => FAKE_FNM);
+jest.mock('@/core/shell/environmentSetup', () => ({
+    EnvironmentSetup: jest.fn().mockImplementation(() => ({ findFnmPath: () => mockFindFnmPath() })),
+}));
+
+// Below the mocks on purpose: the SUT must bind to them (webview-test-authoring §3).
 import { writeMcpConfigs } from '@/features/project-creation/services/aiBundle/mcpConfigWriter';
 
 export { writeMcpConfigs };

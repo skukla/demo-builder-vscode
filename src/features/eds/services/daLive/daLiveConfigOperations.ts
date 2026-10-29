@@ -8,8 +8,8 @@
  * share one hardened read/write discipline (`readConfigOrError` +
  * `computeSheetNames` + `postSiteConfig`): fail closed on a read error, probe
  * org ownership on 401, and never drop an existing sheet. Builds on the shared
- * `DaLiveApiClient` (token + error mapping); the facade constructs one instance
- * and delegates to it.
+ * `DaLiveApiClient` (token + error mapping); DaLiveContentOperations constructs
+ * one instance and hands it out as `configOps`.
  *
  * Keep this module `vscode`-free (the MCP server constructs it in a separate
  * Node process).

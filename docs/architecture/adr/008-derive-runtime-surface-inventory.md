@@ -26,6 +26,25 @@ Related: [ADR-006](006-thin-layer-storefront-customization.md) — the last-know
 > fragments, auth pages, spreadsheets, and the derivation gate — stands
 > unchanged; mentions of placeholder sheets below are historical context.
 
+> **Amendment 2026-10-12 — derivation also runs in the extension, on the storefront
+> being copied (EDS-40).** The gate derives from ONE pinned boilerplate per ledger.
+> A demo added from a colleague's repository keeps whatever code it was made with,
+> has no ledger, and got only the static list: its copy arrived without `/cart`,
+> `/checkout`, `/search` and fifteen more documents its source serves
+> (`.rptc/research/added-demo-content-completeness/research.md`). So the content
+> pipeline now reads the SC's own repository before the copy
+> (`storefrontCodeReader.ts`, one archive download), derives every site path that
+> code loads (`storefrontCodePaths.ts`), asks the source for each and copies what
+> answers (`backfillCodePaths`), and after publishing asks the storefront for the same
+> paths and reports what is missing (`storefront/missingPages.ts`). The source probe is
+> the filter, so the derivation over-reads freely and needs no categories. The
+> feasibility prototype (`scripts/runtime-surfaces/`) was deleted in that change: its
+> logic lives in `storefrontCodePaths.ts`, widened (its page pattern matched only a
+> quoted `/customer/<name>`). The gate in the patches repository is unchanged and is
+> still the only thing that feeds `runtimeSurfaceResolver.ts`. The static list stays
+> for what no code names (`/metadata`, `/redirects`, `/sitemap`), for the auth-page
+> stubs, and as the fallback when the code cannot be read.
+
 ---
 
 ## Context
@@ -199,9 +218,9 @@ This does not replace either existing mechanism — it strengthens the backstop:
 
 ### Neutral
 
-- **The prototype is throwaway-ish.** It lives in `scripts/runtime-surfaces/` with
-  its own `node:test` suite; productionizing means porting the extractor into the
-  gate, not shipping the `.mjs` as-is.
+- **The prototype is throwaway-ish.** It lived in `scripts/runtime-surfaces/` with
+  its own `node:test` suite; productionizing meant porting the extractor into the
+  gate, not shipping the `.mjs` as-is. (Deleted 2026-10-12; see the amendment.)
 - **Reference-following discovery is unchanged** — this hardens the orphan backstop,
   not the link crawler.
 
@@ -211,7 +230,7 @@ This does not replace either existing mechanism — it strengthens the backstop:
 
 | Step | Status | Notes |
 |---|---|---|
-| Feasibility prototype + unit tests | **Landed** | `scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs` (+ `.test.mjs`, 7 tests, `node:test`); README documents run/scope |
+| Feasibility prototype + unit tests | **Landed, then deleted 2026-10-12** | Was `scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs` (+ `.test.mjs`, 7 tests, `node:test`). Superseded by `src/features/eds/services/storefrontCodePaths.ts` (see the 2026-10-12 amendment) |
 | Empirical validation against real B2B boilerplate | **Done** | `.rptc/research/runtime-surface-derivation/findings.md` — 14/18 re-derived, 9 hand-list gaps found |
 | Live-source verification of the 9 derived-only surfaces | **Done** | all 8 added to the inventory (`/customer/sidebar-fragment` + 7 B2B sheets) confirmed `200` on `main--boilerplate-b2b--adobe-commerce.aem.live` — previously silently dropped |
 | Stop-gap: add the missing orphans to the hand list | **Landed** | `runtimeSurfaceInventory.ts` (+ `.plain.html` probe fix for `/customer/*`) — keeps demos correct until the consumer half flips to the generated file |
@@ -221,17 +240,19 @@ This does not replace either existing mechanism — it strengthens the backstop:
 | Retire the hand-maintained bulk in `runtimeSurfaceInventory.ts` | **Deferred** | the static list stays the safety floor (zero-regression). Trimming it to just the residual waits until all ledgers are seeded + the gate has soaked |
 | `authPages` drift auto-consumed (needs a `blockClass`) | **Out of scope** | a new `/customer/*` page surfaces via the gate PR for a human to add with its block class; the merge never auto-stubs auth pages |
 | Optional: runtime-observation pass to shrink the static residual | **Not started** | future enhancement |
+| Derivation at runtime, on the storefront being copied (EDS-40) | **Landed 2026-10-12** | `storefrontCodePaths.ts` (derive), `storefrontCodeReader.ts` (read the SC's repository), `daLiveCopyPaths.ts` `backfillCodePaths` (probe the source, copy), `storefront/missingPages.ts` (check the destination). Runs in the shared pipeline, so creation and reset agree. Not yet run against a live reset |
 
 ---
 
 ## Cross-References
 
 - **Empirical basis**: `.rptc/research/runtime-surface-derivation/findings.md` (+ `prototype-run-b2b.txt`)
-- **Prototype**: `scripts/runtime-surfaces/` (`deriveRuntimeSurfaces.mjs`, `deriveRuntimeSurfaces.test.mjs`, `README.md`)
+- **Prototype**: deleted 2026-10-12 (was `scripts/runtime-surfaces/`); its logic is `src/features/eds/services/storefrontCodePaths.ts`
+- **Runtime derivation (EDS-40)**: `src/features/eds/services/storefrontCodePaths.ts`, `storefrontCodeReader.ts`, `sitePathProbe.ts`, `storefront/missingPages.ts`; the two pipeline steps in `edsPipeline.ts` (`storefront-code`, `page-check`)
 - **Producer (drift gate)**: `skukla/eds-demo-patches#1` — `scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs`, the per-ledger check in `scripts/lkg-gate.sh`, `b2b/runtime-surfaces.json`, and the `lkg/surface-drift` PR step in `.github/workflows/lkg-gate.yml`
 - **Consumer (fetch + merge)**: `src/features/eds/services/runtimeSurfaceResolver.ts` (`getRuntimeSurfaces` / `mergeRuntimeSurfaces`), called from `src/features/eds/services/daLive/daLiveContentCopy.ts` (`backfillEssentialPaths`)
 - **Static hand list (floor)**: `src/features/eds/services/runtimeSurfaceInventory.ts`
-- **Discovery + orphan seeding**: `src/features/eds/services/daLive/daLiveContentOperations.ts` (`copyContentFromSource`, reference-following)
+- **Discovery + orphan seeding**: `src/features/eds/services/daLive/daLiveContentCopy.ts` (`copyContentFromSource`, reference-following)
 - **Production home for the gate**: `skukla/eds-demo-patches` (`scripts/lkg-gate.sh`) per ADR-006
 - **Subject boilerplate**: `adobe-commerce/boilerplate-b2b-template` @ `160b453e`
 

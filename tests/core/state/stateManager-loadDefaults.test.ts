@@ -14,12 +14,9 @@
  * loaded values surface.
  */
 
-import * as fs from 'fs/promises';
 import { setupMocks, type TestMocks } from './stateManager.testUtils';
+import * as fs from 'fs/promises';
 import type { ProcessInfo } from '@/types/base';
-
-jest.mock('fs/promises');
-jest.mock('os');
 
 const RUNNING: ProcessInfo = {
     pid: 12345,

@@ -100,7 +100,8 @@ describe('useDashboardStatus — Status Display Strings', () => {
             });
 
             expect(result.current.demoStatusDisplay.text).toBe('Stopping');
-            expect(result.current.demoStatusDisplay.color).toBe('yellow');
+            // Blue: in progress, like Starting (owner, 2026-10-16).
+            expect(result.current.demoStatusDisplay.color).toBe('blue');
         });
 
         it('should return Error for error status', () => {

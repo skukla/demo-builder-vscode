@@ -12,13 +12,17 @@
  */
 
 import {
+    COMPLETE_EDS_CONFIG,
     cancelPayloads,
+    pushComplete,
     pushProgress,
     renderStep,
     resetDriver,
     subscribedMessageTypes,
 } from './StorefrontSetupStep.driver.testUtils';
 import { screen } from '@testing-library/react';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { StorefrontSetupProgressPhase } from '@/types/webviewPayloads';
 
 beforeEach(() => {
@@ -72,19 +76,35 @@ describe('StorefrontSetupStep — the loader rows', () => {
         expect(loader()).toHaveAttribute('data-progress', '70');
     });
 
-    // Row 3 is a STATIC expectation per phase. Each phase gets its own value so
-    // the block never reflows; a phase falling through to its neighbour's arm is
-    // exactly what these cases catch.
+    // Every working phase arrives as a STEP (progress vocabulary, owner 2026-10-16):
+    // line 1 the step with its place in the run, line 2 what it is doing, line 3 the
+    // step's expectation from the shared table with the whole run's clock.
+    it('shows the step, numbered, over what it is doing, with its expectation and the run clock', () => {
+        const startedAt = 1_760_000_000_000;
+        jest.setSystemTime(startedAt + 125_000);
+        renderStep();
+
+        pushProgress({
+            phase: 'content',
+            stage: OPERATION_STAGES.copyingContent.label,
+            position: { index: 4, total: 7 },
+            message: '40 of 103 files',
+            progress: 54,
+            startedAt,
+        });
+
+        expect(loader()).toHaveTextContent('Copying the content (4 of 7)');
+        expect(loader()).toHaveAttribute('data-sub-message', '40 of 103 files');
+        expect(loader()).toHaveAttribute(
+            'data-helper-text',
+            `${OPERATION_STAGES.copyingContent.expectation} · 2 minutes, 5 seconds`
+        );
+    });
+
+    // The two phases that name no step keep what they are waiting on.
     const HELPER_TEXT: Array<[StorefrontSetupProgressPhase, string]> = [
-        ['repository', 'This may take up to 30 seconds'],
-        ['storefront-code', 'This may take about a minute'],
-        ['code-sync', 'This may take up to a minute'],
-        ['site-config', 'This may take up to a minute'],
-        ['content', 'This may take 1-2 minutes'],
-        ['block-library', 'This may take up to 30 seconds'],
-        ['publish', 'This may take 2-3 minutes'],
         ['auth-recovery', 'Waiting for you to finish signing in'],
-        ['cancelling', 'This should only take a moment'],
+        ['cancelling', 'Usually a moment'],
     ];
 
     it.each(HELPER_TEXT)('phase %s expects "%s"', (phase, helperText) => {
@@ -237,5 +257,37 @@ describe('StorefrontSetupStep — subscriptions', () => {
         unmount();
 
         expect(subscribedMessageTypes()).toStrictEqual([]);
+    });
+});
+
+describe('StorefrontSetupStep — completion keeps what creation must record', () => {
+    it('holds the installed block libraries on the wizard config, beside the repo URL', () => {
+        // Creation saves these onto the project it makes. Storefront setup used to
+        // save them itself, onto whichever project happened to be open (2026-10-09).
+        const installed: InstalledBlockLibrary[] = [
+            {
+                name: 'Isle5 Blocks',
+                source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+                commitSha: 'abc123',
+                blockIds: ['hero'],
+                installedAt: '2026-10-09T00:00:00.000Z',
+            },
+        ];
+        const { updateState } = renderStep();
+
+        pushComplete({
+            message: 'Done',
+            githubRepo: 'https://github.com/o/r',
+            installedBlockLibraries: installed,
+        });
+
+        expect(updateState).toHaveBeenCalledWith({
+            edsConfig: expect.objectContaining({
+                ...COMPLETE_EDS_CONFIG,
+                repoUrl: 'https://github.com/o/r',
+                preflightComplete: true,
+                installedBlockLibraries: installed,
+            }),
+        });
     });
 });

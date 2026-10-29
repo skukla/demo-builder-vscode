@@ -2,18 +2,18 @@
  * Project Handlers - Validation Tests
  *
  * Tests for organization validation and error message formatting:
- * - handleEnsureOrgSelected: Verify organization is selected
+ * - sendOrgMismatch / resolveOrgContext: the org gate
  * - Error message formatting for various scenarios
  */
 
 import {
-    handleEnsureOrgSelected,
     handleGetProjects,
     sendOrgMismatch,
 } from '@/features/authentication/handlers/projectHandlers';
 import type { EnsureOrgContextResult } from '@/features/authentication/services/ensureOrgContext';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockContext, mockOrganization } from './projectHandlers.testUtils';
+import { entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator');
@@ -37,69 +37,6 @@ describe('projectHandlers - Validation', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockContext = createMockContext();
-    });
-
-    describe('handleEnsureOrgSelected', () => {
-        it('should return success when organization is selected', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
-
-            const result = await handleEnsureOrgSelected(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(result.data!.hasOrg).toBe(true);
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('orgSelectionStatus', {
-                hasOrg: true
-            });
-        });
-
-        it('should return false hasOrg when no organization selected', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(undefined);
-
-            const result = await handleEnsureOrgSelected(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(result.data!.hasOrg).toBe(false);
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('orgSelectionStatus', {
-                hasOrg: false
-            });
-        });
-
-        it('should handle errors gracefully', async () => {
-            const error = new Error('Failed to get org');
-            mockContext.authManager.getCurrentOrganization.mockRejectedValue(error);
-
-            const result = await handleEnsureOrgSelected(mockContext);
-
-            expect(result.success).toBe(false);
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                'Failed to ensure org selected:',
-                error
-            );
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('error', {
-                message: 'Failed to check organization selection',
-                details: 'Failed to get org'
-            });
-        });
-
-        it('should handle undefined org gracefully', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(undefined);
-
-            const result = await handleEnsureOrgSelected(mockContext);
-
-            expect(result.success).toBe(true);
-            expect(result.data!.hasOrg).toBe(false);
-        });
-    });
-
-    describe('handleEnsureOrgSelected without an auth manager', () => {
-        it('answers hasOrg=false as a success, not as a failure', async () => {
-            const ctx = { ...mockContext, authManager: undefined };
-
-            const result = await handleEnsureOrgSelected(ctx);
-
-            expect(result).toEqual({ success: true, data: { hasOrg: false } });
-            expect(ctx.sendMessage).toHaveBeenCalledWith('orgSelectionStatus', { hasOrg: false });
-        });
     });
 
     describe('sendOrgMismatch — one message per non-ok status', () => {
@@ -154,7 +91,7 @@ describe('projectHandlers - Validation', () => {
 
     describe('Error Message Formatting', () => {
         it('should format timeout errors correctly', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockRejectedValue(
                 new Error('Request timed out. Please check your connection and try again.')
             );
@@ -170,7 +107,7 @@ describe('projectHandlers - Validation', () => {
         });
 
         it('should provide generic error message for non-timeout errors', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            entityServicesOf(mockContext.authManager).resolver.getCurrentOrganization.mockResolvedValue(mockOrganization);
             mockContext.authManager.getProjects.mockRejectedValue(new Error('Some other error'));
 
             const result = await handleGetProjects(mockContext);

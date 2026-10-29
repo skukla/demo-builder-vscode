@@ -32,13 +32,11 @@ function makeMeshModel(overrides: Partial<IntegrationCardModel> = {}): Integrati
         isMesh: true,
         name: 'API Mesh',
         kindLabel: 'API Mesh',
-        sourceIsAi: false,
         status: 'deployed',
         statusLabel: 'Deployed',
         dotVariant: 'success',
         url: 'https://mesh.example.com/graphql',
         urlLabel: 'Endpoint',
-        lastDeployed: '6/1/2026, 10:00:00 AM',
         menuActions: [],
         canRename: false,
         commerceScope: SCOPE,
@@ -58,6 +56,7 @@ function renderPanel(model: IntegrationCardModel) {
         <IntegrationDetailPanel
             model={model}
             onClose={jest.fn()}
+            onOpenLinked={jest.fn()}
             onAction={jest.fn()}
             onRename={jest.fn(() => Promise.resolve(null))}
         />

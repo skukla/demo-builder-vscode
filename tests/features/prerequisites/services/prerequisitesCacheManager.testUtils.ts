@@ -55,14 +55,3 @@ export const setupMockRandom = (value = 0.5): { restore: () => void } => {
         },
     };
 };
-
-/**
- * Common mock configurations for dependencies
- */
-export const mockDependencies = () => {
-        jest.mock('@/core/utils/timeoutConfig', () => ({
-        CACHE_TTL: {
-            MEDIUM: 300000, // 5 minutes - semantic category (replaces PREREQUISITE_CHECK)
-        },
-    }));
-};

@@ -103,3 +103,7 @@ Open design questions, in dependency order:
 > service can enumerate imports beyond this project's) gate everything, and
 > question 3 (a service-side true wipe) may obsolete the rest, so ask it early.
 > Then design the surface and confirm copy before writing code.
+
+## Shipped so far
+
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the body's 'service is frozen (owner retired, questions-only)' is stale: DI-1's 2026-10-01 log shows PRs merged in July and September by other maintainers.

@@ -124,26 +124,30 @@ describe('thin-layer path', () => {
         });
     });
 
-    it.each([
-        ['the comparison fails', null],
-        ['the comparison counts nothing', { ahead_by: 0 }],
-    ])(
-        'LKG advanced but %s: no update, zero behind, the LKG SHA still reported',
-        async (_label, comparison) => {
-            mockCompareCommits.mockResolvedValue(comparison);
+    it('LKG advanced but the comparison counts nothing: no update, zero behind, the LKG SHA still reported', async () => {
+        mockCompareCommits.mockResolvedValue({ ahead_by: 0 });
 
-            const result = await checker.checkForUpdates(edsProject(metadata));
+        const result = await checker.checkForUpdates(edsProject(metadata));
 
-            expect(result).toEqual({
-                hasUpdates: false,
-                currentCommit: OLD_SHA,
-                latestCommit: NEW_SHA,
-                commitsBehind: 0,
-                templateOwner: OWNER,
-                templateRepo: REPO,
-            });
-        }
-    );
+        expect(result).toEqual({
+            hasUpdates: false,
+            currentCommit: OLD_SHA,
+            latestCommit: NEW_SHA,
+            commitsBehind: 0,
+            templateOwner: OWNER,
+            templateRepo: REPO,
+        });
+    });
+
+    // Until 2026-10-16 a failed comparison answered "zero behind", which is "up to
+    // date". The B2B template re-makes its top commits nightly, so the commit a
+    // project recorded leaves the template's history; if GitHub ever stops answering
+    // for it, every such project would have been told it is current.
+    it('LKG advanced but the comparison fails: null ("could not check")', async () => {
+        mockCompareCommits.mockResolvedValue(null);
+
+        await expect(checker.checkForUpdates(edsProject(metadata))).resolves.toBeNull();
+    });
 
     it('a throwing LKG reader answers null rather than rejecting', async () => {
         mockReadLkgSha.mockRejectedValue(new Error('patches repo unreachable'));
@@ -186,26 +190,26 @@ describe('forked path', () => {
         });
     });
 
-    it.each([
-        ['the comparison fails', null],
-        ['the comparison counts nothing', { ahead_by: 0 }],
-    ])(
-        'main advanced but %s: no update, zero behind, main HEAD still reported',
-        async (_label, comparison) => {
-            mockCompareCommits.mockResolvedValue(comparison);
+    it('main advanced but the comparison counts nothing: no update, zero behind, main HEAD still reported', async () => {
+        mockCompareCommits.mockResolvedValue({ ahead_by: 0 });
 
-            const result = await checker.checkForUpdates(edsProject(complete));
+        const result = await checker.checkForUpdates(edsProject(complete));
 
-            expect(result).toEqual({
-                hasUpdates: false,
-                currentCommit: OLD_SHA,
-                latestCommit: NEW_SHA,
-                commitsBehind: 0,
-                templateOwner: OWNER,
-                templateRepo: REPO,
-            });
-        }
-    );
+        expect(result).toEqual({
+            hasUpdates: false,
+            currentCommit: OLD_SHA,
+            latestCommit: NEW_SHA,
+            commitsBehind: 0,
+            templateOwner: OWNER,
+            templateRepo: REPO,
+        });
+    });
+
+    it('main advanced but the comparison fails: null ("could not check")', async () => {
+        mockCompareCommits.mockResolvedValue(null);
+
+        await expect(checker.checkForUpdates(edsProject(complete))).resolves.toBeNull();
+    });
 
     it('main HEAD unavailable: null, with no comparison made', async () => {
         mockGetLatestBranchCommit.mockResolvedValue(null);

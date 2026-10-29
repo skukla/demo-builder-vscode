@@ -9,20 +9,25 @@
  */
 
 import * as path from 'path';
+import * as vscode from 'vscode';
+import { adobeSignInRestored, askToSignInOnce } from '../services/adobeSignInPrompt';
 import { buildStatusPayload, deriveMeshStatus } from '../services/dashboardStatusService';
 import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
+import { detectFrontendChanges } from '@/core/state/projectStateSync';
 import { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
+import { agentCliStatus } from '@/features/ai/engine/activeEngine';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
 import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
 import {
     handleRegenerateAiFiles,
     logAiVerification,
+    EXTENSION_COMMAND_PROBE,
 } from '@/features/dashboard/handlers/aiHandlers';
-import { warmOrgServicesCatalog } from '@/features/dashboard/handlers/warmOrgServicesCatalog';
+import { warmProjectReads } from '@/features/dashboard/handlers/warmProjectReads';
 import { createAiContextFreshnessCheck } from '@/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck';
 import { createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks/aiVerifyCheck';
 import { createDemoSourceCheck } from '@/features/dashboard/services/onOpenChecks/demoSourceCheck';
@@ -31,15 +36,105 @@ import { createMeshVerifyCheck } from '@/features/dashboard/services/onOpenCheck
 import { runOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import {
     applicableMcpPackages,
     readInstalledMcpPackages,
 } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
+import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import { MessageHandler } from '@/types/handlers';
+import { type HandlerContext, MessageHandler } from '@/types/handlers';
 import { getMeshComponentInstance, isEdsProject } from '@/types/typeGuards';
 import type { MeshStatus } from '@/types/webviewPayloads';
+
+const ADOBE_SIGN_IN = 'Sign In';
+
+/** The Adobe sign-in prompt: a modal, and nothing opens until the SC says so. */
+async function askAdobeSignIn(): Promise<boolean> {
+    const choice = await vscode.window.showWarningMessage(
+        'Your Adobe sign-in has expired',
+        {
+            modal: true,
+            detail:
+                "Sign in to use this project's Adobe features, such as deploys and integrations. " +
+                'The sign-in opens in your browser.',
+        },
+        ADOBE_SIGN_IN,
+    );
+    return choice === ADOBE_SIGN_IN;
+}
+
+/**
+ * Build the dashboard's status and post it, with none of the on-open checks.
+ *
+ * The cheap half of `requestStatus`, on its own so a project SAVE can refresh an
+ * open dashboard (`ProjectDashboardWebviewCommand.pushStatus`). An agent's
+ * configure_project changed the store and the Republish tile stayed plain until
+ * the dashboard was reopened (owner, 2026-10-17); the full refresh reruns the mesh
+ * verify and the AI checks, too heavy for every save.
+ */
+export async function postStatusUpdate(
+    context: HandlerContext,
+    panel: vscode.WebviewPanel,
+    project: Project,
+): Promise<{
+    statusData: ReturnType<typeof buildStatusPayload>;
+    shouldVerifyMesh: boolean;
+}> {
+    const meshComponent = getMeshComponentInstance(project);
+    const frontendConfigChanged =
+        project.status === 'running' ? detectFrontendChanges(project) : false;
+
+    context.logger.debug(`[Dashboard] Status request: mesh=${meshComponent?.status || 'none'}`);
+
+    // Determine mesh status from persisted state (no redundant re-checking).
+    // The derivation itself lives in dashboardStatusService so the agent surface
+    // reports the same mesh the same way; only the AUTH question differs, and it
+    // stays here because only this caller may prompt.
+    let meshStatus: MeshStatus = 'not-deployed';
+    // Set when a deployed mesh should be background-verified on open (auth'd +
+    // has a deployment record). The verify runs as the mesh-verify OnOpenCheck.
+    let shouldVerifyMesh = false;
+
+    if (meshComponent) {
+        const settledWithoutAuth =
+            meshComponent.status === 'deploying' || meshComponent.status === 'error';
+
+        // Auth check, SILENTLY here. An unauthenticated mesh derives `needs-auth`,
+        // which this dashboard renders as "Session expired" beside a sign-in
+        // affordance. The one prompt for an expired sign-in is the org check's
+        // (`adobeSignInPrompt`, owner 2026-10-17, replacing the 2026-09-20 rule that
+        // opening a dashboard asks nothing); a second one here would ask twice.
+        //
+        // Skipped entirely for the two states reported without waiting on auth, so
+        // a failed deploy costs nothing to look at.
+        let authenticated = false;
+        if (!settledWithoutAuth) {
+            authenticated = await ServiceLocator.getAuthenticationService().isAuthenticated();
+        }
+
+        const derived = deriveMeshStatus(project, authenticated);
+        if (derived) {
+            meshStatus = derived.status;
+            shouldVerifyMesh = derived.shouldVerify;
+        }
+    }
+
+    // Keyed-first (ADR-011 D3 Steps 07+09): the endpoint lives on the keyed
+    // mesh appBuilderComponents entry (legacy meshState fallback inside).
+    const meshEndpoint = getMeshEndpoint(project);
+    const statusData = buildStatusPayload(
+        project,
+        frontendConfigChanged,
+        meshComponent ? { status: meshStatus, endpoint: meshEndpoint } : undefined,
+    );
+
+    panel.webview.postMessage({
+        type: 'statusUpdate',
+        payload: statusData,
+    });
+
+    return { statusData, shouldVerifyMesh };
+}
 
 /**
  * Handle 'requestStatus' message - Send current project status
@@ -62,66 +157,11 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
-    const meshComponent = getMeshComponentInstance(project);
-    const frontendConfigChanged =
-        project.status === 'running' ? detectFrontendChanges(project) : false;
-
-    context.logger.debug(`[Dashboard] Status request: mesh=${meshComponent?.status || 'none'}`);
-
-    // Determine mesh status from persisted state (no redundant re-checking).
-    // The derivation itself lives in dashboardStatusService so the agent surface
-    // reports the same mesh the same way; only the AUTH question differs, and it
-    // stays here because only this caller may prompt.
-    let meshStatus: MeshStatus = 'not-deployed';
-    // Set when a deployed mesh should be background-verified on open (auth'd +
-    // has a deployment record). The verify runs as the mesh-verify OnOpenCheck.
-    let shouldVerifyMesh = false;
-
-    if (meshComponent) {
-        const settledWithoutAuth =
-            meshComponent.status === 'deploying' || meshComponent.status === 'error';
-
-        // Auth check — prompt for inline sign-in if not authenticated. Skipped for
-        // the two states that are reported without waiting on auth, so a failed
-        // deploy never costs the user a sign-in prompt to look at.
-        let authenticated = false;
-        if (!settledWithoutAuth) {
-            const authManager = ServiceLocator.getAuthenticationService();
-            const { ensureAdobeIOAuth } = await import('@/core/auth/adobeAuthGuard');
-            const authResult = await ensureAdobeIOAuth({
-                authManager,
-                logger: context.logger,
-                logPrefix: '[Dashboard]',
-                projectContext: {
-                    organization: project.adobe?.organization,
-                    projectId: project.adobe?.projectId,
-                    workspace: project.adobe?.workspace,
-                },
-                warningMessage: 'Adobe sign-in required to check mesh status.',
-            });
-            authenticated = authResult.authenticated;
-        }
-
-        const derived = deriveMeshStatus(project, authenticated);
-        if (derived) {
-            meshStatus = derived.status;
-            shouldVerifyMesh = derived.shouldVerify;
-        }
-    }
-
-    // Keyed-first (ADR-011 D3 Steps 07+09): the endpoint lives on the keyed
-    // mesh appBuilderComponents entry (legacy meshState fallback inside).
-    const meshEndpoint = getMeshEndpoint(project);
-    const statusData = buildStatusPayload(
+    const { statusData, shouldVerifyMesh } = await postStatusUpdate(
+        context,
+        context.panel,
         project,
-        frontendConfigChanged,
-        meshComponent ? { status: meshStatus, endpoint: meshEndpoint } : undefined,
     );
-
-    context.panel.webview.postMessage({
-        type: 'statusUpdate',
-        payload: statusData,
-    });
 
     // On-open checks run through the orchestrator (fire-and-forget): each posts a
     // typed outcome on the single `checkResult` channel.
@@ -137,6 +177,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         createOrgContextCheck({
             authManager: ServiceLocator.getAuthenticationService(),
             stateManager: () => ServiceLocator.getStateManager(),
+            // An expired sign-in asks, once per expiry; the browser opens on a yes only.
+            onSignedOut: () =>
+                askToSignInOnce(askAdobeSignIn, () => handleReAuthenticate(context)),
+            onSignedIn: adobeSignInRestored,
         }),
         createMcpHealthCheck({
             detectDrift: detectMcpDrift,
@@ -169,7 +213,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                 const extensionDistPath = path.join(context.context.extensionPath, 'dist');
                 const result = await verifyAiSetup(p, extensionDistPath, recordedHashes);
                 logAiVerification(context, result); // preserve the on-open observability
-                return result;
+                // The same answer the verify-ai-setup request adds, so the badge
+                // agrees on open and after Regenerate (AI-4a).
+                const agentCli = await agentCliStatus(EXTENSION_COMMAND_PROBE);
+                return { ...result, agentCli };
             },
         }),
     ];
@@ -198,10 +245,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         );
     }
 
-    // Start loading the org's Adobe API list now, so it is ready before the user
-    // reaches a picker — see warmOrgServicesCatalog. Not an on-open check: it has
-    // no badge and nothing to report. Deliberately not awaited.
-    void warmOrgServicesCatalog(context);
+    // Start the slow reads now (the org's Adobe API list, the Commerce sign-in), so they
+    // are ready before the user reaches a picker or a dialog that reads the store — see
+    // warmProjectReads. Not an on-open check: no badge and nothing to report. Not awaited.
+    warmProjectReads(context);
 
     void runOnOpenChecks(
         {
@@ -220,7 +267,8 @@ export const handleRequestStatus: MessageHandler = async (context) => {
  * Handle 'reAuthenticate' message - Re-authenticate with Adobe
  *
  * Called when user clicks "Sign in" link after session expired (needs-auth status).
- * Uses loginAndRestoreProjectContext to restore full project context after login,
+ * Always a fresh, forced sign-in (see the call). Uses loginAndRestoreProjectContext to
+ * restore full project context after login,
  * then requests a status refresh to update the mesh status display.
  */
 export const handleReAuthenticate: MessageHandler = async (context) => {

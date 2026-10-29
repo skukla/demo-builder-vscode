@@ -7,8 +7,9 @@
  * deployed, and whether a given PDP URL resolves at all.
  *
  * Signals verified live against `skukla/demo-builder-test` (2026-08-07):
- *   /scripts/delayed.js   carries SMART_404_MARKER_START
  *   /404.html             carries SMART_404_HEAD_MARKER_START
+ *                         and, since 2026-10-29, SMART_404_PAGE_MARKER_START (the
+ *                         recovery script, which lived in /scripts/delayed.js before)
  *   /products/default     200 + class="product-details"
  *   /products/<bad>/<sku> 404
  *
@@ -25,10 +26,8 @@ import {
     probeOverlayVersion,
     probeStorefrontDelivery,
 } from '@/features/eds/services/storefront/storefrontProbe';
-import {
-    SMART_404_MARKER_START,
-    SMART_404_HEAD_MARKER_START,
-} from '@/features/eds/services/pdp/pdp404Snippet';
+import { SMART_404_HEAD_MARKER_START, SMART_404_MARKER_START } from '@/features/eds/services/pdp/pdp404Snippet';
+import { SMART_404_PAGE_MARKER_START } from '@/features/eds/services/pdp/pdp404Page';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const logger = createMockLogger();
@@ -53,8 +52,7 @@ function mockFetch(routes: Record<string, { status: number; body?: string }>) {
 }
 
 const HEALTHY = {
-    '/scripts/delayed.js': { status: 200, body: `x\n${SMART_404_MARKER_START}\ny` },
-    '/404.html': { status: 200, body: `<html>${SMART_404_HEAD_MARKER_START}</html>` },
+    '/404.html': { status: 200, body: `<html>${SMART_404_HEAD_MARKER_START}<body>${SMART_404_PAGE_MARKER_START}</body></html>` },
     '/': { status: 200, body: '<html>home</html>' },
 };
 
@@ -71,7 +69,7 @@ describe('aemLiveBaseUrl', () => {
 });
 
 describe('probeStorefrontDelivery', () => {
-    it('reports the smart-404 snippet installed when delayed.js carries the marker', async () => {
+    it("reports the smart-404 script installed when 404.html carries the recovery block", async () => {
         mockFetch(HEALTHY);
 
         const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
@@ -79,8 +77,12 @@ describe('probeStorefrontDelivery', () => {
         expect(result.smart404Snippet?.installed).toBe(true);
     });
 
-    it('reports it MISSING when delayed.js is served without the marker', async () => {
-        mockFetch({ ...HEALTHY, '/scripts/delayed.js': { status: 200, body: 'no marker here' } });
+    it('reports it MISSING when only delayed.js carries it (a storefront not reset since 2026-10-29)', async () => {
+        mockFetch({
+            ...HEALTHY,
+            '/404.html': { status: 200, body: `<html>${SMART_404_HEAD_MARKER_START}</html>` },
+            '/scripts/delayed.js': { status: 200, body: `x\n${SMART_404_MARKER_START}\ny` },
+        });
 
         const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
 
@@ -88,11 +90,12 @@ describe('probeStorefrontDelivery', () => {
     });
 
     it('reports the eager redirect from 404.html', async () => {
-        mockFetch({ ...HEALTHY, '/404.html': { status: 200, body: '<html>plain</html>' } });
+        mockFetch({ ...HEALTHY, '/404.html': { status: 200, body: `<html>${SMART_404_PAGE_MARKER_START}</html>` } });
 
         const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
 
         expect(result.eagerRedirect?.installed).toBe(false);
+        expect(result.smart404Snippet?.installed).toBe(true);
     });
 
     it('reports the overlay source template published when it serves 200', async () => {
@@ -195,7 +198,7 @@ describe('probeStorefrontDelivery', () => {
     });
 
     it('gives a verdict naming the missing piece when the site is up', async () => {
-        mockFetch({ ...HEALTHY, '/scripts/delayed.js': { status: 404, body: '' } });
+        mockFetch({ ...HEALTHY, '/404.html': { status: 200, body: `<html>${SMART_404_HEAD_MARKER_START}</html>` } });
 
         const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
 
@@ -209,9 +212,8 @@ describe('probeStorefrontDelivery', () => {
  * `/products/default` cannot fail for a prerender reason (it is the overlay's
  * input). A path built for a SKU the catalog just confirmed exists can: the
  * request goes through overlay registration, `render-pdp`, the authored-template
- * fetch, and the content-bus write. It is also the only automated check that the
- * three hand-written copies of `encodeSkuForUrl` still agree — our copy builds
- * the path, their code serves it.
+ * fetch, and the content-bus write. It is also the only live check on the path
+ * contract (ADR-024) — `pdpPathFor` builds the path, the storefront serves it.
  */
 describe('probeStorefrontDelivery — real SKU leg', () => {
     const SKU = 'VA19-SI-NA';
@@ -269,7 +271,7 @@ describe('probeStorefrontDelivery — real SKU leg', () => {
     });
 
     it('names BOTH causes of a 404 rather than blaming the chain', async () => {
-        // Cold-path recovery is client-side: delayed.js runs in a browser and
+        // Cold-path recovery is client-side: the 404 page's script runs in a browser and
         // calls prepublish-pdp, so a fetch can never trigger it. Any SKU that
         // pre-warming missed 404s on a perfectly healthy storefront. Asserting
         // "the chain is broken" there is the same over-claiming that made this
@@ -473,11 +475,11 @@ describe('probeStorefrontDelivery — no answer, and the edges of "reachable"', 
     });
 
     it('carries the transport error onto the leg instead of calling it not installed', async () => {
-        // "delayed.js is missing its marker" points at a reset. "the request for
-        // delayed.js failed" does not — the two must not read the same.
+        // "404.html is missing its marker" points at a reset. "the request for
+        // 404.html failed" does not — the two must not read the same.
         mockFetchOrThrow({
             '/': { status: 200, body: '<html>home</html>' },
-            '/scripts/delayed.js': new Error('socket hang up'),
+            '/404.html': new Error('socket hang up'),
         });
 
         const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
@@ -500,7 +502,8 @@ describe('probeStorefrontDelivery — no answer, and the edges of "reachable"', 
     });
 
     it('names the eager redirect on its own when the smart 404 handler is present', async () => {
-        mockFetch({ ...HEALTHY, '/404.html': { status: 404, body: '' } });
+        // Both live in 404.html since 2026-10-29, so only the eager block can be missing alone.
+        mockFetch({ ...HEALTHY, '/404.html': { status: 200, body: `<html><body>${SMART_404_PAGE_MARKER_START}</body></html>` } });
 
         const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
 

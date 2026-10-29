@@ -7,13 +7,9 @@
  * Step 4 of Projects Navigation Architecture plan.
  */
 
+import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
-import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
-
-// Re-declare mocks to ensure proper typing and hoisting
-jest.mock('fs/promises');
-jest.mock('os');
 
 describe('StateManager - Context Variables', () => {
     let testMocks: TestMocks;

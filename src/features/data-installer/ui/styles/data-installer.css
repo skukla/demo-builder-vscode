@@ -562,3 +562,14 @@
     color: var(--vscode-descriptionForeground);
 }
 }
+
+/* "Save as file" and the line saying where it went (SaveDatapackFileButton).
+   Used in the detail flyout's actions and an export's result, both only in this bundle. */
+@layer theme {
+.datapack-save-file {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+}

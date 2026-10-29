@@ -71,7 +71,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                     name: 'EDS ACCS API Mesh',
                     description: 'GraphQL mesh for ACCS',
                     dependencies: { required: [], optional: [] },
-                    configuration: { nodeVersion: '20' },
+                    configuration: {},
                 },
             ];
             const mockRegistry = {
@@ -147,7 +147,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                             name: 'EDS ACCS API Mesh',
                             description: 'GraphQL mesh for ACCS',
                             dependencies: { required: [], optional: [] },
-                            configuration: { nodeVersion: '20' },
+                            configuration: {},
                         },
                     ],
                     envVars: {

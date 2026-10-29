@@ -25,7 +25,7 @@ Consequences:
 | "Is the project's org reachable?" (proactive guard) | `detectProjectOrgMismatch(authManager, project, logger)` → `OrgMismatchInfo` or undefined | `src/features/authentication/services/detectProjectOrgMismatch.ts` |
 | Target an org for ONE `aio` invocation | `withOrgContext` / `orgContextEnv` / `applyAdobeCLIDefaults` (env per invocation) | `src/core/shell/orgContextEnv.ts`, `commandExecutor.ts` |
 | Sign in / recover | `AuthenticationService.login(force)` and `loginAndRestoreProjectContext(adobeContext, force)` | `src/features/authentication/services/authenticationService.ts` |
-| Reactive 403 handling | `ErrorCode.ORG_MISMATCH` (thrown by `adobeEntityFetcher`); MCP treats org-mismatch as non-retryable | `src/types/errorCodes.ts`, `adobeEntityFetcher.ts` |
+| Reactive 403 handling | `ErrorCode.ORG_MISMATCH` (thrown by `adobeCliFallback`); MCP treats org-mismatch as non-retryable | `src/types/errorCodes.ts`, `adobeCliFallback.ts` |
 
 ## Rules
 

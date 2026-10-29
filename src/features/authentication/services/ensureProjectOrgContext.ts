@@ -19,6 +19,7 @@
 
 import * as vscode from 'vscode';
 import { detectProjectOrgMismatch, type OrgAwareAuthManager } from './detectProjectOrgMismatch';
+import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -79,8 +80,8 @@ export async function ensureProjectOrgContext(options: {
 
     logger.warn(`${logPrefix} Project org not reachable by the current token`);
 
-    const selection = await vscode.window.showWarningMessage(
-        buildPrompt(project.name, initial.currentOrg),
+    const selection = await askDuringOperation(
+        { title: 'Switch Adobe organization', message: buildPrompt(project.name, initial.currentOrg) },
         'Switch IMS Org',
         'Cancel',
     );
@@ -95,7 +96,7 @@ export async function ensureProjectOrgContext(options: {
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Opening browser to switch organization',
+            title: 'Switching Adobe organization',
             cancellable: false,
         },
         () => authManager.loginAndRestoreProjectContext(

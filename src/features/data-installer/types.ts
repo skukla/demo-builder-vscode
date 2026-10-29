@@ -19,6 +19,12 @@ export interface DatapackId {
     version: string;
 }
 
+/**
+ * Which datapack catalog: the Data Installer service, or the team's own datapack
+ * library, which answers the same routes at its own address.
+ */
+export type DatapackStoreName = 'installer' | 'library';
+
 /** Cover and thumbnail art, either of which may be absent. */
 export interface DatapackArt {
     cover?: string;
@@ -36,6 +42,13 @@ export interface DatapackSummary {
     art: DatapackArt;
     createdAt?: string;
     updatedAt?: string;
+    /**
+     * Which catalog the row came from. Absent means the Data Installer, which is
+     * every row from before the datapack library existed.
+     */
+    store?: DatapackStoreName;
+    /** True when the signed-in SC owns it. Only the library says; absent otherwise. */
+    mine?: boolean;
 }
 
 /** A single datapack's full metadata. Same shape plus timing. */
@@ -108,6 +121,20 @@ export interface ActivityEntry {
 }
 
 /** A page of results from a paginated endpoint. */
+/**
+ * The catalog the panel shows: the Data Installer's packs, plus the library's when
+ * asked. `libraryError` says why the library's are missing, when they are.
+ */
+/** Which engine installs and removes datapacks (`demoBuilder.dataInstaller.engine`, DI-5). */
+export type DatapackEngineId = 'service' | 'demo-builder';
+
+/**
+ * The catalog with the library's rows. `engine` says which engine will install, so the screen
+ * offers Install on a library pack only when Demo Builder's engine is chosen: the service
+ * installs only from its own catalog.
+ */
+export type CatalogPage = Page<DatapackSummary> & { libraryError?: string; engine?: DatapackEngineId };
+
 export interface Page<T> {
     items: T[];
     count: number;
@@ -211,7 +238,7 @@ export interface ImportJobRecord {
         // 'watching' forever and the panel claiming an import was still running.
         | 'unwatchable';
     perType: Record<string, DataTypeStatus>;
-    /** Why nothing happened — for `never-registered` and `unwatchable`. */
+    /** Why it did not all succeed: `never-registered`, `unwatchable`, and an `error` or `partial` run the engine explained. */
     reason?: string;
     processingTimeMs?: number;
 }

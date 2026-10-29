@@ -68,6 +68,19 @@
       "nativeForPackages": ["buildright"],
       "onlyForPackages": ["buildright"],
       "stackTypes": ["eds-storefront"]
+    },
+    {
+      "id": "demo-builder-blocks",
+      "name": "Demo Builder Blocks",
+      "description": "Blocks every storefront gets from Demo Builder: a nav menu built from the Commerce category tree",
+      "alwaysIncluded": true,
+      "type": "standalone",
+      "source": {
+        "owner": "skukla",
+        "repo": "demo-builder-block-library",
+        "branch": "main"
+      },
+      "stackTypes": ["eds-storefront"]
     }
   ]
 }

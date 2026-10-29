@@ -3,9 +3,9 @@
  *
  * FEATURE-SCOPED DESPITE LIVING IN core/ui (ADR-017 §6, and §3 as amended
  * 2026-09-09: reach, not global). `Modal` is in core/ui/components/ui, but only
- * FIVE entries render it — wizard, dashboard, integrations, aiOverview and
- * dataInstaller. `configure`, `sidebar` and `projectsList` do not, and do not
- * import this sheet.
+ * SIX entries render it — wizard, dashboard, integrations, aiOverview,
+ * dataInstaller and projectsList (the Updates modal, PL-80). `configure` and
+ * `sidebar` do not, and do not import this sheet.
  *
  * `.modal-body:has(.manage-apis-body)` travels with this family, not with
  * `.manage-*`: its first class decides ownership, and it styles the modal body.
@@ -198,5 +198,43 @@
     opacity: 0.4;
     cursor: default;
     pointer-events: none;
+}
+
+/* The progress modal's body (PL-59, OperationProgressModal): ONE height for every
+ * state, with the content centred in it, so the modal never resizes as stages come and
+ * go, a step wraps, or it turns into a failure (owner, 2026-09-19). Sized for the
+ * tallest state — a failure whose reason runs to three lines; a longer one scrolls
+ * inside. Here rather than in a feature sheet because every screen that hosts a Modal
+ * hosts this one, and this sheet is what reaches them. */
+.modal-progress-body {
+    display: flex;
+    flex-direction: column;
+    /* `safe`: content taller than the body (a result's rows) starts at the top and
+       scrolls, rather than overflowing above it where nothing can scroll to. */
+    justify-content: safe center;
+    /* 240px until 2026-10-28, when the delete question (two boxes, each naming what it
+       deletes) overflowed it; 280 leaves a margin for a question one box longer. */
+    height: 280px;
+    overflow-y: auto;
+}
+
+/* A question's checkbox detail (what the box deletes), on its own smaller line inside the
+   box's label, so it lines up under the label and the delete question fits the body's one
+   height without scrolling (owner, 2026-10-28). */
+.prompt-checkbox-detail {
+    display: block;
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* What the operation acts on, under a short title instead of inside a long one that
+ * wrapped ("Changing destination to Kukla Test App 2 · Production", 2026-10-28). One
+ * line in every state, so the body below keeps its one height. */
+.modal-progress-subject {
+    font-size: 14px;
+    color: var(--spectrum-global-color-gray-700);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 }

@@ -14,9 +14,8 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { loadDeclaredSecretFlags } from '@/features/components/services/commerceSecretMigration';
-import { loadAppBuilderComponentSecretFlags } from '@/features/dashboard/handlers/appBuilderComponentSecrets';
+import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import type { Logger } from '@/types/logger';
 import { internals } from '../../../helpers/commandInternals';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
@@ -25,17 +24,6 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
-jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAvailableAppBuilderComponents: jest.fn(() => []),
-}));
-jest.mock('@/core/state/appBuilderComponentState', () => ({
-    getProvidedEnvVars: jest.fn(() => ({ MESH_ENDPOINT: 'https://mesh.test' })),
-}));
-jest.mock('@/features/dashboard/handlers/appBuilderComponentSecrets', () => ({
-    loadAppBuilderComponentSecretFlags: jest.fn(async () => ({ API_KEY: true })),
-    persistAppBuilderComponentSecrets: jest.fn(),
-    splitAppBuilderComponentSecrets: jest.fn(),
-}));
 jest.mock('@/features/components/services/commerceSecretMigration', () => ({
     loadDeclaredSecretFlags: jest.fn(async () => ({ COMMERCE_PASSWORD: true })),
     migrateDeclaredSecrets: jest.fn(),
@@ -111,6 +99,13 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
             stateManager,
             logger
         );
+    });
+
+    // Configure used to open only beside the dashboard. Since Edit can hand over to
+    // it, it can be the only screen open, so closing it has to land somewhere
+    // (owner, 2026-10-17). extension.ts decides where; this is the opt-in.
+    it('asks to be followed by another screen when it closes', () => {
+        expect(internals(command).shouldReopenWelcomeOnDispose()).toBe(true);
     });
 
     describe('execute', () => {
@@ -258,26 +253,12 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
             expect(data.theme).toBe('light');
         });
 
-        it('passes the project stack ids to the App Builder catalog', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(
-                createMockProject({
-                    componentSelections: { backend: 'accs', frontend: 'eds-storefront' },
-                })
-            );
+        it("sends no integration settings: those live on each integration's tile (AB-21)", async () => {
+            const data = await internals(command).getInitialData<Record<string, unknown>>();
 
-            await internals(command).getInitialData();
-
-            expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('accs', 'eds-storefront');
-        });
-
-        it('sends empty stack ids — not undefined — when the project has no selections', async () => {
-            stateManager.getCurrentProject.mockResolvedValue(
-                createMockProject({ componentSelections: undefined })
-            );
-
-            await internals(command).getInitialData();
-
-            expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('', '');
+            expect(data).not.toHaveProperty('appBuilderComponentCatalog');
+            expect(data).not.toHaveProperty('appBuilderComponentSecretFlags');
+            expect(data).not.toHaveProperty('providedEnvVars');
         });
 
         it('asks for declared-secret flags for exactly the configured components', async () => {
@@ -326,15 +307,10 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
 
         it('forwards the secret FLAGS (never the values) the webview needs', async () => {
             const data = await internals(command).getInitialData<{
-                appBuilderComponentSecretFlags: Record<string, boolean>;
                 componentSecretFlags: Record<string, boolean>;
-                providedEnvVars: Record<string, string>;
             }>();
 
-            expect(loadAppBuilderComponentSecretFlags).toHaveBeenCalled();
-            expect(data.appBuilderComponentSecretFlags).toEqual({ API_KEY: true });
             expect(data.componentSecretFlags).toEqual({ COMMERCE_PASSWORD: true });
-            expect(data.providedEnvVars).toEqual({ MESH_ENDPOINT: 'https://mesh.test' });
         });
 
         it('passes the registry component categories through untouched', async () => {
@@ -384,7 +360,9 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
             });
 
             expect(getRegisteredTypes).toHaveBeenCalled();
-            expect(registered).toEqual(['cancel', 'openExternal', 'save-configuration']);
+            // `republish-storefront` is the Republish progress modal's Retry, inline
+            // like save-configuration because it runs the command's own republish.
+            expect(registered).toEqual(['cancel', 'openExternal', 'save-configuration', 'republish-storefront']);
         });
 
         it('dispatches a registered message to the handler map under its own type', async () => {
@@ -406,6 +384,72 @@ describe('ConfigureProjectWebviewCommand - panel lifecycle and initial data', ()
                 'openExternal',
                 { url: 'https://example.test' }
             );
+        });
+    });
+
+    describe('the custom block-library setting changing while Configure is open', () => {
+        const LIBRARY_URL = 'https://github.com/acme/my-blocks';
+        let settingChanged: (event: { affectsConfiguration: (key: string) => boolean }) => void;
+        let sendSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            (vscode.workspace.onDidChangeConfiguration as jest.Mock).mockImplementation(
+                (listener: typeof settingChanged) => {
+                    settingChanged = listener;
+                    return { dispose: jest.fn() };
+                }
+            );
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+                get: jest.fn((key: string) =>
+                    key === 'blockLibraries.custom' ? [LIBRARY_URL] : undefined
+                ),
+            });
+            stateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ selectedStack: 'eds-accs' })
+            );
+            sendSpy = jest
+                .spyOn(
+                    command as unknown as {
+                        sendMessage: (t: string, d?: unknown) => Promise<void>;
+                    },
+                    'sendMessage'
+                )
+                .mockResolvedValue(undefined);
+            internals(command).initializeMessageHandlers({ onStreaming: jest.fn() });
+        });
+
+        function changeSetting(key: string): Promise<void> {
+            settingChanged({ affectsConfiguration: (changed) => changed === key });
+            // The push reads the project first; let that settle.
+            return new Promise((resolve) => setImmediate(resolve));
+        }
+
+        it('pushes the new custom libraries to the screen', async () => {
+            await changeSetting('demoBuilder.blockLibraries.custom');
+
+            const expected = parseCustomBlockLibrarySettings([LIBRARY_URL]);
+            expect(expected).toHaveLength(1);
+            expect(sendSpy).toHaveBeenCalledWith('customBlockLibraryDefaultsUpdated', {
+                customBlockLibraryDefaults: expected,
+            });
+        });
+
+        it('pushes nothing when another setting changes', async () => {
+            await changeSetting('demoBuilder.blockLibraries.defaults');
+
+            expect(sendSpy).not.toHaveBeenCalled();
+        });
+
+        it('offers no custom libraries to a project that is not Edge Delivery', async () => {
+            stateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ selectedStack: 'headless-accs' })
+            );
+
+            await changeSetting('demoBuilder.blockLibraries.custom');
+
+            expect(sendSpy).toHaveBeenCalledWith('customBlockLibraryDefaultsUpdated', {
+                customBlockLibraryDefaults: [],
+            });
         });
     });
 });

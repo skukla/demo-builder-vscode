@@ -98,8 +98,8 @@ describe('response-size ceilings', () => {
     });
 
     it.each([
-        ['write_page', { path: '/a', content: '<p>x</p>' }],
-        ['publish_page', { path: '/a' }],
+        ['write_page', { path: '/a', content: '<p>x</p>', confirm: true }],
+        ['publish_page', { path: '/a', confirm: true }],
         ['delete_page', { path: '/a', confirm: true }],
     ])('%s — outcome responses stay tiny', async (tool, args) => {
         expectWithinCeiling(tool, JSON.stringify(await register().call(tool, args)));

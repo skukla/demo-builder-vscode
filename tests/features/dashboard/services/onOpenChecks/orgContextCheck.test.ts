@@ -5,7 +5,7 @@
  * (`isAuthenticated` token check + SDK-only org read) and maps to ok / warning /
  * unknown. It must NEVER call the interactive auth guard or the CLI org-list
  * fallback (the two paths that launch a browser / stall ~14.5s). A degraded
- * state (no token, SDK cold) resolves to `unknown` ("sign in to check"), never a
+ * state (no token, SDK cold) resolves to `unknown` (signed out / not verified), never a
  * prompt. The canonical `detectProjectOrgMismatch` / `ensureOrgContext` logic is
  * exercised for real (pure given an injected org list).
  */
@@ -20,6 +20,7 @@ import { CHECK_IDS } from '@/types/messages';
 import type { CheckResult } from '@/features/dashboard/services/onOpenChecks/types';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { makeOrgContextAuth, buildOrgContextCheck, makeOrgCheckContext, projectWithOrg } from './orgContextCheck.testUtils';
+import { entityServicesOf } from '../../../../helpers/authenticationServiceFake';
 
 /** The default self-heal sink; a test that asserts on it installs its own. */
 let saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
@@ -49,16 +50,13 @@ it('no Adobe org → ok no-op, without touching auth at all', async () => {
 
     expect(outcome.status).toBe('ok');
     expect(auth.isAuthenticated).not.toHaveBeenCalled();
-    expect(auth.getOrganizationsSdkOnly).not.toHaveBeenCalled();
+    expect(entityServicesOf(auth).orgReads.getOrganizationsSdkOnly).not.toHaveBeenCalled();
 });
 
 it('valid token + matching org → ok with currentOrg; no CLI / no interactive path', async () => {
-    const auth = makeOrgContextAuth({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+    const auth = makeOrgContextAuth({ isAuthenticated: jest.fn().mockResolvedValue(true) }, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
             { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
-        ]),
-    });
+        ]) });
     const orgContextCheck = checkWith(auth);
     const { ctx } = makeOrgCheckContext(projectWithOrg('org1'));
 
@@ -71,9 +69,7 @@ it('valid token + matching org → ok with currentOrg; no CLI / no interactive p
 });
 
 it('posts a pending outcome before resolving', async () => {
-    const auth = makeOrgContextAuth({
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([{ id: 'org1', name: 'Org One' }]),
-    });
+    const auth = makeOrgContextAuth({}, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([{ id: 'org1', name: 'Org One' }]) });
     const orgContextCheck = checkWith(auth);
     const { ctx, post } = makeOrgCheckContext(projectWithOrg('org1'));
 
@@ -83,11 +79,9 @@ it('posts a pending outcome before resolving', async () => {
 });
 
 it('valid token + mismatch → warning with orgMismatch banner data', async () => {
-    const auth = makeOrgContextAuth({
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+    const auth = makeOrgContextAuth({}, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
             { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
-        ]),
-    });
+        ]) });
     const orgContextCheck = checkWith(auth);
     // Project expects an org the token can't reach.
     const { ctx } = makeOrgCheckContext(projectWithOrg('orgX', { organizationName: 'Expected Org' }));
@@ -100,7 +94,7 @@ it('valid token + mismatch → warning with orgMismatch banner data', async () =
     expect(outcome.data?.orgMismatch?.currentOrg).toBe('Org One');
 });
 
-it('absent/expired token → unknown; SDK read NOT attempted, no interactive login', async () => {
+it('absent/expired token → unknown + signedOut; SDK read NOT attempted, no interactive login', async () => {
     const auth = makeOrgContextAuth({
         isAuthenticated: jest.fn().mockResolvedValue(false),
     });
@@ -110,24 +104,52 @@ it('absent/expired token → unknown; SDK read NOT attempted, no interactive log
     const outcome = await orgContextCheck.run(ctx);
 
     expect(outcome.status).toBe('unknown');
-    expect(outcome.message).toMatch(/sign in/i);
-    expect(auth.getOrganizationsSdkOnly).not.toHaveBeenCalled();
+    expect(outcome.message).toBe('Signed out of Adobe');
+    expect(outcome.data).toEqual({ signedOut: true });
+    expect(entityServicesOf(auth).orgReads.getOrganizationsSdkOnly).not.toHaveBeenCalled();
     expect(auth.loginAndRestoreProjectContext).not.toHaveBeenCalled();
 });
 
-it('SDK unavailable (undefined SDK-only read) → unknown; no CLI fallback fired', async () => {
-    // `undefined` means the SDK could not answer (cold, timeout, error) — that is
-    // the only case where "Sign in to check" is honest.
-    const auth = makeOrgContextAuth({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue(undefined),
-    });
+// An expired sign-in now prompts (owner, 2026-10-17): the check hands that off and
+// returns at once, so the badge does not wait on the SC's answer.
+it('asks the host to prompt for a sign-in when signed out, without signing in itself', async () => {
+    const onSignedOut = jest.fn();
+    const auth = makeOrgContextAuth({ isAuthenticated: jest.fn().mockResolvedValue(false) });
+    const check = buildOrgContextCheck(auth, () => undefined, { onSignedOut });
+    const { ctx } = makeOrgCheckContext(projectWithOrg('org1'));
+
+    await check.run(ctx);
+
+    expect(onSignedOut).toHaveBeenCalledTimes(1);
+    expect(auth.loginAndRestoreProjectContext).not.toHaveBeenCalled();
+});
+
+it('tells the host the sign-in is good, so the next expiry prompts again', async () => {
+    const onSignedIn = jest.fn();
+    const onSignedOut = jest.fn();
+    const auth = makeOrgContextAuth({ isAuthenticated: jest.fn().mockResolvedValue(true) });
+    const check = buildOrgContextCheck(auth, () => undefined, { onSignedIn, onSignedOut });
+    const { ctx } = makeOrgCheckContext(projectWithOrg('org1'));
+
+    await check.run(ctx);
+
+    expect(onSignedIn).toHaveBeenCalledTimes(1);
+    expect(onSignedOut).not.toHaveBeenCalled();
+});
+
+it('SDK unavailable (undefined SDK-only read) → unknown, NOT signed out; no CLI fallback fired', async () => {
+    // `undefined` means the SDK could not answer (cold, timeout, error). The token
+    // is valid, so the badge must not say "Signed out" — it says "Not verified" and
+    // offers Verify, which re-runs this check.
+    const auth = makeOrgContextAuth({ isAuthenticated: jest.fn().mockResolvedValue(true) }, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue(undefined) });
     const orgContextCheck = checkWith(auth);
     const { ctx } = makeOrgCheckContext(projectWithOrg('org1'));
 
     const outcome = await orgContextCheck.run(ctx);
 
     expect(outcome.status).toBe('unknown');
+    expect(outcome.message).toBe('Adobe organization not verified');
+    expect(outcome.data).toBeUndefined();
     expect(auth.getOrganizations).not.toHaveBeenCalled();
 });
 
@@ -138,10 +160,7 @@ it('token valid but SDK answers ZERO orgs → warning with the Switch IMS Org re
     // login — which silently reuses the same browser SSO session and can never
     // change the outcome. A genuine empty answer must surface the mismatch banner
     // instead: its forced "Switch IMS Org" login shows the account/org chooser.
-    const auth = makeOrgContextAuth({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
-    });
+    const auth = makeOrgContextAuth({ isAuthenticated: jest.fn().mockResolvedValue(true) }, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]) });
     const orgContextCheck = checkWith(auth);
     const { ctx } = makeOrgCheckContext(projectWithOrg('orgX', { organizationName: 'Expected Org' }));
 
@@ -158,11 +177,9 @@ it('token valid but SDK answers ZERO orgs → warning with the Switch IMS Org re
 });
 
 it('no state manager yet → the self-heal write is skipped and the check still resolves ok', async () => {
-    const auth = makeOrgContextAuth({
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+    const auth = makeOrgContextAuth({}, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
             { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
-        ]),
-    });
+        ]) });
     // Resolved lazily and may not exist yet; nothing to write to is not an error.
     const orgContextCheck = buildOrgContextCheck(auth, () => null);
     const project = projectWithOrg('Org One');
@@ -176,11 +193,9 @@ it('no state manager yet → the self-heal write is skipped and the check still 
 });
 
 it('reachable + org data already correct → no manifest write at all', async () => {
-    const auth = makeOrgContextAuth({
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+    const auth = makeOrgContextAuth({}, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
             { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
-        ]),
-    });
+        ]) });
     const orgContextCheck = checkWith(auth);
     // Both fields already hold what the token reaches — nothing to heal.
     const project = projectWithOrg('org1', { organizationName: 'Org One' });
@@ -193,11 +208,9 @@ it('reachable + org data already correct → no manifest write at all', async ()
 });
 
 it('reachable + stale org NAME only → heals the name and writes once', async () => {
-    const auth = makeOrgContextAuth({
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+    const auth = makeOrgContextAuth({}, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
             { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
-        ]),
-    });
+        ]) });
     const orgContextCheck = checkWith(auth);
     // The id is already canonical; only the persisted name is out of date.
     const project = projectWithOrg('org1', { organizationName: 'Stale Name' });
@@ -212,11 +225,9 @@ it('reachable + stale org NAME only → heals the name and writes once', async (
 });
 
 it('mismatch with no persisted name → names the org only when the stored value is a human name', async () => {
-    const auth = makeOrgContextAuth({
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+    const auth = makeOrgContextAuth({}, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
             { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
-        ]),
-    });
+        ]) });
     const orgContextCheck = checkWith(auth);
 
     // An id/code never has whitespace, so there is no human name to show.
@@ -236,11 +247,9 @@ it('mismatch with no persisted name → names the org only when the stored value
 
 it('reachable + legacy/name data → self-heals project org id + name (one manifest write)', async () => {
     saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
-    const auth = makeOrgContextAuth({
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+    const auth = makeOrgContextAuth({}, { getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
             { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
-        ]),
-    });
+        ]) });
     const orgContextCheck = checkWith(auth);
     // Legacy: organization holds the NAME, not the id; no organizationName yet.
     const project = projectWithOrg('Org One');

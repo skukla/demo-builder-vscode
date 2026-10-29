@@ -13,8 +13,14 @@
  */
 
 import type { SummaryRow } from '../BuildYourProjectSummary';
+import { boilerplateFloorWarning, boilerplateLabel } from '@/features/eds/services/storefront/storefrontProvenance';
 import { deriveBlockLibraryName } from '@/features/project-creation/services/customBlockLibraryUtils';
-import { SHARED_DEMO_FILE_VERSION, type AddedDemo, type StorefrontKind } from '@/types/projectFile';
+import {
+    SHARED_DEMO_FILE_VERSION,
+    type AddedDemo,
+    type StorefrontBoilerplate,
+    type StorefrontKind,
+} from '@/types/projectFile';
 import type { SharedDemoProbeResult, SharedDemoRead } from '@/types/webviewRequests';
 
 export type AddDemoStage = 'link' | 'found';
@@ -47,7 +53,7 @@ export interface AddDemoDraft {
 
 export const COPY = {
     title: 'Add a demo package',
-    /** The two ways in, as choice cards: the same shape as Export's "How will you hand it over?". */
+    /** The two ways in, as choice cards. */
     wayQuestion: 'Where is the demo?',
     wayLink: 'From a link',
     wayLinkWhy: "A GitHub link or the demo's site address. Keeps its history and later changes.",
@@ -136,6 +142,10 @@ export function foundRows(read: SharedDemoRead): SummaryRow[] {
         // Where the code lives, first: a site address was read back to it.
         { label: 'Code', value: `github.com/${read.fullName}`, done: true },
         { label: 'Type', value: KIND_LABEL[read.kind], done: true },
+        // One row only (EDS-13f decision 7): the rest of the origin is in Diagnostics.
+        ...(read.boilerplate
+            ? [{ label: 'Built on', value: builtOnValue(read.boilerplate), done: true }]
+            : []),
         {
             label: 'Pages',
             value: read.kind === 'eds' ? pages : 'Not needed for a headless demo',
@@ -149,6 +159,12 @@ export function foundRows(read: SharedDemoRead): SummaryRow[] {
             ? []
             : [{ label: 'Company (B2B) features', value: read.b2b === 'on' ? 'On' : 'Off', done: true }]),
     ];
+}
+
+/** The boilerplate, with the step-05 floor warning on the same row: a warning, never a refusal. */
+function builtOnValue(boilerplate: StorefrontBoilerplate): string {
+    const warning = boilerplateFloorWarning(boilerplate);
+    return warning ? `${boilerplateLabel(boilerplate)}. ${warning}` : boilerplateLabel(boilerplate);
 }
 
 /** The two key families every shipped brand carries, so the backend choice does not lose the codes. */
@@ -190,9 +206,13 @@ export function buildAddedDemo(read: SharedDemoRead, draft: AddDemoDraft): Added
         ...(description?.datapack ? { datapack: description.datapack } : {}),
         ...(description?.integrations ? { integrations: description.integrations } : {}),
         ...(description?.blockLibraries ? { blockLibraries: description.blockLibraries } : {}),
+        // A saved package's record of what it was built from (EDS-13f): its fixes keep arriving.
+        ...(description?.builtWith ? { builtWith: description.builtWith } : {}),
         ...(read.contentSource ? { contentSource: read.contentSource } : {}),
         source: { owner, repo, branch: read.defaultBranch },
         storefrontKind: read.kind === 'headless' ? 'headless' : 'eds',
+        ...(read.boilerplate ? { boilerplate: read.boilerplate } : {}),
+        ...(read.lineage ? { lineage: read.lineage } : {}),
     };
 }
 

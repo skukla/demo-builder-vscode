@@ -14,8 +14,11 @@
  * @module core/ui/components/ui/menuIcons
  */
 
+import Add from '@spectrum-icons/workflow/Add';
 import Beaker from '@spectrum-icons/workflow/Beaker';
+import Clock from '@spectrum-icons/workflow/Clock';
 import Copy from '@spectrum-icons/workflow/Copy';
+import DataAdd from '@spectrum-icons/workflow/DataAdd';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Duplicate from '@spectrum-icons/workflow/Duplicate';
 import Edit from '@spectrum-icons/workflow/Edit';
@@ -29,6 +32,7 @@ import PinOn from '@spectrum-icons/workflow/PinOn';
 import Play from '@spectrum-icons/workflow/Play';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Revert from '@spectrum-icons/workflow/Revert';
+import Settings from '@spectrum-icons/workflow/Settings';
 import Stop from '@spectrum-icons/workflow/Stop';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
@@ -54,8 +58,16 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     delete: <Delete size="S" />,
     /** API access/entitlements — a key reads as "what this is allowed to reach". */
     apiAccess: <Key size="S" />,
+    /** Values a person sets on a thing (an integration's Settings). */
+    settings: <Settings size="S" />,
     /** Try something out without it taking effect — the workbench's whole job. */
     measure: <Beaker size="S" />,
+    /** Fill something with records from elsewhere (an ERP from Commerce). */
+    loadData: <DataAdd size="S" />,
+    /** Add another of something beside what is there (another ERP for an integration). */
+    add: <Add size="S" />,
+    /** Something unavailable for a while (a demo ERP's simulated downtime). */
+    downtime: <Clock size="S" />,
 };
 
 /**

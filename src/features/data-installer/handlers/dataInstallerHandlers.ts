@@ -19,10 +19,19 @@ import { DataInstallerClient } from '../services/dataInstallerClient';
 import {
     isDataInstallerEnabled,
     resolveDataInstallerBaseUrl,
+    resolveDatapackStoreBaseUrl,
+    selectedDatapackEngine,
 } from '../services/dataInstallerConfig';
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
 import { orgNumberOf } from '../services/dataInstallerSignIn';
-import type { DatapackId, OperationMode } from '../types';
+import type {
+    CatalogPage,
+    DatapackId,
+    DatapackStoreName,
+    DatapackSummary,
+    OperationMode,
+    Page,
+} from '../types';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
@@ -66,9 +75,15 @@ function refuse(
  *
  * Order matters: the cheap local checks run before anything that could prompt the
  * user or hit the network.
+ *
+ * `store` picks which catalog the client talks to: the Data Installer (the default,
+ * and every caller before the datapack library existed), or the library, which
+ * answers the same routes at its own address. The feature switch and the sign-in
+ * apply to both.
  */
 export async function resolveDataInstallerAccess(
     context: HandlerContext,
+    store: DatapackStoreName = 'installer',
 ): Promise<DataInstallerAccess> {
     // Both config refusals LOG. They used to return in silence, and a colleague's
     // 864-line debug log carried zero lines from this feature while the catalog
@@ -83,6 +98,20 @@ export async function resolveDataInstallerAccess(
             'The Data Installer is turned off. Enable demoBuilder.dataInstaller.enabled to use it.',
             ErrorCode.INVALID_OPERATION,
         );
+    }
+
+    if (store === 'library') {
+        const library = resolveDatapackStoreBaseUrl();
+        if (!library.ok) {
+            context.logger.warn(
+                `${LOG_PREFIX} Refused: demoBuilder.datapackStore.apiBaseUrl is ${library.reason === 'not-configured' ? 'not set' : `not usable (${library.fingerprint ?? 'unreadable'})`}.`,
+            );
+            return refuse(
+                'The datapack library has no usable address. Set demoBuilder.datapackStore.apiBaseUrl to an https:// URL.',
+                ErrorCode.INVALID_OPERATION,
+            );
+        }
+        return authorize(context, library.baseUrl);
     }
 
     const resolved = resolveDataInstallerBaseUrl();
@@ -100,7 +129,11 @@ export async function resolveDataInstallerAccess(
             ErrorCode.INVALID_OPERATION,
         );
     }
+    return authorize(context, resolved.baseUrl);
+}
 
+/** The sign-in half of the guard, shared by both stores: both take the SC's own Adobe token. */
+async function authorize(context: HandlerContext, baseUrl: string): Promise<DataInstallerAccess> {
     const authManager = context.authManager;
     if (!authManager) {
         return refuse('Adobe sign-in is required.', ErrorCode.AUTH_REQUIRED);
@@ -139,17 +172,17 @@ export async function resolveDataInstallerAccess(
     const getToken = async (): Promise<string> =>
         (await authManager.getTokenManager().inspectToken()).token ?? '';
 
-    const org = await serviceOrgCode(authManager, resolved.baseUrl, context.logger);
+    const org = await serviceOrgCode(authManager, baseUrl, context.logger);
     if ('refusal' in org) return { ok: false, response: org.refusal };
     const { orgCode } = org;
 
     return {
         ok: true,
-        baseUrl: resolved.baseUrl,
+        baseUrl,
         getToken,
         ...(orgCode ? { orgCode } : {}),
         client: new DataInstallerClient({
-            baseUrl: resolved.baseUrl,
+            baseUrl,
             getToken,
             orgCode,
             onDrift: (endpoint, missingKeys) => {
@@ -168,8 +201,8 @@ export async function resolveDataInstallerAccess(
  * header", Stage, 2026-10-27).
  *
  * beta.150 sent the CACHED org, which is empty after a reload and after a fresh sign-in,
- * so its requests named none. The cache is still read first, but only counts when it IS
- * that org. Adobe's org list is the quick one that never opens a browser.
+ * so its requests named none (fixed in beta.151). The cache is still read first, but only
+ * counts when it IS that org. Adobe's org list is the quick one that never opens a browser.
  *
  * A sign-in that does not reach that org is refused here, saying why. When the address
  * names no org, or Adobe cannot list the orgs, the request goes without one.
@@ -181,11 +214,11 @@ async function serviceOrgCode(
 ): Promise<{ orgCode?: string } | { refusal: HandlerResponse }> {
     const orgNumber = orgNumberOf(baseUrl);
     if (!orgNumber) return {};
-    const cached = authManager.getCachedOrganization();
+    const cached = authManager.getCacheManager().getCachedOrganization();
     if (cached?.id === orgNumber) return { orgCode: cached.code };
     let orgs;
     try {
-        orgs = await authManager.getOrganizationsSdkOnly();
+        orgs = await (await authManager.getEntityServices()).orgReads.getOrganizationsSdkOnly();
     } catch (error) {
         logger.warn(`${LOG_PREFIX} Could not list Adobe orgs to name org ${orgNumber}: ${(error as Error).message}`);
         return {};
@@ -207,7 +240,9 @@ async function serviceOrgCode(
 /** Turn a thrown error into a response the UI can act on. */
 function toFailure(error: unknown, fallback: string): HandlerResponse {
     // Only reached past the guard, so the SC is signed in: the SERVICE turned the sign-in away,
-    // and signing in again would hand it the same one (2026-10-27).
+    // and signing in again would hand it the same one. Said as such, never as "sign in" — the
+    // Data Installer's Stage deployment refuses a sign-in its Production one takes, and the
+    // screen asked a signed-in owner to sign in (2026-10-27).
     if (isDataInstallerAuthError(error)) {
         return {
             success: false,
@@ -228,12 +263,61 @@ function toFailure(error: unknown, fallback: string): HandlerResponse {
 }
 
 /** Run one client call behind the guard, mapping both failure kinds. */
+const LIBRARY_LIST_FAILED = 'Could not list the datapack library.';
+
+/**
+ * The library's catalog, each row tagged `library`.
+ *
+ * No curation filter: the library already answers each SC with the shared packs
+ * plus their own, and their own are exactly what they came to find.
+ */
+async function listLibrary(
+    client: DataInstallerClient,
+    paging: { limit?: number; skip?: number },
+): Promise<Page<DatapackSummary>> {
+    const listed = await client.findDatapacks(paging);
+    return { ...listed, items: listed.items.map((item) => ({ ...item, store: 'library' as const })) };
+}
+
+/**
+ * The Data Installer's page with the library's rows added.
+ *
+ * A library that cannot be reached costs only its own rows: the Data Installer's
+ * catalog still shows, and the reason travels as `libraryError` so the panel can
+ * say why the library is missing rather than silently showing less.
+ */
+async function withLibraryRows(
+    context: HandlerContext,
+    installer: Page<DatapackSummary>,
+    paging: { limit?: number; skip?: number },
+): Promise<HandlerResponse> {
+    const library = await withClient(
+        context,
+        LIBRARY_LIST_FAILED,
+        (client) => listLibrary(client, paging),
+        'library',
+    );
+    if (!library.success) {
+        const libraryError = library.error ?? LIBRARY_LIST_FAILED;
+        return { success: true, data: { ...installer, libraryError, engine: selectedDatapackEngine() } satisfies CatalogPage };
+    }
+    const extra = (library.data as Page<DatapackSummary>).items;
+    // No `total`: the two stores' totals do not add up to anything a caller can use.
+    const merged: CatalogPage = {
+        items: [...installer.items, ...extra],
+        count: installer.count + extra.length,
+        engine: selectedDatapackEngine(),
+    };
+    return { success: true, data: merged };
+}
+
 async function withClient(
     context: HandlerContext,
     fallback: string,
     run: (client: DataInstallerClient) => Promise<unknown>,
+    store: DatapackStoreName = 'installer',
 ): Promise<HandlerResponse> {
-    const access = await resolveDataInstallerAccess(context);
+    const access = await resolveDataInstallerAccess(context, store);
     if (!access.ok) {
         return access.response;
     }
@@ -260,6 +344,10 @@ async function withClient(
 // Exported because the wizard's composite map registers `find-datapacks`, and
 // TypeScript cannot NAME the map's inferred type while this stays local.
 export interface FindDatapacksPayload {
+    /** Which catalog to list. Defaults to the Data Installer. */
+    store?: DatapackStoreName;
+    /** With the Data Installer's list: add the library's packs to it. */
+    includeLibrary?: boolean;
     includeCommunity?: boolean;
     limit?: number;
     skip?: number;
@@ -269,6 +357,8 @@ export interface FindDatapacksPayload {
 interface DatapackRefPayload {
     datapackName?: string;
     version?: string;
+    /** Which catalog holds it. Defaults to the Data Installer. */
+    store?: DatapackStoreName;
 }
 
 export const dataInstallerHandlers = defineHandlers({
@@ -280,16 +370,32 @@ export const dataInstallerHandlers = defineHandlers({
     'find-datapacks': async (
         context: HandlerContext,
         payload?: FindDatapacksPayload,
-    ): Promise<HandlerResponse> =>
-        withClient(context, 'Could not list datapacks.', (client) =>
+    ): Promise<HandlerResponse> => {
+        const paging = {
+            ...(payload?.limit !== undefined ? { limit: payload.limit } : {}),
+            ...(payload?.skip !== undefined ? { skip: payload.skip } : {}),
+        };
+        if (payload?.store === 'library') {
+            return withClient(
+                context,
+                LIBRARY_LIST_FAILED,
+                (client) => listLibrary(client, paging),
+                'library',
+            );
+        }
+        const installer = await withClient(context, 'Could not list datapacks.', (client) =>
             client.findDatapacks({
                 // Curated by default: 23 of 40 live entries are shared, and the
                 // rest is developer scratch nobody wants to browse.
                 ...(payload?.includeCommunity ? {} : { shared: true }),
-                ...(payload?.limit !== undefined ? { limit: payload.limit } : {}),
-                ...(payload?.skip !== undefined ? { skip: payload.skip } : {}),
+                ...paging,
             }),
-        ),
+        );
+        if (!payload?.includeLibrary || !installer.success) {
+            return installer;
+        }
+        return withLibraryRows(context, installer.data as Page<DatapackSummary>, paging);
+    },
 
     'get-datapack-detail': async (
         context: HandlerContext,
@@ -299,8 +405,10 @@ export const dataInstallerHandlers = defineHandlers({
         if (!id) {
             return { success: false, error: 'A datapack name and version are required.' };
         }
+        const store = payload?.store ?? 'installer';
         return withClient(context, 'Could not load the datapack.', async (client) => {
-            const detail = await client.getDatapackDetail(id);
+            const fetched = await client.getDatapackDetail(id);
+            const detail = store === 'library' ? { ...fetched, store } : fetched;
             // Explicit types only — omitting them returns a 400 from the service.
             const inventory =
                 detail.dataTypes.length > 0
@@ -313,7 +421,7 @@ export const dataInstallerHandlers = defineHandlers({
                           requestedCount: 0,
                       };
             return { detail, inventory };
-        });
+        }, store);
     },
 
     'list-datapack-data-types': async (

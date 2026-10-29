@@ -114,3 +114,34 @@ describe('what the field shows', () => {
         expect(screen.getByText(/Folder: bodea-b2b-demo/)).toBeInTheDocument();
     });
 });
+
+describe('in Edit', () => {
+    // The name was locked here because Edit changed only the label; it now renames
+    // with the same rename Configure uses, after the Edit (owner, 2026-10-17).
+    const editing = {
+        ...baseState,
+        wizardMode: 'edit' as const,
+        projectTitle: 'Bodea Demo',
+        projectName: 'bodea-demo',
+    };
+
+    it('shows the name and lets it change', () => {
+        renderStep(editing);
+
+        expect(nameField()).toHaveValue('Bodea Demo');
+        expect(nameField()).not.toHaveAttribute('readonly');
+    });
+
+    it('names the folder it lives in, as when creating', () => {
+        renderStep(editing);
+
+        expect(screen.getByText(/Folder: bodea-demo/)).toBeInTheDocument();
+        expect(screen.queryByText('Rename in Configure.')).not.toBeInTheDocument();
+    });
+
+    it('stays editable when creating', () => {
+        renderStep(baseState);
+
+        expect(nameField()).not.toHaveAttribute('readonly');
+    });
+});

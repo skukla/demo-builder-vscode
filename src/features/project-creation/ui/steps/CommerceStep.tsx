@@ -51,6 +51,7 @@ import {
     type CommerceSectionId,
 } from './commerceSections';
 import { sectionBody } from './commerceStepBodies';
+import { isSetInConfigure } from './editLocks';
 import { isCommerceConfigured, isAdobeSignedIn } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
 import {
@@ -166,6 +167,10 @@ export function CommerceStep({
     const handleBackendSelect = useCallback(
         (backend: string) => {
             if (!pkg) return;
+            // A different backend resets the Commerce settings, so Edit must let the
+            // SC choose them again (editLocks.ts). Sticky: switching back does not
+            // restore what the switch reset.
+            if (backend !== state.selectedBackend) updateState({ foundationChanged: true });
             const resolution = resolveStackForBackend(stacks, pkg, backend);
             // Unique mapping → commit the stack (preserves the mesh reconciliation,
             // which includes clearing the stale config-validity verdicts).
@@ -191,7 +196,7 @@ export function CommerceStep({
             // Selecting a backend STAYS on Backend — the footer Continue advances to
             // the next sub-step (no auto-advance).
         },
-        [pkg, stacks, handlers, updateState],
+        [pkg, stacks, handlers, updateState, state.selectedBackend],
     );
 
     // Persist the store-view selection so Catalog unlocks (shared env-var keys).
@@ -281,6 +286,7 @@ export function CommerceStep({
                 state,
                 updateState,
                 configForm,
+                setInConfigure: isSetInConfigure(state),
             }),
         [
             activeStep,

@@ -1,7 +1,8 @@
 /**
- * The fakes the headless apply suites stand on.
+ * The fakes the headless check-and-apply suites stand on: updateApplyService's
+ * own and updateSelections.test.ts, which finds what this applies.
  *
- * Every collaborator the service constructs — the five services and the two
+ * Every collaborator the two modules construct — the services and the
  * checkers — is a mock CLASS whose methods are module-scoped jest.fns, so a
  * suite can script one answer per call and read back what the service handed
  * each of them. The shared apply cores (block library, commit-sha rollback,
@@ -10,8 +11,9 @@
  * THIS FILE OWNS THE jest.mock CALLS. Import it FIRST.
  */
 
+import type { IntegrationUpdateProbe } from '@/features/updates/services/integrationUpdates';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
-import type { UpdateSelections } from '@/features/updates/services/updateApplyService';
+import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -23,16 +25,20 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 export const mockSyncFork = jest.fn();
 export const mockCheckForkStatus = jest.fn();
 export const mockSyncWithTemplate = jest.fn();
+export const mockSyncBoilerplate = jest.fn();
 export const mockUpdateLastSyncedCommit = jest.fn();
 export const mockUpdateComponent = jest.fn();
 export const mockApplyAdobeMcpUpdate = jest.fn();
 export const mockApplyBlockLibraryUpdateResolved = jest.fn();
 export const mockUpdateCommitShaWithRollback = jest.fn();
+/** The installer the block-library INSTALL core calls (EDS-28). */
+export const mockInstallBlockLibraryFiles = jest.fn();
 export const mockCheckTemplateUpdates = jest.fn();
 export const mockCheckAllProjectsForUpdates = jest.fn();
 export const mockCheckMcpUpdates = jest.fn();
 export const mockCheckBlockLibraries = jest.fn();
 export const mockCheckInspectorSdk = jest.fn();
+export const mockCheckBoilerplate = jest.fn();
 
 /** Constructor spies: what each service was BUILT with. */
 export const ForkSyncServiceCtor = jest.fn();
@@ -58,6 +64,7 @@ jest.mock('@/features/updates/services/templateSyncService', () => ({
             TemplateSyncServiceCtor(...args);
         }
         syncWithTemplate = (...a: unknown[]) => mockSyncWithTemplate(...a);
+        syncBoilerplate = (...a: unknown[]) => mockSyncBoilerplate(...a);
         updateLastSyncedCommit = (...a: unknown[]) => mockUpdateLastSyncedCommit(...a);
     },
 }));
@@ -75,6 +82,7 @@ jest.mock('@/features/updates/services/adobeMcpUpdateCore', () => ({
 jest.mock('@/features/updates/services/updateCore', () => ({
     applyBlockLibraryUpdateResolved: (...a: unknown[]) => mockApplyBlockLibraryUpdateResolved(...a),
     updateCommitShaWithRollback: (...a: unknown[]) => mockUpdateCommitShaWithRollback(...a),
+    installBlockLibraryFiles: (...a: unknown[]) => mockInstallBlockLibraryFiles(...a),
 }));
 jest.mock('@/features/updates/services/templateUpdateChecker', () => ({
     TemplateUpdateChecker: class {
@@ -99,6 +107,16 @@ jest.mock('@/features/updates/services/adobeMcpUpdateChecker', () => ({
         }
         checkForUpdates = (...a: unknown[]) => mockCheckMcpUpdates(...a);
     },
+}));
+// An unset mock (jest's resetMocks clears it before each test) answers no updates, as the
+// real check does for a project with no Adobe base.
+jest.mock('@/features/updates/services/boilerplateCheck', () => ({
+    checkBoilerplate: async (...a: unknown[]) => (await mockCheckBoilerplate(...a)) ?? [],
+}));
+// The local storefront copy's refresh runs real git; its rules are localStorefrontRefresh.test's.
+export const mockRefreshLocalStorefronts = jest.fn();
+jest.mock('@/features/updates/services/localStorefrontRefresh', () => ({
+    refreshLocalStorefronts: (...a: unknown[]) => mockRefreshLocalStorefronts(...a),
 }));
 jest.mock('@/features/updates/services/addonUpdateChecker', () => ({
     AddonUpdateChecker: class {
@@ -144,6 +162,15 @@ export function edsProject(overrides: Partial<Project> = {}): Project {
             },
         },
         installedInspectorSdk: { commitSha: 'old', installedAt: '2026-01-01T00:00:00.000Z' },
+        // Every storefront has Demo Builder Blocks (always included, 2026-10-15);
+        // without it the check would offer to install it.
+        installedBlockLibraries: [
+            installedLibrary('Demo Builder Blocks', {
+                owner: 'skukla',
+                repo: 'demo-builder-block-library',
+                branch: 'main',
+            }),
+        ],
         ...overrides,
     });
 }
@@ -165,10 +192,33 @@ export function emptySelections(): UpdateSelections {
     return {
         forkSync: [],
         template: [],
+        boilerplate: [],
+        finish: [],
         component: [],
         adobeMcp: [],
         blockLibrary: [],
+        blockLibraryInstall: [],
         inspector: [],
+        integration: [],
+    };
+}
+
+/**
+ * The integration probe the calling boundary binds (AB-73), answering from the
+ * records alone — the way the real check answers when nothing changed — with
+ * every project in the signed-in org.
+ */
+export function recordsIntegrationProbe(): IntegrationUpdateProbe {
+    return {
+        check: jest.fn(async (project: Project) => ({
+            reports: Object.entries(project.appBuilderComponents ?? {}).map(([id, state]) => ({
+                id,
+                available: Boolean(state.updateAvailable),
+            })),
+            changed: false,
+        })),
+        inOtherOrg: jest.fn(async () => false),
+        catalog: [],
     };
 }
 
@@ -184,8 +234,14 @@ export function resetFakes(): void {
     mockUpdateLastSyncedCommit.mockResolvedValue(undefined);
     mockUpdateComponent.mockResolvedValue(undefined);
     mockApplyAdobeMcpUpdate.mockResolvedValue(undefined);
-    mockApplyBlockLibraryUpdateResolved.mockResolvedValue(undefined);
+    mockApplyBlockLibraryUpdateResolved.mockResolvedValue([]);
     mockUpdateCommitShaWithRollback.mockResolvedValue(undefined);
+    mockInstallBlockLibraryFiles.mockResolvedValue({
+        success: true,
+        blocksCount: 0,
+        blockIds: [],
+        libraryVersions: [],
+    });
     mockCheckForkStatus.mockResolvedValue(null);
     mockCheckTemplateUpdates.mockResolvedValue(null);
     mockCheckAllProjectsForUpdates.mockResolvedValue([]);

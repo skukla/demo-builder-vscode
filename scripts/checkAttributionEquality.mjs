@@ -35,10 +35,14 @@ const POSITIVE = 'src/features/project-creation/services/aiBundle/agentsMdSectio
 /** A webview entry point: nothing mirrors it and nothing imports it. */
 const NEGATIVE = 'src/features/project-creation/ui/wizard/index.tsx';
 
+/** The day `suitesFor` gained the import-graph fallback. */
+const FALLBACK_LANDED = '2026-09-08';
+
 const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 
 function main() {
-    const modules = Object.keys(JSON.parse(readFileSync(BASELINE, 'utf8')).modules);
+    const rows = JSON.parse(readFileSync(BASELINE, 'utf8')).modules;
+    const modules = Object.keys(rows);
     const failures = [];
 
     // Guard against the vacuous pass: an empty or unreadable baseline agrees with
@@ -48,10 +52,20 @@ function main() {
     }
 
     let barren = 0;
+    let viaFallback = 0;
     let differing = 0;
     for (const m of modules) {
         const mirror = mirroringSuites(m);
         if (!mirror.length) {
+            // A row RECORDED after the fallback landed, for a module the fallback still
+            // answers for, was measured through it: there is no older meaning to move.
+            // First one: appBuilderRemovalState.ts, 2026-10-10, split from a file whose
+            // suites kept the old name. A row with no `recorded` stamp predates that
+            // field and so predates nothing we can vouch for; it still fails.
+            if ((rows[m].recorded ?? '') >= FALLBACK_LANDED && suitesFor(m).length) {
+                viaFallback += 1;
+                continue;
+            }
             // The fallback WOULD fire here, so this row's meaning is no longer fixed.
             barren += 1;
             failures.push(`${m}: no mirroring suite — the fallback would change this pinned row.`);
@@ -80,7 +94,8 @@ function main() {
     }
 
     console.log(`baseline rows checked                : ${modules.length}`);
-    console.log(`  rows whose suite set is unchanged  : ${modules.length - barren - differing}`);
+    console.log(`  rows whose suite set is unchanged  : ${modules.length - barren - differing - viaFallback}`);
+    console.log(`  rows measured THROUGH the fallback : ${viaFallback}`);
     console.log(`  rows with no mirroring suite       : ${barren}   (must be 0)`);
     console.log(`  rows whose suite set MOVED         : ${differing}   (must be 0)`);
     console.log(`POSITIVE control ${POSITIVE}`);

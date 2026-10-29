@@ -19,7 +19,7 @@ import '../../../../helpers/integrationCardSpectrumMocks';
 import React from 'react';
 import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
-import type { IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
+import type { IntegrationCardModel, LinkedCard } from '@/core/ui/components/integrations/integrationCardModel.types';
 import '@testing-library/jest-dom';
 
 jest.mock('@/core/ui/components/ui/StatusDot', () => ({
@@ -36,7 +36,6 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
         name: 'ERP Sync',
         kindLabel: 'Pre-built',
         sourceLine: 'acme/erp-sync',
-        sourceIsAi: false,
         status: 'deployed',
         statusLabel: 'Deployed',
         dotVariant: 'success',
@@ -72,6 +71,14 @@ describe('IntegrationCard', () => {
         expect(screen.getByText('ERP Sync')).toBeInTheDocument();
         expect(screen.getByTestId('status-dot')).toHaveAttribute('data-variant', 'success');
         expect(screen.getByText('Deployed')).toBeInTheDocument();
+    });
+
+    // The name wraps to two lines, then clamps (CSS); the full name is the hover
+    // title on both name forms, renamable and plain.
+    it.each([true, false])('carries the full name as its hover title (canRename %s)', (canRename) => {
+        renderCard(makeModel({ canRename }));
+
+        expect(screen.getByText('ERP Sync')).toHaveAttribute('title', 'ERP Sync');
     });
 
     it('is a keyboard-reachable button (role + tabIndex)', () => {
@@ -149,7 +156,7 @@ describe('IntegrationCard', () => {
 
         // A menu item now, not a face link — the mock renders Menu items eagerly
         // as buttons, so query by role button.
-        fireEvent.click(screen.getByRole('button', { name: /^open$/i }));
+        fireEvent.click(screen.getByRole('button', { name: 'Open in Developer Console' }));
 
         expect(onAction).toHaveBeenCalledWith(model, 'open');
         expect(onOpen).not.toHaveBeenCalled();
@@ -412,6 +419,78 @@ describe('IntegrationCard', () => {
                 expect.objectContaining({ id: 'erp-sync' }),
                 'remove'
             );
+        });
+    });
+
+    // Names in a row ran out of room on long ERP names (owner, 2026-10-01). One link
+    // shows its name; several show a count, and the flyout lists them.
+    describe('type badge', () => {
+        it('shows what kind of system the card is, beside its name', () => {
+            const { container } = renderCard(makeModel({ typeBadge: 'ERP' }));
+
+            expect(container.querySelector('.integration-card-badge')).toHaveTextContent('ERP');
+        });
+
+        it('shows no badge on a card that names no type', () => {
+            const { container } = renderCard(makeModel());
+
+            expect(container.querySelector('.integration-card-badge')).toBeNull();
+        });
+    });
+
+    describe('linked line', () => {
+        const link = (id: string, name: string, typeBadge?: string): LinkedCard => ({
+            id,
+            name,
+            ...(typeBadge ? { typeBadge } : {}),
+            status: 'deployed',
+            statusLabel: 'Deployed',
+            dotVariant: 'success',
+        });
+        const shown = (container: HTMLElement) =>
+            container.querySelector('.integration-card-link-name')?.textContent;
+
+        it('names a single linked card', () => {
+            const { container } = renderCard(
+                makeModel({ linked: { cards: [link('erp-integration', 'ERP Integration')] } })
+            );
+
+            expect(shown(container)).toBe('ERP Integration');
+        });
+
+        it('counts several of one type by that type, and keeps every name in the title', () => {
+            const { container } = renderCard(
+                makeModel({
+                    linked: {
+                        cards: [link('a', 'Justrite ERP', 'ERP'), link('b', 'Accuform ERP', 'ERP')],
+                    },
+                })
+            );
+
+            expect(shown(container)).toBe('2 ERPs');
+            expect(screen.getByTitle('Connected to Justrite ERP, Accuform ERP')).toBeInTheDocument();
+        });
+
+        it('shows no linked line on a card that is linked to nothing', () => {
+            const { container } = renderCard(makeModel());
+
+            expect(container.querySelector('.integration-card-link')).toBeNull();
+        });
+
+        it('counts several cards that name no type as connected, never by a missing type', () => {
+            const { container } = renderCard(
+                makeModel({ linked: { cards: [link('a', 'One'), link('b', 'Two')] } })
+            );
+
+            expect(shown(container)).toBe('2 connected');
+        });
+
+        it('counts several of mixed or unknown type as connected', () => {
+            const { container } = renderCard(
+                makeModel({ linked: { cards: [link('a', 'One', 'ERP'), link('b', 'Two')] } })
+            );
+
+            expect(shown(container)).toBe('2 connected');
         });
     });
 });

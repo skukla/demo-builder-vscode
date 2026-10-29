@@ -45,8 +45,8 @@ export async function warmOrgServicesCatalog(context: HandlerContext): Promise<v
         const { isAuthenticated } = await authManager.getTokenStatus();
         if (!isAuthenticated) return;
 
-        await withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe), () =>
-            authManager.getServicesForOrg(orgId),
+        await withOrgContext(buildOrgTargetFromProjectAdobe(project.adobe), async () =>
+            (await authManager.getEntityServices()).orgServices.getServicesForOrg(orgId),
         );
         context.logger.debug('[Integrations] API catalog prefetched');
     } catch {

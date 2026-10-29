@@ -17,7 +17,9 @@ describe('deriveIntegrationCard — installation facet', () => {
         expect(model.menuActions).not.toContain('install');
     });
 
-    it('installed: label Installed, no install action', () => {
+    // The flyout shows an installed app as ONE line (2026-10-01), so the timestamp and
+    // the no-op sentence do not travel: the model carries only what renders.
+    it('installed: label Installed and nothing else, no install action', () => {
         const model = deriveIntegrationCard(
             integration({
                 status: 'deployed',
@@ -25,8 +27,7 @@ describe('deriveIntegrationCard — installation facet', () => {
             })
         );
 
-        expect(model.installation).toMatchObject({ label: 'Installed', failed: false });
-        expect(model.installation?.at).toBeDefined();
+        expect(model.installation).toStrictEqual({ label: 'Installed', failed: false });
         expect(model.menuActions).not.toContain('install');
     });
 
@@ -38,11 +39,26 @@ describe('deriveIntegrationCard — installation facet', () => {
             })
         );
 
-        expect(model.installation).toMatchObject({
+        expect(model.installation).toStrictEqual({ label: 'Installed', failed: false });
+    });
+
+    it('upgraded IS installed', () => {
+        const model = deriveIntegrationCard(
+            integration({
+                status: 'deployed',
+                installation: {
+                    status: 'upgraded',
+                    detail: 'Upgraded in Commerce to version 0.2.0.',
+                    version: '0.2.0',
+                },
+            })
+        );
+
+        expect(model.installation).toStrictEqual({
             label: 'Installed',
-            detail: 'Already installed and current.',
             failed: false,
         });
+        expect(model.menuActions).not.toContain('install');
     });
 
     it('failed on a deployed card: Not installed + the install action AFTER the status verb slot', () => {
@@ -61,6 +77,90 @@ describe('deriveIntegrationCard — installation facet', () => {
         // Deployed has no status verb, so install LEADS.
         expect(model.menuActions[0]).toBe('install');
         expect(model.menuActions).toContain('redeploy');
+    });
+
+    it('a refused upgrade: Needs reinstall, and Reinstall replaces Install', () => {
+        const model = deriveIntegrationCard(
+            integration({
+                status: 'deployed',
+                installation: {
+                    status: 'failed',
+                    detail: 'Commerce cannot upgrade the installed app in place.',
+                    needsReinstall: true,
+                },
+            })
+        );
+
+        expect(model.installation).toMatchObject({
+            label: 'Needs reinstall',
+            failed: true,
+            needsReinstall: true,
+        });
+        expect(model.menuActions[0]).toBe('reinstall');
+        expect(model.menuActions).not.toContain('install');
+    });
+
+    // Commerce can lose what an app registered while the app still reports itself
+    // installed (2026-09-22, live: another copy of the same app uninstalled and took
+    // this one's webhooks with it). The install pass then answers "skipped", so the
+    // reinstall — the one pass that starts from nothing — is the SC's only repair and
+    // is offered on every installed card, below Redeploy rather than leading.
+    it('Reinstall is offered on any installed card, as the repair', () => {
+        const states = [
+            { status: 'installed' as const },
+            { status: 'upgraded' as const, version: '0.2.0' },
+            { status: 'failed' as const, detail: 'hands-back line' },
+        ];
+
+        for (const installation of states) {
+            const model = deriveIntegrationCard(integration({ status: 'deployed', installation }));
+            expect(model.menuActions).toContain('reinstall');
+            expect(model.menuActions.indexOf('reinstall')).toBeGreaterThan(
+                model.menuActions.indexOf('redeploy')
+            );
+            expect(model.installation?.needsReinstall).toBeUndefined();
+        }
+    });
+
+    // The Admin is where an installed app is SEEN (its menu entry under System), and
+    // the drawer's own "Open Commerce Admin" link sits three clicks away behind the
+    // card. The menu item is the shortcut; both post the same message (owner,
+    // 2026-09-22). Commerce's Admin page for the app cannot be linked directly — its
+    // URL carries a per-session security key — so this lands on the Admin itself.
+    it('an installed card can open the Commerce Admin, first among its verbs', () => {
+        const model = deriveIntegrationCard(
+            integration({ status: 'deployed', installation: { status: 'installed' } })
+        );
+
+        expect(model.menuActions).toContain('open-admin');
+        expect(model.menuActions[0]).toBe('open-admin');
+    });
+
+    it('no Commerce Admin item on a card with nothing installed', () => {
+        const noRecord = deriveIntegrationCard(integration({ status: 'deployed' }));
+        const deploying = deriveIntegrationCard(
+            integration({ status: 'deploying', installation: { status: 'installed' } })
+        );
+
+        expect(noRecord.menuActions).not.toContain('open-admin');
+        expect(deploying.menuActions).not.toContain('open-admin');
+    });
+
+    it('no Reinstall where there is nothing installed to redo', () => {
+        const deploying = deriveIntegrationCard(
+            integration({
+                status: 'deploying',
+                installation: { status: 'failed', needsReinstall: true },
+            })
+        );
+        const errored = deriveIntegrationCard(
+            integration({ status: 'error', installation: { status: 'installed' } })
+        );
+        const noRecord = deriveIntegrationCard(integration({ status: 'deployed' }));
+
+        expect(deploying.menuActions).not.toContain('reinstall');
+        expect(errored.menuActions).not.toContain('reinstall');
+        expect(noRecord.menuActions).not.toContain('reinstall');
     });
 
     it('no install action while deploying or on an errored card — the deploy re-runs the install itself', () => {

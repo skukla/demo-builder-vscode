@@ -7,7 +7,12 @@
 
 import type { Logger } from '@/types/logger';
 import { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
-import { IDateProvider, IProcessSpawner, ITimerProvider } from '@/core/utils/progressUnifier/types';
+import {
+    IDateProvider,
+    IProcessSpawner,
+    ITimerProvider,
+    ProgressReporterDeps,
+} from '@/core/utils/progressUnifier/types';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import { EventEmitter } from 'events';
 
@@ -25,10 +30,14 @@ export interface MockChildProcess {
 }
 
 /**
- * Test context providing ProgressUnifier with mocked dependencies
+ * The controlled clock, timers and spawner every progressUnifier test runs on,
+ * plus a `ProgressReporterDeps` built from them for driving a reporter
+ * (exactProgress, milestoneProgress, timedProgress) directly. Its
+ * `enhanceDetailWithElapsedTime` is the identity: the elapsed clock is
+ * ProgressUnifier's job and is tested through it.
  */
-export interface ProgressUnifierTestContext {
-    progressUnifier: ProgressUnifier;
+export interface ProgressTestHarness {
+    reporterDeps: ProgressReporterDeps;
     mocks: {
         date: jest.Mocked<IDateProvider>;
         timers: jest.Mocked<ITimerProvider>;
@@ -44,6 +53,13 @@ export interface ProgressUnifierTestContext {
         lastTriggered: number;
     }>;
     createMockProcess: () => MockChildProcess;
+}
+
+/**
+ * Test context providing ProgressUnifier with mocked dependencies
+ */
+export interface ProgressUnifierTestContext extends ProgressTestHarness {
+    progressUnifier: ProgressUnifier;
 }
 
 /**
@@ -68,6 +84,24 @@ interface TrackedTimer {
  * @returns Test context with mocked ProgressUnifier and helper utilities
  */
 export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTestContext {
+    const harness = createProgressTestHarness(logger);
+    const progressUnifier = new ProgressUnifier(
+        logger,
+        harness.mocks.date,
+        harness.mocks.timers,
+        harness.mocks.spawn as unknown as IProcessSpawner
+    );
+    return { ...harness, progressUnifier };
+}
+
+/**
+ * The controlled clock, timers and spawner on their own, for driving one
+ * progress reporter directly rather than through ProgressUnifier.executeStep.
+ *
+ * @param logger Logger the reporter deps carry
+ * @returns Mocks, time control and a ProgressReporterDeps built from them
+ */
+export function createProgressTestHarness(logger: Logger): ProgressTestHarness {
     let currentTime = 1000000; // Arbitrary start time
 
     // Track active timers
@@ -187,14 +221,15 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
     );
 
     /**
-     * Create ProgressUnifier with mocked dependencies
+     * What a reporter is handed by ProgressUnifier, built on the same mocks
      */
-    const progressUnifier = new ProgressUnifier(
+    const reporterDeps: ProgressReporterDeps = {
         logger,
-        mockDate,
-        mockTimers,
-        mockSpawn as unknown as IProcessSpawner
-    );
+        dateProvider: mockDate,
+        timerProvider: mockTimers,
+        spawnCommand: (command) => mockSpawn(command, [], {}),
+        enhanceDetailWithElapsedTime: (detail) => detail,
+    };
 
     /**
      * Advance fake time and trigger timers that should fire
@@ -301,7 +336,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
     };
 
     return {
-        progressUnifier,
+        reporterDeps,
         mocks: {
             date: mockDate,
             timers: mockTimers,

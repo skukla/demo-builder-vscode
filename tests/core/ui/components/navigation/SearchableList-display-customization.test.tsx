@@ -59,24 +59,13 @@ describe('SearchableList - Display Customization', () => {
     });
 
     describe('AutoFocus', () => {
-        it('does not autofocus by default', () => {
+        // A screen with a search filter focuses nothing on load (owner, 2026-10-01).
+        it('never focuses the search on load', () => {
             renderWithProviders(<SearchableList {...defaultProps} searchThreshold={3} />);
 
-            expect(screen.getByRole('searchbox')).toBeInTheDocument();
+            expect(screen.getByRole('searchbox')).not.toHaveFocus();
         });
 
-        it('autofocuses search when autoFocus is true and no selection', () => {
-            renderWithProviders(
-                <SearchableList
-                    {...defaultProps}
-                    selectedKeys={[]}
-                    searchThreshold={3}
-                    autoFocus={true}
-                />
-            );
-
-            expect(screen.getByRole('searchbox')).toBeInTheDocument();
-        });
     });
 
     describe('Custom Item Renderer', () => {

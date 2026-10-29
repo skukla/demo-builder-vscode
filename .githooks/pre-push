@@ -33,12 +33,31 @@ only_deletes=1
 # passes one newline-joined argument where N were meant, and it has cost this
 # repo three debugging sessions. Say what is meant instead.
 ranges=()
+
+# Where a branch the remote has never seen was cut from: the nearer of develop and
+# master, i.e. the merge-base with the FEWEST commits between it and the branch.
+# Measuring against master alone counted everything develop had added as this
+# branch's own: on 2026-10-28 a branch that touched no stylesheet was refused for
+# three of develop's.
+branch_base() {
+    local tip="$1" best="" best_n="" b n
+    for ref in origin/develop origin/master; do
+        b=$(git merge-base "$tip" "$ref" 2>/dev/null) || continue
+        n=$(git rev-list --count "$b..$tip" 2>/dev/null) || continue
+        if [ -z "$best_n" ] || [ "$n" -lt "$best_n" ]; then
+            best="$b"
+            best_n="$n"
+        fi
+    done
+    echo "$best"
+}
+
 while read -r _local_ref local_sha _remote_ref remote_sha; do
     if [ "$local_sha" != "$ZERO" ]; then
         only_deletes=0
         if [ "$remote_sha" = "$ZERO" ]; then
-            # A branch the remote has never seen: everything it adds to master.
-            base=$(git merge-base "$local_sha" origin/master 2>/dev/null || true)
+            # A branch the remote has never seen: everything it adds to its base.
+            base=$(branch_base "$local_sha")
             [ -n "$base" ] && ranges+=("$base..$local_sha")
         else
             ranges+=("$remote_sha..$local_sha")
@@ -49,10 +68,112 @@ if [ "$only_deletes" -eq 1 ]; then
     exit 0
 fi
 
-echo "pre-push: running the quality gate (matches CI) — 'git push --no-verify' skips it"
-echo
+# GUARD THE SHARED GIT CONFIG. From a worktree, git hands this hook GIT_DIR, and every
+# test, script and check below inherits it. A git command in a temp folder that does
+# not strip it acts on THIS repository: on 2026-09-15 that set core.bare = true and
+# committed a delete-everything tree; on 2026-10-28 it wrote a fake user.name/email,
+# and core.bare = true appeared again during a push. The keys are recorded here and
+# compared after the gate; a change is put back and the push refused, naming the key,
+# so the next one is caught when it happens rather than found later.
+GUARDED_KEYS=(core.bare core.hooksPath user.name user.email)
+common_config="$(git rev-parse --git-common-dir)/config"
+config_before=$(for k in "${GUARDED_KEYS[@]}"; do
+    printf '%s=%s\n' "$k" "$(git config --file "$common_config" --get-all "$k" | tr '\n' ' ')"
+done)
 
-if npm run gate; then
+restore_config_if_changed() {
+    local now k was
+    now=$(for k in "${GUARDED_KEYS[@]}"; do
+        printf '%s=%s\n' "$k" "$(git config --file "$common_config" --get-all "$k" | tr '\n' ' ')"
+    done)
+    [ "$now" = "$config_before" ] && return 0
+    for k in "${GUARDED_KEYS[@]}"; do
+        was=$(printf '%s\n' "$config_before" | sed -n "s/^$k=//p" | sed 's/ $//')
+        git config --file "$common_config" --unset-all "$k" 2>/dev/null || true
+        [ -n "$was" ] && git config --file "$common_config" "$k" "$was"
+    done
+    {
+        echo
+        echo "pre-push: REFUSED — something in the gate changed this repository's git config:"
+        diff <(printf '%s\n' "$config_before") <(printf '%s\n' "$now") | sed -n 's/^[<>] /  /p'
+        echo "It has been put back. A git command in a test or script inherited GIT_DIR;"
+        echo "find it before pushing again (a test fixes it by removing every GIT_* variable from git's env)."
+    } >&2
+    return 1
+}
+
+# A push that changes only Markdown, docs/ or .rptc/ runs only the checks that READ
+# those files (`npm run gate:docs`, ~35s): the repo-rule enforcers in tests/sop, the
+# hook tests, the template checks and the tool-prompt coverage. The full gate (~9 min
+# on this machine) re-ran 2,000 code suites for a docs commit that could change none of
+# their answers (owner, 2026-10-16: "the gate should be smarter").
+#
+# A push that changes code runs scripts/gate-push.sh: every
+# whole-repo check `gate` runs, the repo-rule enforcers, and the tests related to the
+# changed files, but not the full jest run, which CI does on the same push (owner,
+# 2026-10-28: nine minutes for a one-line fix). The FULL gate still runs when the push
+# changes something every test depends on without importing it (WHOLE_RUN below), or
+# when the range cannot be read.
+docs_only=1
+whole_run=0
+code_files=()
+if [ "${#ranges[@]}" -eq 0 ]; then
+    docs_only=0
+    whole_run=1
+fi
+for r in "${ranges[@]}"; do
+    changed=$(git diff --name-only "$r" 2>/dev/null) || { docs_only=0; whole_run=1; break; }
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        case "$f" in
+            docs/*|.rptc/*|*.md) ;;
+            *) docs_only=0 ;;
+        esac
+        # WHOLE_RUN: config and setup that no test imports, so --findRelatedTests
+        # cannot see what they affect.
+        case "$f" in
+            package.json|package-lock.json|jest.config.*|tsconfig*.json|.swcrc|tests/setup/*)
+                whole_run=1 ;;
+        esac
+    done <<< "$changed"
+    # Added, copied, modified or renamed only: a deleted file has nothing to trace.
+    while IFS= read -r f; do
+        [ -n "$f" ] && code_files+=("$f")
+    done < <(git diff --name-only --diff-filter=ACMR "$r" 2>/dev/null)
+done
+
+if [ "$docs_only" -eq 1 ]; then
+    echo "pre-push: only docs changed, so running the checks that read them (npm run gate:docs)"
+    echo
+    if npm run gate:docs; then
+        restore_config_if_changed || exit 1
+        echo
+        echo "pre-push: docs gate passed."
+        exit 0
+    fi
+    restore_config_if_changed || true
+    echo >&2
+    echo "pre-push: REFUSED — the docs checks failed, and CI would fail the same way." >&2
+    exit 1
+fi
+
+run_gate() {
+    if [ "$whole_run" -eq 1 ]; then
+        echo "pre-push: running the full quality gate (matches CI) — 'git push --no-verify' skips it"
+        echo
+        npm run gate
+    else
+        echo "pre-push: running the whole-repo checks and the related tests (scripts/gate-push.sh);"
+        echo "          CI runs the full suite. 'git push --no-verify' skips it"
+        echo
+        # The +-guard: macOS ships bash 3.2, where an EMPTY array under `set -u` is an
+        # "unbound variable" error (a push that only deletes code files has none).
+        bash scripts/gate-push.sh ${code_files[@]+"${code_files[@]}"}
+    fi
+}
+
+if run_gate; then
+    restore_config_if_changed || exit 1
     echo
     echo "pre-push: gate passed."
 
@@ -76,6 +197,7 @@ if npm run gate; then
     exit 0
 fi
 
+restore_config_if_changed || true
 cat >&2 <<'MSG'
 
 pre-push: REFUSED — the gate failed, and CI would fail the same way.

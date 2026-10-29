@@ -18,8 +18,14 @@
 
 import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation/URLValidator';
-import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
+import {
+    handleBackgroundOperation,
+    handleGetOperationProgress,
+    handleOpenDebugLogs,
+} from '@/core/vscode/operationProgress';
+import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
+import { handleCheckStoreViewProducts } from '@/features/eds/handlers/storeViewProductsHandler';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -54,6 +60,21 @@ export async function handleOpenExternal(
  */
 export async function handleOpenEdsSettings(_context: HandlerContext): Promise<HandlerResponse> {
     await vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder.daLive');
+    return { success: true };
+}
+
+/**
+ * Handle open-block-library-settings — open VS Code settings at the custom
+ * block libraries list. Same message and same target as the creation wizard's
+ * picker, which the Block Libraries tab reuses (EDS-39).
+ */
+export async function handleOpenBlockLibrarySettings(
+    _context: HandlerContext,
+): Promise<HandlerResponse> {
+    await vscode.commands.executeCommand(
+        'workbench.action.openSettings',
+        'demoBuilder.blockLibraries.custom',
+    );
     return { success: true };
 }
 
@@ -136,7 +157,15 @@ export const configureHandlers = defineHandlers({
     cancel: handleCancelConfigure,
     openExternal: handleOpenExternal,
     'open-eds-settings': handleOpenEdsSettings,
+    'open-block-library-settings': handleOpenBlockLibrarySettings,
     'discover-store-structure': handleDiscoverStoreStructureAndPersist,
-    // Whether the OAuth fields need filling in at all. Status only — never a pair.
-    'check-credential-service': handleCheckCredentialService,
+    // The same store pickers as the wizard, so the same no-products warning (EDS-46).
+    'check-store-view-products': handleCheckStoreViewProducts,
+    // The Republish progress modal (CONFIGURE_REPUBLISH_OPERATION_ID): where the run is
+    // when the modal opens after its first step, the SC's answer to a question the run
+    // asks there (a DA.live sign-in), "Run in background", and the failure view's logs.
+    getOperationProgress: handleGetOperationProgress,
+    answerOperationPrompt: handleAnswerOperationPrompt,
+    backgroundOperation: handleBackgroundOperation,
+    openDebugLogs: handleOpenDebugLogs,
 });

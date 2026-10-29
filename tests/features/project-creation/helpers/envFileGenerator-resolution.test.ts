@@ -9,10 +9,8 @@
  */
 
 import { promises as fsPromises } from 'fs';
-import {
-    generateComponentEnvFile,
-    regenerateProjectEnvFiles,
-} from '@/features/project-creation/helpers/envFileGenerator';
+import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
+import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
 import type { ComponentConfigs } from '@/types/components';
 import {
     ComponentRegistry,

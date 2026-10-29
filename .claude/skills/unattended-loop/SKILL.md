@@ -236,6 +236,11 @@ session. Log the loop's close to the items it touched.
 
 - The trailer hook survives every commit; the log line does not — run
   `backlog.mjs unlogged --write` before the report.
+- Logging is not closing. `unlogged --write` moves an item to `active` at
+  most, never to `built`. Before the report, set `status=built` on every item
+  whose work is finished (`backlog.mjs set <id> status=built`), and say in the
+  report how many items closed. The 2026-10-05 loop finished six items and
+  closed none until the owner asked.
 - A battery/scan finding is a LEAD; read the source before sentencing (the
   deletion bar in `tool-verdicts`).
 - Self-test every new instrument (`--self-test` plants defects); a scan's

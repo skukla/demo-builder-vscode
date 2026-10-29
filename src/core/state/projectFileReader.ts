@@ -181,12 +181,16 @@ function migrateV1(v1: SettingsFile): ProjectFile {
         appBuilderComponentSources: v1.appBuilderComponentSources,
         componentApiPicks: foldLegacyPicks(v1.componentApiPicks, v1.additionalConsoleApis),
         // Dropped on purpose (PL-56b): `includesSecrets` (a claim about a field that no
-        // longer exists), `installedBlockLibraries` (exported, never read back).
+        // longer exists), `installedBlockLibraries` (older exports carry it; it was
+        // never read back, and the serializer stopped emitting it).
     });
 }
 
-/** The source project's repo and site as provenance. A missing repo yields no entry. */
-function storefrontProvenance(
+/**
+ * The source project's repo and site as provenance. A missing repo yields no
+ * entry. Shared with the writer, so a v1 file and a v2 file say it the same way.
+ */
+export function storefrontProvenance(
     eds: NonNullable<SettingsFile['edsConfig']>,
 ): NonNullable<ProjectFileSource['storefront']> {
     const githubRepo =

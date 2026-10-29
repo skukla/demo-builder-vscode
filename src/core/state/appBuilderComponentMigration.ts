@@ -17,6 +17,9 @@ import type { AppBuilderComponentState } from '@/types/base';
 
 /** Stable id for the migrated mesh appBuilderComponent. */
 const MESH_ID = 'mesh';
+/** Stands in for the source a half-written record never held (see `healPartialComponents`). */
+const UNKNOWN_SOURCE_OWNER = 'unknown';
+
 /** Fallback id for a migrated app with no appId. */
 const APP_ID_FALLBACK = 'app';
 
@@ -89,4 +92,65 @@ export function migrateLegacyToAppBuilderComponents(
     }
 
     return appBuilderComponents;
+}
+
+/**
+ * Complete a record an add left half-written: the workspace and nothing else.
+ *
+ * Measured live 2026-09-22 — a second ERP's add made its workspace, deployed its
+ * ERP, then failed at the API subscribe, and the integration's record was saved
+ * holding only `workspace`. The manifest failed its own schema on every load and
+ * opening the project threw on the missing `source`, so the dashboard rendered
+ * BLANK. The add path no longer writes that shape; this is for the projects that
+ * already carry one, which must keep loading.
+ *
+ * Healed rather than dropped, because the record is the only thing naming the Adobe
+ * workspace the add made: as a failed card the SC can remove it, and the removal
+ * deletes the workspace. Read-side only — the manifest is rewritten on the next save.
+ *
+ * `integration` is the kind assumed: a system is deployed before its integration and
+ * a mesh never gets a workspace of its own, so the integration is the half that can
+ * be left like this.
+ *
+ * @param components - the keyed map as loaded
+ * @returns the map, with any half-written record completed
+ */
+export function healPartialComponents(
+    components: Record<string, AppBuilderComponentState> | undefined,
+): Record<string, AppBuilderComponentState> {
+    const entries = Object.entries(components ?? {});
+    return Object.fromEntries(
+        entries.map(([id, state]) => {
+            // A source with a BLANK owner or repo is as unusable as none: both are
+            // gated on GitHub's name charset before any clone, and the throw takes
+            // out whichever screen asked first (dashboard, then integrations, live
+            // 2026-09-22 — the second time because a build of this very heal wrote
+            // an empty owner and the project was saved with it).
+            const source = state?.source;
+            const whole = state?.kind && state?.status && source?.owner && source?.repo;
+            if (whole) return [id, state];
+            return [
+                id,
+                {
+                    ...state,
+                    kind: state?.kind ?? 'integration',
+                    status: 'error' as const,
+                    name: state?.name ?? state?.workspace?.title ?? id,
+                    // A placeholder, not a guess: the record never held a source, and
+                    // owner/repo are gated on GitHub's name charset before any clone
+                    // (`appBuilderComponentCatalogLoader`), so an empty owner threw and
+                    // took the whole integrations screen with it. Nothing clones this —
+                    // the card exists to be removed.
+                    source: {
+                        ...source,
+                        owner: source?.owner || UNKNOWN_SOURCE_OWNER,
+                        repo: source?.repo || state?.catalogId || id,
+                    },
+                    error:
+                        state?.error ??
+                        'Adding this did not finish. Remove it to clean up what it made, then add it again.',
+                },
+            ];
+        }),
+    );
 }

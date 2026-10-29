@@ -52,10 +52,6 @@ const LEDGER: Record<string, string> = {
     'tests/features/ai/server/mcpSocketDiscovery.test.ts':
         'probeSocket is given a 30,000ms budget and asserted under 1,000ms — a 30x margin ' +
         'proving it took the ECONNREFUSED path instead of waiting the budget out.',
-    'tests/core/shell/retryStrategyManager.test.ts':
-        'capped, four retries wait 100ms each — 400ms. UNCAPPED the same strategy waits ' +
-        '1,000ms then 10,000ms then 100,000ms, so a 5,000ms bound still fails loudly if ' +
-        'the cap breaks. The old 600ms bound had 200ms of margin and measured the machine.',
     'tests/features/ai/server/inExtensionMcpServer-callRecording.test.ts':
         'asserts a RECORDED durationMs is a duration and not a clock reading: >= 0 and ' +
         'under 10,000ms. The bound distinguishes the two, it does not time the call.',

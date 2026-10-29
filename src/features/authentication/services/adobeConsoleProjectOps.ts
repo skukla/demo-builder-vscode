@@ -1,40 +1,44 @@
 /**
- * AdobeConsoleProjectOps — Console project and workspace mutations.
+ * AdobeConsoleProjectOps — Console project mutations.
  *
- * Owns creating, renaming, and deleting Console projects and workspaces,
- * including the App Builder template-parity work a bare `createFireflyProject`
- * leaves undone: the Stage workspace, and a Runtime namespace on every
- * workspace. SDK-only — none of these have a CLI fallback.
+ * Owns creating, renaming, and deleting Console projects, including the one thing
+ * a bare `createFireflyProject` leaves undone: a Runtime namespace, which Adobe
+ * provisions for NO workspace. SDK-only — none of these have a CLI fallback.
+ * Workspace create and delete live in `adobeConsoleWorkspaceOps.ts`.
  *
- * Listing a fresh project's workspaces (for the Runtime sweep) is NOT this
- * class's job — the injected `listWorkspaces` does it, wired by the facade to
- * `AdobeEntityReads.fetchWorkspaces`. Injecting the function rather than the
- * reads object keeps the dependency one-way and exactly as wide as the need.
+ * Listing a fresh project's workspaces, and provisioning one workspace's Runtime
+ * namespace, are NOT this class's jobs — the injected `listWorkspaces` and
+ * `ensureRuntimeNamespace` do them, wired by `createEntityCollaborators` to
+ * `AdobeWorkspaceReads.fetchWorkspaces` and
+ * `AdobeConsoleWorkspaceOps.ensureWorkspaceRuntimeNamespace`. Injecting the
+ * functions rather than the objects keeps the dependency one-way and exactly as
+ * wide as the need.
  *
- * Extracted from `adobeEntityFetcher.ts` (god-file decomposition, 2026-08-23).
+ * Extracted from `adobeEntityFetcher.ts` (god-file decomposition, 2026-08-23);
+ * the workspace half split out by job on 2026-10-09 (EDS-8).
  *
  * @module features/authentication/services/adobeConsoleProjectOps
  */
 
-import { deriveAdobeEntityName } from './adobeEntityName';
+import { deriveAdobeEntityName, toAdobeTitle } from './adobeEntityName';
+import { ensureSDKReady } from './adobeEntityReads';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
-import type {
-    AdobeProject,
-    AdobeWorkspace,
-    ConsoleOpFailure,
-    RawAdobeProject,
-    RawAdobeWorkspace,
-    SDKResponse,
-} from './types';
+import type { AdobeProject, AdobeWorkspace, ConsoleOpFailure, RawAdobeProject, SDKResponse } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
-
 
 /** What renaming an Adobe project answers: done, or Adobe's reason for refusing. */
 export type RemoteRenameResult = { ok: true } | { ok: false; error: string };
 
+/** Provisions one workspace's Runtime namespace; best-effort, never throws. */
+export type EnsureRuntimeNamespace = (
+    orgId: string,
+    projectId: string,
+    workspaceId: string,
+) => Promise<void>;
+
 /**
- * Creates, renames, and deletes Console projects and workspaces.
+ * Creates, renames, and deletes Console projects.
  */
 export class AdobeConsoleProjectOps {
     private debugLogger = getLogger();
@@ -42,18 +46,11 @@ export class AdobeConsoleProjectOps {
     constructor(
         private sdkClient: AdobeSDKClient,
         private cacheManager: AuthCacheManager,
-        /** Lists a project's workspaces (the facade wires in the reads' fetch). */
+        /** Lists a project's workspaces (the wiring hands in the reads' fetch). */
         private listWorkspaces: (orgId: string, projectId: string) => Promise<AdobeWorkspace[]>,
+        /** Gives one workspace its Runtime namespace (the workspace ops' own). */
+        private ensureRuntimeNamespace: EnsureRuntimeNamespace,
     ) {}
-
-    /**
-     * Ensure SDK is initialized (lazy init pattern)
-     */
-    private async ensureSDKReady(): Promise<void> {
-        if (!this.sdkClient.isInitialized()) {
-            await this.sdkClient.ensureInitialized();
-        }
-    }
 
     /**
      * Create a new Adobe I/O App Builder project in the current organization.
@@ -80,7 +77,7 @@ export class AdobeConsoleProjectOps {
         }
 
         try {
-            await this.ensureSDKReady();
+            await ensureSDKReady(this.sdkClient);
 
             // An explicit target overrides the cache. The cache is the UI's
             // selection; the agent surface has its own (`adobeTargetStore`), and
@@ -117,13 +114,14 @@ export class AdobeConsoleProjectOps {
             // Adobe validates the machine `name` as alphanumeric-only; derive it from the
             // free-form title (the user's input). The title stays human-readable in the UI.
             const name = deriveAdobeEntityName(title);
+            const consoleTitle = toAdobeTitle(title);
             this.debugLogger.info(
-                `[Entity Fetcher] Creating App Builder project "${title}" (name: ${name}) in org ${orgId}`,
+                `[Entity Fetcher] Creating App Builder project "${consoleTitle}" (name: ${name}) in org ${orgId}`,
             );
 
             const response = await client.createFireflyProject(orgId, {
                 name,
-                title,
+                title: consoleTitle,
                 description,
             });
 
@@ -140,22 +138,22 @@ export class AdobeConsoleProjectOps {
 
             this.debugLogger.info('[Entity Fetcher] App Builder project created successfully');
 
-            // createFireflyProject provisions ONLY the default Production workspace. The
-            // Console's "Project from template → App Builder" flow also creates Stage, and
-            // there is NO public API to provision both in one call (aio-lib-console exposes
-            // createWorkspace only as a separate operation). Mirror the template so our
-            // projects match. Best-effort: a Stage failure leaves the valid Production-only
-            // project rather than failing the whole create.
-            await this.createDefaultStageWorkspace(orgId, projectId);
-
-            // Every workspace must ship a Runtime namespace so App Builder apps can
-            // deploy to it (the added Stage workspace doesn't get one automatically).
+            // A project gets exactly the one workspace Adobe creates. We used to add a
+            // second, "Stage", to mirror the Console's template flow — and then used that
+            // one and left Adobe's empty. Removed 2026-09-20 (AB-24): it was a workspace
+            // for its own sake, its best-effort create gave "which workspace is this
+            // project's?" two possible answers, and under workspace-per-add every other
+            // workspace belongs to something.
+            //
+            // The namespace is NOT optional and NOT free: Adobe provisions one for no
+            // workspace at all, Production included (measured 2026-09-20 — zero namespaces
+            // at 0s, 15s, 30s and 60s).
             await this.ensureProjectWorkspacesHaveRuntime(orgId, projectId);
 
             return {
                 id: projectId,
                 name,
-                title,
+                title: consoleTitle,
                 description: description || undefined,
                 org_id: orgId,
             };
@@ -205,9 +203,9 @@ export class AdobeConsoleProjectOps {
                 ) => Promise<unknown>;
             };
 
-            await client.editProject(orgId, projectId, { title });
+            await client.editProject(orgId, projectId, { title: toAdobeTitle(title) });
             this.debugLogger.info(
-                `[Entity Fetcher] Renamed remote project ${projectId} title to "${title}"`,
+                `[Entity Fetcher] Renamed remote project ${projectId} title to "${toAdobeTitle(title)}"`,
             );
             return { ok: true };
         } catch (error) {
@@ -218,54 +216,24 @@ export class AdobeConsoleProjectOps {
     }
 
     /**
-     * Create the "Stage" workspace to mirror the App Builder template.
-     *
-     * createFireflyProject provisions only the default Production workspace; the Console's
-     * templated App Builder create additionally makes Stage. There is no public API to
-     * provision both at once, so we add Stage explicitly. Named exactly "Stage" (NOT the
-     * suffix-derived name) to match the convention the workspace picker auto-selects on and
-     * downstream tooling expects. Best-effort — never throws; a failure just leaves the
-     * project with Production only.
-     */
-    private async createDefaultStageWorkspace(orgId: string, projectId: string): Promise<void> {
-        try {
-            const client = this.sdkClient.getClient() as {
-                createWorkspace: (
-                    orgId: string,
-                    projectId: string,
-                    details: {
-                        name: string;
-                        title: string;
-                        description: string;
-                    }
-                ) => Promise<SDKResponse<RawAdobeWorkspace>>;
-            };
-            await client.createWorkspace(orgId, projectId, {
-                name: 'Stage',
-                title: 'Stage',
-                description: '',
-            });
-            this.debugLogger.info(
-                '[Entity Fetcher] Created Stage workspace (App Builder template parity)',
-            );
-        } catch (error) {
-            this.debugLogger.warn(
-                '[Entity Fetcher] Could not create the Stage workspace; project has Production only: ' +
-                    `${(error as Error).message}`,
-            );
-        }
-    }
-
-    /**
      * Ensure EVERY workspace in a freshly-created project has an Adobe I/O Runtime
      * namespace.
      *
-     * The App Builder (jaeger) template provisions Runtime for the default
-     * Production workspace, but a workspace added via `createWorkspace` (our Stage —
-     * the one the picker auto-selects and deploys to) does NOT get one — so an App
-     * Builder app deployed there fails with "no Runtime namespace" (a mesh doesn't,
-     * masking it). Provision it explicitly. Best-effort: a failure logs and leaves
-     * the deploy-time pre-flight as the safety net.
+     * NO workspace gets one on its own — not the one added via `createWorkspace`, and
+     * not the Production workspace Adobe creates. Measured 2026-09-20 on a fresh
+     * project: `runtime` is present with ZERO namespaces at 0s, 15s, 30s and 60s, and
+     * `createRuntimeNamespace` fills it immediately. So this is not propagation, and
+     * this sweep is the ONLY thing that provisions Runtime for a project we create.
+     *
+     * This used to say the App Builder (jaeger) template provisioned Production and
+     * only our added workspace missed out. That was never true and never tested, and
+     * it is the kind of claim that gets a loop deleted as redundant.
+     *
+     * It matters because an App Builder app deployed to a workspace with no namespace
+     * fails (a mesh does not, masking it) — the likeliest cause of the AB-2 spike's
+     * `aio app deploy` failing on a fresh workspace with "Cannot read properties of
+     * undefined 'runtime'". Best-effort: a failure logs and leaves the deploy-time
+     * pre-flight as the safety net.
      *
      * @param orgId - Organization AMS id.
      * @param projectId - The just-created project's id.
@@ -278,7 +246,7 @@ export class AdobeConsoleProjectOps {
             const workspaces = await this.listWorkspaces(orgId, projectId);
             for (const workspace of workspaces) {
                 if (workspace.id) {
-                    await this.ensureWorkspaceRuntimeNamespace(orgId, projectId, workspace.id);
+                    await this.ensureRuntimeNamespace(orgId, projectId, workspace.id);
                 }
             }
         } catch (error) {
@@ -292,213 +260,12 @@ export class AdobeConsoleProjectOps {
     }
 
     /**
-     * Provision an Adobe I/O Runtime namespace on one workspace, idempotently.
-     *
-     * `createRuntimeNamespace` POSTs the workspace's namespace endpoint. A workspace
-     * that already has one (the template Production workspace, or a re-run) returns a
-     * 409 — treated as success, not an error. Any other failure is logged, never
-     * thrown (best-effort; the deploy-time pre-flight is the net).
-     *
-     * @param orgId - Organization AMS id.
-     * @param projectId - Project id.
-     * @param workspaceId - Workspace id to provision Runtime on.
-     */
-    async ensureWorkspaceRuntimeNamespace(
-        orgId: string,
-        projectId: string,
-        workspaceId: string,
-    ): Promise<void> {
-        try {
-            const client = this.sdkClient.getClient() as {
-                createRuntimeNamespace: (
-                    orgId: string,
-                    projectId: string,
-                    workspaceId: string
-                ) => Promise<SDKResponse<unknown>>;
-            };
-            await client.createRuntimeNamespace(orgId, projectId, workspaceId);
-            this.debugLogger.info(
-                `[Entity Fetcher] Ensured Adobe I/O Runtime namespace for workspace ${workspaceId}`,
-            );
-        } catch (error) {
-            const message = (error as Error).message || '';
-            // Already provisioned (template Production ws, or a re-run) → not an error.
-            if (/409|conflict|already\s*exist/i.test(message)) {
-                this.debugLogger.debug(
-                    `[Entity Fetcher] Runtime namespace already present for workspace ${workspaceId}`,
-                );
-                return;
-            }
-            this.debugLogger.warn(
-                `[Entity Fetcher] Could not ensure Runtime namespace for workspace ${workspaceId}: ${message}`,
-            );
-        }
-    }
-
-    /**
-     * Create a new workspace in the current organization's selected project.
-     *
-     * Uses the Console SDK's `createWorkspace`. Needs the cached org id AND
-     * project id. SDK-only (no CLI fallback). Never throws — returns the mapped
-     * workspace, or `undefined` on validation failure, missing org/project,
-     * unavailable SDK, or any SDK error (403 permission / 409 name-taken /
-     * quota), which the handler surfaces to the user.
-     */
-    async createWorkspace(
-        title: string,
-        description: string,
-        target?: { orgId?: string; projectId?: string },
-    ): Promise<AdobeWorkspace | ConsoleOpFailure> {
-        // Input validation — enforce constraints regardless of caller.
-        if (!title || title.length > 200) {
-            this.debugLogger.error(
-                '[Entity Fetcher] Invalid workspace title (empty or >200 chars)',
-            );
-            return { error: 'Workspace title must be 1–200 characters.' };
-        }
-        if (description.length > 500) {
-            this.debugLogger.error('[Entity Fetcher] Invalid workspace description (>500 chars)');
-            return { error: 'Workspace description must be at most 500 characters.' };
-        }
-
-        try {
-            await this.ensureSDKReady();
-
-            // Explicit target wins over the cache — same reason as createProject:
-            // the agent's selection lives in `adobeTargetStore`, which never
-            // reaches this cache, so a cached project could be a different one.
-            const orgId = target?.orgId ?? this.cacheManager.getCachedOrganization()?.id;
-            const projectId = target?.projectId ?? this.cacheManager.getCachedProject()?.id;
-            if (!orgId || !projectId) {
-                this.debugLogger.debug(
-                    '[Entity Fetcher] Cannot create workspace: missing org or project ID',
-                );
-                return { error: 'No organization or project selected.' };
-            }
-
-            if (!this.sdkClient.isInitialized()) {
-                this.debugLogger.debug('[Entity Fetcher] SDK not available for workspace creation');
-                return { error: 'Console SDK is not available — sign in to Adobe first.' };
-            }
-
-            const client = this.sdkClient.getClient() as {
-                createWorkspace: (
-                    orgId: string,
-                    projectId: string,
-                    details: {
-                        name: string;
-                        title: string;
-                        description: string;
-                    }
-                ) => Promise<SDKResponse<RawAdobeWorkspace>>;
-            };
-
-            // Adobe validates the machine `name` as alphanumeric-only; derive it from the
-            // free-form title (the user's input). The title stays human-readable in the UI.
-            const name = deriveAdobeEntityName(title);
-            this.debugLogger.info(
-                `[Entity Fetcher] Creating workspace "${title}" (name: ${name}) in project ${projectId}`,
-            );
-
-            const response = await client.createWorkspace(orgId, projectId, {
-                name,
-                title,
-                description,
-            });
-
-            // The create endpoint returns only the new id ({ workspaceId }), NOT a full
-            // workspace — so construct the workspace from that id + the details we sent.
-            const raw = response?.body as { id?: string; workspaceId?: string } | undefined;
-            const workspaceId = raw?.id ?? raw?.workspaceId;
-            if (!workspaceId) {
-                this.debugLogger.error(
-                    '[Entity Fetcher] Workspace created but no workspaceId in response',
-                );
-                return { error: 'Console accepted the create but returned no workspace id.' };
-            }
-
-            this.debugLogger.info('[Entity Fetcher] Workspace created successfully');
-
-            // A user-added workspace also needs a Runtime namespace for App Builder
-            // app deploys — createWorkspace alone doesn't provision one.
-            await this.ensureWorkspaceRuntimeNamespace(orgId, projectId, workspaceId);
-
-            return { id: workspaceId, name, title };
-        } catch (error) {
-            const message = (error as Error).message || '';
-            if (message.includes('409') || message.includes('Conflict')) {
-                this.debugLogger.error('[Entity Fetcher] Workspace name already exists (409)');
-                return { error: 'A workspace with this name already exists in the project (409).' };
-            }
-            this.debugLogger.error('[Entity Fetcher] Failed to create workspace', error as Error);
-            return { error: message || 'Console rejected the workspace with no error message.' };
-        }
-    }
-
-    /**
-     * Delete a workspace from the selected project.
-     *
-     * THE REVERSAL OF `createWorkspace`, and it is shaped like it deliberately: same
-     * target resolution, same "never throws, returns a failure the caller can show"
-     * contract. `deleteConsoleProject` below throws instead, because its caller is a
-     * multi-step teardown that maps SDK errors itself; this one answers a single tool
-     * call.
-     *
-     * Adobe refuses to delete the Production workspace, and that refusal arrives as an
-     * SDK error rather than as anything this can check first — so it is surfaced rather
-     * than pre-empted with a guess about which names are protected.
-     */
-    async deleteWorkspace(
-        workspaceId: string,
-        target?: { orgId?: string; projectId?: string },
-    ): Promise<{ deleted: true } | ConsoleOpFailure> {
-        if (!workspaceId) {
-            return { error: 'A workspace id is required.' };
-        }
-
-        try {
-            await this.ensureSDKReady();
-
-            // Explicit target wins over the cache — same reason as createWorkspace: an
-            // agent's selection lives in `adobeTargetStore`, which never reaches this cache.
-            const orgId = target?.orgId ?? this.cacheManager.getCachedOrganization()?.id;
-            const projectId = target?.projectId ?? this.cacheManager.getCachedProject()?.id;
-            if (!orgId || !projectId) {
-                return { error: 'No organization or project selected.' };
-            }
-
-            if (!this.sdkClient.isInitialized()) {
-                return { error: 'Console SDK is not available — sign in to Adobe first.' };
-            }
-
-            const client = this.sdkClient.getClient() as {
-                deleteWorkspace: (
-                    orgId: string,
-                    projectId: string,
-                    workspaceId: string
-                ) => Promise<unknown>;
-            };
-
-            this.debugLogger.info(
-                `[Entity Fetcher] Deleting workspace ${workspaceId} from project ${projectId}`,
-            );
-            await client.deleteWorkspace(orgId, projectId, workspaceId);
-            this.debugLogger.info('[Entity Fetcher] Workspace deleted successfully');
-            return { deleted: true };
-        } catch (error) {
-            const message = (error as Error).message || '';
-            this.debugLogger.error('[Entity Fetcher] Failed to delete workspace', error as Error);
-            return { error: message || 'Console rejected the delete with no error message.' };
-        }
-    }
-
-    /**
      * Delete an Adobe Console project. SDK errors propagate UNCHANGED — the
      * teardown caller maps them (notably the 409 ERR_MSG_PROJECT_DELETE_FORBIDDEN
      * thrown while event providers are still attached to the project).
      */
     async deleteConsoleProject(orgId: string, projectId: string): Promise<void> {
-        await this.ensureSDKReady();
+        await ensureSDKReady(this.sdkClient);
 
         if (!orgId || !projectId) {
             throw new Error('deleteConsoleProject: orgId and projectId are required');

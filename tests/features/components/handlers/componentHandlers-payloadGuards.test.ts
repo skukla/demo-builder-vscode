@@ -19,11 +19,7 @@ import {
 } from './componentHandlers.testUtils';
 import {
     handleCheckCompatibility,
-    handleLoadComponents,
     handleLoadDependencies,
-    handleLoadPreset,
-    handleUpdateComponentSelection,
-    handleUpdateComponentsData,
     handleValidateSelection,
 } from '@/features/components/handlers/componentHandlers';
 import { HandlerContext } from '@/types/handlers';
@@ -48,25 +44,6 @@ describe('componentHandlers — payload guards', () => {
     describe('non-object payloads', () => {
         it.each([
             ['null', null],
-            ['undefined', undefined],
-            ['a string', 'headless'],
-            ['a number', 7],
-        ])('handleUpdateComponentSelection refuses %s', async (_label, payload) => {
-            expect(await handleUpdateComponentSelection(context, payload)).toEqual(INVALID);
-            expect(context.sharedState.currentComponentSelection).toBeUndefined();
-        });
-
-        it.each([
-            ['null', null],
-            ['undefined', undefined],
-            ['a string', 'data'],
-        ])('handleUpdateComponentsData refuses %s', async (_label, payload) => {
-            expect(await handleUpdateComponentsData(context, payload)).toEqual(INVALID);
-            expect(context.sharedState.componentsData).toBeUndefined();
-        });
-
-        it.each([
-            ['null', null],
             ['a string', 'headless'],
         ])('handleCheckCompatibility refuses %s', async (_label, payload) => {
             expect(await handleCheckCompatibility(context, payload)).toEqual(INVALID);
@@ -79,14 +56,6 @@ describe('componentHandlers — payload guards', () => {
         ])('handleLoadDependencies refuses %s', async (_label, payload) => {
             expect(await handleLoadDependencies(context, payload)).toEqual(INVALID);
             expect(dependencyResolver.resolveDependencies).not.toHaveBeenCalled();
-        });
-
-        it.each([
-            ['null', null],
-            ['a string', 'citisignal-headless'],
-        ])('handleLoadPreset refuses %s', async (_label, payload) => {
-            expect(await handleLoadPreset(context, payload)).toEqual(INVALID);
-            expect(registryManager.getPresets).not.toHaveBeenCalled();
         });
 
         it.each([
@@ -121,14 +90,6 @@ describe('componentHandlers — payload guards', () => {
         });
 
         it.each([
-            ['a non-string presetId', { presetId: 42 }],
-            ['no presetId at all', {}],
-        ])('handleLoadPreset refuses %s', async (_label, payload) => {
-            expect(await handleLoadPreset(context, payload)).toEqual(INVALID);
-            expect(registryManager.getPresets).not.toHaveBeenCalled();
-        });
-
-        it.each([
             [
                 'a non-string frontend',
                 { frontend: 42, backend: 'adobe-commerce-paas', dependencies: [] },
@@ -141,65 +102,6 @@ describe('componentHandlers — payload guards', () => {
         ])('handleValidateSelection refuses %s', async (_label, payload) => {
             expect(await handleValidateSelection(context, payload)).toEqual(INVALID);
             expect(dependencyResolver.resolveDependencies).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('handleLoadPreset — a preset that is not there', () => {
-        it('reports the missing preset rather than failing on its selections', async () => {
-            registryManager.getPresets.mockResolvedValue([
-                {
-                    id: 'citisignal-headless',
-                    name: 'CitiSignal Headless',
-                    description: 'CitiSignal with Next.js',
-                    selections: { frontend: 'headless', backend: 'paas', dependencies: [] },
-                },
-            ]);
-
-            const result = await handleLoadPreset(context, { presetId: 'nope' });
-
-            // Naming the id is the whole value of the throw: without it the
-            // handler still fails, but on `undefined.selections` two lines later,
-            // which says nothing about what was asked for.
-            expect(result.success).toBe(false);
-            expect(String(result.error)).toMatch(/Preset nope not found/);
-        });
-    });
-
-    describe('handleLoadComponents — the frontend list it hands the wizard', () => {
-        it('marks headless as recommended and carries feature lists', async () => {
-            registryManager.getFrontends.mockResolvedValue([
-                {
-                    id: 'headless',
-                    name: 'CitiSignal Next.js',
-                    description: 'Storefront',
-                    features: ['SSR'],
-                    dependencies: { required: [], optional: [] },
-                    configuration: {},
-                },
-                {
-                    id: 'eds',
-                    name: 'Edge Delivery',
-                    description: 'Storefront',
-                    features: ['Docs'],
-                    dependencies: { required: [], optional: [] },
-                    configuration: {},
-                },
-            ]);
-            registryManager.getBackends.mockResolvedValue([]);
-            registryManager.getIntegrations.mockResolvedValue([]);
-            registryManager.getDependencies.mockResolvedValue([]);
-            registryManager.getPresets.mockResolvedValue([]);
-
-            const result = await handleLoadComponents(context);
-
-            // The recommendation and the feature bullets are what the wizard's
-            // frontend cards render; drop the options and both disappear with
-            // every other assertion still passing.
-            const [headless, eds] = (result.data as { frontends: Array<Record<string, unknown>> })
-                .frontends;
-            expect(headless).toMatchObject({ id: 'headless', recommended: true, features: ['SSR'] });
-            expect(eds.recommended).toBeUndefined();
-            expect(eds.features).toEqual(['Docs']);
         });
     });
 });

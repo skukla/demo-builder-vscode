@@ -62,7 +62,7 @@ describe('AdobeOrgServices — the saved API list', () => {
         await expect(service.getServicesForOrg('org-1')).resolves.toEqual(SERVICES);
         await service.getServicesForOrg('org-1');
         expect(client.getServicesForOrg).toHaveBeenCalledTimes(1);
-        expect(client.getServicesForOrg).toHaveBeenCalledWith('org-1');
+        expect(client.getServicesForOrg.mock.calls[0][0]).toBe('org-1');
     });
 
     it("reads only the asked org's copy", async () => {

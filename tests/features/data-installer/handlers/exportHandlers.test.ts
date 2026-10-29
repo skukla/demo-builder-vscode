@@ -16,8 +16,8 @@
 
 import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
-import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
-import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
+import { DataInstallerExportClient } from '@/features/data-installer/services/dataInstallerExportClient';
+import { selectedDatapackEngine } from '@/features/data-installer/services/dataInstallerConfig';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -31,19 +31,19 @@ import {
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
-jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
-    resolveCommerceCredentials: jest.fn(),
+jest.mock('@/features/data-installer/services/dataInstallerExportClient');
+// Export is the Data Installer service's; this suite is about that path, so the service
+// engine is chosen. The one test for Demo Builder's engine says so itself.
+jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
+    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
+    selectedDatapackEngine: jest.fn(() => 'service'),
 }));
-jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
 }));
 
-const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
-    typeof resolveCommerceCredentials
->;
-const MockedClient = DataInstallerWriteClient as jest.MockedClass<typeof DataInstallerWriteClient>;
+const MockedClient = DataInstallerExportClient as jest.MockedClass<typeof DataInstallerExportClient>;
 
 const ACCS_ENDPOINT = 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql';
 
@@ -109,18 +109,10 @@ beforeEach(() => {
                 : true
         ),
     });
-    mockedCredentials.mockResolvedValue({
-        ok: true,
-        credentials: {
-            kind: 'accs',
-            clientId: 'cid',
-            clientSecret: 'fake-test-secret-not-a-secret',
-        },
-    });
     listExportItems = jest.fn().mockResolvedValue({ items: [], totalCount: 0, excludedCount: 0 });
     startExport = jest.fn().mockResolvedValue({ success: true, perType: [] });
     MockedClient.mockImplementation(
-        () => ({ listExportItems, startExport }) as unknown as DataInstallerWriteClient
+        () => ({ listExportItems, startExport }) as unknown as DataInstallerExportClient
     );
 });
 
@@ -168,6 +160,19 @@ describe('list-datapack-export-items', () => {
 });
 
 describe('start-datapack-export', () => {
+    // 2026-10-29: export is the service's, which has not saved what it reads since
+    // August and ignores the credentials it is sent. With Demo Builder's engine (the
+    // default) it refuses before anything reaches the shared catalog.
+    it("refuses with Demo Builder's engine chosen, writing nothing", async () => {
+        (selectedDatapackEngine as jest.Mock).mockReturnValueOnce('demo-builder');
+
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
+        expect(result.error).toMatch(/Demo Builder's engine/);
+        expect(startExport).not.toHaveBeenCalled();
+    });
+
     /**
      * The catalog is shared infrastructure. A pack written under a name someone
      * else owns is not something the service will stop, so this does.
@@ -256,19 +261,37 @@ describe('start-datapack-export', () => {
         expect(harness.logger.warn).not.toHaveBeenCalled();
     });
 
-    it('refuses when the project has no usable Commerce credentials', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
+    /** A failure with no per-type entry would otherwise leave no trace at all. */
+    it('warns when a failed export names no data type, and not when a success names none', async () => {
+        startExport.mockResolvedValue({ success: false, perType: [] });
+        const failed = makeImportHarness();
+        await importHandlers['start-datapack-export'](failed, PAYLOAD);
 
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+        startExport.mockResolvedValue({ success: true, perType: [] });
+        const succeeded = makeImportHarness();
+        await importHandlers['start-datapack-export'](succeeded, PAYLOAD);
+
+        expect(failed.logger.warn).toHaveBeenCalledTimes(1);
+        expect(succeeded.logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('refuses when the project has no Commerce backend', async () => {
+        const result = await importHandlers['start-datapack-export'](
+            makeImportHarness({ ...accsProject(), componentSelections: { backend: '' } }),
+            PAYLOAD,
+        );
 
         expect(result.success).toBe(false);
         expect(startExport).not.toHaveBeenCalled();
     });
 
-    it('never puts the credential pair in the response', async () => {
+    // The service signs in with its own credential (DEMOSYS-1698), so the export names
+    // only the backend: an ACCS project that saved no Commerce pair is not refused (DI-6).
+    it('exports for an ACCS project that saved no Commerce credentials, naming its backend', async () => {
         const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
 
-        expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
+        expect(result.success).toBe(true);
+        expect(startExport).toHaveBeenCalledWith(expect.objectContaining({ backend: 'accs' }));
     });
 });
 
@@ -352,7 +375,7 @@ describe('prepareExport guards', () => {
         expect(startExport).not.toHaveBeenCalled();
     });
 
-    it('builds the write client against the configured API base URL', async () => {
+    it('builds the export client against the configured API base URL', async () => {
         await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
 
         expect(MockedClient).toHaveBeenCalledWith(
@@ -376,68 +399,6 @@ describe('prepareExport guards', () => {
         startExport.mockClear();
         await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
         expect(startExport.mock.calls[0][0]).not.toHaveProperty('selections');
-    });
-});
-
-describe('credential refusals', () => {
-    it('names the specific gap rather than a generic one', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' });
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result.error).toMatch(/no Commerce admin username and password saved/);
-        expect(startExport).not.toHaveBeenCalled();
-    });
-
-    it('falls back to a generic message for a gap it has no wording for', async () => {
-        mockedCredentials.mockResolvedValue({
-            ok: false,
-            reason: 'something-new' as 'missing-paas-admin',
-        });
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result.error).toBe('Commerce credentials are missing.');
-    });
-
-    /**
-     * The provisioning offer is gated on the Adobe binding for the same reason
-     * the import spine's is: an offer that leads nowhere is worse than none.
-     */
-    it('offers ACCS provisioning when the reason is ACCS and the project is bound', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
-
-        const result = await importHandlers['start-datapack-export'](
-            makeImportHarness({
-                ...accsProject(),
-                adobe: { organization: 'org', projectId: 'proj', workspace: 'stage' },
-            }),
-            PAYLOAD
-        );
-
-        expect(result.data).toEqual({ needsAccsCredentials: true });
-    });
-
-    it('withholds the offer when the project has no Adobe workspace to provision into', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
-
-        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
-
-        expect(result.data).toEqual({ needsAccsCredentials: false });
-    });
-
-    it('withholds the offer for a non-ACCS gap even on a bound project', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' });
-
-        const result = await importHandlers['start-datapack-export'](
-            makeImportHarness({
-                ...accsProject(),
-                adobe: { organization: 'org', projectId: 'proj', workspace: 'stage' },
-            }),
-            PAYLOAD
-        );
-
-        expect(result.data).toEqual({ needsAccsCredentials: false });
     });
 });
 

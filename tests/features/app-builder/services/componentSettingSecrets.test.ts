@@ -1,0 +1,217 @@
+/**
+ * AppBuilderComponent Secret Routing Tests (D2 Track B — Step 04)
+ *
+ * SECRET SAFETY (repo is PUBLIC): a `type:'secret'` value MUST be routed to VS
+ * Code SecretStorage and MUST NEVER reach `componentConfigs`, the `.env` file,
+ * any persisted manifest, or the logs. These tests are the gate for that.
+ *
+ * Uses the safe GitGuardian fixture convention (`fake-test-pw-not-a-secret`)
+ * for the test secret value. SecretStorage is mocked.
+ */
+
+import {
+    forgetAppBuilderComponentSecrets,
+    persistAppBuilderComponentSecrets,
+    loadAppBuilderComponentSecretFlags,
+    resolveSecretInputs,
+} from '@/features/app-builder/services/componentSettingSecrets';
+import { secretKey } from '@/features/app-builder/services/secretKey';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+
+const FAKE_SECRET = 'fake-test-pw-not-a-secret';
+
+/** A catalog entry with one secret var and one text var. */
+const erpEntry: AppBuilderComponentCatalogEntry = {
+    id: 'erp-integration',
+    name: 'ERP Integration',
+    description: 'Test integration',
+    kind: 'integration',
+    source: { owner: 'acme', repo: 'erp', branch: 'main' },
+    envSchema: [
+        { name: 'ERP_HOST', type: 'text', label: 'ERP Host' },
+        { name: 'ERP_API_KEY', type: 'secret', label: 'ERP API Key' },
+    ],
+};
+
+/** A seed mesh: only a derived (bucket 1) var — no secrets. */
+const meshEntry: AppBuilderComponentCatalogEntry = {
+    id: 'commerce-paas-mesh',
+    name: 'Commerce PaaS API Mesh',
+    description: 'Mesh',
+    kind: 'mesh',
+    source: { owner: 'skukla', repo: 'commerce-paas-mesh', branch: 'main' },
+    envSchema: [
+        {
+            name: 'COMMERCE_ENDPOINT',
+            type: 'text',
+            label: 'Commerce endpoint',
+            derivedFrom: 'connect-commerce',
+        },
+    ],
+};
+
+function makeSecretStorage() {
+    const store = new Map<string, string>();
+    return {
+        store,
+        api: {
+            store: jest.fn(async (key: string, value: string) => {
+                store.set(key, value);
+            }),
+            get: jest.fn(async (key: string) => store.get(key)),
+            delete: jest.fn(async (key: string) => {
+                store.delete(key);
+            }),
+        },
+    };
+}
+
+describe('persistAppBuilderComponentSecrets', () => {
+    it('routes each secret to SecretStorage under the deterministic key', async () => {
+        const { api } = makeSecretStorage();
+
+        await persistAppBuilderComponentSecrets(
+            [
+                {
+                    appBuilderComponentId: 'erp-integration',
+                    varName: 'ERP_API_KEY',
+                    value: FAKE_SECRET,
+                },
+            ],
+            'proj-1',
+            api
+        );
+
+        const expectedKey = secretKey('proj-1', 'erp-integration', 'ERP_API_KEY');
+        expect(api.store).toHaveBeenCalledWith(expectedKey, FAKE_SECRET);
+    });
+
+    it('never logs the secret value', async () => {
+        const { api } = makeSecretStorage();
+        const logger = createMockLogger();
+
+        await persistAppBuilderComponentSecrets(
+            [
+                {
+                    appBuilderComponentId: 'erp-integration',
+                    varName: 'ERP_API_KEY',
+                    value: FAKE_SECRET,
+                },
+            ],
+            'proj-1',
+            api,
+            logger
+        );
+
+        const allLogArgs = JSON.stringify([
+            ...logger.info.mock.calls,
+            ...logger.debug.mock.calls,
+            ...logger.warn.mock.calls,
+            ...logger.error.mock.calls,
+        ]);
+        expect(allLogArgs).not.toContain(FAKE_SECRET);
+    });
+
+    it('does nothing (no store calls) for an empty secret list', async () => {
+        const { api } = makeSecretStorage();
+        await persistAppBuilderComponentSecrets([], 'proj-1', api);
+        expect(api.store).not.toHaveBeenCalled();
+    });
+});
+
+describe('loadAppBuilderComponentSecretFlags', () => {
+    it('reports a secret as set without revealing its value', async () => {
+        const { api } = makeSecretStorage();
+        await api.store(secretKey('proj-1', 'erp-integration', 'ERP_API_KEY'), FAKE_SECRET);
+
+        const flags = await loadAppBuilderComponentSecretFlags([erpEntry], 'proj-1', api);
+
+        expect(flags['erp-integration'].ERP_API_KEY).toBe(true);
+        // The flags map carries only booleans — never the secret value.
+        expect(JSON.stringify(flags)).not.toContain(FAKE_SECRET);
+    });
+
+    it('reports an unset secret as false', async () => {
+        const { api } = makeSecretStorage();
+
+        const flags = await loadAppBuilderComponentSecretFlags([erpEntry], 'proj-1', api);
+
+        expect(flags['erp-integration'].ERP_API_KEY).toBe(false);
+    });
+
+    it('produces no entries for a seed mesh (no secret vars)', async () => {
+        const { api } = makeSecretStorage();
+
+        const flags = await loadAppBuilderComponentSecretFlags([meshEntry], 'proj-1', api);
+
+        expect(flags['commerce-paas-mesh']).toBeUndefined();
+    });
+});
+
+describe('resolveSecretInputs — secrets reach the deploy', () => {
+    function storeOf(values: Record<string, string>) {
+        return { get: jest.fn(async (key: string) => values[key]) };
+    }
+
+    it("reads the entry's secrets from SecretStorage, and leaves unset ones out", async () => {
+        const store = storeOf({ [secretKey('/p', 'erp-integration', 'ERP_API_KEY')]: FAKE_SECRET });
+
+        expect(await resolveSecretInputs(erpEntry, '/p', store)).toEqual({ ERP_API_KEY: FAKE_SECRET });
+        expect(await resolveSecretInputs(erpEntry, '/other', store)).toStrictEqual({});
+    });
+
+    it("a bound system reads its integration's secret first", async () => {
+        const system: AppBuilderComponentCatalogEntry = {
+            ...erpEntry,
+            id: 'demo-erp',
+            kind: 'system',
+            boundTo: 'erp-integration',
+        };
+        const store = storeOf({
+            [secretKey('/p', 'erp-integration', 'ERP_API_KEY')]: FAKE_SECRET,
+            [secretKey('/p', 'demo-erp', 'ERP_API_KEY')]: 'fake-old-value-not-a-secret',
+        });
+
+        expect(await resolveSecretInputs(system, '/p', store)).toEqual({ ERP_API_KEY: FAKE_SECRET });
+    });
+
+    it('an entry with no secret settings reads nothing', async () => {
+        const store = storeOf({});
+
+        expect(await resolveSecretInputs(meshEntry, '/p', store)).toStrictEqual({});
+        expect(store.get).not.toHaveBeenCalled();
+    });
+});
+
+describe('forgetAppBuilderComponentSecrets — removal takes the secrets with it (PL-64)', () => {
+    const screenEntry: AppBuilderComponentCatalogEntry = {
+        ...erpEntry,
+        id: 'demo-erp',
+        kind: 'system',
+        envSchema: [],
+        screen: { action: 'screen', keyEnvVar: 'ERP_SCREEN_KEY' },
+    };
+
+    it("deletes each entry's secret settings and screen key, and nothing of another project", async () => {
+        const other = secretKey('/other', 'erp-integration', 'ERP_API_KEY');
+        const { secrets, store } = createMockSecretStorage({
+            [secretKey('/p', 'erp-integration', 'ERP_API_KEY')]: FAKE_SECRET,
+            [secretKey('/p', 'demo-erp', 'ERP_SCREEN_KEY')]: FAKE_SECRET,
+            [other]: FAKE_SECRET,
+        });
+
+        await forgetAppBuilderComponentSecrets([erpEntry, screenEntry], '/p', secrets);
+
+        expect([...store.keys()]).toStrictEqual([other]);
+    });
+
+    it('asks nothing of the store for an entry with no secrets', async () => {
+        const { secrets } = createMockSecretStorage();
+
+        await forgetAppBuilderComponentSecrets([meshEntry], '/p', secrets);
+
+        expect(secrets.delete).not.toHaveBeenCalled();
+    });
+});

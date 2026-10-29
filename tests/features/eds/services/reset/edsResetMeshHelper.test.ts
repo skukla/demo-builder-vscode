@@ -45,7 +45,7 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
 }));
 
 const mockUpdateMeshState = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: (...args: unknown[]) => mockUpdateMeshState(...args),
 }));
 
@@ -55,6 +55,7 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { poolUnits } from '../../../../helpers/authenticationServiceFake';
 
 // =============================================================================
 // Fixtures
@@ -64,12 +65,13 @@ const MESH_PATH = '/p/components/eds-accs-mesh';
 
 /** The auth fake is built here so the suite can assert the deps object by identity. */
 const meshDeps = createMeshDepsFake({
-    authManager: {
+    authManager: poolUnits({
         getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })),
         getCachedOrganization: jest.fn(),
-    },
+    }),
 });
-const cachedOrganization = meshDeps.authManager.getCachedOrganization as jest.Mock;
+const cachedOrganization = meshDeps.authManager.getCacheManager()
+    .getCachedOrganization as jest.Mock;
 
 function makeProject(overrides: Partial<Project> = {}): Project {
     return createMockProject({
@@ -202,14 +204,14 @@ describe('redeployApiMesh — skip and preflight', () => {
     it('runs the preflight with the auth service, the project and the reset wording', async () => {
         const { context, project, report } = await run();
 
-        expect(report).toHaveBeenNthCalledWith(1, 12, 'Checking Adobe organization access');
+        expect(report).toHaveBeenNthCalledWith(1, 12, 'Checking Adobe access');
         expect(mockEnsureProjectAdobeContext).toHaveBeenCalledWith({
             authManager: meshDeps.authManager,
             project,
             logger: context.logger,
             logPrefix: '[EdsReset]',
             warningMessage:
-                'Your Adobe I/O session has expired. Please sign in to continue the mesh redeployment.',
+                'Your Adobe sign-in has expired. Sign in to redeploy the API Mesh.',
         });
     });
 
@@ -237,7 +239,7 @@ describe('redeployApiMesh — skip and preflight', () => {
 
         expect(result).toStrictEqual(
             partial(
-                'Reset completed but mesh redeployment skipped: Adobe I/O authentication required'
+                'Reset completed but mesh redeployment skipped: Adobe sign-in required'
             )
         );
         expect(mockWithOrgContext).not.toHaveBeenCalled();
@@ -265,7 +267,7 @@ describe('redeployApiMesh — the targeted deploy', () => {
     it('deploys the mesh at the component path with the reset deps and logger', async () => {
         const { context, report } = await run();
 
-        expect(report).toHaveBeenNthCalledWith(2, 12, 'Redeploying API Mesh');
+        expect(report).toHaveBeenNthCalledWith(2, 12, 'Redeploying the mesh');
         expect(mockFetchMeshInfo).toHaveBeenCalledWith(meshDeps.commandManager, context.logger);
         expect(mockDeployMeshComponent).toHaveBeenCalledWith(
             MESH_PATH,

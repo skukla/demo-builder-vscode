@@ -1,3 +1,4 @@
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import {
     createMockCommandManager,
@@ -65,7 +66,7 @@ describe('MeshDeployment - Progress Reporting', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('Reading mesh configuration', '');
+            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.readingMeshConfig.label);
         });
 
         it('should report deployment start', async () => {
@@ -83,7 +84,7 @@ describe('MeshDeployment - Progress Reporting', () => {
             );
 
             // Now uses create-first approach (create, then fallback to update if mesh exists)
-            expect(onProgress).toHaveBeenCalledWith('Deploying API Mesh', 'Creating mesh');
+            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.deployingMesh.label, 'Creating the mesh');
         });
 
         it('should report verification status', async () => {
@@ -111,7 +112,18 @@ describe('MeshDeployment - Progress Reporting', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('Verifying deployment', 'Checking deployment status');
+            // The step says WHAT is being waited on and carries no clock of its
+            // own: the modal times the stage, and a second count beside it
+            // disagreed by the seconds between when the stage started and when
+            // polling did (owner, 2026-09-20).
+            expect(onProgress).toHaveBeenCalledWith(
+                OPERATION_STAGES.verifyingMesh.label,
+                'Waiting for Adobe',
+            );
+            const counted = onProgress.mock.calls.filter(([, step]: [string, string?]) =>
+                /\d/.test(step ?? ''),
+            );
+            expect(counted).toStrictEqual([]);
         });
 
         it('should report completion', async () => {
@@ -128,7 +140,7 @@ describe('MeshDeployment - Progress Reporting', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('✓ Deployment Complete', 'Mesh deployed successfully');
+            expect(onProgress).toHaveBeenCalledWith(OPERATION_STAGES.verifyingMesh.label, 'Mesh deployed');
         });
 
         it('should track all progress phases in order', async () => {
@@ -152,14 +164,14 @@ describe('MeshDeployment - Progress Reporting', () => {
 
             // Verify progress phases appear in correct order
             const messages = progressCalls.map(([msg]) => msg);
-            expect(messages).toContain('Reading mesh configuration');
-            expect(messages).toContain('Deploying API Mesh');
-            expect(messages).toContain('✓ Deployment Complete');
+            expect(messages).toContain(OPERATION_STAGES.readingMeshConfig.label);
+            expect(messages).toContain(OPERATION_STAGES.deployingMesh.label);
+            expect(messages).toContain(OPERATION_STAGES.verifyingMesh.label);
 
             // Reading should come before deploying
-            const readingIndex = messages.indexOf('Reading mesh configuration');
-            const deployingIndex = messages.indexOf('Deploying API Mesh');
-            const completeIndex = messages.indexOf('✓ Deployment Complete');
+            const readingIndex = messages.indexOf(OPERATION_STAGES.readingMeshConfig.label);
+            const deployingIndex = messages.indexOf(OPERATION_STAGES.deployingMesh.label);
+            const completeIndex = messages.indexOf(OPERATION_STAGES.verifyingMesh.label);
 
             expect(readingIndex).toBeLessThan(deployingIndex);
             expect(deployingIndex).toBeLessThan(completeIndex);

@@ -32,17 +32,49 @@ import { actionRow as row, actionRows } from './actionDescriptors.testUtils';
 const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
     regenerate_ai_files: false,
     start_demo: false,
+    add_erp: ['adobe'],
     add_integration: ['adobe'],
     rename_integration: false,
+    // Stores the change, then redeploys through the guarded deploy path.
+    set_integration_settings: ['adobe'],
+    // Writes an ERP's own settings to the deployed integration (AB-16j).
+    set_erp_settings: ['adobe'],
+    // The demo ERP's look and simulated downtime (AB-59), through the Adobe sign-in.
+    set_erp_appearance: ['adobe'],
+    start_erp_downtime: ['adobe'],
+    end_erp_downtime: ['adobe'],
+    // The demo setup checklist (AB-26x): marking a step is saved state only; checking reads Commerce.
+    set_setup_step: false,
+    check_setup_steps: ['adobe'],
     set_console_apis: ['adobe'],
     set_project_destination: ['adobe'],
     deploy_integration: ['adobe'],
     redeploy_integration: ['adobe'],
     install_integration: ['adobe'],
+    reinstall_integration: ['adobe'],
+    update_integration: ['adobe'],
+    check_integration_updates: false,
     remove_integration: ['adobe'],
+    // AB-1c's agent door: creates and deletes a repository on the user's GitHub account.
+    save_app_to_github: ['github'],
+    delete_app_github_repo: ['github'],
+    delete_undeclared_runtime_code: ['adobe'],
+    load_erp_demo_data: ['adobe'],
+    // AB-74: preview without confirm, write with it; both read Commerce through the sign-in.
+    assign_erp_products: ['adobe'],
+    add_erp_owner_to_attribute_sets: ['adobe'],
+    undo_erp_assignment: ['adobe'],
+    remove_erp_owner_from_attribute_sets: ['adobe'],
+    // AB-77: preview without confirm, write with it; all three read and write Commerce.
+    prepare_commerce_store: ['adobe'],
+    undo_commerce_store_preparation: ['adobe'],
+    set_commerce_config: ['adobe'],
+    reset_erp_records: ['adobe'],
+    write_erp_rest: false,
+    invoke_runtime_action: ['adobe'],
+    open_erp_screen: false,
     stop_demo: false,
     restart_demo: false,
-    set_current_project: false,
     set_project_pinned: false,
     rename_project: false,
     save_ai_prompt: false,
@@ -59,32 +91,61 @@ const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
 const INPUT_KEYS: Record<string, string[]> = {
     regenerate_ai_files: [],
     start_demo: [],
-    add_integration: ['apis', 'id', 'instanceId', 'name', 'refreshCli', 'source'],
+    add_erp: ['confirm', 'id', 'name', 'owns'],
+    // `confirm` gates the ERP integration's add alone, which prepares the store (2026-10-22).
+    add_integration: ['apis', 'confirm', 'id', 'instanceId', 'name', 'refreshCli', 'source'],
     rename_integration: ['id', 'name'],
+    // No `secrets`: a secret must never be a tool argument (AB-21).
+    set_integration_settings: ['id', 'values'],
+    set_erp_settings: ['erp', 'id', 'values', 'website'],
+    set_erp_appearance: ['erp', 'id', 'palette', 'theme'],
+    start_erp_downtime: ['erp', 'id', 'minutes'],
+    end_erp_downtime: ['erp', 'id'],
+    set_setup_step: ['id', 'state', 'stepId'],
+    check_setup_steps: ['id'],
     set_console_apis: ['apis', 'componentId'],
     set_project_destination: ['project', 'workspace'],
     deploy_integration: ['id', 'refreshCli'],
     redeploy_integration: ['id', 'refreshCli'],
     install_integration: ['id'],
-    remove_integration: ['id'],
+    reinstall_integration: ['id'],
+    update_integration: ['id'],
+    check_integration_updates: [],
+    remove_integration: ['force', 'id'],
+    save_app_to_github: ['id', 'owner', 'repoName'],
+    delete_app_github_repo: ['id'],
+    delete_undeclared_runtime_code: ['componentId'],
+    load_erp_demo_data: ['erp', 'id'],
+    assign_erp_products: ['confirm', 'erp', 'id', 'selection'],
+    add_erp_owner_to_attribute_sets: ['confirm', 'id'],
+    undo_erp_assignment: ['confirm', 'erp', 'id'],
+    remove_erp_owner_from_attribute_sets: ['confirm', 'id'],
+    prepare_commerce_store: ['confirm', 'id', 'stepIds'],
+    undo_commerce_store_preparation: ['confirm', 'id', 'stepId'],
+    set_commerce_config: ['confirm', 'items', 'undo'],
+    reset_erp_records: ['id'],
+    write_erp_rest: ['body', 'erp', 'id', 'method', 'path'],
+    invoke_runtime_action: ['action', 'componentId', 'payload'],
+    open_erp_screen: ['erp', 'id'],
     stop_demo: [],
     restart_demo: [],
-    set_current_project: ['projectPath'],
     set_project_pinned: ['pinned', 'projectPath'],
     rename_project: ['newName'],
     save_ai_prompt: ['prompt'],
     delete_ai_prompt: ['promptId'],
     deploy_mesh: [],
-    export_project_settings: ['includeSecrets', 'path'],
+    export_project_settings: ['path'],
     refresh_block_library: [],
     delete_mesh: ['workspaceId'],
-    add_console_apis: ['apis'],
+    add_console_apis: ['apis', 'componentId'],
     install_prerequisite: ['prerequisiteId', 'version'],
 };
 
 describe('ACTION_DESCRIPTORS — per-row contract', () => {
     it('covers every shipped row in both tables', () => {
-        const tools = actionRows().map((d) => d.tool).sort();
+        const tools = actionRows()
+            .map((d) => d.tool)
+            .sort();
         // Control: without this, a table entry for a row that no longer exists
         // would pass every loop below by never being visited.
         expect(tools.length).toBeGreaterThan(0);
@@ -134,7 +195,7 @@ describe('ACTION_DESCRIPTORS — per-row contract', () => {
             expect(source.safeParse({ owner: 'acme' }).success).toBe(false);
         });
 
-        it('set_project_destination keeps the project and workspace ids', () => {
+        it('set_project_destination keeps the ids, and REQUIRES the workspace name', () => {
             const d = row('set_project_destination');
             for (const field of ['project', 'workspace'] as const) {
                 const schema = d.inputSchema![field];
@@ -143,10 +204,21 @@ describe('ACTION_DESCRIPTORS — per-row contract', () => {
                     name: 'n',
                     title: 't',
                 });
-                // The id is what the move targets; name/title are display only.
                 expect(schema.safeParse({ name: 'n' }).success).toBe(false);
-                expect(schema.safeParse({ id: 'p1' }).success).toBe(true);
             }
+
+            // This pin used to say "name/title are display only" and accept an
+            // id alone for BOTH — which is the belief that broke a real project.
+            // An App Management install sends the workspace MACHINE name, so a
+            // destination written without it leaves the project unable to install
+            // one, and the refusal names an internal field days later (Kukla
+            // Bodea, moved 2026-09-18, found 2026-09-20).
+            expect(d.inputSchema!.project.safeParse({ id: 'p1' }).success).toBe(true);
+            expect(d.inputSchema!.workspace.safeParse({ id: 'w1' }).success).toBe(false);
+            expect(d.inputSchema!.workspace.safeParse({ id: 'w1', name: '' }).success).toBe(false);
+            expect(d.inputSchema!.workspace.safeParse({ id: 'w1', name: 'Stage' }).success).toBe(
+                true
+            );
         });
 
         it('save_ai_prompt.prompt keeps id, title, body and the pinned flag', () => {
@@ -201,6 +273,95 @@ describe('ACTION_DESCRIPTORS — per-row contract', () => {
         it('set_console_apis.apis DOES take an empty list — that is how extras are cleared', () => {
             const apis = row('set_console_apis').inputSchema!.apis;
             expect(apis.parse([])).toStrictEqual([]);
+        });
+
+        // An id handed on as '' reaches a handler that reads it as "no id given"
+        // and falls back to a default — the wrong integration, or the first ERP.
+        it.each([
+            ['delete_undeclared_runtime_code', 'componentId', 'erp-integration'],
+            ['assign_erp_products', 'erp', 'erp-brand-b'],
+            ['undo_erp_assignment', 'erp', 'erp-brand-b'],
+            ['invoke_runtime_action', 'componentId', 'erp-integration'],
+        ])('%s.%s refuses an empty id and takes a real one', (tool, field, real) => {
+            const id = row(tool).inputSchema![field];
+            expect(id.safeParse('').success).toBe(false);
+            expect(id.parse(real)).toBe(real);
+        });
+
+        it('invoke_runtime_action.componentId may be left out', () => {
+            const id = row('invoke_runtime_action').inputSchema!.componentId;
+            expect(id.parse(undefined)).toBeUndefined();
+        });
+
+        it('add_erp.name takes one to forty characters', () => {
+            // The name becomes a Commerce Admin menu entry; the cap is its width.
+            const name = row('add_erp').inputSchema!.name;
+            expect(name.safeParse('').success).toBe(false);
+            expect(name.parse('Brand B')).toBe('Brand B');
+            expect(name.parse('x'.repeat(40))).toBe('x'.repeat(40));
+            expect(name.safeParse('x'.repeat(41)).success).toBe(false);
+        });
+    });
+
+    /**
+     * The closed lists. Each names every value a handler dispatches on, so an
+     * emptied or shortened list is a tool that refuses what its description
+     * offers — and a widened one hands the handler a value it has no branch for.
+     */
+    describe('closed lists take exactly their own values', () => {
+        it.each([
+            ['set_setup_step', 'state', ['done', 'dismissed', 'open'], 'finished'],
+            ['write_erp_rest', 'method', ['POST', 'PUT', 'PATCH', 'DELETE'], 'GET'],
+        ])('%s.%s', (tool, field, allowed, refused) => {
+            const schema = row(tool).inputSchema![field];
+            for (const value of allowed) {
+                expect(schema.parse(value)).toBe(value);
+            }
+            expect(schema.safeParse(refused).success).toBe(false);
+        });
+
+        it('set_erp_settings.values takes a string to set and null to clear, nothing else', () => {
+            const values = row('set_erp_settings').inputSchema!.values;
+            expect(values.parse({ ERP_URL: 'https://erp.example.com', ERP_REGION: null })).toStrictEqual({
+                ERP_URL: 'https://erp.example.com',
+                ERP_REGION: null,
+            });
+            expect(values.safeParse({ ERP_TIMEOUT: 30 }).success).toBe(false);
+        });
+
+        it('add_erp.owns keeps the rule it was given, by attribute or by website', () => {
+            const owns = row('add_erp').inputSchema!.owns;
+            expect(owns.parse({ mode: 'attribute', attribute: 'erp_owner=brand-b' })).toStrictEqual({
+                mode: 'attribute',
+                attribute: 'erp_owner=brand-b',
+            });
+            expect(owns.parse({ mode: 'websites', websites: ['base', 'eu'] })).toStrictEqual({
+                mode: 'websites',
+                websites: ['base', 'eu'],
+            });
+            expect(owns.safeParse({ mode: 'everything' }).success).toBe(false);
+        });
+
+        it('assign_erp_products.selection takes each of its four ways to pick products', () => {
+            const selection = row('assign_erp_products').inputSchema!.selection;
+            const ways = [
+                { by: 'category', categoryId: 12 },
+                { by: 'brand', brand: 'Acme' },
+                { by: 'skuPrefix', prefix: 'ACM-' },
+                { by: 'skus', skus: ['ACM-1', 'ACM-2'] },
+            ];
+            for (const way of ways) {
+                expect(selection.parse(way)).toStrictEqual(way);
+            }
+            expect(selection.safeParse({ by: 'everything' }).success).toBe(false);
+        });
+
+        it('assign_erp_products.selection refuses a pick that names nothing', () => {
+            // An empty brand, prefix or SKU list would match every product or none.
+            const selection = row('assign_erp_products').inputSchema!.selection;
+            expect(selection.safeParse({ by: 'brand', brand: '' }).success).toBe(false);
+            expect(selection.safeParse({ by: 'skuPrefix', prefix: '' }).success).toBe(false);
+            expect(selection.safeParse({ by: 'skus', skus: [] }).success).toBe(false);
         });
     });
 });

@@ -5,7 +5,7 @@
 **Decision Maker**: Project Owner
 **Implementer**: Phase 1 ship 2026-06-09 (this slice). Phase 2 ship 2026-06-09 (later same day; verified live on `citisignal-b2b`).
 
-Related: [ADR-007](007-pdp-sku-url-encoding.md) — reversible SKU URL encoding (the `/products/{urlKey}/{sku}` path's SKU segment).
+Related: [ADR-024](024-pdp-sku-in-the-page.md) — the `/products/{urlKey}/{sku}` path is Helix-clean and the page carries the real SKU (supersedes ADR-007's URL encoding).
 
 ---
 
@@ -50,7 +50,7 @@ Demo Builder serves Adobe Solutions Consultants prepping demos. Two requirements
 | **SSR template** — `render-pdp` action returns SC's authored `/products/default` | Phase 2 LIVE 2026-06-09; fetches `https://main--{site}--{org}.aem.live/products/default` with browser User-Agent, caches per org/site, generic shell fallback | **Aligned with canonical** (line-for-line equivalent of `actions/pdp-renderer/render.js`) |
 | **Multi-tenant hosting** of the action | One shared `accs-discovery-service` workspace; `?org=&site=` query params on the registered overlay URL route per-tenant | **Innovation #1** — canonical is single-tenant per workspace |
 | **Catalog publishing** — pre-warming at create/reset | Enumerate Catalog Service, fire `prepublish-pdp` for each SKU in batches of 5 | **Aligned with canonical** — same operation as one poller cycle, run synchronously |
-| **Catalog-churn recovery** — smart-404 client-side trigger | Vendored into `head.html`, `404.html`, `delayed.js`; on cold-visit, POSTs to `prepublish-pdp` to publish on demand | **Innovation #2** — closes the gap Adobe acknowledges in issue #262 |
+| **Catalog-churn recovery** — smart-404 client-side trigger | Vendored into `head.html` and `404.html` (`delayed.js` until 2026-10-29: Adobe's B2B template has none); on cold-visit, POSTs to `prepublish-pdp` to publish on demand | **Innovation #2** — closes the gap Adobe acknowledges in issue #262 |
 | **Server-side SSR injection** — JSON-LD, per-SKU og:image, Merchant Center metadata | Not built | **Deliberately omitted** — Tier 3 from canonical; not required for demo audiences |
 
 ### What this means
@@ -87,7 +87,7 @@ Demo Builder serves Adobe Solutions Consultants prepping demos. Two requirements
 - **Smart-404 has no canonical equivalent today.** We built what Adobe has acknowledged as a desired feature (issue #262) but hasn't shipped. If issue #262 ships, Demo Builder might migrate to the canonical mechanism. Until then, smart-404 is custom code we own.
 - **No server-side SSR / JSON-LD / Merchant Center support.** Acceptable for demos (humans on calls). If production-grade SEO is ever needed on a demo storefront, that requires layering `aem-commerce-prerender` on top — a meaningful additional setup step for the SC.
 - **~2-second cold-path latency** the first time a never-warmed SKU is visited (smart-404 cycle). Pre-warming covers the catalog at create/reset, so cold paths only fire for catalog churn. Spinner + storefront chrome stay visible during the cycle.
-- **Depends on Helix admin POST being unauthenticated** for our origin. If Helix changes that contract, the smart-404 cold-path mechanism needs follow-up.
+- **Depends on Helix accepting a site-scoped publish key** held by the shared action. (Originally: depended on Helix admin POST being unauthenticated; that ended when setup began pinning a site admin, and the extension now registers a publish key per site after every config write and renews it — `publishKeyRegistrar.ts`, corrected 2026-10-05.)
 - **Depends on Catalog Service being case-insensitive on SKU lookups.** If that changes, PDPs render with empty product data (silent rot). Detection probe documented in memory entry `catalog-service-sku-case-insensitive`.
 
 ### Neutral
@@ -139,7 +139,55 @@ So the trade is: accept the maintenance burden of custom code that fills a docum
 Two triggers should cause us to revisit smart-404:
 
 1. **Adobe ships event-driven recovery** (resolves issue #262). At that point, evaluate whether the canonical mechanism is sufficient for demo workflows. If so, retire smart-404.
-2. **Helix locks down admin POST.** Smart-404's cold-path trigger relies on this; we'd need to switch to authenticated trigger or accept the churn-404 behavior.
+2. **Helix stops accepting site-scoped publish keys.** (This trigger originally read "Helix locks down admin POST"; that happened for pinned sites, and the publish key per site is the authenticated trigger it called for — corrected 2026-10-05.)
+3. **Re-evaluated 2026-10-05 (EDS-25):** Adobe's `aem-commerce-prerender` is still one site per deployment, has no on-demand publish (#262 open), and bakes the guest price into B2B pages. Kept ours; see `.rptc/research/prerender-vs-shared-action/research.md`.
+
+---
+
+## Category pages ride the same overlay (EDS-61, 2026-10-22)
+
+**Decision (owner, 2026-10-22).** The overlay also serves each Commerce category's page, at
+the category's own url path — `/signs`, `/signs/danger-signs`, every segment cleaned the way
+Helix cleans a published path (`safety_cabinets` → `/safety-cabinets`) — filled from the
+site's authored `/categories/default`. Demo Builder publishes them; the catalog menu links
+each category to its own address.
+
+**The fact that shaped it — measured 2026-10-22 on scratch-1022-b.** An authored DA.live
+page at a product path, previewed and published, was not served: the overlay's template was.
+On preview the overlay is asked first and its answer beats authored content (the BYOM spec
+says so; this is the measurement). At a category's address that means an authored page —
+Justrite's hand-built `/apparel`, `/hazard-communication`, `/workplace-safety` — would be
+replaced the next time anything previewed it.
+
+**So the overlay steps aside, and only on sites that opt in.** A public published sheet,
+`/authored-category-pages.json` (`{data: [{path: "/apparel"}, ...]}`), lists every category
+address with a DA.live document that is not one of Demo Builder's own unedited generated
+pages. The overlay never answers a listed path (Helix falls through to DA.live), and it
+renders category pages only on a site where the sheet exists: no sheet, no category pages,
+which is every site before this decision. An empty sheet means opted in, nothing authored.
+Demo Builder writes it with the SC's own DA.live access and publishes it BEFORE any category
+path — and, in republish, before the bulk content publish, so no authored page is previewed
+while unlisted.
+
+**Undo.**
+
+| Flow | Category pages Demo Builder published | The sheet |
+|---|---|---|
+| Republish | Republished; those of categories now gone are taken down | Rewritten before the bulk publish and again before the category pages |
+| Reset | Kept on the record; the rebuild keeps or takes them down | Taken out before the content is re-published, written again first in the rebuild |
+| Library removed, or overlay off | Taken down (never an authored address) | Taken out: the site is back to the overlay leaving it alone |
+| Project delete | Gone with the site | Gone with the site |
+
+A page a shopper's first visit published (the smart-404 script) for a category Demo Builder
+never published is not on the record; if that category is later deleted, the page stays live
+until a reset. Accepted as a known limit (owner, 2026-10-22).
+
+**Rejected: a `/categories/{url_path}` prefix.** It was the design's recommendation: under a
+prefix no authored page could share a category's address, so the overlay could never replace
+one, with no list to keep. Its stated cost was that the URLs are not Adobe's canonical shape
+(Adobe's `aem-commerce-prerender` serves categories at their root paths). The owner chose the
+root shape on 2026-10-22; the opt-in sheet is what makes it safe. Design and history:
+`.rptc/plans/category-pages-overlay/overview.md`; behaviour: `docs/systems/category-pages.md`.
 
 ---
 
@@ -153,6 +201,13 @@ Two triggers should cause us to revisit smart-404:
 - **Related ADRs**: ADR-003 (Multisite Architecture Seam — what Phase 1 doesn't address)
 
 ## Reference notes
+
+- **2026-10-05, the undo (EDS-26).** This decision publishes product pages that exist
+  nowhere but in Helix, and it shipped without their removal: reset and delete left
+  them live. Both now remove them, listed from Helix itself, with a refusal when another
+  local project shares the repository and a stated live-only fallback when Helix keeps
+  the preview copies. See "Reset and delete remove the product pages" in
+  [eds-byom-pdp-routing.md](../eds-byom-pdp-routing.md). Not yet seen live.
 
 - `.rptc/backlog/2026-06-09-pdp-graceful-empty-state.md` — a backlog item since closed
   and archived. The path is accurate to the decision's date.

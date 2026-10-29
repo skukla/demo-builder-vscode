@@ -3,11 +3,11 @@ import React, { useEffect, useCallback, useState } from 'react';
 import { AddDemoModal } from '../components/add-demo/AddDemoModal';
 import { EditDemoPackageModal } from '../components/add-demo/EditDemoPackageModal';
 import { BrandGallery } from '../components/BrandGallery';
+import { projectNameDescription } from './editLocks';
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { normalizeProjectName, getProjectNameError } from '@/core/validation/normalizers';
 import { removeKeysFromComponents } from '@/features/components/services/componentConfigWrites';
 import { addedDemoId, packageFromAddedDemo } from '@/features/components/services/storefrontResolver';
@@ -45,7 +45,8 @@ export function WelcomeStep({
     addedDemos = NO_ADDED_DEMOS,
     onDemoAdded,
 }: WelcomeStepProps) {
-    const defaultProjectName = 'my-commerce-demo';
+    // Typed as a title, like the SC would; the field derives the folder name from it.
+    const defaultProjectTitle = 'My Commerce Demo';
     const [addDemoOpen, setAddDemoOpen] = useState(false);
     const [editingDemo, setEditingDemo] = useState<AddedDemo | undefined>(undefined);
     const selectableDefaultProps = useSelectableDefault();
@@ -78,21 +79,13 @@ export function WelcomeStep({
         return error ? 'invalid' : 'valid';
     };
 
-    // Set default project name and manually focus + select on mount
+    // Set the default project name on mount. Nothing takes focus: this step has the
+    // package filter, and a screen with a search filter focuses nothing on load
+    // (owner, 2026-10-01).
     useEffect(() => {
         if (!state.projectName) {
-            updateState({ projectName: defaultProjectName });
+            updateState({ projectTitle: defaultProjectTitle, projectName: normalizeProjectName(defaultProjectTitle) });
         }
-
-        // Manually focus and select text (more reliable than autoFocus + onFocus)
-        // Delay slightly longer than WizardContainer's auto-focus (300ms + 100ms)
-        setTimeout(() => {
-            const input = document.querySelector('input[type="text"]') as HTMLInputElement;
-            if (input) {
-                input.focus();
-                input.select();
-            }
-        }, TIMEOUTS.STEP_CONTENT_FOCUS + 100); // Delay to allow Spectrum components to mount and win focus race
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 
@@ -149,6 +142,8 @@ export function WelcomeStep({
                     commerceStoreViewChosen: false,
                     committedCommerceSteps: [],
                     packageConfigDefaults: pkg?.configDefaults,
+                    // Edit lets the SC re-choose what this reset (editLocks.ts).
+                    foundationChanged: true,
                 });
             }
         },
@@ -261,10 +256,14 @@ export function WelcomeStep({
         const storefront = pkg?.storefronts?.[state.selectedStack];
         if (!storefront) return;
 
-        // Always set template config from storefront (source of truth)
-        updateState({
-            edsConfig: buildEdsConfigFromStorefront(storefront, state.edsConfig),
-        });
+        // Always set template config from storefront (source of truth), but only
+        // when it differs: the write changes `state.edsConfig`, which this effect
+        // depends on, so writing every time re-ran it without end. Measured
+        // 2026-10-13 with a stateful render: over 200 writes, never settling, on
+        // every Edge Delivery Edit (Edit opens here with package and stack set).
+        const next = buildEdsConfigFromStorefront(storefront, state.edsConfig);
+        if (JSON.stringify(next) === JSON.stringify(state.edsConfig)) return;
+        updateState({ edsConfig: next });
     }, [state.selectedStack, state.selectedPackage, packages, updateState, state.edsConfig]);
 
     // Project Name Input - shared between both layouts
@@ -296,7 +295,7 @@ export function WelcomeStep({
                 // Say where it lands, rather than making them type it. The folder
                 // is browsable on disk, so it is worth showing -- silently
                 // deriving a name the user then cannot find is its own bug.
-                description={state.projectName ? `Folder: ${state.projectName}` : undefined}
+                description={projectNameDescription(state)}
                 width="size-6000"
                 isRequired
                 {...selectableDefaultProps}

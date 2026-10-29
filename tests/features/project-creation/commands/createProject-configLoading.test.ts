@@ -9,10 +9,10 @@
  * `getInitialData`'s return value and the shared state handlers receive.
  */
 
+import { CreateProjectWebviewCommand } from './createProject.testUtils';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { StepLogger } from '@/core/logging/stepLogger';
-import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import type { Logger } from '@/types/logger';
 import type { WizardStepDefinition } from '@/types/wizard';
 import { internals } from '../../../helpers/commandInternals';
@@ -27,14 +27,12 @@ jest.mock('fs', () => ({
     existsSync: jest.fn(),
     readFileSync: jest.fn(),
 }));
-jest.mock('@/core/logging/debugLogger');
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({ isAuthenticated: jest.fn() })),
         getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
-jest.mock('@/features/prerequisites/services/PrerequisitesManager');
 
 const VALID_STEPS: WizardStepDefinition[] = [
     { id: 'welcome', name: 'Welcome', enabled: true },

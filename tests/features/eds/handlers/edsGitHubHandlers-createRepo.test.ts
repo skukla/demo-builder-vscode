@@ -13,15 +13,16 @@ import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 jest.mock('@/features/eds/handlers/storefrontSetup/storefrontSetupPhase1', () => ({
     createRepoFromSource: jest.fn(),
 }));
-const repoOperations = { waitForContent: jest.fn().mockResolvedValue(true) };
+const repoOperations = {};
+const repoLifecycle = { waitForContent: jest.fn().mockResolvedValue(true) };
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: () => ({ repoOperations }),
+    getGitHubServices: () => ({ repoOperations, repoLifecycle }),
 }));
 // The handler builds the shared template reset, which runs git through the executor.
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getCommandExecutor: () => ({ execute: jest.fn() }) },
 }));
-const services = { repoOps: repoOperations, templateSync: expect.objectContaining({ resetRepository: expect.any(Function) }) };
+const services = { repoOps: repoOperations, repoLifecycle, templateSync: expect.objectContaining({ resetRepository: expect.any(Function) }) };
 const mockCreate = createRepoFromSource as jest.Mock;
 
 function ctx() {
@@ -52,7 +53,7 @@ describe('handleCreateGitHubRepo', () => {
             'isle5-demo',
             expect.anything(),
         );
-        expect(repoOperations.waitForContent).toHaveBeenCalledWith('steve', 'new-demo');
+        expect(repoLifecycle.waitForContent).toHaveBeenCalledWith('steve', 'new-demo');
         expect(result).toEqual({
             success: true,
             data: { owner: 'steve', name: 'new-demo', url: 'https://github.com/steve/new-demo', fullName: 'steve/new-demo' },

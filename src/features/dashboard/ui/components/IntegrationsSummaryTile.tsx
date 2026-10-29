@@ -16,19 +16,17 @@
  * @module features/dashboard/ui/components/IntegrationsSummaryTile
  */
 
-import Data from '@spectrum-icons/workflow/Data';
+import Plug from '@spectrum-icons/workflow/Plug';
 import React from 'react';
 import type { MeshStatus } from '../hooks/useDashboardStatus';
 import { DashboardTile } from './DashboardTile';
-import { toMeshCardStatus } from './integrations/integrationCardModel';
+import { toMeshCardStatus, withUpdateStatus } from './integrations/integrationCardModel';
 import { type StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
 import { getStatusDisplay, type DisplayStatus } from '@/core/ui/utils/statusVocabulary';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AppBuilderComponentState } from '@/types/base';
 
 export interface IntegrationsSummaryTileProps {
-    /** Render gate: integrations need an Adobe workspace to deploy into. */
-    hasAdobeContext?: boolean;
     /** Keyed persisted component map. */
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     /** Whether the project has a mesh — it counts as a peer card on the surface. */
@@ -85,56 +83,79 @@ function worstRank(statuses: string[]): SeverityRank | undefined {
     return SEVERITY.find((entry) => statuses.includes(entry.status));
 }
 
+/** A removal that stopped reads amber on its card; below a failure, it outranks the rest. */
+const REMOVAL_STOPPED = { variant: 'warning' as const, label: 'Removal stopped' };
+
+/** The dot's colour and words: the worst status, or a stopped removal above anything but a failure. */
+function worstFace(
+    statuses: string[],
+    anyRemovalStopped: boolean,
+): { variant: StatusDotVariant; label: string } | undefined {
+    const worst = worstRank(statuses);
+    if (anyRemovalStopped && worst?.status !== 'error') return REMOVAL_STOPPED;
+    const label = getStatusDisplay(worst?.status)?.label;
+    return worst && label ? { variant: worst.variant, label } : undefined;
+}
+
+/**
+ * Rendered on every project, an Adobe org or not (release walk 2026-10-28). It used to need
+ * one, and a project created without an integration or a mesh never gets one, since only the
+ * add flow signs in to Adobe: that project could never add an integration at all. The add flow
+ * on the integrations screen signs in and picks the Adobe project itself, and the first add
+ * records that destination under the signed-in org (`projectDestinationRecord.ts`).
+ */
 export function IntegrationsSummaryTile({
-    hasAdobeContext,
     appBuilderComponents,
     hasMesh,
     meshStatus,
-}: IntegrationsSummaryTileProps): React.ReactElement | null {
-    if (!hasAdobeContext) {
-        return null;
-    }
-
-    // Integrations only — a `kind: 'mesh'` entry in the keyed map is the mesh's
-    // persisted record, not an integration; the mesh counts via `hasMesh`.
+}: IntegrationsSummaryTileProps): React.ReactElement {
+    // Integrations and the systems they use, each a card on the surface. A
+    // `kind: 'mesh'` entry in the keyed map is the mesh's persisted record, not
+    // a card of its own; the mesh counts via `hasMesh`.
     const integrations = Object.values(appBuilderComponents ?? {}).filter(
-        (entry) => entry.kind === 'integration',
+        (entry) => entry.kind === 'integration' || entry.kind === 'system',
     );
     // The mesh folds in through the SAME mapping the mesh card uses, so the dot
     // can never disagree with the card the surface shows. An in-flight
     // 'checking' mesh arrives here and simply ranks nowhere.
     const meshCardStatus = hasMesh ? toMeshCardStatus(meshStatus) : undefined;
     const reportable: string[] = [
-        ...integrations.map((entry) => entry.status),
+        ...integrations.map((entry) => withUpdateStatus(entry.status, entry)),
         ...(meshCardStatus ? [meshCardStatus] : []),
     ];
     // The dot reports HEALTH, so with nothing rankable there is no worst state
     // and the tile carries no dot at all — an empty project used to be painted
     // green, "all good" about nothing. The tile still renders: it is the way in
     // to add the first integration.
-    //
-    // Shaped like its build-zone neighbours (icon above label) so the row reads
-    // as one bar; the dot rides the icon as a small overlay rather than widening
-    // the tile, which is what made it wrap onto its own line before.
+    // An Open-row card beside Open in Browser, Author Content and Manage
+    // Commerce (owner, 2026-10-06): integrations are a destination of the same
+    // weight, not a line item under Build. On a card the status word replaces
+    // the description line, so the dot sits beside words, not in a far corner.
     //
     // Wording comes from the SHARED vocabulary, so the tooltip cannot disagree
     // with the card the integrations surface shows for the same state.
-    const worst = worstRank(reportable);
-    const worstLabel = getStatusDisplay(worst?.status)?.label;
+    const worst = worstFace(
+        reportable,
+        integrations.some((entry) => entry.removalStopped),
+    );
 
     return (
         <DashboardTile
             label="Integrations"
-            icon={<Data size="L" />}
+            description="Connected systems"
+            icon={<Plug size="L" />}
             onPress={() => webviewClient.postMessage('openIntegrations')}
             action="integrations"
-            className="integrations-tile"
             tooltip="View and manage this project's integrations"
             status={
-                worst && worstLabel
+                // Healthy says nothing, like every other dot on the dashboard:
+                // a green "all good" was the one status always showing, so it
+                // drew the eye to the one thing that needed nothing.
+                worst && worst.variant !== 'success'
                     ? {
                           variant: worst.variant,
-                          tooltip: worstLabel,
+                          tooltip: worst.label,
+                          label: worst.label,
                           testId: 'integrations-tile-dot',
                       }
                     : undefined

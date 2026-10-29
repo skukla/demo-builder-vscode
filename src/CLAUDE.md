@@ -13,8 +13,7 @@ src/
 ├── commands/         VS Code commands              (→ commands/CLAUDE.md)
 ├── features/         one directory per domain      (→ features/CLAUDE.md)
 ├── core/             shared infrastructure         (→ core/CLAUDE.md)
-├── types/            shared interfaces, message shapes, handler contracts
-└── utils/            LEGACY — only autoUpdater.ts. Takes no new code
+└── types/            shared interfaces, message shapes, handler contracts
 ```
 
 The in-extension MCP server itself lives at

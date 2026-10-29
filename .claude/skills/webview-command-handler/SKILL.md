@@ -23,9 +23,9 @@ description: Add a webview message handler/command end-to-end (MessageType → h
 
 Two traps that fail SILENTLY — nothing throws, nothing logs, the UI just never updates:
 
-- **Static push senders address ONE panel id.** The senders in
-  `showDashboard.ts` (`sendMeshStatusUpdate`, `sendAppBuilderComponentStatusUpdate`,
-  `sendAppBuilderComponentsSnapshot`, …) look up `getActivePanel('demoBuilder.projectDashboard')`.
+- **Push senders must not address ONE panel id.** The senders in
+  `dashboard/services/projectPanelPushes.ts` (`sendMeshStatusUpdate`, `sendAppBuilderComponentStatusUpdate`,
+  `sendAppBuilderComponentsSnapshot`, …) once looked up `getActivePanel('demoBuilder.projectDashboard')`.
   Surfaces open by tab REPLACEMENT — the dashboard panel is disposed — so on a new
   project-scoped surface every push reaches nobody. Resolve whichever panel is live
   (`getLiveProjectPanel()`), preferring one so a push renders once. Symptom: the surface
@@ -36,7 +36,10 @@ Two traps that fail SILENTLY — nothing throws, nothing logs, the UI just never
   is not "no more registration": the map you register must cover every message the surface's
   components send, INCLUDING components borrowed from another feature — see below.
 
-Precedents to copy rather than invent: `showProjectsList.ts` (command shape),
+Precedents to copy rather than invent: `showProjectsList.ts` (command shape — it extends
+`BundledPanelCommand`, so the page HTML and the handler context come from setting
+`bundleName`, not from copying either method; `StandalonePanelCommand` for a panel that
+works with no project),
 `src/features/dashboard/ui/aiSurface/index.tsx` (entry point), `WEBVIEW_ENTRIES` in
 `esbuild.config.js` (bundle key), `commandManager.ts` `registerCommands()` (registration +
 sibling-panel disposal).
@@ -73,7 +76,7 @@ gates read, and for the fields its JSX renders. Three different lists.
   (auth + org-mismatch) performs the auth check, whose `aio config get` spawns the whole
   `aio` CLI — seconds on a cold cache. A handler that guards first, then opens
   `withProgress`, shows the user nothing for those seconds and reads as laggy. Put EVERY
-  slow step inside the progress callback with `report('Checking requirements')` as its
+  slow step inside the progress callback with `report(OPERATION_STAGES.checkingRequirements.label)` as its
   first line — the shape `deployMeshHeadless` uses. Reported twice (2026-07-31: "it's not
   as immediate as it should be… We've hit this before"), so it is pinned by an ordering
   test in `appBuilderComponentHandlers-drawer.test.ts`.
@@ -100,9 +103,9 @@ gates read, and for the fields its JSX renders. Three different lists.
   (2026-08-12, Data Installer: a connectivity line read `data.reachable` off a guard refusal
   and told signed-out users "Connected to the Data Installer service" for two steps.)
   - **Type the ENVELOPE and branch on `.success`** — the pattern EDS already uses:
-    `webviewClient.request<GitHubAppCheckResult>(…)`, where that interface declares
-    `success: boolean` and `pollGitHubAppInstallation` checks it before reading any other
-    field (`repoSelectionInline.helpers.tsx`; same shape in `RepoSelectionInline.tsx`).
+    `webviewClient.request<{ success: boolean; isInstalled: boolean }>('check-github-app', …)`,
+    then branches on `result.success` before reading any other field
+    (`GitHubAppInstallDialog.tsx`, `handleCheckInstallation`).
   - `useVSCodeRequest` is only safe against a handler that THROWS on failure. Since this
     project's convention is the opposite (bullet above), treat the hook's domain-typed
     generic as the exception, not the default.

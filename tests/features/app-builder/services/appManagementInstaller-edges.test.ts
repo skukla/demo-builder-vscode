@@ -13,11 +13,11 @@
 
 import {
     APP_MANAGEMENT_HANDS_BACK,
-    buildAppData,
     deriveCommerceTarget,
     installAppManagementApp,
-    isRetryableInstallFailure,
 } from '@/features/app-builder/services/appManagementInstaller';
+import { isRetryableInstallFailure } from '@/features/app-builder/services/appManagementInstallFailures';
+import { buildAppData } from '@/features/app-builder/services/appManagementAppData';
 import { AppManagementApiError } from '@/features/app-builder/services/appManagementClient';
 import type { InstallationState } from '@/features/app-builder/services/appManagementClient';
 import type { Project } from '@/types/base';
@@ -146,14 +146,14 @@ describe('buildAppData — the Adobe context', () => {
         const project = paasProject();
         delete (project.adobe as Record<string, unknown>)[field];
 
-        expect(buildAppData(project)).toEqual({ error: expect.stringContaining('is missing') });
+        expect(buildAppData(project, 'app')).toEqual({ error: expect.stringContaining('is missing') });
     });
 
     it('refuses a project with no Adobe context at all', () => {
         const project = paasProject();
         delete (project as { adobe?: unknown }).adobe;
 
-        expect(buildAppData(project)).toEqual({ error: expect.stringContaining('consumerOrgId') });
+        expect(buildAppData(project, 'app')).toEqual({ error: expect.stringContaining('consumerOrgId') });
     });
 });
 
@@ -192,7 +192,7 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
                 .mockRejectedValue(new AppManagementApiError('boom', 500, 'already-current')),
         });
 
-        return installAppManagementApp(paasProject(), DEPLOYED_URLS, makeInstallerDeps(client)).then(
+        return installAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, makeInstallerDeps(client)).then(
             (result) => {
                 expect(result.status).toBe('failed');
                 expect(result.detail).toContain(APP_MANAGEMENT_HANDS_BACK);
@@ -215,7 +215,7 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -231,7 +231,7 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -257,7 +257,7 @@ describe('installAppManagementApp — the poll budget', () => {
         const client = neverLands();
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
@@ -270,7 +270,7 @@ describe('installAppManagementApp — the poll budget', () => {
     it('spends exactly the allowance, not one round more', async () => {
         const client = neverLands();
 
-        await installAppManagementApp(paasProject(), DEPLOYED_URLS, makeInstallerDeps(client));
+        await installAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, makeInstallerDeps(client));
 
         expect(client.getInstallationState).toHaveBeenCalledTimes(POLL_ROUNDS);
     });
@@ -280,7 +280,7 @@ describe('installAppManagementApp — the poll budget', () => {
         const client = neverLands();
 
         await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { wait })
         );
@@ -288,20 +288,20 @@ describe('installAppManagementApp — the poll budget', () => {
         expect(wait).toHaveBeenCalledWith(5000);
     });
 
-    it('answers a synchronous 200 without polling at all', async () => {
+    it('answers a synchronous install answer without polling at all', async () => {
         const client = makeInstallerClient({
             reconcileInstallation: jest
                 .fn()
-                .mockResolvedValue({ operation: 'upgrade', message: 'plan applied' }),
+                .mockResolvedValue({ operation: 'install', message: 'installed', accepted: false }),
         });
 
         const result = await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client)
         );
 
-        expect(result).toEqual({ status: 'installed', detail: 'plan applied' });
+        expect(result).toEqual({ status: 'installed', detail: 'installed', version: undefined });
         expect(client.getInstallationState).not.toHaveBeenCalled();
     });
 });
@@ -314,7 +314,7 @@ describe('installAppManagementApp — what it tells the user', () => {
         const client = makeInstallerClient();
 
         await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { onProgress })
         );
@@ -343,7 +343,7 @@ describe('installAppManagementApp — what it tells the user', () => {
         });
 
         await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { onProgress })
         );
@@ -353,7 +353,10 @@ describe('installAppManagementApp — what it tells the user', () => {
         expect(messages).toContain('Retrying the install (transient conflict, round 2)');
     });
 
-    it('narrates each poll round while the install is queued', async () => {
+    // Each round used to re-send "Installing into Commerce…", and every resend read
+    // as a new step: four of them for one install (2026-09-21). The install's own
+    // line describes the wait.
+    it('does not re-announce itself on every poll round', async () => {
         const onProgress = jest.fn();
         const client = makeInstallerClient({
             reconcileInstallation: jest
@@ -366,14 +369,15 @@ describe('installAppManagementApp — what it tells the user', () => {
         });
 
         await installAppManagementApp(
-            paasProject(),
+            paasProject(), 'app',
             DEPLOYED_URLS,
             makeInstallerDeps(client, { onProgress })
         );
 
-        expect(onProgress.mock.calls.map((c) => c[0] as string)).toContain(
-            'Installing into Commerce'
-        );
+        expect(onProgress.mock.calls.map((c) => c[0] as string)).toEqual([
+            'Associating the app with your Commerce instance',
+            'Installing into Commerce (App Management)',
+        ]);
     });
 });
 
@@ -382,7 +386,7 @@ describe('installAppManagementApp — the guards before any call', () => {
         const client = makeInstallerClient();
         const project = paasProject({ componentSelections: {} });
 
-        const result = await installAppManagementApp(project, DEPLOYED_URLS, makeInstallerDeps(client));
+        const result = await installAppManagementApp(project, 'app', DEPLOYED_URLS, makeInstallerDeps(client));
 
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('no Commerce backend');
@@ -394,11 +398,29 @@ describe('installAppManagementApp — the guards before any call', () => {
         const project = paasProject();
         delete project.adobe?.workspaceName;
 
-        const result = await installAppManagementApp(project, DEPLOYED_URLS, makeInstallerDeps(client));
+        const result = await installAppManagementApp(project, 'app', DEPLOYED_URLS, makeInstallerDeps(client));
 
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('workspaceName');
         expect(client.setAssociation).not.toHaveBeenCalled();
+    });
+
+    it('stops with no sign-in, naming the install call and building no client', async () => {
+        const clientFactory = jest.fn();
+        const deps = makeInstallerDeps(makeInstallerClient(), {
+            getAuth: jest.fn().mockResolvedValue(undefined),
+            clientFactory,
+        });
+
+        const result = await installAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
+
+        expect(result).toEqual({
+            status: 'failed',
+            detail:
+                'No Adobe sign-in is available to authenticate the install call. ' +
+                APP_MANAGEMENT_HANDS_BACK,
+        });
+        expect(clientFactory).not.toHaveBeenCalled();
     });
 });
 
@@ -421,7 +443,7 @@ describe('installAppManagementApp — the default client', () => {
             const deps = makeInstallerDeps(makeInstallerClient());
             delete deps.clientFactory;
 
-            const result = await installAppManagementApp(paasProject(), DEPLOYED_URLS, deps);
+            const result = await installAppManagementApp(paasProject(), 'app', DEPLOYED_URLS, deps);
 
             expect(result.status).toBe('installed');
             const urls = fetchMock.mock.calls.map((c) => c[0]);
@@ -434,5 +456,35 @@ describe('installAppManagementApp — the default client', () => {
         } finally {
             global.fetch = originalFetch;
         }
+    });
+});
+
+describe('installAppManagementApp — a timed-out call still running when the poll gives up', () => {
+    it('hands back as still running, after saying it is following the installation', async () => {
+        const timeout = Object.assign(new Error('The operation was aborted due to timeout'), {
+            name: 'TimeoutError',
+        });
+        const client = makeInstallerClient({
+            reconcileInstallation: jest.fn().mockRejectedValue(timeout),
+            getInstallationState: jest.fn().mockResolvedValue({ id: 'i1', status: 'in-progress' }),
+        });
+        const onProgress = jest.fn();
+
+        const result = await installAppManagementApp(
+            paasProject(), 'app',
+            DEPLOYED_URLS,
+            makeInstallerDeps(client, { onProgress })
+        );
+
+        expect(result).toEqual({
+            status: 'failed',
+            detail:
+                'The install call timed out and the installation is still running. ' +
+                APP_MANAGEMENT_HANDS_BACK,
+        });
+        expect(onProgress).toHaveBeenLastCalledWith(
+            'The install call is taking long; following the installation instead'
+        );
+        expect(client.getInstallationState).toHaveBeenCalledTimes(POLL_ROUNDS);
     });
 });

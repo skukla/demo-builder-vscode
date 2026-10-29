@@ -29,6 +29,7 @@
  */
 
 import { executeSampleDataPhase } from '@/features/project-creation/handlers/executorSampleDataPhase';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { installSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -101,7 +102,7 @@ describe('executeSampleDataPhase', () => {
 
         expect(progress).toHaveBeenNthCalledWith(
             1,
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             92,
             'Installing bodea'
         );
@@ -145,7 +146,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Datapack could not be installed \u2014 unexpected'
         );
@@ -158,7 +159,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Datapack could not be installed \u2014 the module was not there'
         );
@@ -172,7 +173,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Datapack could not be installed \u2014 the service refused'
         );
@@ -190,7 +191,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Datapack could not be installed \u2014 the import did not start'
         );
@@ -212,7 +213,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Skipped datapack \u2014 this instance already holds every type'
         );
@@ -225,7 +226,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Skipped datapack \u2014 nothing to install'
         );
@@ -237,7 +238,7 @@ describe('executeSampleDataPhase', () => {
 
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
-        expect(progress).toHaveBeenLastCalledWith('Installing Datapack', 96, 'Installed bodea');
+        expect(progress).toHaveBeenLastCalledWith(OPERATION_STAGES.installingDatapack.label, 96, 'Installed bodea');
     });
 
     it('says so when only some types landed', async () => {
@@ -251,7 +252,7 @@ describe('executeSampleDataPhase', () => {
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
         expect(progress).toHaveBeenLastCalledWith(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             'Installed bodea partially \u2014 some data types did not land. Retry from the dashboard.'
         );
@@ -279,7 +280,9 @@ describe('executeSampleDataPhase', () => {
             return progress;
         }
 
-        it('puts the count in the title and the types in flight in the detail row', async () => {
+        // The step is the step; the count is how far it has got, on the line under it
+        // (progress vocabulary, owner 2026-10-16): never "(1/3)" in the step's place.
+        it('keeps the step and puts the count and the types in flight on the line under it', async () => {
             const progress = await driveProgress({
                 categories: 'success',
                 products: 'processing',
@@ -287,27 +290,31 @@ describe('executeSampleDataPhase', () => {
             });
 
             expect(progress).toHaveBeenCalledWith(
-                'Installing Datapack (1/3)',
+                OPERATION_STAGES.installingDatapack.label,
                 94,
-                'Products, Attribute sets'
+                '1 of 3 data types: Products, Attribute sets'
             );
         });
 
         /**
-         * Between types nothing is processing, and an empty detail row would read
-         * as a stall. The pack name holds the line until the next type starts.
+         * Between types nothing is processing: the count alone holds the line until
+         * the next type starts.
          */
-        it('falls back to the pack name when no type is in flight', async () => {
+        it('shows the count alone when no type is in flight', async () => {
             const progress = await driveProgress({ categories: 'success', products: 'pending' });
 
-            expect(progress).toHaveBeenCalledWith('Installing Datapack (1/2)', 94, 'bodea');
+            expect(progress).toHaveBeenCalledWith(OPERATION_STAGES.installingDatapack.label, 94, '1 of 2 data types');
         });
 
         /** Errors are finished work too — a failed type must not stall the count. */
         it('counts a failed type as done', async () => {
             const progress = await driveProgress({ categories: 'error', products: 'processing' });
 
-            expect(progress).toHaveBeenCalledWith('Installing Datapack (1/2)', 94, 'Products');
+            expect(progress).toHaveBeenCalledWith(
+                OPERATION_STAGES.installingDatapack.label,
+                94,
+                '1 of 2 data types: Products'
+            );
         });
     });
 

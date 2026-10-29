@@ -1,14 +1,13 @@
 /**
- * GitHubRepoOperations — the Octokit-driven paths.
+ * GitHubRepoOperations — the Octokit-driven read paths.
  *
- * The mirror suite covers the happy paths of create/list/access/delete. This one
- * covers what no test reached: `hasContent`, `waitForContent`, `getRepository`,
- * pagination and its safety limit, the permission-shaped denials, and the cached
- * client's lifecycle.
+ * The mirror suite covers the happy paths of list and access. This one covers
+ * `getRepository`, pagination and its safety limit, the permission-shaped
+ * denials, and the cached client's lifecycle. The create, content-poll and delete
+ * paths moved with the code to githubRepoLifecycle-apiPaths.test.ts (2026-10-08).
  *
  * Assertions are on the ARGUMENTS a collaborator receives — the request route and
- * body, the poll options — because that is the only thing a mocked collaborator can
- * be wrong about.
+ * body — because that is the only thing a mocked collaborator can be wrong about.
  */
 
 import {
@@ -16,164 +15,21 @@ import {
     createTokenService,
     GitHubRepoOperations,
     mockOctokitConstructor,
-    mockPollUntilCondition,
     mockRequest,
 } from './githubRepoOperations.testUtils';
-import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 
 describe('GitHubRepoOperations — Octokit paths', () => {
     let logger: ReturnType<typeof createMockLogger>;
-    let executor: ReturnType<typeof createMockCommandExecutor>;
 
     beforeEach(() => {
         jest.clearAllMocks();
         logger = createMockLogger();
-        executor = createMockCommandExecutor();
     });
 
     const build = (tokenService: GitHubTokenService = createTokenService()) =>
-        new GitHubRepoOperations(tokenService, executor, logger);
-
-    describe('hasContent', () => {
-        it('asks for the repository root on the default branch', async () => {
-            // Given: a root listing with one entry
-            mockRequest.mockResolvedValue({ data: [{ name: 'README.md' }] });
-
-            // When: content is checked with no branch argument
-            const result = await build().hasContent('owner', 'repo');
-
-            // Then: the request targets the root path on `main`
-            expect(mockRequest).toHaveBeenCalledWith('GET /repos/{owner}/{repo}/contents/{path}', {
-                owner: 'owner',
-                repo: 'repo',
-                path: '',
-                ref: 'main',
-            });
-            expect(result).toBe(true);
-        });
-
-        it('uses the branch it was given as the ref', async () => {
-            // Given: a populated root
-            mockRequest.mockResolvedValue({ data: [{ name: 'README.md' }] });
-
-            // When: an explicit branch is passed
-            await build().hasContent('owner', 'repo', 'develop');
-
-            // Then: that branch is the ref, not the default
-            expect(mockRequest).toHaveBeenCalledWith(
-                'GET /repos/{owner}/{repo}/contents/{path}',
-                expect.objectContaining({ ref: 'develop' })
-            );
-        });
-
-        it('reports no content for an empty directory listing', async () => {
-            // Given: the root lists nothing
-            mockRequest.mockResolvedValue({ data: [] });
-
-            // When/Then: an empty array is not content
-            await expect(build().hasContent('owner', 'repo')).resolves.toBe(false);
-        });
-
-        it('reports no content when the response is not a directory listing', async () => {
-            // Given: GitHub returns a single file object rather than an array
-            mockRequest.mockResolvedValue({ data: { name: 'README.md' } });
-
-            // When/Then: a non-array response is not content
-            await expect(build().hasContent('owner', 'repo')).resolves.toBe(false);
-        });
-
-        it('treats a 404 as an empty repository', async () => {
-            // Given: the branch does not exist yet
-            mockRequest.mockRejectedValue({ status: 404 });
-
-            // When/Then: the absence is an answer, not a failure
-            await expect(build().hasContent('owner', 'repo')).resolves.toBe(false);
-        });
-
-        it('rethrows any status other than 404', async () => {
-            // Given: the API refuses the read
-            mockRequest.mockRejectedValue(Object.assign(new Error('boom'), { status: 500 }));
-
-            // When/Then: the caller sees the failure
-            await expect(build().hasContent('owner', 'repo')).rejects.toThrow('boom');
-        });
-    });
-
-    describe('waitForContent', () => {
-        it('polls with the repo-scoped options and reports success', async () => {
-            // Given: polling resolves
-            mockPollUntilCondition.mockResolvedValue(undefined);
-            const abortSignal = new AbortController().signal;
-
-            // When: waiting for content
-            const result = await build().waitForContent('owner', 'repo', abortSignal);
-
-            // Then: the poll is named for the repo and carries the configured budget
-            expect(mockPollUntilCondition).toHaveBeenCalledWith(expect.any(Function), {
-                name: 'github-repo-owner/repo',
-                maxAttempts: 10,
-                initialDelay: TIMEOUTS.POLL.INTERVAL,
-                maxDelay: TIMEOUTS.POLL.MAX,
-                timeout: TIMEOUTS.NORMAL,
-                abortSignal,
-            });
-            expect(result).toBe(true);
-        });
-
-        it('reports failure when polling gives up', async () => {
-            // Given: polling times out
-            mockPollUntilCondition.mockRejectedValue(new Error('Polling timeout'));
-
-            // When/Then: the caller gets false rather than a throw
-            await expect(build().waitForContent('owner', 'repo')).resolves.toBe(false);
-        });
-
-        it('passes no abort signal through when the caller gave none', async () => {
-            // Given: polling resolves
-            mockPollUntilCondition.mockResolvedValue(undefined);
-
-            // When: waiting without a signal
-            await build().waitForContent('owner', 'repo');
-
-            // Then: abortSignal is absent rather than fabricated
-            expect(mockPollUntilCondition.mock.calls[0][1].abortSignal).toBeUndefined();
-        });
-
-        it('the poll predicate answers with the content check', async () => {
-            // Given: polling captures the predicate, and the root has content
-            mockPollUntilCondition.mockResolvedValue(undefined);
-            mockRequest.mockResolvedValue({ data: [{ name: 'README.md' }] });
-            await build().waitForContent('owner', 'repo');
-            const predicate = mockPollUntilCondition.mock.calls[0][0] as () => Promise<boolean>;
-
-            // When: the predicate runs
-            const answer = await predicate();
-
-            // Then: it reports the content check's verdict for the default branch
-            expect(answer).toBe(true);
-            expect(mockRequest).toHaveBeenCalledWith(
-                'GET /repos/{owner}/{repo}/contents/{path}',
-                expect.objectContaining({ owner: 'owner', repo: 'repo', ref: 'main' })
-            );
-        });
-
-        it('the poll predicate swallows a content-check failure so polling continues', async () => {
-            // Given: the captured predicate, with the content check now failing hard
-            mockPollUntilCondition.mockResolvedValue(undefined);
-            mockRequest.mockResolvedValue({ data: [] });
-            await build().waitForContent('owner', 'repo');
-            const predicate = mockPollUntilCondition.mock.calls[0][0] as () => Promise<boolean>;
-            mockRequest.mockRejectedValue(
-                Object.assign(new Error('rate limited'), { status: 500 })
-            );
-
-            // When/Then: the predicate resolves false instead of rejecting
-            await expect(predicate()).resolves.toBe(false);
-        });
-    });
+        new GitHubRepoOperations(tokenService, logger);
 
     describe('getRepository', () => {
         it('maps the API response onto the repo shape', async () => {
@@ -401,16 +257,6 @@ describe('GitHubRepoOperations — Octokit paths', () => {
         });
     });
 
-    describe('deleteRepository', () => {
-        it('rethrows a failure that is not a missing scope', async () => {
-            // Given: the repo is gone
-            mockRequest.mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
-
-            // When/Then: the 403-only message is not applied to everything
-            await expect(build().deleteRepository('owner', 'repo')).rejects.toThrow('not found');
-        });
-    });
-
     describe('the cached Octokit', () => {
         it('builds one client and reuses it across calls', async () => {
             // Given: a service that has already made a request
@@ -459,90 +305,6 @@ describe('GitHubRepoOperations — Octokit paths', () => {
             // stale token would keep answering
             expect(mockOctokitConstructor).toHaveBeenCalledTimes(2);
             expect(mockRequest).toHaveBeenCalledTimes(2);
-        });
-    });
-
-    describe('createFromTemplate', () => {
-        it('creates a public repository when no privacy is asked for', async () => {
-            // Given: a successful create
-            mockRequest.mockResolvedValue({ data: apiRepo() });
-
-            // When: creating with the default privacy
-            await build().createFromTemplate('adobe', 'template', 'demo');
-
-            // Then: the repo is public — an SC's demo storefront has to be readable
-            // by aem.live, so the default must not flip to private
-            expect(mockRequest).toHaveBeenCalledWith(
-                'POST /repos/{template_owner}/{template_repo}/generate',
-                {
-                    template_owner: 'adobe',
-                    template_repo: 'template',
-                    name: 'demo',
-                    private: false,
-                }
-            );
-        });
-
-        it('passes the private flag through to the generate call', async () => {
-            // Given: a successful create
-            mockRequest.mockResolvedValue({ data: apiRepo() });
-
-            // When: creating a private repo
-            await build().createFromTemplate('adobe', 'template', 'demo', true);
-
-            // Then: the request asks for a private repo under that name
-            expect(mockRequest).toHaveBeenCalledWith(
-                'POST /repos/{template_owner}/{template_repo}/generate',
-                {
-                    template_owner: 'adobe',
-                    template_repo: 'template',
-                    name: 'demo',
-                    private: true,
-                }
-            );
-        });
-
-        it('rethrows a 422 that is not a name collision', async () => {
-            // Given: a 422 about something else
-            mockRequest.mockRejectedValue(
-                Object.assign(new Error('validation failed'), {
-                    status: 422,
-                    errors: [{ message: 'template repository is not a template' }],
-                })
-            );
-
-            // When/Then: the specific "already exists" message is not applied to every 422
-            await expect(build().createFromTemplate('adobe', 'template', 'demo')).rejects.toThrow(
-                'validation failed'
-            );
-        });
-
-        it('only reads the name collision out of a 422', async () => {
-            // Given: a 500 that happens to mention a name collision
-            mockRequest.mockRejectedValue(
-                Object.assign(new Error('server exploded'), {
-                    status: 500,
-                    errors: [{ message: 'name already exists on this account' }],
-                })
-            );
-
-            // When/Then: the friendly "already exists" message belongs to 422 alone;
-            // a server failure must not be reported to the SC as a naming problem
-            await expect(build().createFromTemplate('adobe', 'template', 'demo')).rejects.toThrow(
-                'server exploded'
-            );
-        });
-
-        it('rethrows a 422 that carries no error list', async () => {
-            // Given: a 422 with no `errors` array at all
-            mockRequest.mockRejectedValue(
-                Object.assign(new Error('unprocessable'), { status: 422 })
-            );
-
-            // When/Then: the optional lookup does not turn into a name collision
-            await expect(build().createFromTemplate('adobe', 'template', 'demo')).rejects.toThrow(
-                'unprocessable'
-            );
         });
     });
 });

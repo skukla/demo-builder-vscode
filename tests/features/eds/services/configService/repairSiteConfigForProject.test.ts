@@ -25,7 +25,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     resolveByomOverlayConfig: (...args: unknown[]) => mockResolveByomOverlayConfig(...args),
 }));
 
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: jest.fn() })),
 }));
 
@@ -40,7 +40,7 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
 }));
 
 import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';

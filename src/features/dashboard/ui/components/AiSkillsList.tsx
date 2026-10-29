@@ -4,14 +4,20 @@
  * Skills are infrastructure (Claude auto-discovers them from descriptions),
  * but the user still wants to confirm what's installed. Layout:
  *
- *   Skills · N installed                       ← static summary
+ *   Skills (N)                                 ← static summary
  *   ┌─────────────────────────────┐
- *   │ DEMO BUILDER · 13           │            ← sticky group header
- *   │   add-component             │
+ *   │ Demo Builder skills (13)    │            ← sticky group header
+ *   │   Add component             │
  *   │   …                         │            ← every skill visible; the
- *   │ ADOBE APP BUILDER · 7       │              LIST scrolls, the modal
+ *   │ Adobe … skills (7)          │              LIST scrolls, the modal
  *   │   …                         │              never resizes
  *   └─────────────────────────────┘
+ *
+ * Inside an integration section (`flat`) a section holds one set, so its header
+ * is just "Skills (N)" and the NAMES run in two columns (owner, 2026-10-22: "it
+ * feels noisy"). A row is the title alone; the on-disk name is its tooltip.
+ * No middle dots anywhere. Which files the user edited is not this list's job:
+ * the modal says it once, beside Regenerate.
  *
  * One group per Adobe BUNDLE, not one for "Adobe". Each bundle arrives in its
  * own `<prefix>-<skill>/` directory, and grouping on `source: 'adobe'` alone
@@ -40,12 +46,6 @@ export interface AiSkillsListProps {
      */
     isLoading?: boolean;
     /**
-     * ADR-013: user-edited bundle files (project-relative posix paths). A skill
-     * whose file appears here gets an "edited — kept your version" flag on its
-     * row; non-skill entries are the modal note's job and are ignored here.
-     */
-    editedFiles?: string[];
-    /**
      * Tool-driving skills this project qualifies for but does not have, with
      * why. Rendered as muted rows AFTER the installed groups — an absence with
      * a stated reason instead of a silent omission (third-party-tooling item,
@@ -59,9 +59,11 @@ export interface AiSkillsListProps {
     /**
      * Rendered INSIDE an integration section (see `aiIntegrations`), where the
      * section already carries the heading and the modal body already scrolls.
-     * Drops this list's own "Skills · N" summary and its fixed-height scroll
-     * region; the group header stays, because within a section it names the
-     * skill set ("Storefront skills · 6") rather than repeating the section.
+     * Drops this list's own "Skills (N)" summary and its fixed-height scroll
+     * region. The group header stays: "Skills (N)" when the section holds one
+     * set, the set's own name when it holds several (the Other section can).
+     * The names run in two columns here (`.ai-skill-names`); outside a section
+     * the GROUPS already do (`.ai-skills-scroll`), so the names stay in one.
      */
     flat?: boolean;
 }
@@ -71,17 +73,6 @@ function gatedReasonLabel(reason: 'setting-disabled' | 'tool-missing'): string {
     return reason === 'setting-disabled'
         ? 'requires Playwright — disabled by the third-party tooling setting'
         : 'requires Playwright — tool not installed; Regenerate AI Files installs it';
-}
-
-/**
- * Does this skill's on-disk file appear in the edited list? Suffix match:
- * inventory paths are absolute while edited entries are project-relative, so
- * anchor on a separator to avoid partial-name collisions. Backslashes are
- * normalized for win32 inventory paths (edited keys are always posix).
- */
-function isEditedSkill(skill: SkillInventoryEntry, editedFiles: string[]): boolean {
-    const normalized = skill.path.replace(/\\/g, '/');
-    return editedFiles.some((relPath) => normalized.endsWith(`/${relPath}`));
 }
 
 /**
@@ -148,15 +139,34 @@ function titleFromSlug(slug: string): string {
  * skill is `aem-block-developer` — we prefix the directory so two bundles that
  * both ship a `tester` stay distinct, and Claude requires the `name:` to match
  * that directory. Neither constraint applies to a catalog a person reads, and
- * the prefixed slug appears nowhere in the docs. The literal name still renders
- * beside the title, muted, because this modal doubles as a debugging surface.
+ * the prefixed slug appears nowhere in the docs. The literal name is the row's
+ * tooltip, because this modal doubles as a debugging surface. Exported for the
+ * modal's Regenerate sentence, which names an edited skill by this title.
  */
-function displayTitleOf(skill: SkillInventoryEntry): string {
+export function skillDisplayTitle(skill: SkillInventoryEntry): string {
     const bare =
         skill.bundle && skill.name.startsWith(`${skill.bundle}-`)
             ? skill.name.slice(skill.bundle.length + 1)
             : skill.name;
     return SKILL_TITLE_OVERRIDES[bare] ?? titleFromSlug(bare);
+}
+
+/**
+ * One skill: its title, with the on-disk name as the tooltip. A plain span, not
+ * Spectrum `Text`: `Text` filters DOM props down to ids and data attributes, so
+ * a `title` handed to it never reaches the page.
+ */
+function renderSkillRow(skill: SkillInventoryEntry): React.ReactElement {
+    return (
+        <span
+            key={skill.path}
+            data-testid="ai-skill-row"
+            className="text-gray-800"
+            title={skill.name}
+        >
+            {skillDisplayTitle(skill)}
+        </span>
+    );
 }
 
 /** Rank for the canonical render order: Demo Builder → Adobe bundles → Custom. */
@@ -167,9 +177,8 @@ const SOURCE_ORDER: Readonly<Record<SkillSource, number>> = {
 };
 
 /*
- * "…skills", so a group reads as a SET beside its MCP server inside an
- * integration section ("Demo Builder · 107 tools" / "Demo Builder skills · 15")
- * rather than repeating the section heading back at the reader.
+ * "…skills", so a group reads as a SET outside a section, where nothing else
+ * names it. Inside a section with one set the header is just "Skills (N)".
  */
 const SOURCE_LABELS: Readonly<Record<SkillSource, string>> = {
     'demo-builder': 'Demo Builder skills',
@@ -196,7 +205,6 @@ export function AiSkillsList({
     skills,
     hasError = false,
     isLoading = false,
-    editedFiles,
     gatedSkills,
     flat = false,
 }: AiSkillsListProps): React.ReactElement {
@@ -219,7 +227,7 @@ export function AiSkillsList({
         for (const group of byKey.values()) {
             // Sort by the DISPLAYED title, not the on-disk name — the list
             // renders titles (same rule AiMcpsList follows for its labels).
-            group.items.sort((a, b) => displayTitleOf(a).localeCompare(displayTitleOf(b)));
+            group.items.sort((a, b) => skillDisplayTitle(a).localeCompare(skillDisplayTitle(b)));
         }
         // Source rank first, then label — so two Adobe bundles sit together and
         // in a stable order rather than in Map insertion order.
@@ -267,14 +275,13 @@ export function AiSkillsList({
         );
     }
 
+    // One set inside a section: the section names it, so the header need not.
+    const soleSetInSection = flat && grouped.length === 1;
     return (
         <Flex direction="column" gap="size-100" data-testid="ai-skills-list">
-            {/* Counted the same way as the MCP section heading. One said
-                "Skills · N installed" and the other just "MCP servers", so two
-                parallel lists were labelled by two different rules. */}
             {!flat && (
                 <Text data-testid="ai-skills-summary" UNSAFE_className="ai-section-heading">
-                    Skills · {skills.length}
+                    Skills ({skills.length})
                 </Text>
             )}
             {/* Fixed-height scroll region — the modal frame never resizes.
@@ -287,44 +294,24 @@ export function AiSkillsList({
                             className="ai-skills-group-header"
                             data-testid={`ai-skills-group-${key}`}
                         >
-                            {label} · {items.length}
+                            {soleSetInSection ? 'Skills' : label} ({items.length})
                         </div>
                         {/* Flush with the group header, matching the MCP list.
                             The skills were indented and the MCP rows were not,
                             so two lists in one modal read as two systems. */}
-                        <Flex direction="column" gap="size-50">
-                            {items.map((skill) => (
-                                <Text
-                                    key={skill.path}
-                                    data-testid="ai-skill-row"
-                                    UNSAFE_className="text-gray-800"
-                                >
-                                    {displayTitleOf(skill)}
-                                    <span
-                                        data-testid="ai-skill-literal-name"
-                                        className="text-gray-600"
-                                    >
-                                        {' '}
-                                        · {skill.name}
-                                    </span>
-                                    {isEditedSkill(skill, editedFiles ?? []) && (
-                                        <span
-                                            data-testid="ai-skill-edited-flag"
-                                            className="text-gray-600"
-                                        >
-                                            {' '}
-                                            · edited — kept your version
-                                        </span>
-                                    )}
-                                </Text>
-                            ))}
-                        </Flex>
+                        {flat ? (
+                            <div className="ai-skill-names">{items.map(renderSkillRow)}</div>
+                        ) : (
+                            <Flex direction="column" gap="size-50">
+                                {items.map(renderSkillRow)}
+                            </Flex>
+                        )}
                     </div>
                 ))}
                 {gatedSkills && gatedSkills.length > 0 && (
                     <div>
                         <div className="ai-skills-group-header" data-testid="ai-skills-group-gated">
-                            Not available · {gatedSkills.length}
+                            Not available ({gatedSkills.length})
                         </div>
                         <Flex direction="column" gap="size-50">
                             {gatedSkills.map((g) => (
@@ -333,7 +320,7 @@ export function AiSkillsList({
                                     data-testid="ai-skill-gated-row"
                                     UNSAFE_className="text-gray-600"
                                 >
-                                    {g.file} · {gatedReasonLabel(g.reason)}
+                                    {`${g.file}: ${gatedReasonLabel(g.reason)}`}
                                 </Text>
                             ))}
                         </Flex>

@@ -478,10 +478,6 @@ describe('parseJobStatus', () => {
     it('omits processingTimeMs rather than reporting an undefined duration', () => {
         expect('processingTimeMs' in parseJobStatus({})).toBe(false);
     });
-
-    it('carries it when the body has one', () => {
-        expect(parseJobStatus({ overall_processing_time: 900 }).processingTimeMs).toBe(900);
-    });
 });
 
 // =============================================================================

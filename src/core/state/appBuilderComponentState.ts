@@ -6,11 +6,11 @@
  * PL-1 phase 2 made it the ONLY in-memory carrier — legacy manifests fold into
  * it at load via the quarantined read-migration). No I/O, no `vscode`.
  *
- * @module features/app-builder/services/appBuilderComponentState
+ * @module core/state/appBuilderComponentState
  */
 
 import type { Project, AppBuilderComponentState } from '@/types/base';
-import { hasEntries, getMeshEndpointUrl } from '@/types/typeGuards';
+import { hasEntries } from '@/types/typeGuards';
 
 /** The canonical key a migrated legacy mesh lands under. */
 const MESH_ID = 'mesh';
@@ -26,6 +26,38 @@ export function getAppBuilderComponent(
     id: string,
 ): AppBuilderComponentState | undefined {
     return project.appBuilderComponents?.[id];
+}
+
+/** An install pass's outcome, as `recordInstallation` stores it. */
+export interface InstallationOutcome {
+    status: NonNullable<AppBuilderComponentState['installation']>['status'];
+    detail?: string;
+    version?: string;
+    needsReinstall?: boolean;
+}
+
+/** Forget a recorded update (`updateAvailable`), after the update that applied it. */
+export function clearUpdateAvailable(state: AppBuilderComponentState): void {
+    delete state.updateAvailable;
+}
+
+/**
+ * Store an App Management install pass's outcome on the component, where the
+ * card, the drawer and `get_integration_install_status` read it. The deploy
+ * tail and the install tool both write it.
+ */
+export function recordInstallation(
+    state: AppBuilderComponentState,
+    outcome: InstallationOutcome,
+    at: string = new Date().toISOString(),
+): void {
+    state.installation = {
+        status: outcome.status,
+        detail: outcome.detail,
+        at,
+        ...(outcome.version ? { version: outcome.version } : {}),
+        ...(outcome.needsReinstall ? { needsReinstall: true } : {}),
+    };
 }
 
 // The legacy `meshState`/`appState` synthesis functions lived here until PL-1
@@ -64,12 +96,67 @@ export function getMeshAppBuilderComponent(project: Project): AppBuilderComponen
     return getIdentifiedMeshAppBuilderComponent(project)?.state;
 }
 
+/**
+ * The mesh endpoint as recorded on the keyed mesh entry, unchecked. Takes a missing
+ * project so callers holding an optional one need no guard. `getMeshEndpoint` below
+ * is the checked read (a non-empty string, else undefined).
+ *
+ * Lived in `@/types/typeGuards` until 2026-10-07, which made that file and this one
+ * import each other.
+ */
+export function getMeshEndpointUrl(project: Project | undefined | null): string | undefined {
+    if (!project) return undefined;
+    return getMeshAppBuilderComponent(project)?.endpoint;
+}
+
 /** List every keyed appBuilderComponent with the id it is stored under. */
 export function listAppBuilderComponents(project: Project): IdentifiedAppBuilderComponent[] {
     return Object.entries(project.appBuilderComponents ?? {}).map(([id, state]) => ({
         id,
         ...state,
     }));
+}
+
+/**
+ * Whether the running app is older than the clone: the last good deploy recorded the
+ * commit it shipped (`deployedCommit`), and the clone is now at another. A record with
+ * none (deployed before the field existed) trusts the clone, as update always had
+ * (AB-71). Update and the update check both ask this, so the card's badge and the
+ * Update button agree.
+ */
+export function runsOlderCode(
+    deployedCommit: string | undefined,
+    cloneCommit: string | undefined,
+): boolean {
+    return Boolean(deployedCommit && cloneCommit && deployedCommit !== cloneCommit);
+}
+
+/**
+ * Pure: the keyed map with every `systems` list holding only ids still in the map.
+ *
+ * A removed system's id used to stay in its integration's list (AB-70, the owner's
+ * Justrite project: `systems: ['demo-erp', 'demo-erp-2']` with `demo-erp-2` gone).
+ * Readers skipped it, but a later system added under the same id read as linked
+ * before its add finished. The removal drops the id through this, and the manifest
+ * writer does too, so a project already carrying one heals on its next save. A list
+ * emptied this way stays an empty list: a stored `[]` says "no system".
+ *
+ * Records that change are copied; the input is not mutated.
+ */
+export function withoutStaleSystemLinks(
+    components: Record<string, AppBuilderComponentState>,
+): Record<string, AppBuilderComponentState> {
+    const pruned: Record<string, AppBuilderComponentState> = {};
+    for (const [id, state] of Object.entries(components)) {
+        const { systems } = state;
+        if (!systems) {
+            pruned[id] = state;
+            continue;
+        }
+        const kept = systems.filter((systemId) => systemId in components);
+        pruned[id] = kept.length !== systems.length ? { ...state, systems: kept } : state;
+    }
+    return pruned;
 }
 
 /** Pure: return a new project with `appBuilderComponents[id]` set (does not mutate input). */
@@ -128,7 +215,7 @@ export function hasMeshDeploymentRecord(project: Project): boolean {
 }
 
 /**
- * Get the deployed mesh endpoint (via getMeshEndpointUrl, ADR-011 D3 Step 06).
+ * Get the deployed mesh endpoint, checked (via getMeshEndpointUrl, ADR-011 D3 Step 06).
  *
  * See docs/architecture/state-ownership.md for details.
  *
@@ -144,4 +231,46 @@ export function getMeshEndpoint(project: Project): string | undefined {
     }
 
     return undefined;
+}
+
+/**
+ * The workspaces a removal should delete: the ones the removed components held that
+ * NOTHING remaining still records.
+ *
+ * The check matters because a bound pair SHARES a workspace. Deleting on the first
+ * removal would take the partner's Runtime namespace, its code and its database with
+ * it — and the partner would go on looking deployed, because its record still says so.
+ * Removing a pair goes through the integration and takes its systems with it, so in
+ * practice both are gone by the time this runs and the workspace is released once.
+ *
+ * @param held - the workspaces the removed components recorded, before removal
+ * @param remaining - the project AFTER the removed components were cleared
+ */
+export function workspacesToRelease(
+    held: ReadonlyArray<NonNullable<AppBuilderComponentState['workspace']>>,
+    remaining: Project,
+): NonNullable<AppBuilderComponentState['workspace']>[] {
+    // A component with no workspace contributes `undefined`, which no held
+    // workspace's id can equal, so the set needs no filtering.
+    const stillUsed = new Set(
+        Object.values(remaining.appBuilderComponents ?? {}).map((state) => state.workspace?.id),
+    );
+    const seen = new Set<string>();
+    return held.filter((workspace) => {
+        if (stillUsed.has(workspace.id) || seen.has(workspace.id)) return false;
+        seen.add(workspace.id);
+        return true;
+    });
+}
+
+/** Every workspace recorded by a component in this list, in order, deduped later. */
+export function workspacesHeldBy(
+    project: Project,
+    ids: ReadonlyArray<string>,
+): NonNullable<AppBuilderComponentState['workspace']>[] {
+    return ids
+        .map((id) => project.appBuilderComponents?.[id]?.workspace)
+        .filter((workspace): workspace is NonNullable<AppBuilderComponentState['workspace']> =>
+            Boolean(workspace),
+        );
 }

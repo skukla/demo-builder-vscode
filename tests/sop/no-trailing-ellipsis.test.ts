@@ -25,10 +25,10 @@
  * programs on their own versioning.
  */
 
-import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import * as ts from 'typescript';
+import { workingTreeFiles } from './architectureScan';
 
 const ROOT = join(__dirname, '..', '..');
 const OUT_OF_SCOPE = [
@@ -111,8 +111,7 @@ function offences(files: Array<{ file: string; source: string }>): string[] {
     );
 }
 
-const SOURCES = execSync('git ls-files src', { cwd: ROOT, encoding: 'utf8' })
-    .split('\n')
+const SOURCES = workingTreeFiles('src')
     .filter((f) => /\.(tsx?|json)$/.test(f) && !OUT_OF_SCOPE.some((rule) => rule.test(f)))
     .map((file) => ({ file, source: readFileSync(join(ROOT, file), 'utf8') }));
 

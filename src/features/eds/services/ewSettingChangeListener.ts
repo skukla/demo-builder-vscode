@@ -21,6 +21,7 @@ import { resolveProjectAuthoringExperience } from '../handlers/edsHelpers';
 import { applyAuthoringExperienceFlip } from './authoringExperienceFlip';
 import type { GitHubTokenService } from './github/githubTokenService';
 import { COMPONENT_IDS } from '@/core/constants';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import type { AuthoringExperience, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
@@ -53,6 +54,14 @@ export interface EwSettingChangeListenerDeps {
      * trip. This listener has no use for it itself.
      */
     githubTokenService: GitHubTokenService;
+    /**
+     * Called after each project is re-applied, so an open dashboard can swap its
+     * Author Content link. Without it the dashboard kept the URL it was opened
+     * with, and Author Content went on opening the OLD editor (release testing,
+     * 2026-10-06). The Configure save path already pushes; this was the other
+     * door to the same flip.
+     */
+    onReapplied?: (project: Project) => Promise<void>;
 }
 
 /**
@@ -113,7 +122,7 @@ async function handleEwSettingChange(
     deps: EwSettingChangeListenerDeps,
     flags: ChangeFlags,
 ): Promise<void> {
-    const { context, stateManager, logger, githubTokenService } = deps;
+    const { context, stateManager, logger, githubTokenService, onReapplied } = deps;
     try {
         const affected = await findAffectedProjects(stateManager, flags);
         if (affected.length === 0) {
@@ -140,6 +149,10 @@ async function handleEwSettingChange(
                     githubTokenService,
                 });
                 successCount++;
+                await onReapplied?.(project).catch((error: unknown) => {
+                    const message = error instanceof Error ? error.message : String(error);
+                    logger.warn(`[EWSettingChange] Dashboard refresh failed for ${project.name}: ${message}`);
+                });
             } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 logger.warn(`[EWSettingChange] Republish failed for ${project.name}: ${message}`);
@@ -208,15 +221,11 @@ function hasAuthoringOverride(project: Project): boolean {
     return !!metadataValue && AUTHORING_EXPERIENCES.has(metadataValue);
 }
 
-/** Toast on completion: single project names it; many report a count. */
+/** Success on completion, as every success reads (a ✅ status-bar line, owner 2026-10-15): one project names it; many report a count. */
 function notifyCompletion(affected: Project[], successCount: number): void {
     if (affected.length === 1) {
-        void vscode.window.showInformationMessage(
-            `Re-applied Experience Workspace config to ${affected[0].name}`,
-        );
+        showSuccessInStatusBar(`Re-applied Experience Workspace config to ${affected[0].name}`);
         return;
     }
-    void vscode.window.showInformationMessage(
-        `Re-applied Experience Workspace config to ${successCount} of ${affected.length} projects`,
-    );
+    showSuccessInStatusBar(`Re-applied Experience Workspace config to ${successCount} of ${affected.length} projects`);
 }

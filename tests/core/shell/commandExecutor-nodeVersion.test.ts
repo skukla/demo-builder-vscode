@@ -3,9 +3,9 @@
  *
  * `useNodeVersion` decides whether the command runs as typed, wrapped in
  * `fnm exec --using=<version>`, or wrapped in `eval "$(fnm env)" &&` — and each
- * wrapper also forces the shell to /bin/zsh, because `eval` and `$(...)` are
- * shell syntax that execa's default shell:false would hand to the kernel as
- * part of a binary name.
+ * wrapper needs a shell, because execa's default shell:false would hand the
+ * whole string to the kernel as a binary name. `fnm exec` keeps the caller's
+ * shell, else the platform's; the `eval` form uses zsh.
  *
  * Everything here asserts the ARGUMENTS execa receives. The subprocess is a
  * mock and answers the same whatever it is handed, so a test that read the
@@ -13,6 +13,8 @@
  */
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { nodeFolderPath } from '@/core/shell/nodeFolder';
 import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 import { runThroughExeca } from './commandExecutor.testUtils';
 
@@ -22,14 +24,10 @@ import execa from 'execa';
 const mockExeca = execa as jest.MockedFunction<typeof execa>;
 const FNM = '/usr/local/bin/fnm';
 
-/** An executor whose environment reports the named fnm path and auto version. */
-function executorWith({
-    fnmPath = FNM as string | null,
-    autoVersion = '18' as string | null,
-} = {}) {
+/** An executor whose environment reports the named fnm path. */
+function executorWith({ fnmPath = FNM as string | null } = {}) {
     const deps = createFakeCommandExecutorDeps();
     (deps.environmentSetup.findFnmPath as jest.Mock).mockReturnValue(fnmPath);
-    (deps.environmentSetup.findAdobeCLINodeVersion as jest.Mock).mockResolvedValue(autoVersion);
     return new CommandExecutor(deps);
 }
 
@@ -38,7 +36,7 @@ beforeEach(() => {
 });
 
 describe('an explicit Node version', () => {
-    it('wraps the command in `fnm exec --using=<version>` and switches to zsh', async () => {
+    it('wraps the command in `fnm exec --using=<version>` and runs it in the platform shell', async () => {
         const { execaCommand, execaOptions } = await runThroughExeca(
             executorWith(),
             mockExeca,
@@ -47,7 +45,27 @@ describe('an explicit Node version', () => {
         );
 
         expect(execaCommand).toBe(`${FNM} exec --using=20 npm install`);
-        expect(execaOptions.shell).toBe('/bin/zsh');
+        expect(execaOptions.shell).toBe(DEFAULT_SHELL);
+    });
+
+    it('keeps a shell the caller named', async () => {
+        const { execaOptions } = await runThroughExeca(executorWith(), mockExeca, 'npm install', {
+            useNodeVersion: '20',
+            shell: '/bin/sh',
+        });
+
+        expect(execaOptions.shell).toBe('/bin/sh');
+    });
+
+    it("points fnm at Demo Builder's Node folder, keeping the rest of the environment (PR-1a)", async () => {
+        const { execaOptions } = await runThroughExeca(executorWith(), mockExeca, 'npm install', {
+            useNodeVersion: '24',
+        });
+
+        const env = execaOptions.env as NodeJS.ProcessEnv;
+        expect(env.FNM_DIR).toBe(nodeFolderPath());
+        // An env without PATH runs nothing.
+        expect(env.PATH).toBe(process.env.PATH);
     });
 
     it('runs the command AS TYPED when fnm cannot be found', async () => {
@@ -72,6 +90,14 @@ describe('an explicit Node version', () => {
 
         expect(execaCommand).toBe('eval "$(fnm env)" && npm install');
         expect(execaOptions.shell).toBe('/bin/zsh');
+    });
+
+    it("reads CURRENT from Demo Builder's Node folder, so the Node check reports what Demo Builder runs on (PR-1a)", async () => {
+        const { execaOptions } = await runThroughExeca(executorWith(), mockExeca, 'node --version', {
+            useNodeVersion: 'current',
+        });
+
+        expect((execaOptions.env as NodeJS.ProcessEnv).FNM_DIR).toBe(nodeFolderPath());
     });
 
     it('still uses the eval form for CURRENT when fnm is not on the PATH', async () => {
@@ -118,53 +144,10 @@ describe('no Node version asked for', () => {
     });
 });
 
-describe('the AUTO version', () => {
-    it('resolves the Adobe CLI version and wraps with it', async () => {
-        const { execaCommand } = await runThroughExeca(
-            executorWith({ autoVersion: '22' }),
-            mockExeca,
-            'aio console where',
-            { useNodeVersion: 'auto', configureTelemetry: false },
-        );
-
-        expect(execaCommand).toBe(`${FNM} exec --using=22 aio console where`);
-    });
-
-    it('runs the command UNWRAPPED when no Adobe CLI version can be resolved', async () => {
-        // findAdobeCLINodeVersion returns null when fnm has no install matching
-        // the CLI. Wrapping anyway would run `fnm exec --using=null aio ...`.
-        const { execaCommand } = await runThroughExeca(
-            executorWith({ autoVersion: null }),
-            mockExeca,
-            'aio console where',
-            { useNodeVersion: 'auto', configureTelemetry: false },
-        );
-
-        expect(execaCommand).toBe('aio console where');
-    });
-
-    it('uses the eval form when the resolved version is CURRENT', async () => {
-        const { execaCommand } = await runThroughExeca(
-            executorWith({ autoVersion: 'current' }),
-            mockExeca,
-            'aio console where',
-            { useNodeVersion: 'auto', configureTelemetry: false },
-        );
-
-        expect(execaCommand).toBe('eval "$(fnm env)" && aio console where');
-    });
-
-    it('refuses a resolved version carrying shell metacharacters', async () => {
-        // CWE-77: the resolved version is interpolated into a shell command, and
-        // it comes from the environment rather than from the caller, so the
-        // caller-side validation above it cannot have covered it.
-        const executor = executorWith({ autoVersion: '20; rm -rf /' });
-
+describe('a version that is not a Node version', () => {
+    it("refuses 'auto', which was removed (PR-1a)", async () => {
         await expect(
-            executor.execute('aio console where', {
-                useNodeVersion: 'auto',
-                configureTelemetry: false,
-            }),
+            executorWith().execute('npm install', { useNodeVersion: 'auto' }),
         ).rejects.toThrow('Invalid Node.js version format');
         expect(mockExeca).not.toHaveBeenCalled();
     });

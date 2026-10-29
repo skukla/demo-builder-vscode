@@ -18,7 +18,7 @@
  * makes the header rearrange itself as the list grows past it — the same screen renders two
  * different layouts depending on how much data came back.
  *
- * Page-level surfaces therefore pass 0 (`ProjectsDashboard`, `IntegrationsScreen`) so the
+ * Page-level surfaces therefore pass 0 (`ProjectsDashboard`, `IntegrationsActionBand`) so the
  * field is present from the first item and the layout never moves. Pick non-zero only for a
  * bounded in-page list where you have decided both layouts are acceptable.
  */
@@ -36,8 +36,9 @@ import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
 import ViewList from '@spectrum-icons/workflow/ViewList';
 import React from 'react';
 import { Spinner } from '../ui/Spinner';
-/** Available view modes */
-export type ViewMode = 'cards' | 'rows';
+/** The shared cards/rows type, re-exported so the header's callers keep one import. */
+export type { ViewMode } from '@/types/viewMode';
+import type { ViewMode } from '@/types/viewMode';
 
 export interface SearchHeaderProps {
     /** Current search query */
@@ -76,13 +77,18 @@ export interface SearchHeaderProps {
 
     /** Whether data has loaded at least once (shows count when true) */
     hasLoadedOnce: boolean;
-    /** Whether to auto-focus search field */
-    autoFocus?: boolean;
     /** Always show count even below threshold (default: false) */
     alwaysShowCount?: boolean;
 
     /** Optional action element to show inline (e.g., "+ New" button) */
     action?: React.ReactNode;
+
+    /**
+     * Replaces the built count line, for a list holding more than one kind of
+     * thing ("1 integration, 1 system"). Ignored while filtering, where
+     * "Showing N of M" is the answer whatever the kinds are.
+     */
+    countText?: string;
 
     /**
      * Content for the END of the count row.
@@ -230,7 +236,6 @@ export function SearchHeader(props: SearchHeaderProps) {
     const searchPlaceholder = props.searchPlaceholder ?? 'Type to filter';
     const isRefreshing = props.isRefreshing ?? false;
     const refreshAriaLabel = props.refreshAriaLabel ?? 'Refresh list';
-    const autoFocus = props.autoFocus ?? false;
 
     const { showSearch, showCount, nounPlural, displayNoun, isFiltering } =
         computeDisplayValues(props);
@@ -251,7 +256,6 @@ export function SearchHeader(props: SearchHeaderProps) {
                         onChange={onSearchQueryChange}
                         width="100%"
                         isQuiet
-                        autoFocus={autoFocus}
                         aria-label={`Filter ${nounPlural}`}
                         UNSAFE_className="flex-1"
                     />
@@ -262,7 +266,9 @@ export function SearchHeader(props: SearchHeaderProps) {
             {showCount && (
                 <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
                     <Text UNSAFE_className="text-sm text-gray-600">
-                        {buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
+                        {!isFiltering && props.countText
+                            ? props.countText
+                            : buildCountText(isFiltering, filteredCount, totalCount, displayNoun)}
                     </Text>
                     {!showSearch && ActionButtons}
                     {countTrailing}

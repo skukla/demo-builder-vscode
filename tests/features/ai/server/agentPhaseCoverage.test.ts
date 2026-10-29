@@ -8,8 +8,8 @@
  *
  * That shape is easy to reintroduce, because collecting phases for the result is
  * a perfectly reasonable thing to do on its own. This asserts that a tool doing
- * so also calls `reportPhase`, so the next one written that way fails here
- * instead of shipping silent.
+ * so also calls `reportPhase` (or `stepPhaseReporter`, which calls it), so the
+ * next one written that way fails here instead of shipping silent.
  *
  * A source-level check on purpose: driving every long tool to observe its
  * notifications would mean standing up their whole dependency trees, and the
@@ -41,11 +41,13 @@ describe('agent tools narrate the phases they collect', () => {
         expect(filesCollectingPhases().length).toBeGreaterThan(0);
     });
 
-    it.each(filesCollectingPhases())('%s also calls reportPhase', (file) => {
+    it.each(filesCollectingPhases())('%s also reports live', (file) => {
         const src = fs.readFileSync(path.join(SERVER_DIR, file), 'utf8');
 
         // Collecting for the result is fine; collecting INSTEAD of reporting is
-        // the silent wait this whole thread exists to remove.
-        expect(src).toMatch(/reportPhase\(/);
+        // the silent wait this whole thread exists to remove. `stepPhaseReporter`
+        // reports through `reportPhase`, each step's name once (progress
+        // vocabulary slice 8).
+        expect(src).toMatch(/\b(reportPhase|stepPhaseReporter)\(/);
     });
 });

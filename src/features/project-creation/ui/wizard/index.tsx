@@ -39,6 +39,10 @@ import '../styles/build-summary.css';
 // .intflow-* — the Add Integration modal. TWO entries render it; the dedicated
 // integrations surface imports this same sheet.
 import '../styles/add-integration-flow.css';
+// CheckboxRow, the API picker's rows (ADR-017 §6).
+import '@/core/ui/styles/checkbox-row.css';
+// SectionLabel and LeadText (ADR-017 §6).
+import '@/core/ui/styles/modal-text.css';
 // .timeline-* and .wizard-* — the SETUP PROGRESS rail and the wizard shell,
 // including the rail-collapse breakpoint. Wizard-only.
 import '../styles/wizard-timeline.css';
@@ -54,8 +58,11 @@ import '@/core/ui/styles/step-scaffold.css';
 import '@/core/ui/styles/vstep-list.css';
 // .choice-* — the option cards, also rendered on the integrations surface.
 import '../styles/choice-cards.css';
-// The "Add a demo package" dialog and its plus card; sits on the flow and summary styles above.
+// The "Add a demo package" dialog; sits on the flow and summary styles above.
 import '../styles/add-demo.css';
+// .add-card — the shared dashed add card ("Add a demo package"). After brand-cards.css,
+// whose card shape it sits on. The integrations entry imports it too.
+import '@/core/ui/styles/add-card.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
 // .two-* — the shared two-column layout's stacking breakpoint.

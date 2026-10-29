@@ -1,5 +1,5 @@
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
-import { getMeshEndpointUrl } from '@/types/typeGuards';
+import { getMeshEndpointUrl } from '@/core/state/appBuilderComponentState';
 import {
     createMockProject,
     setupMeshVerifier,

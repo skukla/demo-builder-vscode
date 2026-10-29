@@ -1,0 +1,17 @@
+{
+  "_captured": {
+    "from": "Bodea sandbox (Adobe Commerce as a Cloud Service)",
+    "on": "2026-09-27",
+    "request": "GET companyCredits/company/21",
+    "note": "Contact details, IPs, hostnames, the tenant id and the company name replaced; everything else as answered."
+  },
+  "body": {
+    "id": 21,
+    "company_id": 21,
+    "credit_limit": 120000,
+    "balance": 0,
+    "currency_code": "USD",
+    "exceed_limit": false,
+    "available_limit": 120000
+  }
+}

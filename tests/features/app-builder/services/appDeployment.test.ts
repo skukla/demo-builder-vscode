@@ -1,5 +1,10 @@
 import { deployAppComponent } from '@/features/app-builder/services/appDeployment';
 import { mockFs, createMockCommandManager, createMockLogger } from './appDeployment.testUtils';
+import {
+    fetchRuntimeCredentials,
+    readRuntimeCredentials,
+} from '@/features/app-builder/services/runtimeCredentials';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 
 /**
  * deployAppComponent Test Suite
@@ -42,10 +47,24 @@ jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
     extractAioErrorDetail: jest.requireActual('@/features/app-builder/services/runtimeCredentials')
         .extractAioErrorDetail,
     aioOutputTail: jest.requireActual('@/features/app-builder/services/runtimeCredentials').aioOutputTail,
+    readRuntimeCredentials: jest.fn().mockResolvedValue({
+        namespace: 'test-namespace',
+        auth: 'fake-test-pw-not-a-secret',
+    }),
     fetchRuntimeCredentials: jest.fn().mockResolvedValue({
         namespace: 'test-namespace',
         auth: 'fake-test-pw-not-a-secret',
     }),
+}));
+
+// Whether the app's config asks Adobe for the project's credentials. Off by
+// default; the suite below turns it on.
+const mockDeclaresIms = jest.fn().mockResolvedValue(false);
+jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
+    declaresIncludeImsCredentials: (...args: unknown[]) => mockDeclaresIms(...args),
+    // No declared actions, so these suites exercise the get-url path the config
+    // derivation falls back to (see appDeployment-urlSources.test.ts).
+    listDeclaredActions: () => Promise.resolve([]),
 }));
 
 const DEPLOY_CMD = 'aio app deploy --verbose';
@@ -133,7 +152,7 @@ describe('deployAppComponent', () => {
                     streaming: true,
                     shell: true,
                     timeout: 180000,
-                    useNodeVersion: 'auto',
+                    useNodeVersion: demoBuilderNode(),
                     enhancePath: true,
                 })
             );
@@ -457,7 +476,7 @@ describe('deployAppComponent', () => {
                 cwd: '/app',
                 shell: true,
                 timeout: 180000,
-                useNodeVersion: 'auto',
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
                 env: {
                     AIO_RUNTIME_NAMESPACE: 'test-namespace',
@@ -509,6 +528,11 @@ describe('extension layout: workspace config import', () => {
         const useIdx = commands.findIndex((c: string) => c.startsWith('aio app use'));
         expect(downloadIdx).toBeGreaterThanOrEqual(0);
         expect(useIdx).toBeGreaterThan(downloadIdx);
+        // ONE download: the namespace and key are read from the imported file (a
+        // second download cost 12s of the ERP add, 2026-09-21).
+        expect(commands.filter((c) => c.startsWith('aio console workspace download'))).toHaveLength(1);
+        expect(jest.mocked(fetchRuntimeCredentials)).not.toHaveBeenCalled();
+        expect(jest.mocked(readRuntimeCredentials)).toHaveBeenCalledWith(expect.any(String), logger);
         // Non-interactive, overwrite, no service sync — the measured-live shape.
         expect(commands[useIdx]).toContain('--overwrite');
         expect(commands[useIdx]).toContain('--no-input');
@@ -533,14 +557,14 @@ describe('extension layout: workspace config import', () => {
         expect(optionsFor('aio console workspace download')).toEqual({
             shell: true,
             timeout: 180000,
-            useNodeVersion: 'auto',
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
         });
         expect(optionsFor('aio app use')).toEqual({
             cwd: '/app',
             shell: true,
             timeout: 180000,
-            useNodeVersion: 'auto',
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
         });
     });
@@ -646,5 +670,77 @@ describe('extension layout: workspace config import', () => {
         const result = await deployAppComponent('/app', cm, logger, { layout: 'extension' });
 
         expect(result.error).toBe('Could not import workspace configuration: exit code 9');
+    });
+});
+
+describe('deployAppComponent — an app that asks for the project credentials', () => {
+    // Found 2026-09-14 on Bodea: the demo ERP's actions carry `include-ims-credentials`,
+    // aio then requires the four IMS_OAUTH_S2S values, and the deploy failed with
+    // "Credentials for the project are incomplete".
+    const IMS_ENV = {
+        IMS_OAUTH_S2S_CLIENT_ID: 's2s-client',
+        IMS_OAUTH_S2S_CLIENT_SECRET: 'fake-test-pw-not-a-secret-1',
+        IMS_OAUTH_S2S_ORG_ID: 'ABC123@AdobeOrg',
+        IMS_OAUTH_S2S_SCOPES: '["AdobeID"]',
+    };
+    const { fetchRuntimeCredentials } = jest.requireMock('@/features/app-builder/services/runtimeCredentials') as {
+        fetchRuntimeCredentials: jest.Mock;
+    };
+    let cm: ReturnType<typeof createMockCommandManager>;
+    let logger: ReturnType<typeof createMockLogger>;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        cm = createMockCommandManager();
+        logger = createMockLogger();
+        mockFs.access.mockRejectedValue(new Error('ENOENT'));
+        cm.execute.mockResolvedValue(ok());
+        fetchRuntimeCredentials.mockResolvedValue({
+            namespace: 'test-namespace',
+            auth: 'fake-test-pw-not-a-secret',
+            imsOAuthS2SEnv: IMS_ENV,
+        });
+    });
+
+    const deployEnv = () =>
+        (cm.execute.mock.calls.find((args: unknown[]) => args[0] === DEPLOY_CMD)?.[1] as { env?: Record<string, string> })?.env;
+
+    it('passes the four values to the deploy when the app asks', async () => {
+        mockDeclaresIms.mockResolvedValue(true);
+
+        await deployAppComponent('/erp', cm, logger);
+
+        expect(mockDeclaresIms).toHaveBeenCalledWith('/erp');
+        expect(deployEnv()).toStrictEqual({
+            ...IMS_ENV,
+            AIO_RUNTIME_NAMESPACE: 'test-namespace',
+            AIO_RUNTIME_AUTH: 'fake-test-pw-not-a-secret',
+        });
+    });
+
+    it('keeps them out of the deploy of an app that does not ask', async () => {
+        mockDeclaresIms.mockResolvedValue(false);
+
+        await deployAppComponent('/app', cm, logger);
+
+        expect(deployEnv()).toStrictEqual({
+            AIO_RUNTIME_NAMESPACE: 'test-namespace',
+            AIO_RUNTIME_AUTH: 'fake-test-pw-not-a-secret',
+        });
+    });
+
+    it('refuses before deploying when the app asks and the workspace has no S2S credential', async () => {
+        mockDeclaresIms.mockResolvedValue(true);
+        fetchRuntimeCredentials.mockResolvedValue({ namespace: 'test-namespace', auth: 'fake-test-pw-not-a-secret' });
+
+        const result = await deployAppComponent('/erp', cm, logger);
+
+        expect(result).toStrictEqual({
+            success: false,
+            error:
+                "This app's actions ask Adobe for the project's credentials, but the workspace has no " +
+                'OAuth server-to-server credential. Add the app again so Demo Builder can create one.',
+        });
+        expect(deployEnv()).toBeUndefined();
     });
 });

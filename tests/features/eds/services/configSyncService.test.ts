@@ -173,6 +173,40 @@ describe('syncConfigToRemote', () => {
         });
     });
 
+    // 2026-10-15: GitHub has it and the live site serves it, so there is nothing to do.
+    describe('a config.json that is already live', () => {
+        const SAME = '{"public":{"default":{"commerce-endpoint":"https://example.com/graphql"}}}';
+        let ops: { getFileContent: jest.Mock; createOrUpdateFile: jest.Mock };
+
+        beforeEach(() => {
+            (fsPromises.readFile as jest.Mock).mockResolvedValue(SAME);
+            ops = {
+                getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha', content: SAME }),
+                createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
+            };
+            const { GitHubFileOperations } = require('@/features/eds/services/github/githubFileOperations');
+            GitHubFileOperations.mockImplementation(() => ops);
+        });
+
+        it('pushes nothing, publishes nothing, and answers success', async () => {
+            const result = await syncConfigToRemote(baseParams);
+
+            expect(ops.createOrUpdateFile).not.toHaveBeenCalled();
+            expect(mockPreviewCode).not.toHaveBeenCalled();
+            expect(result).toMatchObject({ success: true, cdnVerified: true, unchanged: true });
+        });
+
+        it('pushes and publishes as before when GitHub has other text — control', async () => {
+            ops.getFileContent.mockResolvedValue({ sha: 'existing-sha', content: '{}' });
+
+            const result = await syncConfigToRemote(baseParams);
+
+            expect(ops.createOrUpdateFile).toHaveBeenCalled();
+            expect(mockPreviewCode).toHaveBeenCalled();
+            expect(result).not.toHaveProperty('unchanged');
+        });
+    });
+
     describe('error handling', () => {
         it('returns error if local config.json not found', async () => {
             // Arrange

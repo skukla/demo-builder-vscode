@@ -7,7 +7,7 @@ import { cn } from '@/core/ui/utils/classNames';
  *
  * This is the ONE place dashboard statuses surface a per-status action: an
  * `unknown` or lightweight `warning` outcome renders its fix here (mesh
- * "Sign in", AI "Regenerate", org "Sign in to check") instead of inventing a
+ * "Sign in", AI "Regenerate", org "Sign in" / "Verify") instead of inventing a
  * bespoke placement. Blocking problems use the full-width banner instead.
  */
 export interface StatusCardAction {

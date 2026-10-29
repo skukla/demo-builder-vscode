@@ -1,10 +1,18 @@
 /**
- * DA.live Spreadsheet Utilities
+ * DA.live spreadsheet utilities: the ONE place that knows the shape of a DA.live
+ * sheet document, plus the HTML escape the generated pages share.
  *
- * Pure functions for converting between EDS spreadsheet JSON format
- * and HTML table format used by DA.live.
+ * A sheet is stored in DA.live as a JSON document at `<path>.json`. The same
+ * document is what the block library writes (`DaLiveBlockLibrarySheet`) and what
+ * a sheet copied from another site is written as (`daLiveSpreadsheetCopy`); both
+ * build it with {@link buildSheetDocument}.
  *
- * Extracted from DaLiveContentOperations for better testability.
+ * There is no HTML form of a sheet. Until 2026-10-12 a copied sheet was turned
+ * into an HTML table and posted to `<path>.html`; DA.live stored a page, the page
+ * was served as a page, and `<path>.json` answered 404 (EDS-40, measured on a
+ * scratch storefront). That converter is removed.
+ *
+ * Pure functions, no I/O.
  */
 
 /**
@@ -18,69 +26,118 @@ export function escapeHtml(str: string): string {
         .replace(/"/g, '&quot;');
 }
 
-/**
- * Wrap table(s) in a minimal HTML document
- */
-export function wrapInDocument(content: string): string {
-    return `<!DOCTYPE html>\n<html>\n<body>\n${content}\n</body>\n</html>`;
+/** One row of a sheet: column name to cell value. */
+export type SheetRow = Record<string, unknown>;
+
+/** A sheet by name, the form both readers and writers of a document meet in. */
+export interface NamedSheet {
+    name: string;
+    rows: SheetRow[];
+    /** Column names, when the writer knows them. Taken from the first row when absent. */
+    columns?: string[];
 }
 
 /**
- * Create an HTML table from columns and data
+ * A sheet as the CDN served it: possibly one PAGE of it. `rows` is what this
+ * response held; `total` is how many rows the server says the sheet has.
  */
-export function createHtmlTable(
-    columns: string[],
-    data: Record<string, unknown>[],
-    sheetName?: string,
-): string {
-    const headerRow = `<tr>${columns.map(col => `<th>${escapeHtml(col)}</th>`).join('')}</tr>`;
-    const dataRows = data
-        .map(
-            row =>
-                `<tr>${columns.map(col => `<td>${escapeHtml(String(row[col] ?? ''))}</td>`).join('')}</tr>`,
-        )
-        .join('\n');
+export interface ServedSheet extends NamedSheet {
+    total: number;
+    /**
+     * The `sheet` query value that asks the CDN for this sheet alone. Absent for
+     * a single sheet, which is the whole document and is asked for bare.
+     */
+    sheetParam?: string;
+}
 
-    const className = sheetName ? ` class="sheet-${sheetName}"` : '';
-    return `<table${className}>\n<thead>\n${headerRow}\n</thead>\n<tbody>\n${dataRows}\n</tbody>\n</table>`;
+/** One sheet inside a stored document. */
+export interface DaLiveSheet {
+    total: number;
+    limit: number;
+    offset: number;
+    data: SheetRow[];
+    ':colWidths': number[];
 }
 
 /**
- * Convert EDS spreadsheet JSON to HTML table format
- * Handles both single-sheet and multi-sheet formats
+ * A sheet document as DA.live stores it: one {@link DaLiveSheet} per name in
+ * `:names`, always in multi-sheet form.
+ */
+export interface DaLiveSheetDocument {
+    ':names': string[];
+    ':version': 3;
+    ':type': 'multi-sheet';
+    [sheetName: string]: DaLiveSheet | string[] | 3 | 'multi-sheet';
+}
+
+/** The width DA.live's sheet editor opens every column at. */
+const DEFAULT_COLUMN_WIDTH = 300;
+
+/**
+ * Build the document DA.live stores for these sheets.
  *
- * @param json - EDS spreadsheet JSON (from .json endpoint)
- * @returns HTML string or null if conversion fails
+ * Always multi-sheet, whatever the count: a storefront asks for
+ * `<path>.json?sheet=data`, and only a multi-sheet document has a sheet to answer
+ * by name. The shape is the one `/.da/library/blocks.json` has on every storefront,
+ * which answers 200 with and without the query.
+ *
+ * @param sheets - the sheets, in the order the document names them
+ * @returns the document to POST to `/source/{org}/{site}/{path}.json`
  */
-export function convertSpreadsheetJsonToHtml(json: Record<string, unknown>): string | null {
-    try {
-        // Check for multi-sheet format
-        if (json[':type'] === 'multi-sheet' && Array.isArray(json[':names'])) {
-            // Multi-sheet: create multiple tables
-            const names = json[':names'] as string[];
-            const tables = names
-                .filter(name => !name.startsWith('dnt')) // Skip "do not translate" sheets
-                .map(name => {
-                    const sheet = json[name] as {
-                        columns?: string[];
-                        data?: Record<string, unknown>[];
-                    };
-                    if (!sheet?.data) return '';
-                    return createHtmlTable(sheet.columns || [], sheet.data, name);
-                })
-                .filter(Boolean)
-                .join('\n');
-            return wrapInDocument(tables);
-        }
-
-        // Single-sheet format
-        const data = json.data as Record<string, unknown>[] | undefined;
-        const columns = json.columns as string[] | undefined;
-        if (!data || !Array.isArray(data)) return null;
-
-        const table = createHtmlTable(columns || Object.keys(data[0] || {}), data);
-        return wrapInDocument(table);
-    } catch {
-        return null;
+export function buildSheetDocument(sheets: NamedSheet[]): DaLiveSheetDocument {
+    const byName: Record<string, DaLiveSheet> = {};
+    for (const sheet of sheets) {
+        const columns = sheet.columns ?? Object.keys(sheet.rows[0] ?? {});
+        byName[sheet.name] = {
+            total: sheet.rows.length,
+            limit: sheet.rows.length,
+            offset: 0,
+            data: sheet.rows,
+            ':colWidths': columns.map(() => DEFAULT_COLUMN_WIDTH),
+        };
     }
+    return {
+        ...byName,
+        ':names': sheets.map((sheet) => sheet.name),
+        ':version': 3,
+        ':type': 'multi-sheet',
+    };
+}
+
+/** The rows and stated total of a served sheet, or null when it has no row list. */
+function pageOf(sheet: unknown): { rows: SheetRow[]; total: number } | null {
+    const { data, total } = (sheet ?? {}) as { data?: unknown; total?: unknown };
+    if (!Array.isArray(data)) return null;
+    return { rows: data as SheetRow[], total: typeof total === 'number' ? total : data.length };
+}
+
+/**
+ * Read the sheets out of what aem.live serves at `<path>.json`.
+ *
+ * Two shapes are served. A multi-sheet document names its sheets in `:names` and
+ * holds each under its name; every one is kept, `dnt` included (it is the author's
+ * do-not-translate setting, and a copy that drops it is not the same document). A
+ * single sheet holds its rows at the top level and has no name, so it is read as
+ * one sheet named `data`.
+ *
+ * A response can be one page of a longer sheet: compare `rows.length` with `total`.
+ *
+ * @param served - the parsed JSON body
+ * @returns the sheets in served order, or null when the body is not a sheet
+ */
+export function readServedSheets(served: unknown): ServedSheet[] | null {
+    if (typeof served !== 'object' || served === null) return null;
+    const document = served as Record<string, unknown>;
+
+    if (document[':type'] === 'multi-sheet' && Array.isArray(document[':names'])) {
+        const sheets: ServedSheet[] = [];
+        for (const name of document[':names'] as string[]) {
+            const page = pageOf(document[name]);
+            if (page) sheets.push({ name, ...page, sheetParam: name });
+        }
+        return sheets.length > 0 ? sheets : null;
+    }
+
+    const page = pageOf(document);
+    return page ? [{ name: 'data', ...page }] : null;
 }

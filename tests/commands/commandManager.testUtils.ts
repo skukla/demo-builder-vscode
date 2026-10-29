@@ -28,7 +28,6 @@ import type { StateManager } from '@/types/state';
 
 jest.mock('@/commands/configure');
 jest.mock('@/commands/diagnostics');
-jest.mock('@/commands/manageSiteAccess');
 jest.mock('@/commands/migrateStorefrontNames');
 jest.mock('@/commands/openInClaude');
 jest.mock('@/commands/openModernizationAgent');
@@ -43,7 +42,7 @@ jest.mock('@/features/dashboard/commands/openAi');
 jest.mock('@/features/dashboard/commands/showDashboard');
 jest.mock('@/features/dashboard/commands/showIntegrations');
 jest.mock('@/features/data-installer/commands/showDataInstaller');
-jest.mock('@/features/lifecycle/commands/deleteProject');
+jest.mock('@/features/eds/commands/showSiteAccess');
 jest.mock('@/features/lifecycle/commands/startDemo');
 jest.mock('@/features/lifecycle/commands/stopDemo');
 jest.mock('@/features/lifecycle/commands/syncStorefront');
@@ -89,8 +88,10 @@ const mockGetTokenStatus = jest.fn();
 const mockLogin = jest.fn();
 const mockSetShowingProjectsList = jest.fn();
 const mockIsSidebarInitialized = jest.fn(() => false);
+const mockCommandExists = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
+        getCommandExecutor: () => ({ commandExists: mockCommandExists }),
         isSidebarInitialized: () => mockIsSidebarInitialized(),
         getSidebarProvider: () => ({ setShowingProjectsList: mockSetShowingProjectsList }),
         getAuthenticationService: () => ({
@@ -110,6 +111,7 @@ jest.mock('fs/promises', () => ({ access: (...a: unknown[]) => mockAccess(...a) 
 export { CommandManager, vscode };
 export {
     mockAccess,
+    mockCommandExists,
     mockDaLiveAuthQuickPick,
     mockGetTokenStatus,
     mockIsSidebarInitialized,

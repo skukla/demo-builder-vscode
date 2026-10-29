@@ -44,9 +44,7 @@ describe('aiHandlers — copy & module helpers', () => {
             });
 
             expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('Build a hero block');
-            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-                expect.stringContaining('Prompt copied to clipboard')
-            );
+            expect((vscode.window.setStatusBarMessage as jest.Mock).mock.calls[0][0]).toBe('✅ Prompt copied to clipboard');
             expect(result).toEqual({ success: true });
         });
 

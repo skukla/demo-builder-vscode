@@ -358,12 +358,6 @@
           "items": {
             "type": "string"
           }
-        },
-        "nodeVersions": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       }
     }

@@ -29,12 +29,10 @@
 
 import { registerPublishKey, type PublishKeyTokenProvider } from '../pdp/publishKeyRegistrar';
 import { DaLiveAuthError } from '../types';
-import type {
-    buildSiteConfigParams,
-    ConfigServiceResult,
-    SiteRegistrationParams,
-} from './configurationService';
+import type { ConfigServiceResult } from './configServiceRequest';
+import type { buildSiteConfigParams, SiteRegistrationParams } from './siteConfigParams';
 import { sleep } from '@/core/utils/sleep';
+import { countLine } from '@/core/utils/storefrontJobs';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -256,8 +254,10 @@ async function retryWhilePropagating(
             `[ConfigService] 403 — retrying after ${delayMs / 1000}s ` +
                 `(attempt ${attempt + 1}/${delays.length}). Waiting for admin-role propagation`,
         );
+        // The line under the caller's step: the attempts are a count, never a
+        // position (progress vocabulary slice 8).
         await onProgress?.(
-            `Waiting for Configuration Service access (${attempt + 1}/${delays.length})`,
+            `Waiting for Configuration Service access: ${countLine(attempt + 1, delays.length, 'attempt')}`,
         );
         await sleep(delayMs);
 

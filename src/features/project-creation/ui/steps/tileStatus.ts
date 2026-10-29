@@ -22,6 +22,7 @@ import {
     getSelectableAppBuilderComponents,
     type SelectableAppBuilderComponent,
 } from '../../services/appBuilderComponentSelection';
+import { isSetInConfigure } from './editLocks';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardSessionState, WizardState } from '@/types/webview';
@@ -33,11 +34,10 @@ import type { WizardSessionState, WizardState } from '@/types/webview';
  * @returns true when a stack is selected AND the connect form reported valid
  */
 export function isCommerceConfigured(state: WizardState): boolean {
-    return (
-        Boolean(state.selectedStack) &&
-        state.commerceConnectValid === true &&
-        state.commerceCatalogValid !== false
-    );
+    if (!state.selectedStack) return false;
+    // Edit leaves the settings to Configure; the project already has them.
+    if (isSetInConfigure(state)) return true;
+    return state.commerceConnectValid === true && state.commerceCatalogValid !== false;
 }
 
 /**
@@ -151,15 +151,13 @@ export function isIntegrationsComplete(
  * Whether the Storefront step's Storefront tile is fully configured.
  *
  * @param state - Wizard state
- * @returns true when GitHub + DA.live are authenticated AND both the repo and the
- *   AEM Code Sync app reported valid
+ * @returns true when GitHub + DA.live are authenticated AND the repo reported valid
  */
 export function isStorefrontConfigured(state: WizardState): boolean {
     const eds = state.edsConfig;
     return (
         Boolean(eds?.githubAuth?.isAuthenticated) &&
         Boolean(eds?.daLiveAuth?.isAuthenticated) &&
-        state.storefrontRepoValid === true &&
-        state.storefrontCodeSyncValid === true
+        state.storefrontRepoValid === true
     );
 }

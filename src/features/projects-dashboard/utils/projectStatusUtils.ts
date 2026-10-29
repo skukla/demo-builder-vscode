@@ -8,14 +8,24 @@
 
 import { getIdentifiedMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import type { StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
-import { getStorefrontStatusDisplay, severityToVariant } from '@/core/ui/utils/statusVocabulary';
+import { getStorefrontStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
+import {
+    NEEDS_RESET_LABEL,
+    NEEDS_RESET_LINE,
+    storefrontNeedsReset,
+} from '@/features/eds/services/storefront/storefrontChanges';
 import type { AppBuilderComponentState, Project, ProjectStatus } from '@/types/base';
 import { getComponentInstanceValues, isEdsProject } from '@/types/typeGuards';
 
 /**
- * StatusDot variant type for visual status indication
+ * Work in flight, which every project shows, EDS or not. `creating` is set by the
+ * projects list for a creation running in this window (`loadProjectsForList`, PL-82).
  */
-export type StatusVariant = 'success' | 'neutral' | 'warning' | 'error';
+const UNSETTLED_TEXT: Partial<Record<ProjectStatus, string>> = {
+    creating: 'Creating',
+    resetting: 'Resetting',
+    republishing: 'Republishing',
+};
 
 /**
  * Gets the human-readable display text for a project status
@@ -26,16 +36,10 @@ export type StatusVariant = 'success' | 'neutral' | 'warning' | 'error';
  * @returns Human-readable status text
  */
 export function getStatusText(status: ProjectStatus, port?: number, isEds?: boolean): string {
-    // EDS projects show "Published" unless they're in a transitional state
-    if (isEds) {
-        if (status === 'resetting') {
-            return 'Resetting';
-        }
-        if (status === 'republishing') {
-            return 'Republishing';
-        }
-        return 'Published';
-    }
+    const unsettled = UNSETTLED_TEXT[status];
+    if (unsettled) return unsettled;
+    // EDS projects show "Published" unless something is unsettled
+    if (isEds) return 'Published';
 
     switch (status) {
         case 'running':
@@ -44,13 +48,6 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
             return 'Starting';
         case 'stopping':
             return 'Stopping';
-        case 'resetting':
-            return 'Resetting';
-        case 'republishing':
-            return 'Republishing';
-        case 'stopped':
-        case 'ready':
-            return 'Stopped';
         case 'error':
             return 'Error';
         default:
@@ -65,28 +62,16 @@ export function getStatusText(status: ProjectStatus, port?: number, isEds?: bool
  * @param isEds - Whether the project is an EDS project
  * @returns StatusDot variant for color coding
  */
-export function getStatusVariant(status: ProjectStatus, isEds?: boolean): StatusVariant {
-    // EDS projects show "success" (green) unless they're in a transitional state
-    if (isEds) {
-        if (status === 'resetting' || status === 'republishing') {
-            return 'warning'; // Yellow/orange during transitional operations
-        }
-        return 'success';
-    }
-
-    switch (status) {
-        case 'running':
-            return 'success';
-        case 'starting':
-        case 'stopping':
-        case 'resetting':
-        case 'republishing':
-            return 'warning';
-        case 'error':
-            return 'error';
-        default:
-            return 'neutral';
-    }
+export function getStatusVariant(status: ProjectStatus, isEds?: boolean): StatusDotVariant {
+    // Blue while something is in progress, the dot's own meaning of `info`, on every
+    // surface (StatusDot). These were orange until 2026-10-16 (owner: "it should be
+    // blue"); the card's deployment line already used `info` for Deploying.
+    if (UNSETTLED_TEXT[status]) return 'info';
+    // EDS projects show "success" (green) unless something is unsettled
+    if (isEds) return 'success';
+    if (status === 'starting' || status === 'stopping') return 'info';
+    if (status === 'error') return 'error';
+    return status === 'running' ? 'success' : 'neutral';
 }
 
 /**
@@ -127,24 +112,6 @@ function getIntegrationStatuses(project: Project): AppBuilderComponentState['sta
 }
 
 /**
- * Whether the project has any App Builder component at all — the test for
- * offering a route to the Integrations page.
- *
- * Replaced `listRedeployableIntegrations`, which existed to build one
- * "Redeploy <name>" menu item per integration. Those grew with N and predate the
- * dedicated Integrations page; the page owns per-integration actions now, so the
- * menu needs a single yes/no rather than a list. Deliberately NOT filtered by
- * status: a not-deployed or failed integration is exactly when you want to go
- * look at it.
- *
- * @param project - the project to test
- * @returns true when at least one App Builder component is keyed on the project
- */
-export function hasIntegrations(project: Project): boolean {
-    return Object.keys(project.appBuilderComponents ?? {}).length > 0;
-}
-
-/**
  * The storefront's label and dot for a surface that shows exactly one status
  * line (`ProjectRow`). Both halves come from the shared table, so this cannot
  * drift from the dashboard's rendering of the same state — which is precisely
@@ -154,8 +121,8 @@ export function getStorefrontStatusText(project: Project): string {
     return getStorefrontStatusDisplay(project.edsStorefrontStatusSummary).label;
 }
 
-export function getStorefrontStatusVariant(project: Project): StatusVariant {
-    return severityToVariant(
+export function getStorefrontStatusVariant(project: Project): StatusDotVariant {
+    return severityToDot(
         getStorefrontStatusDisplay(project.edsStorefrontStatusSummary).severity,
     );
 }
@@ -165,19 +132,32 @@ export function getStorefrontStatusVariant(project: Project): StatusVariant {
 // ============================================================================
 
 /**
+ * Whether the project's storefront is behind how Demo Builder builds storefronts now
+ * (`storefrontChanges.ts`). Never while work is in flight: a project being created
+ * or reset says so instead.
+ */
+export function showsNeedsReset(project: Project): boolean {
+    return !UNSETTLED_TEXT[project.status] && storefrontNeedsReset(project);
+}
+
+/**
  * How urgently a deployable needs the user, worst first.
  *
  * Three vocabularies feed this — the mesh's, the storefront's and the
  * integrations' — and none of them share a value set. This is the common
  * denominator they collapse onto.
  */
-type DeploymentConcern = 'attention' | 'deploying' | 'not-deployed' | 'current';
+type DeploymentConcern = 'attention' | 'deploying' | 'needs-reset' | 'not-deployed' | 'current';
 
 const CONCERN_ORDER: readonly DeploymentConcern[] = [
     // Attention beats deploying deliberately: an in-flight deploy is transient,
     // a failed or drifted one is not.
     'attention',
     'deploying',
+    // The storefront is behind how Demo Builder builds storefronts now. It takes the
+    // place of "Deployed", which says nothing once a reset is due (owner, 2026-10-23),
+    // and of "Not deployed": the reset is the next thing to do either way.
+    'needs-reset',
     'not-deployed',
     'current',
 ];
@@ -185,19 +165,20 @@ const CONCERN_ORDER: readonly DeploymentConcern[] = [
 /**
  * The card's one deployment line.
  *
- * Typed against `StatusDotVariant`, not this module's narrower `StatusVariant`:
- * the value feeds a StatusDot, and only the dot's type admits `info` — which is
- * what an in-flight deploy should be, rather than the `warning` the runtime line
- * uses for its transitional states.
+ * Typed against `StatusDotVariant`: the value feeds a StatusDot, whose `info` is
+ * what an in-flight deploy is.
  */
 export interface DeploymentSummary {
     text: string;
     variant: StatusDotVariant;
+    /** One sentence saying why, shown on hover; only where the words need one. */
+    explanation?: string;
 }
 
 const CONCERN_DISPLAY: Record<DeploymentConcern, DeploymentSummary> = {
     attention: { text: 'Attention needed', variant: 'warning' },
     deploying: { text: 'Deploying', variant: 'info' },
+    'needs-reset': { text: NEEDS_RESET_LABEL, variant: 'warning', explanation: NEEDS_RESET_LINE },
     'not-deployed': { text: 'Not deployed', variant: 'neutral' },
     current: { text: 'Deployed', variant: 'success' },
 };
@@ -239,9 +220,13 @@ function concernFromStorefront(
  * @returns the line, or null when the project has nothing deployable at all
  */
 export function getDeploymentSummary(project: Project): DeploymentSummary | null {
+    // While work is in flight what is deployed is changing under it; the work's own
+    // line ("Resetting") is the one to show (2026-10-29: "Resetting" sat over "Deployed").
+    if (UNSETTLED_TEXT[project.status]) return null;
     const concerns = [
         concernFromComponentStatus(getMeshStatusKey(project)),
         concernFromStorefront(project.edsStorefrontStatusSummary),
+        showsNeedsReset(project) ? 'needs-reset' : null,
         ...getIntegrationStatuses(project).map(concernFromComponentStatus),
     ].filter((concern): concern is DeploymentConcern => concern !== null);
 
@@ -286,8 +271,7 @@ export function getDeploymentSummary(project: Project): DeploymentSummary | null
  */
 export function getRuntimeSummary(project: Project): DeploymentSummary | null {
     if (isEdsProject(project)) {
-        const inFlight = project.status === 'resetting' || project.status === 'republishing';
-        if (!inFlight) return null;
+        if (!UNSETTLED_TEXT[project.status]) return null;
         return {
             text: getStatusText(project.status, undefined, true),
             variant: getStatusVariant(project.status, true),
@@ -335,18 +319,40 @@ export function getProjectStatusDisplay(project: Project): {
     isEds: boolean;
     port: number | undefined;
     statusText: string;
-    statusVariant: StatusVariant;
+    statusVariant: StatusDotVariant;
+    /** Why, on hover: set only when the status is "Needs reset". */
+    statusExplanation?: string;
 } {
     const isEds = isEdsProject(project);
     const port = getFrontendPort(project);
+    // Work in flight is said first, on the row as on the card: an EDS row showed its
+    // storefront's last state for the whole of a reset.
+    if (UNSETTLED_TEXT[project.status]) {
+        return {
+            isEds,
+            port,
+            statusText: getStatusText(project.status, port, isEds),
+            statusVariant: getStatusVariant(project.status, isEds),
+        };
+    }
+    const variant = isEds ? getStorefrontStatusVariant(project) : getStatusVariant(project.status, false);
+    // A reset due outranks a status that says all is well, as on the card; anything
+    // worse keeps its own words.
+    if (variant === 'success' && showsNeedsReset(project)) {
+        return {
+            isEds,
+            port,
+            statusText: NEEDS_RESET_LABEL,
+            statusVariant: 'warning',
+            statusExplanation: NEEDS_RESET_LINE,
+        };
+    }
     return {
         isEds,
         port,
         statusText: isEds
             ? getStorefrontStatusText(project)
             : getStatusText(project.status, port, false),
-        statusVariant: isEds
-            ? getStorefrontStatusVariant(project)
-            : getStatusVariant(project.status, false),
+        statusVariant: variant,
     };
 }

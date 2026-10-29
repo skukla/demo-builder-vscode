@@ -298,7 +298,6 @@ export abstract class BaseWebviewCommand<TInitialData = unknown> extends BaseCom
         // Create communication manager
         // SOP §1: Using TIMEOUTS constants instead of magic numbers
         this.communicationManager = await createWebviewCommunication(this.panel, {
-            enableLogging: true,
             handshakeTimeout: TIMEOUTS.NORMAL,
             messageTimeout: TIMEOUTS.NORMAL,
             maxRetries: 3,
@@ -351,24 +350,6 @@ export abstract class BaseWebviewCommand<TInitialData = unknown> extends BaseCom
             this.communicationManager?.sendMessage('theme-changed', { theme: themeMode });
         });
         this.disposables.add(themeListener);
-
-        // State request handler
-        this.communicationManager.on('get-state', async () => {
-            const state = await this.stateManager.getCurrentProject();
-            return state;
-        });
-
-        // State update handler
-        this.communicationManager.on('update-state', async (updates: Record<string, unknown>) => {
-            const current = await this.stateManager.getCurrentProject();
-            if (!current) {
-                throw new Error('No project loaded');
-            }
-            const updated = { ...current, ...updates };
-            await this.stateManager.saveProject(updated);
-            this.communicationManager?.incrementStateVersion();
-            return { success: true, version: this.communicationManager?.getStateVersion() };
-        });
     }
 
     /**

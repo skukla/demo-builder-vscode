@@ -21,14 +21,21 @@
  * did on 2026-09-03. Run it alone anyway: two Stryker runs starve each other.
  *
  * RESUMABLE. A module with a report on disk is skipped. Delete the report to redo it.
+ * A report is named for the module's whole path (`reportNameFor`), because two
+ * modules sharing a basename wrote the same file on 2026-10-10.
+ *
+ * THE ANSWER IS NOT IN summary.jsonl. Its counts are per module, and a test idle for
+ * one module can hold another. `node scripts/mutationRedundancyCombine.mjs` judges
+ * each test once, across every report.
  */
 import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'fs';
-import { basename, join, resolve } from 'path';
+import { join, resolve } from 'path';
 
 import { suitesFor } from './focusModule.mjs';
 import { isReactSuite } from './mutationScope.mjs';
 import { analyse } from './mutationRedundantTests.mjs';
+import { reportNameFor } from './mutationRedundancyCombine.mjs';
 
 const ROOT = process.cwd();
 const BASELINE = 'reports/mutation/baseline.json';
@@ -50,7 +57,6 @@ const ONLY = arg('--only', '');
 const ALL = process.argv.includes('--all');
 
 function configsFor(mod) {
-    const stem = basename(mod).replace(/\.tsx?$/, '');
     const suites = suitesFor(mod);
     const react = suites.some(isReactSuite);
     // The JEST config must sit at the tree root: jest resolves everything relative
@@ -64,7 +70,7 @@ function configsFor(mod) {
     // loads the real tree's config while Stryker mutates the sandbox — "No tests
     // were executed", four times on 2026-09-03 before this was bisected.
     const strykerPath = resolve('stryker.redundancy.config.json');
-    const reportPath = resolve(DIR, `${stem}.json`);
+    const reportPath = resolve(DIR, reportNameFor(mod));
     writeFileSync(
         jestPath,
         `// GENERATED per module by scripts/mutationRedundancySweep.mjs — do not edit.\n` +
@@ -79,7 +85,7 @@ function configsFor(mod) {
         ...base,
         mutate: [mod],
         jest: { configFile: 'jest.redundancy.config.js', enableFindRelatedTests: true },
-        jsonReporter: { fileName: `${DIR}/${stem}.json` },
+        jsonReporter: { fileName: `${DIR}/${reportNameFor(mod)}` },
         reporters: ['json'],
         tempDirName: '.stryker-tmp-redundancy',
         incremental: false,
@@ -100,7 +106,7 @@ function main() {
         const want = new Set(readFileSync(ONLY, 'utf8').split('\n').map((l) => l.trim()).filter(Boolean));
         mods = mods.filter((m) => want.has(m));
     }
-    const pending = mods.filter((m) => !existsSync(resolve(DIR, `${basename(m).replace(/\.tsx?$/, '')}.json`)));
+    const pending = mods.filter((m) => !existsSync(resolve(DIR, reportNameFor(m))));
     console.log(`candidates: ${mods.length}   already measured: ${mods.length - pending.length}   to run: ${pending.length}`);
     const deadline = Date.now() + MINUTES * 60_000;
     let n = 0;

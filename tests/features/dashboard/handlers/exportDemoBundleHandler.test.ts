@@ -38,7 +38,7 @@ function archive(): Buffer {
 }
 
 const repoOperations = { getRepository: jest.fn() };
-const fileOperations = { downloadRepoArchive: jest.fn() };
+const repoArchive = { downloadRepoArchive: jest.fn() };
 
 function edsProject(dir: string, overrides: Partial<Project> = {}): Project {
     return createMockProject({
@@ -70,11 +70,11 @@ let dir: string;
 beforeEach(() => {
     jest.clearAllMocks();
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bundle-export-'));
-    mockGitHub.mockReturnValue({ repoOperations, fileOperations });
+    mockGitHub.mockReturnValue({ repoOperations, repoArchive });
     repoOperations.getRepository.mockResolvedValue({ fullName: 'steve/kukla-bodea', defaultBranch: 'main', isPrivate: false });
-    fileOperations.downloadRepoArchive.mockResolvedValue(archive());
-    mockSettingsDialog.mockResolvedValue({ success: true, data: { path: '/picked/kukla-bodea.demo-builder.json' } });
-    mockSettingsFile.mockResolvedValue({ path: '/p/kukla-bodea.demo-builder.json', includesSecrets: false, verify: 'x' });
+    repoArchive.downloadRepoArchive.mockResolvedValue(archive());
+    mockSettingsDialog.mockResolvedValue({ success: true, data: { path: '/picked/kukla-bodea.project.demo-builder.json' } });
+    mockSettingsFile.mockResolvedValue({ path: '/p/kukla-bodea.project.demo-builder.json', verify: 'x' });
     global.fetch = jest.fn(async () => ({ ok: false, status: 404 })) as unknown as typeof fetch;
 });
 
@@ -92,8 +92,8 @@ describe('handleExportDemoBundle', () => {
         expect(fromDialog).toMatchObject({ success: true });
 
         const headless = await handleExportDemoBundle(contextFor(edsProject(dir), false), { setup: true, storefront: false, path: 'out.json' });
-        expect(mockSettingsFile).toHaveBeenCalledWith(expect.anything(), { path: 'out.json', includeSecrets: false });
-        expect(headless).toEqual({ success: true, data: { path: '/p/kukla-bodea.demo-builder.json', fileCount: 1, parts: ['setup'] } });
+        expect(mockSettingsFile).toHaveBeenCalledWith(expect.anything(), { path: 'out.json' });
+        expect(headless).toEqual({ success: true, data: { path: '/p/kukla-bodea.project.demo-builder.json', fileCount: 1, parts: ['setup'] } });
     });
 
     it('asks where with the save dialog from the webview, and answers cancelled when dismissed', async () => {
@@ -101,7 +101,7 @@ describe('handleExportDemoBundle', () => {
         const result = await handleExportDemoBundle(contextFor(edsProject(dir), true), undefined);
         expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({ filters: { 'Demo bundle': ['zip'] } }));
         expect(result).toEqual({ success: true, data: { cancelled: true } });
-        expect(fileOperations.downloadRepoArchive).not.toHaveBeenCalled();
+        expect(repoArchive.downloadRepoArchive).not.toHaveBeenCalled();
     });
 
     it('writes the bundle where the dialog said: setup without credentials, storefront from the default branch with the description inside', async () => {
@@ -111,11 +111,11 @@ describe('handleExportDemoBundle', () => {
 
         const result = await handleExportDemoBundle(contextFor(edsProject(dir), true), undefined);
 
-        expect(fileOperations.downloadRepoArchive).toHaveBeenCalledWith('steve', 'kukla-bodea', 'develop');
+        expect(repoArchive.downloadRepoArchive).toHaveBeenCalledWith('steve', 'kukla-bodea', 'develop');
         expect(result).toMatchObject({ success: true, data: { path: target, fileCount: 3, parts: ['setup', 'storefront'] } });
         const written = new AdmZip(fs.readFileSync(target));
         const setup = JSON.parse(written.readAsText('kukla-bodea-demo-bundle/setup.demo-builder.json'));
-        expect(setup.includesSecrets).toBe(false);
+        expect(setup).not.toHaveProperty('includesSecrets');
         expect(JSON.stringify(setup)).not.toContain('fake-test-pw-not-a-secret');
         const description = JSON.parse(written.readAsText('kukla-bodea-demo-bundle/storefront/demo.demo-builder.json'));
         expect(description).toMatchObject({ kind: 'demo', name: 'Bodea', contentSource: { org: 'skukla', site: 'kukla-bodea' } });
@@ -132,7 +132,7 @@ describe('handleExportDemoBundle', () => {
     });
 
     it("passes GitHub's failure through", async () => {
-        fileOperations.downloadRepoArchive.mockRejectedValue(new Error('Failed to download archive: HTTP 404'));
+        repoArchive.downloadRepoArchive.mockRejectedValue(new Error('Failed to download archive: HTTP 404'));
         expect(await handleExportDemoBundle(contextFor(edsProject(dir), false), undefined)).toEqual({ success: false, error: 'Failed to download archive: HTTP 404' });
     });
 });

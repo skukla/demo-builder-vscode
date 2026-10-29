@@ -15,6 +15,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { normalizeProjectName } from '@/core/validation/normalizers';
 import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
+import { moveProjectSecrets } from '@/features/projects-dashboard/services/projectSecretCleanup';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
@@ -152,6 +153,13 @@ export async function renameProjectCore(
             throw saveError;
         }
 
+        // The project's secrets are keyed by its path: move them to the new one, or the
+        // renamed project loses its Commerce and integration secrets (PL-64). After the
+        // save, so a rename that rolled back never moved them.
+        await moveProjectSecrets(project, oldPath, context.context?.secrets, (line) =>
+            context.logger.info(`[Rename] ${line}`),
+        );
+
         // Regenerate AI context files when the folder moved. The MCP configs
         // (.mcp.json / .claude/mcp.json) bake the ABSOLUTE project path into the
         // server args, so a rename leaves them pointing at the old path (→ MCP
@@ -246,7 +254,8 @@ async function syncRemoteProjectTitle(
         return;
     }
     try {
-        const renamed = await context.authManager.renameRemoteProject(
+        const { projectOps } = await context.authManager.getEntityServices();
+        const renamed = await projectOps.renameRemoteProject(
             adobe.organization,
             adobe.projectId,
             newTitle,

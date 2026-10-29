@@ -12,14 +12,11 @@
  * both destinations, because nothing is ever removed from one.
  */
 
-const mockDeployAppBuilderComponent = jest.fn();
-const mockTeardownRemote = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
-    deployAppBuilderComponent: (...a: unknown[]) => mockDeployAppBuilderComponent(...a),
-    teardownRemote: (...a: unknown[]) => mockTeardownRemote(...a),
-}));
-
-import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
+import {
+    mockDeployAppBuilderComponent,
+    mockTeardownRemote,
+    moveAppBuilderComponentsToDestination,
+} from './appBuilderComponentMigration.testUtils';
 import type { Project } from '@/types/base';
 
 import { createDeps } from './appBuilderComponentRunner.testUtils';
@@ -97,7 +94,7 @@ function deployWritingEndpointsExcept(failingId: string) {
         if (instance) {
             instance.status = 'deployed';
             // The mesh tail stamps the NEW workspace's mesh id here
-            // (appBuilderComponentRunner.ts). A mesh id belongs to exactly one
+            // (appBuilderDeployDispatch.ts). A mesh id belongs to exactly one
             // workspace, so this is the field most wrong after an abort.
             instance.metadata = { ...instance.metadata, meshId: `${id}-mesh-id-at-new-ws` };
         }

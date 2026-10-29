@@ -119,6 +119,15 @@ describe('the enforcer-suite count in CLAUDE.md matches the disk', () => {
         });
     });
 
+    it('the stated OVERNIGHT count equals what the registry actually holds', () => {
+        // The mutation runs left the sweep on 2026-10-09 for a cadence of their
+        // own. A row naming where they went is only worth having if its number
+        // cannot drift the way the periodic row's did.
+        const row = readFileSync(CLAUDE_MD, 'utf8').match(/\|\s*overnight\s*\|\s*(\d+) /);
+        expect(row).not.toBeNull();
+        expect(Number(row![1])).toBe(INSTRUMENTS.filter((i) => i.cadence === 'overnight').length);
+    });
+
     it('the stated count equals the suites in tests/sop/', () => {
         const claimed = Number(
             readFileSync(CLAUDE_MD, 'utf8').match(
@@ -352,6 +361,64 @@ describe('every entry says enough to be actionable', () => {
         ).toStrictEqual([]);
         // ...and the registry really does contain writers, so that means something.
         expect(INSTRUMENTS.filter((i) => i.writes).length).toBeGreaterThan(0);
+    });
+
+    /**
+     * The sweep never starts Stryker. Three periodic entries did, which made a
+     * "25 second" sweep take hours and collide with any other test run on the
+     * machine. Re-measuring is the overnight runner's job (owner, 2026-10-09).
+     *
+     * Read from the registry's DATA — each command, expanded through package.json
+     * and into the node script it names — so a future Stryker entry filed as
+     * `periodic` fails here, whatever it is called.
+     */
+    function runsStryker(command: string): boolean {
+        const npmScript = /^npm run (\S+)/.exec(command)?.[1];
+        const body = npmScript ? (packageScripts[npmScript] ?? '') : command;
+        if (/\bstryker run\b/.test(body)) return true;
+        const nodeFile = /^node (\S+\.mjs)/.exec(body)?.[1];
+        if (!nodeFile || !existsSync(join(REPO_ROOT, nodeFile))) return false;
+        // A spawn argument list (`['stryker', 'run', ...]`), not a mention in prose.
+        return /['"]stryker['"]/.test(readFileSync(join(REPO_ROOT, nodeFile), 'utf8'));
+    }
+
+    it('CONTROL: the Stryker detector finds the real ones and only those', () => {
+        const found = INSTRUMENTS.filter((i) => i.runs && runsStryker(i.runs))
+            .map((i) => i.id)
+            .sort();
+        expect(found).toEqual(
+            expect.arrayContaining(['mutation-test-pilot', 'test:mutation:focus'])
+        );
+        // Reads Stryker's output, and only LISTS stale rows: neither starts it.
+        expect(runsStryker('npm run test:mutation:worklist')).toBe(false);
+        expect(runsStryker('npm run test:mutation:stale -- --limit 30')).toBe(false);
+        // The overnight runner spawns it from inside a node script.
+        expect(runsStryker('node scripts/mutationSweep.mjs --stale')).toBe(true);
+    });
+
+    it('keeps every instrument that runs Stryker out of the sweep', () => {
+        const swept = sweepable()
+            .filter((i) => runsStryker(i.runs as string))
+            .map((i) => i.id);
+        expect(swept).toStrictEqual([]);
+    });
+
+    it('CONTROL: a periodic Stryker entry WOULD be swept, so the test above can fail', () => {
+        const planted: Instrument = {
+            id: 'planted-stryker',
+            kind: 'npm-script',
+            cadence: 'periodic',
+            resultKind: 'report',
+            what: 'a constructed Stryker run, to prove the check above can go red',
+            runs: 'npm run test:mutation',
+        };
+        expect(isSweepable(planted) && runsStryker(planted.runs as string)).toBe(true);
+    });
+
+    it('registers the overnight re-measure, which is where the Stryker runs went', () => {
+        const overnight = INSTRUMENTS.filter((i) => i.cadence === 'overnight');
+        expect(overnight.some((i) => i.runs?.includes('--stale'))).toBe(true);
+        expect(overnight.every((i) => i.runs && runsStryker(i.runs))).toBe(true);
     });
 
     it('points every npm-script entry at a script that exists', () => {

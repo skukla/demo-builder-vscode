@@ -19,8 +19,14 @@ import {
     handleSaveAiPrompt,
 } from './aiPromptHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { AI_FILES_OPERATION_ID } from '@/core/utils/operationIds';
+import { stageLine } from '@/core/utils/stageLine';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import { pushOperationProgress } from '@/core/vscode/operationProgress';
 import { verifyAiSetup, type AiVerificationResult } from '@/features/ai/aiSetupVerifier';
+import { agentCliStatus } from '@/features/ai/engine/activeEngine';
+import type { CommandProbe } from '@/features/ai/engine/agentCli';
 import { clearMcpCache } from '@/features/ai/mcpInspector';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { applicableMcpPackages, installAiDefaultsMcpTools, readInstalledMcpPackages } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
@@ -45,6 +51,16 @@ export { GLOBAL_AI_PROMPTS_KEY, readMergedAiPrompts } from './aiPromptHandlers';
 // ==========================================================
 // Handlers
 // ==========================================================
+
+/**
+ * The extension's command executor, as the agent CLI check asks it. Resolved
+ * inside the call, so an executor that is not registered reads as "not installed"
+ * rather than failing the verify. Shared with the on-open verify in
+ * statusHandlers, so both paths feeding the AI badge ask the same thing (AI-4a).
+ */
+export const EXTENSION_COMMAND_PROBE: CommandProbe = {
+    commandExists: (name) => ServiceLocator.getCommandExecutor().commandExists(name),
+};
 
 /**
  * Handle verify-ai-setup — run AI context file health checks.
@@ -78,6 +94,9 @@ export async function handleVerifyAiSetup(context: HandlerContext): Promise<Hand
         success: true,
         ...result,
         inventory: { ...result.inventory, gatedSkills },
+        // Not a file check, so the verifier cannot answer it: the chat needs the
+        // command-line tool, and the badge must not be green without it (AI-4a).
+        agentCli: await agentCliStatus(EXTENSION_COMMAND_PROBE),
     };
 }
 
@@ -201,6 +220,19 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
             logs: [],
         };
         void context.sendMessage('creationProgress', payload);
+        // ...and to an AGENT, which has no panel to send to: without this a
+        // regenerate said its name and then nothing for a minute (PL-59 R3).
+        reportPhase(stageLine(currentOperation, { index: stepNumber, total: totalSteps }));
+        // The same step on the shared channel, so closing the AI Capabilities
+        // modal can hand the run to a notification that keeps narrating
+        // (PL-59 R8). The modal's own per-step view is unchanged.
+        void pushOperationProgress({
+            id: AI_FILES_OPERATION_ID,
+            state: 'running',
+            stage: currentOperation,
+            step: message,
+            position: { index: stepNumber, total: totalSteps },
+        });
     };
 
     if (needsAiTooling) {
@@ -291,6 +323,9 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
     // cache so the next verify re-spawns from a clean slate.
     clearMcpCache();
 
+    // Ends the run on the shared channel: a modal closes, a backgrounded run
+    // says "— done" (PL-59 R6).
+    await pushOperationProgress({ id: AI_FILES_OPERATION_ID, state: 'succeeded' });
     return { success: true, skippedFiles, removedFiles };
 }
 

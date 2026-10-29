@@ -42,7 +42,7 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function fakeServer() {
      
-    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
+    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }>; isError?: true }>>();
     // The DECLARATION is kept, not discarded: `needsAuth`, the read-only
     // annotations and the endpoint enum are contract an agent's client reads out
     // of `tools/list`, and nothing else in this repo checks them for this tool.
@@ -54,6 +54,7 @@ function fakeServer() {
             declarations.set(name, def);
         },
         declaration: (): McpToolSchema => declarations.get('run_commerce_query')!,
+        call: async (args?: unknown) => tools.get('run_commerce_query')!(args),
         raw: async (args?: unknown): Promise<string> =>
             (await tools.get('run_commerce_query')!(args)).content[0].text,
         json: async (args?: unknown): Promise<any> =>
@@ -285,7 +286,10 @@ describe('run_commerce_query — the declaration', () => {
             { safeParse: (v: unknown) => { success: boolean } }
         >;
 
-        expect(Object.keys(shape).sort()).toStrictEqual(['endpoint', 'query', 'variables']);
+        expect(Object.keys(shape).sort()).toStrictEqual(['customerGroupId', 'endpoint', 'query', 'variables']);
+        expect(shape.customerGroupId.safeParse(16).success).toBe(true);
+        expect(shape.customerGroupId.safeParse(-1).success).toBe(false);
+        expect(shape.customerGroupId.safeParse('16').success).toBe(false);
         for (const name of ['commerceGraphQl', 'catalogService', 'mesh']) {
             expect(shape.endpoint.safeParse(name).success).toBe(true);
         }
@@ -412,6 +416,16 @@ describe('run_commerce_query — failure paths', () => {
         );
     });
 
+    it('marks a refusal or failure isError, and a result not (AI-10)', async () => {
+        const s = serve();
+        expect((await s.call({ query: 'mutation { createCart { id } }' })).isError).toBe(true);
+        expect((await s.call({ query: '' })).isError).toBe(true);
+        fetchMock.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+        expect((await s.call({ query: '{ x }' })).isError).toBe(true);
+        fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: async () => 'not json' });
+        expect((await s.call({ query: '{ x }' })).isError).toBeUndefined();
+    });
+
     it('reports a non-Error rejection rather than printing [object Object]', async () => {
         fetchMock.mockRejectedValue('socket hang up');
         const s = serve();
@@ -501,5 +515,54 @@ describe('run_commerce_query — failure paths', () => {
         const s = serve();
 
         expect(await s.raw({ query: '{ x }' })).toBe('<html>varnish cache server</html>');
+    });
+});
+
+describe('run_commerce_query — asking as a customer group', () => {
+    // Measured 2026-09-26 on bodea: Catalog Service prices a company's shared-catalog
+    // custom price only when `Magento-Customer-Group` carries the SHA-1 of the group's
+    // numeric id. ServerSavvy Solutions (group 16) got accessmesh at 49 that way; the
+    // plain id, the group's name and an empty header all got the catalog's 55.
+    const SHA1_OF_16 = '1574bddb75c78a6fd2251d61e2993b5146201319';
+
+    it('sends the SHA-1 of the group id as Magento-Customer-Group', async () => {
+        const s = serve();
+        await s.json({ query: '{ products(skus:["accessmesh"]) { sku } }', customerGroupId: 16 });
+
+        const [, init] = fetchMock.mock.calls[0];
+        expect(init.headers['Magento-Customer-Group']).toBe(SHA1_OF_16);
+    });
+
+    it('sends group 0 (NOT LOGGED IN) as its hash, not as an absent header', async () => {
+        const s = serve();
+        await s.json({ query: '{ products(skus:["x"]) { sku } }', customerGroupId: 0 });
+
+        const [, init] = fetchMock.mock.calls[0];
+        expect(init.headers['Magento-Customer-Group']).toBe('b6589fc6ab0dc82cf12099d1c2d40ab994e8410c');
+    });
+
+    it('leaves the configured header alone when no group is asked for', async () => {
+        // The project's own config sends it empty (the storefront fills it after sign-in).
+        const s = serve();
+        await s.json({ query: '{ products(skus:["x"]) { sku } }' });
+
+        const [, init] = fetchMock.mock.calls[0];
+        expect(init.headers['Magento-Customer-Group']).toBe('');
+    });
+
+    it('refuses a group on an endpoint that does not read the header', async () => {
+        // PaaS Commerce Core GraphQL takes the group from a customer token, not a
+        // header; sending one there would answer as the guest while claiming otherwise.
+        getCurrentProject.mockResolvedValue(PAAS_PROJECT);
+        const s = serve();
+        const text = await s.raw({
+            query: '{ products { total_count } }',
+            endpoint: 'commerceGraphQl',
+            customerGroupId: 16,
+        });
+
+        expect(text).toMatch(/customerGroupId/);
+        expect(text).toMatch(/Catalog Service/);
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 });

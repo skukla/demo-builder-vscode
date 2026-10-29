@@ -23,6 +23,7 @@ import './CommerceStep.testUtils';
 import React from 'react';
 import { screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { vscode } from '@/core/ui/utils/vscode-api';
 import { isCommerceConfigured } from '@/features/project-creation/ui/steps/tileStatus';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { WizardState } from '@/types/webview';
@@ -86,6 +87,55 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe('CommerceStep — in Edit, the settings belong to Configure', () => {
+    const EDITING: Partial<WizardState> = {
+        wizardMode: 'edit',
+        selectedPackage: 'buildright',
+        selectedBackend: PAAS,
+        selectedStack: 'eds-paas',
+        activeCommerceStep: 'backend',
+    };
+
+    // Three steps that each said only "Changed in Configure" are gone from the strip;
+    // the pointer to Configure is said once, on Backend (owner, 2026-10-17).
+    it('says once, on Backend, that the settings are changed in Configure', () => {
+        setup(EDITING);
+
+        expect(screen.getByTestId('commerce-set-in-configure')).toHaveTextContent(
+            'Connection, store and catalog settings are changed in project configuration.',
+        );
+        expect(document.querySelector('[data-step="connection"]')).toBeNull();
+        expect(screen.queryByTestId('connect-store-panel')).not.toBeInTheDocument();
+    });
+
+    it('links to project configuration', () => {
+        setup(EDITING);
+
+        fireEvent.click(screen.getByText('project configuration'));
+
+        // Nothing was changed in this Edit, so nothing is thrown away by leaving it.
+        expect(vscode.postMessage).toHaveBeenCalledWith('open-configure', { discardsEdits: false });
+    });
+
+    it('opens the form again once a different backend is picked', () => {
+        const { updateState } = setup({ ...EDITING, selectedPackage: 'citisignal' });
+        fireEvent.click(stepTab('backend'));
+
+        fireEvent.click(screen.getByTestId(`backend-card-${ACCS}`));
+
+        expect(updateState).toHaveBeenCalledWith({ foundationChanged: true });
+    });
+
+    it('stays locked when the same backend is picked again', () => {
+        const { updateState } = setup(EDITING);
+        fireEvent.click(stepTab('backend'));
+
+        fireEvent.click(screen.getByTestId(`backend-card-${PAAS}`));
+
+        expect(updateState).not.toHaveBeenCalledWith({ foundationChanged: true });
+    });
+});
 
 describe('CommerceStep — Backend→stack bridge (v7)', () => {
     describe('backend cards (selection marker)', () => {

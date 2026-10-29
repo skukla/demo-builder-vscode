@@ -132,6 +132,8 @@ describe('generateClaudeSettings', () => {
         const hook = settings.hooks?.['PostToolUse']?.[0];
 
         expect(hook?.matcher).toMatch(/Write|Edit/);
+        // Claude Code runs only hooks declared as a command.
+        expect(hook?.hooks.map((h) => h.type)).toEqual(['command']);
     });
 
     it('PostToolUse hook command references the storefront local path', () => {
@@ -231,6 +233,29 @@ describe('generateClaudeSettings', () => {
             );
 
             expect(out).toBe('/demo/storefront/blocks/hero/hero.js');
+        });
+
+        it('EXECUTES: takes the camelCase filePath spelling too, at any depth', () => {
+            const project = makeEdsProject();
+            const command =
+                generateClaudeSettings(project, NODE_PATH).hooks?.['PostToolUse']?.[0]?.hooks?.[0]
+                    ?.command ?? '';
+            const script = command.slice(
+                command.indexOf("-e '") + 4,
+                command.indexOf("'); ")
+            );
+            const payload = JSON.stringify({
+                toolName: 'edit',
+                toolArgs: { filePath: '/demo/storefront/blocks/hero/hero.css' },
+            });
+
+            const out = require('child_process').execFileSync(
+                process.execPath,
+                ['-e', script],
+                { input: payload, encoding: 'utf8' }
+            );
+
+            expect(out).toBe('/demo/storefront/blocks/hero/hero.css');
         });
 
         it('EXECUTES: yields empty (and the guard skips) when there is no file_path', () => {
@@ -357,7 +382,7 @@ describe('buildHomeGitSyncCommand', () => {
         expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*) ;; *) exit 0 ;; esac`);
     });
 
-    it('applies the origin-remote guard (the own-storefront guard is proved by running it, in homeGitSyncHook.test.ts)', () => {
+    it('applies the origin-remote guard (the own-storefront guard is proved by running it, in claudeSettingsWriter.homeGitSync.test.ts)', () => {
         const command = buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH);
         expect(command).toContain('git -C "$TOP" remote get-url origin >/dev/null 2>&1 || exit 0');
     });
@@ -386,6 +411,7 @@ describe('generateHomeClaudeSettings', () => {
         const hook = settings.hooks?.['PostToolUse']?.[0];
 
         expect(hook?.matcher).toBe('Write|Edit');
+        expect(hook?.hooks.map((h) => h.type)).toEqual(['command']);
         const command = hook?.hooks?.[0]?.command ?? '';
         expect(command).toBe(buildHomeGitSyncCommand(HOME_ROOT, NODE_PATH));
         expect(command).toContain(`case "$TOP" in "${HOME_ROOT}"/*)`);
@@ -452,6 +478,12 @@ describe('PreToolUse aio-global guard', () => {
         });
     }
 
+    it('is declared as a command hook, the only kind Claude Code runs', () => {
+        const entry = guardEntry(generateClaudeSettings(makeMeshOnlyProject(), NODE_PATH));
+
+        expect(entry?.hooks.map((h) => h.type)).toEqual(['command']);
+    });
+
     describe('the command, executed', () => {
         it('EXECUTES: exits 2 (block) and names the alternative on stderr', () => {
             const command = guardEntry(generateClaudeSettings(makeEdsProject(), NODE_PATH))
@@ -462,7 +494,10 @@ describe('PreToolUse aio-global guard', () => {
             let status: number | undefined;
             let stderr = '';
             try {
-                execFileSync('/bin/sh', ['-c', command], { encoding: 'utf8' });
+                execFileSync('/bin/sh', ['-c', command], {
+                    encoding: 'utf8',
+                    input: '{"tool_name":"mcp__commerce-extensibility__aio-where","tool_input":{}}',
+                });
                 status = 0;
             } catch (err) {
                 const e = err as { status?: number; stderr?: string };
@@ -478,14 +513,66 @@ describe('PreToolUse aio-global guard', () => {
             expect(stderr).toContain('get_project_status');
         });
 
-        it('is static — no interpolated path and nothing that can silently no-op', () => {
-            // The git-sync hook's failure mode was a conditional whose input was
-            // always empty. This command has no input and no conditional.
+        it('interpolates no path — the command carries no project-specific value', () => {
             const command = guardEntry(generateClaudeSettings(makeEdsProject(), NODE_PATH))
                 ?.hooks[0]?.command as string;
             expect(command).not.toContain(EDS_STOREFRONT_PATH);
-            expect(command).not.toContain('TOOL_FILE');
-            expect(command).not.toContain('if ');
+            expect(command).not.toContain(NODE_PATH);
+        });
+    });
+
+    /**
+     * The guard used to be a bare `echo; exit 2` that relied on its matcher. That is
+     * safe only where matchers are honoured. VS Code's Local agent reads Claude-format
+     * hooks and IGNORES matchers, so the bare form denies EVERY tool call there; Copilot
+     * CLI honours neither the matcher nor the `mcp__server__tool` name shape, so it never
+     * fired at all. The command now reads the payload and decides for itself, and its
+     * default answer is "not mine" (2026-09-16, AI-12 step 01).
+     */
+    describe('the command decides for itself, whatever the harness does with matchers', () => {
+        const runGuard = (payload: string): { status: number; stderr: string } => {
+            const command = guardEntry(generateClaudeSettings(makeEdsProject(), NODE_PATH))
+                ?.hooks[0]?.command as string;
+            const { execFileSync } = require('child_process');
+            try {
+                execFileSync('/bin/sh', ['-c', command], { encoding: 'utf8', input: payload });
+                return { status: 0, stderr: '' };
+            } catch (err) {
+                const e = err as { status?: number; stderr?: string };
+                return { status: e.status ?? -1, stderr: e.stderr ?? '' };
+            }
+        };
+
+        it.each([
+            ['Claude', '{"tool_name":"mcp__commerce-extensibility__aio-where","tool_input":{}}'],
+            ['Claude', '{"tool_name":"mcp__commerce-extensibility__aio-app-use","tool_input":{}}'],
+            ['Copilot', '{"tool_name":"commerce-extensibility-aio-configure-global","tool_input":{}}'],
+            ['Copilot camelCase', '{"toolName": "commerce-extensibility-aio-where", "toolInput": {}}'],
+        ])('blocks the guarded tool named the %s way', (_style, payload) => {
+            const { status, stderr } = runGuard(payload);
+            expect(status).toBe(2);
+            expect(stderr).toContain(GUARD_SIGNATURE);
+        });
+
+        it.each([
+            ['an unrelated MCP tool', '{"tool_name":"mcp__commerce-extensibility__aio-app-deploy","tool_input":{}}'],
+            ['one of our own tools', '{"tool_name":"mcp__demo-builder__deploy_mesh","tool_input":{}}'],
+            ['a plain edit', '{"tool_name":"Edit","tool_input":{"file_path":"/p/a.js"}}'],
+            ['no payload at all', ''],
+            ['an unparseable payload', 'not json'],
+        ])('lets %s through', (_case, payload) => {
+            expect(runGuard(payload)).toStrictEqual({ status: 0, stderr: '' });
+        });
+
+        it('does not block an edit that merely MENTIONS a guarded tool', () => {
+            // The cheap implementation greps the whole payload. Documentation and
+            // skill files in this very repo name these tools, so a substring match
+            // would refuse to let anyone write about them.
+            const payload = JSON.stringify({
+                tool_name: 'Write',
+                tool_input: { file_path: '/p/docs/notes.md', content: 'never call aio-where or aio-app-use' },
+            });
+            expect(runGuard(payload)).toStrictEqual({ status: 0, stderr: '' });
         });
     });
 

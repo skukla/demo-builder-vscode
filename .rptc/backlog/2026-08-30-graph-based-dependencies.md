@@ -4,7 +4,7 @@ kind: feature
 area: prerequisites
 needs: []
 value: low
-status: backlog
+status: dropped
 ---
 
 # Graph-based dependency system
@@ -37,3 +37,7 @@ two-level limit is still what hurts, and on which real case, before designing fo
 Preserved in git history — `git show <sha>:docs/architecture/graph-based-dependencies.md`
 — rather than carried forward, since its "Current State" section describes a model
 that has already moved.
+
+## Shipped so far
+
+- 2026-10-03  Dropped 2026-10-03 (owner): an unbuilt proposal whose own body says to re-check the premise; the prerequisites reframe (PR-1) covers the same ground.

@@ -197,6 +197,32 @@ export async function runInBatches<T, R>(
     return results;
 }
 
+/**
+ * Settle with whichever of two promises FULFILS first.
+ *
+ * Unlike a race, a rejection does not win: it waits for the other. Only when both
+ * reject does this reject, with the primary's reason — the one the caller would
+ * have seen had it asked just the primary. (`Promise.any`, which the ES2020 target
+ * lacks, for exactly two.)
+ *
+ * @param primary - the promise whose failure is reported when both fail
+ * @param secondary - the other one
+ * @returns the first fulfilled value
+ */
+export function firstSuccess<T>(primary: Promise<T>, secondary: Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+        let primaryReason: unknown;
+        let failures = 0;
+        const failed = (isPrimary: boolean) => (reason: unknown) => {
+            if (isPrimary) primaryReason = reason;
+            failures += 1;
+            if (failures === 2) reject(primaryReason);
+        };
+        primary.then(resolve, failed(true));
+        secondary.then(resolve, failed(false));
+    });
+}
+
 // Note: For command-level retry logic with exponential backoff,
 // see CommandExecutor.executeWithRetry() which already
 // handles retries for git, npm, aio, and other CLI commands.

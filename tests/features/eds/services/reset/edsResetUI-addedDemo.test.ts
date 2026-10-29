@@ -17,7 +17,7 @@ import {
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
 import type { DemoSourceCheck } from '@/features/eds/services/reset/demoSourceCheck';
-import type { EdsResetResult } from '@/features/eds/services/reset/edsResetService';
+import type { EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -25,6 +25,9 @@ jest.setTimeout(5000);
 
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn(),
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
     extractResetParams: jest.fn().mockReturnValue({
         success: true,
         params: { repoOwner: 'test-owner', repoName: 'test-repo' },
@@ -174,31 +177,44 @@ describe('reset of a project built on an added demo — the source check', () =>
         expect(mockedReset).not.toHaveBeenCalled();
     });
 
+    // Found by the first mutation run of edsResetUI on its own (EDS-8, 2026-10-08).
+    it('never checks a source for a project that is not built on an added demo', async () => {
+        mockedReset.mockResolvedValue({ success: true });
+        const project = createProject();
+        delete project.demo;
+
+        await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project,
+            context: createContext(),
+            repoOperations,
+        });
+
+        expect(mockedCheck).not.toHaveBeenCalled();
+        expect(mockedReset).toHaveBeenCalledTimes(1);
+    });
+
+    it("names the demo in the keep-content offer when the check gave no sentence of its own", async () => {
+        mockedCheck.mockResolvedValue({ ...CONTENT_GONE, contentMessage: undefined });
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce(undefined);
+        const project = createProject();
+
+        await run();
+
+        expect(vscode.window.showWarningMessage).toHaveBeenNthCalledWith(
+            1,
+            `The ${project.demo!.name} demo's pages can't be reached right now. ` +
+                'You can reset the code and keep the content this site has now.',
+            { modal: true },
+            { title: 'Keep current content' },
+        );
+    });
+
     it('never sends keepContent for a reachable content site', async () => {
         await run();
 
         const params = mockedReset.mock.calls[0][0];
         expect('keepContent' in params).toBe(false);
-    });
-});
-
-describe('reset of a project built on an added demo — what the SC is told after', () => {
-    it("shows the dry check's caveats, joined, in the wizard's words", async () => {
-        await run({
-            success: true,
-            demoCaveats: ['Product links may not work.', 'Product pages may open empty.'],
-        });
-
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'A few things to know about this demo: Product links may not work. Product pages may open empty.',
-        );
-    });
-
-    it('shows nothing extra when the dry check found no caveats', async () => {
-        await run({ success: true, demoCaveats: [] });
-
-        expect(vscode.window.showWarningMessage).not.toHaveBeenCalledWith(
-            expect.stringContaining('A few things to know'),
-        );
     });
 });

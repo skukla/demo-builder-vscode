@@ -54,6 +54,41 @@ describe('ProjectConfigWriter manifest fields', () => {
         });
     });
 
+    // AB-70: removing an ERP left its id in the integration's `systems` list, and a later
+    // ERP added under the same id read as linked before its add finished. A manifest
+    // already carrying a stale id heals on its next save; the load path writes nothing.
+    describe("an integration's systems list", () => {
+        const source = { owner: 'skukla', repo: 'commerce-erp-integration' };
+
+        it('drops ids no longer in the project, keeping the rest in order', async () => {
+            const manifest = await save({
+                appBuilderComponents: {
+                    'erp-integration': {
+                        kind: 'integration',
+                        status: 'deployed',
+                        source,
+                        systems: ['demo-erp', 'demo-erp-2'],
+                    },
+                    'demo-erp': { kind: 'system', status: 'deployed', source, usedBy: 'erp-integration' },
+                },
+            });
+
+            const components = manifest.appBuilderComponents as Project['appBuilderComponents'];
+            expect(components?.['erp-integration']?.systems).toEqual(['demo-erp']);
+        });
+
+        it('keeps an emptied list as an empty list, which says "no system"', async () => {
+            const manifest = await save({
+                appBuilderComponents: {
+                    'erp-integration': { kind: 'integration', status: 'deployed', source, systems: ['demo-erp-2'] },
+                },
+            });
+
+            const components = manifest.appBuilderComponents as Project['appBuilderComponents'];
+            expect(components?.['erp-integration']?.systems).toStrictEqual([]);
+        });
+    });
+
     describe('the fixed header', () => {
         it('stamps the current manifest format version', async () => {
             expect((await save({})).formatVersion).toBe(MANIFEST_FORMAT_VERSION);
@@ -126,10 +161,25 @@ describe('ProjectConfigWriter manifest fields', () => {
             expect(manifest.selectedBlockLibraries).toEqual(['citisignal', 'b2b']);
         });
 
+        it('writes installedBlockLibraries when non-empty', async () => {
+            const installed = [
+                {
+                    name: 'Demo Builder Blocks',
+                    source: { owner: 'skukla', repo: 'demo-builder-blocks', branch: 'main' },
+                    commitSha: 'abc123',
+                    blockIds: ['catalog-menu'],
+                    installedAt: '2026-10-05T15:38:19.000Z',
+                },
+            ];
+
+            expect((await save({ installedBlockLibraries: installed })).installedBlockLibraries).toEqual(installed);
+        });
+
         it.each([
             ['selectedAddons'],
             ['selectedBlockLibraries'],
             ['customBlockLibraries'],
+            ['installedBlockLibraries'],
         ] as const)('omits %s when it is an empty array', async (field) => {
             const manifest = await save({ [field]: [] });
 
@@ -140,6 +190,7 @@ describe('ProjectConfigWriter manifest fields', () => {
             ['selectedAddons'],
             ['selectedBlockLibraries'],
             ['customBlockLibraries'],
+            ['installedBlockLibraries'],
         ] as const)('omits %s when it is undefined', async (field) => {
             const manifest = await save({ [field]: undefined });
 

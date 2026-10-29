@@ -20,6 +20,9 @@
  */
 export const CHECK_RESULT_MESSAGE = 'checkResult';
 
+/** The Site access webview's line 2 while it waits for an admin role ("1 of 4 checks done, ..."). */
+export const SITE_ACCESS_PROGRESS_MESSAGE = 'siteAccessProgress';
+
 /**
  * Stable ids for the automatic on-open checks (the `checkResult` routing keys).
  * One typed place — no ad-hoc message-type strings scattered across features.

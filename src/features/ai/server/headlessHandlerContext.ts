@@ -1,8 +1,8 @@
 /**
  * Headless HandlerContext factory for the in-extension MCP server.
  *
- * Mirrors `BaseWebviewCommand.createHandlerContext()` (see
- * `src/features/dashboard/commands/openAi.ts`) but with no webview: `panel` and
+ * Mirrors `BundledPanelCommand.createHandlerContext()` (see
+ * `src/commands/bundledPanelCommand.ts`) but with no webview: `panel` and
  * `communicationManager` are undefined and `sendMessage` is a no-op. This lets
  * MCP tools dispatch to the existing handler maps (via `dispatchHandler`) with
  * the same context the UI uses — minus the webview the agent surface doesn't have.
@@ -21,7 +21,7 @@ import type * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
-import type { HandlerContext, SharedState } from '@/types/handlers';
+import type { AgentWorkingProject, HandlerContext, SharedState } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 
@@ -29,8 +29,10 @@ export function createHeadlessHandlerContext(
     context: vscode.ExtensionContext,
     stateManager: StateManager,
     logger: Logger,
+    agentWorkingProject?: AgentWorkingProject,
 ): HandlerContext {
     return {
+        ...(agentWorkingProject ? { agentWorkingProject } : {}),
         // Real, not undefined. `PrerequisitesManager` takes only an extension path
         // and a logger and contains ZERO `vscode.window` references, so it works
         // headlessly exactly as it does behind the panel

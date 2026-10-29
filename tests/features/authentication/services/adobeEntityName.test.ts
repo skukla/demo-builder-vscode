@@ -8,7 +8,9 @@
 
 import {
     deriveAdobeEntityName,
+    deriveFreeAdobeEntityName,
     randomNameSuffix,
+    toAdobeTitle,
 } from '@/features/authentication/services/adobeEntityName';
 
 describe('deriveAdobeEntityName', () => {
@@ -71,5 +73,94 @@ describe('randomNameSuffix', () => {
         } finally {
             random.mockRestore();
         }
+    });
+});
+
+// Console's workspace boxes show the NAME, so "ProductionKnDo" is what the SC read
+// (owner, 2026-09-21). A workspace name becomes part of its Runtime namespace
+// (`<org>-<project>-<workspace>`), and Adobe's deploy service refuses a namespace
+// with a dash in the workspace part: "Non-standard namespace formats are not
+// supported after aio-cli v10" (measured 2026-09-22, adding Northwind ERP as
+// `Northwind-ERP`). So the name is letters and digits only. A taken name is
+// numbered; the random ending is only for when the names in use cannot be read.
+describe('deriveFreeAdobeEntityName', () => {
+    it('is the title without spaces when nothing in the project has it', () => {
+        expect(deriveFreeAdobeEntityName('Northwind ERP', ['Production'])).toBe('NorthwindERP');
+    });
+
+    it('drops every other character, so no dash ever reaches the namespace', () => {
+        expect(deriveFreeAdobeEntityName('  My  demo_2024! ', [])).toBe('Mydemo2024');
+        expect(deriveFreeAdobeEntityName('Northwind-ERP', [])).toMatch(/^[A-Za-z0-9]+$/);
+    });
+
+    // A second one is numbered, not scrambled (owner, 2026-09-21).
+    it('numbers a taken name with the lowest free number, ignoring case', () => {
+        expect(deriveFreeAdobeEntityName('Northwind ERP', ['northwinderp'])).toBe('NorthwindERP1');
+        expect(
+            deriveFreeAdobeEntityName('Northwind ERP', ['NorthwindERP', 'NorthwindERP1', 'NorthwindERP3']),
+        ).toBe('NorthwindERP2');
+    });
+
+    it('keeps a numbered name at 19 or fewer', () => {
+        expect(deriveFreeAdobeEntityName('a'.repeat(40), ['a'.repeat(19)])).toBe('a'.repeat(18) + '1');
+    });
+
+    it('adds the random ending when the names in use are unknown', () => {
+        expect(deriveFreeAdobeEntityName('Northwind ERP', undefined, 'ZZZZ')).toBe('NorthwindERPZZZZ');
+    });
+
+    it('stays at 19 or fewer', () => {
+        expect(deriveFreeAdobeEntityName('Northwind Tradersx ERP', [])).toBe('NorthwindTradersxER');
+        expect(deriveFreeAdobeEntityName('a'.repeat(40), [], 'ZZZZ')).toBe('a'.repeat(19));
+        expect(deriveFreeAdobeEntityName('a'.repeat(40), undefined, 'ZZZZ')).toBe('a'.repeat(15) + 'ZZZZ');
+    });
+
+    it('falls back to App when the title has nothing Adobe accepts', () => {
+        expect(deriveFreeAdobeEntityName('***', [])).toBe('App');
+    });
+
+    it('treats a missing title as an empty one', () => {
+        expect(deriveFreeAdobeEntityName(undefined as unknown as string, [])).toBe('App');
+    });
+
+    // The fallback still has to be unique: App is numbered when taken, and gets the
+    // random ending when the names in use are unknown.
+    it('gives the App fallback an ending like any other name', () => {
+        expect(deriveFreeAdobeEntityName('***', ['app'])).toBe('App1');
+        expect(deriveFreeAdobeEntityName('***', undefined, 'ZZZZ')).toBe('AppZZZZ');
+    });
+});
+
+// aio's config schema takes a title of letters, digits and spaces, 1–45 long; Console
+// takes anything, so a title it accepted failed at `aio app use` (2026-10-05, live).
+describe('toAdobeTitle', () => {
+    it('turns punctuation into a space so the title reads the same', () => {
+        expect(toAdobeTitle('Multi-ERP Integration')).toBe('Multi ERP Integration');
+        expect(toAdobeTitle("Acme's ERP (test) #2")).toBe('Acme s ERP test 2');
+    });
+
+    it('keeps accented letters, which the schema allows', () => {
+        expect(toAdobeTitle('Café Demo')).toBe('Café Demo');
+    });
+
+    it('leaves a title the schema already accepts alone', () => {
+        expect(toAdobeTitle('Kukla Justrite')).toBe('Kukla Justrite');
+    });
+
+    it('keeps it to 45 characters, with no trailing space', () => {
+        const title = toAdobeTitle(`${'a'.repeat(44)} bcd`);
+        expect(title).toBe('a'.repeat(44));
+        expect(toAdobeTitle('x'.repeat(60))).toHaveLength(45);
+    });
+
+    it('falls back to App when nothing usable is left', () => {
+        expect(toAdobeTitle('---')).toBe('App');
+        expect(toAdobeTitle(undefined as unknown as string)).toBe('App');
+    });
+
+    // The space a leading "-" turns into is dropped BEFORE the cut, so it does not
+    // take one of the 45 places from the title.
+    it('does not spend one of the 45 characters on leading punctuation', () => {
+        expect(toAdobeTitle(`-${'a'.repeat(45)}`)).toBe('a'.repeat(45));
     });
 });

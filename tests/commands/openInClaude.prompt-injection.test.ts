@@ -16,6 +16,7 @@ import {
     makeGlobalState,
     makeOpenInClaudeContext,
     makeOpenInClaudeProject,
+    claudePresent,
 } from './openInClaude.testUtils';
 // The CLASS, not the interface of the same name in `@/types/state`. This
 // consumer declares the class (private fields and all), which is exactly what
@@ -46,7 +47,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({
@@ -62,7 +64,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({
@@ -82,7 +85,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -104,7 +108,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({
@@ -123,7 +128,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({
@@ -141,7 +147,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({
@@ -162,7 +169,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({
@@ -183,7 +191,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({
@@ -202,7 +211,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -215,7 +225,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -245,7 +256,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({
@@ -275,7 +287,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({
@@ -302,7 +315,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(globalState),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute({
@@ -343,7 +357,8 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                makeLogger()
+                makeLogger(),
+                claudePresent(),
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);

@@ -86,7 +86,7 @@ export interface ContentPatchSource {
  *
  * Per ADR-006 D3 the canonical home is `skukla/eds-demo-patches` (the
  * generalized successor to `eds-demo-content-patches`); a path of e.g.
- * `citisignal` selects the patch family for a storefront.
+ * `citisignal-b2b` selects the patch family for a storefront.
  */
 export interface CodePatchSource {
     /** GitHub owner/organization of the patch repository */
@@ -99,7 +99,8 @@ export interface CodePatchSource {
      *  canonical (multi-canonical patches repos). Omitted = the default root
      *  `last-known-good`. Every current package entry (citisignal-b2b, b2b,
      *  bodea) tracks adobe-commerce/boilerplate-b2b-template and sets
-     *  `lkgFile: "b2b/last-known-good"`; the root default is presently unused. */
+     *  `lkgFile: "b2b/last-known-good"`. The root default is still read by older
+     *  projects that recorded no `lkgFile` (see `LkgSource` in lkgReader.ts). */
     lkgFile?: string;
 }
 

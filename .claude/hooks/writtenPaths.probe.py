@@ -18,7 +18,9 @@ passed. A proof covering only the easy shapes reports clean on the one that matt
 """
 import json
 import os
+import shutil
 import subprocess
+import tempfile
 
 ROOT = os.getcwd()
 
@@ -49,12 +51,18 @@ def run_bash(cmd):
     return fired(r.stderr or '')
 
 
-HANDLER = 'src/features/dashboard/handlers/appBuilderComponentHandlers.ts'
+# Must stay OVER the handler limit, or the god-file case below has nothing to fire on.
+# Was appBuilderComponentHandlers.ts until EDS-8 cut it to 152 lines (2026-10-04),
+# then projects-dashboard/handlers/dashboardHandlers.ts until EDS-8 cut that to a
+# 42-line re-export (2026-10-05), then prerequisites/handlers/shared.ts until EDS-8
+# cut that to a 71-line re-export plus one function (2026-10-04, day-b). This one
+# is ~710 lines.
+HANDLER = 'src/features/prerequisites/handlers/installHandler.ts'
 CSS = 'src/core/ui/styles/index.css'
 HELIX = 'src/features/eds/services/helix/helixApiClient.ts'
 
 CASES = [
-    # THE BUG THIS FIXES: a 910-line handler edited through python.
+    # THE BUG THIS FIXES: an oversized handler edited through python.
     ("python3 - <<'PY'\np='" + HANDLER + "'\nopen(p,'w').write(x)\nPY", 'god-file'),
     # a stylesheet edited with an in-place sed
     ("sed -i '' 's/a/b/' " + CSS, 'css-baseline'),
@@ -72,6 +80,23 @@ CASES = [
     ('git log --oneline -5', '-'),
 ]
 
+# A LEADING cd MOVES THE BASE (PL-83). A throwaway checkout (a `.git` entry is what
+# marks one) holding the same relative paths at different sizes from this repo's:
+# the rule must measure the file in the folder the command cd'd into, not this one.
+OTHER = tempfile.mkdtemp(prefix='writtenPaths-cd-')
+os.makedirs(os.path.join(OTHER, '.git'))
+BIG = 'src/features/x/services/onlyThere.ts'  # absent here, 450 lines there
+for rel, lines in ((BIG, 450), (HANDLER, 10)):  # HANDLER is ~710 lines here, 10 there
+    os.makedirs(os.path.dirname(os.path.join(OTHER, rel)), exist_ok=True)
+    with open(os.path.join(OTHER, rel), 'w') as f:
+        f.write('x\n' * lines)
+CASES += [
+    ("cd " + OTHER + " && python3 - <<'PY'\np='" + BIG + "'\nopen(p,'w').write(x)\nPY", 'god-file'),
+    ("cd " + OTHER + " && python3 - <<'PY'\np='" + HANDLER + "'\nopen(p,'w').write(x)\nPY", '-'),
+    # a cd into scratch is not the subject, whatever is written there
+    ("cd /tmp && cat > " + HANDLER + " <<'EOF'\nx\nEOF", '-'),
+]
+
 bad = 0
 for cmd, expect in CASES:
     got = run_bash(cmd)
@@ -80,3 +105,4 @@ for cmd, expect in CASES:
     print(f'  {"OK " if ok else "*** WRONG ***"}  expect={expect:15s} got={got:15s} '
           f'{cmd.splitlines()[0][:50]}')
 print(f'\n{len(CASES) - bad}/{len(CASES)} correct')
+shutil.rmtree(OTHER, ignore_errors=True)

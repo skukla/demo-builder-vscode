@@ -12,6 +12,10 @@
  * for DA.live content operations). The user must have admin role on the
  * org, which is auto-assigned when they install the AEM Code Sync GitHub App.
  *
+ * What a registration says (lookup key, body schema) lives in `siteConfigParams`;
+ * how one request is authenticated and how Adobe's refusals are worded lives in
+ * `configServiceRequest`. This file is the site-config operations themselves.
+ *
  * Note: folder mapping (`POST /folders.json`) is deprecated by Adobe
  * (see aem.live/developer/byom) and removed from this client in audit A2
  * (2026-05-18). CitiSignal storefronts route /products/{sku} via client-side
@@ -20,42 +24,21 @@
  * @module features/eds/services/configService/configurationService
  */
 
-import type { TokenProvider } from '../daLive/daLiveContentOperations';
+import type { TokenProvider } from '../daLive/daLiveApiClient';
 import { HELIX_ADMIN_URL } from '../helix/helixApiClient';
+import { getImsToken, requestConfigService, type ConfigServiceResult } from './configServiceRequest';
+import { buildRegistrationBody, type SiteRegistrationParams } from './siteConfigParams';
 import { captureSiteGrants, restoreCapturedGrants } from './siteGrantPreservation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
-// ==========================================================
-// Constants
-// ==========================================================
-
-/** AEM Admin API base URL (same host as preview/publish) */
-// Host constant shared from helixApiClient — one definition (2026-08-22 spine sweep).
-
-// ==========================================================
-// Types
-// ==========================================================
-
 /**
- * Parameters for site registration with the Configuration Service
+ * The site-config object's address, `/config/{org}/sites/{site}.json`. Register, delete and
+ * the overlay read-back all address the same object; this file is the pinned owner of that
+ * path (spine-chokepoints, "config-service PATHS"), so the builder lives here, once.
  */
-export interface SiteRegistrationParams {
-    /** DA.live org name — used as the Configuration Service lookup key (URL path) */
-    org: string;
-    /** Site name in the Configuration Service */
-    site: string;
-    /** GitHub repository owner */
-    codeOwner: string;
-    /** GitHub repository name */
-    codeRepo: string;
-    /** DA.live content source URL (e.g., https://content.da.live/org/site/) */
-    contentSourceUrl: string;
-    /** Content source type (default: 'markup') */
-    contentSourceType?: string;
-    /** Optional BYOM content overlay URL. When set, the registration body
-     *  includes a `content.overlay` block alongside `content.source`. */
-    contentOverlayUrl?: string;
+function siteConfigUrl(org: string, site: string): string {
+    return `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
 }
 
 /**
@@ -74,76 +57,6 @@ function stripUrlQueryAndFragment(url: string): string {
         return '[unparseable URL]';
     }
 }
-
-/**
- * Build the DA.live content source URL for a given org and site.
- *
- * Exported because the Code Sync setup deep link needs the same value — the
- * tool's Content step reads it from the query string, and rebuilding the URL
- * at that call site would be a second place for this format to drift.
- */
-export function buildContentSourceUrl(daLiveOrg: string, daLiveSite: string): string {
-    return `https://content.da.live/${daLiveOrg}/${daLiveSite}/`;
-}
-
-/** Build site config params from repo and DA.live identifiers */
-export function buildSiteConfigParams(
-    repoOwner: string,
-    repoName: string,
-    daLiveOrg: string,
-    overlayUrl?: string,
-): SiteRegistrationParams {
-    // The Config Service lookup key must use the GitHub owner/repo, not the
-    // DA.live org/site. Helix's preview/publish/live operations issue requests
-    // to /preview/{owner}/{repo}/main/... and look up the site config at
-    // /config/{owner}/sites/{repo}.json. Registering under the DA.live name
-    // leaves the config invisible to those operations — every preview/publish
-    // silently fails because Helix has no content source mapping for the
-    // lookup key it actually checks.
-    //
-    // The DA site name and repo name are ONE identifier: creation locks them
-    // together and every register path migrates a legacy mismatch first
-    // (reset's step 0; repair since 2026-08-23), so this takes no separate
-    // daLiveSite. The former `legacyLookupKey` orphan-cleanup hint retired
-    // with that guarantee — `storefrontNameMigration` is the surviving legacy
-    // path, and its DELETE+PUT re-registration shakes off the stale primary
-    // stamp without needing the orphan deleted.
-    return {
-        org: repoOwner,
-        site: repoName,
-        codeOwner: repoOwner,
-        codeRepo: repoName,
-        contentSourceUrl: buildContentSourceUrl(daLiveOrg, repoName),
-        ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
-    };
-}
-
-/**
- * Result of a Configuration Service operation
- */
-export interface ConfigServiceResult {
-    success: boolean;
-    error?: string;
-    /** HTTP status code from the API */
-    statusCode?: number;
-    /**
-     * `false` when the update landed but the site's admin grants could NOT be
-     * handed back afterwards.
-     *
-     * The config write genuinely succeeded, so this is not a failure — but the
-     * grants are gone and nothing in the app can restore them, because the access
-     * endpoint requires the very role that was lost. Silence is what makes that
-     * permanent, so the loss rides out on the success result instead.
-     * Absent means nothing needed restoring.
-     */
-    grantsRestored?: boolean;
-    /** Masked addresses whose grants were lost, for the message that reports it. */
-    lostGrants?: string[];
-}
-
-// ==========================================================
-// Service
-// ==========================================================
 
 /**
  * Client for the AEM Configuration Service API
@@ -177,16 +90,8 @@ export class ConfigurationService {
      * @returns Result with success/error status
      */
     async registerSite(params: SiteRegistrationParams): Promise<ConfigServiceResult> {
-        const {
-            org,
-            site,
-            codeOwner,
-            codeRepo,
-            contentSourceUrl,
-            contentSourceType,
-            contentOverlayUrl,
-        } = params;
-        const url = `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+        const { org, site, codeOwner, codeRepo, contentSourceUrl, contentOverlayUrl } = params;
+        const url = siteConfigUrl(org, site);
 
         this.logger.info(`[ConfigService] Registering site: ${org}/${site}`);
         this.logger.debug(
@@ -201,37 +106,13 @@ export class ConfigurationService {
             );
         }
 
-        const source = { url: contentSourceUrl, type: contentSourceType || 'markup' };
-        const body = {
-            version: 1,
-            code: { owner: codeOwner, repo: codeRepo },
-            content: contentOverlayUrl
-                ? // `suffix` is part of the overlay schema, not a workaround.
-                  // The Admin API defines `content.overlay` as a Markup Content
-                  // Source — `type` (required), `url` (required), `suffix`
-                  // (optional string):
-                  //   https://www.aem.live/docs/admin.html#schema/ContentConfig
-                  // It is the field that makes Helix's admin service append the
-                  // suffix before fetching from the overlay URL. We need it
-                  // because our PDP paths are extensionless
-                  // (`/products/{urlKey}/{sku}`) while the overlay serves `.html`.
-                  //
-                  // Corroborated empirically (citisignal-b2b 2026-06-10): without
-                  // it, Helix's live tier 404s any unmatched `/products/*` path
-                  // even though the overlay action returns 200 when called
-                  // directly. That observation used to be the ONLY justification
-                  // here, which read as a guess worth tidying away; the schema is
-                  // now the reason and the observation merely agrees with it.
-                  //
-                  // NOTE: an overlay is tied to the BASE CONTENT, not the site
-                  // config — two sites sharing a content source cannot have
-                  // different overlays. See docs/architecture/eds-byom-pdp-routing.md.
-                  // See also: .rptc/research/eds-pdp-routing-validation/findings.md
-                  { source, overlay: { url: contentOverlayUrl, type: 'markup', suffix: '.html' } }
-                : { source },
-        };
-
-        return this.makeRequest('PUT', url, body);
+        return requestConfigService(
+            this.tokenProvider,
+            this.logger,
+            'PUT',
+            url,
+            buildRegistrationBody(params),
+        );
     }
 
     // ==========================================================
@@ -311,11 +192,11 @@ export class ConfigurationService {
      * @returns Result with success/error status
      */
     async deleteSiteConfig(org: string, site: string): Promise<ConfigServiceResult> {
-        const url = `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+        const url = siteConfigUrl(org, site);
 
         this.logger.info(`[ConfigService] Deleting site config: ${org}/${site}`);
 
-        return this.makeRequest('DELETE', url);
+        return requestConfigService(this.tokenProvider, this.logger, 'DELETE', url);
     }
 
     /**
@@ -335,9 +216,9 @@ export class ConfigurationService {
         org: string,
         site: string,
     ): Promise<{ readable: boolean; overlayUrl?: string }> {
-        const url = `${HELIX_ADMIN_URL}/config/${encodeURIComponent(org)}/sites/${encodeURIComponent(site)}.json`;
+        const url = siteConfigUrl(org, site);
         try {
-            const token = await this.getImsToken();
+            const token = await getImsToken(this.tokenProvider);
             const response = await fetch(url, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${token}` },
@@ -358,132 +239,6 @@ export class ConfigurationService {
                 `[ConfigService] Overlay read for ${org}/${site} failed: ${(error as Error).message}`,
             );
             return { readable: false };
-        }
-    }
-
-    // ==========================================================
-    // Private Helpers
-    // ==========================================================
-
-    /**
-     * Make an authenticated request to the Configuration Service API
-     */
-    private async makeRequest(
-        method: string,
-        url: string,
-        body?: Record<string, unknown>,
-    ): Promise<ConfigServiceResult> {
-        try {
-            const token = await this.getImsToken();
-
-            const headers: Record<string, string> = {
-                Authorization: `Bearer ${token}`,
-            };
-
-            const fetchOptions: RequestInit = {
-                method,
-                headers,
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            };
-
-            if (body) {
-                headers['content-type'] = 'application/json';
-                fetchOptions.body = JSON.stringify(body);
-            }
-
-            const response = await fetch(url, fetchOptions);
-
-            if (response.ok) {
-                this.logger.debug(`[ConfigService] ${method} ${url} -> ${response.status} OK`);
-                return { success: true, statusCode: response.status };
-            }
-
-            // 404 on DELETE means already gone — treat as success
-            if (method === 'DELETE' && response.status === 404) {
-                this.logger.debug(`[ConfigService] Site config already deleted (404)`);
-                return { success: true, statusCode: 404 };
-            }
-
-            return await this.handleErrorResponse(method, url, response);
-        } catch (error) {
-            const message = (error as Error).message;
-            this.logger.error(`[ConfigService] Request failed: ${message}`);
-            return { success: false, error: message };
-        }
-    }
-
-    /** Handle a non-OK, non-404-DELETE response from the Configuration Service API. */
-    private async handleErrorResponse(
-        method: string,
-        url: string,
-        response: Response,
-    ): Promise<ConfigServiceResult> {
-        let errorBody = '';
-        try {
-            errorBody = await response.text();
-        } catch {
-            // Ignore parse errors
-        }
-
-        // Debug: log raw response body for auth failures to diagnose token type issues
-        if (response.status === 401 || response.status === 403) {
-            const safeBody = errorBody.replace(/[\r\n]/g, ' ').substring(0, 200);
-            this.logger.debug(`[ConfigService] Auth failure raw response: ${safeBody}`);
-        }
-
-        // Adobe returns an EMPTY body on 401/403 and puts its stated reason in
-        // `x-error`; `x-invocation-id` is the handle Adobe support needs to trace
-        // the call. Both were discarded, which is why a field 403 was
-        // undiagnosable from the logs. Absent headers are omitted rather than
-        // padded, so the line carries only what Adobe actually said.
-        const xError = response.headers?.get?.('x-error') ?? undefined;
-        const invocationId = response.headers?.get?.('x-invocation-id') ?? undefined;
-        const detail = [
-            xError ? `x-error: ${xError}` : undefined,
-            invocationId ? `x-invocation-id: ${invocationId}` : undefined,
-        ]
-            .filter(Boolean)
-            .join(', ');
-
-        const errorMessage = this.formatError(response.status, errorBody);
-        // 409 (conflict) is handled by callers (delete + re-create) — log at info, not error
-        const logLevel = response.status === 409 ? 'info' : 'error';
-        this.logger[logLevel](
-            `[ConfigService] ${method} ${url} -> ${response.status}: ${errorMessage}` +
-                `${detail ? ` (${detail})` : ''}`,
-        );
-        return { success: false, error: errorMessage, statusCode: response.status };
-    }
-
-    /**
-     * Get IMS token for Configuration Service authentication
-     */
-    private async getImsToken(): Promise<string> {
-        const token = await this.tokenProvider.getAccessToken();
-        if (!token) {
-            throw new Error('DA.live authentication required. Please sign in to DA.live first.');
-        }
-        return token;
-    }
-
-    /**
-     * Format error message based on HTTP status
-     */
-    private formatError(status: number, body: string): string {
-        switch (status) {
-            case 401:
-                return 'Configuration Service auth failed. Your DA.live token may have expired — try re-authenticating with DA.live.';
-            case 403:
-                // Deliberately does NOT name AEM Code Sync. This 403 has been
-                // observed on runs where code sync was verified and publishing
-                // in the same session, so pointing at it sends people to
-                // reinstall a working app instead of seeking the access they
-                // actually lack.
-                return 'Not authorized for Configuration Service (403). Your Adobe account lacks admin access to the site configuration for this GitHub namespace — ask an Adobe admin to grant it.';
-            case 409:
-                return 'Site configuration already exists. It may have been created by another process.';
-            default:
-                return `Configuration Service error (${status}): ${body || 'Unknown error'}`;
         }
     }
 }

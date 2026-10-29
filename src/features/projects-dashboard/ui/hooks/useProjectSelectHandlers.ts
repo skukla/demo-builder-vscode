@@ -31,8 +31,11 @@ export type ProjectSelectHandler = (
  * @returns handlers to spread onto the tile's `onClick` / `onKeyDown`
  */
 export function useProjectSelectHandlers(project: Project, onSelect: ProjectSelectHandler) {
+    // A project still being created has nothing to open yet; its tile only says so (PL-82).
+    const creating = project.status === 'creating';
     const handleClick = useCallback(
         (e: React.MouseEvent) => {
+            if (creating) return;
             // Shift-click / Cmd-click → open in a new VS Code window (standard
             // VS Code modifier convention for Open Recent et al.).
             if (e.shiftKey || e.metaKey) {
@@ -41,10 +44,11 @@ export function useProjectSelectHandlers(project: Project, onSelect: ProjectSele
                 onSelect(project);
             }
         },
-        [project, onSelect],
+        [creating, project, onSelect],
     );
 
     const handleKeyDown = useActivateOnKey((e) => {
+        if (creating) return;
         // SHIFT only: there is no cmd-Enter convention for this in VS Code, and
         // binding meta here would swallow other shortcuts.
         if (e.shiftKey) {

@@ -1,5 +1,5 @@
 /**
- * Settings tools (Phase 4, Group 7) — read the 22 `demoBuilder.*` keys, and
+ * Settings tools (Phase 4, Group 7) — read the `demoBuilder.*` keys, and
  * hand a change back to the user.
  *
  * ## Why the read exists
@@ -55,12 +55,12 @@ export const SETTING_KEYS = [
     'demoBuilder.updateChannel',
     'demoBuilder.logLevel',
     'demoBuilder.projectsViewMode',
+    'demoBuilder.integrationsViewMode',
     'demoBuilder.cleanupBehavior',
     'demoBuilder.blockLibraries.defaults',
     'demoBuilder.blockLibraries.custom',
     'demoBuilder.blockLibraries.syncBehavior',
     'demoBuilder.demos.added',
-    'demoBuilder.appBuilderComponents.custom',
     'demoBuilder.ai.enableThirdPartyTools',
     // Read-visible so an agent can tell whether destructive calls will raise
     // the native consent dialog. Writing goes through set_setting's hands-back
@@ -74,8 +74,11 @@ export const SETTING_KEYS = [
     'demoBuilder.byom.enabled',
     'demoBuilder.byom.overlayUrl',
     'demoBuilder.ai.engine',
+    'demoBuilder.ai.permissions',
     'demoBuilder.dataInstaller.enabled',
+    'demoBuilder.dataInstaller.engine',
     'demoBuilder.dataInstaller.apiBaseUrl',
+    'demoBuilder.datapackStore.apiBaseUrl',
 ] as const;
 
 /**

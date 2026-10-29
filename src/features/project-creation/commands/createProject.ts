@@ -1,15 +1,15 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getLogger } from '@/core/logging/debugLogger';
 import { StepLogger } from '@/core/logging/stepLogger';
-import { getBundleUri } from '@/core/utils/bundleUri';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { readViewModeSetting } from '@/core/state/viewModePreference';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
 // Prerequisites checking is handled by PrerequisitesManager
 import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
@@ -18,13 +18,13 @@ import { projectCreationHandlers } from '@/features/project-creation/handlers/Pr
 import { formatGroupName as formatGroupNameHelper } from '@/features/project-creation/helpers/formatters';
 import { ADDED_DEMOS_SETTING, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
+import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import { HandlerContext, SharedState } from '@/types/handlers';
-import type { SettingsFile } from '@/types/settingsFile';
 import { parseJSON } from '@/types/typeGuards';
 import type { ComponentSelection } from '@/types/webview';
 import type { BlockLibraryDefaultsUpdatedPayload, AddedDemosUpdatedPayload,
     CustomBlockLibraryDefaultsUpdatedPayload, WizardInitialData } from '@/types/webviewPayloads';
-import type { EditProjectConfig, WizardStepDefinition } from '@/types/wizard';
+import type { EditProjectConfig, ProjectSeed, WizardStepDefinition } from '@/types/wizard';
 
 /**
  * Type guard for one wizard-steps.json entry (SOP §10 compliance)
@@ -55,7 +55,13 @@ function formatComponentDefaults(defaults: ComponentSelection | null): string {
     return `frontend=${frontend}, backend=${backend}, ${depCount} dependencies`;
 }
 
-export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitialData> {
+/** The confirm button when leaving an Edit that has changes for Configure. */
+const DISCARD_AND_OPEN = 'Discard and open';
+
+export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardInitialData> {
+    protected readonly bundleName = 'wizard';
+    protected override readonly servesLocalMedia = true;
+
     // The prerequisites, auth, error-logging and progress managers are NOT held
     // here: createPanelHandlerContext builds them, and the session's shared
     // instances are the point — a second PrerequisitesManager starts with an
@@ -64,7 +70,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
     private stepLogger: StepLogger | null = null;
     private stepLoggerInitPromise: Promise<StepLogger> | null = null;
     private templatesPath: string;
-    private importedSettings: SettingsFile | null = null; // Settings imported from file or copied from project
+    private importedSettings: ProjectSeed | null = null; // The project file from Import, or Copy's seed
     private editProject: EditProjectConfig | null = null; // Configuration for editing existing project
 
     // Shared state object (passed by reference to handlers for automatic synchronization)
@@ -98,7 +104,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         // Initialize shared state object (passed by reference to handlers)
         this.sharedState = {
             currentComponentSelection: undefined,
-            componentsData: undefined,
             currentPrerequisites: undefined,
             currentPrerequisiteStates: undefined,
             isAuthenticating: false,
@@ -209,7 +214,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
 
     // Implement abstract methods from BaseWebviewCommand
     protected getWebviewId(): string {
-        return 'demoBuilderWizard';
+        return WIZARD_WEBVIEW_ID;
     }
 
     protected getWebviewTitle(): string {
@@ -222,29 +227,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         return { title: this.getWebviewTitle(), subtitle: this.editProject?.projectName };
     }
 
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'wizard',
-        });
-
-        const nonce = this.getNonce();
-
-        // Get base URI for media assets
-        const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
-        const baseUri = this.panel.webview.asWebviewUri(mediaPath);
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce,
-            cspSource: this.panel.webview.cspSource,
-            title: 'Adobe Demo Builder',
-            baseUri,
-        });
+    /** The page keeps the product name while the tab says create or edit. */
+    protected override documentTitle(): string {
+        return 'Adobe Demo Builder';
     }
 
     protected async getInitialData(): Promise<WizardInitialData> {
@@ -305,10 +290,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         const allProjects = await this.stateManager.getAllProjects();
         const existingProjectNames = allProjects.map((p) => p.name);
 
-        // Get view mode setting
-        const config = vscode.workspace.getConfiguration('demoBuilder');
-        const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
+        const projectsViewMode = readViewModeSetting('projects');
 
+        const config = vscode.workspace.getConfiguration('demoBuilder');
         // Get block library default settings (single array setting)
         const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
 
@@ -364,7 +348,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
      * Provides handlers with access to all required managers, loggers,
      * and shared state (passed by reference for automatic synchronization).
      */
-    private async createHandlerContext(): Promise<HandlerContext> {
+    private async createWizardHandlerContext(): Promise<HandlerContext> {
         // Built by the shared factory, not by hand. Hand-listing the managers is
         // how this surface shipped WITHOUT `componentRegistry` (2026-09-02): the
         // Connection view asks for `get-components-data`, the handler threw
@@ -373,15 +357,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         // other panel already used the factory; the wizard was the one that
         // duplicated it, so it was the one that fell behind.
         return {
-            ...createPanelHandlerContext({
-                context: this.context,
-                panel: this.panel,
-                stateManager: this.stateManager,
-                communicationManager: this.communicationManager,
-                sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-                // By reference — handler changes persist automatically.
-                sharedState: this.sharedState,
-            }),
+            // By reference — handler changes persist automatically.
+            ...super.createHandlerContext(this.sharedState),
 
             // The three the wizard genuinely owns. Its step logger is NOT the
             // factory's: it loads `wizard-steps.json` so log lines carry real step
@@ -438,6 +415,29 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
             return { success: true };
         });
 
+        // Edit's line under the backend cards: the Commerce settings change in
+        // Configure, so it links there, and Configure takes Edit's place rather than
+        // opening beside it as a second screen that saves the same project. An Edit
+        // with changes asks before they are thrown away (owner, 2026-10-17).
+        comm.on('open-configure', async (payload?: { discardsEdits?: boolean }) => {
+            if (payload?.discardsEdits) {
+                const choice = await vscode.window.showWarningMessage(
+                    'Discard your changes in Edit and open project configuration?',
+                    { modal: true },
+                    DISCARD_AND_OPEN,
+                );
+                if (choice !== DISCARD_AND_OPEN) return { success: true };
+            }
+            // The dashboard, then Configure on top: what the dashboard's Configure button
+            // leaves, so closing Configure lands on the dashboard.
+            await swapWebviewSurface(
+                this.getWebviewId(),
+                'demoBuilder.showProjectDashboard',
+                'demoBuilder.configureProject',
+            );
+            return { success: true };
+        });
+
         // Auto-register all handlers from projectCreationHandlers object literal
         // This eliminates boilerplate by automatically discovering and registering
         // all message handlers.
@@ -449,7 +449,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
 
         for (const messageType of messageTypes) {
             comm.onStreaming(messageType, async (data: unknown) => {
-                const context = await this.createHandlerContext();
+                const context = await this.createWizardHandlerContext();
                 return dispatchHandler(projectCreationHandlers, context, messageType, data);
             });
         }
@@ -484,7 +484,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
      * Used to reset the wizard when switching modes (e.g., Create while Edit is open).
      */
     public static disposeActivePanel(): void {
-        const panel = BaseWebviewCommand.getActivePanel('demoBuilderWizard');
+        const panel = BaseWebviewCommand.getActivePanel(WIZARD_WEBVIEW_ID);
         if (panel) {
             try {
                 panel.dispose();
@@ -495,7 +495,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
     }
 
     public async execute(options?: {
-        importedSettings?: SettingsFile;
+        importedSettings?: ProjectSeed;
         sourceDescription?: string;
         editProject?: EditProjectConfig;
     }): Promise<void> {

@@ -39,6 +39,13 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     })),
 }));
 
+jest.mock('@/features/eds/services/github/githubRepoLifecycle', () => ({
+    GitHubRepoLifecycle: jest.fn().mockImplementation((tokenService) => ({
+        tokenService,
+        mockType: 'GitHubRepoLifecycle',
+    })),
+}));
+
 jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation((tokenService) => ({
         tokenService,
@@ -65,6 +72,8 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
         tokenProvider,
         mockType: 'DaLiveContentOperations',
     })),
+}));
+jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveTokenProvider: jest.fn().mockReturnValue({
         getAccessToken: jest.fn().mockResolvedValue('mock-token'),
     }),
@@ -137,6 +146,7 @@ describe('edsHelpers', () => {
             expect(services).toBeDefined();
             expect(services.tokenService).toBeDefined();
             expect(services.repoOperations).toBeDefined();
+            expect(services.repoLifecycle).toBeDefined();
             expect(services.fileOperations).toBeDefined();
             expect(services.oauthService).toBeDefined();
         });

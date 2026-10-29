@@ -24,7 +24,10 @@ import {
     defaultResponse,
     DEFAULTS,
     ImportDatapackModal,
+    mockPostMessage,
 } from './ImportDatapackModal.testUtils';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 const STATUS = 'get-datapack-import-status';
 
@@ -164,8 +167,8 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await settle();
 
-            expect(await screen.findByText('Removing')).toBeInTheDocument();
-            expect(screen.getByText(/Removing Categories · 0 of 2 done/)).toBeInTheDocument();
+            expect(await screen.findByText(OPERATION_STAGES.removingDatapack.label)).toBeInTheDocument();
+            expect(screen.getByText('0 of 2 data types: Categories')).toBeInTheDocument();
         });
 
         it('CONTROL — narrates a running import as an import', async () => {
@@ -173,8 +176,8 @@ describe('ImportDatapackModal — decisions', () => {
             renderModal();
             await settle();
 
-            expect(await screen.findByText('Importing')).toBeInTheDocument();
-            expect(screen.getByText(/Importing Categories · 0 of 2 done/)).toBeInTheDocument();
+            expect(await screen.findByText(OPERATION_STAGES.installingDatapack.label)).toBeInTheDocument();
+            expect(screen.getByText('0 of 2 data types: Categories')).toBeInTheDocument();
         });
 
         it('says the REMOVAL continues on the server once watching stops', async () => {
@@ -201,7 +204,7 @@ describe('ImportDatapackModal — decisions', () => {
             withStatus(runningRecord({ perType: { categories: 'success' } }));
             renderModal();
             await settle();
-            await screen.findByText('Importing');
+            await screen.findByText(OPERATION_STAGES.installingDatapack.label);
 
             expect(screen.getByRole('progressbar')).toHaveAttribute('value', '50');
         });
@@ -276,34 +279,6 @@ describe('ImportDatapackModal — decisions', () => {
 
             expect(screen.getByText('Starting removal')).toBeInTheDocument();
         });
-
-        it('says credentials are being set up, and labels Start for that wait', async () => {
-            mockRequest.mockImplementation(async (type: string) => {
-                if (type === 'validate-datapack-import') {
-                    return {
-                        success: false,
-                        error: 'ACCS imports need credentials.',
-                        code: 'INVALID_OPERATION',
-                        data: { needsAccsCredentials: true },
-                    };
-                }
-                if (type === 'provision-accs-credentials') {
-                    return new Promise(() => undefined);
-                }
-                return defaultResponse(type);
-            });
-            renderModal();
-            await awaitForm();
-            await press(screen.getByRole('checkbox', { name: 'Categories' }));
-            await press(screen.getByRole('button', { name: /^dry run$/i }));
-
-            await press(
-                await screen.findByRole('button', { name: /set up credentials automatically/i })
-            );
-
-            expect(screen.getByText('Setting up credentials')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Setting up' })).toBeInTheDocument();
-        });
     });
 
     describe('the result footer', () => {
@@ -320,17 +295,69 @@ describe('ImportDatapackModal — decisions', () => {
             await screen.findByText(/dry run passed/i);
         }
 
-        it('offers Back and nothing else when the outcome carries no credentials offer', async () => {
+        it('offers Back and nothing else', async () => {
             await passedDryRun();
 
-            expect(
-                screen.queryByRole('button', { name: /set up credentials automatically/i })
-            ).not.toBeInTheDocument();
             // Every button, unfiltered: an extra footer entry with no label is
             // exactly what a broken actions array produces, and dropping the
             // nameless ones would hide it.
             const labels = screen.getAllByRole('button').map((button) => button.textContent);
             expect(labels).toEqual(['Close', 'Back']);
+        });
+    });
+
+    /**
+     * Closing stops nothing: a RUNNING job is handed to a progress notification
+     * so the SC keeps seeing it, and the close button says so. With no job
+     * running, closing just closes.
+     */
+    describe('closing the modal', () => {
+        beforeEach(() => {
+            mockPostMessage.mockClear();
+        });
+
+        it('hands a running import to a notification named for it, then closes', async () => {
+            const onClose = jest.fn();
+            withStatus(runningRecord());
+            renderModal({ onClose });
+            await settle();
+
+            await press(await screen.findByRole('button', { name: 'Run in background' }));
+
+            expect(mockPostMessage.mock.calls).toStrictEqual([
+                ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Importing Bodea' }],
+            ]);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('names a running removal as a removal', async () => {
+            withStatus(runningRecord({ operation: 'reset' }));
+            renderModal({ onClose: jest.fn() });
+            await settle();
+
+            await press(await screen.findByRole('button', { name: 'Run in background' }));
+
+            expect(mockPostMessage.mock.calls).toStrictEqual([
+                ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Removing Bodea' }],
+            ]);
+        });
+
+        it('just closes when no job is running', async () => {
+            const onClose = jest.fn();
+            renderModal({ onClose });
+            await awaitForm();
+
+            await press(screen.getByRole('button', { name: 'Close' }));
+
+            expect(mockPostMessage.mock.calls).toStrictEqual([]);
+            expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        it('titles the dialog with the pack it imports', async () => {
+            renderModal();
+            await awaitForm();
+
+            expect(screen.getByText('Import Bodea')).toBeInTheDocument();
         });
     });
 

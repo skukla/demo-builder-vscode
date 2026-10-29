@@ -21,7 +21,7 @@ import {
     mockGetAuthenticationService,
     mockGetCommandExecutor,
     mockGetEwCanvasBranch,
-    mockOpenInIncognito,
+    mockOpenPrivateBrowser,
     mockRenameProjectCore,
     mockResetEdsProjectWithUI,
     mockResetProjectWithUI,
@@ -99,7 +99,11 @@ describe('handleDeleteProject', () => {
 
         const result = await handleDeleteProject(context, { projectPath: project.path });
 
-        expect(mockDeleteProject).toHaveBeenCalledWith(context, project);
+        // Plus where it reports and the id its modal follows (PL-59).
+        expect(mockDeleteProject).toHaveBeenCalledWith(context, project, undefined, {
+            progress: undefined,
+            operationId: expect.stringContaining('delete:'),
+        });
         expect(context.sendMessage).toHaveBeenCalledWith('projectDeleted', {});
         expect(result).toEqual({ success: true, data: { success: true } });
     });
@@ -187,8 +191,8 @@ describe('handleEditProject', () => {
 
         const result = await handleEditProject(context, { projectPath: project.path });
 
-        // includeSecrets = true: a local edit re-seeds the fields the user typed.
-        expect(mockExtractSettingsFromProject).toHaveBeenCalledWith(project, true);
+        // The in-memory seed, not the export: a local edit re-seeds the fields the user typed.
+        expect(mockExtractSettingsFromProject).toHaveBeenCalledWith(project);
         expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.createProject', {
             editProject: {
                 projectPath: project.path,
@@ -330,24 +334,19 @@ describe('handleRenameProject', () => {
 });
 
 describe('handleOpenLiveSite', () => {
-    it('opens the stored live URL in a private browser inside a progress notification', async () => {
+    it('opens the stored live URL in a private browser', async () => {
         const project = createEdsProject();
         const context = createProjectsDashboardContext([project]);
 
         const result = await handleOpenLiveSite(context, { projectPath: project.path });
 
-        expect(mockOpenInIncognito).toHaveBeenCalledWith('https://main--citisignal--acme.aem.live');
+        // The notification covering the launch belongs to openPrivateBrowser and is
+        // pinned in browserUtils' own suite.
+        expect(mockOpenPrivateBrowser).toHaveBeenCalledWith(
+            'https://main--citisignal--acme.aem.live',
+        );
         // Never the ordinary browser — the whole point is a clean session.
         expect(mockOpenExternal).not.toHaveBeenCalled();
-        // Incognito launch is slow, so it runs behind a NON-cancellable notification:
-        // half-launching a browser is not a state the user can be left in.
-        expect(vscode.window.withProgress).toHaveBeenCalledWith(
-            expect.objectContaining({
-                location: vscode.ProgressLocation.Notification,
-                cancellable: false,
-            }),
-            expect.any(Function),
-        );
         expect(result).toEqual({ success: true });
     });
 
@@ -356,10 +355,14 @@ describe('handleOpenLiveSite', () => {
         edsMetadataOf(project).liveUrl = 'javascript:alert(1)';
         const context = createProjectsDashboardContext([project]);
 
-        await expect(
-            handleOpenLiveSite(context, { projectPath: project.path }),
-        ).rejects.toThrow('Invalid live URL');
-        expect(mockOpenInIncognito).not.toHaveBeenCalled();
+        const result = await handleOpenLiveSite(context, { projectPath: project.path });
+
+        // Refused before anything opens, so nothing fails inside a notification.
+        expect(result).toEqual({
+            success: false,
+            error: 'Invalid live URL: javascript:alert(1)',
+        });
+        expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
     });
 
     it('reports the URL is unavailable for a non-EDS project', async () => {
@@ -368,7 +371,7 @@ describe('handleOpenLiveSite', () => {
 
         const result = await handleOpenLiveSite(context, { projectPath: project.path });
 
-        expect(mockOpenInIncognito).not.toHaveBeenCalled();
+        expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
         expect(result).toEqual({ success: false, error: 'EDS live URL not available' });
     });
 
@@ -409,9 +412,25 @@ describe('handleOpenDaLive', () => {
         );
     });
 
-    it('reports the URL is unavailable when the DA.live org is missing', async () => {
+    // No STORED org is not no org: the DA.live org IS the GitHub namespace, which
+    // republish and the agent's storefront tools have always fallen back to. This
+    // used to refuse and hide a link that works (owner sweep, 2026-09-20).
+    it('falls back to the repo owner when no DA.live org is stored', async () => {
         const project = createEdsProject();
         delete edsMetadataOf(project).daLiveOrg;
+        const context = createProjectsDashboardContext([project]);
+
+        const result = await handleOpenDaLive(context, { projectPath: project.path });
+
+        expect(String(mockOpenExternal.mock.calls[0][0])).toBe('https://da.live/#/acme/citisignal');
+        expect(result).toEqual({ success: true });
+    });
+
+    // With no repo either there is nothing to derive from, and it still refuses.
+    it('reports the URL is unavailable when nothing names the storefront', async () => {
+        const project = createEdsProject();
+        delete edsMetadataOf(project).daLiveOrg;
+        delete edsMetadataOf(project).githubRepo;
         const context = createProjectsDashboardContext([project]);
 
         const result = await handleOpenDaLive(context, { projectPath: project.path });
@@ -445,6 +464,8 @@ describe('handleResetProject', () => {
             project,
             context,
             logPrefix: '[ProjectsList]',
+            progress: undefined,
+            operationId: expect.stringContaining('reset:'),
         });
         expect(result).toEqual({ success: true });
     });
@@ -465,6 +486,9 @@ describe('handleResetProject', () => {
             includeBlockLibrary: true,
             verifyCdn: true,
             showLogsOnError: true,
+            // Where it reports, and the id whose modal follows it (PL-59).
+            progress: undefined,
+            operationId: expect.stringContaining('reset:'),
         });
         expect(result).toEqual({ success: true });
     });

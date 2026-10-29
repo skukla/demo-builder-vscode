@@ -31,6 +31,7 @@
  * it might retry.
  */
 
+import { z } from 'zod';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { resolveProjectStatus } from './projectStatusTool';
@@ -64,13 +65,57 @@ export function registerCurrentProjectTool(
             inputSchema: {},
         },
         async () => {
-            const p = await ctxFactory().stateManager.getCurrentProject();
+            const ctx = ctxFactory();
+            const p = await ctx.stateManager.getCurrentProject();
             return asText({
                 currentProject: p ? await resolveProjectStatus(p) : null,
-                // WHY this project: the session's own directory, or the
-                // dashboard's pointer. Scoped sessions never move the pointer.
-                scope: scopedProjectDir ? 'session-directory' : 'dashboard-pointer',
+                // WHY this project: the session's own directory, a project this agent
+                // created or picked, or the dashboard's pointer (AI-15).
+                scope: scopeOf(ctx, scopedProjectDir),
             });
         },
     );
+
+    server.registerTool(
+        'set_current_project',
+        {
+            needsAuth: false,
+            annotations: { readOnlyHint: false, destructiveHint: false },
+            title: 'Set Current Project',
+            description:
+                'Choose the project your other tools act on (get_project, configure_project, deploy_*, ' +
+                "start_demo…). Takes the path from list_projects. It changes only what YOU work on: " +
+                "the person's open project and screens stay where they are. Unrelated to select_project, " +
+                'which picks an Adobe Console project.',
+            inputSchema: {
+                projectPath: z.string().describe('Absolute project path (from list_projects)'),
+            },
+        },
+        async (args: { projectPath?: unknown }) => asText(await chooseProject(ctxFactory(), args?.projectPath)),
+    );
+}
+
+/** Why `get_current_project` answered with this project. */
+function scopeOf(ctx: HandlerContext, scopedProjectDir: string | undefined): string {
+    const chosen = ctx.agentWorkingProject?.path;
+    if (!chosen) return 'dashboard-pointer';
+    return chosen === scopedProjectDir ? 'session-directory' : 'agent-chosen';
+}
+
+/**
+ * Point this agent connection at a project (AI-15). Until 2026-10-19 this ran the projects
+ * list's "open project", which made the project current for the PERSON and opened its
+ * dashboard on their screen; an agent picking a project now moves nothing of theirs.
+ */
+async function chooseProject(ctx: HandlerContext, projectPath: unknown) {
+    if (typeof projectPath !== 'string' || !projectPath) return { error: 'projectPath is required (from list_projects).' };
+    if (!ctx.agentWorkingProject) return { error: 'This connection cannot choose a project.' };
+    // Only a project the projects list would show: the path came from an agent.
+    const known = (await ctx.stateManager.getAllProjects()).some((p) => p.path === projectPath);
+    const project = known
+        ? await ctx.stateManager.loadProjectFromPath(projectPath, undefined, { persistAfterLoad: false })
+        : null;
+    if (!project) return { error: `No project at ${projectPath}. Use a path from list_projects.` };
+    ctx.agentWorkingProject.path = project.path;
+    return { currentProject: { name: project.name, path: project.path }, scope: 'agent-chosen' };
 }

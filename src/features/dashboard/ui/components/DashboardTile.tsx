@@ -35,6 +35,10 @@ export interface DashboardTileStatus {
     variant: StatusDotVariant;
     /** What the dot means. Replaces the idle tooltip while shown. */
     tooltip: string;
+    /** The short word shown beside the dot where a row has room: after the label
+     *  in a compact list, in place of the description on a card. A square tile,
+     *  or a card given no word, keeps only the corner dot. */
+    label?: string;
     testId: string;
 }
 
@@ -42,6 +46,8 @@ export interface DashboardTileProps {
     label: string;
     icon: React.ReactNode;
     onPress: () => void;
+    /** One short line under the label saying where the tile goes. Open-row cards only. */
+    description?: string;
     /** Shown when there is no status dot. Omit for a tile with no tooltip. */
     tooltip?: string;
     /** Present only when there is something to report. */
@@ -61,12 +67,18 @@ export function DashboardTile({
     label,
     icon,
     onPress,
+    description,
     tooltip,
     status,
     isDisabled,
     className,
     action,
 }: DashboardTileProps): React.ReactElement {
+    // A card with something to report says it on its second line — dot and word
+    // where "where this goes" usually sits — instead of a corner dot a card's
+    // width away from the title it qualifies. A corner dot is what made the
+    // integrations status read as detached once it became a card.
+    const inlineStatus = description && status?.label ? status : undefined;
     const button = (
         <ActionButton
             onPress={onPress}
@@ -74,20 +86,48 @@ export function DashboardTile({
             isDisabled={isDisabled}
             UNSAFE_className={cn('dashboard-action-button', className)}
             data-action={action}
+            // A card's name is its title; the description line is a hint, not
+            // part of what the button is called.
+            aria-label={description ? label : undefined}
         >
             {icon}
-            <Text UNSAFE_className="icon-label">{label}</Text>
-            {status && (
+            {description ? (
+                <span className="dashboard-tile-text">
+                    <Text UNSAFE_className="icon-label">{label}</Text>
+                    {inlineStatus ? (
+                        <span className="dashboard-tile-status dashboard-tile-status--inline">
+                            <StatusDot
+                                variant={inlineStatus.variant}
+                                className="tile-status-dot"
+                                testId={inlineStatus.testId}
+                            />
+                            <span className="dashboard-tile-status-text" data-variant={inlineStatus.variant}>
+                                {inlineStatus.label}
+                            </span>
+                        </span>
+                    ) : (
+                        <Text UNSAFE_className="dashboard-tile-description">{description}</Text>
+                    )}
+                </span>
+            ) : (
+                <Text UNSAFE_className="icon-label">{label}</Text>
+            )}
+            {status && !inlineStatus && (
                 // The SHARED dot, never a hand-rolled span: rolling its own is
                 // what once cost the integrations tile its in-progress pulse.
-                // `integrations-tile-dot` supplies POSITION only; `tile-status-dot`
-                // exempts it from the tile's blanket "no descendant backgrounds on
-                // hover" rule, which would otherwise blank it under the pointer.
-                <StatusDot
-                    variant={status.variant}
-                    className="integrations-tile-dot tile-status-dot"
-                    testId={status.testId}
-                />
+                // `dashboard-tile-status` supplies POSITION — a corner overlay on
+                // tiles and cards, inline after the label in a compact list;
+                // `tile-status-dot` exempts the dot from the tile's blanket "no
+                // descendant backgrounds on hover" rule, which would otherwise
+                // blank it under the pointer.
+                <span className="dashboard-tile-status">
+                    <StatusDot variant={status.variant} className="tile-status-dot" testId={status.testId} />
+                    {status.label ? (
+                        <span className="dashboard-tile-status-text" data-variant={status.variant}>
+                            {status.label}
+                        </span>
+                    ) : null}
+                </span>
             )}
         </ActionButton>
     );
@@ -95,10 +135,15 @@ export function DashboardTile({
     const text = status?.tooltip ?? tooltip;
     if (!text) return button;
 
+    // A list tile's tooltip opens BESIDE it: above, it covered the tile you move to
+    // next. A card sits in a row with nothing above it, so its tooltip stays on top
+    // rather than over the card beside it (owner, 2026-10-17).
+    const placement = description ? 'top' : 'end';
+
     return (
-        <TooltipTrigger delay={300}>
+        <TooltipTrigger delay={300} placement={placement}>
             {button}
-            <Tooltip>{text}</Tooltip>
+            <Tooltip UNSAFE_className="dashboard-tile-tooltip">{text}</Tooltip>
         </TooltipTrigger>
     );
 }

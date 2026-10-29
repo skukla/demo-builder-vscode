@@ -17,33 +17,59 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
-import { sleep } from '@/core/utils/sleep';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { whileRunning } from '@/core/state/projectWorkRunning';
+import { numberedSteps } from '@/core/utils/numberedSteps';
+import { resetOperationId } from '@/core/utils/operationIds';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import {
+    withOperationProgress,
+    type ReportStage,
+} from '@/core/vscode/withOperationProgress';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
+import { handleMeshRedeployment } from '@/features/lifecycle/services/projectResetMesh';
+import { toComponentDefinitionEntry } from '@/features/project-creation/services/componentDefinitionEntry';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import type { Project } from '@/types/base';
 import type { ComponentRegistry, TransformedComponentDefinition } from '@/types/components';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { Stack } from '@/types/stacks';
+import { getMeshComponentInstance } from '@/types/typeGuards';
 
 // ==========================================================
 // Types
 // ==========================================================
 
-export interface ResetWithUIOptions {
-    /** Project to reset */
-    project: Project;
-    /** Handler context */
-    context: HandlerContext;
-    /** Log prefix for messages (e.g., '[Dashboard]' or '[ProjectsList]') */
-    logPrefix?: string;
-    /** ADR-015: the shell executor, supplied by the calling handler. */
-    commandManager: CommandExecutor;
-    /** ADR-015: the auth service, likewise. */
-    authManager: AuthenticationService;
+/**
+ * The reset's steps, known before it starts, so each shows its place as "(4 of 7)".
+ * Named from the stage table as creation names the same jobs (progress vocabulary
+ * slice 6, owner 2026-10-16); the mesh adds its access check and its redeploy.
+ *
+ * ORDER IS LOAD-BEARING: a step's number is its index here, so the list follows
+ * `runResetSteps`.
+ *
+ * @param project - the project being reset
+ * @returns the step names
+ */
+function projectResetSteps(project: Project): string[] {
+    return [
+        S.loadingComponents.label,
+        S.removingComponents.label,
+        S.downloadingComponents.label,
+        S.installingComponents.label,
+        S.writingConfigFiles.label,
+        ...(getMeshComponentInstance(project)?.path ? [S.checkingRequirements.label, S.redeployingMesh.label] : []),
+    ];
+}
+
+/** The SC's door: the reset's own needs plus where its progress shows. */
+export interface ResetWithUIOptions extends ProjectResetDeps {
+    /** Started from a screen that hosts the progress modal (PL-59 R1). */
+    progress?: 'modal';
+    /** The id that screen named the operation by, so its modal follows this run. */
+    operationId?: string;
 }
 
 // ==========================================================
@@ -82,43 +108,58 @@ export function buildComponentList(stack: Stack, project: Project): { id: string
     const frontend = stack.frontend;
     // Use project's saved dependencies (includes user-selected optional deps like mesh) or fall back to stack defaults
     const dependencies = project.componentSelections?.dependencies ?? stack.dependencies ?? [];
-    // App Builder apps come from the explicit saved selection (mirrors executor
-    // Step-4), NOT from selectedAddons — so reset re-clones a dashboard-added app
-    // instead of dropping it.
-    const appBuilder = project.componentSelections?.appBuilder ?? [];
+    // No integrations: reset leaves them alone (see `integrationIds`).
     return [
         ...(frontend ? [{ id: frontend, type: 'frontend' }] : []),
         ...dependencies.map((id: string) => ({ id, type: 'dependency' })),
-        ...appBuilder.map((id: string) => ({ id, type: 'app-builder' })),
     ];
 }
 
 /**
- * Reconstruct a git component definition for a dashboard-added App Builder app
- * from its saved componentInstance.
+ * The components a reset leaves exactly as they are: every App Builder component
+ * except a mesh (the mesh is a stack dependency, downloaded again and redeployed).
  *
- * App Builder apps are added at runtime from a public git URL, so they have NO
- * entry in the static registry. Reset must rebuild the definition (with its git
- * source) from the saved instance — otherwise the app is dropped from the
- * re-clone and silently lost. Returns undefined when there is nothing to clone
- * (no saved instance, or a saved instance without a repo URL). Mirrors the
- * git-source shape `appBuilderComponentRunner.buildDefinition` produces.
+ * Owner decision, 2026-09-21 (AB-23 slice 7): reset never touches an integration.
+ * Its code may be the SC's own work — one built with AI exists only on disk, and
+ * downloading it again gave back the blank starter it came from — and its app keeps
+ * running in Adobe either way, as a storefront project's reset has always left it.
+ * Rebuilding only the selected integrations had also deleted the ERP half of a pair
+ * for good, since the ERP comes with its integration rather than being selected.
+ *
+ * @param project - the project being reset
+ * @returns the ids whose folders and records stay
  */
-export function buildAppBuilderDefinitionFromInstance(
+function integrationIds(project: Project): Set<string> {
+    return new Set(
+        Object.entries(project.appBuilderComponents ?? {})
+            .filter(([, state]) => state.kind !== 'mesh')
+            .map(([id]) => id),
+    );
+}
+
+/**
+ * Remove the components folder, except the folders of what `keep` names.
+ *
+ * @param componentsDir - the project's components folder
+ * @param project - the project, whose instances say where each kept folder is
+ * @param keep - the ids whose folders stay
+ */
+async function removeComponentsExcept(
+    componentsDir: string,
     project: Project,
-    appId: string,
-): TransformedComponentDefinition | undefined {
-    const instance = project.componentInstances?.[appId];
-    if (!instance?.repoUrl) {
-        return undefined;
+    keep: Set<string>,
+): Promise<void> {
+    const options = { recursive: true, force: true };
+    if (keep.size === 0) {
+        await fsPromises.rm(componentsDir, options);
+        return;
     }
-    return {
-        id: appId,
-        name: instance.name || appId,
-        type: 'app-builder',
-        subType: 'app',
-        source: { type: 'git', url: instance.repoUrl, branch: instance.branch || 'main' },
-    } as TransformedComponentDefinition;
+    const kept = new Set(
+        [...keep].map((id) => path.basename(project.componentInstances?.[id]?.path ?? id)),
+    );
+    for (const name of await fsPromises.readdir(componentsDir)) {
+        if (!kept.has(name)) await fsPromises.rm(path.join(componentsDir, name), options);
+    }
 }
 
 /**
@@ -150,12 +191,6 @@ async function loadComponentDefinitionsFromProject(
     for (const comp of allComponents) {
         let componentDef = await findComponentByType(registryManager, comp);
 
-        // App Builder apps are added at runtime (not in the static registry), so
-        // rebuild their definition from the saved instance instead of dropping them.
-        if (!componentDef && comp.type === 'app-builder') {
-            componentDef = buildAppBuilderDefinitionFromInstance(project, comp.id);
-        }
-
         // Fallback: search all sections (e.g., mesh in "mesh" section)
         if (!componentDef) {
             componentDef = await registryManager.getComponentById(comp.id);
@@ -186,157 +221,175 @@ async function loadComponentDefinitionsFromProject(
             continue;
         }
 
-        const installOptions: { skipDependencies?: boolean } = { skipDependencies: true };
-
-        componentDef = {
-            ...componentDef,
-            type: comp.type as TransformedComponentDefinition['type'],
-        };
-        componentDefinitions.set(comp.id, {
-            definition: componentDef,
-            type: comp.type,
-            installOptions,
-        });
+        componentDefinitions.set(comp.id, toComponentDefinitionEntry(componentDef, comp.type));
     }
 
     return { componentDefinitions, registry, stack };
 }
 
 // ==========================================================
-// Environment File Regeneration
+// The reset itself
 // ==========================================================
 
-// ==========================================================
-// Mesh Redeployment
-// ==========================================================
+/** What a reset needs, whoever started it. */
+export interface ProjectResetDeps {
+    /** Project to reset */
+    project: Project;
+    /** Handler context */
+    context: HandlerContext;
+    /** Log prefix for messages (e.g., '[Dashboard]' or '[ProjectsList]') */
+    logPrefix?: string;
+    /** ADR-015: the shell executor, supplied by the calling handler. */
+    commandManager: CommandExecutor;
+    /** ADR-015: the auth service, likewise. */
+    authManager: AuthenticationService;
+}
 
-/**
- * Ensure Adobe auth AND the correct org context before redeploying the mesh.
- * Uses the shared existing-project pre-flight so this flow can't drift from the
- * dashboard deploy command (auth-expiry → Sign In; wrong org → Switch IMS Org).
- */
-async function ensureAdobeContext(
-    project: Project,
-    context: HandlerContext,
-    logPrefix: string,
-    authService: AuthenticationService,
-): Promise<boolean> {
-
-    const { ensureProjectAdobeContext } = await import(
-        '@/features/authentication/services/ensureProjectAdobeContext'
-    );
-    const result = await ensureProjectAdobeContext({
-        authManager: authService,
-        project,
-        logger: context.logger,
-        logPrefix,
-        warningMessage:
-            'Your Adobe I/O session has expired. Sign in to redeploy the API Mesh, or skip to finish without redeploying.',
-    });
-
-    return result.ready;
+/** A reset's answer, with what the mesh leg did (an agent has no notification to read it from). */
+export interface ProjectResetOutcome {
+    success: boolean;
+    error?: string;
+    meshRedeployed?: boolean;
 }
 
 /**
- * Build the org-context target for the project's KNOWN org/project/workspace via
- * the shared builder (enriches org code/name from the cached org only on an id
- * match). Targets per-invocation env instead of mutating the global.
+ * Mark the project resetting for the length of `run`; put the old status back if it
+ * never landed. Listed as resetting too, which is what the projects list reads.
  */
-async function buildProjectOrgTarget(
-    project: Project,
-    authService: AuthenticationService,
-): Promise<OrgContextTarget> {
-    const cachedOrg = authService.getCachedOrganization();
-    return buildOrgTargetFromProjectAdobe(project.adobe, cachedOrg);
-}
-
-/** Deploy the mesh under org-context targeting and persist the endpoint. */
-async function runTargetedMeshDeploy(
-    project: Project,
-    meshPath: string,
-    context: HandlerContext,
-    logPrefix: string,
-    progress: { report: (value: { message: string }) => void },
-    vscode: typeof import('vscode'),
-    commandManager: CommandExecutor,
-): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse }> {
-    progress.report({ message: 'Redeploying API Mesh' });
-    context.logger.info(`${logPrefix} Redeploying mesh`);
-
-    try {
-        // Create-or-update from REMOTE truth — the shared rule lives in
-        // deployMeshCreateOrUpdate (one copy, was three).
-        const { deployMeshCreateOrUpdate } = await import('@/features/mesh/services/meshRedeploy');
-        const meshResult = await deployMeshCreateOrUpdate(
-            meshPath,
-            commandManager,
-            context.logger,
-            (_msg, sub) => progress.report({ message: sub || _msg }),
-        );
-
-        if (meshResult.success && meshResult.data?.endpoint) {
-            const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
-            await updateMeshState(project, meshResult.data.endpoint);
-            context.logger.info(`${logPrefix} Mesh redeployed: ${meshResult.data.endpoint}`);
-            return { redeployed: true };
-        }
-        throw new Error(meshResult.error || 'Mesh deployment failed');
-    } catch (meshError) {
-        context.logger.error(`${logPrefix} Mesh redeployment failed`, meshError as Error);
-        project.status = 'ready';
+async function whileResetting<T>(deps: ProjectResetDeps, run: () => Promise<T>): Promise<T> {
+    const { project, context } = deps;
+    return whileRunning(project.path, 'resetting', async () => {
+        const originalStatus = project.status;
+        project.status = 'resetting';
         await context.stateManager.saveProject(project);
-
-        void vscode.window.showWarningMessage(
-            `"${project.name}" reset successfully, but mesh redeployment failed: ${(meshError as Error).message}. You can redeploy manually from the dashboard.`,
-        );
-
-        return {
-            redeployed: false,
-            earlyReturn: {
-                success: true,
-                error: `Reset completed but mesh redeployment failed: ${(meshError as Error).message}`,
-            },
-        };
-    }
+        try {
+            return await run();
+        } finally {
+            // Restore status if still 'resetting' (error path)
+            if (project.status === 'resetting') {
+                project.status = originalStatus;
+                await context.stateManager.saveProject(project);
+            }
+        }
+    });
 }
 
-/** Handle mesh redeployment during project reset */
-export async function handleMeshRedeployment(
-    project: Project,
-    context: HandlerContext,
-    logPrefix: string,
-    progress: { report: (value: { message: string }) => void },
-    vscode: typeof import('vscode'),
-    commandManager: CommandExecutor,
-    authService: AuthenticationService,
-): Promise<{ redeployed: boolean; earlyReturn?: HandlerResponse } | null> {
-    const { getMeshComponentInstance } = await import('@/types/typeGuards');
-    const meshComponent = getMeshComponentInstance(project);
+/** Steps 2–5: remove the components, download and install them again, write the settings back. */
+async function rebuildComponents(
+    deps: ProjectResetDeps,
+    loaded: LoadResult,
+    report: ReportStage,
+): Promise<void> {
+    const { project, context, logPrefix = '[ProjectReset]', commandManager } = deps;
 
-    if (!meshComponent?.path) return null;
-
-    progress.report({ message: 'Checking Adobe organization access' });
-    const ready = await ensureAdobeContext(project, context, logPrefix, authService);
-
-    if (!ready) {
-        context.logger.info(`${logPrefix} Adobe context unavailable, skipping mesh redeploy`);
-        return { redeployed: false };
+    report(S.removingComponents.label);
+    const componentsDir = path.join(project.path, 'components');
+    const kept = integrationIds(project);
+    try {
+        await removeComponentsExcept(componentsDir, project, kept);
+        context.logger.info(`${logPrefix} Removed components directory`);
+    } catch {
+        context.logger.debug(`${logPrefix} No components directory to remove`);
     }
 
-    // Target the project's KNOWN org/project/workspace via per-invocation env
-    // instead of mutating the shared `aio` global with select* (racey).
-    const target = await buildProjectOrgTarget(project, authService);
-    return withOrgContext(target, () =>
-        runTargetedMeshDeploy(
-            project,
-            meshComponent.path as string,
-            context,
-            logPrefix,
-            progress,
-            vscode,
-            commandManager,
-        ),
+    // Clear component instances (rebuilt by cloneAllComponents), except the
+    // integrations', whose folders were left where they are.
+    project.componentInstances = Object.fromEntries(
+        Object.entries(project.componentInstances ?? {}).filter(([id]) => kept.has(id)),
     );
+
+    report(S.downloadingComponents.label);
+    const { cloneAllComponents, installAllComponents } = await import(
+        '@/features/project-creation/services/componentInstallationOrchestrator'
+    );
+    const installContext = {
+        project,
+        componentDefinitions: loaded.componentDefinitions,
+        progressTracker: ((_phase: string, _pct: number, msg: string) => {
+            report(S.downloadingComponents.label, msg);
+        }) as import('@/features/project-creation/handlers/shared').ProgressTracker,
+        logger: context.logger,
+        saveProject: () => context.stateManager.saveProject(project),
+        commandManager,
+    };
+    await cloneAllComponents(installContext);
+
+    report(S.installingComponents.label);
+    await installAllComponents(installContext);
+
+    report(S.writingConfigFiles.label);
+    const { regenerateProjectEnvFiles } = await import(
+        '@/features/project-creation/helpers/envFileRegeneration'
+    );
+    await regenerateProjectEnvFiles(project, loaded.registry, context.logger, context.context.secrets);
+}
+
+/** The steps, numbered and reported through `show`. Throws on failure; the caller decides who hears. */
+async function runResetSteps(deps: ProjectResetDeps, show: ReportStage): Promise<ProjectResetOutcome> {
+    const { project, context, logPrefix = '[ProjectReset]', commandManager, authManager } = deps;
+    const vscode = await import('vscode');
+    context.logger.info(`${logPrefix} Resetting project: ${project.name}`);
+    const report: ReportStage = numberedSteps(projectResetSteps(project), show);
+
+    // Step 1: Load component definitions from saved project state
+    report(S.loadingComponents.label);
+    const loaded = await loadComponentDefinitionsFromProject(project, context);
+    if (loaded.componentDefinitions.size === 0) {
+        return { success: false, error: 'No components found for this project stack' };
+    }
+    context.logger.info(`${logPrefix} Found ${loaded.componentDefinitions.size} components to reset`);
+
+    await rebuildComponents(deps, loaded, report);
+
+    // Steps 6–7: check Adobe access, redeploy the API Mesh (if project has mesh)
+    const mesh = await handleMeshRedeployment(
+        project,
+        context,
+        logPrefix,
+        report,
+        vscode,
+        commandManager,
+        authManager,
+    );
+    if (mesh?.earlyReturn) {
+        return { success: true, error: mesh.earlyReturn.error, meshRedeployed: false };
+    }
+    const meshRedeployed = mesh?.redeployed ?? false;
+
+    project.status = 'ready';
+    await context.stateManager.saveProject(project);
+
+    // No timed success toast (PL-59 R6): the modal closes itself, and
+    // a run handed to the background ends with "— done". What the mesh
+    // did belongs in the log, which is where anyone checking will look.
+    context.logger.info(
+        `${logPrefix} Project reset completed` + (meshRedeployed ? ' (mesh redeployed)' : ''),
+    );
+    return { success: true, meshRedeployed };
+}
+
+/**
+ * Reset a headless project with no dialog and no notification: the core both
+ * doors share. `resetProjectWithUI` wraps it for an SC; the `reset_project`
+ * agent tool calls it directly, having taken consent through `confirm:true`.
+ *
+ * It does not stop a running demo — the caller does, by whatever means it has.
+ *
+ * @param deps - the project, its context and the two services the rebuild uses
+ * @param report - told each stage as it starts
+ * @returns the outcome, with what the mesh leg did
+ * @throws whatever a step threw, after the project's status is put back
+ */
+export async function executeProjectReset(
+    deps: ProjectResetDeps,
+    report: ReportStage,
+): Promise<ProjectResetOutcome> {
+    return whileResetting(deps, () => runResetSteps(deps, report));
+}
+
+/** What the SC's surfaces read: the outcome without the agent's mesh detail. */
+function asHandlerResponse({ success, error }: ProjectResetOutcome): HandlerResponse {
+    return { success, ...(error ? { error } : {}) };
 }
 
 // ==========================================================
@@ -346,32 +399,25 @@ export async function handleMeshRedeployment(
 /**
  * Reset a headless project with full UI flow.
  *
- * Pattern mirrors edsResetService.resetEdsProjectWithUI:
+ * Pattern mirrors edsResetUI.resetEdsProjectWithUI:
  * 1. Confirmation dialog
  * 2. Stop demo if running
  * 3. Set status to 'resetting'
- * 4. Delete components/ directory
- * 5. Clone all components (reuses componentInstallationOrchestrator)
- * 6. Install npm dependencies (reuses componentInstallationOrchestrator)
- * 7. Regenerate .env files from saved componentConfigs
- * 8. Redeploy API Mesh (if project has mesh component)
- * 9. Restore status, show success/error notification
+ * 4. The steps of {@link executeProjectReset}'s core, narrated to the
+ *    notification or the progress modal
+ * 5. Restore status, show the error notification on failure
  */
 export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<HandlerResponse> {
-    const {
-        project,
-        context,
-        logPrefix = '[ProjectReset]',
-        commandManager,
-        authManager,
-    } = options;
+    const { project, context, logPrefix = '[ProjectReset]' } = options;
 
     const vscode = await import('vscode');
 
     // Show confirmation dialog
     const confirmButton = 'Reset Project';
     const confirmation = await vscode.window.showWarningMessage(
-        `Are you sure you want to reset "${project.name}"? This will delete all components and re-install them from scratch. Your configuration will be preserved.`,
+        `Are you sure you want to reset "${project.name}"? This will delete its components and ` +
+            'install them again from scratch. Integrations are left as they are, and your ' +
+            'configuration is kept.',
         { modal: true },
         confirmButton,
     );
@@ -387,132 +433,26 @@ export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<H
         await vscode.commands.executeCommand('demoBuilder.stopDemo');
     }
 
-    // Set status to 'resetting'
-    const originalStatus = project.status;
-    project.status = 'resetting';
-    await context.stateManager.saveProject(project);
+    return whileResetting(options, async () => {
+        try {
+            return await withOperationProgress(
+                {
+                    id: options.operationId ?? resetOperationId(project.name),
+                    title: `Resetting ${getProjectDisplayName(project)}`,
+                    inModal: options.progress === 'modal',
+                },
+                async (report) => asHandlerResponse(await runResetSteps(options, report)),
+            );
+        } catch (error) {
+            const errorMessage = (error as Error).message;
+            context.logger.error(`${logPrefix} Reset failed`, error as Error);
 
-    try {
-        return await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: 'Resetting Project',
-                cancellable: false,
-            },
-            async (progress) => {
-                context.logger.info(`${logPrefix} Resetting project: ${project.name}`);
+            // A modal already shows the reason, with Debug Logs beside it.
+            if (options.progress !== 'modal') {
+                vscode.window.showErrorMessage(`Failed to reset project: ${errorMessage}`);
+            }
 
-                // Step 1: Load component definitions from saved project state
-                progress.report({ message: 'Loading component definitions' });
-                const { componentDefinitions, registry } =
-                    await loadComponentDefinitionsFromProject(project, context);
-
-                if (componentDefinitions.size === 0) {
-                    return {
-                        success: false,
-                        error: 'No components found for this project stack',
-                    };
-                }
-
-                context.logger.info(
-                    `${logPrefix} Found ${componentDefinitions.size} components to reset`,
-                );
-
-                // Step 2: Delete existing components directory
-                progress.report({ message: 'Removing existing components' });
-                const componentsDir = path.join(project.path, 'components');
-
-                try {
-                    await fsPromises.rm(componentsDir, { recursive: true, force: true });
-                    context.logger.info(`${logPrefix} Removed components directory`);
-                } catch {
-                    context.logger.debug(`${logPrefix} No components directory to remove`);
-                }
-
-                // Clear component instances (will be rebuilt by cloneAllComponents)
-                project.componentInstances = {};
-
-                // Step 3: Clone all components (reuse from orchestrator)
-                progress.report({ message: 'Downloading components' });
-                const { cloneAllComponents, installAllComponents } = await import(
-                    '@/features/project-creation/services/componentInstallationOrchestrator'
-                );
-
-                const installContext = {
-                    project,
-                    componentDefinitions,
-                    progressTracker: ((_phase: string, _pct: number, msg: string) => {
-                        progress.report({ message: msg });
-                    }) as import('@/features/project-creation/handlers/shared').ProgressTracker,
-                    logger: context.logger,
-                    saveProject: () => context.stateManager.saveProject(project),
-                    commandManager,
-                };
-
-                await cloneAllComponents(installContext);
-
-                // Step 4: Install npm dependencies (reuse from orchestrator)
-                progress.report({ message: 'Installing dependencies' });
-                await installAllComponents(installContext);
-
-                // Step 5: Regenerate .env files from saved config
-                progress.report({ message: 'Regenerating configuration files' });
-                const { regenerateProjectEnvFiles } = await import(
-                    '@/features/project-creation/helpers/envFileGenerator'
-                );
-                await regenerateProjectEnvFiles(
-                    project,
-                    registry,
-                    context.logger,
-                    context.context.secrets,
-                );
-
-                // Step 6: Redeploy API Mesh (if project has mesh)
-                const meshRedeployResult = await handleMeshRedeployment(
-                    project,
-                    context,
-                    logPrefix,
-                    progress,
-                    vscode,
-                    commandManager,
-                    authManager,
-                );
-                if (meshRedeployResult?.earlyReturn) return meshRedeployResult.earlyReturn;
-                const meshRedeployed = meshRedeployResult?.redeployed ?? false;
-
-                // Save final project state
-                project.status = 'ready';
-                await context.stateManager.saveProject(project);
-
-                // Show auto-dismissing success notification
-                const successMessage = meshRedeployed
-                    ? `"${project.name}" reset and mesh redeployed successfully`
-                    : `"${project.name}" reset successfully`;
-
-                void vscode.window.withProgress(
-                    {
-                        location: vscode.ProgressLocation.Notification,
-                        title: successMessage,
-                    },
-                    async () => sleep(TIMEOUTS.UI.NOTIFICATION),
-                );
-
-                context.logger.info(`${logPrefix} Project reset completed`);
-                return { success: true };
-            },
-        );
-    } catch (error) {
-        const errorMessage = (error as Error).message;
-        context.logger.error(`${logPrefix} Reset failed`, error as Error);
-
-        vscode.window.showErrorMessage(`Failed to reset project: ${errorMessage}`);
-
-        return { success: false, error: errorMessage };
-    } finally {
-        // Restore status if still 'resetting' (error path)
-        if (project.status === 'resetting') {
-            project.status = originalStatus;
-            await context.stateManager.saveProject(project);
+            return { success: false, error: errorMessage };
         }
-    }
+    });
 }

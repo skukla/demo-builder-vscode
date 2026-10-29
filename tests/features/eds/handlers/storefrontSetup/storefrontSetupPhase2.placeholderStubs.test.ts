@@ -30,6 +30,13 @@ import {
 } from '@/features/eds/services/placeholderStubs';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { installSiteFetch, restoreFetch } from '../../../../helpers/siteFetchFake';
+import {
+    B2B_TEMPLATE_CHECKOUT_JSON,
+    B2B_TEMPLATE_CHECKOUT_ROWS,
+} from '../../../../helpers/placeholderLabelFixtures';
+
+afterEach(restoreFetch);
 
 const EDS_CONFIG: StorefrontSetupStartPayload['edsConfig'] = {
     repoName: 'shop',
@@ -95,6 +102,100 @@ describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
             PLACEHOLDER_STUB_PATHS.map((p) => `${p}.json`).sort()
         );
         expect(entries[0].content).toBe(buildPlaceholderStubJson());
+    });
+
+    it('commits no stub for an area the content source serves a sheet for', async () => {
+        // The source the content copy reads from: a stub at the same path would
+        // stop the copied sheet from being served (measured live 2026-10-12).
+        const base = 'https://main--their-demo--colleague.aem.live';
+        const site = installSiteFetch([`${base}/placeholders/cart.json`]);
+        const githubFileOps = makeGithubFileOps();
+
+        await executePhaseHelixConfig(
+            makeContext(),
+            { ...EDS_CONFIG, contentSource: { org: 'colleague', site: 'their-demo', indexPath: '/full-index.json' } },
+            servicesWith(githubFileOps),
+            REPO_INFO,
+            new AbortController().signal
+        );
+
+        const stubCall = githubFileOps.commitTreeToBranch.mock.calls.find((c: unknown[]) =>
+            String(c[4]).includes('placeholder stub')
+        );
+        const paths = (stubCall?.[3] as Array<{ path: string }>).map((e) => e.path).sort();
+        expect(paths).toEqual(
+            PLACEHOLDER_STUB_PATHS.filter((p) => p !== 'placeholders/cart')
+                .map((p) => `${p}.json`)
+                .sort()
+        );
+        expect(site.asked()).toContain(`${base}/placeholders/cart.json`);
+    });
+
+    // The B2B template ships placeholders/checkout.json; a new repository made from
+    // it keeps that file, and it hides the checkout sheet the content copy writes
+    // (EDS-53). Creation removes it after the stub commit, as reset does, when the
+    // content source serves a checkout sheet.
+    it('removes a template label file the source has a sheet for, reading the stub commit', async () => {
+        installSiteFetch(['https://main--their-demo--colleague.aem.live/placeholders/checkout.json']);
+        const githubFileOps = makeGithubFileOps({
+            getFileContent: jest.fn(async (_o: string, _r: string, path: string) =>
+                path === 'placeholders/checkout.json'
+                    ? { content: '{"data":[{"Key":"Checkout.Summary.Edit","Value":"Edit"}]}', sha: 's', path, encoding: 'base64' }
+                    : null,
+            ),
+        });
+
+        await executePhaseHelixConfig(
+            makeContext(),
+            { ...EDS_CONFIG, contentSource: { org: 'colleague', site: 'their-demo', indexPath: '/full-index.json' } },
+            servicesWith(githubFileOps),
+            REPO_INFO,
+            new AbortController().signal
+        );
+
+        expect(githubFileOps.getFileContent).toHaveBeenCalledWith(
+            'me', 'shop', 'placeholders/checkout.json', 'sha123',
+        );
+        expect(githubFileOps.commitTreeToBranch).toHaveBeenCalledWith(
+            'me',
+            'shop',
+            'main',
+            [{ path: 'placeholders/checkout.json', mode: '100644', type: 'blob', sha: null }],
+            expect.any(String),
+        );
+    });
+
+    // Measured 2026-10-22 on a live storefront made from the B2B template: the stub replaced
+    // the template's checkout.json and the checkout's item-list heading and Edit link read
+    // "undefined". With no checkout sheet in the content source, the template's rows stay.
+    it("keeps the template's checkout labels where the source has no checkout sheet", async () => {
+        const githubFileOps = makeGithubFileOps({
+            getFileContent: jest.fn(async (_o: string, _r: string, path: string) =>
+                path === 'placeholders/checkout.json'
+                    ? { content: B2B_TEMPLATE_CHECKOUT_JSON, sha: 's', path, encoding: 'base64' }
+                    : null,
+            ),
+        });
+
+        await executePhaseHelixConfig(
+            makeContext(),
+            EDS_CONFIG,
+            servicesWith(githubFileOps),
+            REPO_INFO,
+            new AbortController().signal
+        );
+
+        expect(githubFileOps.getFileContent).toHaveBeenCalledWith('me', 'shop', 'placeholders/checkout.json', 'main');
+        const stubCall = githubFileOps.commitTreeToBranch.mock.calls.find((c: unknown[]) =>
+            String(c[4]).includes('placeholder stub')
+        );
+        const checkout = (stubCall?.[3] as Array<{ path: string; content: string }>).find(
+            (entry) => entry.path === 'placeholders/checkout.json',
+        );
+        const written = JSON.parse(checkout?.content ?? 'null') as { data: { data: unknown } };
+        expect(written.data.data).toStrictEqual(B2B_TEMPLATE_CHECKOUT_ROWS);
+        // Nothing removes it afterwards: the only commit is the stub commit.
+        expect(githubFileOps.commitTreeToBranch).toHaveBeenCalledTimes(1);
     });
 
     it('a failed stub commit warns and never fails the phase', async () => {

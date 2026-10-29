@@ -30,11 +30,11 @@
  * @module features/eds/services/storefront/storefrontNameMigration
  */
 
+import type { ConfigServiceResult } from '../configService/configServiceRequest';
 import {
     buildSiteConfigParams,
-    type ConfigServiceResult,
     type SiteRegistrationParams,
-} from '../configService/configurationService';
+} from '../configService/siteConfigParams';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';

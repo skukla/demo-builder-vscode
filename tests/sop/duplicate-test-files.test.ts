@@ -32,18 +32,16 @@
  * produces siblings). A copy across directories is a different, rarer mistake and
  * is deliberately out of scope rather than silently claimed.
  *
- * IT READS THE GIT INDEX, NOT THE DISK. `git ls-files` lists tracked files, so a
- * brand-new duplicate that has not been `git add`-ed yet is invisible here. This
- * was found by its own planted-defect control: restoring a deleted duplicate onto
- * disk left the check green, and only staging it turned the check red. That is
- * fine for the job — CI and every commit see staged files — but it means a local
- * run before `git add` is not proof. Anyone writing a control for this must stage
- * the planted file, or the control shares the blind spot and passes with it.
+ * IT READS THE WORKING TREE, untracked files included (PL-67, 2026-10-03). It used
+ * to read the git index only, and its own planted-defect control found the cost:
+ * restoring a deleted duplicate onto disk left the check green until the file was
+ * staged, so a local run before `git add` was not proof. `workingTreeFiles` lists
+ * tracked AND untracked-not-ignored files, so a planted duplicate needs no staging.
  */
 
-import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { basename, dirname, join } from 'path';
+import { workingTreeFiles } from './architectureScan';
 
 const ROOT = join(__dirname, '..', '..');
 
@@ -139,13 +137,7 @@ function testBodies(raw: string): Map<string, string> {
 }
 
 function listTestFiles(): string[] {
-    return execSync('git ls-files "tests/**/*.test.ts" "tests/**/*.test.tsx"', {
-        cwd: ROOT,
-        encoding: 'utf8',
-        maxBuffer: 8 * 1024 * 1024,
-    })
-        .trim()
-        .split('\n')
+    return workingTreeFiles('tests/**/*.test.ts', 'tests/**/*.test.tsx')
         .filter(Boolean);
 }
 

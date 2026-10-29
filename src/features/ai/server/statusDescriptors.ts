@@ -35,7 +35,7 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: false,
         readOnly: true,
         description:
-            'Check the tools a stack needs (Node versions, aio CLI, plugins) and whether each is installed. Requires a stack id from list_stacks.',
+            'Check the tools a stack needs (the Node in the Demo Builder Node folder, the aio CLI and its plugins under that Node) and whether each is installed. Requires a stack id from list_stacks.',
         map: prerequisitesHandlers,
         type: 'check-prerequisites',
         inputSchema: {
@@ -80,7 +80,7 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
         type: 'check-github-app',
         inputSchema: REPO,
         // WRITE-IN-A-READ GUARD. On an HTTP 404 from Helix the handler triggers a
-        // code sync against the repo and waits for it (`checkGitHubAppHandler.ts:207`).
+        // code sync against the repo (`triggerCodeSync`) and re-checks.
         // That is a reasonable thing for the wizard to do mid-setup and a wrong
         // thing for a tool named `check_`: an agent enumerating checks would fire
         // syncs at every repo it asked about. `skipTrigger` is the handler's own

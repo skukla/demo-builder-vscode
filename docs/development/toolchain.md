@@ -255,13 +255,13 @@ string from memory.
 ## Build — `esbuild`
 
 ```bash
-npm run compile         # production, extension + 8 webview bundles
+npm run compile         # production, extension + 9 webview bundles
 npm run watch:all       # background during iteration; then Cmd+R in the dev host
 npm run package         # vsce package
 ```
 
 NOT webpack. `esbuild.config.js` owns `WEBVIEW_ENTRIES`, which is the authoritative
-list of the eight bundles — a feature stylesheet reaches only the bundles whose
+list of the nine bundles — a feature stylesheet reaches only the bundles whose
 entry imports it. Extension-host changes need F5; webview changes need only Cmd+R.
 
 ---

@@ -222,8 +222,8 @@ Tool registration on each connection happens in two layers:
 2. A `registerExtraTools` callback (injected by `extension.ts` so the server
    module stays free of `vscode`/handler imports) that calls every other
    `register…` function: descriptor tools, discovery, auth, Adobe, create/open/
-   delete project, cloud resources, storefront, EDS reset, apply updates, view
-   tools.
+   delete project, create from an exported file, cloud resources, storefront,
+   project reset, apply updates, view tools.
 
 ---
 
@@ -265,15 +265,44 @@ are handed to the transport untouched). The server (`connectionScope.ts`)
 resolves the cwd to the containing project and, for that connection only:
 
 - current-project reads load THAT project fresh from disk per call;
-- saves route through `saveProjectConfigOnly` — a scoped session can NEVER
-  flip the dashboard's pointer (`scopedStateManager.ts`);
+- saves never move the dashboard's pointer to that project
+  (`workingProjectStateManager.ts`);
 - `get_current_project` answers `scope: "session-directory"` (vs
   `"dashboard-pointer"`), so an agent can always tell why it got the project
   it got.
 
 Decided by the owner after the battery's first tier-2 run measured an agent
-inspecting one project while its tools acted on another. The home chat and
-every unscoped client keep pointer semantics unchanged.
+inspecting one project while its tools acted on another.
+
+### Every connection has its own working project (AI-15, 2026-10-19)
+
+The same rule now covers every connection, not only scoped ones. A connection's
+working project (`HandlerContext.agentWorkingProject`) starts as the session
+directory's project, or unset; unset means it follows the person's current
+project. It moves only by the agent's own action, and never moves the person's:
+
+- `create_project`, `create_project_from_file` and `copy_project` build the new
+  project as its own (`runProjectCreation`), so creation's saves leave the
+  person's current project alone, and the agent's next tools act on what it made;
+- `set_current_project` sets the connection's working project only. It used to
+  run the projects list's "open project", which switched the person's project
+  and opened its dashboard on their screen;
+- `get_current_project` answers `scope: "agent-chosen"` once the agent has
+  created or picked a project.
+- while a connection follows the person's project, a read's answer gains one
+  line when the person opened another project since the agent's last call,
+  naming both and how to go back (`projectChangeNotice.ts`). A tool that
+  changes something (it does not declare `readOnlyHint: true`) does not run at
+  all then: its answer is an error naming both projects, and calling it again
+  runs it on the new one (AI-76). A line on the answer came too late for a
+  write, which had already landed. The project choosers (`set_current_project`
+  and the three creators) are never stopped. The first call on a connection has
+  nothing to compare with, so nothing stops it. An agent with its own working
+  project is never told or stopped: nothing it does changed.
+
+Screens keep their own project the same way (`openForCurrentProject` in
+`bundledPanelCommand.ts`), and the lifecycle commands they and agents run take
+the project's path rather than reading the current project.
 
 ## 8. The headless `HandlerContext`
 
@@ -341,8 +370,9 @@ corrects by calling again with `confirm: true`.
 `{ success: true, data: { success: false, error: 'cancelled' } }` — a handler that ran
 correctly and is reporting that the user backed out. Marking that as a tool failure
 would tell an agent to retry something a person just declined.
-`tests/features/ai/server/toolFailureEnvelope.test.ts` pins all of this, including that
-case. Added 2026-09-11; before that the flag was set nowhere and every failure returned
+`tests/features/ai/server/toolFailureEnvelope.test.ts` (the builders) and
+`tests/features/ai/server/toolDescriptors-failureFlag.test.ts` (descriptor rows) pin all
+of this, including that case. Added 2026-09-11; before that the flag was set nowhere and every failure returned
 as a success whose text happened to say otherwise.
 
 So an agent **cannot** assume every response parses as JSON — refusals are prose,
@@ -379,8 +409,9 @@ agents it needed no confirmation. Judge against the rule, not the verb — and i
 checking whether something is gated, read the generated table rather than any prose.
 
 Merely *mutating* is deliberately not the bar. Deploys (`deploy_mesh`,
-`add_integration`, `deploy_integration`, `redeploy_integration`,
-`install_integration`), lifecycle (`start_demo`,
+`add_integration` for every entry but the ERP integration, which prepares the store and
+takes `confirm` (below), `deploy_integration`, `redeploy_integration`,
+`update_integration`, `install_integration`), lifecycle (`start_demo`,
 `stop_demo`) and config writes (`update_project_config`, `rename_project`) change
 state and are ungated, because they are idempotent or trivially reversible and
 gating them would make the agent surface useless for the routine work it exists
@@ -392,20 +423,132 @@ and published to a live site ungated while its exact inverse
 `remove_block_from_library` was gated. If you add a tool, decide against the rule
 above, not against this list.
 
+`load_erp_demo_data` (2026-09-27) is gated because it sets any ERP value changed by hand
+back to Commerce's; it removes nothing. Like `reset_erp_records`, it ends by publishing each
+filled ERP's customer prices into the companies' shared catalogs (AB-26z); prices not
+published are the answer's `warning`, not a failure. Both, and `add_erp`, also answer
+`data.mapping` (AB-26y): the website-to-sales-organization mappings the fill filled from the
+ERP's own sales organizations and the ones it kept because they were already set.
+
+`add_erp` (2026-09-28, AB-16) is gated although it only adds: it creates an Adobe workspace
+and deploys a new ERP into it, which takes minutes and is undone only by `remove_integration`
+on the new ERP's id. Since 2026-10-09 (AB-75) the gate is in its handler: a call without
+`confirm` previews what every ERP will own once it is added (`data.preview`, the same numbers
+the "Add another ERP" dialog shows, and `data.next` when the new ERP would own nothing), and
+only `confirm: true` deploys, with the consent dialog. Its optional `owns` (AB-64) says which products the new ERP owns —
+attribute or websites — and without it the default applies, `erp_owner=<its list id>`. An ERP
+on "everything" is the catch-all for what no other ERP claims by attribute (AB-72), so adding
+by attribute changes no other rule; only a website rule narrows such an ERP, to the websites
+left over. The answer's `owns` / `existingOwns` say the rules saved in words, and its
+`warning` what the user still has to do, including products two rules both claim.
+`assign_erp_products` and `add_erp_owner_to_attribute_sets` (2026-10-09, AB-74) preview
+WITHOUT `confirm`, so they are not refused by the descriptor's confirm gate: a call without
+it reads Commerce and answers what would change, and writes nothing. With `confirm: true`
+they raise the consent dialog and write. `assign_erp_products` dispatches into the same
+handler as "Assign products" on an ERP's card: it writes `erp_owner` on the chosen products
+in one Commerce bulk call (`V1/async/bulk/products/bySku`), follows the bulk to its end,
+records each product's previous value on the ERP, and applies ownership across every ERP.
+`add_erp_owner_to_attribute_sets` is the fix the erp-attributes setup step offers. Their
+undos, `undo_erp_assignment` and `remove_erp_owner_from_attribute_sets`, follow the same
+pattern and dispatch into the same handlers as the card's "Undo last assignment" and the
+setup guide's "Take erp_owner out again".
+`prepare_commerce_store`, `undo_commerce_store_preparation` and `set_commerce_config`
+(2026-10-10, AB-77) take the same shape: without `confirm` they read Commerce and answer what
+would change, and write nothing; with `confirm: true` they raise the consent dialog and
+write. The first applies an integration's setup steps through one engine shared with the
+setup guide's Apply all and per-step Apply — settings through
+`PUT /V1/system/config` (whose `errors` list under HTTP 200 is read on every write), the
+`erp_owner`/`brand` attributes, a warehouse and stock per ERP, a shared catalog per company
+— checking each step first and skipping one a datapack already did, and recording what each
+changed on the integration so the second puts it back newest first (a source it created is
+disabled, not deleted: Commerce cannot). The third writes settings outside a catalog step and
+records the previous values on the project, which `undo: true` writes back. The setup
+checklist tools say which steps are applicable (`fix` on the item) and which were applied
+(`fixApplied`). `add_integration` for the ERP integration runs the same engine before its ERP
+is filled (owner, 2026-10-22), so it takes the same shape for that one entry: without
+`confirm` it answers what preparing the store will change (`data.preparation`) and adds
+nothing; with `confirm: true` it adds. Every other add is ungated, as above. Details:
+`docs/systems/erp-integration.md`, "Preparing the store".
+The ERP tools that act on one ERP (`load_erp_demo_data`,
+`open_erp_screen`, `run_erp_rest`, `write_erp_rest`, `get_erp_status`) take an optional `erp`,
+the ERP's component id, and default to the integration's first, except `load_erp_demo_data`,
+which fills every ERP without it. `reset_erp_records` takes no `erp`: a reset always covers
+every ERP and closes off the orders they hold (AB-16n). `get_erp_status` lists every ERP the
+integration serves — each row with its `listId`, the value a product's `erp_owner` takes to
+route to that ERP (AB-51) — and its live health is the named ERP's.
+
+`reset_erp_records` (2026-09-14) is gated for the same reason `reset_datapack` is: it wipes
+every ERP the ERP integration serves, cancels the open orders they hold (a cancelled order
+cannot be reopened) and undoes what those ERPs wrote into Commerce companies. Its read, `get_erp_status`, is not. `open_erp_screen` (2026-09-16) is gated for
+`open_url`'s reason: it opens a browser window.
+
+The demo ERP's demo controls (2026-10-02, AB-59): `set_erp_appearance` (a theme and/or a colour,
+`PATCH settings`) is agent-only, since people set the ERP's look on its own screen; the
+downtime pair dispatches into the same handlers as the card's "Simulate downtime":
+`start_erp_downtime` (`POST settings/maintenance`, 1–1440 minutes, default
+30) and `end_erp_downtime` (`DELETE settings/maintenance`). Only `start_erp_downtime` is gated,
+with a consent dialog: while it lasts the ERP refuses every call, so the integration's orders
+wait. The look is cosmetic and ending the downtime restores the ERP, so neither is gated. Whether
+a downtime is running is `run_erp_rest` on `health` (`maintenance`).
+
 Both block-library gaps were closed together on 2026-08-16, and they are the
 worked example of the rule: `promote_block_to_library` was ungated because it
 only *adds* things, and `refresh_block_library` because "rebuild" sounds local.
 Both push to a live site. Reach, not intent, is what decides.
 
+`write_page` and `publish_page` were the last two content tools open, and closed on
+2026-10-04 (owner: "Yes, write_page should ask"). Both are `confirm:true`-gated and
+raise the consent dialog: the sign-in pre-flight
+runs first, then the gate, so the refusal can name the storefront (`org/site`) and the
+page, and for `write_page` whether it publishes (`site`, `path`, `publish` in the
+refusal). A write WITHOUT `publish` is gated too: it replaces the DA.live source the
+live site is built from, and the page's next publish, by anyone, ships it. The dialog
+shows the page and, for `write_page`, the `publish` flag; neither is session-grantable.
+
 Note the shape of the refusal differs by tool. Most return an error and do
 nothing. `apply_updates` is the one that reports what *would* happen: no
 `confirm` = a read-only "here's what's available". Don't assume the dry-run
-behavior generalizes.
+behavior generalizes. With `confirm:true` it raises the consent dialog (2026-10-16,
+EDS-51): it rewrites storefront code, and `onClash: 'reset'` discards the
+user's own edits; `onClash: 'keep'` leaves a clash in the local storefront copy for the
+agent to fix (EDS-57). A storefront built on Demo Builder's tested boilerplate is brought to
+that tested version with its fixes put back, and is never reset to the bare template;
+its way through a conflict is `reset_project`.
+
+`finish_storefront_update` (EDS-57) previews the same way: without `confirm` it returns the
+kept clash's files, the ones still carrying conflict markers, and the diff that would go
+live. With `confirm:true` it raises the consent dialog, then checks the fix (still the
+current update, only the clashing files changed, no markers, the JavaScript and JSON
+parse), pushes one commit with the user's token and records the version; with `leave:true`
+it drops the fix instead. It takes the project by name, because the Updates window's Fix
+with AI starts on Your Projects, where the open project can be any other. The agent never
+pushes a fixed clash itself: the tool is the one path that checks it and records it.
 
 **Extra-strict gating for irreversible ops.** Three tools require a `confirmName`
 that exactly echoes the resource, so an agent can't destroy the wrong one on a
 fuzzy match: `delete_project` (project name), `delete_github_repo` (`owner/repo`),
 and `cleanup_dalive_site` (`org/site`).
+
+**Whether a deleted storefront is really down.** `cleanup_dalive_site` and
+`delete_project` (with `deleteDaLiveSite`) run the storefront teardown. It unpublishes
+what Helix lists as published, not only what DA.live still holds, then checks the live
+host. `stillPublished` is false only when that check found the pages gone;
+`publishState` (`down`, `still-live`, `sign-in-refused`, `unknown`) and `publishSummary`
+say which, in words, including "could not tell" (EDS-33). `delete_project` carries
+`publishSummary` under `daLiveSite`. When the check finds pages still live (`still-live`),
+or AEM answers 401/403 to the listing of what is published or to the product pages
+(`sign-in-refused`), the teardown stops there: the DA.live content, the site settings
+and, for `delete_project`, the repository and the project are kept, `stopped` says why,
+and `delete_project` answers `deleted: false` (EDS-65). Deleting them would leave a live
+site with nothing to take it down by. `unknown` (could not tell) does not stop it.
+
+**A storefront's repository needs a working DA.live sign-in to go.** Its code on
+aem.live is removed file by file after the repository is deleted, and the files can only
+be listed while the repository exists (EDS-67). So `delete_github_repo` and
+`delete_project` first ask IMS whether the DA.live sign-in still works; with none, or
+one IMS refuses or cannot be asked about, the repository is kept (`kept: true` /
+`stopped` with the sentence to sign in to DA.live and delete again), and `delete_project`
+keeps the project too.
 
 `delete_page` deliberately uses the plain `confirm: true` gate instead — it removes
 one page from the current project's own storefront, not a whole repository or site.
@@ -420,7 +563,7 @@ The agent then drives `get_auth_status` / `sign_in` and retries. This keeps the
 human-in-the-loop browser sign-in flows working through an agent.
 
 **Progress as a captured timeline.** There's no progress bar on the agent
-surface, so long multi-step tools (`reset_eds_project`, `apply_updates`) collect
+surface, so long multi-step tools (`reset_project`, `apply_updates`) collect
 their per-step messages into a `phases` array and return it, so the agent can
 narrate what happened.
 
@@ -428,9 +571,190 @@ narrate what happened.
 UI calls. When the UI logic was entangled with modals/progress, the headless core
 was *extracted* and both call it — never copied.
 
-**Re-runnable failures.** Idempotent operations (e.g. `reset_eds_project`) report
+**Re-runnable failures.** Idempotent operations (e.g. `reset_project`) report
 `rerunSafe: true` on failure so the agent knows it can fix the cause and call
 again.
+
+### One reset, two kinds of project (2026-10-03)
+
+`reset_project` is the agent's door to the same action as the Reset button, and it
+dispatches the way the button's handler does: an Edge Delivery project goes to
+`executeEdsReset` (storefront repo, DA.live content and config back to the
+template; the site stays up while the content is replaced, and afterwards any page
+still published from before that was not republished is unpublished: `leftoverPages`
+in the answer says `removed`, `some-left`, or `not-listed` when Helix could not say
+what is published, in which case old pages may still be live (EDS-33); a headless
+project goes to `executeProjectReset` (components deleted and installed again;
+integrations and configuration kept), the core
+`resetProjectWithUI` wraps. Before that date the tool was `reset_eds_project` and
+refused a headless project. The headless half refuses a running demo and names
+`stop_demo` rather than stopping it unasked, and asks for the Adobe sign-in only
+when there is a mesh to redeploy. Nothing undoes a reset — it is the return to
+zero — which is why it is consent-gated (`reversibility.ledger.json`).
+
+### A creation's name, and a creation that fails (2026-10-16)
+
+`runProjectCreation` — which `create_project`, `create_project_from_file` and
+`copy_project` all end in — first runs the wizard's own name check
+(`projectNameProblem`): an unsafe name, or one a project already has, is refused before
+anything is built. Creation removes whatever folder already has the new name, so
+without the check an agent reusing a name deleted that project (AI-73). When creation
+then fails, `cleanupFailedCreation` removes the half-built project and any API Mesh the
+creation made, as the wizard does. A mesh the workspace already had is never counted
+as made, so it is never removed. A storefront provisioned before the failure stays, as
+it does in the wizard. A re-run uses it by passing `adoptExisting:true`: the repository
+(`githubOwner`/`repoName`) and DA.live site (`daLiveOrg`/`daLiveSite`) are taken as they
+are, the wizard's "use existing" choice for both, with no reset of the code and no new
+copy of the content. The same flag rebuilds a deleted project whose storefront survived.
+
+### Creating from an exported file (2026-10-03)
+
+`create_project_from_file` takes an absolute PATH to a file `export_project_settings`
+(or the projects list's Export) wrote. The path is checked at the boundary (absolute,
+exists, a file, under 1 MB) and the text is read through `readProjectFile`, which
+reads the version-2 file Export writes, migrates a version-1 file from before
+2026-10, and strips every credential. Creation then
+runs through `runProjectCreation` — the same function `create_project` ends in — with
+the file's package, stack, addons, settings, block libraries, integrations (custom
+sources and API picks included), mesh, datapack and store structure as its inputs.
+The integrations are derived by `integrationStateFromSettings`, the function the
+wizard's edit AND import modes use, so the wizard's Import and this tool agree.
+
+The file never decides the receiver's sign-ins, Adobe workspace, storefront
+repository or DA.live site, or any credential. The answer says what came from the
+file (`fromFile.applied`), what did not and why (`fromFile.notApplied`), and which
+credentials the new project still needs (`stillNeeded.credentials`, read from the
+components' declared env vars against `SECRET_ENV_KEYS`). Like `create_project` it is
+gated by `confirm:true` and is not on the consent-dialog list.
+
+`copy_project` (2026-10-04, PL-56f) is the projects list's Copy from Existing without
+its picker: it takes the source project's NAME, loads it without saving it back, and
+reads it the way the human Copy does — `copySeedFromProject`, the file Export writes
+read back through `readProjectFile` — then goes down `create_project_from_file`'s own
+second half (`createFromProjectFile` in `createProjectFromFileTool.ts`). So a copy
+carries what an import carries and nothing more: never a credential, and the source's
+storefront only as provenance. An Edge Delivery copy gets its own repository and
+DA.live site (owner, 2026-10-04): it needs `repoName`, `daLiveOrg` and `daLiveSite`
+like an import, and naming the source's own repository or site is refused before
+anything is created. The answer reports `fromProject` where an import reports
+`fromFile`. Gated by `confirm:true`, not on the consent-dialog list, undone by
+`delete_project`.
+
+### Store scope at creation (AI-11, 2026-10-03)
+
+`create_project`, `create_project_from_file` and `copy_project` take an optional `storeScope
+{ website, store, storeView }` — the input `configure_project` takes, from the one
+schema in `storeScope.ts`, so all three agree on what a valid scope is (all three
+codes, as text) and where it is stored (the backend's `ACCS_WEBSITE_CODE`,
+`ACCS_STORE_CODE`, `ACCS_STORE_VIEW_CODE`). It is checked before anything is created,
+and refused when the stack has no backend to hold it. It reaches the creation that
+generates `config.json`, so a storefront built on a store other than the demo's is not
+published with the wrong codes first and corrected after. On the file path the call's
+codes win over the file's; omitted, the file's codes stand.
+
+On ACCS, a given `storeScope` is also checked the way the wizard's and Configure's store
+pickers check it (EDS-46): one anonymous Catalog Service search for that store view
+(`storeViewProducts.ts`). When it finds no products, or the scope has no search index, the
+answer carries `warnings: ["Guests won't see any products in this store view."]` — the
+same sentence the pickers show. It never blocks or fails creation, and a check that cannot
+answer (timeout, network, HTTP error) adds nothing.
+
+### The storefront report (EDS-13f, 2026-10-03)
+
+`get_storefront_report` (read-only, GitHub sign-in) answers the same report as the
+Diagnostics section: the storefront's boilerplate
+against Demo Builder's current one, its lineage, what Demo Builder wrote, the content's links
+to pages that do not exist, and `summary`, the words the SC reads. `needsReset: true` (and
+`storefrontNeedsReset: true` in `get_project_status`) says the storefront is behind how Demo
+Builder builds storefronts now (`storefrontChanges.ts`); `reset_project` is the way up to date.
+The dashboard's report window and the `Demo Builder: Storefront Report` command were removed
+on 2026-10-23 (EDS-64); `reset_project` answers the fresh copy's broken links as `brokenLinks`.
+
+It no longer lists Demo Builder's fixes, and `reset_project` and `create_project` no longer
+take `applyFixes`: there is nothing to ask. Creation and reset apply every live patch in the
+shipped ledgers that fits the storefront's code, an added demo's included (owner, 2026-10-23,
+EDS-64; `knownPatches.ts`).
+
+### Category pages and the catalog menu (EDS-24, EDS-61)
+
+There is no catalog menu tool and no category page tool. The category pages and the nav
+switch are part of storefront setup: project creation, `reset_project` and `republish`
+(and the dashboard's Reset and Republish) each run the same step, `catalogMenuStep.ts`,
+when the storefront's own repository has `blocks/catalog-menu/` (the Demo Builder Blocks
+library) and the product page overlay is on. Each category's page is its own url path
+(`/signs`): an authored DA.live page there, or else the one the shared `render-pdp` overlay
+makes from the site's `/categories/default` template. The step first publishes
+`/authored-category-pages.json`, the sheet listing the authored addresses, which the
+overlay steps aside for (and without which it renders no category page); then it
+publishes every category page (generated ones on ACCS), writes a starter template when the
+site has none, takes down pages of categories the store no longer has, adds the menu line
+and the block to `/nav`, and keeps a record on the storefront instance
+(`metadata.catalogMenu`). The step's sentence comes back on `reset_project` and
+`republish` as `categoryPages`: how many pages were published, how many authored pages
+the sheet keeps, any removed, and any edited page it kept.
+
+So an agent that wants the menu gone deselects the library and resets (confirm-gated).
+A category added in Commerce later needs nothing: its page is published on its first
+visit, and `republish` publishes every page again (the way to make a template edit, a
+renamed category, or a page an author just wrote at a category's address show). `check_category_pages` and `add_category_pages` were removed on
+2026-10-22 with the per-category DA.live pages they wrote. See
+`docs/systems/category-pages.md`.
+
+After a store change (EDS-44) the pages belong to the old store. `configure_project`'s
+note then says the republish also replaces the product and category pages. `republish`
+does it when the project's `edsStorefrontState.catalogPagesPending` is
+set and its own config publish reached the CDN: the old store's product and category
+pages come off, the new store's are published (an edited page Demo Builder wrote is
+kept). Both answer `storePages`, the one sentence the SC reads in Configure ("Now on
+CitiSignal: 11 category pages and 39 product pages published. 30 old product pages
+removed."). One service does it for every door (`storeScopePages.ts`).
+
+### Integrations live in Adobe workspaces of their own (AB-23)
+
+Since 2026-09-21 every integration an SC adds gets an Adobe workspace of its own,
+inside the project's Adobe project. One add is one workspace: the ERP and its
+integration share one. The mesh is the exception: it stays in the project's own
+workspace (Production), where the storefront calls it. An integration added before
+this has no workspace of its own and lives in the project's.
+
+What an agent needs to know to act on the right one:
+
+| Question | Where the answer is |
+|---|---|
+| Which workspace is this integration in? | `get_project` → `appBuilderComponents[id].workspace` (`id`, `name`, `title`); absent means the project's. The project's AGENTS.md lists them too |
+| What is deployed there? | `list_runtime_packages` with `componentId` |
+| Code it left behind (an action moved or renamed, a timer and its rule dropped) | Every deploy deletes it. For older leftovers, or when a deploy warned it could not: `delete_undeclared_runtime_code` with `componentId` (confirm-gated) |
+| Give one integration an Adobe API | `add_console_apis` / `set_console_apis` with `componentId`. Without it the API goes on the project's workspace, which that integration never uses |
+| What APIs does it have? | `list_console_apis` with `componentId` |
+
+`deploy_integration`, `redeploy_integration` and `remove_integration` find the
+workspace themselves. Removing an integration also deletes its workspace, once
+nothing else in the project uses it. What Runtime refuses to delete is tried again after
+10, 30 and 60 seconds. In a workspace of the integration's own, anything still there goes
+with the workspace: Adobe deletes a deleted workspace's Runtime namespace about 11 minutes
+later (measured 2026-09-27), and the extension checks with the namespace's old key until
+Runtime refuses it, warning if that has not happened after 20 minutes. `data.workspaces`
+says which workspaces went. In a workspace something that stays still uses, leftovers or a
+namespace that cannot be checked stop the removal and keep the record, the folder and the
+workspace: `remove_integration` answers `COMPONENT_REMOVAL_STOPPED` with what is left;
+calling it again resumes at the undeploy, and `force: true` finishes regardless.
+
+`set_project_destination` moves integrations by what it changes:
+
+- **Another workspace of the same Adobe project** — an integration with its own
+  workspace stays where it is; only what lives in the project's workspace moves.
+- **A different Adobe project** — each integration with its own workspace is removed
+  from the old Adobe project (Commerce changes undone, uninstalled, its workspace
+  deleted) and added again in the new one, with its files on disk kept. This deletes
+  live resources, so the SC confirms it in a modal first; a decline answers
+  `cancelled: true` and changes nothing.
+
+A workspace's name is what Console shows on its box: the letters and digits of its
+title (`NorthwindERP`), numbered `NorthwindERP1`, `NorthwindERP2` when the name is taken.
+Adobe refuses a space in a workspace name; it accepts a dash, but the workspace's Runtime
+namespace then refuses every deploy ("Non-standard namespace formats are not supported
+after aio-cli v10", measured 2026-09-22). Adobe never renames a workspace, so a name is
+fixed when the workspace is made.
 
 ---
 
@@ -476,9 +800,17 @@ extension-side in `agentOperationNotifier.ts`:
 
 - **Destructive calls need consent** (2026-08-24). Any call carrying
   `confirm: true` — the surface's own destructive marker, checked by the
-  descriptor registrar and every direct destructive tool — first raises a
-  MODAL VS Code dialog in the window that owns the socket
-  (`createAgentConsentGate`, injected as `consentGate`). This converts the
+  descriptor registrar and every direct destructive tool — is first asked about
+  IN THE CHAT by MCP elicitation (`consentViaChat.ts`); anything but an explicit
+  accept is a refusal. Only when the client cannot be asked (no elicitation
+  capability, a failed or timed-out ask) does it fall back to a MODAL VS Code
+  dialog in the window that owns the socket (`createAgentConsentGate`, injected
+  as `consentGate`). Per agent: interactive Claude Code renders the ask (measured
+  2026-08-25); headless `claude -p` (2026-08-28) and `copilot -p` (2026-10-06)
+  both declare elicitation and decline at once, so a headless destructive call
+  refuses instead of hanging; VS Code's chat renders it in the panel (read in
+  the 1.140 source). Interactive Copilot CLI and the VS Code panel are not yet
+  watched live with a destructive call (ADR-025). This converts the
   agent-supplied honor-system parameter into consent that survives a
   harness-side tool allowlist. A decline answers a prose refusal (the
   operation never ran); the handler and the progress notification are never
@@ -504,6 +836,14 @@ extension-side in `agentOperationNotifier.ts`:
   (observed live 2026-08-23 as a silent 60s timeout). Generated AGENTS.md
   (v20) tells agents to front-load `get_auth_status` so the one human touch
   happens at flow start, not as a mid-pipeline stall.
+- **DA.live status means "works now".** `get_auth_status`'s `dalive` entry asks IMS
+  (`validate_token`) about the stored token, the same reader the wizard's indicator and
+  the session guard use (`DaLiveAuthService.checkSignIn`). `authenticated` is `'unknown'`
+  when IMS cannot be reached: neither signed in nor out.
+- **A forced Adobe sign-in signs out of DA.live** (measured 2026-10-28). When an agent's
+  `sign_in(provider:"adobe")` falls back to the forced sign-in and that ends a working
+  DA.live sign-in, the result carries `notices` and `next` instead of a dialog; any other
+  agent call that forces one says it in the narration (`daLiveSignedOutNotice`).
 
 ### `get_current_project` answers with the project's STATE
 
@@ -585,19 +925,26 @@ config when a project is created (and on "Regenerate AI files"):
   a usable Node. The ai-defaults MCPs are appended per each entry's `requires`
   gate (aiToolingGate.ts): the Commerce Extensibility Developer Agent for any
   App Builder-adjacent project (EDS storefront, mesh, or attached App Builder
-  component); Playwright and the Adobe dropins MCP (`@dropins/mcp` — drop-in
-  component discovery/scaffolding/health tooling whose project-touching tools
-  take an explicit `projectDir`) for EDS storefronts only. Anchored to the per-project
-  isolated MCP tools dir
+  component); Playwright and the Adobe dropins MCP (`@dropins/ai-tools`, formerly
+  `@dropins/mcp` — drop-in component discovery/scaffolding/health tooling whose
+  project-touching tools take an explicit `projectDir`) for EDS storefronts only.
+  Anchored to the per-project isolated MCP tools dir
   (`<project>/.demo-builder-mcp/node_modules/`) — decoupled from the storefront's
   own `node_modules` so they install even when the storefront's `npm install` can't.
+  They install into, and run from, Demo Builder's Node folder (`~/.demo-builder/node`)
+  on Demo Builder's Node (`demoBuilderNode()`, generated from every component's own
+  `engines.node` range, PR-1a): launched as `fnm exec --using=<major> node <script>` with
+  the entry's `env.FNM_DIR` pointing at that folder, not on the PATH's Node (AI-13).
 - **`.claude/settings.json`** — a `PostToolUse` git-sync hook for EDS projects
   (commit/push storefront edits the agent makes). Skipped if the path contains
   shell metacharacters. The extractor reads the tool-call JSON on **stdin** and
   takes `tool_input.file_path`; it once read a `$CLAUDE_TOOL_INPUT` env var Claude
   Code never sets, so the hook silently did nothing from beta.109 until the
   AI_CONTEXT_VERSION 6 fix. It commits and pushes only — publishing is
-  `sync_content` / `sync_storefront`.
+  `republish` / `sync_storefront`. It does nothing while a storefront update's clash
+  is kept in the copy for fixing (`.git/demo-builder-kept-clash`, AI_CONTEXT_VERSION 42):
+  the copy then holds the whole half-applied update, which `finish_storefront_update`
+  pushes once the fix checks out.
 - **`.claude/settings.json`** also carries a `PreToolUse` **aio-global guard**
   (AI_CONTEXT_VERSION 21) for every project that gets the App Builder tooling
   (`projectNeedsAppBuilderTooling`) and unconditionally for the home Chat. It
@@ -615,13 +962,20 @@ config when a project is created (and on "Regenerate AI files"):
 
 Additionally, the **Demo Builder: Register Global MCP** palette command
 (`src/features/project-creation/services/aiBundle/globalMcpRegistration.ts`) upserts a
-`demo-builder` entry into the user-scope `~/.claude.json` — same command/args
-but **no** socket env, so the proxy discovers a running window at launch (see
-§5). Explicit opt-in only; it merge-preserves everything else in the file and
-refuses to overwrite a malformed one.
+`demo-builder` entry into the user-scope config of every agent that keeps one
+(`GLOBAL_MCP_CONFIGS`: `~/.claude.json` and `~/.copilot/mcp-config.json`) — same
+command/args but **no** socket env, so the proxy discovers a running window at
+launch (see §5). Explicit opt-in only; it merge-preserves everything else in the
+file and refuses to overwrite a malformed one.
 
-Cursor and Codex read `.mcp.json` natively, so no per-tool config files are
-written.
+**Which agent reads what** (ADR-025). The window is homed at the projects root,
+so its `.mcp.json` is the one every agent meets: VS Code's chat discovers it as a
+workspace server (Copilot in VS Code, the default — no user-level file exists to
+write), Copilot CLI reads it in a trusted folder, Claude Code reads it directly.
+Cursor and Codex read `.mcp.json` natively too, so no per-tool config files are
+written. Copilot hands our tools to the model deferred, behind `tool_search`, so
+the 128-tools-per-request cap does not bind; see
+[ai-agents.md](ai-agents.md).
 
 ---
 

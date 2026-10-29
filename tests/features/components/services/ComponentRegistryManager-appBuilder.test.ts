@@ -36,9 +36,6 @@ const registryWithApp: RawComponentRegistry = {
             description: 'A custom App Builder app',
             type: 'app-builder',
             subType: 'app',
-            configuration: {
-                nodeVersion: '22',
-            },
         },
     },
 };
@@ -110,7 +107,6 @@ describe('ComponentRegistryManager - App Builder Category', () => {
 
             expect(component).toBeDefined();
             expect(component?.name).toBe('Custom App Builder App');
-            expect(component?.configuration?.nodeVersion).toBe('22');
         });
 
         it('should still resolve a mesh component by id when appBuilder is present', async () => {

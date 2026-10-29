@@ -19,6 +19,8 @@ jest.setTimeout(5000);
 // blockLibraryLoader double answers two functions, and the library content
 // sources this suite drives come from a third.
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
+    // Pass-through: the always-included libraries are tested where they are added.
+    withAlwaysIncludedBlockLibraries: (selected?: string[]) => selected ?? [],
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
@@ -37,6 +39,12 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn(),
 }));
 
+const mockPublishAuthoredListStep = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/features/eds/services/catalogMenu/catalogMenuStep', () => ({
+    ...jest.requireActual('@/features/eds/services/catalogMenu/catalogMenuStep'),
+    publishAuthoredListStep: (...a: unknown[]) => mockPublishAuthoredListStep(...a),
+}));
+
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn(),
     configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
@@ -53,8 +61,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 const mockCreateFromTemplate = jest.fn();
-jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
-    GitHubRepoOperations: jest.fn().mockImplementation(() => ({
+jest.mock('@/features/eds/services/github/githubRepoLifecycle', () => ({
+    GitHubRepoLifecycle: jest.fn().mockImplementation(() => ({
         createFromTemplate: mockCreateFromTemplate,
         waitForContent: jest.fn(),
     })),
@@ -62,6 +70,11 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000 },
+}));
+
+// The patch ledgers are a network read with their own suite; every one read here.
+jest.mock('@/features/eds/services/patches/shippedPatchLedger', () => ({
+    readShippedPatches: jest.fn().mockResolvedValue({ live: [], retired: [], complete: true }),
 }));
 
 global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
@@ -82,6 +95,7 @@ import { installBlockCollections } from '@/features/eds/services/blockCollection
 import { getBlockLibrarySource } from '@/features/components/services/blockLibraryLoader';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
 
 const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<typeof executeEdsPipeline>;
 
@@ -148,11 +162,12 @@ function projectFor(githubRepo: string) {
 beforeEach(() => {
     jest.clearAllMocks();
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
-    mockExecuteEdsPipeline.mockResolvedValue({
-        success: true,
-        contentFilesCopied: 0,
-        libraryPaths: [],
-    });
+    mockExecuteEdsPipeline.mockResolvedValue(
+        createMockPipelineResult({
+            contentFilesCopied: 0,
+            libraryPaths: [],
+        })
+    );
 });
 
 // =============================================================================
@@ -264,7 +279,11 @@ describe('whether content is copied at all', () => {
     });
 
     it('copies content into a brand new site', async () => {
-        await runSetup(createEdsConfig({ contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' } }));
+        await runSetup(
+            createEdsConfig({
+                contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' },
+            })
+        );
 
         expect(pipelineInput().skipContent).toBe(false);
         expect(pipelineInput().clearExistingContent).toBe(false);
@@ -336,6 +355,33 @@ describe('which project the catalog pre-warm targets', () => {
         await runSetup(createEdsConfig(), { currentProject: null });
 
         expect(pipelineInput().project).toBeUndefined();
+    });
+});
+
+/**
+ * EDS-61: an Edit that rebuilds onto a site that already has the authored-pages sheet must
+ * refresh it before the bulk publish previews every page (the pipeline runs the hook there,
+ * pinned in `edsPipeline-stepGating.test.ts`). A brand-new site gets none: writing one would
+ * opt it in before the category step does.
+ */
+describe('the authored-pages sheet before the content publish', () => {
+    it("hands the pipeline a hook that refreshes the sheet only where it is already live", async () => {
+        const project = projectFor('test-owner/test-repo');
+
+        await runSetup(createEdsConfig(), { currentProject: project });
+        await mockExecuteEdsPipeline.mock.calls[0][0].beforeContentPublish?.();
+
+        expect(mockPublishAuthoredListStep).toHaveBeenCalledTimes(1);
+        const [passed, site, options] = mockPublishAuthoredListStep.mock.calls[0];
+        expect(passed).toBe(project);
+        expect(typeof site.categoryPages.publishAuthoredSheet).toBe('function');
+        expect(options).toEqual({ onlyWhenPublished: true });
+    });
+
+    it('hands no hook on the create path, where no site has a sheet yet', async () => {
+        await runSetup(createEdsConfig(), { currentProject: null });
+
+        expect(pipelineInput().beforeContentPublish).toBeUndefined();
     });
 });
 
@@ -444,12 +490,14 @@ describe('the rest of the pipeline instruction', () => {
 
 describe('when the run does not finish', () => {
     it('reports the pipeline failure and the repo it was working on', async () => {
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: false,
-            error: 'DA.live refused the copy',
-            contentFilesCopied: 0,
-            libraryPaths: [],
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                success: false,
+                error: 'DA.live refused the copy',
+                contentFilesCopied: 0,
+                libraryPaths: [],
+            })
+        );
 
         const result = await runSetup(createEdsConfig());
 
@@ -459,15 +507,19 @@ describe('when the run does not finish', () => {
             repoOwner: 'test-owner',
             repoName: 'test-repo',
             repoUrl: 'https://github.com/test-owner/test-repo',
+            // Phase 2 ran before the copy failed: what its build step left (storefrontChanges.ts).
+            storefrontBuildComplete: true,
         });
     });
 
     it('names the phase when the pipeline failed without saying why', async () => {
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: false,
-            contentFilesCopied: 0,
-            libraryPaths: [],
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                success: false,
+                contentFilesCopied: 0,
+                libraryPaths: [],
+            })
+        );
 
         const result = await runSetup(createEdsConfig());
 
@@ -505,7 +557,7 @@ describe('when the run does not finish', () => {
         const controller = new AbortController();
         mockExecuteEdsPipeline.mockImplementation(async () => {
             controller.abort();
-            return { success: true, contentFilesCopied: 0, libraryPaths: [] };
+            return createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] });
         });
         const context = createSetupContext();
 
@@ -584,11 +636,12 @@ describe('when the run does not finish', () => {
 
 describe('when the run does finish', () => {
     it('says the site is live once library pages were published', async () => {
-        mockExecuteEdsPipeline.mockResolvedValue({
-            success: true,
-            contentFilesCopied: 3,
-            libraryPaths: ['/docs/library/cards'],
-        });
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 3,
+                libraryPaths: ['/docs/library/cards'],
+            })
+        );
         const context = createSetupContext();
 
         const result = await executeStorefrontSetupPhases(
@@ -641,6 +694,7 @@ describe('when the run does finish', () => {
             repoOwner: 'test-owner',
             repoName: 'test-repo',
             repoUrl: 'https://github.com/test-owner/test-repo',
+            storefrontBuildComplete: true,
         });
     });
 });

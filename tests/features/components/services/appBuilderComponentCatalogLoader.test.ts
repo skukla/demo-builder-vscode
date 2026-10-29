@@ -14,10 +14,12 @@ import {
     isSeedIntegration,
     getAvailableAppBuilderComponents,
     getAppBuilderComponentEntry,
+    getAppBuilderComponentCatalog,
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,
     isBlankSource,
 } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { computeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
 
 const CONFIG_DIR = path.join(__dirname, '../../../../src/features/components/config');
 
@@ -106,7 +108,9 @@ describe('appBuilderComponentCatalogLoader', () => {
             expect(entry.name).toBe('Order Sync');
             expect(entry.layout).toBe('extension');
             expect(entry.lifecycle).toBe('app-management');
-            expect(entry.nodeVersion).toBe('24');
+            // No Node of its own: the bundled kit carries none since PR-1a, so it
+            // runs on the shared one (nodeForAppBuilderEntry).
+            expect(entry.nodeVersion).toBeUndefined();
             expect(entry.compatibleBackends).toEqual([
                 'adobe-commerce-paas',
                 'adobe-commerce-accs',
@@ -451,7 +455,7 @@ describe('appBuilderComponentCatalogLoader', () => {
                 for (const field of required) {
                     expect(entry[field]).toBeDefined();
                 }
-                expect(['mesh', 'integration']).toContain(entry.kind);
+                expect(['mesh', 'integration', 'system']).toContain(entry.kind);
             }
         });
 
@@ -468,6 +472,8 @@ describe('appBuilderComponentCatalogLoader', () => {
                 schema.definitions.appBuilderComponent.properties.lifecycle.enum;
             expect(layoutEnum).toEqual(['standalone', 'extension']);
             expect(lifecycleEnum).toEqual(['deploy-only', 'app-management']);
+            const kindEnum: string[] = schema.definitions.appBuilderComponent.properties.kind.enum;
+            expect(kindEnum).toEqual(['mesh', 'integration', 'system']);
             const problems: string[] = [];
             for (const entry of catalog.appBuilderComponents) {
                 if (entry.layout !== undefined && !layoutEnum.includes(entry.layout)) {
@@ -585,10 +591,12 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
         expect(isPrebuiltIntegration(real)).toBe(true);
     });
 
-    it('the starter kit is a SEED, never a pre-built — the gallery stays empty', () => {
+    it('the starter kit is a SEED, never a pre-built; the gallery holds the ERP integration alone', () => {
         // Flipped deliberately 2026-08-27 (owner): "It's not really a pre-built
         // integration. It's a Custom App that's built using the starter kit."
-        // The kit lives on the Build-custom naming stage's seed row.
+        // The kit lives on the Build-custom naming stage's seed row. The ERP
+        // integration (2026-09-14) is the first genuine pre-built; its ERP is a
+        // SYSTEM and never a gallery row of its own.
         for (const [b, f] of [
             ['adobe-commerce-accs', 'eds-storefront'],
             ['adobe-commerce-paas', 'eds-storefront'],
@@ -596,11 +604,18 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
         ]) {
             const all = getAvailableAppBuilderComponents(b, f);
             expect(all.length).toBeGreaterThan(0); // the mixed list is NOT empty
-            expect(all.filter(isPrebuiltIntegration)).toStrictEqual([]);
+            expect(all.filter(isPrebuiltIntegration).map((e) => e.id)).toEqual(['erp-integration']);
             expect(all.filter(isSeedIntegration).map((e) => e.id)).toEqual([
                 'commerce-integration-starter-kit',
             ]);
         }
+    });
+
+    it('a system is neither pre-built nor a seed, whatever else it declares', () => {
+        const erp = getAppBuilderComponentEntry('demo-erp');
+        expect(erp?.kind).toBe('system');
+        expect(erp && isPrebuiltIntegration(erp)).toBe(false);
+        expect(erp && isSeedIntegration(erp)).toBe(false);
     });
 
     // A seed is scaffolding for the Build-custom flow, which builds an
@@ -617,5 +632,33 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
         expect(shell && isPrebuiltIntegration(shell)).toBe(false);
         expect(kit && isSeedIntegration(kit)).toBe(true);
         expect(kit && isPrebuiltIntegration(kit)).toBe(false);
+    });
+});
+
+describe('the bound pair — the ERP comes with the ERP integration (decision 2)', () => {
+    it('declares the ERP as the system the ERP integration brings, and no other system', () => {
+        const systems = getAppBuilderComponentCatalog().filter((entry) => entry.kind === 'system');
+        expect(systems.map((entry) => [entry.id, entry.boundTo])).toEqual([['demo-erp', 'erp-integration']]);
+    });
+
+    it('the ERP provides what the integration consumes, and both fit only a Commerce backend', () => {
+        const erp = getAppBuilderComponentEntry('demo-erp');
+        const integration = getAppBuilderComponentEntry('erp-integration');
+        expect(erp?.providesEnvVars).toEqual(['ERP_BASE_URL']);
+        expect(integration?.envSchema?.find((v) => v.name === 'ERP_BASE_URL')?.providedBy).toBe('demo-erp');
+        expect(erp?.nameFromEnvVar).toBe('ERP_DISPLAY_NAME');
+        expect(getAvailableAppBuilderComponents('', '').map((e) => e.id)).not.toContain('demo-erp');
+        expect(getAvailableAppBuilderComponents('adobe-commerce-accs', 'eds-storefront').map((e) => e.id)).toEqual(
+            expect.arrayContaining(['demo-erp', 'erp-integration']),
+        );
+    });
+
+    it("declares the database's API, so the subscribe before its deploy grants the credential its scopes", () => {
+        // The spike's finding (plan step 01, 2026-09-14) that did not reach the catalog:
+        // without it the ERP's database token lacks adobeio.abdata.* scopes.
+        expect(getAppBuilderComponentEntry('demo-erp')?.requiredApis).toEqual(['AppBuilderDataServicesSDK']);
+        expect(
+            computeRequiredApis(getAvailableAppBuilderComponents('adobe-commerce-accs', 'eds-storefront')),
+        ).toContain('AppBuilderDataServicesSDK');
     });
 });

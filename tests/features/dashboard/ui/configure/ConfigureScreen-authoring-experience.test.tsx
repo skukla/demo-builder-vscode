@@ -7,6 +7,7 @@ import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import '@testing-library/jest-dom';
+import type { ConfigureBlockLibraryChoices } from '@/types/webviewPayloads';
 import {
     mockProject,
     mockComponentsData,
@@ -19,7 +20,7 @@ jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
 }));
 
 // Mock layout components. The shell + rail are NOT mocked (direct-path imports) so the
-// Authoring tab these tests click is the real one.
+// Authoring and Block Libraries tabs these tests click are the real ones.
 jest.mock('@/core/ui/components/layout/PageFooter', () => ({
     PageFooter: ({ leftContent, rightContent }: any) => (
         <div data-testid="page-footer">
@@ -85,6 +86,29 @@ const validConfig = {
     },
 };
 
+// What the extension offers one Edge Delivery project (typed to the real payload).
+const blockLibraryChoices: ConfigureBlockLibraryChoices = {
+    native: [],
+    available: [
+        {
+            id: 'demo-builder-blocks',
+            name: 'Demo Builder Blocks',
+            description: 'Blocks for demos',
+            type: 'standalone',
+            source: { owner: 'acme', repo: 'demo-builder-blocks', branch: 'main' },
+            stackTypes: ['eds-storefront'],
+        },
+    ],
+    customDefaults: [],
+};
+
+// Module-level, so the prop is the same reference on every render.
+const NO_BLOCK_LIBRARY_CHOICES: ConfigureBlockLibraryChoices = {
+    native: [],
+    available: [],
+    customDefaults: [],
+};
+
 describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     let mockRequest: jest.Mock;
 
@@ -129,6 +153,40 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             'Catalog Service',
             'Authoring',
         ]);
+    });
+
+    it('adds a "Block Libraries" tab immediately before "Authoring" when there are libraries to choose', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject}
+                componentsData={mockComponentsData}
+                isEds
+                authoringExperience="da-live-classic"
+                blockLibraryChoices={blockLibraryChoices}
+            />
+        );
+
+        expect(railTabLabels()).toEqual([
+            'Project',
+            'Adobe Commerce',
+            'Catalog Service',
+            'Block Libraries',
+            'Authoring',
+        ]);
+    });
+
+    it('adds NO "Block Libraries" tab when the project has no library to choose', () => {
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject}
+                componentsData={mockComponentsData}
+                isEds
+                authoringExperience="da-live-classic"
+                blockLibraryChoices={NO_BLOCK_LIBRARY_CHOICES}
+            />
+        );
+
+        expect(railTabLabels()).not.toContain('Block Libraries');
     });
 
     it('adds NO "Authoring" tab for a non-EDS project (the control)', () => {
@@ -200,6 +258,88 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
                 })
             );
         });
+    });
+
+    it('sends no authoring experience the SC left as it was (PL-76)', async () => {
+        // It used to ride on every EDS save, so a window opened before a flip made
+        // elsewhere flipped it back.
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject}
+                componentsData={mockComponentsData}
+                existingEnvValues={validConfig}
+                isEds
+                authoringExperience="experience-workspace"
+            />
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Save Changes')).not.toBeDisabled();
+        });
+        await user.click(screen.getByText('Save Changes'));
+
+        await waitFor(() => {
+            expect(mockRequest).toHaveBeenCalledWith('save-configuration', expect.anything());
+        });
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('authoringExperience');
+    });
+
+    it('saves a block library ticked on the Block Libraries tab, even after leaving the tab', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject}
+                componentsData={mockComponentsData}
+                existingEnvValues={validConfig}
+                isEds
+                blockLibraryChoices={blockLibraryChoices}
+            />
+        );
+
+        selectSection('Block Libraries');
+        await user.click(screen.getByRole('button', { name: /Demo Builder Blocks/ }));
+        expect(screen.getByRole('button', { name: /Demo Builder Blocks/ })).toHaveAttribute(
+            'aria-pressed',
+            'true'
+        );
+        // Save submits every section, not the mounted one.
+        selectSection('Project');
+        await user.click(screen.getByText('Save Changes'));
+
+        await waitFor(() => {
+            expect(mockRequest).toHaveBeenCalledWith(
+                'save-configuration',
+                expect.objectContaining({
+                    selectedBlockLibraries: ['demo-builder-blocks'],
+                    customBlockLibraries: [],
+                })
+            );
+        });
+    });
+
+    it('sends no block libraries when none was ticked or unticked', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+        renderWithProvider(
+            <ConfigureScreen
+                project={mockProject}
+                componentsData={mockComponentsData}
+                existingEnvValues={validConfig}
+                isEds
+                blockLibraryChoices={blockLibraryChoices}
+            />
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Save Changes')).not.toBeDisabled();
+        });
+        await user.click(screen.getByText('Save Changes'));
+
+        await waitFor(() => expect(mockRequest).toHaveBeenCalled());
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('selectedBlockLibraries');
     });
 
     it('renders the DA.live & authoring settings link inside the Authoring section', () => {

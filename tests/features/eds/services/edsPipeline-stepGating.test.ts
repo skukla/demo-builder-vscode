@@ -17,6 +17,7 @@ import {
     type EdsPipelineServices,
 } from './edsPipeline.testUtils';
 import { createMockProject } from '../../../helpers/projectFake';
+import { publishLibraryPaths } from '@/features/eds/handlers/edsHelpers';
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: jest.fn().mockResolvedValue(undefined),
@@ -58,13 +59,21 @@ describe('executeEdsPipeline - step gating', () => {
             totalFiles: 1,
             copiedFiles: ['/page'],
             failedFiles: [],
+            sheetPaths: [],
+            codePathsOnSource: [],
         });
 
         services = pipelineServices({
             daLiveContentOps: {
-                copyContentFromSource: mockCopyContentFromSource,
-                createBlockLibraryFromTemplate: mockCreateBlockLibrary,
-                deleteAllSiteContent: jest.fn(),
+                copyOps: {
+                    copyContentFromSource: mockCopyContentFromSource,
+                },
+                blockLibOps: {
+                    createBlockLibraryFromTemplate: mockCreateBlockLibrary,
+                },
+                sourceOps: {
+                    deleteAllSiteContent: jest.fn(),
+                },
             },
             githubFileOps: { getFileContent: jest.fn().mockResolvedValue({ content: '{}' }) },
             helixService: {
@@ -80,9 +89,8 @@ describe('executeEdsPipeline - step gating', () => {
 
     describe('what an omitted flag defaults to', () => {
         it('does not clear the site', async () => {
-            const deleteAll = (
-                services.daLiveContentOps as unknown as { deleteAllSiteContent: jest.Mock }
-            ).deleteAllSiteContent;
+            const deleteAll = services.daLiveContentOps.sourceOps
+                .deleteAllSiteContent as unknown as jest.Mock;
 
             await executeEdsPipeline({ ...params, skipContent: true }, services);
 
@@ -241,6 +249,86 @@ describe('executeEdsPipeline - step gating', () => {
 
             const result = await executeEdsPipeline(prewarmable(), services);
 
+            expect(result.success).toBe(true);
+        });
+    });
+
+    // Configure's block library change (2026-10-15): the site's pages were published
+    // again on every refresh (17s), and every doc page with them (37s).
+    describe('a block library refresh', () => {
+        const LIBRARY = ['/.da/library/blocks.json', '/.da/library/blocks/hero', '/.da/library/blocks/cards'];
+
+        beforeEach(() => {
+            mockCreateBlockLibrary.mockResolvedValue({ success: true, blocksCount: 2, paths: LIBRARY });
+            params = {
+                ...basePipelineParams(),
+                includeBlockLibrary: true,
+                skipContent: true,
+                skipPublish: true,
+                blockCollectionIds: [],
+            };
+        });
+
+        it("publishes the library's pages and none of the site's", async () => {
+            await executeEdsPipeline(params, services);
+
+            expect(mockPublishAllSiteContent).not.toHaveBeenCalled();
+            expect(publishLibraryPaths).toHaveBeenCalledWith(expect.anything(), 'test-owner', 'test-repo', LIBRARY, expect.anything());
+        });
+
+        it('publishes only the block list and the named blocks, when named', async () => {
+            await executeEdsPipeline({ ...params, publishLibraryBlocksOnly: ['cards'] }, services);
+
+            expect(publishLibraryPaths).toHaveBeenCalledWith(
+                expect.anything(),
+                'test-owner',
+                'test-repo',
+                ['/.da/library/blocks.json', '/.da/library/blocks/cards'],
+                expect.anything(),
+            );
+        });
+
+        it('publishes just the block list when no block was added (a removal)', async () => {
+            await executeEdsPipeline({ ...params, publishLibraryBlocksOnly: [] }, services);
+
+            expect((publishLibraryPaths as jest.Mock).mock.calls[0][3]).toEqual(['/.da/library/blocks.json']);
+        });
+    });
+
+    /**
+     * EDS-61: an authored page at a category address must be on the published
+     * authored-pages sheet BEFORE the bulk publish previews it, or the overlay replaces it.
+     * The caller's hook runs after the copy (so it sees the content now in DA.live) and
+     * before the publish.
+     */
+    describe('the hook before the content publish', () => {
+        const SOURCE = { contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' } };
+
+        it('runs after the content copy and before the bulk publish', async () => {
+            const beforeContentPublish = jest.fn().mockResolvedValue(undefined);
+
+            await executeEdsPipeline({ ...params, ...SOURCE, beforeContentPublish }, services);
+
+            expect(beforeContentPublish).toHaveBeenCalledTimes(1);
+            const hook = beforeContentPublish.mock.invocationCallOrder[0];
+            expect(mockCopyContentFromSource.mock.invocationCallOrder[0]).toBeLessThan(hook);
+            expect(hook).toBeLessThan(mockPublishAllSiteContent.mock.invocationCallOrder[0]);
+        });
+
+        it('does not run when nothing is published', async () => {
+            const beforeContentPublish = jest.fn().mockResolvedValue(undefined);
+
+            await executeEdsPipeline({ ...params, ...SOURCE, skipPublish: true, beforeContentPublish }, services);
+
+            expect(beforeContentPublish).not.toHaveBeenCalled();
+        });
+
+        it('never stops the publish: a hook that throws is logged and the content still goes out', async () => {
+            const beforeContentPublish = jest.fn().mockRejectedValue(new Error('DA.live 503'));
+
+            const result = await executeEdsPipeline({ ...params, ...SOURCE, beforeContentPublish }, services);
+
+            expect(mockPublishAllSiteContent).toHaveBeenCalled();
             expect(result.success).toBe(true);
         });
     });

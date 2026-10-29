@@ -9,6 +9,8 @@
  */
 
 import type { ProgressTracker } from './shared';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import type { HandlerContext } from '@/types/handlers';
 
 /**
@@ -39,7 +41,7 @@ export async function executeSampleDataPhase(
         return;
     }
 
-    progressTracker('Installing Datapack', 92, `Installing ${chosen.name}`);
+    progressTracker(OPERATION_STAGES.installingDatapack.label, 92, `Installing ${chosen.name}`);
 
     try {
         const { installSampleData } = await import(
@@ -52,19 +54,19 @@ export async function executeSampleDataPhase(
         const result = await installSampleData(
             project,
             buildSampleDataDeps(context, project, (sd) =>
-                // Three-row contract: count in the title, the types being
-                // installed right now in the detail row (pack name until the
-                // first type starts).
+                // The step stays the step; how far it has got, and the types being
+                // installed right now, go on the line under it (progress vocabulary,
+                // owner 2026-10-16).
                 progressTracker(
-                    `Installing Datapack (${sd.done}/${sd.total})`,
+                    OPERATION_STAGES.installingDatapack.label,
                     94,
-                    sd.processing.join(', ') || chosen.name,
+                    typesLine(sd.done, sd.total, sd.processing),
                 ),
             ),
         );
 
         progressTracker(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             describeSampleDataResult(chosen.name, result),
         );
@@ -75,7 +77,7 @@ export async function executeSampleDataPhase(
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[Sample Data] Phase failed, continuing: ${reason}`);
         progressTracker(
-            'Installing Datapack',
+            OPERATION_STAGES.installingDatapack.label,
             96,
             `Datapack could not be installed \u2014 ${reason}`,
         );

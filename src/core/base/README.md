@@ -9,6 +9,10 @@ convention of convenience — see
 | `BaseCommand` | the command does work and reports on it |
 | `BaseWebviewCommand` | the command opens a panel |
 
+A panel command extends it through `BundledPanelCommand` (in `src/commands/`), which
+supplies the page HTML and the handler context. That half lives outside core because
+the context factory builds feature managers, and core may not import features.
+
 ## What extending buys you
 
 `context`, `stateManager`, `logger` and a `DisposableStore`, already wired. Plus

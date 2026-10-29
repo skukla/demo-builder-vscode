@@ -21,7 +21,11 @@ beforeEach(() => {
 
 async function sendAdd(): Promise<void> {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    await user.click(screen.getAllByRole('button', { name: 'Add integration' })[0]);
+    // The empty state's CTA, or — once there are cards — the grid's add card (PL-62).
+    const door =
+        screen.queryByRole('button', { name: 'Add integration' }) ??
+        screen.getByRole('button', { name: 'grid-add' });
+    await user.click(door);
     await user.click(screen.getByRole('button', { name: 'send-add' }));
 }
 

@@ -168,11 +168,19 @@ describe('getRuntimeSummary — the local axis only', () => {
         const summary = getRuntimeSummary(eds({ status: 'republishing' }));
 
         expect(summary?.text).toBe('Republishing');
-        expect(summary?.variant).toBe('warning');
+        // Blue while in progress (owner, 2026-10-16).
+        expect(summary?.variant).toBe('info');
     });
 
     it('keeps a reset visible too', () => {
         expect(getRuntimeSummary(eds({ status: 'resetting' }))?.text).toBe('Resetting');
+    });
+
+    it('shows an EDS project being created (PL-82)', () => {
+        expect(getRuntimeSummary(eds({ status: 'creating' }))).toEqual({
+            text: 'Creating',
+            variant: 'info',
+        });
     });
 
     it('leaves a NON-EDS project reporting Running/Stopped — control', () => {

@@ -18,12 +18,16 @@
  */
 
 import {
+    BASE_SHA,
+    REPO_DIR,
+    TEMPLATE_HEAD,
     applyStops,
     edsProject,
     failOn,
     gitCalls,
     mockExecute,
     mockReadFile,
+    mockRm,
     mockWriteFile,
     pushed,
     resetFakes,
@@ -79,6 +83,55 @@ describe('CRITERION 1 — the preserved files survive both strategies', () => {
     });
 });
 
+/**
+ * A label file the SC's repository does not have stays absent through a replace
+ * (EDS-53). Reset and creation remove the template's own label files, because one
+ * in the repository hides the DA.live sheet at its path; a replace that read the
+ * template's tree back over the checkout would put the B2B template's
+ * placeholders/checkout.json back and hide CitiSignal's checkout sheet again.
+ */
+describe('a replace keeps the label folder as the storefront had it', () => {
+    const CHECKOUT = `${REPO_DIR}/placeholders/checkout.json`;
+
+    function withoutCheckoutLabel(): void {
+        mockReadFile.mockImplementation(async (p: string) => {
+            if (p === CHECKOUT) throw Object.assign(new Error('nope'), { code: 'ENOENT' });
+            return p.endsWith('fstab.yaml') ? 'MOUNTS' : '{"headers":{}}';
+        });
+    }
+
+    it('removes a label file the storefront did not have, after the template tree lands', async () => {
+        withoutCheckoutLabel();
+
+        await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
+
+        expect(mockRm).toHaveBeenCalledWith(CHECKOUT, { force: true });
+    });
+
+    it('keeps the label files the storefront did have (its stubs), written back as they were', async () => {
+        withoutCheckoutLabel();
+
+        await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
+
+        const removed = mockRm.mock.calls.map((c) => String(c[0]));
+        expect(removed).not.toContain(`${REPO_DIR}/placeholders/cart.json`);
+        expect(mockWriteFile.mock.calls.map((c) => String(c[0]))).toContain(`${REPO_DIR}/placeholders/cart.json`);
+    });
+
+    it('removes nothing from a reset that was asked to preserve nothing', async () => {
+        withoutCheckoutLabel();
+
+        await service().resetRepository({
+            repoOwner: 'skukla',
+            repoName: 'demo-storefront',
+            templateOwner: 'adobe',
+            templateRepo: 'aem-boilerplate-commerce',
+        });
+
+        expect(mockRm).not.toHaveBeenCalledWith(CHECKOUT, { force: true });
+    });
+});
+
 describe('CRITERION 2 — a failed git step never pushes', () => {
     it('CONTROL: a fully successful sync DOES push', () => {
         // Otherwise every assertion in this block passes trivially.
@@ -108,7 +161,7 @@ describe('CRITERION 2 — a failed git step never pushes', () => {
     it('does not push when the recorded version is not a template commit', async () => {
         // The old merge recorded the storefront's OWN head. Diffing from it would
         // replay the whole template over the SC's edits, so it is refused outright.
-        failOn(/merge-base --is-ancestor/);
+        failOn(/git merge-base [^-]/);
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
@@ -180,7 +233,13 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
             strategy: 'merge',
             syncedCommit: '',
             conflicts: ['blocks/hero/hero.js', 'styles/styles.css'],
-            error: 'Merge conflicts in 2 files (blocks/hero/hero.js, styles/styles.css); the template update was not applied.',
+            clash: {
+                source: { owner: 'adobe', repo: 'aem-boilerplate-commerce' },
+                base: BASE_SHA,
+                target: TEMPLATE_HEAD,
+                preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
+            },
+            error: 'Merge conflicts in 2 files (blocks/hero/hero.js, styles/styles.css); the update was not applied.',
         });
         expect(gitCalls().some((c) => /reset --hard HEAD/.test(c))).toBe(true);
         expect(gitCalls().some((c) => /read-tree/.test(c))).toBe(false);
@@ -203,7 +262,7 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
         expect(result.error).toBe(
-            'Merge conflicts in 1 file (blocks/hero/hero.js); the template update was not applied.',
+            'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
         );
     });
 });

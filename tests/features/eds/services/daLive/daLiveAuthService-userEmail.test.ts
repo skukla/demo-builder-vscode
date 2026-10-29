@@ -21,6 +21,8 @@ import {
     createMockExtensionContext,
     createStatefulGlobalState,
 } from '../../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
+import { DA_LIVE_TOKEN_SECRET_KEY } from '@/features/eds/services/daLive/daLiveTokenMigration';
 
 const IMS_PROFILE_URL = 'https://ims-na1.adobelogin.com/ims/profile/v1';
 
@@ -29,18 +31,24 @@ describe('DaLiveAuthService — IMS profile email', () => {
     let service: DaLiveAuthService;
     let store: Map<string, unknown>;
 
-    /** A service over a globalState pre-loaded with `initial`. */
-    function makeService(initial: Record<string, unknown> = {}) {
+    /**
+     * A service over a globalState pre-loaded with `initial`. A `token` entry goes
+     * to SecretStorage, which is where the token lives; everything else is state.
+     */
+    function makeService({ token, ...initial }: Record<string, unknown> = {}) {
         const stateful = createStatefulGlobalState(initial);
         store = stateful.store;
+        const { secrets } = createMockSecretStorage(
+            typeof token === 'string' ? { [DA_LIVE_TOKEN_SECRET_KEY]: token } : {},
+        );
         service = new DaLiveAuthService(
-            createMockExtensionContext({ globalState: stateful.globalState }),
+            createMockExtensionContext({ globalState: stateful.globalState, secrets }),
         );
     }
 
-    /** globalState holding a token that passes the 5-minute expiry buffer. */
+    /** A stored token that passes the 5-minute expiry buffer. */
     const withStoredToken = (accessToken = 'stored-token') => ({
-        'daLive.accessToken': accessToken,
+        token: accessToken,
         'daLive.tokenExpiration': Date.now() + 3600_000,
     });
 
@@ -58,18 +66,7 @@ describe('DaLiveAuthService — IMS profile email', () => {
     });
 
     describe('fetchUserEmail', () => {
-        it('puts the token it was handed on the wire, not the stored one', async () => {
-            makeService(withStoredToken());
-            imsAnswers({ email: 'a@x.test' });
-
-            await service.fetchUserEmail('explicit-token');
-
-            expect(global.fetch).toHaveBeenCalledWith(IMS_PROFILE_URL, {
-                headers: { Authorization: 'Bearer explicit-token' },
-            });
-        });
-
-        it('falls back to the stored token when handed none', async () => {
+        it('puts the stored token on the wire', async () => {
             makeService(withStoredToken());
             imsAnswers({ email: 'a@x.test' });
 

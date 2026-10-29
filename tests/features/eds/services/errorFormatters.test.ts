@@ -2,17 +2,15 @@
  * Unit Tests: EDS Error Formatters
  *
  * Tests for error formatting utilities that transform technical errors
- * into user-friendly messages for GitHub, DA.live, and Helix operations.
+ * into user-friendly messages for GitHub and Helix operations.
  *
- * Coverage: 21 tests across 3 categories
+ * Coverage: 14 tests across 2 categories
  * - GitHub Error Formatting (7 tests)
- * - DA.live Error Formatting (7 tests)
  * - Helix Error Formatting (7 tests)
  */
 
 import {
     formatGitHubError,
-    formatDaLiveError,
     formatHelixError,
 } from '@/features/eds/services/errorFormatters';
 
@@ -108,97 +106,6 @@ describe('EDS Error Formatters', () => {
             // Then: Should fall back to UNKNOWN
             expect(result.code).toBe('UNKNOWN');
             expect(result.message).toBe('');
-        });
-    });
-
-    // ==========================================================
-    // DA.live Error Formatting (7 tests)
-    // ==========================================================
-    describe('formatDaLiveError', () => {
-        it('should format access denied error by code', () => {
-            // Given: Error with ACCESS_DENIED code
-            const error = codedError('Access forbidden', { code: 'ACCESS_DENIED', statusCode: 403 });
-
-            // When: Formatting the error
-            const result = formatDaLiveError(error);
-
-            // Then: Should return permission message
-            expect(result.code).toBe('ACCESS_DENIED');
-            expect(result.userMessage).toMatch(/permission|access/i);
-            expect(result.technicalDetails).toContain('403');
-        });
-
-        it('should format access denied by message pattern', () => {
-            // Given: Error with "forbidden" in message
-            const error = new Error('Request forbidden by server');
-
-            // When: Formatting the error
-            const result = formatDaLiveError(error);
-
-            // Then: Should detect ACCESS_DENIED pattern
-            expect(result.code).toBe('ACCESS_DENIED');
-            expect(result.recoveryHint).toMatch(/administrator|request access/i);
-        });
-
-        it('should format network error by code', () => {
-            // Given: Error with NETWORK_ERROR code
-            const error = codedError('The operation was aborted', { code: 'NETWORK_ERROR' });
-
-            // When: Formatting the error
-            const result = formatDaLiveError(error);
-
-            // Then: Should return connection message
-            expect(result.code).toBe('NETWORK_ERROR');
-            expect(result.userMessage).toMatch(/connect|timeout|interrupted/i);
-        });
-
-        it('should format timeout error by message pattern', () => {
-            // Given: Error with "timeout" in message
-            const error = new Error('Request timed out');
-
-            // When: Formatting the error
-            const result = formatDaLiveError(error);
-
-            // Then: Should detect TIMEOUT pattern
-            // Note: NETWORK_ERROR patterns include 'timeout' but TIMEOUT is checked first
-            expect(result.code).toBe('TIMEOUT');
-            expect(result.userMessage).toMatch(/took too long|timed out/i);
-        });
-
-        it('should format not found error by message pattern', () => {
-            // Given: Error with "404" in message
-            const error = new Error('Response status 404');
-
-            // When: Formatting the error
-            const result = formatDaLiveError(error);
-
-            // Then: Should detect NOT_FOUND pattern
-            expect(result.code).toBe('NOT_FOUND');
-            expect(result.userMessage).toMatch(/could not be found/i);
-        });
-
-        it('should return unknown code for unrecognized errors', () => {
-            // Given: Error with unrecognized message
-            const error = new Error('Unexpected server behavior');
-
-            // When: Formatting the error
-            const result = formatDaLiveError(error);
-
-            // Then: Should fall back to UNKNOWN
-            expect(result.code).toBe('UNKNOWN');
-            expect(result.userMessage).toMatch(/unexpected error/i);
-        });
-
-        it('should handle error with code and statusCode in technical details', () => {
-            // Given: Error with explicit code and statusCode
-            const error = codedError('Server error', { code: 'ACCESS_DENIED', statusCode: 403 });
-
-            // When: Formatting the error
-            const result = formatDaLiveError(error);
-
-            // Then: Should include status in technical details
-            expect(result.code).toBe('ACCESS_DENIED');
-            expect(result.technicalDetails).toContain('403');
         });
     });
 

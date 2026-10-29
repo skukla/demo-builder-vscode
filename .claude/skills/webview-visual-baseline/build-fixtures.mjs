@@ -93,6 +93,7 @@ const init = {
         commerceStoreStructure: project.commerceStoreStructure,
     },
     dataInstaller: { theme, projectName: project.title ?? project.name },
+    siteAccess: { theme, projectName: project.title ?? project.name, hasStorefront: true },
 };
 
 // Answers to requests a surface makes on mount. Anything unlisted gets a benign
@@ -102,6 +103,9 @@ const requests = {
     'get-components-data': { success: true, data: componentsData },
     // Nested under `data.projects` — read from projects-dashboard/ui/index.tsx.
     getProjects: { success: true, data: { projects: [project], projectsViewMode: 'cards' } },
+    getSiteAccess: { success: true, data: fx.buildSiteAccessView(project) },
+    // No updates waiting — the shape handleTakeUpdatesRequest answers with (PL-80).
+    takeUpdatesRequest: { success: true, data: { rows: null } },
 };
 
 writeFileSync(join(outDir, 'fixtures.json'), JSON.stringify({ init, requests, pushed }, null, 2));

@@ -26,12 +26,18 @@ const mockBuildCustomIntegrationEntry = jest.fn();
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
     buildCustomIntegrationEntry: (...a: unknown[]) => mockBuildCustomIntegrationEntry(...a),
+    // The replace-first check reads the pair's bound system from here; none for these entries.
+    getAppBuilderComponentCatalog: () => [],
 }));
 
 // ---- Model B runner (the live engine — fully mocked) -----------------------
 const mockAddAppBuilderComponent = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
+const mockRemoveAppBuilderComponent = jest.fn();
+jest.mock('@/features/app-builder/services/appBuilderAddRun', () => ({
     addAppBuilderComponent: (...a: unknown[]) => mockAddAppBuilderComponent(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderRemoveRun', () => ({
+    removeAppBuilderComponent: (...a: unknown[]) => mockRemoveAppBuilderComponent(...a),
 }));
 
 // ---- runner deps factory + context builder ---------------------------------
@@ -58,7 +64,12 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { reportPhase, withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { creationReporter } from '@/features/project-creation/handlers/creationProgress';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import type { Project } from '@/types/base';
 import {
     executeAppBuilderIntegrationsPhase,
     creationConfig as config,
@@ -106,7 +117,7 @@ describe('executeAppBuilderIntegrationsPhase', () => {
             authManager: mockAuthService,
             commandManager: mockCommandExecutor,
         });
-        expect(mockBuildDefaultRunnerDeps).toHaveBeenCalledWith({ _ctx: true });
+        expect(mockBuildDefaultRunnerDeps).toHaveBeenCalledWith({ _ctx: true }, expect.any(Function));
         expect(mockAddAppBuilderComponent).toHaveBeenCalledTimes(1);
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
             project,
@@ -115,7 +126,7 @@ describe('executeAppBuilderIntegrationsPhase', () => {
         );
         // The API subscribe (union reconcile, inside the runner) is communicated.
         expect(progressTracker).toHaveBeenCalledWith(
-            'Deploying Integrations',
+            OPERATION_STAGES.deployingIntegrations.label,
             expect.any(Number),
             'Enabling API access'
         );
@@ -251,5 +262,182 @@ describe('executeAppBuilderIntegrationsPhase', () => {
                 progressTracker
             )
         ).rejects.toThrow('clone failed');
+    });
+
+    // Folded into one numbered step (owner, 2026-10-16: "Fold"): line 1 is the step
+    // creation is on, and each integration's own step is line 2, under its name.
+    describe('integration deploys fold into the one creation step', () => {
+        type Report = (stage: string, step?: string, position?: { index: number; total: number; name?: string }) => void;
+        const runnerReport = (): Report => (mockBuildDefaultRunnerDeps.mock.calls[0] as unknown[])[1] as Report;
+
+        it("shows the integration's own step on line 2, under its name", async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                runnerReport()(OPERATION_STAGES.deployingApp.label);
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            expect(progressTracker).toHaveBeenLastCalledWith(
+                OPERATION_STAGES.deployingIntegrations.label,
+                expect.any(Number),
+                `${INTEGRATION_ENTRY.name}: ${OPERATION_STAGES.deployingApp.label}`,
+            );
+        });
+
+        it('names the member of a pair the runner is on, and the moment it reports', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                runnerReport()(OPERATION_STAGES.installingIntoCommerce.label, 'Registering webhooks', {
+                    index: 2,
+                    total: 2,
+                    name: 'Justrite ERP',
+                });
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            expect(progressTracker).toHaveBeenLastCalledWith(
+                OPERATION_STAGES.deployingIntegrations.label,
+                expect.any(Number),
+                'Justrite ERP: Registering webhooks',
+            );
+        });
+
+        it('shows a plain line from deeper in under the integration it is for', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                runnerReport()(OPERATION_STAGES.loadingErpDemoData.label);
+                reportPhase('Reading Commerce companies');
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            expect(progressTracker).toHaveBeenLastCalledWith(
+                OPERATION_STAGES.deployingIntegrations.label,
+                expect.any(Number),
+                `${INTEGRATION_ENTRY.name}: Reading Commerce companies`,
+            );
+        });
+
+        it('never reports a step other than the one creation is on', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                runnerReport()(OPERATION_STAGES.subscribingApis.label);
+                runnerReport()(OPERATION_STAGES.deployingApp.label, 'Running aio app deploy');
+                reportPhase('Uploading actions');
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            const steps = new Set(progressTracker.mock.calls.map((call) => call[0]));
+            expect([...steps]).toStrictEqual([OPERATION_STAGES.deployingIntegrations.label]);
+        });
+
+        it('drops a plain line that arrives before any step has started', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                reportPhase('Reading Commerce companies');
+                return { success: true };
+            });
+
+            await executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            // Nothing to file it under, so the screen keeps the phase's own two lines.
+            expect(progressTracker.mock.calls.map((call) => call[2])).toStrictEqual([
+                'Enabling API access',
+                'Deploying ERP Sync',
+            ]);
+        });
+
+        // With creation's own reporter, which also tells an agent: what it tells the
+        // agent must not come back round as a line from deeper in.
+        it('numbers the step on the creation screen, and tells the agent each line once', async () => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockAddAppBuilderComponent.mockImplementation(async () => {
+                runnerReport()(OPERATION_STAGES.deployingApp.label);
+                return { success: true };
+            });
+            const sendMessage = jest.fn().mockResolvedValue(undefined);
+            const creation = creationReporter(sendMessage, 0);
+            creation.numberFrom([OPERATION_STAGES.settingUpProject.label, OPERATION_STAGES.deployingIntegrations.label]);
+            const agent: string[] = [];
+
+            await withPhaseSinks([(line) => agent.push(line)], () =>
+                executeAppBuilderIntegrationsPhase(context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), creation.report),
+            );
+
+            expect(sendMessage).toHaveBeenLastCalledWith('creationProgress', expect.objectContaining({
+                currentOperation: OPERATION_STAGES.deployingIntegrations.label,
+                message: `${INTEGRATION_ENTRY.name}: ${OPERATION_STAGES.deployingApp.label}`,
+                position: { index: 2, total: 2 },
+            }));
+            expect(agent).toStrictEqual([
+                'Deploying integrations (2 of 2) — Enabling API access',
+                'Deploying integrations (2 of 2) — Deploying ERP Sync',
+                `Deploying integrations (2 of 2) — ${INTEGRATION_ENTRY.name}: ${OPERATION_STAGES.deployingApp.label}`,
+            ]);
+        });
+    });
+
+    // A copied project deploys its integrations here, into the Adobe project its original
+    // already deployed to (owner, 2026-10-08): the original's same-named deployment goes first.
+    describe('a same-named deployment another local project put into the same Adobe project', () => {
+        function other(name: string, adobeProjectId = project.adobe?.projectId): Project {
+            return createMockProject({
+                name: 'justrite',
+                path: '/projects/justrite',
+                adobe: { projectId: adobeProjectId, organization: 'org' },
+                appBuilderComponents: {
+                    'erp-sync': { kind: 'integration', status: 'deployed', name, source: { owner: 'acme', repo: 'erp-sync' } },
+                },
+            });
+        }
+
+        function contextWith(held: Project) {
+            return createMockHandlerContext({
+                stateManager: createMockStateManager({
+                    getAllProjects: jest.fn().mockResolvedValue([{ name: held.name, path: held.path, lastModified: new Date() }]),
+                    loadProjectFromPath: jest.fn().mockResolvedValue(held),
+                }),
+            });
+        }
+
+        beforeEach(() => {
+            mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
+            mockRemoveAppBuilderComponent.mockResolvedValue({ success: true });
+        });
+
+        it('removes it from that project before this one deploys', async () => {
+            const held = other('ERP Sync');
+
+            await executeAppBuilderIntegrationsPhase(contextWith(held), project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            expect(mockRemoveAppBuilderComponent).toHaveBeenCalledWith(held, 'erp-sync', expect.anything());
+            expect(mockRemoveAppBuilderComponent.mock.invocationCallOrder[0]).toBeLessThan(
+                mockAddAppBuilderComponent.mock.invocationCallOrder[0],
+            );
+        });
+
+        it('fails the creation, with the reason, when that removal did not finish', async () => {
+            mockRemoveAppBuilderComponent.mockResolvedValue({ success: false, error: 'Nothing was removed.' });
+
+            await expect(
+                executeAppBuilderIntegrationsPhase(contextWith(other('ERP Sync')), project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker),
+            ).rejects.toThrow("justrite's ERP Sync is still deployed");
+            expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+        });
+
+        it('deploys beside a deployment of a different name, and one in a different Adobe project', async () => {
+            await executeAppBuilderIntegrationsPhase(contextWith(other('Sync B')), project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+            await executeAppBuilderIntegrationsPhase(contextWith(other('ERP Sync', 'another-adobe-project')), project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker);
+
+            expect(mockRemoveAppBuilderComponent).not.toHaveBeenCalled();
+            expect(mockAddAppBuilderComponent).toHaveBeenCalledTimes(2);
+        });
     });
 });

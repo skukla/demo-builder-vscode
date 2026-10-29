@@ -36,6 +36,12 @@ import { parseJSON, toError } from '@/types/typeGuards';
 export interface RuntimeCredentials {
     namespace: string;
     auth: string;
+    /**
+     * The workspace's OAuth server-to-server credential as the four
+     * `IMS_OAUTH_S2S_*` values `aio app use` writes; absent when the workspace has
+     * none. Carries a live client secret: per-invocation env only, never logged.
+     */
+    imsOAuthS2SEnv?: Record<string, string>;
 }
 
 /** One Runtime namespace entry as the workspace-download JSON reports it. */
@@ -58,17 +64,85 @@ const RUNTIME_PROVISION_FAILED_MESSAGE =
 /** How many times to re-check for the namespace after provisioning (it can lag). */
 const RUNTIME_PROVISION_ATTEMPTS = 3;
 
+/** One workspace credential as the download reports it (only what we read). */
+interface WorkspaceCredential {
+    integration_type?: string;
+    oauth_server_to_server?: {
+        client_id?: string;
+        client_secrets?: string[];
+        scopes?: string[];
+        technical_account_id?: string;
+        technical_account_email?: string;
+    };
+}
+
+/**
+ * A workspace's OAuth server-to-server credential, read whole. Carries a live client
+ * secret: held in memory for the one call that needs it, never logged or written.
+ */
+export interface WorkspaceS2SCredential {
+    clientId: string;
+    clientSecret: string;
+    orgId: string;
+    scopes: string[];
+    technicalAccountId?: string;
+    technicalAccountEmail?: string;
+}
+
 /** Shape of the workspace-download JSON we consume (defensively partial). */
 interface WorkspaceJson {
     project?: {
+        org?: { ims_org_id?: string };
         workspace?: {
             name?: string;
             details?: {
                 runtime?: {
                     namespaces?: Array<{ name?: string; auth?: string }>;
                 };
+                credentials?: WorkspaceCredential[];
             };
         };
+    };
+}
+
+/**
+ * The workspace's OAuth server-to-server credential: client_id, the FIRST client
+ * secret, the project's IMS org id and the scopes, plus the technical account when the
+ * download carries it. Undefined when any of the first three is missing.
+ */
+function s2sCredentialOf(config: WorkspaceJson | undefined): WorkspaceS2SCredential | undefined {
+    const credential = config?.project?.workspace?.details?.credentials?.find(
+        (c) => c.integration_type === 'oauth_server_to_server',
+    )?.oauth_server_to_server;
+    const orgId = config?.project?.org?.ims_org_id;
+    if (!credential) return undefined;
+    const clientId = credential.client_id;
+    const clientSecret = credential.client_secrets?.[0];
+    if (!clientId || !clientSecret || !orgId) return undefined;
+    return {
+        clientId,
+        clientSecret,
+        orgId,
+        scopes: credential.scopes ?? [],
+        ...(credential.technical_account_id ? { technicalAccountId: credential.technical_account_id } : {}),
+        ...(credential.technical_account_email ? { technicalAccountEmail: credential.technical_account_email } : {}),
+    };
+}
+
+/**
+ * The workspace S2S credential as `IMS_OAUTH_S2S_*` env, mapped exactly as
+ * `aio app use` maps it (aio-cli-plugin-app 14.8 `getOAuthS2SCredential` and
+ * `importConsoleConfig`, read 2026-09-15): client_id, the FIRST client secret, the
+ * project's IMS org id, and the scopes as a JSON string.
+ */
+function imsOAuthS2SEnvOf(config: WorkspaceJson | undefined): Record<string, string> | undefined {
+    const credential = s2sCredentialOf(config);
+    if (!credential) return undefined;
+    return {
+        IMS_OAUTH_S2S_CLIENT_ID: credential.clientId,
+        IMS_OAUTH_S2S_CLIENT_SECRET: credential.clientSecret,
+        IMS_OAUTH_S2S_ORG_ID: credential.orgId,
+        IMS_OAUTH_S2S_SCOPES: JSON.stringify(credential.scopes),
     };
 }
 
@@ -82,7 +156,7 @@ interface WorkspaceJson {
  * @param commandManager - Executor for the aio CLI call.
  * @param logger - Logger (namespace is logged; auth never is).
  * @param nodeVersion - Node resolution for the aio call (same value the
- *   deploy uses, e.g. 'auto').
+ *   deploy uses).
  * @throws With an actionable message when the download fails or the workspace
  *   has no Runtime namespace (Runtime not enabled on the workspace).
  */
@@ -92,15 +166,48 @@ export async function fetchRuntimeCredentials(
     nodeVersion: string,
 ): Promise<RuntimeCredentials> {
     try {
-        const ns = await downloadRuntimeNamespace(commandManager, nodeVersion);
-        if (!ns?.name || !ns?.auth) {
-            throw new Error(NO_RUNTIME_MESSAGE);
-        }
-        logger.debug(`[App Builder] Runtime namespace resolved: ${ns.name}`);
-        return { namespace: ns.name, auth: ns.auth };
+        return credentialsIn(await downloadWorkspaceConfig(commandManager, nodeVersion), logger);
     } catch (error) {
         throw new Error(`Runtime credential fetch failed: ${toError(error).message}`);
     }
+}
+
+/**
+ * The Runtime credentials in a workspace config ALREADY downloaded — the one an
+ * extension app's `aio app use` imports. Reading them from that file saves the
+ * second download {@link fetchRuntimeCredentials} would make: 12s of a 6-minute
+ * ERP add on 2026-09-21.
+ *
+ * @throws When the file holds no Runtime namespace
+ */
+export async function readRuntimeCredentials(filePath: string, logger: Logger): Promise<RuntimeCredentials> {
+    const config = parseJSON<WorkspaceJson>(await fsPromises.readFile(filePath, 'utf-8')) ?? undefined;
+    return credentialsIn(config, logger);
+}
+
+/** The namespace, its key and the S2S env from a parsed workspace config. */
+function credentialsIn(config: WorkspaceJson | undefined, logger: Logger): RuntimeCredentials {
+    const ns = firstNamespaceOf(config);
+    if (!ns?.name || !ns?.auth) {
+        throw new Error(NO_RUNTIME_MESSAGE);
+    }
+    logger.debug(`[App Builder] Runtime namespace resolved: ${ns.name}`);
+    const imsOAuthS2SEnv = imsOAuthS2SEnvOf(config);
+    return { namespace: ns.name, auth: ns.auth, ...(imsOAuthS2SEnv ? { imsOAuthS2SEnv } : {}) };
+}
+
+/**
+ * The targeted workspace's OAuth server-to-server credential, or undefined when it has
+ * none. Unlike {@link fetchRuntimeCredentials}, a workspace without Runtime is not an
+ * error here. Callers run this inside `withOrgContext` aimed at the workspace wanted.
+ *
+ * @throws When the download fails
+ */
+export async function fetchWorkspaceS2SCredential(
+    commandManager: CommandExecutor,
+    nodeVersion: string,
+): Promise<WorkspaceS2SCredential | undefined> {
+    return s2sCredentialOf(await downloadWorkspaceConfig(commandManager, nodeVersion));
 }
 
 /**
@@ -117,7 +224,7 @@ export async function workspaceHasRuntime(
     commandManager: CommandExecutor,
     nodeVersion: string,
 ): Promise<boolean> {
-    const ns = await downloadRuntimeNamespace(commandManager, nodeVersion);
+    const ns = firstNamespaceOf(await downloadWorkspaceConfig(commandManager, nodeVersion));
     return Boolean(ns?.name);
 }
 
@@ -160,18 +267,22 @@ export async function ensureWorkspaceRuntime(
     throw new Error(RUNTIME_PROVISION_FAILED_MESSAGE);
 }
 
+/** The workspace's first Runtime namespace, or undefined when it has none. */
+function firstNamespaceOf(config: WorkspaceJson | undefined): RuntimeNamespace | undefined {
+    return config?.project?.workspace?.details?.runtime?.namespaces?.[0];
+}
+
 /**
- * Download the targeted workspace's config and return its first Runtime namespace
- * (or undefined when the workspace has none). Shared by {@link fetchRuntimeCredentials}
+ * Download the targeted workspace's config. Shared by {@link fetchRuntimeCredentials}
  * (per-deploy credential fetch) and {@link workspaceHasRuntime} (the presence check
  * backing {@link ensureWorkspaceRuntime}'s provision-if-missing path). The downloaded
- * file holds the namespace auth key, so it lands in a 0700 temp dir and is deleted
- * in `finally`.
+ * file holds the namespace auth key and the credential's secret, so it lands in a
+ * 0700 temp dir and is deleted in `finally`.
  */
-async function downloadRuntimeNamespace(
+async function downloadWorkspaceConfig(
     commandManager: CommandExecutor,
     nodeVersion: string,
-): Promise<RuntimeNamespace | undefined> {
+): Promise<WorkspaceJson | undefined> {
     const scratchDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'db-ws-'));
     const filePath = path.join(scratchDir, `ws-${crypto.randomBytes(6).toString('hex')}.json`);
 
@@ -191,8 +302,7 @@ async function downloadRuntimeNamespace(
         }
 
         const raw = await fsPromises.readFile(filePath, 'utf-8');
-        const parsed = parseJSON<WorkspaceJson>(raw);
-        return parsed?.project?.workspace?.details?.runtime?.namespaces?.[0];
+        return parseJSON<WorkspaceJson>(raw) ?? undefined;
     } finally {
         // The file holds the namespace auth key — always remove it.
         await fsPromises.rm(scratchDir, { recursive: true, force: true }).catch(() => {
@@ -232,7 +342,7 @@ export function extractAioErrorDetail(stderr: string | undefined): string {
     return kept.join(' ');
 }
 
-/** Spinner frames and progress glyphs oclif redraws; noise in a log. */
+/** Spinner frames and progress glyphs oclif redraws, and blank lines; noise in a log. */
 const SPINNER_LINE = /^[\s\-\\|/⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏✔✖ℹ⚠]*$/;
 /** A long token-shaped run: masked, since CLI output can echo keys. */
 const TOKEN_LIKE = /[A-Za-z0-9_-]{40,}/g;
@@ -256,7 +366,7 @@ export function aioOutputTail(stdout: string | undefined, stderr: string | undef
         .replace(ANSI, '')
         .split(/\r?\n|\r/)
         .map((line) => line.trimEnd())
-        .filter((line) => line.trim() && !SPINNER_LINE.test(line))
+        .filter((line) => !SPINNER_LINE.test(line))
         .filter((line, index, all) => line !== all[index - 1])
         .map((line) => line.replace(TOKEN_LIKE, '<masked>'));
     return lines.slice(-maxLines).join('\n');

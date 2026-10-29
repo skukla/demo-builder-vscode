@@ -5,7 +5,7 @@ area: platform
 parent: PL-56
 needs: [PL-56a]
 value: high
-status: backlog
+status: built
 ---
 
 # Export carries the whole project, and never a credential
@@ -40,3 +40,9 @@ Export runs the same checks Share runs: a named datapack must be in the datapack
 The serializer suite gains a field-set test pinned to the contract's list (a manifest
 field added later without a decision goes red); a real converged project's manifest is the
 fixture; the secret-strip battery becomes "no `SECRET_ENV_KEYS` key is ever present".
+
+## Shipped so far
+
+- 2026-10-03  Credential half done, uncommitted on loop/2026-10-03-overnight: every export door writes through createExportSettings with no credential, the includeSecrets option and includesSecrets stamp are deleted (tool, handler, service, type, tests, docs), the file is named <name>.project.demo-builder.json and the dialog says Demo Builder project. NOT done: the version-2 file shape (import still reads version 1, so the writer and PL-56d have to move together) and the D32 reachability checks.
+- 2026-10-03  chore(platform): the export never carries a credential; a leftovers check; the agent-surface gap triaged (PL-35, PL-56c, PL-39, AI-1r) (`b7bc129d2`)
+- 2026-10-03  Version-2 half done 2026-10-03, uncommitted on loop/2026-10-03-night2-a: export writes the version-2 project file through createExportSettings (title, Adobe org and workspace names, Commerce connection, store structure, datapack, saved prompts, storefront as provenance only). Proven by projectFileRoundTrip.test.tsx (export, read, wizard, creation wire, field by field). NOT done: the D32 reachability checks (datapack published, custom-app link readable).

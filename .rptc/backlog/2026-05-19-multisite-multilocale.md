@@ -99,6 +99,13 @@ A new "Locales" tile on the per-project dashboard ActionGrid navigates to the Co
 
 ### Configure Screen — Locales Tab
 
+> **The screen this section describes has changed (2026-10-08).** Configure no longer has
+> "Configuration" and "AI Setup" tabs: it is a rail of sections, built by
+> `buildConfigureSections` in `dashboard/ui/configure/hooks/useConfigureSections.ts` and drawn
+> one at a time by `ConfigureSectionBody`. A Locales surface is now a new section kind in that
+> list plus its body, not a third tab, and the dashboard tile's `activeView='locales'` becomes
+> that section's id. Read the current screen before building from the paragraphs below.
+
 A third tab ("Locales") added beside "Configuration" and "AI Setup" in `ConfigureScreen.tsx`. This is the primary post-creation locale management surface.
 
 **Contents:**

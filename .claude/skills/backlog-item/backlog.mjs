@@ -26,7 +26,10 @@
  *   log <id> "<text>"     append a dated line to `## Shipped so far`
  *   sync                  rewrite the README's generated spans in place
  *   stale                 advisory: work-in-progress items with nothing recorded
+ *   leftovers             advisory: finished items whose own body still names work
  *   unlogged [--since R]  commits that NAME an item but were never logged to it
+ *   readiness [--plan F]  built items against the release test plan's Result column:
+ *                         ready / failed / not checked / no row, and a cut verdict
  *
  *   filters: --area X --status S --layer L --kind K --value V --grep TERM
  *   output:  --json  (every read command; this is the agent-facing form)
@@ -214,6 +217,61 @@ export function startable(items) {
                         a.id.localeCompare(b.id, undefined, { numeric: true }));
 }
 
+// ── leftovers ────────────────────────────────────────────────────────────────
+
+// PL-39. On 2026-09-02, 18 items sat at `shipped` or `built` and still named
+// remaining work in their own prose. Nobody re-opens a finished item, so that work
+// was in no list: not `next` (the item is done), not `stale` (it has a record),
+// not `check` (the frontmatter is valid). This READS the prose of finished items.
+//
+// The phrases are the six the item names. They are not banned and must not be:
+// they are the most useful sentences in these files. The point is that something
+// looks at them.
+export const FINISHED = new Set(['shipped', 'built']);
+const REMAINDER = /\b(remaining|remainder|next steps?|follow-on|not yet done|left for)\b/i;
+// A remainder told as history is the record, not open work: "the remaining work
+// WAS finished in...". Same split `doc-drift.sh` makes for paths that are gone.
+const HISTORICAL = /\b(was|were|has been|have been|had been|is now|are now|no longer|since (been )?(done|finished|shipped|landed|closed|fixed)|resolved|completed)\b/i;
+
+/**
+ * The sentences of a body, with hard-wrapped lines joined first. Items are
+ * wrapped at ~80 columns, so "remaining" and the "was finished" that makes it
+ * history are routinely on different LINES of one sentence; judging by line
+ * would report history as open work. A list row, table row or heading starts a
+ * new unit. Fenced code is dropped: a quoted scan output is not a claim.
+ */
+export function sentences(body) {
+    const units = [];
+    let current = '';
+    const flush = () => { if (current.trim()) units.push(current.trim()); current = ''; };
+    for (const line of body.replace(/```[\s\S]*?```/g, '').split('\n')) {
+        if (!line.trim() || /^\s*([-*]\s|\d+\.\s|\||#)/.test(line)) flush();
+        current += ` ${line.trim()}`;
+    }
+    flush();
+    return units.flatMap((u) => u.split(/(?<=[.!?])\s+/)).filter(Boolean);
+}
+
+/**
+ * Finished items that still name work, and why each of the others was skipped.
+ *
+ * An item with a child, or with `superseded-by`, is skipped: its remainder has
+ * somewhere to live, which is all this check asks for.
+ */
+export function leftovers(items) {
+    const finished = items.filter((i) => FINISHED.has(i.status));
+    const parents = new Set(items.map((i) => i.parent).filter(Boolean));
+    const homed = finished.filter((i) => parents.has(i.id) || i['superseded-by']);
+    const found = [], historyOnly = [];
+    for (const i of finished.filter((x) => !homed.includes(x))) {
+        const named = sentences(i.body ?? '').filter((s) => REMAINDER.test(s));
+        const open = named.filter((s) => !HISTORICAL.test(s));
+        if (open.length) found.push({ id: i.id, status: i.status, title: i.title, rel: i.rel, sentences: open });
+        else if (named.length) historyOnly.push(i.id);
+    }
+    return { found, finished: finished.length, homed: homed.length, historyOnly: historyOnly.length };
+}
+
 // ── rendering ────────────────────────────────────────────────────────────────
 
 const family = (i) => i.parent ?? i.id;
@@ -328,6 +386,78 @@ function syncReadme(items) {
     }
     writeFileSync(README, text);
     return missing;
+}
+
+// ── release readiness ────────────────────────────────────────────────────────
+//
+// `built` says code landed; it cannot say anyone has used it, and a tag only
+// says it was released. The release test plan is where use gets recorded: each
+// row names its items in [brackets] and carries a Result cell the owner fills
+// in — pass, fail, or `gate` for work with nothing to click, whose green gate
+// IS the proof. This joins the two so "what is ready to ship" is read off the
+// record instead of remembered.
+
+const PLAN_DIR = '.rptc/handoff';
+const ID_IN_BRACKETS = /\[([^\]]+)\]/g;
+const ITEM_ID = /\b[A-Z]{2,3}-\d+[a-z]?\b/g;
+// Lines in `## Shipped so far` that already record a live run, in the wordings
+// used before the Result column existed. "Live check owed" is the opposite.
+const LIVE_LOG = /\bVerified live\b|\bLIVE\b|^Live[: ]|\bLive on\b|\bproven live\b/;
+const NOT_LIVE = /\bowed\b|not yet (run|seen) live/i;
+
+function latestPlan() {
+    if (!existsSync(PLAN_DIR)) return null;
+    const plans = readdirSync(PLAN_DIR).filter((f) => f.endsWith('release-test-plan.md')).sort();
+    return plans.length ? join(PLAN_DIR, plans[plans.length - 1]) : null;
+}
+
+export function readPlan(text) {
+    const rows = [];
+    let inTable = false, resultCol = -1, tables = 0, withResult = 0;
+    for (const line of text.split('\n')) {
+        if (!line.startsWith('|')) { inTable = false; continue; }
+        const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+        if (cells.every((c) => /^:?-+:?$/.test(c))) continue;
+        if (!inTable) {
+            // The first row of a table is its header.
+            inTable = true;
+            tables++;
+            resultCol = cells.findIndex((c) => /^result$/i.test(c));
+            if (resultCol >= 0) withResult++;
+            continue;
+        }
+        const ids = [];
+        for (const m of line.matchAll(ID_IN_BRACKETS)) ids.push(...(m[1].match(ITEM_ID) ?? []));
+        const raw = resultCol >= 0 ? (cells[resultCol] ?? '') : '';
+        const result = /^(pass|✅|gate)\b/i.test(raw) ? 'pass' : /^(fail|❌)\b/i.test(raw) ? 'fail' : '';
+        rows.push({ star: cells[0].includes('★'), ids, result, raw, what: cells[1] ?? '' });
+    }
+    return { rows, tables, withResult };
+}
+
+function liveLogged(item) {
+    const body = readFileSync(item.path, 'utf8');
+    const i = body.indexOf('## Shipped so far');
+    if (i < 0) return false;
+    return body.slice(i).split('\n')
+        .map((l) => l.replace(/^- \d{4}-\d{2}-\d{2}\s+/, ''))
+        .some((l) => LIVE_LOG.test(l) && !NOT_LIVE.test(l));
+}
+
+export function readiness(items, plan) {
+    const built = items.filter((i) => i.status === 'built');
+    const out = { ready: [], failed: [], unchecked: [], noRow: [] };
+    for (const item of built) {
+        const rows = plan.rows.filter((r) => r.ids.includes(item.id));
+        const entry = { id: item.id, title: item.title, star: rows.some((r) => r.star), live: liveLogged(item) };
+        if (rows.some((r) => r.result === 'fail')) out.failed.push(entry);
+        else if (rows.length && rows.every((r) => r.result === 'pass')) out.ready.push({ ...entry, by: 'plan' });
+        else if (rows.length) out.unchecked.push(entry);
+        else if (entry.live) out.ready.push({ ...entry, by: 'live log' });
+        else out.noRow.push(entry);
+    }
+    const blocking = out.failed.length + out.unchecked.filter((e) => e.star).length;
+    return { ...out, built: built.length, blocking };
 }
 
 // ── cli ──────────────────────────────────────────────────────────────────────
@@ -486,6 +616,54 @@ function main() {
             console.log(`\n  ${unlogged.length} of ${wip} work-in-progress item(s) have nothing recorded` +
                         `\n  control: ${items.length} parsed, ${items.filter((i) => WIP.has(i.status)).length} in a working state, ` +
                         `${items.filter((i) => WIP.has(i.status) && i.kind === 'epic').length} epic(s) excluded`);
+            return;
+        }
+        case 'leftovers': {
+            // Advisory, never a gate, and never part of `check`: a sentence about
+            // remaining work is a judgement to make (file it as a child, or say it
+            // is history), not a defect to refuse a commit over. A failing check
+            // would be answered by deleting the sentence, which trades a visible
+            // gap for an invisible one.
+            const r = leftovers(items);
+            if (opt.json) return console.log(JSON.stringify(r.found, null, 2));
+            for (const f of r.found) {
+                console.log(`  ${f.id.padEnd(6)} ${f.status.padEnd(7)} ${f.title}`);
+                console.log(`         "${f.sentences[0].slice(0, 110)}"` +
+                            (f.sentences.length > 1 ? `  (+${f.sentences.length - 1} more)` : ''));
+            }
+            // The control. "0 leftovers" from a backlog with no finished items, or
+            // from a pattern that matches nothing, reads the same as a clean record.
+            console.log(`\n  ${r.found.length} finished item(s) still name work, and it has no item of its own` +
+                        `\n  control: ${items.length} parsed, ${r.finished} shipped or built, ` +
+                        `${r.homed} have a child or superseded-by (skipped), ` +
+                        `${r.historyOnly} name a remainder only as history (skipped)` +
+                        '\n  for each: file the remainder as a child item, or reword it as history if it is done.');
+            return;
+        }
+        case 'readiness': {
+            // Advisory: exits 0 whatever it finds, like `leftovers`. The verdict
+            // line is the answer; a failing exit would be read as a broken tool.
+            const path = opt.plan ?? latestPlan() ?? die(`no *release-test-plan.md in ${PLAN_DIR}; pass --plan <file>`);
+            const plan = readPlan(readFileSync(path, 'utf8'));
+            const r = readiness(items, plan);
+            if (opt.json) return console.log(JSON.stringify({ plan: path, ...r }, null, 2));
+            const line = (e, note = '') =>
+                console.log(`  ${e.star ? '★' : ' '} ${e.id.padEnd(7)} ${note.padEnd(9)} ${e.title}`);
+            const group = (name, list, note) => {
+                console.log(`\n${name} (${list.length})`);
+                for (const e of [...list].sort((a, b) => Number(b.star) - Number(a.star))) line(e, note(e));
+            };
+            group('READY', r.ready, (e) => e.by);
+            group('FAILED — each fail becomes a new item', r.failed, () => '');
+            group('NOT CHECKED — has a row, no result yet', r.unchecked, (e) => (e.live ? 'live once' : ''));
+            group('NO ROW — add one, or a `gate` row if there is nothing to click', r.noRow, () => '');
+            console.log(`\n  verdict: ${r.blocking === 0 && r.noRow.length === 0
+                ? 'ready to cut — no failures, no unchecked ★ rows'
+                : `not ready — ${r.failed.length} failed, ${r.unchecked.filter((e) => e.star).length} ★ unchecked, ${r.noRow.length} with no row`}`);
+            // The control. A plan whose Result column was never added reads as
+            // "nothing checked", not as "nothing to check".
+            console.log(`  control: ${path}: ${plan.tables} table(s), ${plan.withResult} with a Result column, ` +
+                        `${plan.rows.length} row(s); ${r.built} built item(s)`);
             return;
         }
         case 'unlogged': {

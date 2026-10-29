@@ -12,9 +12,12 @@
  */
 
 import {
+    identityOf,
+    integrationOutcome,
     recordDeployOutcome,
     resolveKeyedComponentId,
 } from '@/features/app-builder/services/appBuilderDeployOutcome';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -84,6 +87,18 @@ describe('recordDeployOutcome — failure reason', () => {
         recordDeployOutcome(p, 'mesh', 'mesh', { status: 'error' });
 
         expect(p.appBuilderComponents?.mesh.error).toBe('the real reason');
+    });
+
+    it("drops a stopped removal's reason: a deploy makes it stale", () => {
+        const p = project();
+        p.appBuilderComponents!.mesh.removalStopped = 'Nothing was removed.';
+        p.appBuilderComponents!.mesh.removalCleanedUp = true;
+
+        recordDeployOutcome(p, 'mesh', 'mesh', { status: 'deployed' });
+
+        expect(p.appBuilderComponents?.mesh).not.toHaveProperty('removalStopped');
+        // A deploy brings the actions back, so the next removal must clean up afresh.
+        expect(p.appBuilderComponents?.mesh).not.toHaveProperty('removalCleanedUp');
     });
 });
 
@@ -396,6 +411,31 @@ describe('recordDeployOutcome — provided env vars', () => {
         });
     });
 
+    // Bodea, 2026-09-19: the ERP moved to another Adobe project and redeployed,
+    // but its recorded ERP_BASE_URL kept naming the OLD namespace — so the
+    // integration was deployed pointing at an ERP about to be deleted.
+    it('records the address a redeploy derived, replacing the old one', () => {
+        const p = createMockProject({
+            appBuilderComponents: {
+                erp: {
+                    kind: 'system',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                    providesEnvVars: { ERP_BASE_URL: 'https://old-ns/api/v1/web/demo-erp' },
+                },
+            },
+        });
+
+        recordDeployOutcome(p, 'system', 'erp', {
+            status: 'deployed',
+            providesEnvVars: { ERP_BASE_URL: 'https://new-ns/api/v1/web/demo-erp' },
+        });
+
+        expect(p.appBuilderComponents?.erp.providesEnvVars).toStrictEqual({
+            ERP_BASE_URL: 'https://new-ns/api/v1/web/demo-erp',
+        });
+    });
+
     it('leaves an entry that provides nothing providing nothing', () => {
         const p = meshProviding(undefined);
 
@@ -494,5 +534,83 @@ describe('recordDeployOutcome — which statuses reach the component instance', 
         expect(() =>
             recordDeployOutcome(p, 'mesh', 'eds-accs-mesh', { status: 'deployed' })
         ).not.toThrow();
+    });
+});
+
+/**
+ * What a successful app deploy is recorded as. The screen and the provided
+ * values are derived by their own modules, run for real here: what is pinned
+ * is which deployed URLs this function hands each of them, and what it does
+ * with the answers.
+ */
+describe('integrationOutcome and identityOf', () => {
+    const WEB = 'https://ns.adobeioruntime.net/api/v1/web/demo-erp';
+    const ERP: AppBuilderComponentCatalogEntry = {
+        id: 'demo-erp',
+        name: 'ERP',
+        description: 'the ERP',
+        kind: 'system',
+        source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        screen: { action: 'screen', keyEnvVar: 'ERP_SCREEN_KEY' },
+        providesEnvVars: ['ERP_BASE_URL'],
+    };
+    const PLAIN: AppBuilderComponentCatalogEntry = {
+        ...ERP,
+        id: 'plain',
+        screen: undefined,
+        providesEnvVars: undefined,
+    };
+    const DEPLOYED = { url: `${WEB}/orders`, deployedUrls: { orders: `${WEB}/orders`, screen: `${WEB}/screen` } };
+
+    beforeEach(() => {
+        jest.useFakeTimers().setSystemTime(new Date('2026-10-10T12:00:00.000Z'));
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it("gives a create the entry's name and where its code lives", () => {
+        expect(identityOf(ERP)).toStrictEqual({
+            name: 'ERP',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+        });
+    });
+
+    it('records a deployed app under its display name, opened at its own screen', () => {
+        expect(integrationOutcome(ERP, DEPLOYED, 'Bodea ERP')).toStrictEqual({
+            status: 'deployed',
+            name: 'Bodea ERP',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+            // The screen, not the action that happened to be listed first.
+            url: `${WEB}/screen`,
+            deployedUrls: DEPLOYED.deployedUrls,
+            lastDeployed: '2026-10-10T12:00:00.000Z',
+            providesEnvVars: { ERP_BASE_URL: WEB },
+        });
+    });
+
+    it('opens a component with no screen at the address the deploy reported', () => {
+        expect(integrationOutcome(PLAIN, DEPLOYED, 'Plain')).toStrictEqual({
+            status: 'deployed',
+            name: 'Plain',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+            url: `${WEB}/orders`,
+            deployedUrls: DEPLOYED.deployedUrls,
+            lastDeployed: '2026-10-10T12:00:00.000Z',
+            providesEnvVars: undefined,
+        });
+    });
+
+    it('still records the deploy when it reported no addresses at all', () => {
+        expect(integrationOutcome(ERP, undefined, 'Bodea ERP')).toStrictEqual({
+            status: 'deployed',
+            name: 'Bodea ERP',
+            source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+            url: undefined,
+            deployedUrls: undefined,
+            lastDeployed: '2026-10-10T12:00:00.000Z',
+            providesEnvVars: undefined,
+        });
     });
 });

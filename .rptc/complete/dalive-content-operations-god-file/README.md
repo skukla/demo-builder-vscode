@@ -76,6 +76,15 @@ root (header doc in `daLiveContentOperations.ts` names the role). The small ongo
 delegator must be hand-added when a sub-service method needs surfacing to consumers — is accepted.
 Revisit only if a consumer's coupling causes concrete pain (YAGNI).
 
+**Revisited 2026-10-08 (EDS-8):** the owner's standing order for the god-file programme is that
+forwarders are retired once the units exist. The sixteen delegators were deleted; the class now
+builds the services and hands them back as public fields (`sourceOps`, `configOps`,
+`discoveryOps`, `copyOps`, `blockLibOps`), so the composition-root half of the decision above
+stands and the flat-surface half does not. The multi-cluster consumers kept one constructor call
+and now name the service per call. `copyDaLiveSite` and `deleteSiteRoot` remain because
+`MigrationContentOps` spans two services. The TokenProvider factories moved to
+`daLiveTokenProviders.ts`.
+
 ## Notes / follow-ups (out of scope for this decomposition)
 
 - **Pre-existing import cycle:** `catalogPrewarmService.ts ↔ edsPipeline.ts` (surfaced by the final

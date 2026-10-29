@@ -82,9 +82,29 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > wrong directory, one is `import type` only, and four are real. A prohibition that exists
 > in one directory's prose is a wish; this is the version with a check behind it.
 
-> **Convention.** Features do not import other features; commands may.
-> [src/features/CLAUDE.md](../../src/features/CLAUDE.md) · enforced by eslint.
-> *Why:* it keeps a feature replaceable. Cross-feature imports are how two features quietly become one.
+> **Convention.** No import cycles in `src/`. A module never reaches itself through its
+> own imports, and an `await import()` does not exempt a loop: deferring it keeps load
+> order working and leaves the loop in place. `import type` edges do not count; they are
+> erased at compile. When a handler or service needs something a command owns, the shared
+> piece moves to a module both can import (`dashboard/services/projectPanelPushes.ts` is
+> the worked example); the handler does not import the command, because the command
+> imports the handler map. Enforced by `tests/sop/import-cycles.test.ts`, a ban with no
+> ledger.
+> *Why:* a cycle makes load order matter, and the failure it causes is a symbol that is
+> `undefined` at import time, in whichever file happened to load first. Until 2026-10-08
+> cycles were only measured when someone ran `circular-dependency-scan`, and four sat in
+> `src/` unnoticed, three of them through the dashboard command, each hidden behind a
+> lazy import. All four were broken on 2026-10-07; the check went in at zero.
+
+> **Convention.** A feature uses another feature through its `services/`, types and
+> config. Code that no single feature owns goes in `core/`. Handlers, commands and the MCP
+> server compose features and import across them freely.
+> [src/features/CLAUDE.md](../../src/features/CLAUDE.md). **Not enforced**, by the owner's
+> choice (PL-68, 2026-10-19). Until then this said "features do not import other features
+> ... enforced by eslint": nothing enforced it, and 857 imports crossed features, 644 of
+> them into `services/`. A ledger for even the narrower rule would have opened with about
+> 160 exceptions, most of them handler maps whose job is to combine features.
+> *Why:* a feature's services are its public face; reaching past them into its internals is how two features quietly become one.
 
 > **Convention.** A module is imported by the path that DEFINES the symbol. No
 > re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is
@@ -106,9 +126,9 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > *Why:* a symbol reachable by two paths is a symbol whose home nobody can name. It is
 > also the rule this codebase already follows: **1,935 imports reach into a module from
 > outside it, against 162 from within**, so the barrels were the minority report, not the
-> convention. Seven of the eight webview bundle entries are `index.tsx` by necessity
+> convention. Eight of the nine webview bundle entries are `index.tsx` by necessity
 > and are read from `WEBVIEW_ENTRIES`, so the check cannot drift from the build. The
-> eighth — the dashboard — is `main.tsx`, because an `index.ts` barrel used to sit
+> ninth — the dashboard — is `main.tsx`, because an `index.ts` barrel used to sit
 > beside it and tsc keeps only one file per basename. That barrel is gone, so the
 > constraint is too; the rename is simply not worth an entry-point change.
 >
@@ -300,6 +320,29 @@ check says so and names the file.
 > the copy step knew better — found live, 2026-09-12.
 > Enforced by `tests/sop/content-index-path.test.ts`.
 
+> **Convention.** Demo Builder states no Node version of its own. Each component declares the
+> Node it accepts in its own repo (`engines.node`); `npm run node:resolve` reads them all at a
+> release cut and writes the one Node they accept to `node-version.generated.json`, and every
+> reader asks `core/shell/demoBuilderNode.ts`. The only other Node is one a custom integration
+> needs, worked out when it is added.
+> *Why:* before PR-1a the same "24" was typed into four catalogs and backed by five hardcoded
+> "20"s, and the mesh's two lookups asked VS Code for the extension under a name it does not
+> have, so mesh ran on the fallback for months while every test passed. A number nobody types
+> cannot drift from the components it describes.
+> Enforced by `tests/sop/node-versions-from-components.test.ts`.
+
+> **Convention.** The boilerplate storefronts are built from moves forward when Adobe moves
+> it, not when someone remembers. The patches repo's daily drift gate verifies each new
+> boilerplate against our patches and, when every patch holds, publishes the release Demo
+> Builder reads (ADR-006). No step waits on a release cut by hand.
+> *Why:* Demo Builder reads the boilerplate pointer at the patches repo's latest release,
+> never its `main`. While releases were cut by hand, none was cut from 2026-08-28 to
+> 2026-10-16: every new project started on, and Check for Updates compared against, a
+> seven-week-old boilerplate while the gate verified 73 newer commits and every check passed.
+> Checked by `npm run patches:released`, daily by `.github/workflows/patches-released.yml` (a
+> failed run emails the owner) and in the periodic sweep. It fails when the gate is switched off,
+> has not run for two days, or holds verified work two days older than any release.
+
 ## 5. What survives between calls
 
 **Position.** Anything cached exists once per session, is built on first use, and can be
@@ -420,6 +463,171 @@ meant.
 > [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by
 > `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger.
 
+> **Convention.** A progress notification's title is an "-ing" verb and its object, and
+> says nothing else: "Deploying API Mesh", never "Demo Builder", never "Loading…", never
+> "Step 2/5:". The message under it is the stage name alone, 25 characters at most.
+> *Why:* VS Code draws the title and message on one line of fixed width, puts ": "
+> between them itself, and spins a wheel beside them — so a trailing "…" or ":" is said
+> twice, a long stage is cut off mid-word, and a title that names the product instead of
+> the work tells the SC nothing. The same title carries across the progress modal and the
+> notification it hands over to, so moving to the background reads as the same thing
+> carrying on (PL-59, owner review 2026-09-19). A count goes after the stage, "(1 of 2)",
+> and only when the total is known before the operation starts.
+>
+> The message rule holds for every notification, not only the ones fed from the stage
+> table: a palette command's own `progress.report` messages follow it too (owner,
+> 2026-09-19).
+>
+> The progress modal says the same thing on three lines under the title: the STEP (the
+> stage name, with "(n of N)" when the total is known), what that step is doing right now
+> (its message, counts included), and the step's expectation with the run's total clock
+> ("Usually about a minute · 3 minutes, 43 seconds"). A step is one job the SC can name;
+> the messages of its parts go on the second line, never in the step's place (owner,
+> 2026-10-16, after a reset showed nine different jobs as nine stages). The middle dot
+> between expectation and clock is the one place this UI joins two phrases with a dot,
+> kept deliberately (owner, 2026-10-16).
+>
+> 16 titles and 40 messages predate the rule and are ledgered; they are reworded slice
+> by slice in `.rptc/plans/operation-progress/extension-wide.md`. Stage names are held
+> separately by `operationStages.test.ts`. Enforced by
+> `tests/sop/progress-wording.test.ts` against a shrink-only ledger.
+
+> **Convention.** Every flow's progress uses one vocabulary and one shape. Line 1 is a
+> step from the stage table (`OPERATION_STAGES`), passed by reference, never written as
+> a literal. "(n of N)" follows it only as that step's position in a run whose steps are
+> known before it starts. A count of pages, types, attempts or projects is a count, and
+> counts go on line 2 ("Copying the content: 32 of 64 pages", `countLine`). Line 3 is the
+> step's expectation and the run's clock, joined by the one middle dot this UI keeps on
+> purpose. A surface with one line (a notification, an agent's chat) shows the step
+> alone, and a count it has no line 2 for is left out rather than moved up. The lines
+> are short by design: line 1 at most 25 characters, line 2 at most 40 of text we
+> write, line 3's expectation at most 25 with the clock after it.
+> *Why:* the same job was called three things depending on which flow ran it, and counts
+> sat where the step goes: "Publishing block library (11 of 11)" read as eleven
+> libraries, and Site Access's "Checking access (2 of 4)" read as step two of four
+> (owner, 2026-10-16: "Everything should be consistent. Every flow."). A literal step
+> also has no expectation line, and drifts from the table the day either is reworded.
+> A result is not a step either: "Up to date" is the outcome after the run.
+>
+> The scan reads every step report in `src/` (102 when it landed) and every position
+> written or built from values; the few places that build a position from a step
+> number are named in the suite with what they count. It cannot see a step passed
+> through a variable, or one reported by number ("report(1, …)"). No sites predate it:
+> the ones it found were fixed the day it landed. The table's own rules (the lengths
+> below, no label twice) are `operationStages.test.ts`. Plan:
+> `.rptc/plans/progress-vocabulary/overview.md`. Enforced by
+> `tests/sop/progress-steps.test.ts`.
+>
+> The limits keep each line to one line on the progress displays, so nothing jumps as
+> the lines change (owner, 2026-10-16: "Why should we need lines that are so long?").
+> Say what the work does in few words; why an expectation is what it is goes in a code
+> comment beside the stage, not on the screen. The displays also cut a line that does
+> not fit with an ellipsis and show it whole on hover (`LoadingDisplay`'s `steady`),
+> but that is only a backstop for names we do not write: a repository, an ERP, a
+> project, a file. The stage table's columns (detail 40, expectation 25) are held by
+> `tests/core/utils/operationStages.test.ts`; the line-2 text written at call sites
+> (job details, a stage's line, a progress push's `subMessage` and `message`) by the
+> progress-steps suite named above, through `progressLineScan.ts`, which measures only
+> the text in the code: a template's placeholders are counts or names, and count as
+> nothing. It cannot see text assigned to a variable first. No sites predate it.
+
+> **Convention.** A field with a fallback rule is read through that rule, everywhere.
+> *Why:* two fields carry one — the DA.live org IS the GitHub namespace, the site
+> name IS the repo name — and the loader STRIPS a stored site that merely duplicates
+> the repo, so a normal project reaches every reader without one. Read raw, they do
+> not fail: they go quiet. The edit wizard refused at its LAST step after the SC had
+> walked the whole thing ("Storefront configuration is incomplete", 2026-09-20);
+> deleting a migrated project left its DA.live site up; flipping the authoring
+> experience skipped its own work under a docstring that called it "a no-op". Four
+> readers had the site rule and one did not; then five had it and three lacked the
+> org half of the same rule.
+>
+> A LONE read can be right — the storefront-name migration reads the raw site as its
+> detection signal, and a log line should print what was stored. What breaks is the
+> PAIR: a DA.live target assembled from both halves with one read raw. So the check
+> is about pairs, and the three entries in its ledger are places the pair is not a
+> target being assembled. Enforced by `tests/sop/derived-fields.test.ts`.
+
+> **Convention.** On the wizard's progress view, a trailing "…" marks an ACTION in
+> progress — on either line. A line that names a STATE reached, or the THING being
+> acted on, never takes one.
+> *Why:* the same line can be either — "Creating GitHub repository…" then
+> "Repository ready" — and the ellipsis is what tells them apart at a glance. It
+> belongs to the action, not to the line it sits on, so a sub-step still running
+> takes one and reads as part of a larger whole ("Verifying the library previewed…"),
+> while the second line that merely names its target does not: "skukla/kukla-bodea…"
+> says nothing true. Measured 2026-09-20 — 66 of 71 first lines already follow it,
+> and of the second lines, 6 of 8 actions carry one against 0 of 23 targets. The
+> remaining exceptions end in a live count ("Publishing to CDN (12/40)"), where the
+> count carries the movement instead.
+> **This is the OPPOSITE of the notification rule above, deliberately**: VS Code
+> joins a notification's title and message with ": " and spins its own wheel, so an
+> ellipsis there is said twice. Two surfaces, two reasons — written down because
+> without it someone eventually makes one match the other. Not enforced: telling an
+> "-ing" verb from a word like "Missing" is beyond a scan, and the first attempt got
+> exactly that wrong (owner, 2026-09-20). **Not enforced**, deliberately: a check
+> that cannot tell those apart would fail honest lines, and a rule people switch off
+> is worse than one they can read.
+
+> **Convention.** A modal does not change size while it works.
+> *Why:* a body that renders a form, then a spinner, then a result is three different
+> amounts of content, and with nothing holding a floor under them the whole dialog
+> jumps at every step. The Data Installer's import modal did it twice in one dry run
+> before anyone measured it (owner, 2026-09-20: "this is bad UX"). Three things hold a
+> floor: `SteadyHeight` measures the tallest state so far and never goes below it,
+> `.modal-progress-body` fixes one height for a body whose states are known, and
+> `CenteredFeedbackContainer` reserves a height the caller names. Measure rather than
+> name a number when the tallest state is data-dependent — the import form is as tall
+> as the pack has data types, so any fixed reserve is dead space for a small pack and
+> still jumps for a large one.
+>
+> What no check can see is whether the floor is the RIGHT height; the ledger is where
+> a body the scan reads as multi-view says it has only one. Enforced by
+> `tests/sop/modal-steady-height.test.ts` against `modal-steady-height.ledger.json`.
+
+> **Convention.** A long operation reports where the SC is looking, and one surface does
+> the narrating. Pressed on a screen, it opens that screen's progress modal; started
+> anywhere else, it opens one notification; run by an agent, it goes to the agent's
+> notifier. Work shorter than about ten seconds gets a busy state on the control that
+> started it and nothing else. A blocking dialog is for a DECISION made before the work
+> starts — never for progress, never for an outcome. A question the work cannot
+> continue without — an expired sign-in, a missing prerequisite, a merge needing a
+> decision — is asked through `askDuringOperation`, which sends it to whichever
+> surface is already narrating. **A check the SC did not start asks nothing at all**:
+> it reports what it found on the surface that wanted it. The one exception is an
+> expired sign-in: the check asks once per expiry, in a blocking dialog, and opens the
+> browser only on a yes (owner, 2026-10-17: "An expired adobe login should PROMPT, but
+> it should not open a browser automatically").
+> *Why:* the surface is not a per-handler choice, because the handler cannot see how it
+> was reached. `withOperationProgress` reads that from the request and routes, so one
+> handler serves a button, the palette and an agent without knowing which is which, and a
+> nested command stands down instead of opening a second thing that says the same thing.
+> A handler calling `vscode.window.withProgress` itself has opted out of all of that, and
+> the failure is invisible: the path you tested still works, and the other two either say
+> nothing or say it twice. The dialog half is the one that actually shipped wrong — Delete
+> put a modal dialog up in the middle of its own run, behind the modal already showing the
+> deletion (PL-59, 2026-09-19). The question half shipped wrong too, and was caught the
+> first time someone republished a storefront: the modal sat on "Checking requirements /
+> Your DA.live sign-in" while a notification in the corner asked for that sign-in. The
+> pause-and-continue was right; the surface was wrong. Eleven guards asked VS Code
+> directly, and none of them could know a modal was up.
+>
+> The last clause is the one the routing cannot decide for you, because a background
+> check has no start to route by. The dashboard's status read prompted "Adobe sign-in
+> required to check mesh status" every time the extension reloaded while signed out —
+> unasked, and for something the screen was already showing two inches away: an
+> unauthenticated mesh derives `needs-auth`, which renders as "Session expired" beside
+> a sign-in affordance, with the re-auth action already on the status header. It reads
+> `isAuthenticated()` silently now, which is what the agent path always did.
+>
+> Five modules own the surfaces and call VS Code's progress directly because that is their
+> job: `baseCommand.ts`, `progressRegister.ts`, `operationBackgroundNotice.ts`,
+> `browserSignInNotice.ts` and `agentOperationNotifier.ts`. 20 other sites predate the
+> router and are ledgered with the reason each still opens its own notification; the list
+> may only shrink. Each of the 13 blocking dialogs names the decision it gates, so a new
+> one cannot arrive without someone saying what it asks. Enforced by
+> `tests/sop/progress-surface.test.ts` against `progress-surface.ledger.json`.
+
 ---
 
 ## 7. The user interface
@@ -427,7 +635,7 @@ meant.
 **Position.** One composition root per surface. Logic lives in hooks, rendering in
 components, and styling in cascade layers rather than in specificity fights.
 
-Each of the eight webviews has one entry file. That entry mounts the app, reads the
+Each of the nine webviews has one entry file. That entry mounts the app, reads the
 initial data, and decides which stylesheets load — it is the only place that does. Below
 it, components receive what they need as props.
 
@@ -578,6 +786,15 @@ Know the difference before relying on it.
 > styles it on that surface and nowhere else. **Amended 2026-09-09** — this said
 > "a globally-loaded sheet", which was stricter than the check enforcing it and pinned
 > 321 feature rules in one file for a guarantee already provided. Reach, not global.
+>
+> **The cost usually arrives through REUSE, in a component you did not open.** Rendering
+> a shared component pulls in everything it composes, and their classes with it. On
+> 2026-09-20 the progress modal reached for `forms/FormField` — the house field, the
+> right instinct — and that one line put 29 unstyled class uses into the dashboard,
+> integrations and projectsList bundles, because `FormField` composes `FieldHelpButton`
+> and `descriptionRenderer` and their sheet reaches only configure and wizard. So the
+> question to ask before reusing is not what the component renders, but what its whole
+> graph renders, and the check answers it in about a second.
 > [ADR-018 §3](../architecture/adr/018-css-architecture.md) · Enforced by the cross-bundle
 > check in `tests/sop/stylesheet-bundles.test.ts`.
 
@@ -691,7 +908,7 @@ check says so and names the file.
 > contents at the moment you create the file.
 
 > **Convention.** Capture a visual baseline before changing a stylesheet.
-> *Why:* a CSS change that breaks a surface produces no error anywhere. Eight bundles
+> *Why:* a CSS change that breaks a surface produces no error anywhere. Nine bundles
 > exist and a feature stylesheet reaches only the ones whose entry imports it, so a class
 > can be styled on one surface and absent on the next with everything still green.
 > [ADR-018](../architecture/adr/018-css-architecture.md) sets this as the evidence bar
@@ -940,6 +1157,18 @@ promising an agent that every response parses.
 > that it works — AB-7 is an open defect where `remove_integration` reported success
 > while leaving deployed code running, and this would not have caught it.
 
+> **Convention.** A tool removes work; it does not add vocabulary the agent has to guess.
+> Every closed list a tool's input accepts (`z.enum`, `z.literal`, `z.nativeEnum`) is recorded
+> with why the set is the agent's own words — our screens, our states, an HTTP verb — and not
+> a name for something it knows by another.
+> *Why:* every constraint a tool adds is a new way for a correct request to be refused.
+> Measured 2026-08-26 (AI-1l): in nine runs of a Commerce query, the agent's first query was
+> right every time, and was right by hand before `run_commerce_query` existed. The tool's
+> `endpoint` enum refused that correct reading five times, and the agent abandoned a right
+> query to work out our name for it. curl had never had that failure.
+> Enforced by `tests/sop/tool-input-constraints.test.ts`: a new closed list fails until its
+> row in `tool-input-constraints.ledger.json` says why; a removed one fails until the row goes.
+
 > **Convention.** A tool that fails says so — the result carries `isError: true`. Never
 > a successful result whose text happens to report a failure.
 > *Why:* MCP has two error mechanisms and they are not interchangeable. A JSON-RPC error
@@ -959,8 +1188,9 @@ promising an agent that every response parses.
 > *How it is set:* `asText` reads the answer's own top-level `success`, because handlers
 > already answer `{ success, … }` (Pattern B) — so this restates a fact rather than making
 > a judgement. `asRawText` takes a string and must be TOLD.
-> Enforced by `tests/features/ai/server/toolFailureEnvelope.test.ts`, which is not the
-> shape suite next to it: a response can be perfectly shaped and still lie about whether
+> Enforced by `tests/features/ai/server/toolFailureEnvelope.test.ts` (the builders) and
+> `tests/features/ai/server/toolDescriptors-failureFlag.test.ts` (descriptor rows) — not the
+> shape suite next to them: a response can be perfectly shaped and still lie about whether
 > it worked.
 > [ADR-023](../architecture/adr/023-error-handling.md) ·
 > [MCP spec, Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
@@ -1000,8 +1230,8 @@ promising an agent that every response parses.
 >
 > The declarations were transcribed mechanically and then VERIFIED against the ledger
 > row by row: 114 found in code, zero mismatches, zero missing. The field is an ARRAY
-> because four tools need two sign-ins — `check_github_app`, `create_project`,
-> `republish` and `sync_content` each need GitHub AND DA.live, and a single value would
+> because some tools need two sign-ins — `check_github_app`, `create_project` and
+> `republish` each need GitHub AND DA.live, and a single value would
 > have dropped exactly the sign-in an agent then fails to offer.
 >
 > **The surface is 114 tools, and no previous count was right**: the `tool-verdicts`
@@ -1554,7 +1784,7 @@ check says so and names the file.
 > **Convention.** A stylesheet change is not pushed until a RESTING visual
 > baseline has been captured while it was in the tree.
 > *Why:* a CSS change that breaks a surface produces no error anywhere — there are
-> eight webview bundles and a feature stylesheet reaches only the ones whose entry
+> nine webview bundles and a feature stylesheet reaches only the ones whose entry
 > imports it, so a class can be styled on one surface and absent on the next with
 > nothing failing. On 2026-09-10 a dashboard regression reached a release
 > spot-check because the day's CSS work was verified with the INTERACTION capture
@@ -1607,11 +1837,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 54 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 62 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
-- **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
+- **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 121 conventions. 121 of them are enforced; 0 are not.**
+**This handbook states 131 conventions. 129 of them are enforced; 2 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
@@ -1960,5 +2190,6 @@ It records one moment and is not edited afterwards; when a decision changes, a n
 supersedes it. The index is [docs/architecture/adr/README.md](../architecture/adr/README.md).
 
 Reach for one when a rule here looks arbitrary and you are about to remove it. That is
-what they are for. ADR-007 exists because the obvious way to encode a product URL
-silently breaks every product page — the rule alone would not have told you that.
+what they are for. ADR-024 exists because a product-URL encoding that passed every
+request probe broke every page it published — the rule alone would not have told you
+that, and the superseded ADR-007 shows why a probe is not a publish.

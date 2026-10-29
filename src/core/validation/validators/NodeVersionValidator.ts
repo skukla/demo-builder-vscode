@@ -10,7 +10,7 @@
  */
 const INVALID_NODE_VERSION_ERROR =
     'Invalid Node.js version format. Valid formats: numeric (e.g., 18, 20), ' +
-    'semantic version (e.g., 18.20.0), or keywords (auto, current).';
+    'semantic version (e.g., 18.20.0), or the keyword current.';
 
 /**
  * Validates Node.js version parameter for command execution safety
@@ -27,7 +27,7 @@ const INVALID_NODE_VERSION_ERROR =
  * Valid Formats:
  * - Numeric major versions: "18", "20", "22"
  * - Semantic versions: "18.20.0", "20.11.0"
- * - Keywords: "auto", "current"
+ * - Keyword: "current"
  * - null/undefined (skip validation)
  *
  * @param nodeVersion - Node.js version string to validate (or null/undefined to skip)
@@ -36,7 +36,7 @@ const INVALID_NODE_VERSION_ERROR =
  * @example
  * validateNodeVersion('20');          // OK - numeric major version
  * validateNodeVersion('18.20.0');     // OK - semantic version
- * validateNodeVersion('auto');        // OK - keyword
+ * validateNodeVersion('current');     // OK - keyword
  * validateNodeVersion(null);          // OK - skip validation
  * validateNodeVersion('20; rm -rf /'); // Throws - command injection attempt
  */
@@ -53,7 +53,7 @@ export function validateNodeVersion(nodeVersion: string | null | undefined): voi
 
     // Allowlist-based validation: only accept specific patterns
     // ^ and $ anchors ensure no additional characters before/after
-    const validPattern = /^(?:\d+|\d+\.\d+\.\d+|auto|current)$/;
+    const validPattern = /^(?:\d+|\d+\.\d+\.\d+|current)$/;
 
     if (!validPattern.test(nodeVersion)) {
         throw new Error(INVALID_NODE_VERSION_ERROR);

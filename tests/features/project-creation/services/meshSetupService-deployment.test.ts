@@ -13,6 +13,7 @@
  */
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
     deployNewMesh,
@@ -23,7 +24,7 @@ import type { ProjectSetupContext } from '@/features/project-creation/services/P
 import type { Project } from '@/types/base';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
@@ -37,9 +38,9 @@ jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
     ensureMeshApiSubscribed: (...args: unknown[]) => mockEnsureSubscribed(...args),
 }));
 
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
-import { updateMeshState } from '@/features/mesh/services/stalenessDetector';
+import { updateMeshState } from '@/features/mesh/services/meshDeployBaseline';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
@@ -141,7 +142,7 @@ describe('meshSetupService deployNewMesh', () => {
             expect(commandExecutor.execute).toHaveBeenCalledWith('aio api-mesh:describe', {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
             });
         });
@@ -332,6 +333,24 @@ describe('meshSetupService deployNewMesh', () => {
 
             expect(onMeshCreated).toHaveBeenCalledWith(undefined);
         });
+
+        // A failed creation deletes the mesh it reports as created. A mesh the
+        // workspace already had was only updated, and is not the creation's to
+        // delete: the agent's create_project has no other guard (2026-10-16).
+        it('does not report a mesh the workspace already had as created', async () => {
+            describeReturns({ meshId: 'already-there' });
+
+            await deployNewMesh(buildContext(), undefined);
+
+            expect(onMeshCreated).not.toHaveBeenCalled();
+            expect(project.componentInstances?.[MESH_ID].status).toBe('deployed');
+        });
+
+        it('nor one the wizard config already names', async () => {
+            await deployNewMesh(buildContext(), { meshId: 'from-wizard' });
+
+            expect(onMeshCreated).not.toHaveBeenCalled();
+        });
     });
 
     describe('mesh phase pushes', () => {
@@ -364,16 +383,14 @@ describe('meshSetupService deployNewMesh', () => {
 
             await deployNewMesh(buildContext(), {});
 
+            // One step, 'Deploying the mesh'; the deploy's own stages are the line under it.
+            const deploying = OPERATION_STAGES.deployingMesh.label;
             expect(progressTracker).toHaveBeenCalledWith(
-                'Deploying API Mesh',
+                deploying,
                 80,
-                'Uploading schema'
+                'Deploying mesh: Uploading schema'
             );
-            expect(progressTracker).toHaveBeenCalledWith(
-                'Deploying API Mesh',
-                80,
-                'Verifying mesh'
-            );
+            expect(progressTracker).toHaveBeenCalledWith(deploying, 80, 'Verifying mesh');
             expect(phasesOfStatus('verifying')[0]).toEqual({
                 status: 'verifying',
                 attempt: 1,

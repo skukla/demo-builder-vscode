@@ -1,10 +1,11 @@
 /**
- * The stubs both `githubRepoOperations-*` suites install.
+ * The stubs the `githubRepoOperations-*` suites install, and the Octokit stub the
+ * `githubRepoLifecycle-*` suites share through their own testUtils.
  *
- * `GitHubRepoOperations` news up its own Octokit through the plugin factory and
- * dynamically imports `PollingService`. Neither can be handed in, so a suite has no
- * way to reach past them other than a module mock — and the two suites would
- * otherwise write the same mocks twice and drift apart on the next edit.
+ * `GitHubRepoOperations` news up its own Octokit through the plugin factory, which
+ * cannot be handed in, so a suite has no way to reach past it other than a module
+ * mock — and the suites would otherwise write the same mock twice and drift apart
+ * on the next edit.
  *
  * The CONSTRUCTOR is exported alongside the request mock on purpose: whether a second
  * call reuses one client is invisible from the requests alone, so the caching and
@@ -27,33 +28,12 @@ jest.mock('@octokit/core', () => ({
     },
 }));
 
-/** The poll `waitForContent` drives, dynamically imported by the subject. */
-export const mockPollUntilCondition = jest.fn();
-
-jest.mock('@/core/shell/pollingService', () => ({
-    PollingService: jest.fn().mockImplementation(() => ({
-        pollUntilCondition: (...args: unknown[]) => mockPollUntilCondition(...args),
-    })),
-}));
-
 // Below the mocks on purpose. `jest.mock` hoists above the imports of the module it
 // appears in — this one — not across modules, so a suite that imported the operations
 // itself would bind them before the Octokit stub was registered.
 import { GitHubRepoOperations } from '@/features/eds/services/github/githubRepoOperations';
 
 export { GitHubRepoOperations };
-
-/**
- * The tokenised clone URL `injectTokenIntoUrl` produces for the test token.
- * Built by parts, never as a literal: a user-colon-secret-at-host literal is banned
- * under tests/ because the repo's secret scanner matches the shape, not the secret.
- */
-export const AUTHED = (repoPath: string): string => {
-    const url = new URL(`https://github.com/${repoPath}`);
-    url.username = 'ghp_test';
-    url.password = 'x-oauth-basic';
-    return url.toString();
-};
 
 /** `getToken` answers with whatever is passed; pass `null` for "signed out". */
 export function createTokenService(token: unknown = { token: 'ghp_test' }): GitHubTokenService {

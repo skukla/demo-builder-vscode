@@ -49,17 +49,24 @@ describe('executeEdsPipeline - integration', () => {
         jest.clearAllMocks();
 
         mockDaLiveContentOps = {
-            copyContentFromSource: jest.fn().mockResolvedValue({
-                success: true,
-                totalFiles: 42,
-                copiedFiles: Array(42).fill('/page'),
-                failedFiles: [],
-            }),
-            createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
-                success: true,
-                blocksCount: 5,
-                paths: ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
-            }),
+            sourceOps: { deleteAllSiteContent: jest.fn() },
+            copyOps: {
+                copyContentFromSource: jest.fn().mockResolvedValue({
+                    success: true,
+                    totalFiles: 42,
+                    copiedFiles: Array(42).fill('/page'),
+                    failedFiles: [],
+                    sheetPaths: [],
+                    codePathsOnSource: [],
+                }),
+            },
+            blockLibOps: {
+                createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
+                    success: true,
+                    blocksCount: 5,
+                    paths: ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
+                }),
+            },
         } as unknown as EdsPipelineServices['daLiveContentOps'];
 
         mockGithubFileOps = {
@@ -109,7 +116,7 @@ describe('executeEdsPipeline - integration', () => {
         it('should pass through numeric progress data from content copy', async () => {
             const onProgress = jest.fn();
 
-            (mockDaLiveContentOps.copyContentFromSource as jest.Mock).mockImplementation(
+            (mockDaLiveContentOps.copyOps.copyContentFromSource as jest.Mock).mockImplementation(
                 async (
                     _source: unknown,
                     _org: unknown,
@@ -117,7 +124,7 @@ describe('executeEdsPipeline - integration', () => {
                     progressCb: (p: Record<string, unknown>) => void
                 ) => {
                     progressCb({ processed: 5, total: 10, percentage: 50, currentFile: '/page-5' });
-                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [] };
+                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
                 }
             );
 
@@ -185,218 +192,30 @@ describe('executeEdsPipeline - integration', () => {
     });
 
     describe('content clear', () => {
-        it('should call unpublishPages with converted web paths', async () => {
-            (mockDaLiveContentOps as unknown as Record<string, unknown>).deleteAllSiteContent = jest
-                .fn()
-                .mockResolvedValue({
+        it('clears the DA.live site directly, without fstab or config manipulation, and unpublishes nothing', async () => {
+            // The pages left over are unpublished after the republish instead (EDS-33);
+            // see edsPipeline-leftoverPages.test.ts.
+            (mockDaLiveContentOps.sourceOps.deleteAllSiteContent as jest.Mock).mockResolvedValue({
                     success: true,
                     deletedCount: 3,
                     deletedPaths: ['/index.html', '/about.html', '/products/default.html'],
                 });
-            (mockHelixService as unknown as Record<string, unknown>).unpublishPages = jest
-                .fn()
-                .mockResolvedValue({ success: true, count: 3 });
+            const unpublishPages = jest.fn();
+            (mockHelixService as unknown as Record<string, unknown>).unpublishPages = unpublishPages;
 
             const result = await executeEdsPipeline(
-                { ...baseParams, clearExistingContent: true, skipContent: true },
+                { ...baseParams, clearExistingContent: true, skipContent: true, skipPublish: true },
                 services
             );
 
             expect(result.success).toBe(true);
-            expect(mockDaLiveContentOps.deleteAllSiteContent).toHaveBeenCalledWith(
+            expect(mockDaLiveContentOps.sourceOps.deleteAllSiteContent).toHaveBeenCalledWith(
                 'test-org',
                 'test-site',
                 expect.any(Function)
             );
-
-            // Should call unified unpublishPages with converted web paths
-            expect(mockHelixService.unpublishPages).toHaveBeenCalledWith(
-                'test-owner',
-                'test-repo',
-                'main',
-                expect.arrayContaining(['/', '/about', '/products/default'])
-            );
-        });
-
-        it('warns with BOTH live and preview failure counts (fixture copied from unpublishPages’ real shape)', async () => {
-            // previewFailed was produced by helixService and consumed by nobody
-            // — a field with no reader is indistinguishable from wrong. The
-            // fixture mirrors the real return {success, count, total,
-            // liveFailed, previewFailed}; the earlier {success, count}-only
-            // mock silently skipped this branch (undefined > 0 is false).
-            (mockDaLiveContentOps as unknown as Record<string, unknown>).deleteAllSiteContent = jest
-                .fn()
-                .mockResolvedValue({
-                    success: true,
-                    deletedCount: 3,
-                    deletedPaths: ['/index.html', '/about.html', '/products/default.html'],
-                });
-            (mockHelixService as unknown as Record<string, unknown>).unpublishPages = jest
-                .fn()
-                .mockResolvedValue({
-                    success: true,
-                    count: 1,
-                    total: 3,
-                    liveFailed: 2,
-                    previewFailed: 1,
-                });
-
-            const result = await executeEdsPipeline(
-                { ...baseParams, clearExistingContent: true, skipContent: true },
-                services
-            );
-
-            expect(result.success).toBe(true);
-            const warns = (mockLogger.warn as jest.Mock).mock.calls.map((c) => String(c[0]));
-            const unpublishWarn = warns.find((w) => w.includes('unpublished'));
-            expect(unpublishWarn).toContain('2/3');
-            expect(unpublishWarn).toContain('1 preview');
-        });
-
-        it('should succeed when unpublishPages throws (non-fatal)', async () => {
-            (mockDaLiveContentOps as unknown as Record<string, unknown>).deleteAllSiteContent = jest
-                .fn()
-                .mockResolvedValue({
-                    success: true,
-                    deletedCount: 2,
-                    deletedPaths: ['/index.html', '/about.html'],
-                });
-            (mockHelixService as unknown as Record<string, unknown>).unpublishPages = jest
-                .fn()
-                .mockRejectedValue(new Error('auth error'));
-
-            const result = await executeEdsPipeline(
-                { ...baseParams, clearExistingContent: true, skipContent: true },
-                services
-            );
-
-            // Pipeline succeeds -- unpublish failure is non-fatal
-            expect(result.success).toBe(true);
-        });
-
-        it('should skip CDN unpublish when no files were deleted', async () => {
-            (mockDaLiveContentOps as unknown as Record<string, unknown>).deleteAllSiteContent = jest
-                .fn()
-                .mockResolvedValue({
-                    success: true,
-                    deletedCount: 0,
-                    deletedPaths: [],
-                });
-
-            const result = await executeEdsPipeline(
-                { ...baseParams, clearExistingContent: true, skipContent: true },
-                services
-            );
-
-            expect(result.success).toBe(true);
-            // No deleted files -- unpublishPages should not be called
-            expect(
-                (mockHelixService as unknown as Record<string, unknown>).unpublishPages
-            ).toBeUndefined();
-        });
-
-        it('should unpublish non-HTML files with their original paths', async () => {
-            (mockDaLiveContentOps as unknown as Record<string, unknown>).deleteAllSiteContent = jest
-                .fn()
-                .mockResolvedValue({
-                    success: true,
-                    deletedCount: 3,
-                    deletedPaths: ['/about.html', '/media_abc123.png', '/config.json'],
-                });
-            (mockHelixService as unknown as Record<string, unknown>).unpublishPages = jest
-                .fn()
-                .mockResolvedValue({ success: true, count: 3 });
-
-            await executeEdsPipeline(
-                { ...baseParams, clearExistingContent: true, skipContent: true },
-                services
-            );
-
-            // HTML paths converted, non-HTML paths kept as-is
-            expect(mockHelixService.unpublishPages).toHaveBeenCalledWith(
-                'test-owner',
-                'test-repo',
-                'main',
-                ['/about', '/media_abc123.png', '/config.json']
-            );
-        });
-
-        it('should convert index.html paths to / web paths', async () => {
-            (mockDaLiveContentOps as unknown as Record<string, unknown>).deleteAllSiteContent = jest
-                .fn()
-                .mockResolvedValue({
-                    success: true,
-                    deletedCount: 2,
-                    deletedPaths: ['/index.html', '/phones/index.html'],
-                });
-            (mockHelixService as unknown as Record<string, unknown>).unpublishPages = jest
-                .fn()
-                .mockResolvedValue({ success: true, count: 2 });
-
-            await executeEdsPipeline(
-                { ...baseParams, clearExistingContent: true, skipContent: true },
-                services
-            );
-
-            // /index.html -> /, /phones/index.html -> /phones
-            expect(mockHelixService.unpublishPages).toHaveBeenCalledWith(
-                'test-owner',
-                'test-repo',
-                'main',
-                ['/', '/phones']
-            );
-        });
-
-        it('should unpublish directly without fstab or config manipulation', async () => {
-            (mockDaLiveContentOps as unknown as Record<string, unknown>).deleteAllSiteContent = jest
-                .fn()
-                .mockResolvedValue({
-                    success: true,
-                    deletedCount: 3,
-                    deletedPaths: ['/index.html', '/about.html', '/products/default.html'],
-                });
-            (mockHelixService as unknown as Record<string, unknown>).unpublishPages = jest
-                .fn()
-                .mockResolvedValue({ success: true, count: 3 });
-
-            const result = await executeEdsPipeline(
-                { ...baseParams, clearExistingContent: true, skipContent: true },
-                services
-            );
-
-            expect(result.success).toBe(true);
-            // Should call unpublishPages directly (no fstab removal, no config deletion)
-            expect(mockHelixService.unpublishPages).toHaveBeenCalledWith(
-                'test-owner',
-                'test-repo',
-                'main',
-                expect.arrayContaining(['/', '/about', '/products/default'])
-            );
-            // No GitHub file operations needed for unpublish
+            expect(unpublishPages).not.toHaveBeenCalled();
             expect(mockGithubFileOps.getFileContent).not.toHaveBeenCalled();
-        });
-
-        it('should log warning when unpublish fails (non-fatal)', async () => {
-            (mockDaLiveContentOps as unknown as Record<string, unknown>).deleteAllSiteContent = jest
-                .fn()
-                .mockResolvedValue({
-                    success: true,
-                    deletedCount: 2,
-                    deletedPaths: ['/index.html', '/about.html'],
-                });
-            (mockHelixService as unknown as Record<string, unknown>).unpublishPages = jest
-                .fn()
-                .mockRejectedValue(new Error('auth error'));
-
-            const result = await executeEdsPipeline(
-                { ...baseParams, clearExistingContent: true, skipContent: true },
-                services
-            );
-
-            expect(result.success).toBe(true);
-            expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('CDN unpublish failed (non-fatal)')
-            );
         });
     });
 
@@ -404,13 +223,13 @@ describe('executeEdsPipeline - integration', () => {
         it('should execute all steps in order for a complete setup', async () => {
             const callOrder: string[] = [];
 
-            (mockDaLiveContentOps.copyContentFromSource as jest.Mock).mockImplementation(
+            (mockDaLiveContentOps.copyOps.copyContentFromSource as jest.Mock).mockImplementation(
                 async () => {
                     callOrder.push('copyContent');
-                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [] };
+                    return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
                 }
             );
-            (mockDaLiveContentOps.createBlockLibraryFromTemplate as jest.Mock).mockImplementation(
+            (mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate as jest.Mock).mockImplementation(
                 async () => {
                     callOrder.push('createBlockLibrary');
                     return { success: true, blocksCount: 3, paths: ['.da/library/blocks.json'] };
@@ -500,7 +319,7 @@ describe('executeEdsPipeline - integration', () => {
 
             expect(result.success).toBe(true);
             expect(result.contentFilesCopied).toBe(0);
-            expect(mockDaLiveContentOps.copyContentFromSource).not.toHaveBeenCalled();
+            expect(mockDaLiveContentOps.copyOps.copyContentFromSource).not.toHaveBeenCalled();
             expect(mockHelixService.publishAllSiteContent).not.toHaveBeenCalled();
             expect(mockHelixService.purgeCacheAll).not.toHaveBeenCalled();
             // Library should still be published

@@ -24,7 +24,7 @@
  * ## Two DA.live-capable tokens, only one of which is right
  *
  * `DaLiveAuthService` (its own sign-in and storage) backs the production content
- * path — `republishStorefrontContent`, `sync_content`. The extension's Adobe IMS
+ * path — `republishStorefrontContent`, the `republish` tool. The extension's Adobe IMS
  * token backs org-level reads like `list_dalive_sites`. Both are IMS tokens, so
  * picking wrong fails as a 401 at runtime rather than a type error. Content
  * operations use the DA.live one, and once a site carries any `access.admin`
@@ -32,25 +32,21 @@
  * nothing else.
  *
  * Preview/publish additionally sends `x-auth-token: <github>`, so the publishing
- * paths pre-flight BOTH credentials, exactly as `sync_content` does.
+ * paths pre-flight BOTH credentials, exactly as `republish` does.
  */
 
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
+import { daLiveOps, helixFor, storefrontTarget, type StorefrontTarget } from './storefrontPages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { buildSourceUrl, resolveDaPath } from '@/features/eds/services/daLive/daLiveContentHelpers';
-import {
-    DaLiveContentOperations,
-    createDaLiveServiceTokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
-import { HelixService } from '@/features/eds/services/helix/helixService';
+import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { aemLiveBaseUrl } from '@/features/eds/services/storefront/storefrontProbe';
-import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
-import { getEdsDaLiveTarget, getEdsRepoParts, isEdsProject } from '@/types/typeGuards';
+import { isEdsProject } from '@/types/typeGuards';
 
 /**
  * Cap for the published-CDN read. Same reasoning as the DA source cap: the body
@@ -78,52 +74,6 @@ const NEEDS_GITHUB = {
     message:
         'GitHub sign-in required to publish. Check get_auth_status, then sign_in(provider:"github", confirm:true) once the user agrees.',
 };
-
-/** Where a page lives, in all the spellings the three surfaces need. */
-interface StorefrontTarget {
-    daLiveOrg: string;
-    daLiveSite: string;
-    repoOwner: string;
-    repoName: string;
-}
-
-/**
- * Coordinate segments are interpolated into a URL AUTHORITY
- * (`main--{repo}--{owner}.aem.live`) and into admin API paths, so they are
- * restricted to characters that cannot restructure a URL.
- *
- * Without this, `githubRepo: "a@internal.example?/b"` yields
- * `https://main--b--a@internal.example?.aem.live`, which parses as userinfo
- * `main--b--a` and host `internal.example` — turning read_published_page into an
- * SSRF probe fired from the extension host. The manifest is writable through
- * `update_project_config`, which validates content only for `.env`, and
- * `getCurrentProject()` re-reads it from disk on every call.
- *
- * Must START alphanumeric, which is what rules out `..` — `githubRepo: "../../x/y"`
- * splits to owner `..` / repo `..`, and a dots-anywhere class accepts both,
- * putting the traversal back into the DA source path. Caught by its own test.
- */
-const SAFE_COORDINATE = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
-
-/**
- * Pull the DA.live + GitHub coordinates off the project's storefront metadata,
- * reusing the shared getters rather than re-splitting `githubRepo` — that split
- * already had four hand-rolled copies before `getEdsRepoParts` existed.
- *
- * Returns null when anything is missing OR fails {@link SAFE_COORDINATE}.
- */
-function storefrontTarget(project: Project): StorefrontTarget | null {
-    const repo = getEdsRepoParts(project);
-    if (!repo) return null;
-    const da = getEdsDaLiveTarget(project);
-    const target = {
-        repoOwner: repo.owner,
-        repoName: repo.repo,
-        daLiveOrg: da?.org || repo.owner,
-        daLiveSite: da?.site || repo.repo,
-    };
-    return Object.values(target).every((v) => SAFE_COORDINATE.test(v)) ? target : null;
-}
 
 /**
  * Canonical WEB path, or `null` when the input is not a safe page path.
@@ -283,24 +233,41 @@ async function openPathCall(
 }
 
 
-/** DA.live content operations bound to the DA.live (not Adobe) token. */
-function daLiveOps(ctx: HandlerContext): DaLiveContentOperations {
-    return new DaLiveContentOperations(
-        createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context)),
-        ctx.logger,
-    );
-}
-
-/** Helix service carrying both credentials preview/publish sends on one request. */
-function helixFor(ctx: HandlerContext): HelixService {
-    return new HelixService(
-        ctx.logger,
-        getGitHubServices(ctx.context.secrets).tokenService,
-        createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context)),
-    );
-}
-
 const message = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+
+/** `org/site`, the name an SC knows the storefront's DA.live content by. */
+const siteName = (t: StorefrontTarget): string => `${t.daLiveOrg}/${t.daLiveSite}`;
+
+/**
+ * write_page's answer without `confirm:true` (CLAUDE.md property 5). A plain write
+ * is gated too: it replaces the DA.live source the live site is built from, so the
+ * next publish of the page — by anyone — ships it.
+ */
+function writeRefusal(target: StorefrontTarget, webPath: string, publish: boolean) {
+    const site = siteName(target);
+    const replaces = `write_page replaces the page ${webPath} in the DA.live source of the storefront ${site}`;
+    const then = publish
+        ? ' and publishes it to the live site, where visitors see it at once'
+        : ', which the live site is built from; it goes live the next time the page is published';
+    return asText({
+        error: `${replaces}${then}. Call again with confirm:true.`,
+        site,
+        path: webPath,
+        publish,
+    });
+}
+
+/** publish_page's answer without `confirm:true`: it changes what visitors see. */
+function publishRefusal(target: StorefrontTarget, webPath: string) {
+    const site = siteName(target);
+    return asText({
+        error:
+            `publish_page puts the current DA.live content of ${webPath} live on the storefront ${site}, ` +
+            'where visitors see it at once. Call again with confirm:true.',
+        site,
+        path: webPath,
+    });
+}
 
 const pathField = z
     .string()
@@ -356,7 +323,7 @@ export function registerContentAuthoringTools(
                 // retry/429 handling, the timeout, and the size cap this response
                 // needs because a model pays for the body as context.
                 const res = await runWithAdobeTarget(() =>
-                    daLiveOps(r.ctx).readSource(r.target.daLiveOrg, r.target.daLiveSite, sourcePath),
+                    daLiveOps(r.ctx).sourceOps.readSource(r.target.daLiveOrg, r.target.daLiveSite, sourcePath),
                 );
                 if (res.status === 404) {
                     return asText({
@@ -388,9 +355,9 @@ export function registerContentAuthoringTools(
         'write_page',
         {
             needsAuth: ['dalive'],
-            annotations: { readOnlyHint: false, destructiveHint: false },
+            annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                "Write a page's HTML to the current project's DA.live storefront; set publish:true to preview+publish it in the same call",
+                "Write a page's HTML to the current project's DA.live storefront, replacing what is there; set publish:true to preview+publish it in the same call. Changes the source the live site is built from, so it requires confirm:true",
             inputSchema: {
                 path: pathField,
                 content: z.string().describe('Full page HTML (EDS block markup)'),
@@ -398,21 +365,26 @@ export function registerContentAuthoringTools(
                     .boolean()
                     .optional()
                     .describe('Preview and publish immediately after writing (default false)'),
+                confirm: z
+                    .boolean()
+                    .optional()
+                    .describe('Must be true — the page is replaced in the source the live site is built from'),
             },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
             const raw = String(args?.path ?? '').trim();
             if (!raw) return asText({ error: 'path is required' });
-            const content = args?.content;
+            const content = args.content;
             if (typeof content !== 'string' || content.length === 0) {
                 return asText({ error: 'content is required' });
             }
-            const publish = args?.publish === true;
+            const publish = args.publish === true;
             const webPath = toWebPath(raw);
             if (!webPath) return asText(INVALID_PATH);
             const r = await resolveTarget(ctxFactory, { needsGitHub: publish });
             if (!r.ok) return asText(r.body);
+            if (args.confirm !== true) return writeRefusal(r.target, webPath, publish);
 
             const sourcePath = toSourcePath(webPath);
             const { daLiveOrg, daLiveSite } = r.target;
@@ -420,7 +392,7 @@ export function registerContentAuthoringTools(
             let write;
             try {
                 write = await runWithAdobeTarget(() =>
-                    daLiveOps(r.ctx).createSource(daLiveOrg, daLiveSite, sourcePath, content, {
+                    daLiveOps(r.ctx).sourceOps.createSource(daLiveOrg, daLiveSite, sourcePath, content, {
                         overwrite: true,
                     }),
                 );
@@ -458,15 +430,20 @@ export function registerContentAuthoringTools(
         'publish_page',
         {
             needsAuth: ['dalive'],
-            annotations: { readOnlyHint: false, destructiveHint: false },
-            description: 'Preview and publish an existing DA.live page to the live CDN',
-            inputSchema: { path: pathField },
+            annotations: { readOnlyHint: false, destructiveHint: true },
+            description:
+                'Preview and publish an existing DA.live page to the live CDN, replacing what visitors see. Requires confirm:true',
+            inputSchema: {
+                path: pathField,
+                confirm: z.boolean().optional().describe('Must be true — the page goes live at once'),
+            },
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
             const r = await openPathCall(ctxFactory, args, { needsGitHub: true });
             if (!r.ok) return asText(r.body);
             const { webPath } = r;
+            if (args.confirm !== true) return publishRefusal(r.target, webPath);
 
             try {
                 await runWithAdobeTarget(() =>
@@ -516,7 +493,7 @@ export function registerContentAuthoringTools(
 
             try {
                 const entries = await runWithAdobeTarget(() =>
-                    daLiveOps(r.ctx).listDirectory(r.target.daLiveOrg, r.target.daLiveSite, dir),
+                    daLiveOps(r.ctx).sourceOps.listDirectory(r.target.daLiveOrg, r.target.daLiveSite, dir),
                 );
                 const skip = Math.max(0, Math.trunc(args?.skip ?? 0));
                 const limit = Math.max(1, Math.trunc(args?.limit ?? CONTENT_PAGE_SIZE));
@@ -556,7 +533,7 @@ export function registerContentAuthoringTools(
             needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Unpublish and delete a page from the current project\'s DA.live storefront (irreversible). Requires confirm:true.',
+                'Unpublish and delete a page from the current project\'s DA.live storefront: live, preview and source (irreversible). Requires confirm:true.',
             inputSchema: {
                 path: pathField,
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
@@ -568,7 +545,7 @@ export function registerContentAuthoringTools(
             if (!raw) return asText({ error: 'path is required' });
             const webPath = toWebPath(raw);
             if (!webPath) return asText(INVALID_PATH);
-            if (args?.confirm !== true) {
+            if (args.confirm !== true) {
                 return asText({
                     error: `delete_page permanently removes ${webPath} from DA.live and unpublishes it. To proceed, call again with confirm:true.`,
                     irreversible: true,
@@ -612,17 +589,26 @@ export function registerContentAuthoringTools(
                 });
             }
 
+            // The preview copy goes too: without it the page stayed on the site's
+            // preview address after the source was gone (measured 2026-10-22 on
+            // JustRite's /apparel). Best-effort and reported, never a reason to
+            // stop: the live page, the one visitors see, is already down.
+            const previewRemoved = await runWithAdobeTarget(() =>
+                helixFactory(r.ctx).deletePreview(daLiveOrg, daLiveSite, webPath),
+            ).catch(() => false);
+
             // `unpublishError` is deliberately NOT carried past this point: it is
             // only ever set in the catch above, which leaves `unpublished` false
             // and returns at the guard. Everything below runs with the unpublish
             // having succeeded, so there is no error to report alongside.
             try {
                 const result = await runWithAdobeTarget(() =>
-                    daLiveOps(r.ctx).deleteSource(daLiveOrg, daLiveSite, sourcePath),
+                    daLiveOps(r.ctx).sourceOps.deleteSource(daLiveOrg, daLiveSite, sourcePath),
                 );
                 return asText({
                     deleted: result.success,
                     unpublished,
+                    previewRemoved,
                     path: webPath,
                     ...(result.error ? { error: result.error } : {}),
                 });
@@ -630,6 +616,7 @@ export function registerContentAuthoringTools(
                 return asText({
                     deleted: false,
                     unpublished,
+                    previewRemoved,
                     path: webPath,
                     error: message(err),
                 });
@@ -658,7 +645,7 @@ export function registerContentAuthoringTools(
             const base = aemLiveBaseUrl(r.target.repoOwner, r.target.repoName);
             const url = buildSourceUrl(base, webPath, true);
             // The host is built from project metadata, so re-assert where the
-            // request is going before it leaves (see SAFE_COORDINATE).
+            // request is going before it leaves (see SAFE_COORDINATE in storefrontPages.ts).
             if (!urlStaysWithin(url, `${base}/`)) {
                 return asText({ path: webPath, error: 'Refusing to fetch outside the storefront host' });
             }

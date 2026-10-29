@@ -49,3 +49,21 @@ export async function restorePreservedFiles(
         }
     }
 }
+
+/**
+ * Remove each of `files` the backup did not hold. The SC's repository did not have
+ * it, so the template's copy does not stay either: a replace keeps the label folder
+ * as the storefront had it (EDS-53).
+ */
+export async function removeFilesNotBackedUp(
+    repoDir: string,
+    files: readonly string[],
+    backups: Map<string, string>,
+    logger: Logger,
+): Promise<void> {
+    for (const filePath of files) {
+        if (backups.has(filePath)) continue;
+        await fs.rm(path.join(repoDir, filePath), { force: true });
+        logger.debug(`[TemplateSync] Kept ${filePath} absent`);
+    }
+}

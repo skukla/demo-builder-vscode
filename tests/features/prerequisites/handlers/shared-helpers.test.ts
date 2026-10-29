@@ -4,21 +4,21 @@
  *
  * Nothing under tests/features/prerequisites/handlers called these directly;
  * they were reached only through checkHandler, which is measured separately.
- * Each case here pins one decision: which Node majors a per-node prerequisite
- * needs, how the progress line and version suffix are built, and which status
+ * Each case here pins one decision: which Node majors a per-node-version prerequisite is
+ * installed under, how the progress line and version suffix are built, and which status
  * and message a prerequisite gets from its installation state.
  */
 
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {
     determinePrerequisiteStatus,
     formatProgressMessage,
     formatVersionSuffix,
     getNodeVersionKeys,
-    getPluginNodeVersions,
     getPrerequisiteDisplayMessage,
     getPrerequisiteStatusMessage,
     hasNodeVersions,
-    resolveRequiredMajors,
+    perNodeVersionMajors,
 } from '@/features/prerequisites/handlers/shared';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 
@@ -61,65 +61,10 @@ describe('hasNodeVersions / getNodeVersionKeys', () => {
     });
 });
 
-describe('resolveRequiredMajors', () => {
-    const nameMapping = { '20': 'Commerce Mesh', '24': 'Headless' };
-    const idMapping = { '20': 'commerce-mesh', '24': 'headless' };
-
-    it("the prerequisite's own requiredFor wins over its plugins", () => {
-        const majors = resolveRequiredMajors(
-            { requiredFor: ['headless'], plugins: [{ requiredFor: ['commerce-mesh'] }] },
-            nameMapping,
-            idMapping
-        );
-        expect(majors).toEqual(['24']);
-    });
-
-    it.each([
-        ['undefined', undefined],
-        ['empty', []],
-    ])('with requiredFor %s, the union of the plugins decides', (_name, requiredFor) => {
-        const majors = resolveRequiredMajors(
-            {
-                requiredFor,
-                plugins: [
-                    { requiredFor: ['commerce-mesh'] },
-                    { requiredFor: [] },
-                    {},
-                    { requiredFor: ['commerce-mesh'] },
-                ],
-            },
-            nameMapping,
-            idMapping
-        );
-        expect(majors).toEqual(['20']);
-    });
-
-    it('with nothing required by prerequisite or plugins, every Node major is required', () => {
-        expect(
-            resolveRequiredMajors({ plugins: [{ requiredFor: [] }, {}] }, nameMapping, idMapping)
-        ).toEqual(['20', '24']);
-        expect(resolveRequiredMajors({ requiredFor: [] }, nameMapping, idMapping)).toEqual([
-            '20',
-            '24',
-        ]);
-        expect(resolveRequiredMajors({}, { '24': 'Headless', '20': 'Mesh' }, idMapping)).toEqual([
-            '20',
-            '24',
-        ]);
-    });
-
-    it('a component nothing in the stack uses yields no majors, not all of them', () => {
-        expect(resolveRequiredMajors({ requiredFor: ['unknown'] }, nameMapping, idMapping)).toStrictEqual([]);
-    });
-});
-
-describe('getPluginNodeVersions', () => {
-    it('a major shared by several components is required when ANY of them needs the plugin', () => {
-        expect(
-            getPluginNodeVersions({ '20': 'eds,commerce-mesh', '24': 'headless' }, [
-                'commerce-mesh',
-            ])
-        ).toEqual(['20']);
+describe('perNodeVersionMajors', () => {
+    it("is the Adobe CLI's own Node major, and only that", () => {
+        // The one set every per-Node check, install and plugin install reads.
+        expect(perNodeVersionMajors()).toStrictEqual([demoBuilderNode()]);
     });
 });
 

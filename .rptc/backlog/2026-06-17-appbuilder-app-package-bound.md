@@ -6,6 +6,7 @@ parent: AB-1
 needs: AB-1
 value: low
 status: gated
+waiting-on: the first real package-bound integration — nothing to auto-attach until one exists
 ---
 # App Builder app — package-bound apps (auto-attach to a demo template)
 
@@ -91,3 +92,7 @@ persistence gap that free-form selections have.
 `.rptc/research/appbuilder-slice3-staleness/research.md` FIRST — the mechanism exists but
 the auto-include seeding, locked UI, and summary visibility do not. Requires a real
 package-bound `kind: 'integration'` entry to bind."
+
+## Shipped so far
+
+- 2026-10-03  Reconciled 2026-10-03 (second pass): computeSelectedAppBuilderComponents is already deleted (zero hits in src); the catalog now has four entries, none with nativeForPackages.

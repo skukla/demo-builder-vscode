@@ -12,7 +12,8 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import { CatalogStage } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
+import { CatalogStage, NAME_IS_FIXED } from '@/features/project-creation/ui/components/integration-flow/stages/CatalogStage';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 function entry(id: string, name: string, description?: string): AppBuilderComponentCatalogEntry {
@@ -39,6 +40,7 @@ function renderStage(props: Partial<Props> = {}): {
                 catalog={
                     props.catalog ?? [entry('acme-a', 'Widget A'), entry('acme-b', 'Widget B')]
                 }
+                unavailable={props.unavailable}
                 selectedId={props.selectedId}
                 onPick={onPick}
                 label={props.label}
@@ -62,6 +64,39 @@ function sixEntries(): AppBuilderComponentCatalogEntry[] {
 }
 
 describe('CatalogStage', () => {
+    // A pre-built pair's name is fixed at creation (owner, 2026-09-25): said before it is committed.
+    it('says under the name that it cannot be changed later, once something is picked', () => {
+        renderStage({ selectedId: 'acme-a' });
+        expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
+    });
+
+    // One typed name names the integration AND its ERP (pairNames); the screen shows both.
+    describe('a pair, read against the real catalog', () => {
+        const erpIntegration = getAppBuilderComponentCatalog().find((e) => e.id === 'erp-integration')!;
+
+        it('names the ERP, not the integration, and says only that it is fixed once deployed', () => {
+            renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration', label: 'JustRite' });
+            expect(screen.getByLabelText(/^ERP name \(optional\)/)).toHaveValue('JustRite');
+            expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
+            expect(screen.queryByText(/Adds “/)).not.toBeInTheDocument();
+        });
+
+        it('with nothing typed, suggests the default ERP name', () => {
+            renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration' });
+            expect(screen.getByPlaceholderText('Acme ERP')).toBeInTheDocument();
+        });
+    });
+
+    it('an entry with no paired system keeps the plain "Name (optional)" field', () => {
+        renderStage({ selectedId: 'acme-b' });
+        expect(screen.getByLabelText(/^Name \(optional\)/)).toBeInTheDocument();
+    });
+
+    it('says nothing about the name before a pick', () => {
+        renderStage();
+        expect(screen.queryByText(NAME_IS_FIXED)).not.toBeInTheDocument();
+    });
+
     it('renders a tile per catalog entry', () => {
         renderStage();
         expect(screen.getByRole('button', { name: /Widget A/ })).toBeInTheDocument();
@@ -186,9 +221,13 @@ describe('CatalogStage', () => {
 });
 
 describe('naming a picked entry (optional-name model, 2026-08-27)', () => {
-    it('shows NO name field until an entry is picked', () => {
+    // On screen from the start, disabled until a pick: appearing ON the pick grew
+    // the whole dialog under the SC's cursor (owner, 2026-09-21).
+    it('shows the name field before a pick, disabled, saying what to do first', () => {
         renderStage();
-        expect(screen.queryByLabelText(/Name \(optional\)/)).not.toBeInTheDocument();
+        const field = screen.getByLabelText(/Name \(optional\)/);
+        expect(field).toBeDisabled();
+        expect(field).toHaveAttribute('placeholder', 'Pick an integration first');
     });
 
     it("shows the picked entry's name as the PLACEHOLDER, empty value, no validation", () => {
@@ -218,6 +257,55 @@ describe('node-version disclosure', () => {
             ],
         });
 
-        expect(screen.getByText(/Installs Node 24 on first use/)).toBeInTheDocument();
+        // A note of its own, so the tile's clipped description never cuts it off.
+        expect(screen.getByText('Installs Node 24 on first use.')).toHaveClass('choice-card-note');
+        expect(screen.getByText('Sync scaffolding.')).toBeInTheDocument();
+    });
+});
+
+// One Commerce instance runs one ERP integration (AB-78). Like the API Mesh tile once
+// a project has its mesh, the tile stays in the gallery, greyed out. The words go in a
+// banner above the gallery, never on the tile, where they would be missed (owner).
+describe('an entry that cannot be added here', () => {
+    const MESSAGE = 'JustRite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
+
+    it('greys its tile out, and leaves the others alone', () => {
+        renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
+
+        expect(screen.getByRole('button', { name: /Widget A/ })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /Widget B/ })).toBeEnabled();
+    });
+
+    it('says why and what to do in a banner above the gallery, not on the tile', () => {
+        renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
+
+        expect(screen.getByTestId('catalog-unavailable')).toHaveTextContent(MESSAGE);
+        expect(screen.getByRole('button', { name: /Widget A/ })).not.toHaveTextContent(MESSAGE);
+    });
+
+    it('cannot be picked', () => {
+        const { onPick } = renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
+
+        fireEvent.click(screen.getByRole('button', { name: /Widget A/ }));
+
+        expect(onPick).not.toHaveBeenCalled();
+    });
+
+    it('drops the name field when no tile can be picked', () => {
+        renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a', 'acme-b'] } });
+
+        expect(screen.queryByLabelText(/Name \(optional\)/)).not.toBeInTheDocument();
+    });
+
+    it('keeps the name field while another tile can still be picked — control', () => {
+        renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
+
+        expect(screen.getByLabelText(/Name \(optional\)/)).toBeInTheDocument();
+    });
+
+    it('shows no banner when nothing listed is unavailable', () => {
+        renderStage({ unavailable: { message: MESSAGE, ids: ['not-listed'] } });
+
+        expect(screen.queryByTestId('catalog-unavailable')).not.toBeInTheDocument();
     });
 });

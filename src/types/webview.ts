@@ -5,7 +5,7 @@ import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs } from './components';
 import type { ErrorCode } from './errorCodes';
 import type { AddedDemo } from './projectFile';
-import type { PrerequisitePluginState, GitHubUser } from './webviewPayloads';
+import type { OperationPosition, PrerequisitePluginState, GitHubUser } from './webviewPayloads';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -55,7 +55,7 @@ export type CommerceSectionId =
  * `WizardState.activeStorefrontStep` can reference it; the pure section logic
  * lives in `ui/steps/storefrontSections.ts`.
  */
-export type StorefrontSectionId = 'accounts' | 'repository' | 'code-sync' | 'block-libraries';
+export type StorefrontSectionId = 'accounts' | 'repository' | 'block-libraries';
 
 /**
  * Wizard state as borrowed-component HOSTS supply it: the same store, every
@@ -128,7 +128,6 @@ export interface WizardState {
     commerceStoreViewChosen?: boolean; // Persisted verdict: the Business Structure store-view selection was made — drives the Catalog tab's gate/status
     commerceStoreLoading?: boolean; // Transient: store discovery is fetching the structure — blocks the Business Structure Continue gate while true
     storefrontRepoValid?: boolean; // Storefront repo selection reported valid (RepoSelectionInline repository phase)
-    storefrontCodeSyncValid?: boolean; // Storefront AEM Code Sync app install reported valid (RepoSelectionInline code-sync phase)
     activeBuildArea?: BuildAreaId; // Area currently focused within the build-your-project step
     /**
      * Which datapack this project should be seeded with, if any.
@@ -186,6 +185,21 @@ export interface WizardState {
     // Edit-target data (populated when wizardMode === 'edit')
     editProjectPath?: string; // Path to existing project being edited
     editOriginalName?: string; // Original project name (for duplicate validation)
+    editOriginalTitle?: string; // Original project title, to tell a rename in Edit
+    /**
+     * The demo package or the backend was changed in this wizard session. Both
+     * reset the Commerce settings and block libraries, so in Edit this is what
+     * lets the SC re-choose them; otherwise those belong to Configure
+     * (ui/steps/editLocks.ts). Never cleared: changing back does not restore what
+     * the change reset.
+     */
+    foundationChanged?: boolean;
+    /**
+     * The SC's choices when the Edit wizard opened (`editChoicesOf`). Comparing
+     * against it is how the wizard tells what an Edit changed, so Finish does only
+     * that (PL-75).
+     */
+    editBaseline?: Record<string, string>;
 }
 
 /**
@@ -306,13 +320,19 @@ export interface MeshPhaseState {
 }
 
 export interface CreationProgress {
+    /** Line 1: the step, a label from the stage table. */
     currentOperation: string;
     progress: number;
+    /** Line 2: what the step is doing now. */
     message: string;
     logs: string[];
     error?: string;
-    /** Mesh deployment state - present during Phase 3 when mesh is being deployed */
-    meshPhase?: MeshPhaseState;
+    /** The step's place in the run, "(3 of 9)", when the run's steps are known. */
+    position?: OperationPosition;
+    /** When the run began, in ms since the epoch: the screen's clock counts from it. */
+    startedAt?: number;
+    /** On the finishing update only: one line the success screen shows under its heading. */
+    note?: string;
 }
 
 export interface FormValidation {
@@ -381,7 +401,6 @@ export interface ComponentSelection {
     services?: string[];
     integrations?: string[];
     appBuilder?: string[];
-    preset?: string;
 }
 
 // ONE declaration with @/types/components (this file used to carry a
@@ -460,14 +479,10 @@ export interface EDSConfig {
     daLiveOrgVerified?: boolean;
     /** DA.live org verification error */
     daLiveOrgError?: string;
-    /** DA.live site mode: create new or use existing */
-    siteMode?: 'new' | 'existing';
     /** DA.live site name (for new sites or manual entry) */
     daLiveSite?: string;
     /** Selected existing DA.live site (from searchable list) */
     selectedSite?: DaLiveSiteItem;
-    /** Whether to reset existing site content (repopulate with demo data) */
-    resetSiteContent?: boolean;
     /** DA.live authentication state */
     daLiveAuth?: {
         isAuthenticated: boolean;
@@ -528,7 +543,7 @@ export interface EDSConfig {
         headSnippet?: string;
     };
 
-    // Repository creation state (set by RepoSelectionInline when creating a new repo)
+    // Repository creation state (set by useRepoCreation, the repo picker's create flow)
     /** Created repository info - set when repo is created in selection step, before proceeding */
     createdRepo?: {
         owner: string;
@@ -542,6 +557,12 @@ export interface EDSConfig {
     preflightComplete?: boolean;
     /** GitHub repository URL from preflight */
     repoUrl?: string;
+    /** Links the preflight content copy found to pages the source lacks, recorded on the project. */
+    brokenLinks?: import('./webviewPayloads').StorefrontBrokenLink[];
+    /** The block libraries preflight installed; creation records them on the project. */
+    installedBlockLibraries?: import('./blockLibraries').InstalledBlockLibrary[];
+    /** Whether preflight's build step left all of Demo Builder's fixes; creation stamps it. */
+    storefrontBuildComplete?: boolean;
     // Note: previewUrl and liveUrl are NOT stored - they are derived from githubRepo
     // by getEdsPreviewUrl() and getEdsLiveUrl() in typeGuards.ts
     /** Whether to skip content copy (e.g., when using existing content) */

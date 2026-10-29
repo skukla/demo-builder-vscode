@@ -9,11 +9,6 @@
  * or on what the manager holds afterwards.
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as vscode from 'vscode';
-import type { ProcessInfo } from '@/types/base';
-import { createMockTerminal, mockWindow } from '../../helpers/vscodeMockViews';
 import {
     createStateManagerProject,
     mockLoggerInstance,
@@ -21,11 +16,15 @@ import {
     setupMocks,
     type TestMocks,
 } from './stateManager.testUtils';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import type { ProcessInfo } from '@/types/base';
+import { createMockTerminal, mockWindow } from '../../helpers/vscodeMockViews';
 
-// The mock wall lives in the testUtils, but a jest.mock only hoists within the
-// module it appears in — each suite must register the same two itself.
-jest.mock('fs/promises');
-jest.mock('os');
+// The mock wall (fs/promises, os, the logger) lives in the testUtils, which is the
+// FIRST import above so its mocks register before any later import loads those
+// modules — jest.mock hoists within a module, not across them.
 
 const PROJECT_PATH = '/test/project';
 const OTHER_PATH = '/test/other-project';

@@ -13,7 +13,7 @@
  *   19:54:17  code.status 403 → installed: true   (lenient)
  *   19:55:23  code.status 403 → installed: false  (strict) → "not installed"
  *
- * Only 200, 400 and 404 are answers. Everything else is a refusal to answer.
+ * Only 200 and 404 are answers. Everything else — 400 included (EDS-23) — is not.
  */
 
 // `export {}` makes this a MODULE. Without it tsc treats both this file and
@@ -86,17 +86,30 @@ describe('GitHubAppService — an inner code.status Helix will not stand behind'
         expect(result.transient).toBeUndefined();
     });
 
-    it.each([
-        [200, 'working'],
-        [400, 'initializing'],
-    ])('CONTROL — %i stays a definitive installed (%s)', async (status) => {
-        helixAnswers(status);
+    it('CONTROL — 200 stays a definitive installed (working)', async () => {
+        helixAnswers(200);
         const service = new GitHubAppService(mockTokenService);
 
         const result = await service.isAppInstalled('skukla', 'bodea-template-test');
 
         expect(result.isInstalled).toBe(true);
         expect(result.transient).toBeUndefined();
+    });
+
+    /**
+     * EDS-23. An inner 400 was read as "installed, initializing". Measured on
+     * skukla/kukla-justrite: 400 while the App did NOT cover the repository (the
+     * code endpoint said "github bot not installed on repository"), and STILL 400
+     * after the owner added it and the code served 200. It says nothing either way,
+     * so strict mode must not call it installed — the code endpoint decides.
+     */
+    it('treats an inner 400 as undetermined in STRICT mode, not as installed', async () => {
+        helixAnswers(400);
+        const service = new GitHubAppService(mockTokenService);
+
+        const result = await service.isAppInstalled('skukla', 'kukla-justrite');
+
+        expect(result).toEqual({ isInstalled: false, codeStatus: 400, transient: true });
     });
 
     it.each([401, 429, 500])('treats an inner %i as undetermined too', async (status) => {

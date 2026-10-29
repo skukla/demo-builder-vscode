@@ -243,7 +243,8 @@ describe('the AI-bundle gate seams named in CLAUDE.md all still exist', () => {
 
     it('CONTROL: the seam names are real symbols in src/', () => {
         for (const s of SEAMS) {
-            const hits = execSync(`git grep -l ${s} -- src | wc -l`, {
+            // --untracked: a seam that lives in a file not yet committed is still real (PL-67).
+            const hits = execSync(`git grep --untracked -l ${s} -- src | wc -l`, {
                 encoding: 'utf8',
                 cwd: ROOT,
             }).trim();
@@ -256,6 +257,9 @@ describe('the AI-bundle gate seams named in CLAUDE.md all still exist', () => {
         expect(CLAUDE_MD).toContain(`${SEAMS.length === 4 ? 'four' : String(SEAMS.length)} seams`);
     });
 });
+
+/** The count as CLAUDE.md spells it ("Nine webview bundles"). */
+const NUMBER_WORDS: Record<number, string> = { 8: 'eight', 9: 'nine', 10: 'ten' };
 
 describe('the "hit every surface" list names every surface that exists', () => {
     // The list exists to stop a change landing on one path and missing the others.
@@ -279,7 +283,7 @@ describe('the "hit every surface" list names every surface that exists', () => {
         const names = entries();
         for (const n of names) expect(CLAUDE_MD).toContain(n.toLowerCase());
         expect(CLAUDE_MD).toContain(
-            `${names.length === 8 ? 'eight' : String(names.length)} webview bundles`
+            `${NUMBER_WORDS[names.length] ?? String(names.length)} webview bundles`
         );
     });
 });

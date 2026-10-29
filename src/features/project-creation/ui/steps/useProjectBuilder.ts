@@ -23,12 +23,14 @@ import { withSelectedAppBuilderComponent } from '../wizard/appBuilderComponentSe
 import { buildEdsConfigFromStorefront } from './edsConfigFromStorefront';
 import { isMeshComponentId } from '@/core/constants';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import { pairNameInputs, pairedSystemOf } from '@/features/app-builder/services/pairNames';
+import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     getNativeBlockLibraries,
     getDefaultBlockLibraryIds,
     getPackageDefaultBlockLibraryIds,
 } from '@/features/components/services/blockLibraryLoader';
-import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
+import { isMeshRequired } from '@/features/components/services/demoPackageLoader';
 import type { BlankInstance } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
@@ -69,7 +71,11 @@ export interface UseProjectBuilderReturn {
     onAddonsChange: (addons: string[]) => void;
     onBlockLibrariesChange: (libraries: string[]) => void;
     onCustomBlockLibrariesChange: (libs: CustomBlockLibrary[]) => void;
-    onAppBuilderComponentToggle: (id: string, isSelected: boolean) => void;
+    /**
+     * @param displayName - what the SC typed for a PAIRED entry: the name both it
+     *   and its bound system are named from (`pairNames`), not a new identity.
+     */
+    onAppBuilderComponentToggle: (id: string, isSelected: boolean, displayName?: string) => void;
     /**
      * Add a custom-URL integration. With `instance` (a named AI-built shell
      * instance) the selection commits under the INSTANCE id and the source record
@@ -84,11 +90,17 @@ export interface UseProjectBuilderReturn {
     onRemoveAppBuilderComponent: (id: string) => void;
     /**
      * Rename an AI-built instance: updates `appBuilderComponentSources[id].name`
-     * IN PLACE. Display name only — the id (folder, ow.package, keyed key),
-     * selection, and API picks are immutable. No-op for ids without a source
-     * record (catalog / legacy fixed-id blank selections have no name home).
+     * IN PLACE, or a paired catalog integration's own name input (the ERP
+     * integration's, which the dashboard renames too). Display name only — the id
+     * (folder, ow.package, keyed key), selection, and API picks are immutable.
+     * No-op for any other id (they have no name home).
      */
     onRenameAppBuilderComponent: (id: string, name: string) => void;
+    /**
+     * Rename the system a paired integration brings (its ERP), by the rule the
+     * add used. Only before creation: after it, the ERP's name is fixed.
+     */
+    onRenamePairedSystem: (id: string, name: string) => void;
 }
 
 /**
@@ -100,7 +112,7 @@ function resolveMeshOptionalDeps(
     stackId: string,
     stackObj: Stack | undefined,
 ): string[] | null {
-    if (getResolvedMeshRequirement(pkg, stackId) === true) {
+    if (isMeshRequired(pkg, stackId)) {
         return stackObj?.optionalDependencies ?? [];
     }
     return null;
@@ -350,7 +362,7 @@ export function useProjectBuilder(
     );
 
     const onAppBuilderComponentToggle = useCallback(
-        (id: string, isSelected: boolean) => {
+        (id: string, isSelected: boolean, displayName?: string) => {
             // A required component cannot be toggled OFF. The card layer
             // already hides Remove on it; this guard is defense in depth so a
             // second door found later cannot reopen the hole — dropping a
@@ -367,6 +379,17 @@ export function useProjectBuilder(
             const update: Partial<WizardState> = {
                 selectedAppBuilderComponents: nextComponents,
             };
+            // A pair is named by the same rule the dashboard's add enforces (pairNames),
+            // so a project created with it matches one it is added to later.
+            const catalog = getAppBuilderComponentCatalog();
+            const entry = isSelected ? catalog.find((candidate) => candidate.id === id) : undefined;
+            const names = entry && pairNameInputs(entry, catalog, displayName);
+            if (names) {
+                update.componentConfigs = {
+                    ...(state.componentConfigs ?? {}),
+                    [id]: { ...(state.componentConfigs?.[id] ?? {}), ...names },
+                };
+            }
             // Toggle-off also drops the integration's free Console-API picks so
             // stale picks never survive a re-add or serialize into creation.
             if (!isSelected) {
@@ -376,7 +399,7 @@ export function useProjectBuilder(
 
             updateState(update);
         },
-        [selectedAppBuilderComponents, state.selectedConsoleApis, isRequiredComponent, updateState],
+        [selectedAppBuilderComponents, state.selectedConsoleApis, state.componentConfigs, isRequiredComponent, updateState],
     );
 
     const onAddCustomAppBuilderComponent = useCallback(
@@ -399,17 +422,47 @@ export function useProjectBuilder(
         [selectedAppBuilderComponents, state.appBuilderComponentSources, updateState],
     );
 
+    // Names before creation are inputs on the integration (safe to change: no id
+    // depends on them); the rest of its inputs are kept.
+    const writeNameInputs = useCallback(
+        (id: string, inputs: Record<string, string>) =>
+            updateState({
+                componentConfigs: {
+                    ...(state.componentConfigs ?? {}),
+                    [id]: { ...(state.componentConfigs?.[id] ?? {}), ...inputs },
+                },
+            }),
+        [state.componentConfigs, updateState],
+    );
+
     const onRenameAppBuilderComponent = useCallback(
         (id: string, name: string) => {
             const sources = state.appBuilderComponentSources ?? {};
             const record = sources[id];
-            // Only sourced rows (AI-built instances) carry a renamable name.
-            if (!record) return;
-            updateState({
-                appBuilderComponentSources: { ...sources, [id]: { ...record, name } },
-            });
+            if (record) {
+                updateState({
+                    appBuilderComponentSources: { ...sources, [id]: { ...record, name } },
+                });
+                return;
+            }
+            const catalog = getAppBuilderComponentCatalog();
+            const entry = catalog.find((candidate) => candidate.id === id);
+            if (!entry?.nameFromEnvVar || !pairedSystemOf(entry, catalog)) return;
+            writeNameInputs(id, { [entry.nameFromEnvVar]: name });
         },
-        [state.appBuilderComponentSources, updateState],
+        [state.appBuilderComponentSources, writeNameInputs, updateState],
+    );
+
+    const onRenamePairedSystem = useCallback(
+        (id: string, name: string) => {
+            const catalog = getAppBuilderComponentCatalog();
+            const entry = catalog.find((candidate) => candidate.id === id);
+            const systemKey = entry && pairedSystemOf(entry, catalog)?.nameFromEnvVar;
+            const names = entry && pairNameInputs(entry, catalog, name);
+            if (!systemKey || !names) return;
+            writeNameInputs(id, { [systemKey]: names[systemKey] });
+        },
+        [writeNameInputs],
     );
 
     const onRemoveAppBuilderComponent = useCallback(
@@ -475,5 +528,6 @@ export function useProjectBuilder(
         onAddCustomAppBuilderComponent,
         onRemoveAppBuilderComponent,
         onRenameAppBuilderComponent,
+        onRenamePairedSystem,
     };
 }

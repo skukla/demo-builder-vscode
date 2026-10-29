@@ -127,8 +127,9 @@ export async function ensureHomeAiContext(
             fsPromises.writeFile(path.join(claudeDir, 'CLAUDE.md'), CLAUDE_MD_POINTER, 'utf-8'),
             // ALL skills — the single home Chat edits any project's files, so it
             // needs the full skill surface, not just one global skill. Each
-            // lands as `<name>/SKILL.md` (the one layout Claude Code registers
-            // as an invocable skill — see skillsWriter); the legacy pre-v27
+            // lands as `<name>/SKILL.md` (the Agent Skills layout: the only one
+            // Claude Code registers as an invocable skill, and the one Copilot
+            // reads from `.claude/skills/` too — see skillsWriter); the legacy pre-v27
             // flat `<name>.md` is unlinked best-effort, safe here because this
             // surface is regenerated wholesale on every activation and the
             // names are ours.
@@ -257,6 +258,8 @@ function buildHomeWhatYouCanDo(): string {
         '- **See every project:** call `list_projects` to list all Demo Builder projects.',
         '- **Create a new project:** call `create_project` to scaffold a new demo (EDS or',
         '  headless) end to end — see the `create-eds-project` skill in `.claude/skills/`.',
+        '  From an exported project file, call `create_project_from_file` with its absolute path;',
+        '  the file never carries credentials or the Adobe workspace (same skill, section 7).',
         '- **Check or change sign-in:** call `get_auth_status` to see the current Adobe',
         '  sign-in, and `sign_in` to authenticate.',
         '- **Operate on a project by name:** the project tools accept a `projectName` argument,',

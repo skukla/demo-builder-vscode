@@ -3,6 +3,12 @@ import {
     ExtensionContext,
 } from './daLiveAuthService.testUtils';
 import { createMockExtensionContext, createStatefulGlobalState } from '../../../../helpers/extensionContextFake';
+import { malformedJwt } from '../../../../helpers/jwtFake';
+import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
+import {
+    DA_LIVE_TOKEN_SECRET_KEY,
+    LEGACY_TOKEN_STATE_KEY,
+} from '@/features/eds/services/daLive/daLiveTokenMigration';
 /**
  * DA.live Auth Service Security Tests
  *
@@ -26,13 +32,19 @@ describe('DaLiveAuthService Security Tests', () => {
     let service: DaLiveAuthService;
     let mockContext: ExtensionContext;
     let globalStateStore: Map<string, unknown>;
+    let keychain: Map<string, string>;
 
     beforeEach(() => {
         jest.clearAllMocks();
 
         const stateful = createStatefulGlobalState();
         globalStateStore = stateful.store;
-        mockContext = createMockExtensionContext({ globalState: stateful.globalState });
+        const secretFake = createMockSecretStorage();
+        keychain = secretFake.store;
+        mockContext = createMockExtensionContext({
+            globalState: stateful.globalState,
+            secrets: secretFake.secrets,
+        });
 
         service = new DaLiveAuthService(mockContext);
     });
@@ -60,20 +72,13 @@ describe('DaLiveAuthService Security Tests', () => {
             expect(tokenPattern.test(fullToken)).toBe(true);
         });
 
-        it('should store tokens only in globalState with specific keys', () => {
-            // Verify tokens are stored via globalState with specific keys
-            // not exposed in logs or other locations
-            const stateKeys = [
-                'daLive.accessToken',
-                'daLive.tokenExpiration',
-                'daLive.userEmail',
-                'daLive.orgName',
-                'daLive.setupComplete',
-            ];
+        it('keeps the token out of globalState, which is plain data on disk', async () => {
+            const token = 'opaque-session-value';
 
-            stateKeys.forEach((key) => {
-                expect(typeof key).toBe('string');
-            });
+            await service.storeToken(token, { expiresAt: Date.now() + 3600000 });
+
+            expect(keychain.get(DA_LIVE_TOKEN_SECRET_KEY)).toBe(token);
+            expect([...globalStateStore.values()]).not.toContain(token);
         });
     });
 
@@ -86,15 +91,12 @@ describe('DaLiveAuthService Security Tests', () => {
             return `${header}.${payloadBase64}.${signature}`;
         };
 
-        it('should store access token in globalState', async () => {
+        it('should store access token in SecretStorage', async () => {
             const token = createTestToken({ sub: 'user123' });
 
             await service.storeToken(token);
 
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.accessToken',
-                token
-            );
+            expect(keychain.get(DA_LIVE_TOKEN_SECRET_KEY)).toBe(token);
         });
 
         it('should extract and store expiration from token payload', async () => {
@@ -155,23 +157,21 @@ describe('DaLiveAuthService Security Tests', () => {
 
         it('should handle invalid JSON in token payload gracefully', async () => {
             // Create a malformed token that can't be parsed
-            const token = 'eyJhbGciOiJIUzI1NiJ9.!!!invalid-base64!!!.signature';
+            const token = malformedJwt();
 
             // Should not throw - just log a warning
             await expect(service.storeToken(token)).resolves.toBeUndefined();
 
             // Should still store the access token
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.accessToken',
-                token
-            );
+            expect(keychain.get(DA_LIVE_TOKEN_SECRET_KEY)).toBe(token);
         });
     });
 
     describe('logout Security', () => {
         it('should clear all sensitive data on logout', async () => {
             // Given: Token data in storage
-            globalStateStore.set('daLive.accessToken', 'sensitive-token');
+            keychain.set(DA_LIVE_TOKEN_SECRET_KEY, 'sensitive-token');
+            globalStateStore.set(LEGACY_TOKEN_STATE_KEY, 'older-sensitive-token');
             globalStateStore.set('daLive.tokenExpiration', Date.now() + 3600000);
             globalStateStore.set('daLive.userEmail', 'user@example.com');
             globalStateStore.set('daLive.orgName', 'my-org');
@@ -179,11 +179,9 @@ describe('DaLiveAuthService Security Tests', () => {
             // When: Logout is called
             await service.logout();
 
-            // Then: All sensitive data should be cleared
-            expect(mockContext.globalState.update).toHaveBeenCalledWith(
-                'daLive.accessToken',
-                undefined
-            );
+            // Then: All sensitive data should be cleared, from both stores
+            expect(keychain.has(DA_LIVE_TOKEN_SECRET_KEY)).toBe(false);
+            expect(globalStateStore.has(LEGACY_TOKEN_STATE_KEY)).toBe(false);
             expect(mockContext.globalState.update).toHaveBeenCalledWith(
                 'daLive.tokenExpiration',
                 undefined

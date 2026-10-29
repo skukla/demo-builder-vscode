@@ -19,31 +19,35 @@
  * registered here.
  *
  * Live updates arrive on the same push channels the dashboard uses; their
- * senders resolve whichever project panel is live (`getLiveProjectPanel`), so
+ * senders (`projectPanelPushes.ts`) resolve whichever project panel is live, so
  * they reach this surface once the dashboard panel is disposed by the swap.
  *
  * @module features/dashboard/commands/showIntegrations
  */
 
 import * as vscode from 'vscode';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { getBundleUri } from '@/core/utils/bundleUri';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { resolveViewMode } from '@/core/state/viewModePreference';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { loadProjectComponentSettings } from '@/features/app-builder/services/componentSettingSecrets';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import { isMeshNeededByPackage } from '@/features/components/services/demoPackageLoader';
+import { settingsCatalogOf } from '@/features/dashboard/handlers/componentSettingsHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { warmProjectReads } from '@/features/dashboard/handlers/warmProjectReads';
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
-import { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
-export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInitialData> {
+export class ShowIntegrationsCommand extends BundledPanelCommand<IntegrationsInitialData> {
+    protected readonly bundleName = 'integrations';
+
     constructor(context: vscode.ExtensionContext, stateManager: StateManager, logger: Logger) {
         super(context, stateManager, logger);
     }
@@ -56,31 +60,13 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInit
         return 'Integrations';
     }
 
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'integrations',
-        });
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce: this.getNonce(),
-            cspSource: this.panel.webview.cspSource,
-            title: 'Integrations',
-        });
-    }
-
     protected getLoadingMessage(): string {
         return 'Loading Integrations';
     }
 
     /**
      * Seeds the grid: the keyed component map, the stack-filtered catalog for the
-     * add picker, and the shared deploy destination (project + workspace TITLES,
+     * add picker, each integration's Settings, and the shared deploy destination (project + workspace TITLES,
      * which the manifest carries — the banner names where every integration in
      * this project deploys).
      */
@@ -93,13 +79,27 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInit
         // `ProjectDisplayName`, so `project.name` here stops compiling at the
         // return statement.
         const projectName = project ? getProjectDisplayName(project) : asDisplayName('');
+        const catalog = this.resolveCatalog(project ?? null);
         return {
             theme,
             projectName,
             hasAdobeContext: Boolean(project?.adobe?.organization),
             appBuilderComponents: project?.appBuilderComponents,
             commerceStoreStructure: project?.commerceStoreStructure,
-            appBuilderComponentCatalog: this.resolveCatalog(project ?? null),
+            appBuilderComponentCatalog: catalog,
+            meshNeededByDemo: isMeshNeededByPackage(project?.selectedPackage, project?.selectedStack),
+            // Each integration's Settings (AB-21): values, and for secrets only
+            // whether one is stored.
+            componentSettings: project
+                ? await loadProjectComponentSettings(
+                      project,
+                      settingsCatalogOf(project),
+                      this.context.secrets,
+                  )
+                : {},
+            // Session choice over the setting, as the projects list does. In the
+            // init payload rather than a request, so the first paint is right.
+            integrationsViewMode: resolveViewMode('integrations'),
             destination: {
                 projectTitle: project?.adobe?.projectTitle,
                 workspaceTitle: project?.adobe?.workspaceTitle,
@@ -169,21 +169,14 @@ export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInit
     }
 
     public async execute(): Promise<void> {
+        // The project this screen is for, kept after the current project moves (AI-15)
+        await this.openForCurrentProject();
         await this.createOrRevealPanel();
         if (!this.communicationManager) {
             await this.initializeCommunication();
         }
-    }
-
-    private createHandlerContext(): HandlerContext {
-        // ONE complete context from the shared factory — no per-panel guessing about
-        // which managers its (possibly reused) handlers will reach for.
-        return createPanelHandlerContext({
-            context: this.context,
-            panel: this.panel,
-            stateManager: this.stateManager,
-            communicationManager: this.communicationManager,
-            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-        });
+        // Every door into this screen runs this command (the dashboard tile and the projects
+        // list's Integrations), so the slow reads start here rather than at one door.
+        warmProjectReads(this.createHandlerContext());
     }
 }

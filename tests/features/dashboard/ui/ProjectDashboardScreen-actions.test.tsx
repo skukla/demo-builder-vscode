@@ -7,12 +7,12 @@ import userEvent from '@testing-library/user-event';
 
 import { setupTestContext, renderDashboard, TestContext } from './ProjectDashboardScreen.testUtils';
 
-jest.mock('@/features/dashboard/ui/components/export/ExportModal', () => ({
+jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
     // The real dialog renders the core Modal, whose Spectrum pieces this suite's
     // partial Spectrum mock does not carry (same reason the Add a demo package dialog is
     // stubbed in the demo-source suite). Its own suite renders it real.
-    ExportModal: ({ onClose }: any) => (
-        <div role="dialog" aria-label="Export">
+    ShareModal: ({ onClose }: any) => (
+        <div role="dialog" aria-label="Share Demo">
             <button onClick={onClose}>Close</button>
         </div>
     ),
@@ -152,14 +152,19 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('openBrowser');
         });
 
-        it('should send deleteProject message when Delete clicked', async () => {
+        // A REQUEST: the delete narrates into this screen's progress modal, and
+        // its answer is how the screen learns a cancelled run is over (PL-59).
+        it('starts the delete as an operation this screen can follow', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             const deleteButton = screen.getByText('Delete');
             await user.click(deleteButton);
 
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('deleteProject');
+            expect(ctx.mockRequest).toHaveBeenCalledWith('deleteProject', {
+                id: expect.stringContaining('delete:'),
+                progress: 'modal',
+            });
         });
 
         it('should send editProject message when Edit clicked', async () => {
@@ -171,22 +176,28 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('editProject');
         });
 
-        it('opens the Export dialog when Export clicked, and posts nothing by itself', async () => {
+        it('opens the Share dialog when Share Demo clicked, and posts nothing by itself', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
-            await user.click(screen.getByText('Export'));
-            expect(screen.getByRole('dialog', { name: 'Export' })).toBeInTheDocument();
+            await user.click(screen.getByText('Share Demo'));
+            expect(screen.getByRole('dialog', { name: 'Share Demo' })).toBeInTheDocument();
             expect(ctx.mockPostMessage).not.toHaveBeenCalledWith('exportProject');
         });
 
-        it('should send resetProject message when Reset clicked', async () => {
+        // A REQUEST, not a push: the reset narrates into this screen's progress
+        // modal, and its answer is how the screen learns a run that never
+        // reported is over — the SC said no at the confirmation (PL-59).
+        it('starts the reset as an operation this screen can follow', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderDashboard();
 
             await user.click(screen.getByText('Reset'));
 
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('resetProject');
+            expect(ctx.mockRequest).toHaveBeenCalledWith('resetProject', {
+                id: expect.stringContaining('reset:'),
+                progress: 'modal',
+            });
         });
     });
 

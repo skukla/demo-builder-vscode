@@ -8,11 +8,9 @@
  * CLASS, which IS declared in this module.
  */
 
-import {
-    DaLiveContentOperations,
-    type DaLiveContentSource,
-    type TokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { type DaLiveContentSource } from '@/features/eds/services/types';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -117,7 +115,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
     }
 
     it('follows the account page reference and copies the /customer/nav fragment', async () => {
-        const result = await service.copyContentFromSource(source(), destOrg, destSite);
+        const result = await service.copyOps.copyContentFromSource(source(), destOrg, destSite);
 
         // The fragment was fetched from canonical…
         expect(mockFetch).toHaveBeenCalledWith(
@@ -136,7 +134,7 @@ describe('copyContentFromSource — reference-following discovery', () => {
     });
 
     it('copies the account page itself (probe uses .plain.html, not the login-gated bare URL)', async () => {
-        const result = await service.copyContentFromSource(source(), destOrg, destSite);
+        const result = await service.copyOps.copyContentFromSource(source(), destOrg, destSite);
         expect(mockFetch).toHaveBeenCalledWith(`${sourceBase}/customer/account.plain.html`, { method: 'HEAD' });
         expect(result.copiedFiles).toContain('/customer/account');
     });
@@ -156,13 +154,13 @@ describe('copyContentFromSource — reference-following discovery', () => {
             return status(404); // /dead-link.plain.html → 404
         });
 
-        const result = await service.copyContentFromSource(source(), destOrg, destSite);
+        const result = await service.copyOps.copyContentFromSource(source(), destOrg, destSite);
         expect(result.success).toBe(true);
         expect(result.copiedFiles).toContain('/customer/nav');
         expect(result.copiedFiles).not.toContain('/dead-link');
     });
 
-    it('completeness audit reports a referenced doc that could not be copied', async () => {
+    it('completeness audit reports a referenced doc the source has but the copy could not take', async () => {
         mockFetch.mockImplementation(async (url: string, options?: RequestInit) => {
             const method = options?.method ?? 'GET';
             if (url.includes('/list/')) return status(404);
@@ -172,12 +170,14 @@ describe('copyContentFromSource — reference-following discovery', () => {
             if (url === `${sourceBase}/customer/account.plain.html`) {
                 return htmlResponse('<body><main><div><a href="/customer/nav">n</a></div></main></body>');
             }
-            return status(404); // /customer/nav.plain.html → 404 (genuinely missing)
+            // The source HAS it (not a 404) but answers an error: a real gap in the copy.
+            if (url === `${sourceBase}/customer/nav.plain.html`) return status(500);
+            return status(404);
         });
 
         const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patches/patchReportHelper');
         const report = createPatchReport();
-        await service.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
+        await service.copyOps.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
 
         const unapplied = getUnapplied(report);
         expect(unapplied.some((u) => u.kind === 'reference' && u.target === '/customer/nav')).toBe(true);
@@ -207,17 +207,16 @@ describe('copyContentFromSource — reference-following discovery', () => {
         const { createPatchReport, getUnapplied } = await import('@/features/eds/services/patches/patchReportHelper');
         const report = createPatchReport();
         report.deferredReferencePrefixes = ['/customer/'];
-        await service.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
+        await service.copyOps.copyContentFromSource(source(), destOrg, destSite, undefined, undefined, undefined, report);
 
         const unapplied = getUnapplied(report);
         expect(unapplied.some((u) => u.kind === 'reference' && u.target === '/customer/nav')).toBe(false);
         expect(mockLogger.warn).not.toHaveBeenCalledWith(
             expect.stringContaining('referenced document not copied: /customer/nav'),
         );
-        // The audit still does its job for everything else.
-        expect(unapplied.some((u) => u.kind === 'reference' && u.target === '/brand-page')).toBe(true);
-        expect(mockLogger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('referenced document not copied: /brand-page'),
-        );
+        // The audit still does its job for everything else: /brand-page 404s on the
+        // source too, so it is a broken link carried over, recorded for the
+        // Storefront Report rather than warned about.
+        expect(report.brokenLinks).toStrictEqual([{ link: '/brand-page', pages: ['/customer/account'] }]);
     });
 });

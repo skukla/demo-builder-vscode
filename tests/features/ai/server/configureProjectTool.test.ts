@@ -10,24 +10,18 @@
  * are the two keys `components.json` marks `type: 'password'`.
  */
 
-import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
+// The testUtils first: it registers the fakes the tool's module binds (see there).
+import {
+    getCurrentProject,
+    mockRegenerateProjectEnvFiles,
+    registerConfigureProjectTool,
+    saveProject,
+    serve,
+    toolContext,
+} from './configureProjectTool.testUtils';
 import type { Project } from '@/types/base';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
-const getCurrentProject = jest.fn();
-const saveProject = jest.fn();
-const stateManager = createMockStateManager({ getCurrentProject, saveProject });
-
-function serve() {
-    const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
-    registerConfigureProjectTool(
-        { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-        stateManager,
-    );
-    return async (args: unknown) =>
-        JSON.parse((await tools.get('configure_project')!(args)).content[0].text);
-}
 
 /**
  * What the tool DECLARES at registration: its guard flags and its schema.
@@ -48,7 +42,7 @@ function definition(): ToolDefinition {
     let def: ToolDefinition | undefined;
     registerConfigureProjectTool(
         { registerTool: (_n: string, d: never) => { def = d; } },
-        stateManager,
+        toolContext,
     );
     return def!;
 }
@@ -88,6 +82,7 @@ function freshProject(): Project {
 beforeEach(() => {
     jest.clearAllMocks();
     getCurrentProject.mockResolvedValue(freshProject());
+    mockRegenerateProjectEnvFiles.mockResolvedValue(undefined);
 });
 
 describe('configure_project — guards', () => {

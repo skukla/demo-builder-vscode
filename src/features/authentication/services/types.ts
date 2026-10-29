@@ -1,8 +1,8 @@
 /**
  * Shared types for authentication module
  *
- * Note: Adobe entity types (Organization, Project, Workspace, AdobeContext) are defined
- * in src/core/ui/types/index.ts and re-exported here for backward compatibility.
+ * Note: Adobe entity types (Organization, Project, Workspace) are defined in
+ * src/types/webview.ts and re-exported here for backward compatibility.
  */
 
 import type { CloudGrouping } from '@/types/adobeApis';
@@ -77,20 +77,12 @@ export interface AdobeContext {
     workspace?: string | { id: string; name: string; title?: string };
 }
 
-export interface AdobeConsoleWhereResponse {
-    org?: string | { id: string; name: string; code: string };
-    project?:
-        | string
-        | {
-              id: string;
-              name: string;
-              title?: string;
-              description?: string;
-              type?: string;
-              org_id?: string;
-          };
-    workspace?: string | { id: string; name: string; title?: string };
-}
+/**
+ * What `aio console where` prints: the same three selections as
+ * {@link AdobeContext}, each either an id string or the entity. One body, two
+ * names, so the parsed CLI answer and the resolver's context cannot drift apart.
+ */
+export type AdobeConsoleWhereResponse = AdobeContext;
 
 export interface SDKResponse<T = unknown> {
     body?: T;
@@ -175,20 +167,31 @@ export interface S2SDeployCredentials {
  */
 export interface OrgServiceInfo {
     code: string;
+    /**
+     * Which KIND of access this row describes. A code the catalog lists more than
+     * once has one row per kind — `adobeid` (user sign-in) and `entp`
+     * (server-to-server), sometimes also `admin_entp` or `analytics`. Read from the
+     * live catalog 2026-09-21: of 17 codes listed more than once, every row carrying
+     * product profiles was the `entp` one and no `adobeid` row carried any.
+     */
+    type?: string;
     /** Human-readable service name (e.g. "API Mesh") — present in the SDK response. */
     name?: string;
     platformList?: string[];
     domainMandatory?: boolean;
     /**
-     * Product profiles the service offers. Used for the subscribe payload
-     * (`licenseConfigs: null` for the free path). NOT a reliable "requires a
-     * profile" signal — the accurate signal is `enabled: false` +
-     * `disabledReasons` containing `USER_MISSING_PRODUCT_PROFILES` (see
-     * `apiAccessCatalog.ts`).
+     * Product profiles and roles, as the catalog nests them (`properties`, not the
+     * row itself — read from the live catalog 2026-09-16). A server-to-server
+     * subscription to a service that offers profiles must name one:
+     * `ACCS-REST-API` answered "requires selection of a product" without it.
+     * NOT a reliable "requires a profile" signal on its own — the accurate one is
+     * `enabled: false` + `disabledReasons` containing
+     * `USER_MISSING_PRODUCT_PROFILES` (see `apiAccessCatalog.ts`).
      */
-    licenseConfigs?: unknown[];
-    /** Roles the service exposes; present alongside licenseConfigs for profile-bound services. */
-    roles?: unknown[];
+    properties?: {
+        licenseConfigs?: ServiceLicenseConfig[] | null;
+        roles?: unknown[] | null;
+    } | null;
     /**
      * Whether the service is currently usable by this org+user. `getServicesForOrg`
      * returns the whole entitled catalog (~90 rows) with disabled duplicates and
@@ -197,6 +200,13 @@ export interface OrgServiceInfo {
     enabled?: boolean;
     /** True when Adobe must approve access first — the "Requires Adobe review" badge. */
     requiresApproval?: boolean;
+    /**
+     * True when the service subscribes ONLY onto an OAuth server-to-server
+     * credential. Set on rows whose `platformList` names web-app types or nothing
+     * (`ACCS-REST-API`, `AppBuilderDataServicesSDK`), so it is the signal that
+     * `platformList` alone misses.
+     */
+    oauthServerToServerOnly?: boolean;
     /** Reason codes when `enabled` is false (e.g. `USER_MISSING_PRODUCT_PROFILES`, `DEPRECATED`). */
     disabledReasons?: string[];
     /**
@@ -205,6 +215,25 @@ export interface OrgServiceInfo {
      * picker's "All available" product sub-headers.
      */
     cloudGrouping?: CloudGrouping;
+}
+
+/**
+ * One product profile — as the org catalog offers it (`properties.licenseConfigs[]`)
+ * and as a credential's `getSDKProperties` reports it. `description` carries the
+ * Commerce tenant id the profile is for; `name` is only "Default - <token>" (read
+ * live 2026-09-19).
+ */
+export interface ServiceLicenseConfig {
+    id: string;
+    productId: string;
+    name?: string;
+    description?: string;
+}
+
+/** One service a credential is subscribed to, with the profiles it holds (none for a free service). */
+export interface SubscribedService {
+    sdkCode: string;
+    licenseConfigs: ServiceLicenseConfig[];
 }
 
 /** Input to `createAdobeIdCredential` (apiKey path). `domain` mandatory for API Mesh. */

@@ -51,6 +51,8 @@ runcmd "$PUSH origin develop $NV"     "long form, trailing"          push-no-ver
 runcmd "$PUSH origin develop -n"      "short form -n at the end"     push-no-verify
 runcmd "$PUSH -n origin develop"      "short form -n in the middle"  push-no-verify
 runcmd "$PUSH $NV origin develop"     "AGAIN — it must not be once-per-session" push-no-verify
+runcmd "$PUSH -n origin x | cat"      "-n before a pipe"             push-no-verify
+runcmd "git status; $PUSH $NV origin x" "a gate-skipping push after ;" push-no-verify
 
 echo
 echo "=== an ordinary push, and other git work, are untouched ==="
@@ -60,3 +62,13 @@ runcmd "git commit -m 'ok'"                    "a commit"                   -
 runcmd "git log --oneline -1"                  "a log"                      -
 # `-n` means something else entirely here, and this rule must not claim it.
 runcmd "git log -n 5"                          "git log -n 5 — not a push"  -
+# Nor a `-n` in a LATER command on the same line (2026-10-20: a push was blocked on
+# the `sed -n 1p` that read its result).
+runcmd "$PUSH origin x; git status -sb | sed -n 1p" "sed -n after the push"     -
+runcmd "$PUSH origin x > log 2>&1 && grep -n x log" "grep -n after the push"    -
+# More shapes (2026-10-28): a -n BEFORE the push, a grep whose pattern is the words of
+# a push, and the push's own flag still caught on a busy line.
+runcmd "[ -n \"\$b\" ] && $PUSH origin x"      "[ -n ] before a push"       -
+runcmd "grep -n \"$PUSH\" notes.txt"           "grep -n for the words"      -
+runcmd "cd repo && $PUSH -n origin x | sed -n 1p"  "-n on the push, sed -n beside it" push-no-verify
+runcmd "[ -n \"\$b\" ] && $PUSH origin x $NV"      "$NV after a [ -n ]"         push-no-verify

@@ -1,22 +1,18 @@
 import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import {
-    createMockOrg,
-    createMockOrg2,
-    createMockConsoleWhere,
-    mockTime,
-} from './authCacheManager.testUtils';
+import { mockTime } from './authCacheManager.testUtils';
 
 /**
  * AuthCacheManager TTL & Expiry Test Suite
  *
  * Tests TTL expiration and security features:
  * - Auth status TTL expiration
- * - Validation cache TTL expiration
- * - Org list TTL expiration
- * - Console.where TTL expiration
  * - TTL jitter (security feature)
  *
- * Total tests: 6
+ * The validation, org-list and console.where expiries are pinned at the exact
+ * instant in authCacheManager-boundaries.test.ts (PL-42 removed the weaker
+ * "advance well past the TTL" copies here).
+ *
+ * Total tests: 3
  */
 
 // Mock getLogger
@@ -48,59 +44,6 @@ describe('AuthCacheManager - TTL & Expiry', () => {
             result = cacheManager.getCachedAuthStatus();
             expect(result.isExpired).toBe(true);
             expect(result.isAuthenticated).toBeUndefined();
-
-            time.restore();
-        });
-    });
-
-    describe('validation cache TTL expiration', () => {
-        it('should expire validation cache after TTL', () => {
-            const time = mockTime();
-
-            cacheManager.setValidationCache('org123', true);
-
-            // Fast-forward time beyond TTL (validation cache uses CACHE_TTL.VALIDATION)
-            time.advance(10 * 60 * 1000 + 1000); // 10 minutes + 1 second (beyond max jitter)
-
-            const result = cacheManager.getValidationCache();
-            expect(result).toBeUndefined();
-
-            time.restore();
-        });
-    });
-
-    describe('org list TTL expiration', () => {
-        it('should expire org list cache after TTL', () => {
-            const mockOrg = createMockOrg();
-            const mockOrg2 = createMockOrg2();
-            const mockOrgList = [mockOrg, mockOrg2];
-
-            const time = mockTime();
-
-            cacheManager.setCachedOrgList(mockOrgList);
-
-            // Fast-forward time beyond TTL
-            time.advance(10 * 60 * 1000 + 1000); // 10 minutes + 1 second
-
-            const result = cacheManager.getCachedOrgList();
-            expect(result).toBeUndefined();
-
-            time.restore();
-        });
-    });
-
-    describe('console.where TTL expiration', () => {
-        it('should expire console.where cache after TTL', () => {
-            const mockConsoleWhere = createMockConsoleWhere();
-            const time = mockTime();
-
-            cacheManager.setCachedConsoleWhere(mockConsoleWhere);
-
-            // Fast-forward time beyond TTL
-            time.advance(10 * 60 * 1000 + 1000); // 10 minutes + 1 second
-
-            const result = cacheManager.getCachedConsoleWhere();
-            expect(result).toBeUndefined();
 
             time.restore();
         });

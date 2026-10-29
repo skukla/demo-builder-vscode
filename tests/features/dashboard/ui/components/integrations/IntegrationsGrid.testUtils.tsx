@@ -40,9 +40,16 @@ jest.mock('@adobe/react-spectrum', () => ({
         </ul>
     ),
     Item: ({ children }: any) => <>{children}</>,
-    View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    // Add another ERP's wait sits a little lower (paddingTop): a Spectrum prop, not a DOM one.
+    View: ({ children, paddingTop: _pt, ...props }: any) => <div {...props}>{children}</div>,
     // The progress modal's LoadingDisplay (PL-59).
     ProgressCircle: ({ 'aria-label': label }: any) => <div role="progressbar" aria-label={label} />,
+    // The setup guide's progress over its steps.
+    ProgressBar: ({ label, valueLabel, value }: any) => (
+        <div role="progressbar" aria-label={label} aria-valuenow={value}>
+            {valueLabel}
+        </div>
+    ),
     // Layout props are Spectrum's, not the DOM's: drop them rather than let React
     // warn about each one (the progress modal's LoadingDisplay passes several).
     Flex: ({
@@ -52,6 +59,10 @@ jest.mock('@adobe/react-spectrum', () => ({
         gap: _g,
         alignItems: _a,
         justifyContent: _j,
+        // SteadyHeight's floor (the setup guide renders one): a Spectrum prop, not a DOM one.
+        minHeight: _mh,
+        // CenteredFeedbackContainer's (Add another ERP's wait), passed even when unset.
+        maxWidth: _mw,
         ...props
     }: any) => (
         <div className={UNSAFE_className} {...props}>
@@ -59,7 +70,8 @@ jest.mock('@adobe/react-spectrum', () => ({
         </div>
     ),
     Heading: ({ children, ...props }: any) => <h3 {...props}>{children}</h3>,
-    Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
+    // Spectrum's style is "fill" or "outline", not CSS: kept off the DOM, which throws on it.
+    Button: ({ children, onPress, isDisabled, variant, style: _style, ...props }: any) => (
         <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
             {children}
         </button>
@@ -69,23 +81,73 @@ jest.mock('@adobe/react-spectrum', () => ({
             {children}
         </button>
     ),
-    Link: ({ children, onPress, isQuiet, ...props }: any) => (
-        <span role="link" tabIndex={0} data-quiet={isQuiet} onClick={onPress} {...props}>
+    Link: ({ children, onPress, isQuiet, UNSAFE_className, ...props }: any) => (
+        <span
+            role="link"
+            tabIndex={0}
+            data-quiet={isQuiet}
+            className={UNSAFE_className}
+            onClick={onPress}
+            {...props}
+        >
             {children}
         </span>
     ),
     Text: ({ children, UNSAFE_className, minHeight: _m, marginTop: _t, ...props }: any) => (
-        <span className={UNSAFE_className} {...props}>{children}</span>
+        <span className={UNSAFE_className} {...props}>
+            {children}
+        </span>
     ),
-    TextField: ({ label, value, onChange, ...props }: any) => (
-        <input
-            aria-label={label}
-            value={value ?? ''}
-            onChange={(e) => onChange?.(e.target.value)}
-            {...props}
-        />
+    // The Spectrum-only props are taken off the input; the error message renders as text,
+    // as Spectrum shows it under an invalid field (the Add another ERP prompt).
+    TextField: ({
+        label,
+        value,
+        onChange,
+        errorMessage,
+        validationState,
+        autoFocus: _af,
+        width: _w,
+        ...props
+    }: any) => (
+        <>
+            <input
+                aria-label={label}
+                value={value ?? ''}
+                onChange={(e) => onChange?.(e.target.value)}
+                data-validation-state={validationState}
+                {...props}
+            />
+            {validationState === 'invalid' && errorMessage ? <span>{errorMessage}</span> : null}
+        </>
     ),
     DialogContainer: ({ children }: any) => <div data-testid="dialog-container">{children}</div>,
+    Badge: ({ children }: any) => <span data-testid="type-badge">{children}</span>,
+    // The Add another ERP prompt's ownership picker (AB-64): a radio per option, a box per code.
+    RadioGroup: ({ children, value, onChange, label }: any) => (
+        <div role="radiogroup" aria-label={label}>
+            {require('react').Children.map(children, (child: any) =>
+                child ? require('react').cloneElement(child, { selectedValue: value, onSelect: onChange }) : null,
+            )}
+        </div>
+    ),
+    Radio: ({ children, value, selectedValue, onSelect }: any) => (
+        <label>
+            <input type="radio" value={value} checked={value === selectedValue} onChange={() => onSelect?.(value)} />
+            {children}
+        </label>
+    ),
+    Checkbox: ({ children, isSelected, onChange }: any) => (
+        <label>
+            <input type="checkbox" checked={isSelected || false} onChange={(e) => onChange?.(e.target.checked)} />
+            {children}
+        </label>
+    ),
+}));
+
+jest.mock('@spectrum-icons/workflow/Link', () => ({
+    __esModule: true,
+    default: () => <span data-testid="icon-link" />,
 }));
 
 jest.mock('@spectrum-icons/workflow/More', () => ({
@@ -123,6 +185,23 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
     ),
 }));
 
+// The progress modal's failure view (PL-59): the shared status display has its own
+// suite, so a stand-in shows only what the modal hands it.
+jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
+    StatusDisplay: ({ title, message, variant, details = [], children }: any) => (
+        <div data-testid="status-display" data-variant={variant}>
+            <strong>{title}</strong>
+            <p>{message}</p>
+            {details.map((line: string) => (
+                <span key={line} data-testid="status-detail">
+                    {line}
+                </span>
+            ))}
+            {children}
+        </div>
+    ),
+}));
+
 // The Manage-APIs modal has its own suite; a stub proves the GRID's
 // single-shared-instance wiring (open-for-id / close).
 jest.mock('@/features/dashboard/ui/components/ManageApisModal', () => ({
@@ -135,12 +214,28 @@ jest.mock('@/features/dashboard/ui/components/ManageApisModal', () => ({
         ) : null,
 }));
 
+// The Settings modal has its own suite; a stub proves the grid opens ONE instance
+// for the acting card, with that card's settings, and closes it.
+jest.mock('@/features/dashboard/ui/components/IntegrationSettingsModal', () => ({
+    IntegrationSettingsModal: ({ target, onClose }: any) =>
+        target ? (
+            <div data-testid="settings-modal" data-component-id={target.id}>
+                settings: {target.name} (
+                {target.settings.fields.map((f: any) => f.label).join(', ')})
+                <button onClick={onClose}>close-settings</button>
+            </div>
+        ) : null,
+}));
+
 // Deliberately below the jest.mock calls (the aiHandlers.testUtils precedent):
 // babel-plugin-jest-hoist lifts them above every import, so the component
 // module always loads against the mocks.
 import { IntegrationsGrid } from '@/features/dashboard/ui/components/integrations/IntegrationsGrid';
-import { ComponentOperationModal } from '@/features/dashboard/ui/components/integrations/ComponentOperationModal';
+import { SetupGuideModal } from '@/features/dashboard/ui/components/integrations/SetupGuideModal';
+import { setupNextStep, useSetupGuide } from '@/features/dashboard/ui/components/integrations/useSetupGuide';
+import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useComponentOperation } from '@/features/dashboard/ui/hooks/useComponentOperation';
+import { MESH_OPERATION } from '@/features/dashboard/ui/integrationsSurface/useIntegrationsScreenActions';
 import {
     buildIntegrationCards,
     deriveMeshCard,
@@ -233,7 +328,7 @@ export interface RenderOptions {
 
 /**
  * Derive the cards the way the SCREEN does, then hand them to the presentational
- * grid. Card derivation moved to IntegrationsScreen (the screen owns and filters
+ * grid. Card derivation moved to the screen (`useIntegrationCards`; the screen owns and filters
  * the data, the grid renders it), so this harness stands in for that half —
  * which keeps every existing grid test expressed in its original inputs
  * (appBuilderComponents + mesh props) rather than hand-built card models.
@@ -278,26 +373,45 @@ type GridProps = Partial<React.ComponentProps<typeof IntegrationsGrid>>;
  * dispatch and modal the SC does. (The screen's own wiring, including an Add on an
  * empty screen, is pinned in IntegrationsScreen-operationModal.test.tsx.)
  */
-function GridWithOperations({ cards, ...props }: GridProps & { cards: IntegrationCardModel[] }) {
+function GridWithOperations({
+    cards,
+    meshToModal,
+    ...props
+}: GridProps & { cards: IntegrationCardModel[]; meshToModal?: boolean }) {
     const operations = useComponentOperation();
+    // The screen's own mesh wiring, through the screen's own constant: the deploy
+    // starts a real operation instead of a spy, so the grid's reopen has one to find.
+    const onDeployMesh = meshToModal ? () => operations.start(MESH_OPERATION) : props.onDeployMesh;
+    // The screen's setup guide wiring (AB-26x): it holds the guide, the grid opens it, and
+    // the progress modal offers it when an operation ends with setup still to do.
+    const { open: openGuide, modal: guideModal } = useSetupGuide(cards);
     return (
         <>
-            <IntegrationsGrid cards={cards} operations={operations} {...props} />
-            <ComponentOperationModal
+            <IntegrationsGrid
+                cards={cards}
+                operations={operations}
+                onOpenGuide={openGuide}
+                {...props}
+                onDeployMesh={onDeployMesh}
+            />
+            <OperationProgressModal
                 operation={operations.open}
-                status={cards.find((c) => (c.componentId ?? c.id) === operations.open?.id)}
                 onRetry={operations.retry}
                 onClose={operations.close}
+                next={setupNextStep(cards, operations.open?.id, openGuide)}
             />
+            <SetupGuideModal {...guideModal} />
         </>
     );
 }
 
-export function renderCards(cards: IntegrationCardModel[], props: GridProps = {}) {
+type RenderCardsProps = GridProps & { meshToModal?: boolean };
+
+export function renderCards(cards: IntegrationCardModel[], props: RenderCardsProps = {}) {
     const result = render(<GridWithOperations cards={cards} {...props} />);
     return {
         ...result,
-        setCards: (next: IntegrationCardModel[], nextProps: GridProps = props) =>
+        setCards: (next: IntegrationCardModel[], nextProps: RenderCardsProps = props) =>
             result.rerender(<GridWithOperations cards={next} {...nextProps} />),
     };
 }
@@ -305,9 +419,10 @@ export function renderCards(cards: IntegrationCardModel[], props: GridProps = {}
 export function renderGrid({
     onDeployMesh = jest.fn(),
     onReAuthenticate = jest.fn(),
+    meshToModal,
     ...options
-}: RenderOptions = {}) {
-    const result = renderCards(cardsFor(options), { onDeployMesh, onReAuthenticate });
+}: RenderOptions & { meshToModal?: boolean } = {}) {
+    const result = renderCards(cardsFor(options), { onDeployMesh, onReAuthenticate, meshToModal });
     return { ...result, onDeployMesh, onReAuthenticate };
 }
 

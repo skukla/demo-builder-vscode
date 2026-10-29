@@ -13,6 +13,7 @@
 import React from 'react';
 import { OptionalNameField } from '../OptionalNameField';
 import { GitHubLinkField } from '@/core/ui/components/forms/GitHubLinkField';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
 
 /** A parsed custom-integration source. */
 export interface CustomSource {
@@ -51,9 +52,7 @@ export function CustomStage({
 }: CustomStageProps): React.ReactElement {
     return (
         <div className="intflow-custom">
-            <p className="intflow-stage-lead">
-                Add your own custom integration from a public GitHub repository.
-            </p>
+            <LeadText>Add your own custom integration from a public GitHub repository.</LeadText>
             <GitHubLinkField
                 label="GitHub URL"
                 placeholder="https://github.com/owner/repo"
@@ -63,13 +62,14 @@ export function CustomStage({
                 source={source}
                 onSourceChange={onSourceChange}
             />
-            {source ? (
-                <OptionalNameField
-                    label={label}
-                    defaultLabel={source.repo}
-                    onLabelChange={onLabelChange}
-                />
-            ) : null}
+            {/* Always on screen, disabled until the URL names a repo — same reason as
+                the catalog stage: a field appearing mid-step grew the dialog. */}
+            <OptionalNameField
+                label={label}
+                defaultLabel={source?.repo ?? ''}
+                onLabelChange={onLabelChange}
+                disabledHint={source ? undefined : 'Enter a repository first'}
+            />
         </div>
     );
 }

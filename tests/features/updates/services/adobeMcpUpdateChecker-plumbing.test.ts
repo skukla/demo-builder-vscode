@@ -13,13 +13,12 @@
 import { AdobeMcpUpdateChecker } from './adobeMcpUpdateChecker.testUtils';
 import {
     ADOBE_MCP_PKG,
-    getLatestReleaseMock,
+    getLatestNpmVersionMock,
     makeMcpProject,
     readFileMock,
 } from './adobeMcpUpdateChecker.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
 import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
 let logger: ReturnType<typeof createMockLogger>;
 let checker: AdobeMcpUpdateChecker;
@@ -33,9 +32,9 @@ function fsError(code: string): NodeJS.ErrnoException {
 beforeEach(() => {
     jest.clearAllMocks();
     logger = createMockLogger();
-    checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, logger);
+    checker = new AdobeMcpUpdateChecker(logger);
     readFileMock.mockResolvedValue(JSON.stringify({ version: '3.4.0' }));
-    getLatestReleaseMock.mockResolvedValue({ tag: 'v3.5.0', version: '3.5.0' });
+    getLatestNpmVersionMock.mockResolvedValue('3.5.0');
 });
 
 describe('the storefront gate — a silent skip, never an error', () => {
@@ -48,7 +47,7 @@ describe('the storefront gate — a silent skip, never an error', () => {
         await expect(checker.checkForUpdates(project)).resolves.toBeNull();
 
         expect(readFileMock).not.toHaveBeenCalled();
-        expect(getLatestReleaseMock).not.toHaveBeenCalled();
+        expect(getLatestNpmVersionMock).not.toHaveBeenCalled();
         expect(logger.error).not.toHaveBeenCalled();
     });
 
@@ -66,7 +65,7 @@ describe('the storefront gate — a silent skip, never an error', () => {
         await expect(checker.checkForUpdates(project)).resolves.toBeNull();
 
         expect(readFileMock).not.toHaveBeenCalled();
-        expect(getLatestReleaseMock).not.toHaveBeenCalled();
+        expect(getLatestNpmVersionMock).not.toHaveBeenCalled();
         expect(logger.error).not.toHaveBeenCalled();
     });
 });
@@ -77,7 +76,7 @@ describe('reading the installed version', () => {
 
         await expect(checker.checkForUpdates(makeMcpProject())).resolves.toBeNull();
 
-        expect(getLatestReleaseMock).not.toHaveBeenCalled();
+        expect(getLatestNpmVersionMock).not.toHaveBeenCalled();
         expect(logger.warn).not.toHaveBeenCalled();
         expect(logger.error).not.toHaveBeenCalled();
     });
@@ -88,7 +87,7 @@ describe('reading the installed version', () => {
 
         await expect(checker.checkForUpdates(makeMcpProject())).resolves.toBeNull();
 
-        expect(getLatestReleaseMock).not.toHaveBeenCalled();
+        expect(getLatestNpmVersionMock).not.toHaveBeenCalled();
         expect(logger.error).toHaveBeenCalledWith(expect.any(String), denied);
     });
 
@@ -97,7 +96,7 @@ describe('reading the installed version', () => {
 
         await expect(checker.checkForUpdates(makeMcpProject())).resolves.toBeNull();
 
-        expect(getLatestReleaseMock).not.toHaveBeenCalled();
+        expect(getLatestNpmVersionMock).not.toHaveBeenCalled();
         expect(logger.warn).toHaveBeenCalledTimes(1);
         expect(logger.error).not.toHaveBeenCalled();
     });
@@ -110,7 +109,7 @@ describe('reading the installed version', () => {
 
         await expect(checker.checkForUpdates(makeMcpProject())).resolves.toBeNull();
 
-        expect(getLatestReleaseMock).not.toHaveBeenCalled();
+        expect(getLatestNpmVersionMock).not.toHaveBeenCalled();
         expect(logger.warn).not.toHaveBeenCalled();
         expect(logger.error).not.toHaveBeenCalled();
     });
@@ -120,7 +119,7 @@ describe('reading the installed version', () => {
 
         await expect(checker.checkForUpdates(makeMcpProject())).resolves.toBeNull();
 
-        expect(getLatestReleaseMock).not.toHaveBeenCalled();
+        expect(getLatestNpmVersionMock).not.toHaveBeenCalled();
         expect(logger.warn).toHaveBeenCalledTimes(1);
         expect(logger.error).not.toHaveBeenCalled();
     });
@@ -141,7 +140,7 @@ describe('reading the installed version', () => {
 
 describe('asking GitHub', () => {
     it('no release to compare against: silent skip, no error', async () => {
-        getLatestReleaseMock.mockResolvedValue(null);
+        getLatestNpmVersionMock.mockResolvedValue(null);
 
         await expect(checker.checkForUpdates(makeMcpProject())).resolves.toBeNull();
 
@@ -150,7 +149,7 @@ describe('asking GitHub', () => {
 
     it('a rejected lookup is an error carrying the cause', async () => {
         const boom = new Error('boom');
-        getLatestReleaseMock.mockRejectedValue(boom);
+        getLatestNpmVersionMock.mockRejectedValue(boom);
 
         await expect(checker.checkForUpdates(makeMcpProject())).resolves.toBeNull();
 

@@ -8,15 +8,20 @@
  */
 
 import * as vscode from 'vscode';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { getBundleUri } from '@/core/utils/bundleUri';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
+import { onWorkChanged } from '@/core/state/projectWorkRunning';
+import { readViewModeSetting, VIEW_MODE_SETTING } from '@/core/state/viewModePreference';
+import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
-import { HandlerContext } from '@/types/handlers';
+import { loadProjectsForList } from '@/features/projects-dashboard/services/loadProjectsForList';
+import { presentedRows } from '@/features/updates/handlers/updatesModalHandlers';
+import { requestUpdatesModal } from '@/features/updates/handlers/updatesModalRequest';
+import type { ShowUpdatesPayload } from '@/types/pendingUpdates';
 import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitialData } from '@/types/webviewPayloads';
 
 /**
@@ -26,7 +31,9 @@ import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitial
  * Follows BaseWebviewCommand pattern with object literal handler maps.
  * Updated in Step 3 to use dispatchHandler instead of class-based registry.
  */
-export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInitialData> {
+export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListInitialData> {
+    protected readonly bundleName = 'projectsList';
+
     constructor(
         context: vscode.ExtensionContext,
         stateManager: import('@/types/state').StateManager,
@@ -45,26 +52,6 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
 
     protected getWebviewTitle(): string {
         return 'Projects';
-    }
-
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'projectsList',
-        });
-
-        const nonce = this.getNonce();
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce,
-            cspSource: this.panel.webview.cspSource,
-            title: 'Projects',
-        });
     }
 
     protected async getInitialData(): Promise<ProjectsListInitialData> {
@@ -96,13 +83,53 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
 
         // Listen for configuration changes and notify webview
         const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
-            if (e.affectsConfiguration('demoBuilder.projectsViewMode')) {
-                const config = vscode.workspace.getConfiguration('demoBuilder');
-                const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
-                this.sendMessage('configChanged', { projectsViewMode } satisfies ConfigChangedPayload);
+            if (e.affectsConfiguration(`demoBuilder.${VIEW_MODE_SETTING.projects}`)) {
+                const projectsViewMode = readViewModeSetting('projects');
+                this.sendMessage('configChanged', {
+                    projectsViewMode,
+                } satisfies ConfigChangedPayload);
             }
         });
         this.disposables.add(configListener);
+
+        this.watchProjectFiles();
+    }
+
+    /**
+     * Reload the list whenever a project's file is created, changed or removed, or
+     * a creation in this window starts or ends.
+     *
+     * The list used to reload only when opened or brought to the front, so a
+     * project an agent created (or renamed, copied, deleted) while the list was
+     * showing never appeared until the SC navigated away and back (owner,
+     * 2026-10-16). Those changes come from many writers, including other windows,
+     * so the project files themselves are the one place that sees all of them.
+     * Creation writes the file several times in a burst; one reload after the
+     * burst settles is enough.
+     */
+    private watchProjectFiles(): void {
+        const watcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(
+                vscode.Uri.file(resolveProjectsRoot()),
+                '*/.demo-builder.json',
+            ),
+        );
+        let pending: ReturnType<typeof setTimeout> | undefined;
+        const reloadSoon = (): void => {
+            if (pending) clearTimeout(pending);
+            pending = setTimeout(() => {
+                pending = undefined;
+                void this.refreshProjectsList();
+            }, TIMEOUTS.UI.PROJECT_LIST_SETTLE);
+        };
+        watcher.onDidCreate(reloadSoon);
+        watcher.onDidChange(reloadSoon);
+        watcher.onDidDelete(reloadSoon);
+        this.disposables.add(watcher);
+        // A creation starting or ending changes a tile with no file write to watch:
+        // an Edge Delivery project has no file until its storefront is set up (PL-82).
+        this.disposables.add(onWorkChanged(reloadSoon));
+        this.disposables.add({ dispose: () => pending && clearTimeout(pending) });
     }
 
     // ============================================================================
@@ -128,7 +155,14 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
     // Lifecycle Hooks
     // ============================================================================
 
-    public async execute(): Promise<void> {
+    /**
+     * Open (or reveal) the projects list.
+     *
+     * @param options - `showUpdates` opens the Updates modal on it with the rows Check for
+     *   Updates presented (PL-80): pushed to a panel already open, held for one just
+     *   created until its screen asks
+     */
+    public async execute(options?: { showUpdates?: boolean }): Promise<void> {
         // Set context to show webview sidebar instead of tree view
         await vscode.commands.executeCommand('setContext', 'demoBuilder.showingProjectsList', true);
 
@@ -140,6 +174,7 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
 
         // Track if this is an existing panel being revealed vs new panel creation
         const isExistingPanel = this.communicationManager !== undefined;
+        if (options?.showUpdates && !isExistingPanel) requestUpdatesModal();
 
         // Create or reveal panel and initialize communication
         await this.createOrRevealPanel();
@@ -153,6 +188,9 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
         if (isExistingPanel) {
             await this.refreshProjectsList();
             await this.refreshConfig();
+            if (options?.showUpdates) {
+                await this.sendMessage('showUpdates', { rows: presentedRows() } satisfies ShowUpdatesPayload);
+            }
         }
     }
 
@@ -165,9 +203,10 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
             return;
         }
 
-        const config = vscode.workspace.getConfiguration('demoBuilder');
-        const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
-        await this.sendMessage('configChanged', { projectsViewMode } satisfies ConfigChangedPayload);
+        const projectsViewMode = readViewModeSetting('projects');
+        await this.sendMessage('configChanged', {
+            projectsViewMode,
+        } satisfies ConfigChangedPayload);
     }
 
     /**
@@ -180,41 +219,14 @@ export class ShowProjectsListCommand extends BaseWebviewCommand<ProjectsListInit
         }
 
         try {
-            // Load all projects (read-only, do not persist after load)
-            const projectList = await this.stateManager.getAllProjects();
-            const projects = [];
-            for (const item of projectList) {
-                const project = await this.stateManager.loadProjectFromPath(item.path, undefined, {
-                    persistAfterLoad: false,
-                });
-                if (project) {
-                    projects.push(project);
-                }
-            }
+            const projects = await loadProjectsForList(this.stateManager);
 
             // Send to webview
-            await this.sendMessage('projectsUpdated', { projects } satisfies ProjectsUpdatedPayload);
+            await this.sendMessage('projectsUpdated', {
+                projects,
+            } satisfies ProjectsUpdatedPayload);
         } catch (error) {
             this.logger.error('[ProjectsList] Failed to refresh projects list', error as Error);
         }
-    }
-
-    // ============================================================================
-    // Helper Methods
-    // ============================================================================
-
-    /**
-     * Create handler context with all dependencies
-     */
-    private createHandlerContext(): HandlerContext {
-        // ONE complete context from the shared factory — no per-panel guessing about
-        // which managers its (possibly reused) handlers will reach for.
-        return createPanelHandlerContext({
-            context: this.context,
-            panel: this.panel,
-            stateManager: this.stateManager,
-            communicationManager: this.communicationManager,
-            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-        });
     }
 }

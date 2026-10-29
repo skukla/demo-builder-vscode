@@ -53,17 +53,18 @@ Deleting things
 - `cleanup_dalive_site` · `remove_block_from_library` · `remove_integration`
 
 Replacing or wiping
-- `reset_eds_project` · `reset_datapack` · `migrate_storefront_name`
+- `reset_project` · `reset_datapack` · `migrate_storefront_name` · `reset_erp_records`
 - `forget_added_demo` (with `deleteRepository` it deletes the repository made from a zip)
 - `remove_demo_package` (takes the description file colleagues add the demo from out of the repository)
 
 Reaching other people
-- `set_site_admin` · `republish` · `sync_content` · `rename_adobe_project`
+- `set_site_admin` · `republish` · `rename_adobe_project`
+- `write_page` (replaces a page in the DA.live source the live site is built from; the dialog shows whether it also publishes) · `publish_page` (puts a page live) — both since 2026-10-04
 - `start_datapack_import` · `start_datapack_export`
 
 ### Deliberately NOT on it
 
-`open_url`, `open_view`, `sign_in`, `create_project`, `apply_updates`,
+`open_url`, `open_view`, `sign_in`, `create_project`, `create_project_from_file`, `copy_project`, `apply_updates`,
 `promote_block_to_library`, `repair_site_configuration`.
 
 All of these raised a dialog before 2026-08-25. They are recoverable, additive, or
@@ -147,7 +148,8 @@ must pass BOTH:
 
 Reading all sixteen consequences on 2026-08-25 left exactly **two**: `republish`
 and `sync_content`. Both fire repeatedly inside one flow and both are undone by
-running them again. `evaluate_prompt` was refused despite changing nothing — it
+running them again. (`sync_content` was removed on 2026-10-23, its job now
+`republish`'s, EDS-63, which leaves `republish` the one tool with a grant.) `evaluate_prompt` was refused despite changing nothing — it
 SPENDS, and money does not come back. (That tool left with the
 prompt-evaluation surface on 2026-08-26, AI-3b. The reasoning is kept because
 the rule it produced still governs the entries that remain: a grant is for

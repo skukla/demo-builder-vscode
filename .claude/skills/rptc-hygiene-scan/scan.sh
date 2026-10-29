@@ -329,3 +329,14 @@ print(f"  control: {scanned} committed item(s) scanned, {cited_total} line-numbe
 print("  NOTE: advisory, ordered fewest-commits-first. It says the ground moved,")
 print("        never that the item is wrong. Read the code before acting.")
 PY
+
+echo
+echo "== 7. Finished items whose own body still names work =="
+# PL-39. The detector lives in the backlog CLI (`leftovers`), next to the parse
+# every other consumer uses; this section only runs it, so the sweep reads it.
+# Advisory: a sentence about remaining work needs a child item or a rewording,
+# never a deletion. The CLI prints its own control line.
+REPO_ROOT="$(cd "$(dirname "$RPTC")" && pwd)"
+if ! (cd "$REPO_ROOT" && node .claude/skills/backlog-item/backlog.mjs leftovers); then
+    echo "  control: 0 items read  ⚠️  CHECK BROKEN — backlog.mjs leftovers did not run"
+fi

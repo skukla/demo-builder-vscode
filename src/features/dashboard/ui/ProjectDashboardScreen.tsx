@@ -9,17 +9,15 @@
  * @module features/dashboard/ui/ProjectDashboardScreen
  */
 
-import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useState, useRef } from 'react';
 import { ActionGrid } from './components/ActionGrid';
-import { AiCapabilitiesModal } from './components/AiCapabilitiesModal';
+import { DashboardDialogs } from './components/DashboardDialogs';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
-import { DemoPackageModal } from './components/demo-package/DemoPackageModal';
 import { DemoSourceNotice } from './components/DemoSourceNotice';
-import { ExportModal } from './components/export/ExportModal';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
+import { useDashboardOperations } from './hooks/useDashboardOperations';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { useHandoverDialogs } from './hooks/useHandoverDialogs';
 import { useInlineRename } from './hooks/useInlineRename';
@@ -30,16 +28,7 @@ import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayo
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { AddDemoModal } from '@/features/project-creation/ui/components/add-demo/AddDemoModal';
-import type { DemoPackage } from '@/types/demoPackages';
-import type { AddedDemo } from '@/types/projectFile';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
-
-/** The change-source dialog lists no catalog and no remembered demos: a link is the way in. */
-const NO_PACKAGES: DemoPackage[] = [];
-const NO_ADDED_DEMOS: AddedDemo[] = [];
-const noop = (): void => undefined;
 
 /**
  * Props for the ProjectDashboardScreen component
@@ -102,19 +91,21 @@ export function ProjectDashboardScreen({
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [showCapabilities, setShowCapabilities] = useState(false);
     // "Change source" (a project built on an added demo): the Add a demo package dialog in
-    // change mode; afterwards status is re-requested so the source check re-runs.
+    // change mode (rendered by DashboardDialogs).
     const [changeSourceOpen, setChangeSourceOpen] = useState(false);
     const openChangeSource = demo ? () => setChangeSourceOpen(true) : undefined;
-    const onSourceChanged = (): void => {
-        webviewClient.postMessage('requestStatus');
-    };
-    const handover = useHandoverDialogs(isEdsStable); // Export, Save as demo package
+    const handover = useHandoverDialogs(); // the Share dialog
     // Inline title rename commit (null = success; string = inline error).
     const renameInline = useInlineRename();
 
-    // Status management via extracted hook
+    // Status management via extracted hook (the AI capability catalog reads it whole)
+    const dashboardStatus = useDashboardStatus(
+        { hasMesh, initialEdsStorefrontStatus, hasAdobeContext },
+        isEdsStable,
+    );
     const {
         isRunning,
+        projectStatus,
         isTransitioning,
         setIsTransitioning,
         demoStatusDisplay,
@@ -126,38 +117,25 @@ export function ProjectDashboardScreen({
         demoSourceIssue,
         imsOrgDisplay,
         aiReady,
-        aiSkills,
-        aiSkillsError,
-        aiMcps,
-        aiMcpsError,
-        aiEditedFiles,
-        aiGatedSkills,
-        aiInventoryLoading,
-        aiBusy,
-        aiRegenProgress,
-        aiRegenError,
         regenerateAiFiles,
-    } = useDashboardStatus({ hasMesh, initialEdsStorefrontStatus, hasAdobeContext }, isEdsStable);
+    } = dashboardStatus;
 
     // Action handlers via extracted hook
     const {
         handleStartDemo,
         handleStopDemo,
-        handleSyncStorefront,
-        handleRefreshBlockLibrary,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
         handleOpenAdminPanel,
         handleConfigure,
         handleEditProject,
-        handleOpenDevConsole,
-        handleDeleteProject,
-        handleRepublishContent,
+        handleOpenAemAssets,
+        handleOpenSiteAccess,
         handleRestartDemo,
-        handleResetProject,
         handleNavigateBack,
         handleReAuthenticate,
+        handleVerifyOrg,
         handleSwitchOrg,
     } = useDashboardActions({
         isOpeningBrowser,
@@ -184,10 +162,19 @@ export function ProjectDashboardScreen({
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
 
+    // The five actions measured in minutes, and the modal they narrate into.
+    const {
+        controls: operations,
+        handleResetProject,
+        handleDeleteProject,
+        handleSyncStorefront,
+        handleRefreshBlockLibrary,
+        handleRepublishContent,
+    } = useDashboardOperations(displayName);
+
     // Build subtitle from package/stack (e.g., "CitiSignal · Headless + PaaS")
     const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(' · ') || undefined;
 
-    // Button disabled states
     const isStartDisabled = isStartActionDisabled(isTransitioning, meshStatus, status || 'ready');
     // Only consulted while `isRunning` — the Stop tile is the Start tile
     // otherwise — and `isRunning` is set from the SAME payload as `status`
@@ -231,6 +218,7 @@ export function ProjectDashboardScreen({
                                 imsOrgDisplay={imsOrgDisplay}
                                 orgCheckState={orgCheckState}
                                 onReAuthenticate={handleReAuthenticate}
+                                onVerifyOrg={handleVerifyOrg}
                                 onRegenerateAi={() => {
                                     void regenerateAiFiles();
                                 }}
@@ -252,7 +240,7 @@ export function ProjectDashboardScreen({
                             <DemoSourceNotice
                                 issue={demoSourceIssue}
                                 onChangeSource={openChangeSource}
-                                onSaveDemoPackage={handover.openDemoPackage}
+                                onKeepAsOwn={isEdsStable ? handover.openShare : undefined}
                             />
                         </>
                     }
@@ -268,7 +256,6 @@ export function ProjectDashboardScreen({
                                     isOpeningBrowser={isOpeningBrowser}
                                     demoStatus={demoStatusDisplay}
                                     handleRestartDemo={handleRestartDemo}
-                                    hasAdobeContext={hasAdobeContext}
                                     dataInstallerAvailable={dataInstallerAvailable}
                                     appBuilderComponents={appBuilderComponents}
                                     hasMesh={hasMesh}
@@ -287,10 +274,11 @@ export function ProjectDashboardScreen({
                                         isEdsStable ? handleRepublishContent : undefined
                                     }
                                     handleConfigure={handleConfigure}
-                                    handleOpenDevConsole={handleOpenDevConsole}
+                                    handleOpenAemAssets={handleOpenAemAssets}
+                                    handleOpenSiteAccess={isEdsStable ? handleOpenSiteAccess : undefined}
+                                    needsReset={projectStatus?.storefrontNeedsReset === true}
                                     handleEditProject={handleEditProject}
-                                    handleExportProject={handover.openExport}
-                                    handleSaveDemoPackage={handover.openDemoPackage}
+                                    handleShareDemo={handover.openShare}
                                     handleChangeDemoSource={openChangeSource}
                                     handleResetProject={handleResetProject}
                                     handleDeleteProject={handleDeleteProject}
@@ -301,49 +289,16 @@ export function ProjectDashboardScreen({
                 />
             </PageLayout>
 
-            {/* Change source — mounted only while open, so the dashboard at rest
-                carries none of the dialog. */}
-            {changeSourceOpen && demo ? (
-                <AddDemoModal
-                    isOpen
-                    mode="change"
-                    currentKind={demo.storefrontKind}
-                    demoPackageName={demo.demoPackageName}
-                    packages={NO_PACKAGES}
-                    addedDemos={NO_ADDED_DEMOS}
-                    onUseShipped={noop}
-                    onDemoAdded={onSourceChanged}
-                    onClose={() => setChangeSourceOpen(false)}
-                />
-            ) : null}
-
-            {/* Export — mounted only while open, like Change source. */}
-            {handover.exportOpen ? (
-                <ExportModal isOpen isEds={isEdsStable} onClose={handover.closeExport} />
-            ) : null}
-            {handover.demoPackageOpen ? <DemoPackageModal isOpen onClose={handover.closeDemoPackage} /> : null}
-
-            {/* Capability catalog — reached from the "View AI Capabilities" link,
-                NOT the health badge. Two sections (skills + MCP servers) plus a
-                Regenerate AI files action (which rewrites both). */}
-            {showCapabilities && (
-                <DialogContainer onDismiss={() => setShowCapabilities(false)}>
-                    <AiCapabilitiesModal
-                        skills={aiSkills}
-                        mcps={aiMcps}
-                        hasSkillsError={aiSkillsError}
-                        hasMcpsError={aiMcpsError}
-                        editedFiles={aiEditedFiles}
-                        gatedSkills={aiGatedSkills}
-                        isLoading={aiInventoryLoading}
-                        onClose={() => setShowCapabilities(false)}
-                        onRegenerate={regenerateAiFiles}
-                        isBusy={aiBusy}
-                        progress={aiRegenProgress ?? undefined}
-                        errorMessage={aiRegenError}
-                    />
-                </DialogContainer>
-            )}
+            <DashboardDialogs
+                isEds={isEdsStable}
+                changeSourceDemo={changeSourceOpen ? demo : undefined}
+                onCloseChangeSource={() => setChangeSourceOpen(false)}
+                handover={handover}
+                operations={operations}
+                capabilitiesOpen={showCapabilities}
+                onCloseCapabilities={() => setShowCapabilities(false)}
+                ai={dashboardStatus}
+            />
         </div>
     );
 }

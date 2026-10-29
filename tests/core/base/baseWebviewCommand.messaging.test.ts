@@ -98,7 +98,6 @@ describe('BaseWebviewCommand communication', () => {
             await command.startCommunication();
 
             expect(createWebviewCommunication).toHaveBeenCalledWith(mintedPanels()[0], {
-                enableLogging: true,
                 handshakeTimeout: TIMEOUTS.NORMAL,
                 messageTimeout: TIMEOUTS.NORMAL,
                 maxRetries: 3,
@@ -129,12 +128,9 @@ describe('BaseWebviewCommand communication', () => {
 
             await command.startCommunication();
 
-            expect(Object.keys(comm.handlers).sort()).toEqual([
-                'get-state',
-                'log',
-                'subclass-handler',
-                'update-state',
-            ]);
+            // `get-state` and `update-state` were here until 2026-10-03. No webview
+            // sent either, so every panel carried a project-wide write nothing used.
+            expect(Object.keys(comm.handlers).sort()).toEqual(['log', 'subclass-handler']);
         });
 
         /**
@@ -159,16 +155,12 @@ describe('BaseWebviewCommand communication', () => {
             const made = makeCommand();
             currentCommand = made.command;
             currentLogger = made.logger;
-            currentState = made.stateManager;
-            currentProject = made.project;
             await currentCommand.openPanel();
             await currentCommand.startCommunication();
         });
 
         let currentCommand: ReturnType<typeof makeCommand>['command'];
         let currentLogger: ReturnType<typeof makeCommand>['logger'];
-        let currentState: ReturnType<typeof makeCommand>['stateManager'];
-        let currentProject: ReturnType<typeof makeCommand>['project'];
 
         // Routing only — which level the webview asked for decides which channel
         // it lands on. What the line SAYS is not this class's business.
@@ -185,43 +177,6 @@ describe('BaseWebviewCommand communication', () => {
             });
 
             expect(currentLogger[channel as 'error' | 'warn' | 'debug' | 'info']).toHaveBeenCalled();
-        });
-
-        it('answers get-state with the current project', async () => {
-            const state = await (comm.handlers['get-state'] as () => Promise<unknown>)();
-
-            expect(state).toBe(currentProject);
-        });
-
-        it('merges an update onto the current project and saves the whole thing', async () => {
-            await (
-                comm.handlers['update-state'] as (u: Record<string, unknown>) => Promise<unknown>
-            )({ port: 3000 });
-
-            // The WHOLE project, with the update merged on — not the update.
-            expect(currentState.saveProject).toHaveBeenCalledWith({
-                ...currentProject,
-                port: 3000,
-            });
-        });
-
-        it('bumps the state version so the webview knows its copy is stale', async () => {
-            const result = await (
-                comm.handlers['update-state'] as (u: Record<string, unknown>) => Promise<unknown>
-            )({ port: 3000 });
-
-            expect(comm.incrementStateVersion).toHaveBeenCalled();
-            expect(result).toEqual({ success: true, version: 7 });
-        });
-
-        it('survives an update that lands after the manager is gone', async () => {
-            currentCommand.forgetComm();
-
-            await expect(
-                (comm.handlers['update-state'] as (u: Record<string, unknown>) => Promise<unknown>)(
-                    { port: 3000 },
-                ),
-            ).resolves.toEqual({ success: true, version: undefined });
         });
 
         // Asserted as a sequence, not as two memberships: a listener that maps
@@ -242,21 +197,6 @@ describe('BaseWebviewCommand communication', () => {
             currentCommand.forgetComm();
 
             expect(() => themeListener()({ kind: vscode.ColorThemeKind.Dark })).not.toThrow();
-        });
-    });
-
-    describe('update-state with nothing loaded', () => {
-        it('refuses rather than saving an update onto no project', async () => {
-            const { command, stateManager } = makeCommand(null);
-            await command.openPanel();
-            await command.startCommunication();
-
-            await expect(
-                (comm.handlers['update-state'] as (u: Record<string, unknown>) => Promise<unknown>)(
-                    { port: 3000 },
-                ),
-            ).rejects.toThrow('No project loaded');
-            expect(stateManager.saveProject).not.toHaveBeenCalled();
         });
     });
 

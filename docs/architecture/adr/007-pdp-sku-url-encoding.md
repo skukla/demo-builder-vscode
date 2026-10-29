@@ -1,6 +1,6 @@
 # ADR-007: PDP SKU URL Encoding — Reversible, Lowercase-Stable, Helix-Safe
 
-**Status**: Accepted
+**Status**: Superseded by [ADR-024](024-pdp-sku-in-the-page.md) (2026-10-06). Helix cleans every path it publishes, so `_` never survives and every `_HH`-encoded SKU 404'd; the evidence below probed requests, never a publish.
 **Date**: 2026-06-12
 **Decision Maker**: Project Owner
 **Implementer**: 2026-06-12 (this slice)
@@ -169,3 +169,7 @@ storefront-side encoding applies regardless of backend.
 - `scripts/commerce.js`, `rootLink` — belong to the generated EDS storefront repository,
   not to this one. This decision spans both repos and names the storefront side
   deliberately.
+- `src/features/eds/services/pdp/pdpUrlEncoding.ts`, `encodeSkuForUrl`,
+  `decodeSkuFromUrl` — removed when ADR-024 superseded this decision
+  (2026-10-06). Named here because this record is what they implemented.
+- `DigiWristExplorer` — a catalog SKU used as evidence, not a code identifier.

@@ -93,14 +93,18 @@ export const window = {
     showQuickPick: jest.fn(),
     showInputBox: jest.fn(),
     showOpenDialog: jest.fn(),
-        showSaveDialog: jest.fn(),
+    showSaveDialog: jest.fn(),
     createQuickPick: jest.fn(),
     terminals: [],
     activeColorTheme: {
         kind: 1, // ColorThemeKind.Dark
     },
     withProgress: jest.fn().mockImplementation(async (_options: any, task: any) => {
-        return await task({ report: jest.fn() });
+        // VS Code always hands a task its cancellation token, cancellable or not.
+        return await task(
+            { report: jest.fn() },
+            { isCancellationRequested: false, onCancellationRequested: jest.fn() },
+        );
     }),
     setStatusBarMessage: jest.fn(),
     createTerminal: jest.fn(() => ({
@@ -183,6 +187,13 @@ export const QuickPickItemKind = {
     Separator: -1,
     Default: 0,
 };
+
+export class RelativePattern {
+    constructor(
+        public readonly baseUri: unknown,
+        public readonly pattern: string
+    ) {}
+}
 
 export class EventEmitter {
     private _listeners: Array<(data: any) => void> = [];

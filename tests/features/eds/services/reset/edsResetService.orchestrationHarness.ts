@@ -59,6 +59,22 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: (...args: unknown[]) => mockExecuteEdsPipeline(...args),
 }));
 
+/** The site object the reset hands from the take-out to the put-back. */
+export const CATALOG_MENU_SITE = { site: 'the storefront, as the catalog menu step sees it' };
+export const mockTakeOutCatalogMenu = jest.fn();
+export const mockPutBackCatalogMenu = jest.fn();
+jest.mock('@/features/eds/services/reset/edsResetCatalogMenu', () => ({
+    takeOutCatalogMenu: (...args: unknown[]) => mockTakeOutCatalogMenu(...args),
+    putBackCatalogMenu: (...args: unknown[]) => mockPutBackCatalogMenu(...args),
+}));
+
+/** Reset's removal of the product pages the overlay published (EDS-26). */
+export const mockTakeOutProductPages = jest.fn();
+jest.mock('@/features/eds/services/reset/edsResetProductPages', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetProductPages'),
+    takeOutProductPages: (...args: unknown[]) => mockTakeOutProductPages(...args),
+}));
+
 export const mockVerifyCdnResources = jest.fn();
 jest.mock('@/features/eds/services/configSyncService', () => ({
     verifyCdnResources: (...args: unknown[]) => mockVerifyCdnResources(...args),
@@ -81,6 +97,7 @@ import type { EdsResetProgress } from '@/features/eds/services/reset/edsResetPar
 import { mockEnsureDaLiveAuth } from './edsResetService.sharedMocks';
 import { createResetContext, meshDeps, resetParams } from './edsResetService.testUtils';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
 
 // =============================================================================
 // Fixtures
@@ -99,6 +116,7 @@ export const REPO_RESULT = {
     blockCollectionIds: ['hero', 'cards'],
     libraryContentSources: [{ org: 'lib-org', site: 'lib-site' }],
     canonicalCodePatchResults: [] as CodePatchResult[],
+    buildComplete: true,
 };
 
 function createProject(): Project {
@@ -112,12 +130,16 @@ export function resetOrchestrationMocks(): void {
     mockResetRepoToTemplate.mockResolvedValue(REPO_RESULT);
     mockPreviewCode.mockResolvedValue(undefined);
     mockPublishConfig.mockResolvedValue({ configWritten: true });
-    mockExecuteEdsPipeline.mockResolvedValue({
-        success: true,
-        contentFilesCopied: 3,
-        libraryPaths: [],
-    });
+    mockExecuteEdsPipeline.mockResolvedValue(
+        createMockPipelineResult({
+            contentFilesCopied: 3,
+            libraryPaths: [],
+        })
+    );
     mockRedeployApiMesh.mockResolvedValue(null);
+    mockTakeOutCatalogMenu.mockResolvedValue(CATALOG_MENU_SITE);
+    mockTakeOutProductPages.mockResolvedValue(undefined);
+    mockPutBackCatalogMenu.mockResolvedValue(undefined);
     mockVerifyCdnResources.mockResolvedValue({ configVerified: true });
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
 }

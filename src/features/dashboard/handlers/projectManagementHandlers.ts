@@ -11,6 +11,11 @@
 import * as vscode from 'vscode';
 import { handleRequestStatus } from './statusHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
+import {
+    narrateOutcomeToModal,
+    progressSurfaceOf,
+} from '@/core/vscode/operationProgress';
 import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler } from '@/types/handlers';
@@ -33,7 +38,7 @@ export const handleEditProject: MessageHandler = async (context) => {
         '@/features/projects-dashboard/services/settingsSerializer'
     );
     // Include secrets — this is a local edit of the user's own project.
-    const settings = extractSettingsFromProject(project, true);
+    const settings = extractSettingsFromProject(project);
 
     context.logger.info(`Opening edit wizard for project: ${project.name}`);
     await vscode.commands.executeCommand('demoBuilder.createProject', {
@@ -59,29 +64,58 @@ export const handleEditProject: MessageHandler = async (context) => {
  * Uses projectDeletionService for unified delete experience including EDS cleanup.
  * Panel disposal is handled by projectDeletionService when deletion succeeds.
  */
-export const handleDeleteProject: MessageHandler = async (context) => {
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project found to delete' };
-    }
+export const handleDeleteProject: MessageHandler<DeleteFromDashboardPayload> =
+    narrateOutcomeToModal(
+        async (context, payload) => {
+            const project = await context.stateManager.getCurrentProject();
+            if (!project) {
+                return { success: false, error: 'No project found to delete' };
+            }
 
-    return deleteProject(context, project);
-};
+            return deleteProject(context, project, undefined, {
+                progress: progressSurfaceOf(payload),
+                operationId: payload?.id ?? deleteOperationId(project.name),
+            });
+        },
+        (payload) => payload?.id ?? '',
+    );
+
+/** What the dashboard sends when its kebab starts a delete. */
+export interface DeleteFromDashboardPayload {
+    /** The id its progress modal follows (PL-59). */
+    id?: string;
+    progress?: 'modal';
+}
+
+/** What the dashboard sends when its kebab starts a reset. */
+export interface ResetProjectPayload {
+    /** The id its progress modal follows (PL-59). */
+    id?: string;
+    progress?: 'modal';
+}
 
 /**
  * Handle 'resetProject' message - Reset project to initial state
+ *
+ * From a screen that hosts the progress modal it narrates there (PL-59 R1): the
+ * whole body is wrapped so the modal is recorded before the first confirmation
+ * dialog rather than after it.
  *
  * Dispatches to the appropriate reset service based on project type:
  * - EDS projects: resetEdsProjectWithUI (template-based reset)
  * - Headless projects: resetProjectWithUI (component re-clone)
  */
-export const handleResetProject: MessageHandler = async (context) => {
+export const handleResetProject: MessageHandler<ResetProjectPayload> = narrateOutcomeToModal(
+    async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
 
     if (!project) {
         context.logger.error('[Dashboard] resetProject: No current project');
         return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
     }
+
+    const progress = progressSurfaceOf(payload);
+    const operationId = payload?.id ?? resetOperationId(project.name);
 
     if (isEdsProject(project)) {
         const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
@@ -102,6 +136,8 @@ export const handleResetProject: MessageHandler = async (context) => {
             includeBlockLibrary: true,
             verifyCdn: true,
             showLogsOnError: true,
+            progress,
+            operationId,
         });
     }
 
@@ -114,8 +150,12 @@ export const handleResetProject: MessageHandler = async (context) => {
         project,
         context,
         logPrefix: '[Dashboard]',
+        progress,
+        operationId,
     });
-};
+    },
+    (payload) => payload?.id ?? '',
+);
 
 /**
  * Handle 'renameProject' message - Rename the current project
@@ -153,13 +193,11 @@ export const handleRenameProject: MessageHandler<{ newName: string }> = async (c
 /**
  * Handle 'exportProjectSettings' message — write the current project's settings
  * to a JSON file on disk (the headless entry behind the export_project_settings
- * MCP tool). Secrets go to the FILE only; the response carries just the path and
- * the includes-secrets flag, never the secret values. The target must resolve
- * inside the project directory. `includeSecrets` defaults to true (a local backup).
+ * MCP tool). The file carries no credential and the response carries the path.
+ * The target must resolve inside the project directory.
  */
 export const handleExportProjectSettings: MessageHandler<{
     path?: string;
-    includeSecrets?: boolean;
 }> = async (context, data) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
@@ -170,10 +208,7 @@ export const handleExportProjectSettings: MessageHandler<{
         '@/features/projects-dashboard/services/settingsTransferService'
     );
     try {
-        const result = await exportProjectSettingsToFile(project, {
-            path: data?.path,
-            includeSecrets: data?.includeSecrets,
-        });
+        const result = await exportProjectSettingsToFile(project, { path: data?.path });
         return { success: true, data: result };
     } catch (error) {
         context.logger.error(

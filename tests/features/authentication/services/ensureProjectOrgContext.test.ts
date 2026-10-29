@@ -148,7 +148,7 @@ describe('ensureProjectOrgContext', () => {
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: expect.stringContaining('Opening browser'),
+                title: expect.stringContaining('Switching Adobe organization'),
                 cancellable: false,
             },
             expect.any(Function),

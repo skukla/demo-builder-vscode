@@ -19,10 +19,21 @@ export interface DestinationContextProps {
     project?: string;
     /** Adobe workspace display name. */
     workspace?: string;
+    /**
+     * Show the Adobe project alone. The Integrations screen: since AB-23 each
+     * integration runs in a workspace of its own that the SC never picks, so a
+     * workspace on that line is plumbing — and, for any integration, the wrong one.
+     */
+    projectOnly?: boolean;
     /** Change action. Omit to render the destination read-only. */
     onChange?: () => void;
     /** Extra class on the wrapper — lets a host pick inline vs full-width. */
     className?: string;
+    /**
+     * Shown when there is no project yet, with the action reading "Choose". Omit to
+     * render nothing then, as every host but the Integrations screen wants.
+     */
+    unsetLabel?: string;
 }
 
 /**
@@ -35,14 +46,29 @@ export interface DestinationContextProps {
 export function DestinationContext({
     project,
     workspace,
+    projectOnly,
     onChange,
     className,
+    unsetLabel,
 }: DestinationContextProps): React.ReactElement | null {
-    if (!project || !workspace) return null;
+    const isUnset = !project || (!projectOnly && !workspace);
+    if (isUnset && !unsetLabel) return null;
+    if (isUnset) {
+        return (
+            <span className={cn('dest-context', className)}>
+                <span className="dest-context-value">{unsetLabel}</span>
+                {onChange ? (
+                    <button type="button" className="inline-action-link" onClick={onChange}>
+                        Choose
+                    </button>
+                ) : null}
+            </span>
+        );
+    }
     return (
         <span className={cn('dest-context', className)}>
             <span className="dest-context-value">
-                {project} · {workspace}
+                {projectOnly ? project : `${project} · ${workspace}`}
             </span>
             {onChange ? (
                 /* `.inline-action-link` (utilities.css), NOT EDS's

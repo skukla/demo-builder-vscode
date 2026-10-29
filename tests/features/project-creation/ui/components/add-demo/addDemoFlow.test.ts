@@ -77,6 +77,24 @@ describe('foundRows', () => {
         expect(rows[3]).toEqual({ label: 'Website', value: undefined, done: false });
     });
 
+    it("adds ONE row naming what the storefront was built on, when it was read (EDS-13f)", () => {
+        const rows = foundRows({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' } });
+
+        expect(rows[2]).toEqual({ label: 'Built on', value: "Adobe's Commerce boilerplate 6.0.0", done: true });
+        expect(rows).toHaveLength(foundRows(READ).length + 1);
+    });
+
+    it('warns on the same row, never refuses, when the boilerplate is below the oldest tested one (step 05)', () => {
+        const rows = foundRows({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' } });
+
+        expect(rows[2]).toEqual({
+            label: 'Built on',
+            value: "Adobe's Commerce boilerplate 4.0.1. Built on an older boilerplate (4.x) than Demo Builder tests on.",
+            done: true,
+        });
+        expect(isBuildable({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' } })).toBe(true);
+    });
+
     it('does not ask a headless demo for pages', () => {
         expect(foundRows({ ...READ, kind: 'headless' })[2]).toEqual({
             label: 'Pages',
@@ -91,7 +109,7 @@ describe('buildAddedDemo', () => {
         const row = buildAddedDemo(READ, INITIAL_DRAFT);
         expect(row).toEqual({
             kind: 'demo',
-            version: 1,
+            version: 2,
             name: 'Isle5 Demo',
             configDefaults: {
                 ADOBE_COMMERCE_WEBSITE_CODE: 'isle5',
@@ -156,6 +174,33 @@ describe('buildAddedDemo', () => {
                 blockLibraries: ['demo-team-blocks'],
             }),
         );
+    });
+
+    it('carries what the storefront was built on and where it came from (EDS-13f)', () => {
+        const boilerplate = { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' };
+        const lineage = { templateRepository: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' } };
+
+        const row = buildAddedDemo({ ...READ, boilerplate, lineage }, INITIAL_DRAFT);
+
+        expect(row.boilerplate).toEqual(boilerplate);
+        expect(row.lineage).toEqual(lineage);
+        expect(buildAddedDemo(READ, INITIAL_DRAFT)).not.toHaveProperty('lineage');
+    });
+
+    it("carries a saved package's builtWith record, so the project knows it is a Demo Builder storefront (EDS-13f)", () => {
+        const builtWith = {
+            template: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },
+            codePatchSource: { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b' },
+            codePatches: ['pdp-empty-data-redirect'],
+            extension: '1.0.0-beta.150',
+        };
+        const withFile: SharedDemoRead = {
+            ...READ,
+            description: { kind: 'demo', version: 2, name: 'Bodea by Steve', builtWith },
+        };
+
+        expect(buildAddedDemo(withFile, INITIAL_DRAFT).builtWith).toEqual(builtWith);
+        expect(buildAddedDemo(READ, INITIAL_DRAFT)).not.toHaveProperty('builtWith');
     });
 
     it('records a Next.js repository as headless', () => {

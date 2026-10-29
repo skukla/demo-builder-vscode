@@ -14,10 +14,10 @@
  * further from a deploy than when a chat turn started it, so agent-driven work is
  * exactly the case the notification exists for.
  *
- * The register split is the same one the whole integrations surface uses
- * (`withComponentProgress`): the NOTIFICATION carries the steps under a static
- * title naming the operation, and the CARD names the operation once and holds
- * still. No two surfaces narrate the same step.
+ * Where it reports is `withOperationProgress`'s decision, shared with every other
+ * operation (PL-59 phase 2): the screen's progress modal when a button started it,
+ * else one notification titled "Deploying API Mesh" showing the stage name, else the
+ * agent's notification. The CARD names the operation once and holds still.
  *
  * Being a SECOND implementation of that policy is what made it drift: when the
  * split was reversed on 2026-08-04 — steps had been on the card, which wrapped
@@ -37,10 +37,14 @@ import {
     type DeployMeshHeadlessDeps,
     type DeployMeshHeadlessResult,
 } from './deployMeshHeadless';
-import {
-    cardInFlightLabel,
-    withProgressRegister,
-} from '@/core/vscode/progressRegister';
+import { meshFailureForPerson } from './meshDeployWording';
+import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { cardInFlightLabel } from '@/core/vscode/progressRegister';
+import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import { sendMeshStatusUpdate } from '@/features/dashboard/services/projectPanelPushes';
+import type { Project } from '@/types/base';
+import { toError } from '@/types/typeGuards';
 
 /**
  * The card's one in-flight line. Built through the shared helper so this surface
@@ -48,33 +52,66 @@ import {
  */
 const CARD_IN_FLIGHT_LABEL = cardInFlightLabel('Deploying', 'Mesh');
 
+/** The operation id a screen uses when it has no mesh component id to name. */
+export const MESH_OPERATION_ID = 'mesh';
+
 /** The deploy inputs, minus the feedback bridges this module supplies. */
-export type DeployMeshWithFeedbackDeps = Omit<DeployMeshHeadlessDeps, 'onStatus' | 'onProgress'>;
+export type DeployMeshWithFeedbackDeps = Omit<DeployMeshHeadlessDeps, 'onStatus' | 'onProgress'> & {
+    /**
+     * Regenerate and publish the storefront's config. After a successful deploy
+     * the storefront must read the mesh where it now answers: a redeploy that
+     * moved it left the live site on a dead address until a hand republish
+     * (owner, 2026-09-21). Passed in, not imported — the storefront is another
+     * feature's.
+     */
+    republishStorefront?: (project: Project) => Promise<RepublishOutcome>;
+};
+
+/** What a republish answers, as much of it as this reads. */
+export interface RepublishOutcome {
+    success: boolean;
+    error?: string;
+    cdnPublished?: boolean;
+}
+
+/** The one mesh value the storefront config reads. */
+const STOREFRONT_READS = 'MESH_ENDPOINT';
+
+/** Where the deploy reports: the screen's modal when a button started it (PL-59 R1). */
+export interface DeployMeshFeedbackOptions {
+    progress?: 'modal';
+    /** The id the screen named the operation by, so its modal follows it. */
+    operationId?: string;
+}
 
 /**
- * Run the mesh deploy inside the progress notification, pushing status and step
- * detail to the mesh card.
+ * Run the mesh deploy, reporting where the SC is looking — the screen's progress modal
+ * when a button started it, else one notification — and pushing status to the mesh
+ * card. Where it reports is decided by `withOperationProgress`, shared with every
+ * other operation.
  *
  * @param deps - project + state/logger + extension path
- * @returns the core's result
+ * @param options - `progress: 'modal'` when started from a button
+ * @returns the core's result; for a modal, a failure carries a person's sentence
  */
 export async function deployMeshWithFeedback(
     deps: DeployMeshWithFeedbackDeps,
+    options: DeployMeshFeedbackOptions = {},
 ): Promise<DeployMeshHeadlessResult> {
-    const { ProjectDashboardWebviewCommand } = await import(
-        '@/features/dashboard/commands/showDashboard'
-    );
+    const inModal = options.progress === 'modal';
 
-    return withProgressRegister(
+    return withOperationProgress(
         {
+            id: options.operationId ?? MESH_OPERATION_ID,
             title: 'Deploying API Mesh',
+            inModal,
             cardLabel: CARD_IN_FLIGHT_LABEL,
             pushCardStatus: (label) => {
-                void ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', label);
+                void sendMeshStatusUpdate('deploying', label);
             },
         },
-        (report) =>
-            deployMeshHeadless({
+        async (report) => {
+            const result = await deployMeshHeadless({
                 ...deps,
                 // The status channel, distinct from the step channel. A TERMINAL
                 // status (deployed / error) carries its message to the card,
@@ -87,22 +124,51 @@ export async function deployMeshWithFeedback(
                 // deploy resolves.
                 onStatus: (status, message, endpoint) => {
                     if (status === 'deploying') {
-                        return ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
+                        return sendMeshStatusUpdate(
                             status,
                             CARD_IN_FLIGHT_LABEL,
                         );
                     }
                     return endpoint === undefined
-                        ? ProjectDashboardWebviewCommand.sendMeshStatusUpdate(status, message)
-                        : ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
+                        ? sendMeshStatusUpdate(status, message)
+                        : sendMeshStatusUpdate(
                               status,
                               message,
                               endpoint,
                           );
                 },
-                // Steps reach the NOTIFICATION through the shared register.
-                onProgress: (message, subMessage) => report(subMessage || message),
-            }),
+                onProgress: (stage, step) => report(stage, step),
+            });
+            if (result.success) {
+                const notRepublished = await republishAfterDeploy(deps, (stage) => report(stage));
+                if (notRepublished) return { ...result, storefrontNotRepublished: notRepublished };
+            }
+            // A modal shows the reason to a person; other callers word their own
+            // (the agent's handler names its tools).
+            return inModal && !result.success ? { ...result, error: meshFailureForPerson(result) } : result;
+        },
     );
+}
 
+/**
+ * Republish the storefront after a deploy, when the storefront reads the mesh.
+ *
+ * @returns why it was not republished, or undefined when it was (or had no need)
+ */
+async function republishAfterDeploy(
+    deps: DeployMeshWithFeedbackDeps,
+    report: (stage: string) => void,
+): Promise<string | undefined> {
+    if (!deps.republishStorefront || !(STOREFRONT_READS in getProvidedEnvVars(deps.project))) {
+        return undefined;
+    }
+    report(OPERATION_STAGES.publishingSettings.label);
+    try {
+        const published = await deps.republishStorefront(deps.project);
+        if (!published.success) return published.error ?? 'the republish did not finish';
+        if (published.cdnPublished === false) return 'the CDN still serves the previous config';
+        return undefined;
+    } catch (error) {
+        return toError(error).message;
+    }
 }

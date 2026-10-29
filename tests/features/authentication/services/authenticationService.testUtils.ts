@@ -7,7 +7,7 @@ import type { CommandResult } from '@/core/shell/types';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
-import type { EntityServices } from '@/features/authentication/services/adobeEntityService';
+import { createMockSDKClient } from '../../../helpers/adobeAuthUnitsFake';
 
 /**
  * Shared test utilities for AuthenticationService tests
@@ -71,52 +71,8 @@ export const createProjectListResult = (): CommandResult => {
     return createSuccessResult(JSON.stringify([{ id: 'proj1', name: 'Project 1' }]));
 };
 
-/**
- * Creates a mock SDK client with default behavior.
- * IMPORTANT: Returns a function to create fresh instances per test to avoid closure issues.
- */
-export const createMockSDKClient = (): jest.Mocked<AdobeSDKClient> => ({
-    initialize: jest.fn().mockResolvedValue(undefined),
-    ensureInitialized: jest.fn().mockResolvedValue(true),
-    clear: jest.fn(),
-} as unknown as jest.Mocked<AdobeSDKClient>);
-
-/**
- * Creates mock entity services matching the EntityServices shape.
- * Methods are grouped by sub-service (fetcher, resolver, selector).
- */
-export const createMockEntityServices = (): {
-    entities: EntityServices;
-    fetcher: jest.Mocked<EntityServices['fetcher']>;
-    resolver: jest.Mocked<EntityServices['resolver']>;
-    selector: jest.Mocked<EntityServices['selector']>;
-} => {
-    const fetcher = {
-        getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
-        getProjects: jest.fn().mockResolvedValue([mockProject]),
-        getWorkspaces: jest.fn().mockResolvedValue([mockWorkspace]),
-    } as unknown as jest.Mocked<EntityServices['fetcher']>;
-
-    const resolver = {
-        getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg),
-        getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-        getCurrentWorkspace: jest.fn().mockResolvedValue(mockWorkspace),
-        getCurrentContext: jest.fn().mockResolvedValue({
-            org: mockOrg, project: mockProject, workspace: mockWorkspace,
-        }),
-    } as unknown as jest.Mocked<EntityServices['resolver']>;
-
-    const selector = {
-        clearConsoleContext: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<EntityServices['selector']>;
-
-    return {
-        entities: { fetcher, resolver, selector },
-        fetcher,
-        resolver,
-        selector,
-    };
-};
+/** The SDK client fake now lives with the other unit fakes. */
+export { createMockSDKClient };
 
 /** What a suite gets back from `setupAuthServiceSuite`. */
 export interface AuthServiceHarness {
@@ -137,14 +93,14 @@ export interface AuthServiceHarness {
  * that and failed two tests with the REAL collaborator running; passing the
  * suite's own bindings removes the question rather than answering it.
  *
- * @param deps - the suite's own mocked bindings, and the fetcher it needs
+ * @param deps - the suite's own mocked bindings, and the org reads it needs
  */
 export function setupAuthServiceSuite(deps: {
     AdobeSDKClient: { mockImplementation: (fn: () => AdobeSDKClient) => unknown };
     createEntityServices: jest.Mock;
     getLogger: jest.Mock;
     /** The context suite also needs `getOrganizationsSdkOnly`; operations does not. */
-    fetcher?: Record<string, unknown>;
+    orgReads?: Record<string, unknown>;
 }): AuthServiceHarness {
     const commandExecutor = createMockCommandExecutorLocal();
     const logger = createMockLoggerLocal();
@@ -156,15 +112,11 @@ export function setupAuthServiceSuite(deps: {
     const StepLoggerClass = require('@/core/logging/stepLogger').StepLogger;
     StepLoggerClass.create = jest.fn().mockResolvedValue(stepLogger);
 
-    const sdkClient = {
-        initialize: jest.fn().mockResolvedValue(undefined),
-        ensureInitialized: jest.fn().mockResolvedValue(true),
-        clear: jest.fn(),
-    } as unknown as jest.Mocked<AdobeSDKClient>;
+    const sdkClient = createMockSDKClient();
     deps.AdobeSDKClient.mockImplementation(() => sdkClient);
 
     deps.createEntityServices.mockReturnValue({
-        fetcher: deps.fetcher ?? { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
+        orgReads: deps.orgReads ?? { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
         resolver: {},
         selector: {},
     });

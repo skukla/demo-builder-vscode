@@ -110,11 +110,23 @@ function rankedModules() {
         .sort((a, b) => a.area - b.area || b.openGaps - a.openGaps);
 }
 
-function goalText(batchName, mods) {
+/** A module's size as the measurement budget counts it: every mutant in its row. */
+const mutantsIn = (m) => (m.killed ?? 0) + (m.survived ?? 0) + (m.noCoverage ?? 0) + (m.timeout ?? 0);
+
+/**
+ * The condition one batch's session is given.
+ *
+ * Each module is listed with its MUTANT count as well as its gaps, because that is the
+ * number `mutationMeasure.mjs` budgets on: a session can see which modules fit one
+ * measurement together (under 400) without measuring to find out. A batch is therefore
+ * always measurable whatever it holds — one module at a time at worst — so the batch
+ * size above does not need to know about the budget.
+ */
+export function goalText(batchName, mods) {
     const list = mods
-        .map((m) => `  - ${m.path}  (${m.openGaps} open gaps)`)
+        .map((m) => `  - ${m.path}  (${m.openGaps} open gaps, ${mutantsIn(m)} mutants)`)
         .join('\n');
-    return `Work backlog item PL-22 — the mutation burn-down, batch ${batchName}. Bring each
+    return `Work backlog item PL-70 — the mutation burn-down, batch ${batchName}. Bring each
 of these modules to ZERO open gaps, in this order:
 
 ${list}
@@ -133,26 +145,32 @@ FIRST, PER MODULE: rename sibling suites named for a FUNCTION rather than the fi
 \`suitesFor\` matches filenames, so their kills count for nothing. Confirm by imports, and
 that the suite DRIVES the module rather than reading its text. Reject cross-cutting ones.
 
-SMALL MODULES SHARE ONE MEASUREMENT: \`focusModule.mjs <a> <b> <c>\` focuses several, so a
-group pays one measure, not one each. Worth it below ~20 gaps apiece. One commit each.
+MEASURE ONLY WITH \`npm run test:mutation:measure -- <module(s)>\`. It focuses, runs
+Stryker under a 12-minute limit, cleans up and prints ONE final line; exit 0 measured,
+124 timed out, 2 refused. A group over 400 mutants is refused: split it. Modules under
+~20 gaps share a run. One module over 400: alone, with \`--timeout-min 30\`.
 
 THE CYCLE — never two measurements at once (the focus configs are single files):
-  1. node scripts/focusModule.mjs <module(s)>
-  2. npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1
-     Background it and read the module meanwhile. Wait on \`Done in\`, never
-     \`mutation score\`. Delete reports/mutation/focus-incremental.json after any edit.
+  1. npm run test:mutation:measure -- <module(s)>      PASTE its final line
+  2. mutants left uncovered? \`npm run test:mutation:measure -- --widen\`
   3. node scripts/mutationWorklist.mjs      — the decisions nothing constrains, ranked
   4. write the tests (or ledger rows with \`node scripts/mutationLedger.mjs add ...\`)
-  5. re-measure, then \`node scripts/checkMutationBaseline.mjs --report
+  5. measure again, then \`node scripts/checkMutationBaseline.mjs --report
      reports/mutation/focus.json\`; add \`--write "<what changed>"\` once the ratchet holds
   6. PASTE the module's row: score, survived, noCoverage, equivalent, openGaps.
+
+NEVER run Stryker directly, or jest with \`--detectOpenHandles\`, \`--detectLeaks\` or
+\`--watch\`. NEVER wait in a loop for output: a command returns or its timeout ends it.
+
+BEFORE DIAGNOSING anything that looks like a known problem (memory, a hang, slowness):
+grep .rptc/research/, docs/, BURNDOWN.md and the config's comments, and say what you found.
 
 A mutant revealing a REAL defect or dead code may be fixed in src/ — say so in the commit.
 NEVER kill a mutant by asserting a logger call's arguments; that pins wording, and an
 enforcer refuses any file whose count rises.
 
 RULES. Stay on the work branch; never checkout or merge develop. One commit per module,
-\`Backlog: PL-22\` trailer, committed with an EXPLICIT pathspec
+\`Backlog: PL-70\` trailer, committed with an EXPLICIT pathspec
 (\`git commit -- <your paths>\`), never bare \`git commit\` or \`-a\`. No cloud writes. No
 attribution trailers.
 
@@ -183,7 +201,7 @@ FINISH with the batch table ONCE: module, openGaps before/after, tests, ledger r
  * Dropping the last module into the next batch costs nothing: the queue is regenerated
  * from the baseline each run, so a batch of four just means the fifth is worked next.
  */
-function packBatches(chosen) {
+export function packBatches(chosen) {
     const batches = [];
     let current = [];
     for (const m of chosen) {

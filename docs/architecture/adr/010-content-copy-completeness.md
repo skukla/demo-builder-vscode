@@ -48,7 +48,7 @@ index misses.
 Copy by **following references**, not by trusting the index alone, and **audit
 completeness after** the copy.
 
-- `daLiveContentOperations.extractReferencedPaths` extracts internal,
+- `daLiveContentReferences.extractReferencedPaths` extracts internal,
   site-relative references from each copied page's authored HTML — from anchor
   hrefs **and** from the fragment-block convention (a regex scoped to
   `class="fragment"` blocks so it stays precise to the convention and doesn't
@@ -59,7 +59,13 @@ completeness after** the copy.
   the canonical source, no fork required.
 - A **post-copy completeness audit** reports references that were discovered but
   never landed, so a future drop surfaces as a logged warning instead of a silent
-  empty UI.
+  empty UI. Amended 2026-10-07: a reference the SOURCE answers 404 for is a broken
+  link in the source, carried over, not a gap in the copy. It is recorded on the
+  project (`metadata.brokenLinks`, with the pages carrying it) and listed in the
+  Storefront Report, whose dashboard tile wears a dot, instead of the warning pop-up.
+  Amended 2026-10-23 (EDS-64): the report window and its tile are removed. A reset names
+  the links on its last view, as a note; Diagnostics and `get_storefront_report` list them.
+  Only a page the source has and the copy could not take still warns.
 - For **branded forks** whose own content legitimately lacks the B2B account pages
   (e.g. CitiSignal), an **account-chrome overlay** (`overlayAccountChrome`, driven
   by a package's `accountContentSource`) copies just the `/customer/*` auth/account

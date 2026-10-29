@@ -95,6 +95,11 @@ describe('normalizeRepositoryName', () => {
         expect(normalizeRepositoryName('..test')).toBe('test');
     });
 
+    it('should trim a trailing run of hyphens and dots', () => {
+        expect(normalizeRepositoryName('My Repo ')).toBe('my-repo');
+        expect(normalizeRepositoryName('demo.-')).toBe('demo');
+    });
+
     it('should handle complex transformations', () => {
         expect(normalizeRepositoryName('My Demo Repo.js')).toBe('my-demo-repo.js');
         expect(normalizeRepositoryName('Test_Demo--Name.v2')).toBe('test-demo-name.v2');

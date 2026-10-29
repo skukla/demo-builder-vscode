@@ -1,5 +1,5 @@
 /**
- * Shared setup for the two ConfigurationService suites.
+ * Shared setup for the three ConfigurationService suites.
  *
  * Both open with the same fourteen lines: the timeout mock, a logger, a token
  * provider, and the IMS token they hand it. Both then spy on `global.fetch` in
@@ -37,8 +37,5 @@ export function spyOnFetch(): jest.SpyInstance {
 }
 
 // Below the mock on purpose — see the note above about hoisting.
-export {
-    ConfigurationService,
-    buildSiteConfigParams,
-} from '@/features/eds/services/configService/configurationService';
-export type { SiteRegistrationParams } from '@/features/eds/services/configService/configurationService';
+export { ConfigurationService } from '@/features/eds/services/configService/configurationService';
+export type { SiteRegistrationParams } from '@/features/eds/services/configService/siteConfigParams';

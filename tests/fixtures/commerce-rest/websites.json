@@ -1,0 +1,40 @@
+{
+  "_captured": {
+    "from": "Bodea sandbox (Adobe Commerce as a Cloud Service)",
+    "on": "2026-09-27",
+    "request": "GET store/websites",
+    "note": "Contact details, IPs, hostnames, the tenant id and the company name replaced; everything else as answered."
+  },
+  "body": [
+    {
+      "id": 0,
+      "code": "admin",
+      "name": "Admin",
+      "default_group_id": 0
+    },
+    {
+      "id": 1,
+      "code": "base",
+      "name": "Main Website",
+      "default_group_id": 1
+    },
+    {
+      "id": 2,
+      "code": "citisignal",
+      "name": "CitiSignal Website",
+      "default_group_id": 2
+    },
+    {
+      "id": 3,
+      "code": "bodea",
+      "name": "Bodea Website",
+      "default_group_id": 3
+    },
+    {
+      "id": 4,
+      "code": "evo",
+      "name": "Evo",
+      "default_group_id": 4
+    }
+  ]
+}

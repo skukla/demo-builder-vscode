@@ -1,0 +1,64 @@
+---
+id: AB-26e
+kind: feature
+area: app-builder
+parent: AB-26
+needs: [AB-26c]
+value: high
+status: shipped
+---
+
+# Sync validation — every entity, both directions, proved (V)
+
+Slice of [[AB-26]] — `.rptc/plans/erp-programme/overview.md` §6. **Lane: 1 for the harness journeys; the live baseline is authorised (owner, 2026-09-24) and runs on the demo instance.**
+
+## What
+
+For each row of the entity coverage matrix (`.rptc/research/erp-bidirectional-review/`): a harness journey (change in Commerce → see in ERP; change in ERP → see in Commerce; reset → undone) and the same journey written as a live script (`docs/sync-validation.md`) with the expected result beside each step. Runs first as a baseline against today's code, again after AB-26f–h and AB-26j, and before every release. Products first.
+
+## Verification block (checked by the loop's done gate — §6a of the plan)
+
+Every matrix row has a journey; the baseline's failures match the matrix's gaps (G1–G5) and nothing else; the live run's results are recorded per row with the date.
+
+## Shipped so far
+- 2026-09-24  Unit half BUILT as the box journeys (AB-26c): every entity-matrix row has a journey in both directions with reset asserted where a write is ledgered. Live half (docs/sync-validation.md script + baseline run on the demo instance) waits for a credential
+- 2026-09-25  D15 built (commerce-erp-integration 536e3cd): product and stock events from the ERP write what the ERP holds now, read through its product API; a late or repeated event can no longer leave Commerce behind the ERP.
+- 2026-09-25  D7 built (commerce-erp-integration e4d1d9a, demo-erp fcb4ced): a Commerce read that times out no longer blanks 'Follow an order'; the ERP order is found by its customer reference (a standard ERP filter the ERP gained) and the headline says Commerce's part is missing.
+- 2026-09-25  D8 built (commerce-erp-integration a5cbb17, 0af7799): a send to the ERP is recorded as 'sending' with a staff note on the order before the ERP is called; a failed write-back is its own 'failed' outcome carrying the ERP number and retried; stuck sends offer Retry.
+- 2026-09-29  2026-09-29 (loop) VALIDATED: the harness/box journeys ARE built (test/box/journeys.test.js + several-erps.test.js, both directions + reset) — the several-erps plan §7 note 'journeys not yet written' is STALE. A5's remaining LANE-1 deliverable is docs/sync-validation.md (MISSING): the live-validation script, one journey per entity-matrix row with the expected result beside each step, products first, derived from the box journeys + erp-bidirectional-review matrix. The live RUN of it is lane-2 (demo instance, authorised). Teed up for the next fire.
+- 2026-09-29  2026-09-29 (loop) LANE-1 DONE: docs/sync-validation.md written on commerce-erp-integration loop/2026-09-29-ab-26e-sync-validation (pushed) — one journey per entity-matrix row (product, stock per source, company, credit limit/block, order+status, shipment/invoice both ways, cancel/hold, contract prices, currency), both directions with reset, expected result beside each step, gaps G1/G2/G3/G5 marked, plus a several-ERPs pass. Products first. REMAINING (lane-2, owner): run it against the demo instance and record PASS/FAIL per row.
+- 2026-09-29  docs(loop): AB-26e live-validation script written (lane-1 done) (`e35ff1713`)
+- 2026-09-29  docs(loop): AB-26e — harness journeys confirmed built; live script is what remains (`58e233005`)
+- 2026-09-29  2026-09-29 (loop) LANE-2 DONE: docs/sync-validation.md run live on Bodea — every entity both directions PASS, gaps confirmed (G2 stock ERP->Commerce, G4 Commerce hold->ERP not built + REST hold no-op, G5 currency now FIXED), three bugs found+fixed+deployed live (AB-40/41/43), currency shows ISO code. Several-ERPs pass PASS (split order fans to owning ERP, each reports only its part, write isolation, reset to zero). RESET leg now proven (reset_erp_records returned both ERPs to zero, ledgered writes undone) — matrix row flipped to +. Remaining - legs (remove-integration clean, fresh add first-sync) fold into AB-16f.
+
+## The end-to-end matrix, live status (2026-09-25 — owner: "our goal is a complete end to end test of all data flows")
+
+Run through the Demo Builder agent tools against the demo instance (Bodea) and the deployed pair.
+✓ proven live with the date; ✗ failed and fixed (see the ledger `commerce-erp-integration/docs/live-validation-learnings.md`); ○ not yet run live.
+
+| Flow | Direction | Live status |
+|---|---|---|
+| Product save (name, price) → ERP product | Commerce → ERP | ✓ 2026-09-25 03:xx UTC, after the priority-subscription fix |
+| Product delete → ERP | Commerce → ERP | ✓ 2026-09-25 14:22 (a throwaway product created in Commerce reached the ERP within 75 s; deleted in Commerce, the ERP answered 404 within 75 s) |
+| Stock item save → ERP warehouse | Commerce → ERP | ✓ 2026-09-25 14:01 (source item accesspoint@default 61 in Commerce, ERP warehouse 61 within 90 s) |
+| Companies, credit, status (minute refresh) → ERP partners | Commerce → ERP | ✓ 2026-09-24 |
+| Order placed → ERP sales order, number written back | Commerce → ERP | ✓ 2026-09-25 12:24 (orders 3000000007, 3000000008), after three fixes (✗ `_isNew`, ✗ company, ✗ timeout) |
+| Cart pricing webhooks (contract price, discount ceiling) | Commerce → ERP → cart | ✓ 2026-09-25 13:52: with the company in its own customer group and an ERP contract price of 40, the cart priced at 40 (item-prices ran in 2.6–2.8 s, recorded). The 13:28 miss was most likely Commerce's old 5 s limit on a cold start (no run recorded then); registrations now wait 10 s and record every run. Discount ceiling: fires (recorded), not yet exercised with a discount |
+| Cancel / hold made in Commerce Admin → ERP | Commerce → ERP | ✓ 2026-09-25 14:05 (cancel of 3000000008 → ERP 0000001002 cancelled "Cancelled in Commerce"); ✓ 14:07–14:09 (hold and unhold of 3000000009 → ERP 0000001003 held "Put on hold in Commerce", then released) |
+| Shipment made in Commerce Admin → ERP | Commerce → ERP | ✓ 2026-09-25 14:12 (order/9/ship from the default source → ERP order shipped, shipment recorded with the Commerce shipment id) |
+| Invoice made in Commerce Admin → ERP | Commerce → ERP | ✓ 2026-09-25 14:17 (order/9/invoice → ERP order invoiced, on I/O Events' first retry after one failed run) |
+| Price / name change → Commerce product | ERP → Commerce | ✓ 2026-09-25 13:56 (list price 55 → Commerce 55 within 65 s); ✓ 14:25 (name "Access Point Pro" → Commerce within 75 s). ✗ the restore to "Access Point" never landed: both events' runs hit the 60 s limit, were redelivered, and the older one's retry won (D15) |
+| Stock change → Commerce source item | ERP → Commerce | ✓ 2026-09-25 13:59 (warehouse default 77 in the ERP, Commerce source item 77 within 75 s) |
+| Credit limit → company credit | ERP → Commerce | ✓ 2026-09-24; ✓ again 2026-09-25 13:05 and 13:17 (the restore landed on I/O Events' redelivery after two 30 s Commerce timeouts, which proves the retry path) |
+| Block / unblock → company status | ERP → Commerce | ✓ 2026-09-24 |
+| Confirmation → note (+ optional custom status) | ERP → Commerce | ✓ 2026-09-25 12:50, after ✗ (Processing is not a status a comment can set) |
+| Credit hold → order On Hold; release → unhold | ERP → Commerce | ✓ 2026-09-25 13:10 (limit 50, order 114 held in the ERP and On Hold in Commerce in 30 s; released and unheld in 18 s, with both notes) |
+| Credit reject → order cancelled | ERP → Commerce | ✓ 2026-09-25 12:21 |
+| Shipment → Commerce shipment (source) | ERP → Commerce | ✓ 2026-09-25 12:31 |
+| Invoice → Commerce invoice (capture) | ERP → Commerce | ✓ 2026-09-25 12:36 (order complete) |
+| Reset → ledgered writes undone, ERP re-mirrored | both | ✓ 2026-09-29 (reset_erp_records: both ERPs to zero, 8 credit reversions undone, 2 orders cancelled + 5 kept/noted) |
+| Remove integration → Commerce clean (credit, status, ext_order_id, holds) | both | ○ |
+| Fresh add → install-time first sync | install | ○ |
+| Agent tools read both sides and the crossing | agent surface | ✓ 2026-09-25 (`get_erp_order_trace`, `run_commerce_rest`, `run_erp_rest`, activations) |
+
+Next runs, in order: credit-hold round trip (lower the demo company's limit in the ERP, order, hold, release, restore), cart pricing via a REST cart with a contract price, ERP price/stock → Commerce, Commerce Admin cancel/hold/ship/invoice → ERP, product delete, then reset and remove with the ledger populated, then a fresh add.

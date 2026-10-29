@@ -23,7 +23,7 @@ import '@/core/ui/styles/utilities.css';
 import '@/core/ui/styles/icon-label.css';
 // .sidebar-* — this panel's own styles, including its short-panel breakpoint.
 import './styles/sidebar.css';
-import type { SidebarContext } from '../types';
+import type { SidebarAiChatMenu, SidebarContext } from '../types';
 import { Sidebar } from './Sidebar';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
@@ -45,6 +45,9 @@ function sendMessage(type: string, payload?: unknown): void {
 function SidebarApp(): React.ReactElement {
     const [context, setContext] = useState<SidebarContext>({ type: 'projects' });
     const [isLoading, setIsLoading] = useState(true);
+    // Plain Chat button until the extension says the agent is a terminal one —
+    // the shipped default, Copilot in VS Code, has its own New / History buttons.
+    const [chatMenu, setChatMenu] = useState(false);
 
     // Handle messages from extension.
     //
@@ -63,6 +66,9 @@ function SidebarApp(): React.ReactElement {
         const unsubscribers = [
             webviewClient.onMessage('contextResponse', onContext),
             webviewClient.onMessage('contextUpdate', onContext),
+            webviewClient.onMessage('aiChatMenu', (payload: unknown) => {
+                setChatMenu((payload as SidebarAiChatMenu | undefined)?.menu === true);
+            }),
         ];
 
         // Request initial context. Queued by the client until the handshake lands.
@@ -74,11 +80,6 @@ function SidebarApp(): React.ReactElement {
     // Handle navigation
     const handleNavigate = useCallback((target: string) => {
         sendMessage('navigate', { target });
-    }, []);
-
-    // Handle back navigation
-    const handleBack = useCallback(() => {
-        sendMessage('back');
     }, []);
 
     // Handle create project
@@ -122,29 +123,9 @@ function SidebarApp(): React.ReactElement {
         sendMessage('newAiChat');
     }, []);
 
-    // Handle start demo
-    const handleStartDemo = useCallback(() => {
-        sendMessage('startDemo');
-    }, []);
-
-    // Handle stop demo
-    const handleStopDemo = useCallback(() => {
-        sendMessage('stopDemo');
-    }, []);
-
-    // Handle open dashboard
-    const handleOpenDashboard = useCallback(() => {
-        sendMessage('openDashboard');
-    }, []);
-
-    // Handle open configure
-    const handleOpenConfigure = useCallback(() => {
-        sendMessage('openConfigure');
-    }, []);
-
-    // Handle check updates
-    const handleCheckUpdates = useCallback(() => {
-        sendMessage('checkUpdates');
+    // Handle pick an earlier chat (AiZone Chat menu) — the terminal agent's own picker.
+    const handlePickAiChat = useCallback(() => {
+        sendMessage('pickAiChat');
     }, []);
 
     // Apply VSCode dark theme class to body (unified theme system ignores user preferences)
@@ -171,7 +152,6 @@ function SidebarApp(): React.ReactElement {
             <Sidebar
                 context={context}
                 onNavigate={handleNavigate}
-                onBack={handleBack}
                 onCreateProject={handleCreateProject}
                 onOpenTools={handleOpenTools}
                 onOpenHelp={handleOpenHelp}
@@ -179,12 +159,8 @@ function SidebarApp(): React.ReactElement {
                 onOpenLogs={handleOpenLogs}
                 onOpenAiChat={handleOpenAiChat}
                 onShowPrompts={handleShowPrompts}
-                onNewAiChat={handleNewAiChat}
-                onStartDemo={handleStartDemo}
-                onStopDemo={handleStopDemo}
-                onOpenDashboard={handleOpenDashboard}
-                onOpenConfigure={handleOpenConfigure}
-                onCheckUpdates={handleCheckUpdates}
+                onNewAiChat={chatMenu ? handleNewAiChat : undefined}
+                onPickAiChat={chatMenu ? handlePickAiChat : undefined}
             />
         </Provider>
     );

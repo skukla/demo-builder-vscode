@@ -10,6 +10,7 @@
  * @module features/eds/services/reset/edsResetParams
  */
 
+import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import type { Project } from '@/types/base';
@@ -95,6 +96,12 @@ export interface EdsResetProgress {
     message: string;
 }
 
+/** A page step's sentence, and whether it reports something not done. */
+export interface PageSentence {
+    sentence: string;
+    problem: boolean;
+}
+
 /**
  * Result of EDS reset operation
  */
@@ -108,10 +115,54 @@ export interface EdsResetResult extends HandlerResponse {
     /** Specific error type for UI handling */
     errorType?: string;
     /**
-     * What the dry check of the load-bearing patches found on an added demo's
-     * code (D23), in SC words. Present only for a project built on an added demo.
+     * Set when the reset could not publish the storefront's code, even after the
+     * site was registered: a sentence for the SC, shown first among the warnings,
+     * because the site serves no pages until it lands (2026-10-22).
      */
-    demoCaveats?: string[];
+    codeNotPublished?: string;
+    /**
+     * What happened to the category pages and the catalog menu (EDS-24), in SC words —
+     * pages written, and pages someone else made left alone by name. Absent when the
+     * storefront has no catalog-menu block and Demo Builder wrote nothing there.
+     */
+    catalogMenu?: string;
+    /**
+     * What happened to the product pages the overlay published (EDS-26), in SC words:
+     * removed, left because another project shares the repository, preview copies Helix
+     * kept, or that they could not be listed. Absent when Helix listed none.
+     */
+    productPages?: string;
+    /**
+     * The copied content's links to pages that do not exist, in one sentence for the SC
+     * (`brokenLinksSentence`): a note, since nothing was left out of the copy. Absent when
+     * there are none, or when the content was kept.
+     */
+    brokenLinks?: string;
+    /**
+     * The page sentences above that say something did not happen (a page that could not
+     * be published, product pages left live). The SC reads them as warnings; the rest of
+     * those sentences are notes. Absent when every page step did all it set out to.
+     */
+    pageWarnings?: string[];
+    /**
+     * What happened to the pages still published from before the reset that it did not
+     * republish (EDS-33): removed, some left, or that Helix could not say what is
+     * published, in which case they may still be live. Absent when there were none, or
+     * when the content was kept.
+     */
+    leftoverPages?: LeftoverPagesResult;
+    /**
+     * What the content pipeline could not do, in SC words (EDS-55): pages the source has
+     * that the storefront does not serve ("2 pages the source has are missing from this
+     * storefront: /cart, /checkout"), old pages that may still be live, an empty block
+     * palette. Absent when it had nothing to say.
+     */
+    pipelineWarnings?: string[];
+    /**
+     * A success's warnings as one line, for the progress modal's last view: set only
+     * when the reset ran in a modal (`withModalWarning`).
+     */
+    warning?: string;
     /** Additional error details */
     errorDetails?: Record<string, unknown>;
 }

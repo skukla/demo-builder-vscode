@@ -15,11 +15,12 @@
  * @module features/mesh/services/deployMeshHeadless
  */
 
+import { updateMeshState } from './meshDeployBaseline';
 import { deployMeshCreateOrUpdate } from './meshRedeploy';
-import { updateMeshState } from './stalenessDetector';
 import type { SecretStorageLike } from '@/core/di/serviceLocator';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
@@ -47,6 +48,11 @@ export interface DeployMeshHeadlessResult {
     /** True when a preflight prompt was dismissed (auth/org) — not an error. */
     cancelled?: boolean;
     currentOrg?: string;
+    /**
+     * Why the storefront was NOT republished after a successful deploy, when it
+     * was not. The mesh itself deployed; this is said, never swallowed.
+     */
+    storefrontNotRepublished?: string;
 }
 
 export interface DeployMeshHeadlessDeps {
@@ -83,6 +89,7 @@ export async function deployMeshHeadless(
     const { authManager } = deps;
 
     await onStatus?.('deploying', 'Checking requirements');
+    onProgress?.(OPERATION_STAGES.checkingRequirements.label);
 
     // PRE-FLIGHT: auth + correct org context (the shared gate). Passes silently
     // when already authed; only prompts when not (accepted headless behavior,
@@ -142,7 +149,7 @@ export async function deployMeshHeadless(
     // subscribe step kept succeeding while the deploy beside it failed.
     const orgTarget = buildOrgTargetFromProjectAdobe(
         project.adobe,
-        authManager.getCachedOrganization(),
+        authManager.getCacheManager().getCachedOrganization(),
     );
 
     try {
@@ -163,10 +170,10 @@ export async function deployMeshHeadless(
             // with its existing file, not stop working. Warn loudly instead.
             const meshComponentId = getMeshComponentId(project);
             if (meshComponentId) {
-                onProgress?.('Generating mesh configuration');
+                onProgress?.(OPERATION_STAGES.generatingMeshConfig.label);
                 try {
                     const { regenerateComponentEnvFile } = await import(
-                        '@/features/project-creation/helpers/envFileGenerator'
+                        '@/features/project-creation/helpers/envFileRegeneration'
                     );
                     await regenerateComponentEnvFile(
                         project,
@@ -186,7 +193,15 @@ export async function deployMeshHeadless(
             }
 
             // Bounded pre-deploy subscribe (API Mesh API + baseline) BEFORE deploying.
-            await ensureMeshApiSubscribed({ project, authService: authManager, logger });
+            onProgress?.(OPERATION_STAGES.subscribingApis.label);
+            await ensureMeshApiSubscribed({
+                project,
+                authService: authManager,
+                logger,
+                // The subscribe's own short lines: it is the step most likely to
+                // sit still for a minute (2026-09-19 Bodea logs).
+                onStep: (step) => onProgress?.(OPERATION_STAGES.subscribingApis.label, step),
+            });
 
             // Create-or-update from REMOTE truth — the shared rule lives in
             // deployMeshCreateOrUpdate (one copy, was three). Untargeted this

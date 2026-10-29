@@ -7,15 +7,19 @@ import {
     handleDeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
     mockEnsureAdobeIOAuth,
+    mockRemoveAppBuilderComponent,
+    mockTestDeveloperPermissions,
     mockSendAppBuilderComponentStatusUpdate,
-    mockSendComponentOperationProgress,
+    mockSendOperationProgress,
     resetHandlerMocks,
     setupMocks,
+    setupModalMocks,
+    modalScreen,
     vscodeMock,
     withComponentProgress,
 } from './appBuilderComponentHandlers.testUtils';
-import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
-import { handleGetComponentOperationProgress } from '@/features/dashboard/handlers/componentOperationProgress';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { handleGetOperationProgress, startModalRun } from '@/core/vscode/operationProgress';
 import type { AppBuilderComponentState } from '@/types/base';
 
 const STAGE = OPERATION_STAGES.deployingApp;
@@ -42,6 +46,9 @@ function options(progress?: 'modal') {
 
 beforeEach(() => {
     resetHandlerMocks();
+    // The tests that drive withComponentProgress directly have no request to record
+    // the screen from, so the run starts on the stand-in screen here.
+    startModalRun('erp-sync', modalScreen);
 });
 
 describe('withComponentProgress — started from the integrations screen', () => {
@@ -51,23 +58,51 @@ describe('withComponentProgress — started from the integrations screen', () =>
             return { success: true };
         });
 
-        expect(mockSendComponentOperationProgress).toHaveBeenCalledWith({
+        expect(mockSendOperationProgress).toHaveBeenCalledWith({
             id: 'erp-sync',
             state: 'running',
             stage: STAGE.label,
             step: 'Running aio app deploy',
             expectation: STAGE.expectation,
+            startedAt: expect.any(Number),
         });
+    });
+
+    it("fills the step line with the stage's own detail when the report names none", async () => {
+        await withComponentProgress(options('modal'), async (report) => {
+            report(OPERATION_STAGES.subscribingApis.label);
+            return { success: true };
+        });
+
+        expect(mockSendOperationProgress).toHaveBeenCalledWith(
+            expect.objectContaining({
+                stage: OPERATION_STAGES.subscribingApis.label,
+                step: OPERATION_STAGES.subscribingApis.detail,
+            }),
+        );
     });
 
     it('ends with succeeded, and opens no notification', async () => {
         await withComponentProgress(options('modal'), async () => ({ success: true }));
 
-        expect(mockSendComponentOperationProgress).toHaveBeenLastCalledWith({
+        expect(mockSendOperationProgress).toHaveBeenLastCalledWith({
             id: 'erp-sync',
             state: 'succeeded',
         });
         expect(vscodeMock.window.withProgress).not.toHaveBeenCalled();
+    });
+
+    it("ends with the run's notes as the modal's warning, so the SC reads them there", async () => {
+        await withComponentProgress(options('modal'), async () => ({
+            success: true,
+            warnings: ['Justrite ERP owns every product again.', 'Justrite ERP: 2 products are sellable again.'],
+        }));
+
+        expect(mockSendOperationProgress).toHaveBeenLastCalledWith({
+            id: 'erp-sync',
+            state: 'succeeded',
+            warning: 'Justrite ERP owns every product again. Justrite ERP: 2 products are sellable again.',
+        });
     });
 
     it('ends with failed and the reason', async () => {
@@ -76,7 +111,7 @@ describe('withComponentProgress — started from the integrations screen', () =>
             error: 'Adobe refused this',
         }));
 
-        expect(mockSendComponentOperationProgress).toHaveBeenLastCalledWith({
+        expect(mockSendOperationProgress).toHaveBeenLastCalledWith({
             id: 'erp-sync',
             state: 'failed',
             error: 'Adobe refused this',
@@ -90,19 +125,18 @@ describe('withComponentProgress — started from the integrations screen', () =>
             'erp-sync',
             'deploying',
             'Deploying Integration',
-            undefined,
         );
     });
 
     it('keeps a failure so a reopened modal can read it, and forgets a success', async () => {
-        const { mockContext } = setupMocks();
+        const { mockContext } = setupModalMocks();
         await withComponentProgress(options('modal'), async () => ({
             success: false,
             error: 'boom',
         }));
 
         await expect(
-            handleGetComponentOperationProgress(mockContext, { id: 'erp-sync' }),
+            handleGetOperationProgress(mockContext, { id: 'erp-sync' }),
         ).resolves.toStrictEqual({
             success: true,
             data: { id: 'erp-sync', state: 'failed', error: 'boom' },
@@ -111,7 +145,7 @@ describe('withComponentProgress — started from the integrations screen', () =>
         await withComponentProgress(options('modal'), async () => ({ success: true }));
 
         await expect(
-            handleGetComponentOperationProgress(mockContext, { id: 'erp-sync' }),
+            handleGetOperationProgress(mockContext, { id: 'erp-sync' }),
         ).resolves.toStrictEqual({ success: true, data: null });
     });
 });
@@ -124,38 +158,41 @@ describe('withComponentProgress — everywhere else', () => {
         });
 
         expect(vscodeMock.window.withProgress).toHaveBeenCalled();
-        expect(mockSendComponentOperationProgress).not.toHaveBeenCalled();
+        expect(mockSendOperationProgress).not.toHaveBeenCalled();
     });
 });
 
 describe('a modal-hosted request always ends', () => {
     it('marks the run running before the handler does anything', async () => {
-        const { mockContext } = setupMocks();
+        const { mockContext } = setupModalMocks();
         (mockContext.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
 
         await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync', progress: 'modal' });
 
-        expect(mockSendComponentOperationProgress).toHaveBeenNthCalledWith(1, {
+        expect(mockSendOperationProgress).toHaveBeenNthCalledWith(1, {
             id: 'erp-sync',
             state: 'running',
+            startedAt: expect.any(Number),
         });
     });
 
     it('ends with the refusal when the handler stops before the operation starts', async () => {
-        const { mockContext } = setupMocks();
+        const { mockContext } = setupModalMocks();
         (mockContext.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
 
         await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync', progress: 'modal' });
 
-        expect(mockSendComponentOperationProgress).toHaveBeenLastCalledWith({
+        expect(mockSendOperationProgress).toHaveBeenLastCalledWith({
             id: 'erp-sync',
             state: 'failed',
             error: 'No project found',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
     it('ends in plain words when the handler throws, and still throws', async () => {
-        const { mockContext } = setupMocks();
+        const { mockContext } = setupModalMocks();
         (mockContext.stateManager.getCurrentProject as jest.Mock).mockRejectedValue(
             new Error('ENOENT: .demo-builder.json'),
         );
@@ -163,45 +200,67 @@ describe('a modal-hosted request always ends', () => {
         await expect(
             handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync', progress: 'modal' }),
         ).rejects.toThrow('ENOENT');
-        expect(mockSendComponentOperationProgress).toHaveBeenLastCalledWith({
+        expect(mockSendOperationProgress).toHaveBeenLastCalledWith({
             id: 'erp-sync',
             state: 'failed',
             error: 'The operation stopped unexpectedly. Details are in Debug Logs.',
+            startedAt: expect.any(Number),
+            tookMs: expect.any(Number),
         });
     });
 
     it('replaces an earlier failure the moment a new run starts', async () => {
-        const { mockContext } = setupMocks();
+        const { mockContext } = setupModalMocks();
         (mockContext.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
         await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync', progress: 'modal' });
         let held: unknown;
         (mockContext.stateManager.getCurrentProject as jest.Mock).mockImplementation(async () => {
-            held = (await handleGetComponentOperationProgress(mockContext, { id: 'erp-sync' })).data;
+            held = (await handleGetOperationProgress(mockContext, { id: 'erp-sync' })).data;
             return undefined;
         });
 
         await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync', progress: 'modal' });
 
-        expect(held).toStrictEqual({ id: 'erp-sync', state: 'running' });
+        expect(held).toStrictEqual({ id: 'erp-sync', state: 'running', startedAt: expect.any(Number) });
     });
 
     it('sends nothing to a modal for a request that did not ask for one', async () => {
-        const { mockContext } = setupMocks();
+        const { mockContext } = setupModalMocks();
         (mockContext.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
 
         await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
-        expect(mockSendComponentOperationProgress).not.toHaveBeenCalled();
+        expect(mockSendOperationProgress).not.toHaveBeenCalled();
+    });
+
+    it("shows a removal's notes in the modal only, with no warning pop-up (owner, 2026-10-09)", async () => {
+        const { mockContext } = setupModalMocks({ appBuilderComponents: DEPLOYED });
+        mockTestDeveloperPermissions(true);
+        mockRemoveAppBuilderComponent.mockResolvedValue({
+            success: true,
+            runtimeCleanup: { verified: true, deleted: ['kit-a'], failed: ['kit-b'] },
+            warnings: ['Justrite ERP owns every product again.'],
+        });
+
+        const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync', progress: 'modal' });
+
+        expect(vscodeMock.window.showWarningMessage).not.toHaveBeenCalled();
+        const ended = mockSendOperationProgress.mock.calls.at(-1)![0] as { state: string; warning?: string };
+        expect(ended.state).toBe('succeeded');
+        expect(ended.warning).toContain('kit-b');
+        expect(ended.warning).toContain('Justrite ERP owns every product again.');
+        // An agent still reads the same words in the answer.
+        expect((result.data as { warning?: string }).warning).toBe(ended.warning);
     });
 
     it('shows a guard refusal in the modal only, with no warning pop-up', async () => {
-        const { mockContext } = setupMocks({ appBuilderComponents: DEPLOYED });
+        const { mockContext } = setupModalMocks({ appBuilderComponents: DEPLOYED });
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
 
         await handleRemoveAppBuilderComponent(mockContext, { id: 'erp-sync', progress: 'modal' });
 
         expect(vscodeMock.window.showWarningMessage).not.toHaveBeenCalled();
-        expect(mockSendComponentOperationProgress).toHaveBeenLastCalledWith(
+        expect(mockSendOperationProgress).toHaveBeenLastCalledWith(
             expect.objectContaining({ id: 'erp-sync', state: 'failed' }),
         );
     });

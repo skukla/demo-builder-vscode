@@ -24,7 +24,8 @@ const validateToken = jest.fn();
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: () => ({
         tokenService: { validateToken },
-        repoOperations: { deleteRepository, getRepository },
+        repoOperations: { getRepository },
+        repoLifecycle: { deleteRepository },
         fileOperations: { getLatestCommitMessage },
     }),
 }));

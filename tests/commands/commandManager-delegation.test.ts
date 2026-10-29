@@ -16,6 +16,7 @@ import {
     CommandManager,
     commandInstance,
     harness,
+    mockCommandExists,
     mockIsSidebarInitialized,
     mockOpenUrl,
     mockSetShowingProjectsList,
@@ -25,7 +26,6 @@ import {
 
 import { ConfigureCommand } from '@/commands/configure';
 import { DiagnosticsCommand } from '@/commands/diagnostics';
-import { ManageSiteAccessCommand } from '@/commands/manageSiteAccess';
 import { MigrateStorefrontNamesCommand } from '@/commands/migrateStorefrontNames';
 import { OpenInClaudeCommand } from '@/commands/openInClaude';
 import { OpenModernizationAgentCommand } from '@/commands/openModernizationAgent';
@@ -40,7 +40,7 @@ import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ShowIntegrationsCommand } from '@/features/dashboard/commands/showIntegrations';
 import { ShowDataInstallerCommand } from '@/features/data-installer/commands/showDataInstaller';
-import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
+import { ShowSiteAccessCommand } from '@/features/eds/commands/showSiteAccess';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
@@ -67,14 +67,13 @@ describe('a command id runs the command object it was built for', () => {
     it.each([
         ['demoBuilder.startDemo', StartDemoCommand],
         ['demoBuilder.stopDemo', StopDemoCommand],
-        ['demoBuilder.deleteProject', DeleteProjectCommand],
         ['demoBuilder.viewStatus', ViewStatusCommand],
         ['demoBuilder.configure', ConfigureCommand],
         ['demoBuilder.configureProject', ConfigureProjectWebviewCommand],
         ['demoBuilder.deployMesh', DeployMeshCommand],
         ['demoBuilder.syncStorefront', SyncStorefrontCommand],
         ['demoBuilder.refreshBlockLibrary', RefreshBlockLibraryCommand],
-        ['demoBuilder.manageSiteAccess', ManageSiteAccessCommand],
+        ['demoBuilder.manageSiteAccess', ShowSiteAccessCommand],
         ['demoBuilder.repairSiteConfiguration', RepairSiteConfigurationCommand],
         ['demoBuilder.checkForUpdates', CheckUpdatesCommand],
         ['demoBuilder.showPromptsPicker', ShowPromptsPickerCommand],
@@ -201,6 +200,20 @@ describe('the AI entry points differ only in what they hand the launcher', () =>
         expect(commandInstance(OpenInClaudeCommand).execute).toHaveBeenCalledWith(undefined);
     });
 
+    it("asks the extension's command executor whether `claude` is installed", async () => {
+        // The launcher's fourth argument is its only way to learn the CLI is
+        // missing; a probe wired to anything else would answer for some other
+        // PATH than the one the extension runs commands on.
+        harness();
+        mockCommandExists.mockResolvedValue(true);
+        const probe = (OpenInClaudeCommand as unknown as jest.Mock).mock.calls[0][3] as {
+            commandExists(name: string): Promise<boolean>;
+        };
+
+        await expect(probe.commandExists('claude')).resolves.toBe(true);
+        expect(mockCommandExists).toHaveBeenCalledWith('claude');
+    });
+
     it('openAiExperience launches with no argument at all', async () => {
         const h = harness();
 
@@ -218,6 +231,18 @@ describe('the AI entry points differ only in what they hand the launcher', () =>
         await h.handlerFor('demoBuilder.newAiChat')();
 
         expect(commandInstance(OpenInClaudeCommand).execute).toHaveBeenCalledWith({ fresh: true });
+    });
+
+    // The third way into the same chat (AI-4b): Claude Code's own picker of
+    // earlier conversations, rather than whichever one `--continue` lands on.
+    it('pickAiChat asks for the earlier-chat picker', async () => {
+        const h = harness();
+
+        await h.handlerFor('demoBuilder.pickAiChat')();
+
+        expect(commandInstance(OpenInClaudeCommand).execute).toHaveBeenCalledWith({
+            pickPast: true,
+        });
     });
 
     it('openAi runs the prompt library, not the launcher', async () => {

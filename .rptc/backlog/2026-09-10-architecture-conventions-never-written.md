@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: built
+status: shipped
 parent: PL-30
 ---
 

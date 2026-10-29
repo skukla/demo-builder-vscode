@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: backlog
+status: shipped
 ---
 
 # "Cleanup DA.live sites" builds its DA.live calls on the Adobe token DA.live refuses

@@ -22,26 +22,6 @@ export function parseInstalledVersions(stdout: string): string[] {
 }
 
 /**
- * Parse major versions from fnm list output
- * @param stdout - Output from fnm list command
- * @returns Array of major version strings (e.g., ['18', '20', '24'])
- */
-export function parseMajorVersions(stdout: string): string[] {
-    const versions = stdout.trim().split('\n').filter(v => v.trim());
-    const majors = new Set<string>();
-
-    for (const version of versions) {
-        // Match patterns like "v20.19.5" or "20.19.5"
-        const match = /v?(\d+)/.exec(version);
-        if (match) {
-            majors.add(match[1]);
-        }
-    }
-
-    return Array.from(majors).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-}
-
-/**
  * Build a mapping of major version to full version from fnm list output
  * @param stdout - Output from fnm list command
  * @returns Map of major version to full version (e.g., {'20' => '20.19.5'})

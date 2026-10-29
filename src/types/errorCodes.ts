@@ -85,6 +85,11 @@ export enum ErrorCode {
     COMPONENT_UPDATE_FAILED = 'COMPONENT_UPDATE_FAILED',
     /** Component dependency missing */
     COMPONENT_DEPENDENCY_MISSING = 'COMPONENT_DEPENDENCY_MISSING',
+    /**
+     * A removal stopped before undeploying, because a clean-up only the deployed
+     * code can do did not finish. Remove again retries; `force` goes ahead.
+     */
+    COMPONENT_REMOVAL_STOPPED = 'COMPONENT_REMOVAL_STOPPED',
 
     // ===== Project Errors =====
     /** Project not found */
@@ -200,6 +205,7 @@ export function getErrorTitle(code: ErrorCode): string {
         [ErrorCode.COMPONENT_INSTALL_FAILED]: 'Component installation failed',
         [ErrorCode.COMPONENT_UPDATE_FAILED]: 'Component update failed',
         [ErrorCode.COMPONENT_DEPENDENCY_MISSING]: 'Missing dependency',
+        [ErrorCode.COMPONENT_REMOVAL_STOPPED]: 'Removal stopped',
 
         // Project
         [ErrorCode.PROJECT_NOT_FOUND]: 'Project not found',

@@ -19,6 +19,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { registerViewTools } from '@/features/ai/server/viewTools';
 import { BUNDLE_LABELS, SERVER_LABELS } from '@/features/dashboard/ui/components/aiSurfaceNames';
 import { SKILL_MCP_TOOL_DEPENDENCIES, DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
 
@@ -121,6 +122,77 @@ describe('no bundle writer writes around the hash-and-skip seam', () => {
             .filter(({ line }) => /\bwriteFile\b/.test(line));
         expect(offenders).toStrictEqual([]);
     });
+
+    // The three names above are opt-in: a FOURTH file in this directory could write
+    // directly and nothing here would look at it. PL-58 (2026-10-03) found exactly
+    // that shape in `homeAiContextWriter.ts` — eight direct writes, never checked.
+    // It is deliberate, so it gets a row; what changes is that the next one cannot
+    // arrive unseen. The whole directory is read, and every file that touches the
+    // disk is the seam or carries a written reason here.
+    const SEAM = 'generatedFileWriter.ts';
+    const DIRECT_WRITE_EXCEPTIONS: Record<string, string> = {
+        'homeAiContextWriter.ts':
+            'Writes the ONE home Chat context at the projects root (~/.demo-builder/projects): ' +
+            '.mcp.json, .claude/, AGENTS.md, CLAUDE.md pointers, skills. Not a per-project ' +
+            'bundle, so there is no manifest to record hashes in; its banner says it is ' +
+            'rewritten on every activation. Confirmed deliberate 2026-10-03 (PL-58 step 1).',
+        'mcpConfigWriter.ts':
+            "Appends MCP entries to the project's .gitignore, only the lines not already " +
+            'there. Hash-and-skip would fight an append-only file the user owns; every ' +
+            "user line is kept, and the append carries the seam's symlink guard. Its " +
+            'bundle files still go through the seam (pinned above).',
+        'globalMcpRegistration.ts':
+            "Read-merge-writes ONE key (mcpServers['demo-builder']) in Claude Code's user " +
+            'config ~/.claude.json, keeping everything else and refusing a file it cannot ' +
+            "parse. Outside any project; only on the explicit 'Register Global MCP' command.",
+        'aiDefaultsInstaller.ts':
+            "Writes package.json in the project's .demo-builder-mcp/ tools directory: the " +
+            'npm manifest for the MCP tool packages. A machine file the installer owns, ' +
+            'not one an SC edits.',
+    };
+
+    /** Calls that change the disk. Reads (`readFile`, `stat`, `lstat`) are not. */
+    const DIRECT_WRITE =
+        /\.(writeFile|writeFileSync|appendFile|appendFileSync|copyFile|copyFileSync|cp|rm|rmSync|unlink|unlinkSync|rename|renameSync|createWriteStream)\s*\(|\bwriteFileAtomic\s*\(/;
+    const writesDirectly = (src: string): boolean => DIRECT_WRITE.test(stripComments(src));
+
+    const bundleFiles = fs.readdirSync(BUNDLE_DIR).filter((f) => f.endsWith('.ts'));
+    const directWriters = bundleFiles.filter((f) =>
+        writesDirectly(fs.readFileSync(path.join(BUNDLE_DIR, f), 'utf-8'))
+    );
+
+    it('CONTROL: the directory-wide matcher sees writes and deletes, not reads or prose', () => {
+        expect(writesDirectly("await fsPromises.appendFile(p, 'x');")).toBe(true);
+        expect(writesDirectly('await fsPromises.rm(p, { force: true });')).toBe(true);
+        expect(writesDirectly('await fsPromises.readFile(p);')).toBe(false);
+        expect(writesDirectly('// a direct `fsPromises.writeFile(` here would clobber')).toBe(false);
+        // The real directory: read whole, the seam seen writing, prose not counted.
+        expect(bundleFiles.length).toBeGreaterThan(10);
+        expect(directWriters).toContain(SEAM);
+        expect(directWriters).not.toContain('aiContextWriter.ts');
+    });
+
+    it('every file in aiBundle/ that writes to disk is the seam or has a written reason', () => {
+        const unexplained = directWriters.filter(
+            (f) => f !== SEAM && !(f in DIRECT_WRITE_EXCEPTIONS)
+        );
+        // Route the write through GeneratedFileWriter, or add a row above saying why
+        // this file is not one a user edits.
+        expect(unexplained).toStrictEqual([]);
+    });
+
+    it('every exception still writes directly — a row for a file that stopped is rot', () => {
+        const stale = Object.keys(DIRECT_WRITE_EXCEPTIONS).filter(
+            (f) => !directWriters.includes(f)
+        );
+        expect(stale).toStrictEqual([]);
+    });
+
+    it('the number of exceptions only falls', () => {
+        // Raising this is a decision a reviewer should see in the diff. Lower it
+        // when a row goes away.
+        expect(Object.keys(DIRECT_WRITE_EXCEPTIONS)).toHaveLength(4);
+    });
 });
 
 describe('every user-facing name carries its provenance', () => {
@@ -136,5 +208,51 @@ describe('every user-facing name carries its provenance', () => {
     it.each(Object.entries(BUNDLE_LABELS))('bundle %s', (_id, entry) => {
         expect(entry.label.length).toBeGreaterThan(0);
         expect(entry.source.length).toBeGreaterThan(10);
+    });
+});
+
+describe('every open_view the bundle teaches names a view the tool accepts', () => {
+    // The AI-files audit (2026-10) found create-eds-project teaching
+    // `open_view view="projects"`; the tool's enum says `projects_list`, so the
+    // call failed. The enum is read from the REGISTERED schema, not restated here.
+    function acceptedViews(): string[] {
+        let views: string[] = [];
+        registerViewTools(
+            {
+                registerTool: (name: string, def: { inputSchema?: Record<string, unknown> }) => {
+                    if (name === 'open_view') views = (def.inputSchema?.view as { options: string[] }).options;
+                },
+            } as unknown as Parameters<typeof registerViewTools>[0],
+            async () => undefined,
+        );
+        return views;
+    }
+
+    const sources = [
+        ...fs
+            .readdirSync(path.join(__dirname, '../../src/features/project-creation/templates/skills'))
+            .map((f) => `src/features/project-creation/templates/skills/${f}`),
+        'src/features/project-creation/services/aiBundle/agentsMdSections.ts',
+        'src/features/project-creation/services/aiBundle/agentsMdStorefrontSections.ts',
+        'src/features/project-creation/services/aiBundle/agentsMdAdobeSections.ts',
+        'src/features/project-creation/services/aiBundle/homeAiContextWriter.ts',
+    ];
+
+    it('CONTROL: the enum was read and the corpus names open_view somewhere', () => {
+        expect(acceptedViews()).toContain('projects_list');
+        const all = sources.map((f) => fs.readFileSync(path.join(__dirname, '../..', f), 'utf-8')).join('\n');
+        expect(all).toMatch(/open_view view="/);
+    });
+
+    it('names only accepted views', () => {
+        const accepted = new Set(acceptedViews());
+        const bad: string[] = [];
+        for (const file of sources) {
+            const text = fs.readFileSync(path.join(__dirname, '../..', file), 'utf-8');
+            for (const m of text.matchAll(/open_view view="([^"]+)"/g)) {
+                if (!accepted.has(m[1])) bad.push(`${file}: ${m[1]}`);
+            }
+        }
+        expect(bad).toStrictEqual([]);
     });
 });

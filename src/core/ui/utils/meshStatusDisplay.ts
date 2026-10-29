@@ -15,14 +15,14 @@
 import {
     getStatusDisplay,
     severityToColor,
-    severityToVariant,
+    severityToDot,
     type StatusColor,
-    type StatusVariant,
+    type StatusDotTone,
 } from './statusVocabulary';
 
 export type MeshStatusColor = StatusColor;
 
-export type MeshStatusVariant = StatusVariant;
+export type MeshStatusVariant = StatusDotTone;
 
 export interface MeshStatusDisplay {
     text: string;
@@ -41,6 +41,6 @@ export function getMeshStatusDisplay(status: string | undefined): MeshStatusDisp
     return {
         text: entry.label,
         color: severityToColor(entry.severity),
-        variant: severityToVariant(entry.severity),
+        variant: severityToDot(entry.severity),
     };
 }

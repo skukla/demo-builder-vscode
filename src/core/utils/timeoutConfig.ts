@@ -77,6 +77,25 @@ export const TIMEOUTS = {
 
         /** Fallback timeout for MutationObserver-based focus management */
         FOCUS_FALLBACK: 1000,
+
+        /**
+         * How long a finished operation's modal shows its result before closing
+         * itself (owner, 2026-09-20: "show success, then auto-close").
+         *
+         * Long enough to register a tick and a line of text, and no longer: at 3s
+         * it "sits too long" (owner, 2026-09-20, watching a real republish). The
+         * SC has been looking at this window for the whole run, so the result is
+         * a confirmation rather than something to read from cold. A failure never
+         * auto-closes — only a success, where there is nothing to act on.
+         */
+        RESULT_GLANCE: 1500,
+
+        /**
+         * How long the projects list waits after a project file changes before it
+         * reloads. Creation writes the file several times in a burst; one reload
+         * after the burst is enough.
+         */
+        PROJECT_LIST_SETTLE: 500,
     },
 
     // =========================================================================
@@ -104,6 +123,13 @@ export const TIMEOUTS = {
     AUTH: {
         /** Browser-based authentication flow (1 minute) */
         BROWSER: 60000,
+
+        /**
+         * A person signing in to Adobe in their browser (5 minutes). One minute was
+         * the limit until 2026-10-23, and it ran out while the SC was still looking
+         * for a browser window that had never opened.
+         */
+        SIGN_IN: 300000,
 
         /** Full OAuth flow with callback (2 minutes) */
         OAUTH: 120000,
@@ -142,8 +168,22 @@ export const TIMEOUTS = {
      *  exceeding 10s on a real org. Bounding it at 10s turned a slow SUCCESS into
      *  a fast failure — worse for the user than the unbounded call it replaced.
      *  Generous enough that a slow-but-working endpoint still lands, while still
-     *  capping a genuine hang (the picker surfaces failures with a Retry). */
-    ORG_SERVICES_FETCH: 60000,
+     *  capping a genuine hang (the picker surfaces failures with a Retry).
+     *  Raised 60s → 150s on 2026-09-19: the call measured 43s, 52s, 63s, 92s and
+     *  131s across 2026-08-27 to 09-19, and at 60s it failed a Bodea move whose
+     *  new credential had to take the full subscribe path. */
+    ORG_SERVICES_FETCH: 150000,
+
+    /** Deadline for the READ that asks whether a credential already holds every
+     *  API needed (`apiSubscriber.ts`, the shortcut past the full subscribe).
+     *  Short on purpose, and for the opposite reason to ORG_SERVICES_FETCH: this
+     *  call's only job is to SAVE time, so a slow answer is worth nothing. Three
+     *  of four Bodea deploys on 2026-09-19 had it 504 ("upstream request
+     *  timeout") after ~60s, and each paid that minute before taking the full
+     *  path anyway — the one that answered finished the whole step in 11.7s.
+     *  Giving up at 10s turns the bad case into 10s plus the full path, which is
+     *  always correct, only slower. */
+    CREDENTIAL_PROBE: 10000,
 
     /** Pause between the tries of one org-services request (3 tries — see
      *  `ORG_SERVICES_ATTEMPTS` in `adobeOrgServices.ts`). Adobe's own error
@@ -153,6 +193,15 @@ export const TIMEOUTS = {
      *  the shared request, so the Manage APIs spinner waits through them rather
      *  than showing an error while a retry it cannot see carries on. */
     ORG_SERVICES_RETRY_DELAY: 2000,
+
+    /** Between looks at a project's workspaces after a delete answered an error.
+     *  Adobe's gateway gives up at 60s while the delete carries on: on 2026-09-21
+     *  a look 7s after a 504 still listed the workspace, and it was gone soon after. */
+    WORKSPACE_DELETE_RECHECK: 15000,
+
+    /** Between rounds of asking a new mesh which address it answers on — the edge
+     *  can take a few seconds to know a mesh Adobe already calls deployed. */
+    MESH_ENDPOINT_PROBE_INTERVAL: 5000,
 
     /** Initial wait before first mesh verification poll (20 seconds) */
     MESH_VERIFY_INITIAL_WAIT: 20000,
@@ -172,11 +221,14 @@ export const TIMEOUTS = {
     /** Update message delay (2 seconds) */
     UPDATE_MESSAGE_DELAY: 2000,
 
-    /** Update result display time (3 seconds) */
-    UPDATE_RESULT_DISPLAY: 3000,
-
     /** Demo stop wait time (2 seconds) */
     DEMO_STOP_WAIT: 2000,
+
+    /**
+     * Between a code file published again and the next look at the CDN (10 seconds):
+     * how long AEM's copy of a repository takes to catch up with a push.
+     */
+    CODE_SERVED_RECHECK: 10000,
 
     /** Demo status update delay (1 second) */
     DEMO_STATUS_UPDATE_DELAY: 1000,
@@ -210,6 +262,25 @@ export const TIMEOUTS = {
 
     /** Auto-update check interval (4 hours) */
     AUTO_UPDATE_CHECK_INTERVAL: 4 * 60 * 60 * 1000,
+
+    /**
+     * How long a Helix status job (the listing of a site's published paths, EDS-26) may
+     * run before the listing is given up as failed: 2 minutes. Polled every
+     * `POLL.INTERVAL`.
+     */
+    HELIX_STATUS_JOB_MAX: 2 * 60 * 1000,
+
+    /**
+     * How often a Commerce bulk write's status is read while its operations are open
+     * (AB-74): every 3 seconds. 43 product saves completed in 15 s on the sandbox.
+     */
+    COMMERCE_BULK_POLL_INTERVAL: 3000,
+
+    /**
+     * How long a Commerce bulk write is followed before the follow stops and says how many
+     * operations are still open: 10 minutes. A single product save took up to 120 s on ACCS.
+     */
+    COMMERCE_BULK_MAX: 10 * 60 * 1000,
 
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
@@ -264,6 +335,11 @@ export const TIMEOUTS = {
 
     /** EDS code sync poll interval (5 seconds) */
     EDS_CODE_SYNC_POLL: 5000,
+
+    /** How long a setup run waits for the AEM Code Sync GitHub App once it has shown the
+     * install dialog (30 minutes). The run polls at EDS_CODE_SYNC_POLL and resumes where it
+     * paused (EDS-20, 2026-09-25); this is the point at which it stops waiting and says so. */
+    EDS_CODE_SYNC_INSTALL_WAIT: 30 * 60 * 1000,
 
     /** Delay before retrying Configuration Service registration on new repos (30 seconds).
      * Used as the base delay; retryRegistrationAfterDelay multiplies it to 30/45/60s for backoff.
@@ -329,6 +405,11 @@ export const TIMEOUTS = {
      *  VERY_LONG (5 min) was observed too tight: the webview showed a timeout
      *  error while the teardown kept running extension-side. */
     PROJECT_TEARDOWN: 900_000,
+    /** Applying the ticked rows in the Updates modal (PL-80): every project's updates in
+     *  one run, several integration pairs among them, each a deploy of minutes. The
+     *  progress modal follows the run regardless; this is how long the screen waits for
+     *  the report at the end. */
+    UPDATES_APPLY: 1_800_000,
 } as const;
 
 /**

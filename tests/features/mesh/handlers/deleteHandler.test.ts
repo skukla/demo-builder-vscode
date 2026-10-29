@@ -25,6 +25,8 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 // Record the target rather than stubbing it out — the assertion IS the target.
 // buildOrgTargetFromProjectAdobe is pure, so the real one is used.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
@@ -34,10 +36,6 @@ jest.mock('@/core/shell/orgContextEnv', () => ({
 }));
 
 jest.mock('@/core/di/serviceLocator');
-jest.mock('@/core/utils/meshConfig', () => ({
-    getMeshNodeVersion: () => '20',
-}));
-
 describe('handleDeleteApiMesh — org targeting', () => {
     let mockContext: HandlerContext;
     let mockCommandExecutor: any;
@@ -49,10 +47,12 @@ describe('handleDeleteApiMesh — org targeting', () => {
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: 'deleted', stderr: '' }),
         };
 
-        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue({
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        });
+        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(
+            poolUnits({
+                isAuthenticated: jest.fn().mockResolvedValue(true),
+                getCachedOrganization: jest.fn().mockReturnValue(undefined),
+            })
+        );
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         mockContext = createMockHandlerContext({
@@ -86,7 +86,7 @@ describe('handleDeleteApiMesh — org targeting', () => {
         expect(mockCommandExecutor.execute).toHaveBeenCalledWith(MESH_DELETE_COMMAND, {
             timeout: TIMEOUTS.NORMAL,
             configureTelemetry: false,
-            useNodeVersion: '20',
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
         });
     });
@@ -109,10 +109,12 @@ describe('handleDeleteApiMesh — org targeting', () => {
      */
     describe('refuses to run at all without Adobe sign-in', () => {
         beforeEach(() => {
-            (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue({
-                isAuthenticated: jest.fn().mockResolvedValue(false),
-                getCachedOrganization: jest.fn().mockReturnValue(undefined),
-            });
+            (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(
+                poolUnits({
+                    isAuthenticated: jest.fn().mockResolvedValue(false),
+                    getCachedOrganization: jest.fn().mockReturnValue(undefined),
+                })
+            );
         });
 
         it('reports the refusal and never reaches the CLI', async () => {

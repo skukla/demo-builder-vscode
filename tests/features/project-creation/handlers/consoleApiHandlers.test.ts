@@ -15,6 +15,7 @@ import { getAppBuilderComponentEntry } from '@/features/components/services/appB
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 const mockGetServicesForOrg = jest.fn();
 jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
@@ -28,11 +29,11 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
 const mockIsAuthenticated = jest.fn();
 const mockGetCachedOrganization = jest.fn();
 const mockGetOrganizationsSdkOnly = jest.fn();
-const mockAuthService = {
+const mockAuthService = poolUnits({
     isAuthenticated: mockIsAuthenticated,
     getCachedOrganization: mockGetCachedOrganization,
     getOrganizationsSdkOnly: mockGetOrganizationsSdkOnly,
-};
+});
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => mockAuthService),

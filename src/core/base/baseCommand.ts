@@ -1,5 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { createWorkingProjectStateManager } from '@/core/state/workingProjectStateManager';
+import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
 import { DisposableStore } from '@/core/utils/disposableStore';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -77,7 +79,24 @@ export abstract class BaseCommand implements vscode.Disposable {
         this.logger = logger;
     }
 
-    public abstract execute(): Promise<void>;
+    /**
+     * Run the command. Most answer nothing — the palette ignores a return value
+     * and the command reports to the SC itself. A command a SCREEN can also
+     * start returns its outcome, so the screen's progress modal knows whether to
+     * close or to show why it stopped (PL-59).
+     */
+    public abstract execute(...args: unknown[]): Promise<unknown>;
+
+    /**
+     * The state a run acts on: the named project's, when a screen or an agent passed
+     * one, else the current project's (AI-15). A screen shown for project A runs
+     * "Start" on A even after another project became current. Anything but a path (a
+     * tree item from a menu, nothing from the palette) means the current project.
+     */
+    protected stateFor(projectPath: unknown): StateManager {
+        if (typeof projectPath !== 'string' || !projectPath) return this.stateManager;
+        return createWorkingProjectStateManager(this.stateManager, () => projectPath);
+    }
 
     /**
      * Dispose all resources owned by this command
@@ -92,10 +111,21 @@ export abstract class BaseCommand implements vscode.Disposable {
         this.disposables.dispose();
     }
 
+    /**
+     * Run `task` under a progress notification — unless an agent started it.
+     *
+     * An agent's tool call already shows its own notification, and the steps reach it
+     * through the phase channel; opening a second one only stacks cards (start/stop
+     * demo showed two, PL-59). So under an agent the task's messages go to the
+     * agent's notification instead, as `withProgressRegister` has done since AI-6.
+     */
     protected async withProgress<T>(
         title: string,
         task: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<T>,
     ): Promise<T> {
+        if (hasActivePhaseSinks()) {
+            return task({ report: ({ message }) => reportPhase(message ?? '') });
+        }
         return vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,

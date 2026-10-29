@@ -10,6 +10,7 @@
 import { handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import type { HandlerContext } from '@/types/handlers';
 import { createAuthHandlerContext, mockOrg, mockProject } from './testUtils';
+import { entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 describe('authenticationHandlers - handleAuthenticate - Re-authentication', () => {
 	let mockContext: jest.Mocked<HandlerContext>;
@@ -22,10 +23,10 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 	describe('already authenticated scenarios', () => {
 		it('should skip authentication when already authenticated and force=false', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
-			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-			(mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
-			(mockContext.authManager!.wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+			(mockContext.authManager!.getCacheManager().wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
 
 			const result = await handleAuthenticate(mockContext, { force: false });
 
@@ -41,22 +42,22 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 
 		it('should initialize SDK when skipping authentication (already authenticated)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
-			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-			(mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
-			(mockContext.authManager!.wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+			(mockContext.authManager!.getCacheManager().wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
 
 			await handleAuthenticate(mockContext, { force: false });
 
-			expect(mockContext.authManager!.ensureSDKInitialized).toHaveBeenCalled();
+			expect(mockContext.authManager!.getSdkClient().ensureInitialized).toHaveBeenCalled();
 		});
 
 		it('should handle orgLacksAccess when skipping auth (already authenticated but no org)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
-			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(undefined);
-			(mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
-			(mockContext.authManager!.wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(true);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(undefined);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getCacheManager().wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(true);
 
 			await handleAuthenticate(mockContext, { force: false });
 
@@ -77,9 +78,9 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 		it('should force re-authentication when force=true', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			const result = await handleAuthenticate(mockContext, { force: true });
 
@@ -89,12 +90,12 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 
 		it('should send "opening browser" message with force flag text', async () => {
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
 			(mockContext.authManager!.testDeveloperPermissions as jest.Mock).mockResolvedValue({
 				hasPermissions: true,
 			});
-			(mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
 
 			await handleAuthenticate(mockContext, { force: true });
 
@@ -110,11 +111,11 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 	describe('already authenticated — the final status, field by field', () => {
 		beforeEach(() => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 		});
 
 		it('with a current org: already signed in, connected to it, no selection needed', async () => {
-			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
 
 			const result = await handleAuthenticate(mockContext);
 
@@ -133,7 +134,7 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 		});
 
 		it('with an org that has no name: connected to "your organization"', async () => {
-			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue({
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue({
 				...mockOrg,
 				name: '',
 			});
@@ -147,8 +148,8 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 		});
 
 		it('with no org and no validation clearing: already signed in, selection needed', async () => {
-			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(undefined);
-			(mockContext.authManager!.wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getCacheManager().wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
 
 			await handleAuthenticate(mockContext);
 

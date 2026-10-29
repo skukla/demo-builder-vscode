@@ -2,13 +2,14 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { flattenArchiveRoot } from './archiveRoot';
-import { mergeEnvContent, parseEnvFile } from './envMerge';
+import { ENV_VAR_RENAMES, mergeEnvContent, parseEnvFile } from './envMerge';
 import { isMeshComponentId } from '@/core/constants';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { nodeForInstall } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { Project } from '@/types/base';
+import type { ComponentInstance, Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
@@ -21,11 +22,6 @@ import { parseJSON } from '@/types/typeGuards';
  * these should find the same shape wherever a build or deploy step failed.
  */
 const BUILD_OUTPUT_LOG_LIMIT = 500;
-
-/** The node version a catalog entry asks for, or null when it does not say. */
-function nodeVersionOf(componentDef: TransformedComponentDefinition | undefined): string | null {
-    return componentDef?.configuration?.nodeVersion || null;
-}
 
 export class ComponentUpdater {
     private logger: Logger;
@@ -117,6 +113,9 @@ export class ComponentUpdater {
                 // 6. Restore and merge .env files (with programmatic write suppression)
                 await this.mergeEnvFiles(component.path, envFiles);
 
+                // 6.5. Record the Node it was just installed under, so Start Demo runs it there
+                await this.recordNodeVersion(component, componentId);
+
                 // 7. Update version tracking ONLY after successful verification
                 if (!project.componentVersions) {
                     project.componentVersions = {};
@@ -128,9 +127,7 @@ export class ComponentUpdater {
 
                 // Also update componentInstances.version to stay in sync
                 // (projectFileLoader.discoverComponents prefers this over componentVersions)
-                if (project.componentInstances?.[componentId]) {
-                    project.componentInstances[componentId].version = newVersion;
-                }
+                component.version = newVersion;
 
                 this.logger.info(`[Updates] Successfully updated ${componentId} to ${newVersion}`);
 
@@ -158,7 +155,7 @@ export class ComponentUpdater {
                     // During rollback, we just want to get dependencies installed
                     let nodeVersion: string | null = null;
                     try {
-                        nodeVersion = nodeVersionOf(await this.componentDefinition(componentId));
+                        nodeVersion = nodeForInstall(await this.componentDefinition(componentId));
                     } catch (_error) {
                         this.logger.debug('[Updates] Could not determine node version from registry, using default');
                     }
@@ -284,6 +281,19 @@ export class ComponentUpdater {
     }
 
     /**
+     * Rewrite the component's recorded Node (`metadata.nodeVersion`) to the Node the
+     * update just installed it under (`nodeForInstall`: Demo Builder's Node, PR-1a).
+     * Start Demo reads the record, so without this a moved Node moved the install
+     * and left `npm run dev` on the old one. A component that installs nothing (an
+     * EDS storefront) keeps whatever it had.
+     */
+    private async recordNodeVersion(instance: ComponentInstance, componentId: string): Promise<void> {
+        const declared = nodeForInstall(await this.componentDefinition(componentId));
+        if (!declared) return;
+        instance.metadata = { ...instance.metadata, nodeVersion: declared };
+    }
+
+    /**
      * Run post-update setup: install dependencies and optionally build
      *
      * After extracting a new component version from a zipball, node_modules is missing.
@@ -293,7 +303,7 @@ export class ComponentUpdater {
     private async runPostUpdateBuild(componentPath: string, componentId: string): Promise<void> {
         const componentDef = await this.componentDefinition(componentId);
 
-        const nodeVersion = nodeVersionOf(componentDef);
+        const nodeVersion = nodeForInstall(componentDef);
         const skipNpmInstall = componentDef?.configuration?.skipNpmInstall === true;
         const buildScript = componentDef?.configuration?.buildScript;
 
@@ -498,7 +508,7 @@ export class ComponentUpdater {
                 continue;
             }
       
-            const mergedContent = mergeEnvContent(oldContent, newTemplate);
+            const mergedContent = mergeEnvContent(oldContent, newTemplate, ENV_VAR_RENAMES);
             await fs.writeFile(envPath, mergedContent, 'utf-8');
       
             const addedKeys = Array.from(parseEnvFile(newTemplate).keys()).filter(

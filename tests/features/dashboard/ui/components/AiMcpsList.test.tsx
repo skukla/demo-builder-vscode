@@ -57,6 +57,39 @@ describe('AiMcpsList', () => {
         );
     });
 
+    // Owner, 2026-10-22: "Demo Builder MCP · 168 tools" was noise. One plain
+    // line per server, no middle dot, saying what the number means to an SC.
+    it('reads a healthy server as one plain line: its name, then the tools the AI can call', () => {
+        renderList({
+            mcps: [
+                {
+                    id: 'demo-builder',
+                    status: 'ok',
+                    tools: [
+                        { name: 'a', description: 'd' },
+                        { name: 'b', description: 'd' },
+                    ],
+                },
+            ],
+        });
+
+        const row = screen.getByTestId('ai-mcp-demo-builder');
+        expect(row).toHaveTextContent(/^Demo Builder MCP: 2 tools your AI can call$/);
+        expect(row.textContent).not.toContain('·');
+    });
+
+    it('keeps the middle dot out of the problem rows too', () => {
+        renderList({
+            mcps: [
+                { id: 'slow', status: 'timeout' },
+                { id: 'broken', status: 'error', error: 'spawn failed' },
+            ],
+        });
+
+        expect(screen.getByTestId('ai-mcp-slow')).toHaveTextContent(/^slow: timed out$/);
+        expect(screen.getByTestId('ai-mcp-broken')).toHaveTextContent(/^broken: failed \(spawn failed\)$/);
+    });
+
     it('shows "1 tool" (singular) for a server with one tool', () => {
         renderList({
             mcps: [{ id: 'single', status: 'ok', tools: [{ name: 'only', description: 'd' }] }],
@@ -112,7 +145,7 @@ describe('AiMcpsList', () => {
         // diagnostic. The row must still read as a failure rather than
         // trailing off after the label.
         renderList({ mcps: [{ id: 'mute', status: 'error' }] });
-        expect(screen.getByTestId('ai-mcp-mute')).toHaveTextContent(/error/i);
+        expect(screen.getByTestId('ai-mcp-mute')).toHaveTextContent(/^mute: failed$/);
     });
 
     it('shows a plain-language empty state when there are no MCPs', () => {

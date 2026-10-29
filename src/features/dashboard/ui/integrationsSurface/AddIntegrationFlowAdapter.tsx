@@ -31,17 +31,18 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { liveAddBuilder } from './liveAddBuilder';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
 import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
+import {
+    ASK_ABOUT_OPEN_PROJECT,
+    useErpIntegrationHolder,
+} from '@/features/project-creation/ui/hooks/useErpIntegrationHolder';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { WizardState } from '@/types/webview';
-import type {
-    AddAppBuilderComponentRequestPayload,
-    DestinationRef,
-    SetProjectDestinationRequestPayload,
-} from '@/types/webviewRequests';
+import type { AddAppBuilderComponentRequestPayload, DestinationRef } from '@/types/webviewRequests';
 
 export interface AddIntegrationFlowAdapterProps {
     isOpen: boolean;
@@ -74,12 +75,21 @@ export interface AddIntegrationFlowAdapterProps {
      * for a custom repo the instance the SC named, else `owner-repo` and the repo
      * (`buildCustomIntegrationEntry`).
      */
-    onAddStarted?: (id: string, name: string) => void;
-}
-
-/** Post an add whose steps narrate to the progress modal. */
-function postAdd(payload: AddAppBuilderComponentRequestPayload): void {
-    webviewClient.postMessage('addAppBuilderComponent', { ...payload, progress: 'modal' });
+    onAddStarted?: (id: string, name: string, payload?: Record<string, unknown>) => void;
+    /**
+     * An add that prepares the store (the ERP integration) waits for its confirm, which
+     * sends it (owner, 2026-10-22). Without this it is sent at once.
+     */
+    onConfirmAdd?: (target: { id: string; name: string; payload: AddAppBuilderComponentRequestPayload }) => void;
+    /**
+     * A destination was chosen (mode `destination`). The move itself belongs to
+     * the SCREEN, which hosts the progress modal it narrates into — this only
+     * says which project and workspace were picked (PL-59 slice 5).
+     */
+    onDestinationChosen?: (chosen: {
+        project: DestinationRef;
+        workspace: DestinationRef;
+    }) => void;
 }
 
 export function AddIntegrationFlowAdapter({
@@ -94,12 +104,20 @@ export function AddIntegrationFlowAdapter({
     adobeOrgId,
     mode = 'add',
     onAddStarted,
+    onConfirmAdd,
+    onDestinationChosen,
 }: AddIntegrationFlowAdapterProps): React.ReactElement {
     // Read through a ref: the builder callbacks below are memoised once.
     const onAddStartedRef = useRef(onAddStarted);
     onAddStartedRef.current = onAddStarted;
+    const onConfirmAddRef = useRef(onConfirmAdd);
+    onConfirmAddRef.current = onConfirmAdd;
+    const onDestinationChosenRef = useRef(onDestinationChosen);
+    onDestinationChosenRef.current = onDestinationChosen;
     const catalogRef = useRef(catalog);
     catalogRef.current = catalog;
+    const componentsRef = useRef(appBuilderComponents);
+    componentsRef.current = appBuilderComponents;
 
     // A REAL state store for the modal session, not a filter.
     //
@@ -131,6 +149,10 @@ export function AddIntegrationFlowAdapter({
     // project and the workspace in separate commits, and the post fires on the
     // second — a setState-backed read would still see the previous render's value.
     const destinationRef = useRef<{ project?: DestinationRef; workspace?: DestinationRef }>({});
+    // Whether the live project already deploys somewhere. When it does not, the add
+    // journey's own destination steps choose one, and the add must carry it.
+    const hadDestinationRef = useRef(Boolean(adobeProjectId));
+    hadDestinationRef.current = Boolean(adobeProjectId);
 
     const updateState = useCallback(
         (updates: Partial<WizardState>): void => {
@@ -149,10 +171,10 @@ export function AddIntegrationFlowAdapter({
             // destination did nothing at all (found live 2026-08-07).
             const { project, workspace } = destinationRef.current;
             if (mode === 'destination' && updates.adobeWorkspace && project && workspace) {
-                webviewClient.postMessage('setProjectDestination', {
-                    project,
-                    workspace,
-                } satisfies SetProjectDestinationRequestPayload);
+                // Handed UP rather than posted here: the screen owns the progress
+                // modal this move narrates into, so the screen sends the message
+                // (PL-59 slice 5).
+                onDestinationChosenRef.current?.({ project, workspace });
             }
 
             setOverrides((current) => ({ ...current, ...updates }));
@@ -183,11 +205,15 @@ export function AddIntegrationFlowAdapter({
 
     const state = useMemo(
         () => ({
-            // A live project IS authenticated and org-scoped — the surface only
-            // renders with hasAdobeContext. Without BOTH of these isAdobeSignedIn()
-            // is false and the flow walks sign-in → project → workspace instead of
-            // collapsing to the summary.
-            adobeAuth: { isAuthenticated: true, isChecking: false },
+            // A project with an Adobe org is signed in and org-scoped, so the flow
+            // collapses to the summary. One with none (created with no integration
+            // and no mesh, so nothing ever signed it in) starts signed out, as the
+            // wizard does: the flow walks sign-in → project → workspace, the sign-in
+            // step's own check writes the real state over this, and the first add
+            // records the destination under the signed-in org (release walk
+            // 2026-10-28). Said signed-in with no org, the step showed "Select Your
+            // Organization" first.
+            adobeAuth: { isAuthenticated: Boolean(adobeOrgId), isChecking: false },
             adobeOrg: adobeOrgId ? { id: adobeOrgId } : undefined,
             adobeProject: adobeProjectId
                 ? { id: adobeProjectId, title: adobeProjectTitle }
@@ -228,36 +254,23 @@ export function AddIntegrationFlowAdapter({
 
     // The wizard stages these into its draft; here each one deploys.
     const builder = useMemo(
-        () => ({
-            onAppBuilderComponentToggle: (id: string, selected: boolean): void => {
-                if (selected) {
-                    postAdd({ id, apis: apiPicksRef.current[id] });
-                    const name = catalogRef.current.find((entry) => entry.id === id)?.name;
-                    onAddStartedRef.current?.(id, name ?? id);
-                }
-            },
-            onAddCustomAppBuilderComponent: (
-                source: { owner: string; repo: string },
-                instance?: { id: string; name: string },
-            ): void => {
-                // BOTH halves of the instance identity: the name the user typed
-                // AND the collision-checked id. Sending only the name let the id
-                // fall back to `${owner}-${repo}`, so the card came back titled
-                // "skukla-app-builder-shell" instead of what they named it.
-                // Picks key under the instance id for a named blank, else the
-                // owner-repo slug useProjectBuilder derives — the same key
-                // useIntegrationFlow just wrote them under.
-                const picksKey = instance ? instance.id : `${source.owner}-${source.repo}`;
-                postAdd({
-                    source,
-                    ...(instance ? { name: instance.name, instanceId: instance.id } : {}),
-                    apis: apiPicksRef.current[picksKey],
-                });
-                onAddStartedRef.current?.(picksKey, instance?.name ?? source.repo);
-            },
-        }),
+        () =>
+            liveAddBuilder({
+                catalog: catalogRef,
+                components: componentsRef,
+                apiPicks: apiPicksRef,
+                destination: destinationRef,
+                hadDestination: hadDestinationRef,
+                onAddStarted: onAddStartedRef,
+                onConfirmAdd: onConfirmAddRef,
+            }),
         [],
     );
+
+    // One Commerce instance runs one ERP integration (AB-78): while the add journey
+    // is open, ask whether another project already runs one on this project's
+    // instance, so the gallery greys it out the way it does an added mesh.
+    const erpHolder = useErpIntegrationHolder(isOpen && mode === 'add' ? ASK_ABOUT_OPEN_PROJECT : undefined);
 
     // The DASHBOARD webview registers `reAuthenticate` (not the wizard's
     // `authenticate`); it awaits the browser sign-in and returns when done, so the
@@ -276,6 +289,7 @@ export function AddIntegrationFlowAdapter({
             updateState={updateState}
             meshComponent={meshComponent}
             catalog={catalog}
+            unavailable={erpHolder}
             blankComponent={blankComponent}
             reservedIds={reservedIds}
             builder={builder}

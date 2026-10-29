@@ -8,7 +8,9 @@
 import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ServiceDefinition } from './components';
+import type { ErpAssignmentRecord, ErpOwnerSetsRecord } from './erpAssign';
 import type { AddedDemo } from './projectFile';
+import type { CommerceConfigChangeRecord, StorePreparationRecord } from './storePreparation';
 
 /**
  * AiPrompt - A user-saved AI prompt
@@ -42,7 +44,7 @@ export interface AiPrompt {
  * Project - Core project definition
  */
 
-/** What "Save as demo package" left behind, so it can be undone exactly. */
+/** What Share Demo's link save left behind, so it can be undone exactly. */
 export interface SavedDemoPackage {
     /** Blob sha of the description file as we last wrote it. */
     fileSha: string;
@@ -125,7 +127,7 @@ export interface Project {
     /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */
     selectedAddons?: string[];
     /**
-     * "Save as demo package" wrote the description file into this project's
+     * Share Demo's link save wrote the description file into this project's
      * storefront repository: the blob sha GitHub answered (the proof the file is
      * ours, so a hand edit is never clobbered and Remove takes out only what we
      * wrote). Absent when the storefront is not a demo package.
@@ -170,6 +172,17 @@ export interface Project {
         lastPublished: string; // ISO date string
         userDeclinedUpdate?: boolean; // User clicked "Later" on republish prompt
         declinedAt?: string; // ISO date string when user declined
+        /**
+         * Set when a published config.json changed the store (website, store or store
+         * view code) and the storefront's product and category pages are still the
+         * previous store's (EDS-44). Names that previous store. Cleared once a
+         * republish has replaced the pages (`storeScopePages.ts`).
+         */
+        catalogPagesPending?: {
+            fromWebsiteCode: string;
+            fromStoreCode: string;
+            fromStoreViewCode: string;
+        };
     };
     // EDS Storefront status summary for card grid display
     edsStorefrontStatusSummary?: 'published' | 'stale' | 'update-declined' | 'not-published';
@@ -249,13 +262,46 @@ export interface Project {
      * Pin/Unpin kebab item.
      */
     pinned?: boolean;
+    /**
+     * The values the settings held before `set_commerce_config`'s last write (AB-77), so the
+     * same tool can put them back (`undo: true`). Replaced by each write.
+     */
+    commerceConfigChange?: CommerceConfigChangeRecord;
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;
 }
 
-/** An App Builder component's kind: a mesh artifact or a custom App Builder integration. */
-export type AppBuilderComponentKind = 'mesh' | 'integration';
+/** What names a Commerce instance: the backend chosen, and the values typed for it. */
+export type CommerceSource = Pick<Project, 'componentSelections' | 'componentConfigs'>;
+
+/**
+ * An App Builder component's kind: a mesh artifact, an App Builder integration,
+ * or a SYSTEM — a stand-in for an external system an integration talks to (the
+ * demo ERP). A system is a plain App Builder app with no Commerce install; it
+ * never gets a card of its own and comes and goes with the integration it is
+ * bound to (`AppBuilderComponentCatalogEntry.boundTo`; decision 13, 2026-09-14).
+ */
+export type AppBuilderComponentKind = 'mesh' | 'integration' | 'system';
+
+/** One setup step's saved state: marked done or dismissed, and what its last check said. */
+export interface SetupStepRecord {
+    /** Absent = still to do. */
+    state?: 'done' | 'dismissed';
+    /** What the last automatic check found, in words (e.g. which companies share a group). */
+    note?: string;
+    /**
+     * What that check concluded: set up, not set up, or it could not tell (the state is
+     * then left as it was, so the state alone cannot say). Absent on records saved before
+     * 2026-10-01; `setupChecklistOf` infers it from the state for those.
+     */
+    lastCheck?: SetupCheckOutcome;
+    /** When that check ran (ISO). */
+    checkedAt?: string;
+}
+
+/** What a setup check concluded. */
+export type SetupCheckOutcome = 'passed' | 'failed' | 'unknown';
 
 /**
  * Keyed appBuilderComponent state (Model B). One concept replaces the singular
@@ -264,6 +310,12 @@ export type AppBuilderComponentKind = 'mesh' | 'integration';
  */
 export interface AppBuilderComponentState {
     kind: AppBuilderComponentKind;
+    /**
+     * The Node this component installs and deploys on, recorded only when it is NOT
+     * Demo Builder's own: a custom integration whose `engines.node`
+     * range excludes it (PR-1a). Redeploy, update, teardown and cleanup read it back.
+     */
+    nodeVersion?: string;
     /**
      * `'deploying'` is TRANSIENT: written when a deploy starts so pollers
      * (agents reading get_project, the grid) can tell an in-flight run from a
@@ -274,9 +326,65 @@ export interface AppBuilderComponentState {
      * next deploy or verify corrects it.
      */
     status: 'deployed' | 'deploying' | 'stale' | 'error' | 'not-deployed';
+    /**
+     * The id this component declares to Commerce (App Management apps only, and only
+     * for a COPY — the first of a kind keeps the id its app ships with).
+     *
+     * Written the first time the copy deploys and never rewritten: Commerce names its
+     * webhooks and events from it and refuses to change it on an upgrade, so a later
+     * rename moves the label and leaves this alone (`commerceAppId.ts`).
+     */
+    commerceAppId?: string;
+    /**
+     * For a system its integration serves in a list (`listedAs`): its id in that list,
+     * derived from its name when it was added (`northwind` for "Northwind ERP") and never
+     * rewritten — it is on every product it owns, every key-map row and every event, so
+     * a later rename moves the label and leaves this alone (`erpListId.ts`, AB-51).
+     */
+    listId?: string;
     /** Display name for the integration (durable home for the user-facing name). */
     name?: string;
+    /**
+     * Where the SC is with each of the catalog entry's `setupSteps` (AB-26x), by step id.
+     * Absent = open. Removed with the component.
+     */
+    setupSteps?: Record<string, SetupStepRecord>;
+    /**
+     * An ERP's last "Assign products" (AB-74): the value written and each product's
+     * `erp_owner` before it, so "Undo last assignment" can put them back. Replaced by the
+     * next assignment, removed by the undo, and removed with the component.
+     */
+    erpAssignment?: ErpAssignmentRecord;
+    /**
+     * The ERP integration's record of the attribute sets Demo Builder added `erp_owner` to
+     * (AB-74), so the addition can be undone. Removed by the undo and with the component.
+     */
+    erpOwnerSets?: ErpOwnerSetsRecord;
+    /**
+     * What the demo setup's Apply changed in Commerce for this component's setup steps (AB-77),
+     * by step id, so each can be undone. A step's entry goes with its undo; the record goes
+     * with the component.
+     */
+    storePreparation?: StorePreparationRecord;
+    /**
+     * The catalog entry this component was made from, when its id is not that entry's
+     * id: a second copy of a kind the project already holds (`demo-erp-2`). ABSENT
+     * means the id IS the catalog id — every component before this, and the first of
+     * each kind. Read through `catalogEntryFor`.
+     */
+    catalogId?: string;
     source: { owner: string; repo: string; branch?: string };
+    /**
+     * Set when Demo Builder saved this app to a repository of its own (AB-1c):
+     * `source` is then that repository, and `from` is where the app came from (the
+     * blank starter). Its presence is the proof the undo needs to delete the
+     * repository; the undo restores `from` and removes this.
+     */
+    promotion?: {
+        from: { owner: string; repo: string; branch?: string };
+        /** ISO date string of the save. */
+        at: string;
+    };
     endpoint?: string; // mesh GraphQL endpoint
     url?: string; // integration primary URL
     deployedUrls?: Record<string, string>;
@@ -303,11 +411,81 @@ export interface AppBuilderComponentState {
      * merely dormant until installed (Commerce Admin > Apps > App Management).
      */
     installation?: {
-        status: 'installed' | 'skipped' | 'failed';
+        status: 'installed' | 'upgraded' | 'skipped' | 'failed';
         detail?: string;
         /** ISO date string of the attempt. */
         at?: string;
+        /** The app version installed in Commerce (its manifest's `metadata.version`), when known. */
+        version?: string;
+        /** The installed app cannot be upgraded in place; a reinstall would apply the new version. */
+        needsReinstall?: boolean;
     };
+    /**
+     * Newer code is available: the source branch on GitHub has commits the
+     * clone lacks, the clone is at a commit the last good deploy did not ship
+     * (`deployedCommit`), or the clone's app version differs from the one
+     * installed in Commerce. Set by the integrations screen's check, removed by a
+     * successful update (integrationUpdateCheck).
+     */
+    updateAvailable?: {
+        /** The commit an update would put live: the branch head, or a fetched commit never deployed. */
+        commit?: string;
+        /** The version in the clone, when it differs from the installed one. */
+        version?: string;
+        /** ISO date string of the check. */
+        checkedAt: string;
+    };
+    /**
+     * The commit the last SUCCESSFUL deploy shipped: the clone's HEAD when the deploy
+     * ran. Written by every app deploy (add, redeploy, update) that succeeds, never by
+     * one that fails, so it names the code that is running (AB-71). Update and the
+     * update check compare the clone with it: a clone an earlier update moved, whose
+     * deploy then failed, is current while the running app is not.
+     *
+     * ABSENT means "trust the clone", which is what every component deployed before
+     * this field existed has: such a record is current when its clone is. An update
+     * that moves such a clone records the commit it moved from first, so a deploy that
+     * then fails is still retried.
+     */
+    deployedCommit?: string;
+    /**
+     * The Adobe workspace this component is deployed into.
+     *
+     * **ABSENT means the project's own workspace** (`project.adobe`), which is what
+     * every component created before AB-23 has and what every component still gets
+     * until the add path starts creating one. That default is the whole reason this
+     * is optional: existing projects keep working with no migration.
+     *
+     * The `id` is what deploys target. The `name` is Adobe's machine name, which an
+     * App Management install sends (`buildAppData`) and which CANNOT be changed after
+     * the workspace is created — Adobe answers `400 "Workspace name can not be
+     * changed"` — so it is recorded here rather than looked up or derived.
+     */
+    workspace?: {
+        id: string;
+        name: string;
+        title?: string;
+    };
+    /**
+     * The systems this integration uses (their `appBuilderComponents` ids), written
+     * when the pair is added. Read through `appBuilderComponentLinks`.
+     */
+    systems?: string[];
+    /** The integration this system belongs to (its `appBuilderComponents` id). */
+    usedBy?: string;
+    /**
+     * Why the last removal stopped, in plain words: a clean-up only the deployed code
+     * can do did not finish (before the undeploy), or Runtime still held some of the
+     * app after every attempt to delete it (after). The card offers Remove anyway.
+     * Gone with the record when a removal finishes.
+     */
+    removalStopped?: string;
+    /**
+     * Set when a removal stopped AFTER its clean-up and undeploy ran: the retry goes
+     * straight to the undeploy and the leftover check, because the ERP's own actions
+     * that the clean-up calls are gone. Cleared by a deploy, which brings them back.
+     */
+    removalCleanedUp?: boolean;
     // Mesh-kind runtime fields (ADR-011 D3 Step 06). These previously lived
     // only on the singular `meshState` (same values, so no new data exposure);
     // the keyed entry is their durable home so Step 07 can retire `meshState`.
@@ -369,6 +547,7 @@ export type ProjectTemplate = 'commerce-paas' | 'commerce-saas' | 'aem-commerce'
 
 export type ProjectStatus =
     | 'created'
+    | 'creating' // Transitional: a new project is being created (PL-82)
     | 'configuring'
     | 'ready'
     | 'starting' // Transitional: demo is starting up
@@ -400,6 +579,21 @@ export interface AdobeConfig {
     /** Human-readable workspace title (preferred for display) */
     workspaceTitle?: string;
     authenticated?: boolean;
+    /**
+     * The Adobe product profile this project's credentials use for Commerce
+     * (ACCS-REST-API), with the Commerce tenant it was chosen for.
+     *
+     * Adobe's org catalog answers that service with no profiles at all now and
+     * then — twenty minutes of it on 2026-09-21, and a whole failed add on
+     * 2026-09-22 — while the entitlement is intact. Remembering what was chosen
+     * lets a later workspace subscribe anyway. The TENANT is what makes it safe:
+     * a project pointed at another Commerce instance must never be handed this.
+     */
+    commerceProfile?: {
+        tenant: string;
+        id: string;
+        productId: string;
+    };
 }
 
 export interface CommerceConfig {
@@ -475,7 +669,6 @@ export interface ConfigField {
 export interface ComponentConfiguration {
     envVars?: string[];
     port?: number;
-    nodeVersion?: string;
     buildScript?: string; // npm script to run after install (e.g., "build")
     skipNpmInstall?: boolean; // Skip npm install after update (e.g., EDS storefronts)
     required?: Record<string, ConfigField>;

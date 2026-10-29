@@ -14,23 +14,27 @@ import type { GitHubFileOperations } from '../github/githubFileOperations';
 import { generateInspectorTreeEntries, installInspectorTagging } from '../inspectorHelpers';
 import { applyCanonicalCodePatches } from '../patches/codePatchPipelineHelpers';
 import type { CodePatchResult } from '../patches/codePatchRegistry';
-import { addedDemoCaveats } from '../patches/loadBearingPatches';
-import { installSmart404Handler } from '../pdp/pdp404HandlerPublisher';
+import { removeShadowingPlaceholderFiles } from '../placeholderStubs';
 import { installQuickEdit } from '../quickEditPublisher';
+import { readRepoBoilerplate } from '../storefront/storefrontOrigin';
+import { bringStorefrontUpToDate } from '../storefront/storefrontUpToDate';
 import { resolveTemplateCommitSha } from '../templateCommitResolver';
 import type { GitHubTreeInput } from '../types';
 import { buildResetFileOverrides } from './edsResetFileOverrides';
 import { type EdsResetParams } from './edsResetParams';
+import { RESET_STEP } from '@/core/utils/resetStages';
 import {
     getBlockLibrarySource,
     getBlockLibraryContentSource,
     getBlockLibraryName,
     isBlockLibraryAvailableForPackage,
+    withAlwaysIncludedBlockLibraries,
 } from '@/features/components/services/blockLibraryLoader';
 import type { Project } from '@/types/base';
 import type { AddonSource } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StorefrontBoilerplate } from '@/types/projectFile';
 
 // ==========================================================
 // Helpers
@@ -92,7 +96,7 @@ async function installWithBlockLibraries(
     report: (step: number, message: string) => void,
 ): Promise<string[]> {
     report(
-        2,
+        RESET_STEP.resettingCode,
         `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}`,
     );
     const blockResult = await installBlockCollections(
@@ -122,7 +126,7 @@ async function installInspectorOnly(
     logger: Logger,
     report: (step: number, message: string) => void,
 ): Promise<void> {
-    report(3, 'Installing inspector tagging');
+    report(RESET_STEP.resettingCode, 'Installing the inspector');
     const inspectorResult = await installInspectorTagging(
         githubFileOps,
         repoOwner,
@@ -156,7 +160,7 @@ async function reinstallBlockLibraries(
     blockCollectionIds?: string[];
     libraryContentSources: Array<{ org: string; site: string }>;
 }> {
-    report(2, 'Preparing block libraries');
+    report(RESET_STEP.resettingCode, 'Preparing block libraries');
 
     // Generate inspector tree entries (always, for consistency with storefront setup)
     let inspectorEntries: GitHubTreeInput[] = [];
@@ -182,7 +186,7 @@ async function reinstallBlockLibraries(
 
     const { allLibraries, libraryContentSources } = collectLibrarySources(
         project,
-        project.selectedBlockLibraries ?? [],
+        withAlwaysIncludedBlockLibraries(project.selectedBlockLibraries, project.selectedPackage ?? ''),
         logger,
     );
 
@@ -233,10 +237,14 @@ export async function resetRepoToTemplate(
     blockCollectionIds?: string[];
     libraryContentSources: Array<{ org: string; site: string }>;
     canonicalCodePatchResults?: CodePatchResult[];
-    /** The dry check's caveats for an added demo (D23); absent for a shipped brand. */
-    demoCaveats?: string[];
     /** The template commit the repository now matches; absent when it could not be resolved. */
     templateCommitSha?: string;
+    /** What the repository is built on now, read back after the reset (EDS-13f); absent when unread. */
+    boilerplate?: StorefrontBoilerplate;
+    /** Whether the build step's own fixes all landed (`bringStorefrontUpToDate`). */
+    buildComplete: boolean;
+    /** The commit the reset made; everything committed after it is checked on the site (`codeServed.ts`). */
+    resetCommitSha: string;
 }> {
     const {
         repoOwner,
@@ -250,10 +258,8 @@ export async function resetRepoToTemplate(
         codePatchSource,
     } = params;
 
-    report(1, 'Resetting repository to template');
+    report(RESET_STEP.resettingCode, 'Resetting the repository');
     context.logger.info(`[EdsReset] Resetting repo using bulk tree operations`);
-
-    const fileOverrides = await buildResetFileOverrides(params, githubFileOps, context.logger);
 
     // Determine the template revision to reset onto — the same commit project
     // creation records: the verified LKG for thin-layer storefronts, otherwise the
@@ -282,6 +288,14 @@ export async function resetRepoToTemplate(
         );
     }
 
+    // Built once the template's revision is known: the label files read the template there.
+    const { fileOverrides, stubPaths } = await buildResetFileOverrides(
+        params,
+        githubFileOps,
+        { owner: templateOwner, repo: templateRepo, ref: templateRef },
+        context.logger,
+    );
+
     // Canonical-phase code patches: apply BEFORE the bulk reset so patched
     // canonical files (`head.html`, `scripts/*.js`, etc.) land in the same
     // atomic Git Tree commit as `fileOverrides`. Block-targeting patches
@@ -290,6 +304,8 @@ export async function resetRepoToTemplate(
     // patchReport (callers pass it forward into `executeEdsPipeline`).
     let canonicalCodePatchResults: CodePatchResult[] | undefined;
     if (codePatches && codePatches.length > 0 && codePatchSource) {
+        // Targets are read at the ref the reset commits, so a patched file is
+        // the same version as the rest of the tree (EDS-51).
         canonicalCodePatchResults = await applyCanonicalCodePatches(
             fileOverrides,
             templateOwner,
@@ -297,6 +313,7 @@ export async function resetRepoToTemplate(
             codePatches,
             codePatchSource,
             context.logger,
+            templateRef,
         );
     }
 
@@ -312,12 +329,17 @@ export async function resetRepoToTemplate(
     context.logger.info(
         `[EdsReset] Repository reset complete: ${resetResult.fileCount} files, commit ${resetResult.commitSha.substring(0, 7)}`,
     );
-    report(1, `Reset ${resetResult.fileCount} files`);
+    report(RESET_STEP.resettingCode, `Reset ${resetResult.fileCount} files`);
 
-    // An added demo's dry check re-runs on every reset; its caveats ride the result (D23).
-    const demoCaveats = project.demo
-        ? await addedDemoCaveats(project.demo, { owner: templateOwner, repo: templateRepo }, context.logger)
-        : undefined;
+    // The template's own label files hide the sheets the content copy writes at the
+    // same paths (the B2B template's placeholders/checkout.json did, EDS-53). Only the
+    // areas the source serves a sheet for: the label files above own the rest.
+    await removeShadowingPlaceholderFiles(
+        githubFileOps,
+        { owner: repoOwner, repo: repoName, ref: resetResult.commitSha },
+        stubPaths,
+        context.logger,
+    );
 
     const { blockCollectionIds, libraryContentSources } = await reinstallBlockLibraries(
         project,
@@ -328,17 +350,17 @@ export async function resetRepoToTemplate(
         report,
     );
 
-    // Install the smart 404 PDP handler into the storefront's
-    // scripts/delayed.js. Same shape as inspector tagging — vendors a
-    // small JS snippet into storefront code. The pipeline's subsequent
-    // bulk Helix code preview picks up the committed change.
+    // Bring the storefront up to Demo Builder's current fixes (EDS-62) and scripts — the
+    // same step creation and a tested-boilerplate update run.
+    // The code publish after it can miss these last commits (AEM's copy of the
+    // repository lags a push), so the reset checks the site afterwards (`codeServed.ts`).
     //
     // Still non-fatal, but no longer silent. Reset is the path a user takes to
     // REPAIR a broken storefront, so a skip here mattered more than on create
     // and was the one reported least — the result was discarded entirely.
     // `report()` is the context-appropriate surface (UI progress or MCP output),
     // matching how the overlay-registration failure is surfaced on this path.
-    const smart404 = await installSmart404Handler(
+    const { smart404, current: buildComplete } = await bringStorefrontUpToDate(
         githubFileOps,
         repoOwner,
         repoName,
@@ -346,13 +368,14 @@ export async function resetRepoToTemplate(
         context.logger,
         daLiveOrg,
         daLiveSite,
+        { inspectorInstalled: true }, // installed with the block libraries above; loader → head.html
     );
     if (!smart404.installed && params.byomOverlayUrl) {
         context.logger.warn(
             `[EdsReset] Smart-404 handler not installed: ${smart404.reason ?? 'unknown reason'}`,
         );
         report(
-            1,
+            RESET_STEP.resettingCode,
             '⚠️ Smart-404 handler not installed — product pages may not recover on first visit',
         );
     }
@@ -363,12 +386,16 @@ export async function resetRepoToTemplate(
     // reset reconciles Quick Edit wiring just like every other vendored file.
     await installQuickEdit(githubFileOps, repoOwner, repoName, context.logger);
 
+    const boilerplate = await readRepoBoilerplate(githubFileOps, { owner: repoOwner, repo: repoName }, context.logger);
+
     return {
-        ...(demoCaveats ? { demoCaveats } : {}),
+        ...(boilerplate.status === 'read' ? { boilerplate: boilerplate.value } : {}),
         filesReset: resetResult.fileCount,
         blockCollectionIds,
         libraryContentSources,
         canonicalCodePatchResults,
         templateCommitSha,
+        buildComplete,
+        resetCommitSha: resetResult.commitSha,
     };
 }

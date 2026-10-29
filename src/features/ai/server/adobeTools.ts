@@ -20,6 +20,7 @@
 
 import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget, setAdobeTarget } from './adobeTargetStore';
+import { resolveAgentOrg } from './agentOrg';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { hasErrorCode } from '@/core/errors';
@@ -207,7 +208,9 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
             // getWorkspaces has no org/project option, so run it under the stored
             // target's env (mirrors select_workspace). Untargeted when none set.
             try {
-                const workspaces = await runWithAdobeTarget(() => mgr.getWorkspaces());
+                const workspaces = await runWithAdobeTarget(async () =>
+                    (await mgr.getEntityServices()).workspaceReads.getWorkspaces(),
+                );
                 return asText(workspaces.map(lean));
             } catch (err) {
                 // A deleted target answers a bare 404, and a bare 404 is a
@@ -276,11 +279,13 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
         async (args: any) => {
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return NEEDS_ADOBE_AUTH;
-            const stored = getAdobeTarget();
-            if (!stored?.orgId) return asText({ error: 'No org selected — call select_org first.' });
-            // List projects within the stored org via env targeting (no global mutation).
-            const projects = await mgr.getProjects({ orgId: stored.orgId });
-            const project = projects.find((p) => p.id === args.projectId);
+            // The agent's org, or the only one the sign-in reaches (remembered).
+            const org = await resolveAgentOrg(mgr);
+            if ('error' in org) return asText(org);
+            const stored = { ...getAdobeTarget(), orgId: org.orgId };
+            // Ask Adobe for the ONE project within the stored org: it downloaded the org's
+            // whole list (780 projects) to check one id until 2026-10-28.
+            const project = await mgr.getProject({ orgId: stored.orgId, projectId: String(args.projectId) });
             if (!project) {
                 // NEVER enumerate here. This path used to return every project in
                 // the org as `validOptions` — 725 rows / 111,748 bytes measured in
@@ -288,7 +293,6 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
                 // tool catalogue. Name the tool that can search instead.
                 return asText({
                     error: `Unknown projectId: ${args.projectId}. Use list_adobe_projects with a search term to find the right id.`,
-                    projectsInOrg: projects.length,
                 });
             }
             // Merge the project into the stored target; switching projects drops
@@ -322,7 +326,9 @@ export function registerAdobeTools(server: McpToolServer, ctxFactory: () => Hand
             if (!stored?.projectId) return asText({ error: 'No project selected — call select_project first.' });
             // List workspaces within the stored org/project via env targeting
             // (getWorkspaces has no orgId/projectId option, so wrap it).
-            const workspaces = await withOrgContext(stored, () => mgr.getWorkspaces());
+            const workspaces = await withOrgContext(stored, async () =>
+                (await mgr.getEntityServices()).workspaceReads.getWorkspaces(),
+            );
             const workspace = workspaces.find((w) => w.id === args.workspaceId);
             if (!workspace) {
                 return asText({ error: `Unknown workspaceId: ${args.workspaceId}`, validOptions: workspaces.map(lean) });

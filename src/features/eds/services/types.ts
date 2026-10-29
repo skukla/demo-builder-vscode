@@ -1,3 +1,4 @@
+import type { StorefrontBoilerplate, StorefrontLineage } from '@/types/projectFile';
 import type { GitHubUser } from '@/types/webviewPayloads';
 /**
  * GitHub Service Types
@@ -64,6 +65,10 @@ export interface GitHubRepo {
     updatedAt?: string;
     /** Whether repository is private (optional, for listing) */
     isPrivate?: boolean;
+    /** GitHub's `template_repository`: the template this repository was generated from (EDS-13f). */
+    templateRepository?: StorefrontLineage['templateRepository'];
+    /** GitHub's `parent`: the repository this one is a fork of (EDS-13f). */
+    forkParent?: StorefrontLineage['forkParent'];
 }
 
 /**
@@ -118,8 +123,11 @@ export interface GitHubTreeInput {
     mode: '100644' | '100755' | '040000' | '160000' | '120000';
     /** Object type */
     type: 'blob' | 'tree' | 'commit';
-    /** Existing blob SHA (mutually exclusive with content) */
-    sha?: string;
+    /**
+     * Existing blob SHA (mutually exclusive with content). `null` DELETES the
+     * path from the tree: that is how GitHub's create-tree call removes a file.
+     */
+    sha?: string | null;
     /** Inline content for a new blob (mutually exclusive with sha) */
     content?: string;
 }
@@ -216,6 +224,25 @@ export interface DaLiveCopyResult {
     failedFiles: { path: string; error: string }[];
     /** Total number of files processed */
     totalFiles: number;
+}
+
+/**
+ * What a whole-site content copy returns: the files, plus the sheets among them.
+ */
+export interface DaLiveSiteContentCopyResult extends DaLiveCopyResult {
+    /**
+     * The sheets the copy wrote, as the web paths to preview and publish
+     * (`/metadata.json`, `/placeholders/cart.json`). The whole-site publish skips
+     * sheets, so whoever publishes after this copy publishes these by path.
+     */
+    sheetPaths: string[];
+    /**
+     * The paths the storefront's own code loads that the source has, as a browser
+     * asks for them (`/cart`, `/placeholders/cart.json`). The copy took each one,
+     * so the finished storefront should serve every one; whoever publishes can
+     * check. Empty when the code was not read.
+     */
+    codePathsOnSource: string[];
 }
 
 /**
@@ -586,16 +613,6 @@ export type GitHubErrorCode =
     | 'UNKNOWN';
 
 /**
- * Error codes for DA.live operations
- */
-export type DaLiveErrorCode =
-    | 'ACCESS_DENIED'
-    | 'NETWORK_ERROR'
-    | 'TIMEOUT'
-    | 'NOT_FOUND'
-    | 'UNKNOWN';
-
-/**
  * Error codes for Helix operations
  */
 export type HelixErrorCode =
@@ -654,6 +671,14 @@ export interface EdsMetadata {
          *  ledgers sharing the default root LKG. */
         lkgFile?: string;
     };
+    /** The `package.json` name and version the repository was built on, read at
+     *  creation and after each reset (EDS-13f). Absent when it could not be read. */
+    boilerplate?: StorefrontBoilerplate;
+    /** The newest storefront change (`STOREFRONT_CHANGES`) the version that last created or
+     *  reset the storefront knew, `YYYY-MM-DD`. Older than a listed change reads "Needs reset". */
+    storefrontBuiltThrough?: string;
+    /** Set when that build's own fixes did not all land; also reads "Needs reset". */
+    storefrontBuildIncomplete?: true;
 }
 
 /**
@@ -696,4 +721,9 @@ export interface EdsCleanupResult {
     daLive: CleanupOperationResult;
     /** GitHub repository deletion/archive result */
     github: CleanupOperationResult;
+    /**
+     * The site's code on aem.live after a repository DELETE (EDS-67); skipped for an
+     * archive, a failed delete, or a repository that was not a storefront.
+     */
+    siteCode: CleanupOperationResult;
 }

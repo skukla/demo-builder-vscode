@@ -22,6 +22,12 @@ import type { Logger } from '@/types/logger';
 
 export interface ForkStatus {
     isFork: boolean;
+    /**
+     * The signed-in account administers the repository (owner or admin). A collaborator on
+     * a colleague's personal repository can push but never administer, so push alone does
+     * not count. False when GitHub reports no permissions (no token).
+     */
+    isYours: boolean;
     behindBy: number;
     parentFullName?: string;
     defaultBranch?: string;
@@ -65,10 +71,11 @@ export class ForkSyncService {
             }
 
             const repoData = await repoResponse.json() as GitHubRepoResponse;
+            const isYours = repoData.permissions?.admin === true;
 
             if (!repoData.fork) {
                 this.logger.debug(`[Updates] ${owner}/${repo} is not a fork — skipping`);
-                return { isFork: false, behindBy: 0 };
+                return { isFork: false, isYours, behindBy: 0 };
             }
 
             this.logger.debug(`[Updates] ${owner}/${repo} is a fork of ${repoData.parent?.full_name}`);
@@ -93,6 +100,7 @@ export class ForkSyncService {
 
             return {
                 isFork: true,
+                isYours,
                 behindBy: compareData.ahead_by,
                 parentFullName,
                 defaultBranch,
@@ -156,6 +164,8 @@ export class ForkSyncService {
 interface GitHubRepoResponse {
     fork: boolean;
     default_branch: string;
+    /** Present only on an authenticated request: the signed-in account's rights. */
+    permissions?: { admin?: boolean };
     parent?: {
         full_name: string;
         default_branch: string;

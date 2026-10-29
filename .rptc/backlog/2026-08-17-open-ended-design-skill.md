@@ -5,8 +5,9 @@ area: ai
 parent: AI-1
 needs: []
 value: low
-status: backlog
+status: superseded
 layer: C
+superseded-by: AI-1a
 ---
 # An open-ended design skill — for a pass that adds design skills, not for phase 5
 

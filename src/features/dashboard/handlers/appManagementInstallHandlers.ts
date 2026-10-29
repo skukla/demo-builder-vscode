@@ -11,6 +11,8 @@
  * - `installAppBuilderComponent` — re-run the install/associate pass WITHOUT a
  *   redeploy; until this, the only retry for a failed install was a full
  *   deploy round.
+ * - `reinstallAppBuilderComponent` — uninstall then install, only for an app
+ *   Commerce refused to upgrade in place (AB-13).
  *
  * Split from `appBuilderComponentHandlers.ts` (899 lines) rather than grown
  * into it; the guard chain, target resolution, and progress telegraph are that
@@ -26,16 +28,19 @@ import {
     withComponentProgress,
     type GuardableResult,
 } from './appBuilderComponentHandlers';
-import { narrateOutcomeToModal, progressSurfaceOf } from './componentOperationProgress';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import { getAppBuilderComponent, recordInstallation } from '@/core/state/appBuilderComponentState';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
+import type { AppBuilderComponentRunnerDeps } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
     AppManagementClient,
     type InstallationState,
     type StepStatus,
 } from '@/features/app-builder/services/appManagementClient';
 import { deriveAppManagementBaseUrl } from '@/features/app-builder/services/appManagementInstaller';
-import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
+import { reinstallAppManagementApp } from '@/features/app-builder/services/appManagementReinstall';
+import type { AppManagementInstallResult } from '@/features/app-builder/services/appManagementUpgrade';
 import {
     buildCustomIntegrationEntry,
     getAppBuilderComponentEntry,
@@ -45,9 +50,10 @@ import {
     buildRunnerDepsContext,
     resolveAppManagementAuth,
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
-import type { AppBuilderComponentState } from '@/types/base';
+import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 /**
  * The entry's lifecycle, resolved the way the runner resolves it: catalog row
@@ -96,6 +102,56 @@ function shapeLiveState(state: InstallationState | undefined): Record<string, un
     };
 }
 
+type ComponentTarget =
+    | { ok: true; id: string; project: Project; state: AppBuilderComponentState }
+    | { ok: false; error: HandlerResponse };
+
+/**
+ * The requested component and its record, or the refusal: no id, no project,
+ * or no record that `accepts` (a typed PROJECT_NOT_FOUND naming the id).
+ */
+export async function resolveComponentRecord(
+    context: HandlerContext,
+    requestedId: string | undefined,
+    accepts: (state: AppBuilderComponentState) => boolean = () => true,
+): Promise<ComponentTarget> {
+    const target = await resolveComponentTarget(context, requestedId);
+    if (!target.ok) return target;
+    const state = getAppBuilderComponent(target.project, target.id);
+    if (!state || !accepts(state)) {
+        return {
+            ok: false,
+            error: {
+                success: false,
+                error: `Integration "${target.id}" not found.`,
+                code: ErrorCode.PROJECT_NOT_FOUND,
+            },
+        };
+    }
+    return { ...target, state };
+}
+
+/**
+ * Repair a record that says failed over an app whose own install state says succeeded.
+ * The record's detail names why, so a reader of the file sees it was the call, not the
+ * install, that failed. Answers whether anything changed.
+ */
+function repairStaleFailure(
+    state: AppBuilderComponentState,
+    live: InstallationState | undefined,
+): boolean {
+    if (state.installation?.status !== 'failed' || live?.status !== 'succeeded') return false;
+    recordInstallation(
+        state,
+        {
+            status: 'installed',
+            detail: "Installed — the app's own install state confirmed it after an earlier call timed out.",
+        },
+        live.completedAt ?? new Date().toISOString(),
+    );
+    return true;
+}
+
 /**
  * Handle 'getAppBuilderInstallStatus' — the persisted install record plus the
  * app's LIVE installation state (its own GET /installation). Read-only: no
@@ -106,18 +162,9 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
     context,
     payload,
 ): Promise<HandlerResponse> => {
-    const target = await resolveComponentTarget(context, payload?.id);
+    const target = await resolveComponentRecord(context, payload?.id);
     if (!target.ok) return target.error;
-    const { id, project } = target;
-
-    const state = getAppBuilderComponent(project, id);
-    if (!state) {
-        return {
-            success: false,
-            error: `Integration "${id}" not found.`,
-            code: ErrorCode.PROJECT_NOT_FOUND,
-        };
-    }
+    const { id, project, state } = target;
     const baseUrl = deriveAppManagementBaseUrl(state.deployedUrls);
     if (!baseUrl) {
         return {
@@ -137,12 +184,23 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
 
     try {
         const live = await new AppManagementClient(baseUrl, auth).getInstallationState();
+        // A record that says failed over an app that says succeeded is a stale record:
+        // the install call outran its wait and the app finished anyway (2026-09-30, one
+        // second apart, shown as "Not installed" for two hours). The live state is the
+        // truth and this read is where it is in hand, so the record is repaired here and
+        // the cards redrawn — rather than asking the SC to press Install to clear a line.
+        const repaired = repairStaleFailure(state, live);
+        if (repaired) {
+            await context.stateManager.saveProject(project);
+            await postComponentsSnapshot(context);
+        }
         return {
             success: true,
             data: {
                 id,
                 persisted: state.installation,
                 live: shapeLiveState(live),
+                ...(repaired ? { repaired: true } : {}),
             },
         };
     } catch (error) {
@@ -150,6 +208,144 @@ export const handleGetAppBuilderInstallStatus: MessageHandler<{ id?: string }> =
         return { success: false, error: `Could not read the install state: ${message}` };
     }
 };
+
+/**
+ * The runner deps a dashboard handler hands the runner, with the runner's step
+ * text forwarded to `report`: the sub-step alone when there is one, because the
+ * notification title already names the operation.
+ *
+ * `save: 'in-place'` writes the project's record without making it the current
+ * project — for a project other than the open one (the extension's update check
+ * updating a pair in another project, AB-73; the `replaceDeployedElsewhere`
+ * precedent). Passed INTO the builder rather than patched after, because the
+ * deps capture `saveProject` in closures of their own.
+ */
+export async function handlerRunnerDeps(
+    context: HandlerContext,
+    project: Project,
+    report?: (message: string, subMessage?: string, position?: OperationPosition) => void,
+    save: 'current' | 'in-place' = 'current',
+): Promise<AppBuilderComponentRunnerDeps> {
+    const ctx = await buildRunnerDepsContext(context, project, {
+        authManager: ServiceLocator.getAuthenticationService(),
+        commandManager: ServiceLocator.getCommandExecutor(),
+    });
+    const saveProject =
+        save === 'in-place' ? (p: Project) => context.stateManager.saveProjectConfigOnly(p) : ctx.saveProject;
+    return buildDefaultRunnerDeps(
+        { ...ctx, saveProject },
+        report && ((message, subMessage, position) => report(message, subMessage, position)),
+    );
+}
+
+/** Everything an install-pass handler needs once the target checks pass. */
+interface InstallPass {
+    project: Project;
+    id: string;
+    state: AppBuilderComponentState;
+    deps: AppBuilderComponentRunnerDeps;
+    report: (message: string) => void;
+    appVersion: string | undefined;
+}
+
+type InstallPassCheck = (id: string, state: AppBuilderComponentState) => string | undefined;
+
+/** Which pass this is, and where its progress shows. */
+interface InstallPassOptions {
+    requestedId: string | undefined;
+    title: string;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress: 'modal' | undefined;
+    check?: InstallPassCheck;
+}
+
+/**
+ * The shared body of install and reinstall: resolve a DEPLOYED app-management
+ * integration, run the guards and build the runner deps under a progress
+ * notification, run `pass`, then persist its outcome where the drawer and
+ * get_integration_install_status read it.
+ */
+async function runInstallPass(
+    context: HandlerContext,
+    options: InstallPassOptions,
+    /** Resolves to the outcome, or to a reason string when the pass is not wired (nothing persisted). */
+    pass: (input: InstallPass) => Promise<AppManagementInstallResult | string>,
+): Promise<HandlerResponse> {
+    const { requestedId, title, progress, check } = options;
+    const target = await resolveComponentRecord(
+        context,
+        requestedId,
+        (record) => record.kind === 'integration',
+    );
+    if (!target.ok) return target.error;
+    const { id, project, state } = target;
+    const refusal = refuseInstallPass(id, state) ?? check?.(id, state);
+    if (refusal) {
+        return { success: false, error: refusal, code: ErrorCode.INVALID_OPERATION };
+    }
+
+    const result = await withComponentProgress(
+        {
+            title,
+            id,
+            label: state.name ?? id,
+            noun: 'Integration',
+            logger: context.logger,
+            progress,
+        },
+        async (report): Promise<GuardableResult & { detail?: string }> => {
+            const refused = await guardOrBlock(context, project, report, progress);
+            if (refused) {
+                return refused;
+            }
+
+            const deps = await handlerRunnerDeps(context, project, report);
+            const componentPath = project.componentInstances?.[id]?.path;
+            const appVersion = componentPath
+                ? await deps.readAppVersion?.(componentPath)
+                : undefined;
+            // The installer's messages are the STEP under the install stage, as in the
+            // runner's own install pass — the stage keeps its expectation line.
+            const stepReport = (message: string): void =>
+                report(OPERATION_STAGES.installingIntoCommerce.label, message);
+            const outcome = await pass({
+                project,
+                id,
+                state,
+                deps,
+                report: stepReport,
+                appVersion,
+            });
+            if (typeof outcome === 'string') {
+                return { success: false, error: outcome };
+            }
+            // Same persistence the deploy tail's install pass writes — the
+            // drawer and the status read serve THIS record.
+            recordInstallation(state, outcome);
+            await context.stateManager.saveProject(project);
+            return outcome.status === 'failed'
+                ? { success: false, error: outcome.detail, detail: outcome.detail }
+                : { success: true, detail: outcome.detail };
+        },
+    );
+
+    // The persisted record changed — refresh the grid/drawer either way.
+    await postComponentsSnapshot(context);
+    return result.success
+        ? { success: true, installation: state.installation }
+        : { success: false, error: result.error, code: result.code };
+}
+
+/** Why an integration cannot take an install pass at all, if it cannot. */
+function refuseInstallPass(id: string, state: AppBuilderComponentState): string | undefined {
+    if (resolveLifecycle(id, state) !== 'app-management') {
+        return `"${id}" does not install into Commerce (only App Management apps do).`;
+    }
+    if (state.status !== 'deployed') {
+        return `"${id}" is not deployed yet — deploy it first (the deploy runs the install).`;
+    }
+    return undefined;
+}
 
 /**
  * Handle 'installAppBuilderComponent' — re-run the Commerce install/associate
@@ -162,89 +358,56 @@ export const handleInstallAppBuilderComponent: MessageHandler<{
     /** `'modal'` when the SC started it from the integrations screen (PL-59). */
     progress?: 'modal';
 }> = narrateOutcomeToModal(
-    async (
-        context: HandlerContext,
-        payload,
-    ): Promise<HandlerResponse> => {
-        const target = await resolveComponentTarget(context, payload?.id);
-        if (!target.ok) return target.error;
-        const { id, project } = target;
-    
-        const state = getAppBuilderComponent(project, id);
-        if (!state || state.kind !== 'integration') {
-            return {
-                success: false,
-                error: `Integration "${id}" not found.`,
-                code: ErrorCode.PROJECT_NOT_FOUND,
-            };
-        }
-        if (resolveLifecycle(id, state) !== 'app-management') {
-            return {
-                success: false,
-                error: `"${id}" does not install into Commerce (only App Management apps do).`,
-                code: ErrorCode.INVALID_OPERATION,
-            };
-        }
-        if (state.status !== 'deployed') {
-            return {
-                success: false,
-                error: `"${id}" is not deployed yet — deploy it first (the deploy runs the install).`,
-                code: ErrorCode.INVALID_OPERATION,
-            };
-        }
-    
-        const displayName = state.name ?? id;
-        const result = await withComponentProgress(
-            {
-                title: 'Installing',
-                id,
-                label: displayName,
-                noun: 'Integration',
-                logger: context.logger,
-                progress: progressSurfaceOf(payload),
-            },
-            async (report): Promise<GuardableResult & { detail?: string }> => {
-                const refused = await guardOrBlock(context, project, report, progressSurfaceOf(payload));
-                if (refused) {
-                    return refused;
-                }
-    
-                const deps = buildDefaultRunnerDeps(
-                    await buildRunnerDepsContext(context, project, {
-                        authManager: ServiceLocator.getAuthenticationService(),
-                        commandManager: ServiceLocator.getCommandExecutor(),
-                    }),
-                    (message, subMessage) => report(message, subMessage),
-                );
+    (context, payload) =>
+        runInstallPass(
+            context,
+            { requestedId: payload?.id, title: 'Installing', progress: progressSurfaceOf(payload) },
+            async ({ project, id, deps, report, appVersion }) => {
                 // Always wired by buildDefaultRunnerDeps; the field is optional only
                 // for bare unit-test deps, so a guard beats asserting it away.
                 if (!deps.installAppManagement) {
-                    return { success: false, error: 'The install pass is not available.' };
+                    return 'The install pass is not available.';
                 }
-                // The installer's messages are the STEP under the install stage, as in the
-                // runner's own install pass — the stage keeps its expectation line.
-                const installed = await deps.installAppManagement(project, state.deployedUrls, (message) =>
-                    report(OPERATION_STAGES.installingIntoCommerce.label, message),
-                );
-                // Same persistence the deploy tail's install pass writes — the
-                // drawer and the status read serve THIS record.
-                state.installation = {
-                    status: installed.status,
-                    detail: installed.detail,
-                    at: new Date().toISOString(),
-                };
-                await context.stateManager.saveProject(project);
-                return installed.status === 'failed'
-                    ? { success: false, error: installed.detail, detail: installed.detail }
-                    : { success: true, detail: installed.detail };
+                return deps.installAppManagement(project, id, report, { appVersion });
             },
-        );
-    
-        // The persisted record changed — refresh the grid/drawer either way.
-        await postComponentsSnapshot(context);
-        return result.success
-            ? { success: true, installation: state.installation }
-            : { success: false, error: result.error, code: result.code };
-    },
-    (payload) => payload?.id,
+        ),
+    (payload) => payload.id,
+);
+
+/**
+ * Handle 'reinstallAppBuilderComponent' — uninstall the app from Commerce and
+ * install it again from the code already deployed.
+ *
+ * Open to any deployed App Management integration, not only one Commerce refused
+ * to upgrade. It is the only pass that starts from nothing, and that is the
+ * repair when Commerce has LOST what the app registered while the app still
+ * reports itself installed: the install pass then answers "skipped" and nothing
+ * comes back. Measured live 2026-09-22 — a second copy of the same app
+ * uninstalling took this one's webhooks with it (they share names), and the only
+ * way back was clearing the app's record by hand.
+ *
+ * Destructive, so it stays behind the card's confirm dialog and the agent
+ * surface's `confirm: true`.
+ */
+export const handleReinstallAppBuilderComponent: MessageHandler<{
+    id?: string;
+    /** `'modal'` when the SC confirmed it on the integrations screen (PL-59). */
+    progress?: 'modal';
+}> = narrateOutcomeToModal(
+    (context, payload) =>
+        runInstallPass(
+            context,
+            { requestedId: payload?.id, title: 'Reinstalling', progress: progressSurfaceOf(payload) },
+            async ({ project, id, deps, report, appVersion }) => {
+                const { installAppManagement, uninstallAppManagement } = deps;
+                if (!installAppManagement || !uninstallAppManagement) {
+                    return 'The reinstall is not available.';
+                }
+                return reinstallAppManagementApp({
+                    uninstall: () => uninstallAppManagement(project, id, report),
+                    install: () => installAppManagement(project, id, report, { appVersion }),
+                });
+            },
+        ),
+    (payload) => payload.id,
 );

@@ -39,6 +39,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as yaml from 'yaml';
 import addComponentContent from '../../templates/skills/add-component.md';
+import authorCommerceDataContent from '../../templates/skills/author-commerce-data.md';
 import commerceBlockMapperContent from '../../templates/skills/commerce-block-mapper.md';
 import connectAuthenticatedSiteContent from '../../templates/skills/connect-authenticated-site.md';
 import createEdsProjectContent from '../../templates/skills/create-eds-project.md';
@@ -94,6 +95,7 @@ const SKILL_CONTENT: Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], stri
     'create-eds-project': createEdsProjectContent,
     'diagnose-demo': diagnoseDemoContent,
     'import-datapack': importDatapackContent,
+    'author-commerce-data': authorCommerceDataContent,
     'scrape-reference-site': scrapeReferenceSiteContent,
     'connect-authenticated-site': connectAuthenticatedSiteContent,
     'commerce-block-mapper': commerceBlockMapperContent,

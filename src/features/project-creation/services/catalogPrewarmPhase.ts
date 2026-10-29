@@ -21,6 +21,7 @@
  * @module features/project-creation/services/catalogPrewarmPhase
  */
 
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { PdpPublisher } from '@/features/eds/services/catalogPrewarmService';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -77,7 +78,7 @@ export async function executeCatalogPrewarmPhase(
         }
 
         const { createDaLiveServiceTokenProvider } = await import(
-            '@/features/eds/services/daLive/daLiveContentOperations'
+            '@/features/eds/services/daLive/daLiveTokenProviders'
         );
         const { getDaLiveAuthService } = await import('@/features/eds/handlers/edsHelpers');
         const { getGitHubServices } = await import('@/features/eds/handlers/edsServiceCache');
@@ -98,7 +99,9 @@ export async function executeCatalogPrewarmPhase(
                   daLiveTokenProvider,
               );
 
-        progressTracker('Pre-warming Catalog', 96, 'Publishing product pages');
+        // Reset's and Republish's step for the same job, its count on the line under it.
+        const step = OPERATION_STAGES.warmingProductPages.label;
+        progressTracker(step, 96);
 
         const result = await prewarmCatalog(
             project,
@@ -107,6 +110,7 @@ export async function executeCatalogPrewarmPhase(
             params.daLiveSite,
             helixService,
             logger,
+            (info) => progressTracker(step, 96, info.message),
         );
         if (!result.skipped) {
             logger.info(

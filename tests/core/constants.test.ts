@@ -124,8 +124,28 @@ describe('AI_CONTEXT_VERSION', () => {
     // exactly one file in the repo: the shipped template. Every project generated
     // since carried it, so an agent following the skill got "command not found".
     // The bump is what delivers the correction to projects that already have it.
-    it('is 32 (the mesh deploy command in sync-changes is api-mesh, not api:mesh)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(32);
+    // v33: AGENTS.md lists each integration's own Adobe workspace, and the API
+    // guidance passes componentId so an integration's API reaches its workspace.
+    // v34: AGENTS.md names reset_project (one reset for both project kinds), and
+    // create-eds-project teaches create_project_from_file.
+    // v35: factual fixes from the 2026-10 AI-files audit — no false mesh .env rule, the
+    // real open_view name, one true answer on PDP blocks, no blocks the template lacks.
+    // v36: the author-commerce-data skill (AI-10). Without the bump, existing projects
+    // never receive it.
+    // v37: category pages are written at storefront setup (EDS-24); two skills say so.
+    // v38: the bundle stops naming one agent (Copilot support).
+    // v39: the ai-defaults tools install and run on Node 24 through fnm, and
+    // @dropins/mcp became @dropins/ai-tools (AI-13).
+    // v40: the ai-defaults tools launch from Demo Builder's Node folder (FNM_DIR in .mcp.json, PR-1a).
+    // v41: the sync-changes skill stops calling promote_block_to_library "push back to source library".
+    // v42: the storefront git-sync hook skips while an update's clash is kept (EDS-57).
+    // v43: category pages come from the product page overlay; the two skills drop the
+    // removed category-page tools and the autoAdd setting (EDS-61).
+    // v44: the skills name `republish`, which took `sync_content`'s job (EDS-63).
+    // v45: header-nav-footer names the "Commerce: All" catalog line, not "Shop the catalog".
+    // v46: AGENTS.md says the smart-404 recovery script lives in 404.html, not delayed.js.
+    it('is 46 (AGENTS.md says the smart-404 script lives in 404.html)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(46);
     });
 });
 

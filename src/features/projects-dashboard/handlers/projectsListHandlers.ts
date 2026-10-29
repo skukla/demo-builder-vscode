@@ -26,10 +26,18 @@ import {
     handleRenameProject,
     handleOpenHelp,
     handleOpenSettings,
-    handleSetViewModeOverride,
     handleOpenAiForProject,
     handleSetProjectPinned,
 } from './dashboardHandlers';
+import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
+import {
+    handleBackgroundOperation,
+    handleGetOperationProgress,
+    handleOpenDebugLogs,
+} from '@/core/vscode/operationProgress';
+import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
+import { handleApplyUpdates, handleRecheckUpdates } from '@/features/updates/handlers/updatesModalHandlers';
+import { handleTakeUpdatesRequest } from '@/features/updates/handlers/updatesModalRequest';
 import { defineHandlers } from '@/types/handlers';
 
 /**
@@ -87,4 +95,21 @@ export const projectsListHandlers = defineHandlers({
 
     // Pin / unpin a project — pinned projects sort first on the dashboard
     setProjectPinned: handleSetProjectPinned,
+
+    // The Updates modal (PL-80): the ticked rows of the check it was handed, applied.
+    applyUpdates: handleApplyUpdates,
+    // A screen opened by Check for Updates asks, once mounted, whether to show it.
+    takeUpdatesRequest: handleTakeUpdatesRequest,
+    // "Back to updates" after a run: Check for Updates again, for what is still waiting.
+    recheckUpdates: handleRecheckUpdates,
+
+    // The progress modal a reset narrates into (PL-59): where a reopened modal
+    // asks how far the run got, and how a closed one hands over to a
+    // notification. Shared with every other screen that hosts the modal.
+    getOperationProgress: handleGetOperationProgress,
+    backgroundOperation: handleBackgroundOperation,
+    // The SC answered a question the work was paused on — a sign-in that expired,
+    // a prerequisite missing, a merge needing a decision (PL-59, owner 2026-09-20).
+    answerOperationPrompt: handleAnswerOperationPrompt,
+    openDebugLogs: handleOpenDebugLogs,
 });

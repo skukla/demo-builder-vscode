@@ -18,6 +18,12 @@
  * them after globalSetup returns, and they inherit the parent environment.
  */
 
+import {
+    ancestorPids,
+    peerJestPids,
+    processSnapshot,
+    PEERS_AT_START_ENV,
+} from './concurrentRuns';
 import { RUN_ID_ENV } from './mcpTestSocketRoot';
 
 export default async function globalSetup(): Promise<void> {
@@ -25,4 +31,10 @@ export default async function globalSetup(): Promise<void> {
     // later, which is how globalTeardown tells a crashed run's leftovers from a
     // running one's live sockets.
     process.env[RUN_ID_ENV] = String(process.pid);
+
+    // Who else is running jest RIGHT NOW. Sampled at both ends rather than one:
+    // a peer that starts after us is missed here and caught at teardown, and one
+    // that finishes before we do is caught here and missed there. Only the union
+    // answers "did this run have the machine to itself".
+    process.env[PEERS_AT_START_ENV] = peerJestPids(processSnapshot(), ancestorPids()).join(',');
 }

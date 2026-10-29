@@ -8,8 +8,8 @@
  * answered 401 "missing x-gw-ims-org-id header"; with the header, 200 and 42 datapacks.
  * A deployment without the gateway check ignores the header.
  *
- * One place, because both clients send it (read and write), and a header added to one
- * of them is the defect.
+ * One place, because four clients send it (read, write, export, and the read
+ * transport under the first), and a header added to three of them is the defect.
  *
  * @module features/data-installer/services/dataInstallerSignIn
  */

@@ -34,7 +34,7 @@
 
 import type * as vscode from 'vscode';
 import { DaLiveConfigService, type ContentReader } from './daLiveConfigService';
-import { createDaLiveServiceTokenProvider } from './daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from './daLiveTokenProviders';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import type { Logger } from '@/types/logger';

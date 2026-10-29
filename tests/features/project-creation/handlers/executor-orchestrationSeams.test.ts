@@ -16,16 +16,18 @@
 jest.setTimeout(30_000);
 
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
 jest.mock('@/features/mesh/services/meshDeployment');
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
+jest.mock('@/features/mesh/services/meshEnvVars', () => ({
     readMeshEnvVarsFromFile: jest.fn().mockResolvedValue({}),
+}));
+jest.mock('@/features/mesh/services/meshDeployBaseline', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
-    fetchDeployedMeshConfig: jest.fn().mockResolvedValue({}),
 }));
 
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -53,14 +55,26 @@ jest.mock('fs/promises', () => ({
 }));
 
 jest.mock('@/features/project-creation/handlers/executorPreflight', () => ({
+    // Pure: where the project is built. The real one, not a fake.
+    creationPath: jest.requireActual('@/features/project-creation/handlers/executorPreflight')
+        .creationPath,
     handlePortConflicts: jest.fn().mockResolvedValue(undefined),
+    refuseSecondErpIntegration: jest.fn().mockResolvedValue(undefined),
     cleanupOrphanedDirectory: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/features/project-creation/handlers/executorEditMode', () => ({
+    // Pure: what an Edit keeps of the old project. The real one, not a fake.
+    carriedOverFromEdit: jest.requireActual('@/features/project-creation/handlers/executorEditMode')
+        .carriedOverFromEdit,
     loadExistingProjectForEdit: jest.fn().mockResolvedValue(undefined),
     prepareEditModeTempDir: jest.fn().mockResolvedValue('/tmp/edit/components.tmp'),
     performAtomicComponentSwap: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/features/project-creation/handlers/executorEditApply', () => ({
+    // Answers "rebuild" unless a test says otherwise.
+    finishEditWithoutRebuild: jest.fn().mockResolvedValue(false),
 }));
 
 jest.mock('@/features/components/services/commerceSecretMigration', () => ({
@@ -68,6 +82,20 @@ jest.mock('@/features/components/services/commerceSecretMigration', () => ({
         .fn()
         .mockResolvedValue({ sanitizedConfigs: {}, retained: [] }),
 }));
+
+jest.mock('@/features/project-creation/services/catalogMenuPhase', () => ({
+    executeCatalogMenuPhase: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/core/utils/agentPhaseChannel', () => ({
+    reportPhase: jest.fn(),
+}));
+
+// The real phase, wrapped so the path it is handed can be read.
+jest.mock('@/features/project-creation/handlers/executorEdsPhase', () => {
+    const actual = jest.requireActual('@/features/project-creation/handlers/executorEdsPhase');
+    return { ...actual, syncEdsConfigToRemote: jest.fn(actual.syncEdsConfigToRemote) };
+});
 
 jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
@@ -94,6 +122,12 @@ jest.mock('@/features/project-creation/services/projectFinalizationService', () 
 }));
 
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
+import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
+import { syncEdsConfigToRemote } from '@/features/project-creation/handlers/executorEdsPhase';
+import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import {
@@ -108,7 +142,12 @@ import {
     loadExistingProjectForEdit,
     performAtomicComponentSwap,
 } from '@/features/project-creation/handlers/executorEditMode';
-import { cleanupOrphanedDirectory } from '@/features/project-creation/handlers/executorPreflight';
+import { finishEditWithoutRebuild } from '@/features/project-creation/handlers/executorEditApply';
+import {
+    cleanupOrphanedDirectory,
+    handlePortConflicts,
+    refuseSecondErpIntegration,
+} from '@/features/project-creation/handlers/executorPreflight';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 const EDIT_PATH = '/somewhere/else/my-edited-project';
@@ -165,12 +204,16 @@ describe('executeProjectCreation — the progress it reports', () => {
 
         await executeProjectCreation(context, config());
 
+        // An EDS stack with no mesh, integrations or datapack, and a storefront setup
+        // that did not finish: eight steps, this the first, with the run's start for
+        // the screen's clock.
         expect(sendMessage).toHaveBeenCalledWith('creationProgress', {
-            currentOperation: 'Setting Up Project',
+            currentOperation: OPERATION_STAGES.settingUpProject.label,
             progress: 10,
             message: 'Creating project directory structure',
             logs: [],
-            meshPhase: undefined,
+            position: { index: 1, total: 8 },
+            startedAt: expect.any(Number),
         });
     });
 });
@@ -194,6 +237,51 @@ describe('executeProjectCreation — the directories it makes', () => {
         await executeProjectCreation(context, config({ editProjectPath: EDIT_PATH }));
 
         expect(madeDirectories().map(([p]) => p)).toContain(`${EDIT_PATH}/components`);
+    });
+});
+
+describe('executeProjectCreation — an Edit finished without the rebuild (PL-75)', () => {
+    it('stops once the Edit is finished: no port check, no install, no finalize', async () => {
+        // A running demo is not stopped and nothing is rebuilt or redeployed.
+        (finishEditWithoutRebuild as jest.Mock).mockResolvedValue(true);
+        const { context } = makeContext();
+
+        await executeProjectCreation(
+            context,
+            config({ editProjectPath: EDIT_PATH, editChanges: [] }),
+        );
+
+        expect(finishEditWithoutRebuild).toHaveBeenCalledWith(
+            context,
+            expect.objectContaining({ editProjectPath: EDIT_PATH, editChanges: [] }),
+            expect.any(Function),
+        );
+        expect(handlePortConflicts).not.toHaveBeenCalled();
+        expect(cloneAllComponents).not.toHaveBeenCalled();
+        expect(finalizeProject).not.toHaveBeenCalled();
+    });
+
+    it('stops before anything is made when the instance already has an ERP integration (AB-78)', async () => {
+        (finishEditWithoutRebuild as jest.Mock).mockResolvedValue(false);
+        (refuseSecondErpIntegration as jest.Mock).mockRejectedValueOnce(new Error('held'));
+        const { context } = makeContext();
+        const cfg = config();
+
+        await expect(executeProjectCreation(context, cfg)).rejects.toThrow('held');
+
+        expect(refuseSecondErpIntegration).toHaveBeenCalledWith(context, cfg);
+        expect(cleanupOrphanedDirectory).not.toHaveBeenCalled();
+        expect(cloneAllComponents).not.toHaveBeenCalled();
+    });
+
+    it('runs the full path when the Edit needs the rebuild', async () => {
+        (finishEditWithoutRebuild as jest.Mock).mockResolvedValue(false);
+        const { context } = makeContext();
+
+        await executeProjectCreation(context, config({ editProjectPath: EDIT_PATH }));
+
+        expect(handlePortConflicts).toHaveBeenCalled();
+        expect(finalizeProject).toHaveBeenCalled();
     });
 });
 
@@ -294,5 +382,122 @@ describe('executeProjectCreation — the AI bundle step', () => {
         expect(saveProjectConfigOnly).toHaveBeenCalledWith(
             expect.objectContaining({ name: 'seam-demo' })
         );
+    });
+});
+
+describe('executeProjectCreation — where a new project lives', () => {
+    it('puts a NEW project under ~/.demo-builder/projects/<name>', async () => {
+        const { context } = makeContext();
+        const home = path.join(os.homedir(), '.demo-builder', 'projects', 'seam-demo');
+
+        await executeProjectCreation(context, config());
+
+        expect(madeDirectories().map(([p]) => p)).toEqual([
+            path.join(home, 'components'),
+            path.join(home, 'logs'),
+        ]);
+    });
+
+    it('hands the config sync the storefront’s own folder under components/', async () => {
+        const { context } = makeContext();
+        const home = path.join(os.homedir(), '.demo-builder', 'projects', 'seam-demo');
+
+        await executeProjectCreation(context, config());
+
+        const [, , , isEdsStack, edsComponentPath] = (syncEdsConfigToRemote as jest.Mock).mock
+            .calls[0];
+        expect(isEdsStack).toBe(true);
+        expect(edsComponentPath).toBe(path.join(home, 'components', 'eds-storefront'));
+    });
+});
+
+describe('executeProjectCreation — what an agent and the wizard are told', () => {
+    it('names each early step to both, the agent hearing "<stage> — <step>"', async () => {
+        const { context, sendMessage } = makeContext();
+
+        await executeProjectCreation(context, config());
+
+        const setUp = OPERATION_STAGES.settingUpProject.label;
+        const loading = OPERATION_STAGES.loadingComponents.label;
+        expect(sendMessage).toHaveBeenCalledWith(
+            'creationProgress',
+            expect.objectContaining({ progress: 15, message: 'Initializing project configuration' })
+        );
+        expect(sendMessage).toHaveBeenCalledWith(
+            'creationProgress',
+            expect.objectContaining({ progress: 20, message: 'Preparing component definitions' })
+        );
+        expect(reportPhase).toHaveBeenCalledWith(`${setUp} (1 of 8) — Creating project directory structure`);
+        expect(reportPhase).toHaveBeenCalledWith(`${loading} (2 of 8) — Preparing component definitions`);
+    });
+
+    it('sends an empty message, and the bare stage to the agent, when a step names none', async () => {
+        const { context, sendMessage } = makeContext();
+        (cloneAllComponents as jest.Mock).mockImplementation(
+            async (ctx: { progressTracker: (operation: string, progress: number) => void }) => {
+                ctx.progressTracker('Cloning', 30);
+            }
+        );
+
+        await executeProjectCreation(context, config());
+
+        expect(sendMessage).toHaveBeenCalledWith('creationProgress', {
+            currentOperation: 'Cloning',
+            progress: 30,
+            message: '',
+            logs: [],
+            startedAt: expect.any(Number),
+        });
+        expect(reportPhase).toHaveBeenCalledWith('Cloning');
+    });
+});
+
+describe('executeProjectCreation — the settings the defaults are filled into', () => {
+    it('fills defaults into the settings the secret step returned, keeping every value', async () => {
+        const { context } = makeContext();
+        (migrateDeclaredSecrets as jest.Mock).mockResolvedValueOnce({
+            sanitizedConfigs: { 'adobe-commerce-paas': { ADOBE_COMMERCE_URL: 'https://shop.test' } },
+            retained: [],
+        });
+
+        await executeProjectCreation(context, config());
+
+        const [{ project }] = (cloneAllComponents as jest.Mock).mock.calls[0];
+        expect(project.componentConfigs).toMatchObject({
+            'adobe-commerce-paas': { ADOBE_COMMERCE_URL: 'https://shop.test' },
+        });
+    });
+});
+
+describe('executeProjectCreation — category pages and the catalog menu', () => {
+    it('runs the step for an EDS storefront, handing it the project being edited', async () => {
+        const { context } = makeContext();
+        const existing = { name: 'seam-demo', created: new Date('2026-01-01') };
+        (loadExistingProjectForEdit as jest.Mock).mockResolvedValueOnce(existing);
+
+        await executeProjectCreation(context, config({ editProjectPath: EDIT_PATH }));
+
+        expect(executeCatalogMenuPhase).toHaveBeenCalledTimes(1);
+        expect(executeCatalogMenuPhase).toHaveBeenCalledWith(
+            context,
+            expect.objectContaining({ name: 'seam-demo', path: EDIT_PATH }),
+            expect.any(Function),
+            existing
+        );
+    });
+
+    it('skips the step for a headless storefront, which has no catalog menu', async () => {
+        const { context } = makeContext();
+
+        await executeProjectCreation(
+            context,
+            config({
+                selectedStack: 'headless-paas',
+                components: { frontend: 'headless', dependencies: [] },
+            })
+        );
+
+        expect(sendCompletionAndCleanup).toHaveBeenCalled();
+        expect(executeCatalogMenuPhase).not.toHaveBeenCalled();
     });
 });

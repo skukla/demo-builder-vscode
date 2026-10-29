@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: low
-status: backlog
+status: dropped
 layer: G
 ---
 # Monorepo Support with Independent Release Tracking - Implementation Plan
@@ -142,3 +142,7 @@ See individual step files for detailed test specifications.
 ## Next Actions
 
 1. Begin Step 1: Extend COMPONENT_REPOS with Tag Prefix Support
+
+## Shipped so far
+
+- 2026-10-03  Dropped 2026-10-03 (owner): a 2025-12 plan whose own body says no repository serves two components; its file map is stale.

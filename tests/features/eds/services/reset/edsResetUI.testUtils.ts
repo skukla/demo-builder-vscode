@@ -8,7 +8,7 @@
  * and therefore ends up with exactly the set it started with.
  *
  * Moved here (all specs agreed): @/core/auth/adobeAuthGuard, @/core/di, @/core/logging, @/core/utils/timeoutConfig, @/features/authentication/services/ensureProjectOrgContext, @/features/eds/handlers/edsHelpers, @/features/eds/services/daLive/daLiveAuthService, @/features/eds/services/github/githubAppService, @/types/typeGuards, vscode
- * Left inline (specs disagree):  @/features/data-installer/services/commerceCredentials, @/features/data-installer/services/sampleDataInstall, @/features/eds/services/reset/edsResetService
+ * Left inline (specs disagree):  @/features/data-installer/services/sampleDataInstall, @/features/eds/services/reset/edsResetService
  *
  * Extracted 2026-08-30 (lane C2). Resolving the disputed ones is a separate
  * decision, deliberately not taken here.

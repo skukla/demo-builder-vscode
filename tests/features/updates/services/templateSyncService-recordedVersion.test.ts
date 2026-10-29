@@ -36,7 +36,7 @@ const NOT_IN_TEMPLATE = `The storefront's recorded template version (${BASE_SHA}
 /** The merge checks the recorded version is a commit on the template's main. */
 const BASE_CHECK_STEPS = [
     [`git cat-file -e "${BASE_SHA}^{commit}"`, opts(REPO_DIR, TIMEOUTS.QUICK)],
-    [`git merge-base --is-ancestor ${BASE_SHA} template/main`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
+    [`git merge-base ${BASE_SHA} template/main`, opts(REPO_DIR, TIMEOUTS.NORMAL)],
 ];
 
 beforeEach(() => {
@@ -47,6 +47,11 @@ describe('the recorded version a merge starts from', () => {
     it.each([
         ['absent', undefined],
         ['not a commit sha', 'main'],
+        // The record is interpolated into git commands, so a sha is the WHOLE value.
+        ['a sha with something after it', `${BASE_SHA}; rm -rf .`],
+        ['a sha with something before it', `HEAD~${BASE_SHA}`],
+        // A hand-edited manifest: seven digits read as a sha once coerced to text.
+        ['a number rather than text', 1234567],
     ])('a recorded version that is %s: refuses before making a temp dir', async (_label, recorded) => {
         const result = await service().syncWithTemplate(
             edsProject({ lastSyncedCommit: recorded }),
@@ -88,7 +93,7 @@ describe('the recorded version a merge starts from', () => {
 
     it.each([
         ['absent even after fetching it', /git cat-file -e/],
-        ["not an ancestor of the template's main", /merge-base --is-ancestor/],
+        ["sharing no history with the template", /git merge-base [^-]/],
     ])('a recorded version %s: fails with the reset-once sentence, pushes nothing', async (_label, pattern) => {
         failOn(pattern);
 
@@ -97,6 +102,18 @@ describe('the recorded version a merge starts from', () => {
         expect(result).toEqual({ success: false, strategy: 'merge', syncedCommit: '', error: NOT_IN_TEMPLATE });
         expect(gitCalls()).not.toContainEqual(expect.stringMatching(/diff-tree|git apply/));
         expect(pushed()).toBe(false);
+    });
+
+    it('names a full-length recorded version by its first seven characters', async () => {
+        const full = `c0ffee1${'d'.repeat(33)}`;
+        failOn(/git merge-base [^-]/);
+
+        const result = await service().syncWithTemplate(
+            edsProject({ lastSyncedCommit: full }),
+            { strategy: 'merge' },
+        );
+
+        expect(result.error).toBe(NOT_IN_TEMPLATE.replace(BASE_SHA, 'c0ffee1'));
     });
 
     it('already at the template head: succeeds without diffing or pushing', async () => {

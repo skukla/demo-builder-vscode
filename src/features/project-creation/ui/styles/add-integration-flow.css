@@ -32,24 +32,8 @@
     flex-direction: column;
 }
 
-.intflow-stage-lead {
-    margin: 0 0 12px;
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--spectrum-global-color-gray-700);
-}
-
-/* Section label inside a stage ("Start from"): small caps over a card group,
-   making the group read as a labeled sub-choice rather than the modal's main
-   event (the unlabeled seed row was the owner's 2026-08-27 design flag). */
-.intflow-section-label {
-    margin: 0 0 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--spectrum-global-color-gray-600);
-}
+/* A step's opening sentence and its section labels are `LeadText` and `SectionLabel`
+   (core/ui), styled in core/ui/styles/modal-text.css. */
 
 /* The optional name field sits a beat below the card group it follows. */
 .intflow-blank {
@@ -122,8 +106,14 @@
     flex: 0 0 auto;
     /* The viewport term reserves the modal chrome (title, search, count, context
        line, footer, dialog margins) so a short window shrinks the list rather than
-       overflowing the dialog. */
-    height: min(420px, calc(100vh - 22rem));
+       overflowing the dialog.
+       It was 22rem, which undercounted that chrome by 21px (measured 2026-10-28 at a
+       725px-tall webview, on both the project and the workspace list): `.modal-body`
+       ended up shorter than its content and scrolled, clipping the list's last row
+       and pulling its top row under the header. Scrolling the LIST cannot reveal
+       that strip, so a selected last row stayed half-hidden. 24rem leaves ~11px of
+       slack. */
+    height: min(420px, calc(100vh - 24rem));
 }
 
 /* A committed choice (project/workspace) collapsed to one compact boxed line. */
@@ -418,32 +408,7 @@
     color: var(--spectrum-global-color-static-white, #fff);
 }
 
-.intflow-api-row {
-    padding: 2px 0;
-}
-
-/* Display name primary, code secondary gray — names first, codes for the curious. */
-.intflow-api-name {
-    font-size: 13px;
-    color: var(--spectrum-global-color-gray-900);
-}
-
-.intflow-api-code {
-    margin-left: 8px;
-    font-size: 11px;
-    color: var(--spectrum-global-color-gray-600);
-}
-
-/* Why a row cannot be unchecked (`lockedReason`), rendered after the name and code.
-   Secondary explanatory text, so it takes the same register as `.intflow-api-code`
-   directly above rather than a new one. It had no rule at all until 2026-09-08
-   (PL-20) and rendered at inherited body size, louder than the code beside it. */
-.intflow-api-reason {
-    margin-left: 8px;
-    font-size: 11px;
-    color: var(--spectrum-global-color-gray-600);
-}
-
+/* The rows themselves are `CheckboxRow` (core/ui), styled in core/ui/styles/checkbox-row.css. */
 .intflow-api-empty {
     padding: 24px 8px;
     text-align: center;

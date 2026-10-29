@@ -126,7 +126,7 @@ describe('useAddDemoFlow', () => {
 
     it("keeps a bundle's setup, and Start a project adds the demo then hands setup and row to the host", async () => {
         const { hook, onDemoAdded } = setup();
-        const SETUP = { version: 1, exportedAt: 'x', source: {}, includesSecrets: false, selections: {}, configs: {} };
+        const SETUP = { version: 1, exportedAt: 'x', source: {}, selections: {}, configs: {} };
         mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'steve', repo: 'summit', setup: SETUP } });
         mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/summit' } });
         await continueWithZip(hook);

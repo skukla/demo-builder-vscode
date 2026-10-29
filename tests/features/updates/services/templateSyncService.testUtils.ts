@@ -13,7 +13,8 @@ import { TemplateSyncService } from '@/features/updates/services/templateSyncSer
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { githubAccessFor } from '../../../helpers/githubAccessFake';
+import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
 
 export const mockExecute = jest.fn();
 export const mockReadFile = jest.fn();
@@ -24,10 +25,6 @@ export const mockMkdtemp = jest.fn();
 export const mockGetToken = jest.fn();
 
 jest.mock('vscode', () => ({ window: {}, workspace: {} }), { virtual: true });
-// The subject reads its token through the service cache; only getToken is called.
-jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
-    getGitHubServices: () => ({ tokenService: { getToken: (...a: unknown[]) => mockGetToken(...a) } }),
-}));
 jest.mock('fs/promises', () => ({
     readFile: (...a: unknown[]) => mockReadFile(...a),
     writeFile: (...a: unknown[]) => mockWriteFile(...a),
@@ -68,8 +65,10 @@ export function edsProject(metadataOverrides: Record<string, unknown> = {}): Pro
 }
 
 export function service(logger = createMockLogger()): TemplateSyncService {
+    // The token is the one call each case steers (signed in, or not).
+    const access = githubAccessFor(createMockSecretStorage(githubTokenSecret('gh-token')).secrets, logger);
     return new TemplateSyncService(
-        createMockSecretStorage({ githubToken: 'gh-token' }).secrets,
+        { ...access, tokenService: { getToken: () => mockGetToken() } },
         logger,
         createMockCommandExecutor({ execute: (...a: unknown[]) => mockExecute(...a) }),
     );

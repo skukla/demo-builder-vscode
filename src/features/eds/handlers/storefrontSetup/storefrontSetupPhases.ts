@@ -14,15 +14,16 @@
  */
 
 import * as vscode from 'vscode';
+import { authoredSheetRefresh } from '../../services/catalogMenu/authoredSheetRefresh';
+import { createCatalogMenuSite } from '../../services/catalogMenu/catalogMenuSiteDeps';
 import { ConfigurationService } from '../../services/configService/configurationService';
 import { withDaLiveAuthRetry, MAX_REAUTH_ATTEMPTS } from '../../services/daLive/daLiveAuthRetry';
-import {
-    createDaLiveServiceTokenProvider,
-    DaLiveContentOperations,
-} from '../../services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '../../services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '../../services/daLive/daLiveTokenProviders';
 import { executeEdsPipeline } from '../../services/edsPipeline';
 import { GitHubAppService } from '../../services/github/githubAppService';
 import { GitHubFileOperations } from '../../services/github/githubFileOperations';
+import { GitHubRepoLifecycle } from '../../services/github/githubRepoLifecycle';
 import { GitHubRepoOperations } from '../../services/github/githubRepoOperations';
 import { HelixService } from '../../services/helix/helixService';
 import {
@@ -30,24 +31,30 @@ import {
     reportUnapplied,
     type PatchReport,
 } from '../../services/patches/patchReportHelper';
+import { confirmStorefrontCodeServed } from '../../services/storefront/codeServed';
 import { getDaLiveAuthService } from '../edsHelpers';
-import { dryCheckDemo, withDemoContentSource } from './storefrontSetupDemo';
+import { withDemoContentSource } from './storefrontSetupDemo';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
 import { executePhaseCodeSync } from './storefrontSetupPhase3';
+import {
+    buildPipelineProgressCallback,
+    sendSessionExpired,
+    storefrontSetupSteps,
+    withSetupSteps,
+    type PipelineProgressInfo,
+} from './storefrontSetupProgress';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getBlockLibraryContentSource } from '@/features/components/services/blockLibraryLoader';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
-import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
+import { projectTargetsStorefront } from '@/features/eds/services/storefrontIdentityGuard';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
-import type {
-    StorefrontSetupProgressPayload,
-    StorefrontSetupProgressPhase,
-} from '@/types/webviewPayloads';
+import type { StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
 
 // Public type re-exports
 export type { StorefrontSetupResult } from './storefrontSetupTypes';
@@ -63,13 +70,10 @@ function createSetupServices(context: HandlerContext): SetupServices {
     const daLiveAuthService = getDaLiveAuthService(context.context);
     const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     return {
-        githubRepoOps: new GitHubRepoOperations(
-            githubTokenService,
-            ServiceLocator.getCommandExecutor(),
-            context.logger,
-        ),
+        githubRepoOps: new GitHubRepoOperations(githubTokenService, context.logger),
+        githubRepoLifecycle: new GitHubRepoLifecycle(githubTokenService, context.logger),
         templateSync: new TemplateSyncService(
-            context.context.secrets,
+            getGitHubServices(context.context.secrets),
             context.logger,
             ServiceLocator.getCommandExecutor(),
         ),
@@ -99,72 +103,6 @@ function buildLibraryContentSources(
     return sources;
 }
 
-type PipelineProgressInfo = {
-    operation: string;
-    message: string;
-    subMessage?: string;
-    percentage?: number;
-    current?: number;
-    total?: number;
-};
-
-const PIPELINE_PROGRESS = {
-    CONTENT_CLEAR: 49,
-    CONTENT_COPY_START: 50,
-    CONTENT_COPY_END: 58, // 50 + 8 (0.08 × 100)
-    BLOCK_LIBRARY: 59,
-    EDS_SETTINGS: 63,
-    CACHE_PURGE: 66,
-    CONTENT_PUBLISH_START: 67,
-    CONTENT_PUBLISH_END: 94, // 67 + 27
-    LIBRARY_PUBLISH: 95, // after content-publish completes — must be > CONTENT_PUBLISH_END (94)
-} as const;
-
-/** Build the progress callback for the EDS content pipeline */
-function buildPipelineProgressCallback(
-    context: HandlerContext,
-): (info: PipelineProgressInfo) => void {
-    return (info) => {
-        const mapping: Record<string, { phase: StorefrontSetupProgressPhase; progress: number }> = {
-            'content-clear': { phase: 'content', progress: PIPELINE_PROGRESS.CONTENT_CLEAR },
-            'content-copy': { phase: 'content', progress: PIPELINE_PROGRESS.CONTENT_COPY_START },
-            'block-library': { phase: 'block-library', progress: PIPELINE_PROGRESS.BLOCK_LIBRARY },
-            'eds-settings': { phase: 'block-library', progress: PIPELINE_PROGRESS.EDS_SETTINGS },
-            'cache-purge': { phase: 'publish', progress: PIPELINE_PROGRESS.CACHE_PURGE },
-            'content-publish': {
-                phase: 'publish',
-                progress: PIPELINE_PROGRESS.CONTENT_PUBLISH_START,
-            },
-            'library-publish': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
-            'catalog-prewarm': { phase: 'publish', progress: PIPELINE_PROGRESS.LIBRARY_PUBLISH },
-        };
-        // Fallback for an operation the mapping doesn't know. It used to push
-        // the raw operation string as the phase — a value outside the phase
-        // vocabulary that the webview's bookkeeping silently ignored.
-        const m = mapping[info.operation] ?? {
-            phase: 'content' as const,
-            progress: PIPELINE_PROGRESS.CONTENT_COPY_START,
-        };
-        let progress = m.progress;
-        if (info.operation === 'content-copy' && info.percentage !== undefined) {
-            progress = PIPELINE_PROGRESS.CONTENT_COPY_START + Math.round(info.percentage * 0.08);
-        }
-        if (info.operation === 'content-publish' && info.current !== undefined && info.total) {
-            const span =
-                PIPELINE_PROGRESS.CONTENT_PUBLISH_END - PIPELINE_PROGRESS.CONTENT_PUBLISH_START;
-            progress =
-                PIPELINE_PROGRESS.CONTENT_PUBLISH_START +
-                Math.round((info.current / info.total) * span);
-        }
-        context.sendMessage('storefront-setup-progress', {
-            phase: m.phase,
-            message: info.message,
-            subMessage: info.subMessage,
-            progress,
-        } satisfies StorefrontSetupProgressPayload);
-    };
-}
-
 /**
  * Run Phase 2 (Helix config) and Phase 3 (code sync) with DA.live auth recovery.
  * Returns blockCollectionIds and any early-return result.
@@ -188,7 +126,8 @@ async function runConfigCodeSyncPhases(
                 signal,
                 options,
             );
-            const phase3Result = await executePhaseCodeSync(context, edsConfig, services, repoInfo);
+            const phase3Result =
+                await executePhaseCodeSync(context, edsConfig, services, repoInfo, signal);
             if (phase3Result) {
                 return {
                     blockCollectionIds: phase2Result.blockCollectionIds,
@@ -201,12 +140,7 @@ async function runConfigCodeSyncPhases(
             maxAttempts: MAX_REAUTH_ATTEMPTS,
             logPrefix: '[Storefront Setup]',
             operationLabel: 'Setup',
-            onExpired: () =>
-                context.sendMessage('storefront-setup-progress', {
-                    phase: 'auth-recovery',
-                    message: 'DA.live session expired. Please re-authenticate to continue.',
-                    progress: -1,
-                } satisfies StorefrontSetupProgressPayload),
+            onExpired: () => sendSessionExpired(context),
             onBeforeRetry: async () => {
                 context.logger.info(
                     '[Storefront Setup] DA.live re-authenticated, resuming configuration',
@@ -219,6 +153,36 @@ async function runConfigCodeSyncPhases(
             },
         },
     );
+}
+
+/**
+ * Before the bulk publish of an Edit that rebuilds onto an existing storefront: the hook
+ * that refreshes a live authored-pages sheet (EDS-61, `authoredSheetRefresh.ts`).
+ */
+function authoredSheetHook(
+    context: HandlerContext,
+    logger: Logger,
+    services: SetupServices,
+    repoInfo: RepoInfo,
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    project: Project,
+): () => Promise<void> {
+    const site = createCatalogMenuSite({
+        project,
+        target: {
+            daLiveOrg: edsConfig.daLiveOrg,
+            daLiveSite: edsConfig.daLiveSite,
+            repoOwner: repoInfo.repoOwner,
+            repoName: repoInfo.repoName,
+        },
+        daLive: services.daLiveContentOps.sourceOps,
+        helix: services.helixService,
+        github: services.githubFileOps,
+        stateManager: context.stateManager,
+        logger,
+        overlay: edsConfig.byomOverlayUrl !== undefined,
+    });
+    return authoredSheetRefresh(project, site, logger, '[Storefront Setup]');
 }
 
 /**
@@ -294,6 +258,9 @@ async function runEdsPipelineWithRecovery(
                     purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
                     byomOverlayUrl: edsConfig.byomOverlayUrl,
                     project: project ?? undefined,
+                    ...(project
+                        ? { beforeContentPublish: authoredSheetHook(context, logger, services, repoInfo, edsConfig, project) }
+                        : {}),
                 },
                 {
                     daLiveContentOps: services.daLiveContentOps,
@@ -304,18 +271,27 @@ async function runEdsPipelineWithRecovery(
                 onProgress,
             );
             if (!result.success) throw new Error(result.error || 'Content pipeline failed');
+            if (result.warnings.length > 0) repoInfo.pipelineWarnings = result.warnings;
+            // After the copy, as a reset does: the code publish can miss the last
+            // commits, and a storefront whose site runs old code is not built.
+            const codeNotServed = await confirmStorefrontCodeServed(
+                services.githubFileOps,
+                services.helixService,
+                { owner: repoInfo.repoOwner, repo: repoInfo.repoName },
+                undefined,
+                logger,
+            );
+            if (codeNotServed) {
+                repoInfo.pipelineWarnings = [...(repoInfo.pipelineWarnings ?? []), codeNotServed];
+                repoInfo.storefrontBuildComplete = false;
+            }
             return { libraryPaths: result.libraryPaths };
         },
         {
             maxAttempts: MAX_REAUTH_ATTEMPTS,
             logPrefix: '[Storefront Setup]',
             operationLabel: 'Setup',
-            onExpired: () =>
-                context.sendMessage('storefront-setup-progress', {
-                    phase: 'auth-recovery',
-                    message: 'DA.live session expired. Please re-authenticate to continue.',
-                    progress: -1,
-                } satisfies StorefrontSetupProgressPayload),
+            onExpired: () => sendSessionExpired(context),
             onBeforeRetry: async () => {
                 logger.info('[Storefront Setup] DA.live re-authenticated, resuming pipeline');
                 await context.sendMessage('storefront-setup-progress', {
@@ -350,13 +326,13 @@ async function runEdsPipelineWithRecovery(
  * @returns Setup result with repo details
  */
 export async function executeStorefrontSetupPhases(
-    context: HandlerContext,
+    runContext: HandlerContext,
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     signal: AbortSignal,
     options?: BlockLibraryOptions,
     servicesOverride?: Partial<SetupServices>,
 ): Promise<StorefrontSetupResult> {
-    const logger = context.logger;
+    const logger = runContext.logger;
     /**
      * One seam for the whole bundle, rather than one per service.
      *
@@ -370,11 +346,17 @@ export async function executeStorefrontSetupPhases(
     // Merged, not replaced: a caller (in practice a suite) supplies only the
     // collaborators it cares about and the rest are built as usual. An all-or-nothing
     // override forced every caller to stand in for eight services to steer one.
-    const services: SetupServices = { ...createSetupServices(context), ...servicesOverride };
+    const services: SetupServices = { ...createSetupServices(runContext), ...servicesOverride };
 
     const wantsToResetContent = Boolean(edsConfig.resetSiteContent);
     const skipContent =
         !edsConfig.contentSource || (Boolean(edsConfig.selectedSite) && !wantsToResetContent);
+    // Every progress push as a numbered step with its line under it (`storefrontSetupProgress.ts`).
+    const steps = storefrontSetupSteps({
+        clearsContent: wantsToResetContent,
+        copiesContent: !skipContent,
+    });
+    const context = withSetupSteps(runContext, steps);
     logger.info(
         `[Storefront Setup] Content: skipContent=${skipContent}, selectedSite=${Boolean(edsConfig.selectedSite)}, resetContent=${wantsToResetContent}`,
     );
@@ -446,11 +428,6 @@ export async function executeStorefrontSetupPhases(
         );
         if (phase1Result) return phase1Result;
 
-        // An added demo's code is never patched (D4); the dry check says what may not work.
-        if (edsConfig.demo) {
-            await dryCheckDemo(edsConfig.demo, repoInfo, { owner: templateOwner, repo: templateRepo }, logger);
-        }
-
         const { blockCollectionIds, earlyReturn } = await runConfigCodeSyncPhases(
             context,
             edsConfig,
@@ -490,7 +467,8 @@ export async function executeStorefrontSetupPhases(
                     : 'Content publish complete',
             progress: 100,
         } satisfies StorefrontSetupProgressPayload);
-        return { success: true, ...repoInfo };
+        const { brokenLinks } = patchReport;
+        return { success: true, ...repoInfo, ...(brokenLinks?.length ? { brokenLinks } : {}) };
     } catch (error) {
         logger.error(`[Storefront Setup] Failed: ${(error as Error).message}`);
         return { success: false, error: (error as Error).message, ...repoInfo };

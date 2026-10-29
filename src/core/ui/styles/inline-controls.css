@@ -3,8 +3,9 @@
  * components and the text-button that goes with them.
  *
  * FEATURE-SCOPED (ADR-017 §6 and §7). InlineNotice and InlineRenameField live in
- * core/ui/components; imported by the four entries that render one of them —
- * dashboard, integrations, projectsList and wizard.
+ * core/ui/components; imported by the entries that render one of them —
+ * dashboard, integrations, projectsList, siteAccess, wizard and configure (the
+ * store pickers' no-products notice, EDS-46).
  *
  * THEY WERE HIDING IN THE UTILITY SHEET. `--move` selects on a class's PREFIX and
  * the utility list names `inline`, so `.inline-notice-body` and
@@ -51,6 +52,16 @@
     color: var(--spectrum-global-color-blue-600);
 }
 
+/* Green for something that finished and worked (2026-10-28), drawn the way info is:
+   the border and the icon, all the way round. */
+.inline-notice--success {
+    border-color: var(--spectrum-global-color-green-500);
+}
+
+.inline-notice--success .inline-notice-icon {
+    color: var(--spectrum-global-color-green-600);
+}
+
 .inline-notice-icon {
     color: var(--spectrum-global-color-orange-600);
     flex-shrink: 0;
@@ -81,6 +92,11 @@
 /* Action stays on the right, full-size, never shrinks. */
 .inline-notice-actions {
     flex-shrink: 0;
+}
+
+/* `actionBelow`: the buttons sit under the text, inside the body column. */
+.inline-notice-body > .inline-notice-actions {
+    margin-top: 8px;
 }
 
 /* In-flight spinner inside the "Switching…" button — small gap before the label. */
@@ -142,6 +158,18 @@
     margin-left: 6px;
     opacity: 1;
     pointer-events: auto;
+}
+
+/* Inside a Spectrum ListView row, whose text slot is one line tall and clips.
+ * The collapsed pencil keeps its 32px HEIGHT (only its width collapses), so an
+ * inline field grew to 32px, centred its name in that, and the slot cut the
+ * name's lower half off. Filling the slot instead centres the name on the line
+ * and lets the pencil overflow evenly. */
+.inline-rename-row,
+.inline-rename-row .inline-rename {
+    display: flex;
+    align-items: center;
+    height: 100%;
 }
 
 .inline-rename .inline-rename-pencil {

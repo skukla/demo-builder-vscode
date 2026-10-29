@@ -9,6 +9,8 @@
  */
 
 import { AdobeOrgMismatchError } from '@/features/authentication/services/authenticationErrors';
+import type { InstalledBlockLibrary } from '@/types/blockLibraries';
+import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
 
 import {
     EDS,
@@ -376,9 +378,21 @@ describe('create_project', () => {
             await s.call({ ...EDS, stack: 'eds-accs', accsEndpoint: 'https://commerce.example' });
 
             expect(storefrontSetup).toHaveBeenCalled();
+            // accsHost is the field creation reads (buildProjectEdsConfig).
             expect(capturedWizardState().edsConfig).toMatchObject({
-                accsEndpoint: 'https://commerce.example',
                 accsHost: 'https://commerce.example',
+            });
+        });
+
+        it("records the endpoint on the backend's config, where the wizard's Connection step puts it", async () => {
+            // Until 2026-09-30 it reached only the storefront's config.json, so the
+            // project had a store scope and no endpoint: every Commerce tool refused.
+            const s = toolServer();
+
+            await s.call({ ...EDS, stack: 'eds-accs', accsEndpoint: 'https://commerce.example' });
+
+            expect(capturedWizardState().componentConfigs).toStrictEqual({
+                'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://commerce.example' },
             });
         });
 
@@ -388,6 +402,7 @@ describe('create_project', () => {
             await s.call(EDS);
 
             expect(storefrontSetup).toHaveBeenCalled();
+            expect(capturedWizardState().componentConfigs).toStrictEqual({});
         });
 
         it('creates a mesh-requiring EDS project from the session target', async () => {
@@ -449,5 +464,36 @@ describe('create_project', () => {
             expect(state.selectedBlockLibraries).toStrictEqual([]);
             expect(state.customBlockLibraries).toStrictEqual([]);
         });
+    });
+});
+
+describe('create_project — the block libraries storefront setup installed', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        defaultStorefrontSetup();
+    });
+
+    it('threads them into creation, the same channel the wizard uses', async () => {
+        const installed: InstalledBlockLibrary[] = [
+            {
+                name: 'Isle5 Blocks',
+                source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+                commitSha: 'abc123',
+                blockIds: ['hero'],
+                installedAt: '2026-10-09T00:00:00.000Z',
+            },
+        ];
+        storefrontSetup.mockImplementationOnce(async (ctx: { sendMessage: (t: string, d?: unknown) => Promise<void> }) => {
+            await ctx.sendMessage('storefront-setup-complete', {
+                message: 'Done',
+                githubRepo: 'https://github.com/o/r',
+                installedBlockLibraries: installed,
+            } satisfies StorefrontSetupCompletePayload);
+            return { success: true };
+        });
+
+        await toolServer().call(EDS);
+
+        expect(capturedWizardState().edsConfig?.installedBlockLibraries).toStrictEqual(installed);
     });
 });

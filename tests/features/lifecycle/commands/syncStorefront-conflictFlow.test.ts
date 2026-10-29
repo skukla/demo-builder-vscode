@@ -25,6 +25,7 @@ import {
     resetSyncStorefrontMocks,
     syncAndPublishMock,
     SyncStorefrontCommand,
+    type SyncStorefrontOutcome,
 } from './syncStorefront.testUtils';
 import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
@@ -42,7 +43,7 @@ const showTextDocument = vscode.window.showTextDocument as jest.Mock;
 let report: jest.Mock;
 let logger: Logger;
 
-function runCommand(): Promise<void> {
+function runCommand(): Promise<SyncStorefrontOutcome> {
     return new SyncStorefrontCommand(
         makeSyncStorefrontContext(),
         makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
@@ -114,27 +115,30 @@ describe('classifying the rebase failure', () => {
         await runCommand();
 
         expect(report).toHaveBeenCalledWith({
-            message: 'Someone else changed the storefront — merging their work in',
+            message: 'Merging their work in',
         });
         expect(git[0]).toEqual(['-C', STOREFRONT, 'pull', '--rebase']);
     });
 });
 
 describe('the manual conflict flow', () => {
-    it('asks with a modal, then waits on the SC before continuing the rebase', async () => {
+    it('asks the SC, then waits before continuing the rebase', async () => {
         const git = conflictOn(['blocks/hero/hero.js']);
         showWarningMessage.mockResolvedValue('Continue');
 
         await runCommand();
 
+        // No longer a BLOCKING dialog: it asks the SC to go and resolve conflicts in
+        // Source Control, which a modal:true dialog stops them reaching. It goes
+        // through askDuringOperation now — the progress modal when one is up, this
+        // notification otherwise (PL-59, owner 2026-09-20).
         expect(showWarningMessage).toHaveBeenCalledWith(
             expect.stringContaining('Resolve each conflict in the Source Control panel'),
-            { modal: true },
             'Continue',
             'Cancel and Reset'
         );
         expect(report).toHaveBeenCalledWith({
-            message: 'Waiting for you to resolve the overlapping changes in Source Control',
+            message: 'Waiting for your merge',
         });
         expect(pollingMock().pollUntilCondition).toHaveBeenCalledWith(expect.any(Function), {
             timeout: TIMEOUTS.VERY_LONG,
@@ -144,15 +148,20 @@ describe('the manual conflict flow', () => {
         });
         expect(report).toHaveBeenCalledWith({ message: 'Finishing the merge' });
         expect(git).toContainEqual(['-C', STOREFRONT, 'rebase', '--continue']);
-        expect(report).toHaveBeenCalledWith({ message: 'Pushing to GitHub' });
         expect(syncAndPublishMock).toHaveBeenCalledTimes(2);
+        // The re-push names its own steps (the service is mocked here): what it
+        // names reaches the notification.
+        syncAndPublishMock.mock.calls[1][0].onStep('Pushing to GitHub');
+        expect(report).toHaveBeenLastCalledWith({ message: 'Pushing to GitHub' });
     });
 
     it('falls back to the prompt when git cannot even list the conflicts', async () => {
         conflictOn([], { 'diff --name-only --diff-filter=U': gitFailure({ stderr: 'fatal: bad index' }) });
         showWarningMessage.mockResolvedValue('Continue');
 
-        await expect(runCommand()).resolves.toBeUndefined();
+        // The command answers its outcome now, for a screen's progress modal to
+        // end on; the rebase path reports itself, so it reads as cancelled.
+        await expect(runCommand()).resolves.toEqual({ success: false, cancelled: true });
 
         expect(showWarningMessage).toHaveBeenCalledTimes(1);
         // Nothing to reveal: no file was opened.

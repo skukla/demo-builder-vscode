@@ -51,7 +51,7 @@ the repository. With it, you choose the name and say the things a repository can
 | Field | What it says |
 |---|---|
 | `kind` | Always `"demo"`, so a reader knows which Demo Builder file it holds |
-| `version` | The file format's version; `1` today |
+| `version` | The file format's version; `2` today. A version-1 file is still read, as before |
 | `name` | The name on the Welcome grid |
 | `description` | The line under the name |
 | `configDefaults` | Store codes and other config values the project starts with |
@@ -61,6 +61,7 @@ the repository. With it, you choose the name and say the things a repository can
 | `integrations` | The integrations the demo depends on: catalog ids, and custom apps by repository |
 | `blockLibraries` | Shipped block libraries to pre-tick |
 | `contentSource` | The content site, when it is not the one `fstab.yaml` names, or to name its index path |
+| `builtWith` | Written by Share Demo's link save, never by hand: the shipped package, template, pin, fix list and boilerplate the storefront was built from, and the Demo Builder version that saved it |
 
 A file that names a content site names its index path; the `indexPath` field is required
 inside `contentSource`. Only the SC's own actions guess a path, and only for a repository
@@ -78,7 +79,7 @@ A complete example:
 ```json
 {
   "kind": "demo",
-  "version": 1,
+  "version": 2,
   "name": "Isle5 by Jen",
   "description": "A B2B outdoor-equipment demo with company accounts and quotes",
   "configDefaults": {
@@ -102,8 +103,8 @@ A complete example:
 Demo Builder reads four files from the repository's default branch:
 
 - **`package.json`.** A `next` dependency makes it a headless (Next.js) demo. Otherwise it
-  is an Edge Delivery demo when `head.html`, `scripts/scripts.js` and `scripts/delayed.js`
-  are present; a repository with none of them is not a storefront and is refused, naming
+  is an Edge Delivery demo when `head.html`, `scripts/scripts.js` and `404.html`
+  are present (not `scripts/delayed.js`, which Adobe's B2B template does not have); a repository with none of them is not a storefront and is refused, naming
   what is missing.
 - **`fstab.yaml`.** The DA.live site, as above.
 - **`config.json`.** The store codes from the `headers.cs` block, and whether company (B2B)
@@ -115,20 +116,44 @@ When neither file says whether the demo uses company features, the dialog asks t
 says what an empty account menu would mean if they answer wrong. The agent's tools do not
 ask; they treat it as off and say so.
 
-## What is yours, and what Demo Builder writes
+## What Demo Builder writes, and what it never touches
 
-The code is yours. No Demo Builder patch is applied to a storefront built from your demo,
-and reset never applies one either. Five behaviours the shipped brands get from patches are
-checked against your code instead, and what is missing is said to the SC in three sentences
-at most: product links may open an empty page, a product page with no product may be blank,
-and product images from AEM Assets may not load for some SKUs. Those are yours to fix in
-your code, and the sentence says so.
+Into every project built from your demo, Demo Builder writes what connects it to that
+project: `fstab.yaml` pointing at the project's own content site, `config.json` and
+`demo-config.json` with the project's own store and endpoint, the product-page fallback
+(the smart-404 snippet in `404.html`), the block library, the inspector tagging,
+the quick-edit hooks and the description file. Your files are the starting point; those are
+the ones the project owns afterwards.
 
-Into every project built from your demo, Demo Builder writes what makes it that project's:
-`fstab.yaml` pointing at the project's own content site, `config.json` and
-`demo-config.json` with the project's own store and endpoint, the block library, the
-inspector tagging and the quick-edit hooks. Your files are the starting point; those are the
-ones the project owns afterwards.
+Every write goes to the SC's own copy, never to your repository.
+
+## Demo Builder's fixes reach the SC's copy of your code
+
+The shipped brands carry a handful of fixes to Adobe's boilerplate (code patches, ADR-006),
+listed in Demo Builder's patch ledgers and tested against Adobe's template every day. A
+storefront built from your demo gets every one of them that fits, on creation and on every
+reset (owner, 2026-10-23, EDS-64): the same list, not a second one kept for colleagues
+(`knownPatches.ts`, run by the build step in `storefrontUpToDate.ts`).
+
+A fix fits only where the code it fixes is in the file exactly once. A fix already there is
+left as it is, and the fixes to one file go in together or not at all, so a link never goes in
+without the import it calls. Code you changed no longer matches, so it is never written over.
+The writes go to the SC's copy; your repository is never touched. If a patch list cannot be
+downloaded, what was read still goes in, and the project shows Needs reset until a reset reads
+them all.
+
+Measured on JustRite, 2026-10-23: of the six fixes, two were already in its code and the other
+four fit (the AEM Assets image name, and the product teaser's link, import and image address).
+
+## Boilerplate versions
+
+Demo Builder records what every storefront it touches was built on: the `name` and `version`
+in its `package.json` (both Adobe Commerce boilerplates call themselves
+`@adobe/aem-boilerplate-commerce`) and, from GitHub, the template it was generated from or the
+repository it is a fork of. The add dialog shows it as one row, **Built on**; the storefront
+report compares it with Demo Builder's current boilerplate, the template at the patches
+repository's last-known-good commit. An older storefront is still added: age alone never
+refuses one.
 
 ## Where a colleague's projects read from
 
@@ -139,8 +164,8 @@ creation, so a project already built keeps working whatever happens to yours. Re
 updates go back to your repository.
 
 **Keeping a demo nobody can take away.** An SC who wants to keep building on your demo even
-if you remove it builds one project from it and uses **More → Save as demo package** on that
-project. The card that makes reads that project's own repository and pages, so it needs
+if you remove it builds one project from it and saves it with **Share Demo**, **Also show it
+on my Welcome step** ticked, on that project. The card that makes reads that project's own repository and pages, so it needs
 nothing of yours.
 
 Your repository's history is readable by anyone who can read the repository. **Do not share a
@@ -155,8 +180,8 @@ repository whose history ever held a secret.**
 - **If you delete it,** projects built on it keep working. Their reset refuses with one
   sentence, and their dashboard says the demo's repository can't be reached. "Change
   source" points a project at another copy of the same kind, for a demo that moved; on an
-  Edge Delivery project "Save as demo package" keeps it as the SC's own, for one that is
-  gone.
+  Edge Delivery project "Keep as my own demo" opens Share Demo to keep it as the SC's own,
+  for one that is gone.
 
 ## The words
 
@@ -164,25 +189,46 @@ On the Welcome grid and in the dialog it is a **demo**: the thing you share and 
 they build on. Inside a project it is a **storefront**: that project's own code and site,
 which the Storefront area configures. One demo, many storefronts.
 
-## Save as demo package
+## Share Demo
 
-For an Edge Delivery project you built here, **More → Save as demo package** turns the
-storefront into a card on your own Welcome step, the way Isle5 is one, so you can build new
-projects from it. The dialog opens with the name and description prefilled from the brand or
-demo the project was built on (the project's own title for a Starter build); edit them,
-then **Save**. Two things happen: the description file is written into your own storefront
-repository from what the project already holds, and the card is added to your Welcome step.
-Nothing else about the repository changes: it is not marked as a GitHub template. A
-project created from the card still works, because creation copies a repository that is not a
+**Share Demo**, in the dashboard's Share row, is the one way to hand this demo on. It replaced
+two dialogs on 2026-10-22 (Export, and Save as demo package), which did the same job: both
+wrote the description file into your repository and put the card on your Welcome step. It
+asks **how** the demo travels first.
+
+### Send a link
+
+For a colleague who can reach your GitHub and the shared services. Keeps the history, and
+they get your later changes. Edge Delivery projects only. Top to bottom, the form shows:
+
+- The link and one button. A link carries nothing itself, so while your repository lacks the
+  description file the button reads **Save details and copy link**: it writes the file from
+  what the project already holds, then copies. Once the file is there it reads **Copy link**
+  and only copies. It reads **Save details and copy link** again after you change the name,
+  the description or the box below, because the next press will write.
+- One line: "Colleagues paste this into "Add a demo package" and get your code, content and
+  later changes."
+- **Also show it on my Welcome step**, ticked by default (it was always on before the merge).
+  Ticked, the save also puts the card on your own Welcome step, the way Isle5 is one, so you
+  can build new projects from it. Unticked, the save writes the file only, and takes your
+  card off the list if it was there. For a demo already shared, the box shows where its
+  card is now.
+- **Change name or description**, a quiet link that opens the two fields. They are
+  prefilled from the description file when it is the one Demo Builder wrote, otherwise from
+  the brand or demo the project was built on (the project's own title for a Starter build).
+- **What colleagues get**, one line each: whether colleagues can open the storefront's code
+  (a private repository needs access, or make it public), whether they start with your
+  published pages (a site with no published page list says so and points at Republish),
+  whether the sample data the demo uses is available to them, and whether each custom
+  integration's code can be read. The sample-data line only confirms; nothing is uploaded.
+  Nothing in the list stops you saving; it tells you what to fix first.
+- **Remove the details from my repository**, once there is something of yours to undo. It
+  takes the file out (only when it is ours) and the card off your list. The storefront is
+  untouched.
+
+Nothing else about the repository changes: it is not marked as a GitHub template. A project
+created from the card still works, because creation copies a repository that is not a
 template into a new empty one.
-
-Above the button, "What colleagues get" says, one line each, what a project built from the
-card will start with: whether colleagues can open the storefront's code (a private repository
-needs access, or make it public), whether they start with your published pages (a site with
-no published page list says so and points at Republish), whether the sample data the demo
-uses is available to them, and whether each custom integration's code can be read. The
-sample-data line only confirms; nothing is uploaded. Nothing in the list stops you saving;
-it tells you what to fix first.
 
 Resetting the project keeps the file: a reset replaces the storefront's code with the
 template's, and the description file rides along with `fstab.yaml` and `config.json`, so the
@@ -190,30 +236,19 @@ card and its link keep working.
 
 Demo Builder rewrites only a description file it wrote itself, and knows it by the file's
 recorded revision. A file you wrote or edited by hand is left alone and the dialog says so;
-the card still goes on your list. **Remove demo package** takes the file out (again only
-when it is ours) and takes the card off your list. The card's own menu on the Welcome step, always visible, has **Edit** (rename the card and change its description) and **Remove**
-too: it takes the card off the list and nothing else, and never offers to delete a repository
-that is one of your projects' storefronts. Colleagues who already added the demo keep it.
+the link is still copied. The card's own menu on the Welcome step, always visible, has
+**Edit** (rename the card and change its description) and **Remove** too: it takes the card
+off the list and nothing else, and never offers to delete a repository that is one of your
+projects' storefronts. Colleagues who already added the demo keep it.
 
-This is about you. Handing the demo to someone else is Export.
+### Send a file
 
-## Export
-
-**More → Export** hands this demo to someone else. It asks **how** it travels first.
-
-- **Send a link**, when the colleague can reach your GitHub and the shared services. Keeps
-  the history, and they get your later changes. The form is the link and **Copy link**. A
-  link carries nothing itself, so the first Copy also writes the demo's name and description
-  into your repository (the description file above, prefilled from the project), and the
-  form says so in one line; that is what puts your name on the colleague's card instead of
-  the repository's. A storefront that already carries the file is only copied. Nothing has
-  to be saved first. Your setup travels only as a file.
-- **Send a file**, when they can't. One zip, `<project>-demo-bundle.zip`. **What to include**
-  lists the two parts you can tick: **Setup** (your Commerce, Adobe, GitHub and DA.live
-  settings, never a credential) and **Storefront** (the repository's code with the demo's
-  description file inside). A colleague adds the storefront with Add a demo package's **From a zip file**,
-  which reads the bundle. Setup alone writes the plain settings file the projects list
-  imports today.
+For a colleague who can't reach your GitHub. One zip, `<project>-demo-bundle.zip`. **What to
+include** lists the two parts you can tick: **Setup** (your Commerce, Adobe, GitHub and
+DA.live settings, never a credential) and **Storefront** (the repository's code with the
+demo's description file inside). A colleague adds the storefront with Add a demo package's
+**From a zip file**, which reads the bundle. Setup alone writes the plain settings file the
+projects list imports today. Your setup travels only as a file.
 
 Parts that do not exist yet are not listed. When one is built, it is added to the file form.
 
@@ -229,11 +264,18 @@ to their own accounts as the wizard asks.
 ## Headless demos
 
 A Next.js demo adds the same way; its pages live in the app, so there is no content site
-to index. There is no storefront part in Export, and no Save as demo package, for a headless project, because a headless project
+to index. Share Demo offers no link and no storefront part for a headless project, because a headless project
 is a local clone with no repository of the SC's own: share one by pushing your clone to a
 repository and sending the link.
 
 ## For agents
+
+`get_storefront_report` answers the storefront report for the open project, as data and in
+the SC's words, including `brokenLinks`: links in the copied content to pages the colleague's
+site does not have either, each with the pages it is on. People read the same report in
+Diagnostics; a reset names the broken links on its last view, and `reset_project` answers
+them as `brokenLinks`. The dashboard's Storefront Report tile and window were removed on
+2026-10-23 (EDS-64): what they showed is in those places.
 
 The same doors exist as tools, in [mcp-tools.md](mcp-tools.md): `probe_shared_demo` reads
 a demo from a link, `add_shared_demo` adds it, `create_project` takes an added demo's id or
@@ -244,10 +286,12 @@ bundle: the repository it creates in the SC's account needs `confirm:true`. When
 the bundle carries setup, the answer says so and points at the projects list's Import, which
 is the door that opens the wizard pre-filled.
 
-Saving has the same doors as the dialog: `get_demo_package_preview` reads what a project
-built from the card would get, `save_demo_package` writes the file, puts the card on the
-list and answers the link, and `remove_demo_package` undoes it. Both writes need `confirm:true`. Export's file form is `export_demo_bundle`,
-which writes the bundle inside the project directory.
+Share Demo has the same doors: `get_demo_package_preview` reads what a project built from
+the card would get, `save_demo_package` writes the file, puts the card on the list (or, with
+`addToWelcome:false`, keeps it off, as the unticked box does) and answers the link, and
+`remove_demo_package` undoes it. Both writes need `confirm:true`. The file form is
+`export_demo_bundle`, which writes the bundle inside the project directory. Copying a link
+to the clipboard is a person's act and has no tool.
 
 ## Related
 

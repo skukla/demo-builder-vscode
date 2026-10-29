@@ -1,69 +1,77 @@
-import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import {
-    loadAppBuilderComponentSecretFlags,
-    persistAppBuilderComponentSecrets,
-    splitAppBuilderComponentSecrets,
-} from '../handlers/appBuilderComponentSecrets';
 import { configureHandlers } from '../handlers/configureHandlers';
-import { mergeEnvValuesFromSources } from './configureEnvLoader';
+import { runConfigureRepublish } from './configureRepublishRun';
+import { storefrontPrompt } from './configureStorefrontRepublish';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
-import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
+import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
-import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
-import { getBundleUri } from '@/core/utils/bundleUri';
-import { parseEnvFile } from '@/core/utils/envParser';
-import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import {
-    loadDeclaredSecretFlags,
-    migrateDeclaredSecrets,
-    reKeyProjectSecrets,
-} from '@/features/components/services/commerceSecretMigration';
+import { loadDeclaredSecretFlags } from '@/features/components/services/commerceSecretMigration';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
 import {
-    getEwCanvasBranch,
-    resolveProjectAuthoringExperience,
-} from '@/features/eds/handlers/edsHelpers';
+    applyBlockLibrarySelection,
+    buildBlockLibraryChoices,
+    type BlockLibrarySelectionInput,
+} from '@/features/dashboard/services/configureBlockLibraries';
+import {
+    describePendingBlockLibraryWork,
+    hasPendingBlockLibraryWork,
+} from '@/features/dashboard/services/configureBlockLibraryWork';
+import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
+import {
+    readProjectSettings,
+    stageSettingsChange,
+} from '@/features/dashboard/services/projectSettingsChange';
+import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import {
     applyAuthoringExperienceFlip,
     type AuthoringExperienceFlipDeps,
 } from '@/features/eds/services/authoringExperienceFlip';
-import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
-import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileGenerator';
+import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project, type AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import type { HandlerContext } from '@/types/handlers';
 import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
-import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
+import type { ComponentConfigs } from '@/types/webview';
+import type {
+    ConfigureInitialData,
+    CustomBlockLibraryDefaultsUpdatedPayload,
+    DeploymentStatusPayload,
+} from '@/types/webviewPayloads';
+
+/** The setting custom block libraries are defined in. */
+const CUSTOM_BLOCK_LIBRARY_SETTING = 'demoBuilder.blockLibraries.custom';
+
+/** The custom-library setting as read; `buildBlockLibraryChoices` checks its shape. */
+function readCustomLibrarySetting(): unknown {
+    return vscode.workspace.getConfiguration('demoBuilder').get<unknown>('blockLibraries.custom');
+}
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
     'da-live-classic',
     'experience-workspace',
 ]);
 
-// Component configuration type (key-value pairs for environment variables)
-type ComponentConfigs = Record<string, Record<string, string>>;
-
-interface SaveConfigurationData {
-    componentConfigs: ComponentConfigs;
+interface SaveConfigurationData extends BlockLibrarySelectionInput {
+    /** Only the values the SC changed; laid over the settings as they are now (PL-76). */
+    configChanges?: ComponentConfigs;
     newProjectName?: string;
     authoringExperience?: AuthoringExperience;
 }
 
-export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<ConfigureInitialData> {
+export class ConfigureProjectWebviewCommand extends BundledPanelCommand<ConfigureInitialData> {
+    protected readonly bundleName = 'configure';
+    protected override readonly servesLocalMedia = true;
+
     /**
      * Helix seam, forwarded to the shared authoring-experience flip. Production
      * leaves it undefined and the flip builds the real service.
@@ -100,6 +108,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         }
     }
 
+    /**
+     * Configure used to open only beside the dashboard. Since Edit can hand over to
+     * it, it can be the only screen open, so closing it must land somewhere; the
+     * disposal callback in extension.ts (`screenAfterClose`) decides where.
+     */
+    protected shouldReopenWelcomeOnDispose(): boolean {
+        return true;
+    }
+
     protected getWebviewId(): string {
         return 'demoBuilder.configureProject';
     }
@@ -119,10 +136,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         return { title: this.getWebviewTitle(), subtitle: this.loadingProjectName };
     }
 
-    public async execute(): Promise<void> {
+    public async execute(projectPath?: unknown): Promise<void> {
         try {
-            // Get current project
-            const project = await this.stateManager.getCurrentProject();
+            // The project this screen is for, kept after the current project moves (AI-15)
+            const project = await this.openForCurrentProject(projectPath);
             if (!project) {
                 await this.showWarning('No project found to configure.');
                 return;
@@ -141,31 +158,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         } catch (error) {
             await this.showError('Failed to open configuration', error as Error);
         }
-    }
-
-    protected async getWebviewContent(): Promise<string> {
-        if (!this.panel) {
-            throw new Error('Panel must be created before getting webview content');
-        }
-        const scriptUri = getBundleUri({
-            webview: this.panel.webview,
-            extensionPath: this.context.extensionPath,
-            featureBundleName: 'configure',
-        });
-
-        const nonce = this.getNonce();
-
-        // Get base URI for media assets
-        const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
-        const baseUri = this.panel.webview.asWebviewUri(mediaPath);
-
-        return getWebviewHTML({
-            scriptUri,
-            nonce,
-            cspSource: this.panel.webview.cspSource,
-            title: 'Configure Project',
-            baseUri,
-        });
     }
 
     protected async getInitialData(): Promise<ConfigureInitialData> {
@@ -199,20 +191,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         const theme =
             vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 
-        // AppBuilderComponent bucket-3/bucket-2 surface: the catalog for the project's
-        // selection, the provided ("connected") values, and the "is set" flags
-        // for secrets (booleans only — secret VALUES never travel to the webview).
-        const appBuilderComponentCatalog = getAvailableAppBuilderComponents(
-            project.componentSelections?.backend ?? '',
-            project.componentSelections?.frontend ?? '',
-        );
-        const providedEnvVars = getProvidedEnvVars(project);
-        const appBuilderComponentSecretFlags = await loadAppBuilderComponentSecretFlags(
-            appBuilderComponentCatalog,
-            project.path,
-            this.context.secrets,
-        );
-        // The same signal for COMPONENT-declared secrets. The webview cannot read
+        // Whether each COMPONENT-declared secret is stored. The webview cannot read
         // the keychain, and two things there depend on knowing a value exists: the
         // store-discovery trigger, and the password field, which would otherwise
         // render empty and let a blank be saved over a good credential.
@@ -230,9 +209,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
             existingProjectNames,
             isEds: isEdsProject(project),
             authoringExperience: resolveProjectAuthoringExperience(project),
-            appBuilderComponentCatalog,
-            providedEnvVars,
-            appBuilderComponentSecretFlags,
+            // The setting is read HERE, at the boundary; the lists are built by a
+            // `vscode`-free function from the same loader the wizard's picker uses.
+            blockLibraryChoices: buildBlockLibraryChoices(project, readCustomLibrarySetting()),
             componentSecretFlags,
         };
     }
@@ -254,6 +233,30 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         comm.onStreaming('save-configuration', async (data: SaveConfigurationData) =>
             this.handleSaveConfiguration(data),
         );
+        // The Republish progress modal's Retry (CONFIGURE_REPUBLISH_OPERATION_ID).
+        comm.onStreaming('republish-storefront', async () => this.retryRepublish());
+
+        // The picker's "Configure custom libraries in Settings" link sends the SC to
+        // the setting while this screen stays open: push the new list, as the wizard does.
+        this.disposables.add(
+            vscode.workspace.onDidChangeConfiguration((event) => {
+                if (event.affectsConfiguration(CUSTOM_BLOCK_LIBRARY_SETTING)) {
+                    this.sendCustomLibraryChoices().catch((error: unknown) =>
+                        this.logger.warn('[Configure] Could not refresh custom block libraries', error),
+                    );
+                }
+            }),
+        );
+    }
+
+    /** Push the custom block libraries this project can now choose from. */
+    private async sendCustomLibraryChoices(): Promise<void> {
+        const project = await this.stateManager.getCurrentProject();
+        if (!project) return;
+        const { customDefaults } = buildBlockLibraryChoices(project, readCustomLibrarySetting());
+        await this.sendMessage('customBlockLibraryDefaultsUpdated', {
+            customBlockLibraryDefaults: customDefaults,
+        } satisfies CustomBlockLibraryDefaultsUpdatedPayload);
     }
 
     /** The save-configuration message body (extracted 2026-08-24, function-length pass). */
@@ -264,87 +267,48 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                 throw new Error('No project found');
             }
 
-            // Handle project rename if name changed (re-keys path-keyed secrets)
+            // Handle project rename if name changed (renameProjectCore moves path-keyed secrets)
             project = await this.renameProjectIfRequested(project, data.newProjectName);
 
-            // SECRET SAFETY (repo is PUBLIC): split appBuilderComponent `type:'secret'`
-            // values out of componentConfigs → VS Code SecretStorage BEFORE any
-            // detection/persistence/.env work. The sanitized configs (no secrets)
-            // are what every downstream path sees; secrets never reach the
-            // manifest, the .env file, or the change-detectors.
-            const appBuilderComponentCatalog = getAvailableAppBuilderComponents(
-                project.componentSelections?.backend ?? '',
-                project.componentSelections?.frontend ?? '',
-            );
-            const split = splitAppBuilderComponentSecrets(
-                data.componentConfigs,
-                appBuilderComponentCatalog,
-            );
-            // Values are all strings here (the Configure payload is text/secret
-            // strings); the split only deletes secret keys, so the narrow local
-            // ComponentConfigs shape is preserved.
-            const appBuilderSanitized = split.sanitizedConfigs as ComponentConfigs;
-            await persistAppBuilderComponentSecrets(
-                split.secrets,
-                project.path,
-                this.context.secrets,
-                this.logger,
-            );
+            // The screen sends only what the SC changed (PL-76). Staging lays it over
+            // the settings as they are now, keeps integration settings, moves secrets,
+            // and marks the mesh and storefront: the same steps configure_project runs.
+            const { configs: sanitizedConfigs, meshChanges, storefrontChanges } =
+                await stageSettingsChange(project, data.configChanges ?? {}, {
+                    secrets: this.context.secrets,
+                    // Against the DEPLOYED mesh. Org-targeted: with an empty
+                    // staleness baseline this fetches the deployed config over the
+                    // `aio` CLI, and an unwrapped call queries whatever org the
+                    // CLI's process-global selection happens to hold.
+                    detectMeshChanges: (staged, configs) =>
+                        withOrgContext(buildOrgTargetFromProjectAdobe(staged.adobe), () =>
+                            detectMeshChanges(staged, configs, {
+                                commandManager: ServiceLocator.getCommandExecutor(),
+                                authManager: ServiceLocator.getAuthenticationService(),
+                            }),
+                        ),
+                    log: (line) => this.logger.info(`[Configure] ${line}`),
+                    warn: (line) => this.logger.warn(`[Configure] ${line}`),
+                });
 
-            // Same guarantee for COMPONENT-declared secrets (`secret: true` in
-            // components.json) — the Commerce credentials. Write-through with a
-            // verified read-back: a value only leaves componentConfigs once
-            // SecretStorage is proven to hold it, so it is never in neither place
-            // (`.rptc/complete/component-secret-routing/`, phase 2).
-            const migration = await migrateDeclaredSecrets(
-                appBuilderSanitized,
-                project.path,
-                this.context.secrets,
-                (line) => this.logger.info(`[Configure] ${line}`),
-            );
-            if (migration.retained.length > 0) {
-                // Not fatal, and not silent: the save proceeds with the value
-                // exactly where it was, and the next one tries again.
-                this.logger.warn(
-                    `[Configure] ${migration.retained.length} secret(s) could not be ` +
-                        `moved to SecretStorage and remain in project config: ` +
-                        `${migration.retained.join(', ')}`,
-                );
-            }
-            const sanitizedConfigs = migration.sanitizedConfigs as ComponentConfigs;
-
-            // Detect if mesh configuration changed BEFORE saving.
-            // Org-targeted: with an empty staleness baseline this fetches
-            // the deployed config over the `aio` CLI, and an unwrapped call
-            // queries whatever org the CLI's process-global selection
-            // happens to hold.
-            const meshChanges = await withOrgContext(
-                buildOrgTargetFromProjectAdobe(project.adobe),
-                () =>
-                    detectMeshChanges(project, sanitizedConfigs, {
-                        commandManager: ServiceLocator.getCommandExecutor(),
-                        authManager: ServiceLocator.getAuthenticationService(),
-                    }),
-            );
-
-            // Detect if storefront configuration changed (EDS projects only)
-            const storefrontChanges = detectStorefrontChanges(project, sanitizedConfigs);
-
-            // Update project state
-            project.componentConfigs = sanitizedConfigs;
-            if (meshChanges.hasChanges) {
-                project.meshStatusSummary = 'stale';
-            }
-            if (storefrontChanges.hasChanges) {
-                project.edsStorefrontStatusSummary = 'stale';
-            }
+            // Record the ticked block libraries (EDS-39). What the storefront gains or
+            // loses is then read from the project, so a "Later" is offered again.
+            applyBlockLibrarySelection(project, data);
+            const libraryWorkPending = hasPendingBlockLibraryWork(project);
 
             // Re-arm the apply prompts for THIS change. Without it, a
             // single earlier "Later" muted them for the whole session:
             // the handlers below saw `shouldShow === false`, returned
             // before prompting, and the save reported success while the
-            // storefront kept serving the previous config.
-            if (meshChanges.hasChanges || storefrontChanges.hasChanges) {
+            // storefront kept serving the previous config. Any changed setting
+            // re-arms the restart prompt too: a running demo reads its `.env` once.
+            const settingsChanged = Object.keys(data.configChanges ?? {}).length > 0;
+            if (
+                settingsChanged ||
+                meshChanges.hasChanges ||
+                storefrontChanges.hasChanges ||
+                libraryWorkPending
+            ) {
                 await vscode.commands.executeCommand('demoBuilder._internal.configChanged');
             }
 
@@ -369,7 +333,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                         data.authoringExperience,
                         getEwCanvasBranch(),
                     );
-                    await ProjectDashboardWebviewCommand.sendAuthoringExperienceUpdate(
+                    await sendAuthoringExperienceUpdate(
                         edsDaLiveUrl,
                     );
                 } catch (error) {
@@ -403,14 +367,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
             // Show success notification after returning (non-blocking). When the
             // authoring experience changed, its own progress toast is the
             // confirmation, so suppress the generic "saved" toast to avoid a
-            // double notification.
+            // double notification. A failure here (a dashboard refresh that throws)
+            // is logged: unhandled, it left no prompt and no trace (PL-76).
             setImmediate(() => {
-                this.showPostSaveNotifications(
-                    project,
-                    meshChanges,
-                    storefrontChanges,
-                    authoringChanged,
-                );
+                this.showPostSaveNotifications(project, meshChanges, storefrontChanges, authoringChanged)
+                    .catch((error: unknown) =>
+                        this.logger.error('[Configure] Post-save prompts failed:', error as Error),
+                    );
             });
 
             return result;
@@ -439,7 +402,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         project: Project,
         newProjectName: string | undefined,
     ): Promise<Project> {
-        const pathBeforeRename = project.path;
         if (!newProjectName || newProjectName === project.name) {
             return project;
         }
@@ -450,18 +412,14 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         if (!renameResult.success) {
             throw new Error(renameResult.error || 'Failed to rename project');
         }
+        // The folder moved with the name: this screen follows it there (AI-15).
+        const newPath = renamedPathOf(renameResult.data);
+        if (newPath) this.followOwnProject(newPath);
         // Reload project after rename (path may have changed)
         const reloaded = await this.stateManager.getCurrentProject();
         if (!reloaded) {
             throw new Error('Project not found after rename');
         }
-        await reKeyProjectSecrets(
-            pathBeforeRename,
-            reloaded.path,
-            Object.keys(reloaded.componentConfigs ?? {}),
-            this.context.secrets,
-            (line) => this.logger.info(`[Configure] ${line}`),
-        );
         return reloaded;
     }
 
@@ -512,9 +470,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                 // Narrate the steps the shared flip runs (editor.path always;
                 // Quick Edit + config.json regen are Experience-Workspace-only).
                 // The shared service performs the ordering internally.
-                progress.report({ message: 'Updating the DA.live editor link' });
+                progress.report({ message: 'Updating the editor link' });
                 if (experience === 'experience-workspace') {
-                    progress.report({ message: 'Adding Quick Edit to the storefront' });
+                    progress.report({ message: 'Adding Quick Edit' });
                 }
                 await applyAuthoringExperienceFlip(project, experience, {
                     context: this.context,
@@ -534,55 +492,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
      * Load existing environment variable values from component .env files
      * and project root .env (for values from non-installed components like backends)
      */
+    /** The settings as the screen shows them (`readProjectSettings`). */
     private async loadExistingEnvValues(
         project: Project,
     ): Promise<Record<string, Record<string, string>>> {
-        const envValues: Record<string, Record<string, string>> = {};
-
-        // Read each component's .env file
-        // SOP §4: Using helper instead of inline Object.entries
-        for (const [componentId, instance] of getComponentInstanceEntries(project)) {
-            if (!instance.path) {
-                continue;
-            }
-
-            // Next.js uses .env.local, others use .env
-            const possibleEnvFiles = [
-                path.join(instance.path, '.env.local'),
-                path.join(instance.path, '.env'),
-            ];
-
-            let loaded = false;
-            for (const envPath of possibleEnvFiles) {
-                try {
-                    const envContent = await fs.readFile(envPath, 'utf-8');
-                    envValues[componentId] = parseEnvFile(envContent);
-                    loaded = true;
-                    break; // Found it, stop looking
-                } catch {
-                    // File doesn't exist, try next one
-                }
-            }
-
-            if (!loaded) {
-                envValues[componentId] = {};
-            }
-        }
-
-        // Also read project root .env for values from non-installed components
-        // (e.g., backend configs like adobe-commerce-accs that don't have componentInstances).
-        // Non-installed components may also store values exclusively in .demo-builder.json —
-        // the merge helper handles both sources with the correct precedence.
-        let rootEnvValues: Record<string, string> = {};
-        try {
-            const rootEnvPath = path.join(project.path, '.env');
-            const rootEnvContent = await fs.readFile(rootEnvPath, 'utf-8');
-            rootEnvValues = parseEnvFile(rootEnvContent);
-        } catch {
-            // Root .env doesn't exist or can't be read — fall through to manifest-only values.
-        }
-
-        return mergeEnvValuesFromSources(envValues, rootEnvValues, project.componentConfigs ?? {});
+        return readProjectSettings(project);
     }
 
     /**
@@ -645,58 +559,28 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
     }
 
     /**
-     * Republish storefront config.json for EDS projects.
-     * Shows progress notification and handles errors.
+     * Republish the storefront for EDS projects: block libraries, config.json and —
+     * after a store change — the product and category pages (EDS-44). Told in this
+     * screen's progress modal while it is open, else in a notification
+     * (`configureRepublishRun.ts`).
      */
     private async republishStorefront(project: Project): Promise<void> {
-        try {
-            await vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    title: 'Republishing storefront',
-                    cancellable: false,
-                },
-                async (progress) => {
-                    const result = await republishStorefrontConfig({
-                        persist: (p) => this.stateManager.saveProject(p),
-                        project,
-                        secrets: this.context.secrets,
-                        logger: this.logger,
-                        onProgress: (message) => {
-                            progress.report({ message });
-                        },
-                    });
+        const { context, stateManager, logger, communicationManager } = this;
+        await runConfigureRepublish(project, {
+            parts: { context, stateManager, logger },
+            sendToScreen: communicationManager
+                ? (type, data) => communicationManager.sendMessage(type, data)
+                : undefined,
+            showSuccess: (message) => void this.showSuccessMessage(message),
+        });
+    }
 
-                    if (result.success) {
-                        // Save updated project state
-                        await this.stateManager.saveProject(project);
-                        await ProjectDashboardWebviewCommand.refreshStatus();
-                        // Reset the once-per-session storefront notification flag so the
-                        // NEXT storefront config change re-prompts to republish. Mirrors
-                        // the mesh flow (deployMesh -> meshActionTaken) and restart flow
-                        // (startDemo -> restartActionTaken). Without this, the flag stays
-                        // latched after the first republish and later changes (e.g.
-                        // switching store views back) silently show "Configuration saved"
-                        // while the live storefront stays stale.
-                        await vscode.commands.executeCommand(
-                            'demoBuilder._internal.storefrontActionTaken',
-                        );
-                        this.showSuccessMessage(
-                            'Storefront configuration republished successfully',
-                        );
-                    } else {
-                        vscode.window.showErrorMessage(
-                            `Failed to republish storefront: ${result.error}`,
-                        );
-                    }
-                },
-            );
-        } catch (error) {
-            this.logger.error('[Configure] Failed to republish storefront:', error as Error);
-            vscode.window.showErrorMessage(
-                `Failed to republish storefront: ${(error as Error).message}`,
-            );
-        }
+    /** The progress modal's Retry: the storefront half again, for the project as saved. */
+    private async retryRepublish(): Promise<{ success: boolean }> {
+        const project = await this.stateManager.getCurrentProject();
+        if (!project) return { success: false };
+        await this.withDeploymentStatus(() => this.republishStorefront(project));
+        return { success: true };
     }
 
     /**
@@ -713,11 +597,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
 
         let contextualNotificationShown = false;
         const isEds = isEdsProject(project);
+        // Pending block library work rides the storefront prompt and its action (EDS-39).
+        const storefrontWork = storefrontChanges.hasChanges || hasPendingBlockLibraryWork(project);
 
-        if (meshChanges.hasChanges && storefrontChanges.hasChanges && isEds) {
+        if (meshChanges.hasChanges && storefrontWork && isEds) {
             contextualNotificationShown =
                 await this.handleCombinedMeshStorefrontNotification(project);
-        } else if (storefrontChanges.hasChanges && isEds) {
+        } else if (storefrontWork && isEds) {
             contextualNotificationShown = await this.handleStorefrontOnlyNotification(project);
         } else if (meshChanges.hasChanges) {
             contextualNotificationShown = await this.handleMeshOnlyNotification(project);
@@ -754,7 +640,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         );
 
         const selection = await vscode.window.showWarningMessage(
-            'Configuration saved. Apply changes to mesh and storefront?',
+            storefrontPrompt(project, true) + describePendingBlockLibraryWork(project),
             'Apply Changes',
             'Later',
         );
@@ -763,7 +649,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
             await this.ensureAuthAndApply(
                 () =>
                     this.withDeploymentStatus(async () => {
-                        await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                        await this.runForThisProject('demoBuilder.deployMesh');
                         const freshProject = await this.stateManager.getCurrentProject();
                         if (freshProject) {
                             await this.republishStorefront(freshProject);
@@ -802,8 +688,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
             'demoBuilder._internal.markStorefrontNotificationShown',
         );
 
+        // After a store change it says so: the Republish replaces the pages (EDS-44).
         const selection = await vscode.window.showInformationMessage(
-            'Configuration saved. Republish storefront to apply changes.',
+            storefrontPrompt(project, false) + describePendingBlockLibraryWork(project),
             'Republish',
             'Later',
         );
@@ -837,22 +724,26 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
 
         await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
 
+        // A running demo read its `.env` when it started, so it needs a restart as
+        // well as the redeploy. The button used to say so and only redeploy.
         const isRunning = project.status === 'running';
+        const apply = isRunning ? 'Redeploy and Restart' : 'Redeploy Mesh';
         const message = isRunning
             ? 'Configuration saved. Redeploy mesh and restart demo to apply changes.'
             : 'Configuration saved. Redeploy mesh to apply changes.';
 
         const selection = await (isRunning
-            ? vscode.window.showWarningMessage(message, 'Redeploy Mesh', 'Later')
-            : vscode.window.showInformationMessage(message, 'Redeploy Mesh', 'Later'));
+            ? vscode.window.showWarningMessage(message, apply, 'Later')
+            : vscode.window.showInformationMessage(message, apply, 'Later'));
 
-        if (selection === 'Redeploy Mesh') {
+        if (selection === apply) {
             await this.ensureAuthAndApply(
                 () =>
                     this.withDeploymentStatus(async () => {
-                        await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                        await this.runForThisProject('demoBuilder.deployMesh');
+                        if (isRunning) await this.restartDemo();
                     }),
-                'redeploy mesh',
+                isRunning ? 'redeploy mesh and restart demo' : 'redeploy mesh',
             );
         } else if (selection === 'Later') {
             // Keyed-only write (ADR-011 D3 Step 07): the decline lands on the keyed mesh entry.
@@ -879,36 +770,33 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
 
         await vscode.commands.executeCommand('demoBuilder._internal.markRestartNotificationShown');
 
+        // Later is a real answer: the next save that changes a setting asks again
+        // (`_internal.configChanged` re-arms this prompt).
         const selection = await vscode.window.showInformationMessage(
             'Configuration saved. Restart the demo to apply changes.',
             'Restart Demo',
+            'Later',
         );
 
-        if (selection === 'Restart Demo') {
-            try {
-                await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                await vscode.commands.executeCommand('demoBuilder.startDemo');
-            } catch (error) {
-                this.logger.error('[Configure] Failed to restart demo:', error as Error);
-            }
-        }
+        if (selection === 'Restart Demo') await this.restartDemo();
 
         return true;
     }
 
-    /**
-     * Create handler context for message handlers
-     */
-    private createHandlerContext(): HandlerContext {
-        // ONE complete context from the shared factory — no per-panel guessing about
-        // which managers its (possibly reused) handlers will reach for.
-        return createPanelHandlerContext({
-            context: this.context,
-            panel: this.panel,
-            stateManager: this.stateManager,
-            communicationManager: this.communicationManager,
-            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-        });
+    /** Run a project command for THIS screen's project, not whichever is current (AI-15). */
+    private async runForThisProject(commandId: string): Promise<void> {
+        const project = await this.stateManager.getCurrentProject();
+        await vscode.commands.executeCommand(commandId, project?.path);
+    }
+
+    /** Stop and start the demo so it reads the new `.env`; a failure is logged. */
+    private async restartDemo(): Promise<void> {
+        try {
+            await this.runForThisProject('demoBuilder.stopDemo');
+            await this.runForThisProject('demoBuilder.startDemo');
+        } catch (error) {
+            this.logger.error('[Configure] Failed to restart demo:', error as Error);
+        }
     }
 
     /**
@@ -958,4 +846,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
             return false;
         }
     }
+}
+
+/** The folder a successful rename moved the project to (`renameProjectCore`'s `data.newPath`). */
+function renamedPathOf(data: unknown): string | undefined {
+    if (typeof data !== 'object' || data === null || !('newPath' in data)) return undefined;
+    return typeof data.newPath === 'string' ? data.newPath : undefined;
 }

@@ -7,6 +7,7 @@ import { clearCompletedFrom } from '@/core/ui/utils/stepCompletion';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
 import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
+import { editChangesOf, editRenameTo, isPackageChange } from '@/features/project-creation/ui/wizard/editChanges';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage, GitSource } from '@/types/demoPackages';
 import type { WizardStep, WizardState, WizardMode, ComponentSelection } from '@/types/webview';
@@ -187,14 +188,19 @@ export function getAdobeStepIndices(wizardSteps: WizardStepConfig[]): AdobeStepI
  * Project and workspace are co-located there, so both clear together — keeping
  * state consistent on re-traversal (the pickers re-load + re-auto-select).
  *
- * @param _currentState - Current wizard state (unused; signature kept for callers)
+ * Not in Edit: there the destination is the project's own, nothing re-selects it,
+ * and clearing it on a Back made Finish lose it (the rebuild saved the project
+ * with no Adobe project; PL-75's Finish refused the half destination). An org
+ * change still clears both, in the sign-in screen (`useAuthStatus`).
+ *
+ * @param currentState - Current wizard state (its mode)
  * @param targetStep - Step we're navigating to
  * @param targetIndex - Index of target step
  * @param indices - Picker-host step index
  * @returns Partial state updates to apply
  */
 export function computeStateUpdatesForBackwardNav(
-    _currentState: WizardState,
+    currentState: Pick<WizardState, 'wizardMode'>,
     targetStep: WizardStep,
     targetIndex: number,
     indices: AdobeStepIndices,
@@ -204,7 +210,8 @@ export function computeStateUpdatesForBackwardNav(
     };
 
     // Clear project + workspace (and caches) when going before the picker host.
-    if (indices.buildStepIndex !== -1 && targetIndex < indices.buildStepIndex) {
+    const editing = currentState.wizardMode === 'edit';
+    if (!editing && indices.buildStepIndex !== -1 && targetIndex < indices.buildStepIndex) {
         updates.adobeProject = undefined;
         updates.projectsCache = undefined;
         updates.adobeWorkspace = undefined;
@@ -471,25 +478,23 @@ function extractImportedMeshEndpoint(
     return undefined;
 }
 
-/** Validate stack/package configuration consistency and log warnings */
-function validateStackPackageConfig(
-    wizardState: ProjectConfigSource,
-    packages: DemoPackage[] | undefined,
-): void {
+/**
+ * Where `buildProjectConfig` sends its two configuration warnings. The wizard hands
+ * the extension's Debug Logs channel (PL-65): both are reachable from a saved
+ * project file, and the webview console they used to go to is somewhere no SC
+ * looks. Without a sink they go to the console, which is right for the extension
+ * host's MCP `create_project` — and it refuses both states before it builds.
+ */
+export type ConfigWarningSink = (message: string) => void;
+
+const consoleWarning: ConfigWarningSink = (message) => console.warn(message);
+
+/** Warn when a stack is selected with no demo package */
+function validateStackPackageConfig(wizardState: ProjectConfigSource, warn: ConfigWarningSink): void {
     if (wizardState.selectedStack && !wizardState.selectedPackage) {
-        console.warn(
-            '[Demo Builder] Incomplete configuration: architecture is selected but brand/package is missing. ' +
-                'This may result in missing storefront data.',
-        );
-        // eslint-disable-next-line no-console
-        console.log(
-            '[buildProjectConfig] Validation warning - selectedStack without selectedPackage:',
-            {
-                selectedPackage: wizardState.selectedPackage,
-                selectedStack: wizardState.selectedStack,
-                hasPackages: !!packages,
-                packagesCount: packages?.length || 0,
-            },
+        warn(
+            `[Demo Builder] Incomplete configuration: stack '${wizardState.selectedStack}' is ` +
+                'selected but no demo package is. This may result in missing storefront data.',
         );
     }
 }
@@ -506,23 +511,31 @@ function resolveFrontendSourceFromPackage(
     return pkg?.storefronts?.[wizardState.selectedStack]?.source;
 }
 
-/** Validate that stack lookup succeeded and log warnings if not */
+/** Warn when the selected stack id resolves to no stack this build ships */
 function validateStackLookup(
     wizardState: ProjectConfigSource,
     stack: ReturnType<typeof getStackById> | undefined,
+    warn: ConfigWarningSink,
 ): void {
     if (wizardState.selectedStack && !stack) {
-        console.warn(
-            `[Demo Builder] Configuration warning: selected architecture '${wizardState.selectedStack}' not found. ` +
-                'Components may be missing from project.',
+        warn(
+            `[Demo Builder] Configuration warning: stack '${wizardState.selectedStack}' ` +
+                `(demo package '${wizardState.selectedPackage ?? 'none'}') is not one this build ` +
+                'ships. Components may be missing from the project.',
         );
-        // eslint-disable-next-line no-console
-        console.log('[buildProjectConfig] Validation warning - stack lookup failed:', {
-            selectedStack: wizardState.selectedStack,
-            selectedPackage: wizardState.selectedPackage,
-            stackFound: false,
-        });
     }
+}
+
+/**
+ * Whether the storefront's existing pages are replaced with the package's: when the SC
+ * resets to the template ("replaces all content", the tick's own words) or changes the
+ * package in an Edit. The separate tick for the site's content went with the DA.live site
+ * picker (b21696992), and nothing set it since, so an Edit onto another package kept the
+ * old package's pages under the new package's code (owner, 2026-10-19: Bodea over CitiSignal).
+ */
+export function replacesSiteContent(wizardState: ProjectConfigSource): boolean {
+    if (wizardState.edsConfig?.resetToTemplate) return true;
+    return isPackageChange(editChangesOf(wizardState) ?? []);
 }
 
 /** Build EDS config object for project creation from wizard EDS state */
@@ -544,12 +557,19 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
         isPrivate: eds.selectedRepo?.isPrivate,
         skipContent: eds.skipContent,
         skipTools: !wizardState.selectedAddons?.includes('adobe-commerce-aco'),
-        resetSiteContent: eds.resetSiteContent || false,
+        resetSiteContent: replacesSiteContent(wizardState),
         // The whole storefront-derived slice, from the one list (step 05 closed
         // the half-list that used to live here).
         ...pickStorefrontDerived(eds),
         repoUrl: eds.repoUrl,
         preflightComplete: eds.preflightComplete,
+        ...(eds.brokenLinks?.length ? { brokenLinks: eds.brokenLinks } : {}),
+        ...(eds.installedBlockLibraries?.length
+            ? { installedBlockLibraries: eds.installedBlockLibraries }
+            : {}),
+        ...(eds.storefrontBuildComplete !== undefined
+            ? { storefrontBuildComplete: eds.storefrontBuildComplete }
+            : {}),
     };
 }
 
@@ -616,23 +636,55 @@ export type ProjectConfigSource = Pick<
     | 'selectedBlockLibraries'
     | 'customBlockLibraries'
     | 'editProjectPath'
+    | 'editOriginalName'
+    | 'editOriginalTitle'
     | 'edsConfig'
+    | 'wizardMode'
+    | 'editBaseline'
+    // Choices the config does not carry, but `editChangesOf` compares.
+    | 'selectedBackend'
+    | 'components'
+    | 'commerceConfig'
 >;
+
+/**
+ * The project's name as the Edit runs: in Edit the ORIGINAL name, since the Edit
+ * runs in the project's existing folder and a new name there would leave the name
+ * and the folder disagreeing; the new one is renamed to after it (`renameField`).
+ */
+function nameFields(wizardState: ProjectConfigSource): { projectName: string; projectTitle?: string } {
+    if (editRenameTo(wizardState) && wizardState.editOriginalName) {
+        return { projectName: wizardState.editOriginalName, projectTitle: wizardState.editOriginalTitle };
+    }
+    return { projectName: wizardState.projectName, projectTitle: wizardState.projectTitle };
+}
+
+/** A rename asked for in Edit, made after the Edit by the shared rename. */
+function renameField(wizardState: ProjectConfigSource): { editRenameTo?: string } {
+    const editRenameToValue = editRenameTo(wizardState);
+    return editRenameToValue ? { editRenameTo: editRenameToValue } : {};
+}
+
+/** What an Edit changed, for Finish to do only that (PL-75); nothing outside an Edit. */
+function editChangesField(wizardState: ProjectConfigSource): { editChanges?: string[] } {
+    const editChanges = editChangesOf(wizardState);
+    return editChanges ? { editChanges } : {};
+}
 
 export function buildProjectConfig(
     wizardState: ProjectConfigSource,
     importedSettings?: ImportedSettings | null,
     packages?: DemoPackage[],
+    warn: ConfigWarningSink = consoleWarning,
 ): ProjectCreationConfig {
     const importedMeshEndpoint = extractImportedMeshEndpoint(wizardState.componentConfigs);
-    validateStackPackageConfig(wizardState, packages);
+    validateStackPackageConfig(wizardState, warn);
     const frontendSource = resolveFrontendSourceFromPackage(wizardState, packages);
     const stack = wizardState.selectedStack ? getStackById(wizardState.selectedStack) : undefined;
-    validateStackLookup(wizardState, stack);
+    validateStackLookup(wizardState, stack, warn);
 
     return {
-        projectName: wizardState.projectName,
-        projectTitle: wizardState.projectTitle,
+        ...nameFields(wizardState),
         adobe: {
             organization: wizardState.adobeOrg?.id,
             organizationName: wizardState.adobeOrg?.name,
@@ -681,6 +733,8 @@ export function buildProjectConfig(
         customBlockLibraries: wizardState.customBlockLibraries || [],
         frontendSource,
         editProjectPath: wizardState.editProjectPath,
+        ...editChangesField(wizardState),
+        ...renameField(wizardState),
         edsConfig: buildProjectEdsConfig(wizardState),
     };
 }

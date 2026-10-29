@@ -16,11 +16,11 @@ jest.mock('@/core/di/serviceLocator', () => ({
         })),
     },
 }));
-jest.mock('@/features/mesh/services/stalenessDetector');
-// The API-list warm-up has its own suite; here we only check that opening the
-// dashboard starts it.
-jest.mock('@/features/dashboard/handlers/warmOrgServicesCatalog', () => ({
-    warmOrgServicesCatalog: jest.fn().mockResolvedValue(undefined),
+jest.mock('@/core/state/projectStateSync');
+// The warm-ups have their own suites; here we only check that opening the dashboard
+// starts them.
+jest.mock('@/features/dashboard/handlers/warmProjectReads', () => ({
+    warmProjectReads: jest.fn(),
 }));
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
@@ -48,19 +48,21 @@ jest.mock(
 
 import './dashboardValidatorMocks';
 import { handleReAuthenticate, handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
-import { warmOrgServicesCatalog } from '@/features/dashboard/handlers/warmOrgServicesCatalog';
+import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
+import { adobeSignInRestored } from '@/features/dashboard/services/adobeSignInPrompt';
+import { warmProjectReads } from '@/features/dashboard/handlers/warmProjectReads';
 import { setupMocks } from './dashboardHandlers.testUtils';
 
 describe('dashboardHandlers - handleRequestStatus', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
     });
 
     it('should return persisted mesh status from meshStatusSummary (Pattern B)', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         // Project has meshStatusSummary='deployed' (set by card grid)
@@ -89,7 +91,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     });
 
     it('should return "config-changed" when meshStatusSummary is stale', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'stale' });
@@ -112,7 +114,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     // so setting it to undefined asserted nothing — keyed-only is now the only
     // shape there is. An `as any` on the override was hiding it.
     it('should report deployed status + endpoint for a keyed-only project (Steps 07+09)', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({
@@ -152,7 +154,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
             },
         });
 
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const result = await handleRequestStatus(mockContext);
@@ -194,7 +196,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     });
 
     it('should return frontendConfigChanged=true when frontend config differs', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(true);
 
         const { mockContext } = setupMocks({
@@ -215,22 +217,24 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         });
     });
 
-    it('should return needs-auth when not authenticated and user cancels sign-in', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+    // It reports what it found, and since 2026-10-17 it also ASKS: "An expired adobe
+    // login should PROMPT, but it should not open a browser automatically" (owner,
+    // replacing the 2026-09-20 rule that it asked nothing). The ask is a modal, and
+    // a no (this mock's 'Cancel') opens no sign-in.
+    it('reports needs-auth and asks to sign in, opening nothing on a no', async () => {
+        adobeSignInRestored();
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks();
 
         // Override auth mock AFTER setupMocks (which sets isAuthenticated=true)
         const { ServiceLocator } = require('@/core/di/serviceLocator');
+        const signIn = jest.fn().mockResolvedValue(false);
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(false),
-            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(false),
+            loginAndRestoreProjectContext: signIn,
         });
-
-        // Mock user clicking "Cancel" on the sign-in prompt
-        const vscode = require('vscode');
-        vscode.window.showWarningMessage.mockResolvedValue('Cancel');
 
         const result = await handleRequestStatus(mockContext);
 
@@ -241,18 +245,21 @@ describe('dashboardHandlers - handleRequestStatus', () => {
             },
         });
 
-        // Verify sign-in prompt was shown
+        // The on-open checks run in the background; let them reach the prompt.
+        for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
+        const vscode = require('vscode');
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'Adobe sign-in required to check mesh status.',
+            'Your Adobe sign-in has expired',
+            expect.objectContaining({ modal: true }),
             'Sign In',
-            'Cancel'
         );
+        expect(signIn).not.toHaveBeenCalled();
     });
 
     it('should NOT carry orgMismatch in the status payload (delivered separately)', async () => {
         // The org check is decoupled — it's posted via the on-open orchestrator's
         // `checkResult` message, never bundled into the status payload (kept fast).
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
@@ -271,26 +278,19 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         expect((result.data as { orgMismatch?: unknown }).orgMismatch).toBeUndefined();
     });
 
-    it('should check mesh status after successful sign-in', async () => {
-        const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
+    // The counterpart: signed in, so the same silent read gives the real status.
+    it('reports the deployed mesh when the session is still good', async () => {
+        const { detectFrontendChanges } = require('@/core/state/projectStateSync');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
 
-        // Auth returns false initially, then true after login
         const { ServiceLocator } = require('@/core/di/serviceLocator');
-        const mockAuthManager = {
-            isAuthenticated: jest
-                .fn()
-                .mockResolvedValueOnce(false) // Initial check
-                .mockResolvedValueOnce(true), // After login
-            loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
-        };
-        ServiceLocator.getAuthenticationService.mockReturnValue(mockAuthManager);
-
-        // Mock user clicking "Sign In"
-        const vscode = require('vscode');
-        vscode.window.showWarningMessage.mockResolvedValue('Sign In');
+        const signIn = jest.fn().mockResolvedValue(true);
+        ServiceLocator.getAuthenticationService.mockReturnValue({
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+            loginAndRestoreProjectContext: signIn,
+        });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -300,24 +300,41 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                 status: 'deployed',
             },
         });
-
-        // Verify login was called
-        expect(mockAuthManager.loginAndRestoreProjectContext).toHaveBeenCalled();
+        // A status read never signs anyone in, in either direction.
+        expect(signIn).not.toHaveBeenCalled();
     });
 
-    it('starts loading the Adobe API list when the dashboard opens', async () => {
+    it('starts the slow reads when the dashboard opens', async () => {
         // Developer Console loads its API list the moment it opens, so the list is
-        // ready before anyone looks; a cold load takes Adobe about a minute.
+        // ready before anyone looks; a cold load takes Adobe about a minute. The
+        // Commerce sign-in took two on Justrite (2026-10-18).
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
 
         await handleRequestStatus(mockContext);
 
-        expect(warmOrgServicesCatalog).toHaveBeenCalledWith(mockContext);
+        expect(warmProjectReads).toHaveBeenCalledWith(mockContext);
+    });
+
+    // The cheap half, posted on every project save (pushStatus): the status the
+    // dashboard renders, and none of the on-open work.
+    it('posts the status alone, without the on-open work, through postStatusUpdate', async () => {
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
+        const project = await mockContext.stateManager.getCurrentProject();
+        if (!project || !mockContext.panel) throw new Error('fixture has no project or panel');
+
+        const { statusData } = await postStatusUpdate(mockContext, mockContext.panel, project);
+
+        expect(mockContext.panel.webview.postMessage).toHaveBeenCalledWith({
+            type: 'statusUpdate',
+            payload: statusData,
+        });
+        expect(statusData).toMatchObject({ name: 'test-project' });
+        expect(warmProjectReads).not.toHaveBeenCalled();
     });
 });
 
 /**
- * The dashboard's "Sign in" links appear only after Adobe has refused the sign-in, so they
+ * The dashboard's "Sign in" buttons appear only after Adobe has refused the sign-in, so they
  * always ask for a FRESH one (`aio auth login -f`). A colleague on beta.149, 2026-10-27:
  * Adobe answered 401 ErrInvalidOauthToken to a token whose saved expiry was hours away, so
  * the normal login reused it in five seconds with no browser, reported success, and the
@@ -329,6 +346,11 @@ describe('handleReAuthenticate', () => {
         const { ServiceLocator } = require('@/core/di/serviceLocator');
         const signIn = jest.fn().mockResolvedValue(false);
         ServiceLocator.getAuthenticationService.mockReturnValue({ loginAndRestoreProjectContext: signIn });
+        // The sign-in notice runs inside a cancellable progress window.
+        const vscode = require('vscode');
+        vscode.window.withProgress.mockImplementation((_options: unknown, task: (p: unknown, t: unknown) => unknown) =>
+            task({ report: jest.fn() }, { onCancellationRequested: jest.fn() }),
+        );
 
         await handleReAuthenticate(mockContext);
 

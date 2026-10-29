@@ -21,9 +21,21 @@ its files and its keyed entry.
 Rename changes the **display name only**. The id, the folder and the OpenWhisk
 package are immutable — they are baked into deployed resources.
 
+## One Adobe project holds one ERP of a given name
+
+Two local projects (a project and its copy) deploying the same pair into one Adobe
+project showed the integration's Commerce columns twice (2026-10-08). So before any add
+deploys, `replaceDeployedElsewhere` (in `dashboard/handlers/`) removes the pair another
+local project put into the same Adobe project under the same ERP name
+(`pairWithSameErpElsewhere.ts`), and stops the add if that removal does not finish. A
+removal also reads Adobe's extension-point registry after the undeploy and unpublishes
+what the app declared, believing only a re-read: a registration still published stops
+the removal, and a workspace of the component's own may not take it.
+
 ## Every deploy goes through the keyed runner
 
-`appBuilderComponentRunner.ts`, behind the per-id handlers. There is no headless
+`appBuilderAddRun.ts`, `appBuilderRedeployRun.ts` and `appBuilderRemoveRun.ts`, behind the
+per-id handlers; `appBuilderComponentRunner.ts` holds what they share. There is no headless
 variant: `deployAppHeadless` was retired once its only caller was replaced, and being
 UI-free turned out to be the wrong goal for an agent-triggered deploy — that is
 precisely when the user needs telling.

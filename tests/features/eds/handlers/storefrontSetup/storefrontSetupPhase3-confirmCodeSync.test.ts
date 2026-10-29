@@ -40,6 +40,7 @@ jest.mock('@/features/eds/services/appInstallationResolver', () => ({
 }));
 
 import { executePhaseCodeSync } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase3';
+import { STOREFRONT_JOBS } from '@/core/utils/storefrontJobs';
 import { configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import type {
@@ -47,8 +48,13 @@ import type {
     SetupServices,
 } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import {
+    makePhase3Context,
+    makePhase3Services,
+    progressMessages,
+    sentTypes,
+} from './storefrontSetupPhase3.testUtils';
+import { PREVIEW_CODE_APP_NOT_ON_REPO_ERROR } from '../../../../helpers/helixAdminFixtures';
 
 const REPO: RepoInfo = {
     repoOwner: 'skukla',
@@ -59,24 +65,8 @@ const REPO: RepoInfo = {
 /** Records the sequence whose ORDER is the thing under test. */
 let order: string[];
 
-function makeContext(): HandlerContext {
-    return createMockHandlerContext({
-        logger: createMockLogger(),
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-    });
-}
-
-function makeServices(): SetupServices {
-    return {
-        helixService: { previewCode: jest.fn().mockResolvedValue(undefined) },
-        daLiveAuthService: { getUserEmail: jest.fn().mockResolvedValue('k@adobe.com') },
-        daLiveTokenProvider: {},
-        githubAppService: {
-            isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true, codeStatus: 200 }),
-            getInstallUrl: jest.fn().mockReturnValue('https://github.com/apps/aem-code-sync'),
-        },
-    } as unknown as SetupServices;
-}
+const makeContext = makePhase3Context;
+const makeServices = (): SetupServices => makePhase3Services(() => order.push('publishCode'));
 
 const EDS_CONFIG = {
     daLiveOrg: 'skukla',
@@ -98,11 +88,7 @@ const appRequiredPayload = (context: HandlerContext): { message: string; isTeamO
     return send.mock.calls.find((c) => c[0] === 'storefront-setup-github-app-required')?.[1];
 };
 
-const messages = (context: HandlerContext): string =>
-    (context.sendMessage as unknown as jest.Mock).mock.calls
-        .filter((c) => c[0] === 'storefront-setup-progress')
-        .map((c) => String((c[1] as { message?: string }).message))
-        .join('\n');
+const messages = progressMessages;
 
 const progressPayloads = (context: HandlerContext): unknown[] =>
     (context.sendMessage as unknown as jest.Mock).mock.calls
@@ -111,10 +97,7 @@ const progressPayloads = (context: HandlerContext): unknown[] =>
 
 const mockConfigurePermissions = configureDaLivePermissions as jest.Mock;
 
-const REPO_LABEL = 'skukla/kukla-bodea';
 
-const sentTypes = (context: HandlerContext): string[] =>
-    (context.sendMessage as unknown as jest.Mock).mock.calls.map((c) => c[0] as string);
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -134,7 +117,7 @@ describe('the App verdict waits for the site', () => {
 
         await run(context, makeServices());
 
-        expect(order).toEqual(['registerSite', 'appCheck']);
+        expect(order).toEqual(['registerSite', 'publishCode', 'appCheck']);
     });
 
     it('tells the resolver the site was just created, so a lagging code sync is not a verdict', async () => {
@@ -165,15 +148,45 @@ describe('saying so when it passes', () => {
     });
 });
 
-describe('the one failure that earns a halt', () => {
-    it('halts on an inner code.status 404 — Helix HAS the site and reports no sync', async () => {
+describe('the one measurement that earns a pause', () => {
+    it('pauses on an inner code.status 404 — Helix HAS the site and reports no sync — then continues', async () => {
         mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
         const context = makeContext();
-
-        const result = await run(context, makeServices());
-
-        expect(result).toMatchObject({ success: false, awaitingGitHubApp: true });
+        const services = makeServices();
+        const result = await run(context, services);
         expect(sentTypes(context)).toContain('storefront-setup-github-app-required');
+        // The pause polled the App itself and found it, so the phase finished.
+        expect(services.githubAppService.isAppInstalled).toHaveBeenCalled();
+        expect(result).toBeNull();
+        expect(messages(context)).toMatch(/resuming setup/i);
+        expect(messages(context)).toMatch(/Site configuration complete/i);
+    });
+
+    it('ends the run when it is cancelled while waiting for the App', async () => {
+        mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
+        const services = makeServices();
+        const controller = new AbortController();
+        (services.githubAppService.isAppInstalled as jest.Mock).mockImplementation(async () => {
+            controller.abort();
+            return { isInstalled: false, codeStatus: 404 };
+        });
+        await expect(
+            executePhaseCodeSync(makeContext(), EDS_CONFIG, services, REPO, controller.signal)
+        ).rejects.toThrow('Operation cancelled');
+    });
+
+    it('fails honestly when the App never appears within the wait', async () => {
+        mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
+        const services = makeServices();
+        (services.githubAppService.isAppInstalled as jest.Mock).mockResolvedValue({
+            isInstalled: false,
+            codeStatus: 404,
+        });
+        const result = await run(makeContext(), services);
+        expect(result).toMatchObject({
+            success: false,
+            error: expect.stringMatching(/Waited 30 minutes/),
+        });
     });
 
     it('does NOT halt when the check merely failed', async () => {
@@ -263,7 +276,9 @@ describe('who can actually fix it', () => {
  * nothing about whether the call was well formed.
  */
 describe('what the phase reports and calls', () => {
-    it('reports each step in order, naming the repo it is working on', async () => {
+    // Line 2 under 'Publishing code, settings' (progress vocabulary, owner 2026-10-16):
+    // the jobs in the vocabulary's words; the repository was named on the step before.
+    it('reports each step in order, each job in the vocabulary', async () => {
         const context = makeContext();
 
         await run(context, makeServices());
@@ -272,26 +287,26 @@ describe('what the phase reports and calls', () => {
             {
                 phase: 'code-sync',
                 message: expect.stringContaining('Verifying code synchronization'),
-                subMessage: REPO_LABEL,
                 progress: 40,
             },
             {
-                phase: 'code-sync',
-                message: expect.stringContaining('Publishing code to CDN'),
-                subMessage: REPO_LABEL,
-                progress: 43,
-            },
-            { phase: 'code-sync', message: expect.stringContaining('Code synchronized'), progress: 45 },
-            {
                 phase: 'site-config',
-                message: expect.stringContaining('Configuring site permissions'),
-                subMessage: REPO_LABEL,
+                message: STOREFRONT_JOBS.settingSitePermissions,
                 progress: 46,
+            },
+            {
+                phase: 'code-sync',
+                message: STOREFRONT_JOBS.publishingCode,
+                progress: 47,
+            },
+            {
+                phase: 'code-sync',
+                message: expect.stringContaining('Code synchronized'),
+                progress: 47,
             },
             {
                 phase: 'site-config',
                 message: expect.stringContaining('Verifying AEM Code Sync'),
-                subMessage: REPO_LABEL,
                 progress: 48,
             },
             {
@@ -320,15 +335,24 @@ describe('what the phase reports and calls', () => {
         );
     });
 
-    it('carries on when the CDN preview fails — the code is on GitHub either way', async () => {
+    it('fails the setup when the code publish fails — a site with no code is not ready', async () => {
+        // It used to carry on ("the code is on GitHub either way"), and the project
+        // was marked ready while aem.page served no scripts (scratch-1022, 2026-10-22).
         const services = makeServices();
         (services.helixService.previewCode as jest.Mock).mockRejectedValue(new Error('helix 503'));
         const context = makeContext();
 
         const result = await run(context, services);
 
-        expect(result).toBeNull();
-        expect(messages(context)).toMatch(/Code synchronized/);
+        expect(result).toMatchObject({
+            success: false,
+            error: expect.stringContaining('helix 503'),
+            repoOwner: 'skukla',
+            repoName: 'kukla-bodea',
+        });
+        expect(messages(context)).toMatch(/Code not published to the CDN: helix 503/);
+        expect(messages(context)).not.toMatch(/Code synchronized/);
+        expect(messages(context)).not.toMatch(/Site configuration complete/);
     });
 });
 
@@ -418,10 +442,7 @@ describe('the App-required payload', () => {
         mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
     });
 
-    it('names the repo and the install URL, and does not claim the site is unregistered', async () => {
-        // siteUnregistered says the SITE is missing. Here Helix has the site and
-        // reports code.status 404, so claiming otherwise would send the webview
-        // down the wrong recovery path.
+    it('names the repo and the install URL', async () => {
         const context = makeContext();
 
         await run(context, makeServices());
@@ -430,7 +451,6 @@ describe('the App-required payload', () => {
             owner: 'skukla',
             repo: 'kukla-bodea',
             installUrl: 'https://github.com/apps/aem-code-sync',
-            siteUnregistered: false,
             message: expect.any(String),
         });
     });
@@ -445,7 +465,7 @@ describe('the App-required payload', () => {
 
         const result = await run(context, makeServices(), config);
 
-        expect(result).toMatchObject({ awaitingGitHubApp: true });
+        expect(result).toBeNull();
         expect(appRequiredPayload(context).message).not.toMatch(/admin rights/i);
     });
 
@@ -458,7 +478,143 @@ describe('the App-required payload', () => {
 
         const result = await run(context, makeServices(), config);
 
-        expect(result).toMatchObject({ awaitingGitHubApp: true });
+        expect(result).toBeNull();
         expect(appRequiredPayload(context).message).not.toMatch(/admin rights/i);
+    });
+});
+
+/**
+ * EDS-23 — the code endpoint decides, because `/status` cannot.
+ *
+ * On skukla/kukla-justrite `/status` answered an inner 400 while the App did NOT
+ * cover the repository, and again after it did. The code POST this phase already
+ * makes said which: `x-error: [admin] github bot not installed on repository.`
+ * That answer earns the same pause as an inner 404 (EDS-20), and the pause ends
+ * when the same POST stops saying it — `/status` would read 400 throughout.
+ */
+describe('the code endpoint says the App is not on the repository', () => {
+    const appMissing = () => new Error(PREVIEW_CODE_APP_NOT_ON_REPO_ERROR);
+
+    it('pauses for the App, naming the repository, without asking /status', async () => {
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock)
+            .mockRejectedValueOnce(appMissing())
+            .mockResolvedValue(undefined);
+        const context = makeContext();
+
+        const result = await run(context, services);
+
+        expect(mockResolve).not.toHaveBeenCalled();
+        expect(appRequiredPayload(context)).toEqual({
+            owner: 'skukla',
+            repo: 'kukla-bodea',
+            installUrl: 'https://github.com/apps/aem-code-sync',
+            message: expect.stringContaining('skukla/kukla-bodea'),
+        });
+        expect(result).toBeNull();
+        expect(messages(context)).toMatch(/resuming setup/i);
+    });
+
+    it('ends the wait by publishing the code again — the same call, the same arguments', async () => {
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock)
+            .mockRejectedValueOnce(appMissing())
+            .mockRejectedValueOnce(appMissing())
+            .mockResolvedValue(undefined);
+
+        await run(makeContext(), services);
+
+        expect(services.helixService.previewCode).toHaveBeenCalledTimes(3);
+        for (const call of (services.helixService.previewCode as jest.Mock).mock.calls) {
+            expect(call).toEqual(['skukla', 'kukla-bodea', '/*', 'main']);
+        }
+        // /status reads the same 400 before and after — it must not end this wait.
+        expect(services.githubAppService.isAppInstalled).not.toHaveBeenCalled();
+    });
+
+    it('says in the code line that the App is missing, not just the raw reason', async () => {
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock)
+            .mockRejectedValueOnce(appMissing())
+            .mockResolvedValue(undefined);
+        const context = makeContext();
+
+        await run(context, services);
+
+        expect(messages(context)).toMatch(
+            /Code not published to the CDN — the AEM Code Sync GitHub App is not on skukla\/kukla-bodea/
+        );
+    });
+
+    it('stops waiting once the endpoint gives a different reason — and reports that reason', async () => {
+        // The App is no longer the blocker, but the code is still not on the CDN,
+        // so the run must not go on to call the storefront ready.
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock)
+            .mockRejectedValueOnce(appMissing())
+            .mockRejectedValue(new Error('helix 503'));
+        const context = makeContext();
+
+        const result = await run(context, services);
+
+        expect(services.helixService.previewCode).toHaveBeenCalledTimes(2);
+        expect(result).toMatchObject({ success: false, error: expect.stringContaining('helix 503') });
+        expect(messages(context)).not.toMatch(/Site configuration complete/);
+    });
+
+    it('fails honestly when the App never covers the repository within the wait', async () => {
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock).mockRejectedValue(appMissing());
+
+        const result = await run(makeContext(), services);
+
+        expect(result).toMatchObject({
+            success: false,
+            error: expect.stringMatching(/Waited 30 minutes/),
+        });
+    });
+});
+
+describe('an inner 400 from /status', () => {
+    it('is verified by a code publish that succeeded', async () => {
+        mockResolve.mockResolvedValue({ kind: 'undetermined', codeStatus: 400 });
+        const context = makeContext();
+
+        const result = await run(context, makeServices());
+
+        expect(result).toBeNull();
+        expect(messages(context)).toMatch(/AEM Code Sync verified/);
+        expect(sentTypes(context)).not.toContain('storefront-setup-github-app-required');
+    });
+
+    it('cannot turn a FAILED code publish into success', async () => {
+        // scratch-1022, 2026-10-22: the publish failed, /status read 400 twice, and
+        // the run logged "Setup succeeded". After a failed publish the 400 is not
+        // asked at all — the publish's own failure is the answer.
+        mockResolve.mockResolvedValue({ kind: 'undetermined', codeStatus: 400 });
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock).mockRejectedValue(new Error('helix 503'));
+        const context = makeContext();
+
+        const result = await run(context, services);
+
+        expect(result).toMatchObject({ success: false, error: expect.stringContaining('helix 503') });
+        expect(mockResolve).not.toHaveBeenCalled();
+        expect(messages(context)).not.toMatch(/AEM Code Sync verified/);
+        expect(messages(context)).not.toMatch(/setup completed anyway/i);
+    });
+
+    it('is NOT verified when the answer was a definite "not installed"', async () => {
+        // The publish only settles an answer Helix DECLINED to give. A definite
+        // "not installed" carrying the same number is still a "no", and reporting
+        // it as verified would tell the SC the App is there when Helix said it is not.
+        mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 400 });
+        const context = makeContext();
+
+        const result = await run(context, makeServices());
+
+        expect(result).toBeNull();
+        expect(messages(context)).not.toMatch(/AEM Code Sync verified/);
+        expect(messages(context)).toMatch(/could not verify/i);
     });
 });

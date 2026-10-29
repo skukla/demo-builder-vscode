@@ -157,7 +157,7 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Demo Builder: Migrating storefront names',
+                title: 'Migrating storefront names',
                 cancellable: false,
             },
             async (progress) => {
@@ -165,7 +165,8 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
                     const candidate = candidates[i];
                     progress.report({
                         increment: 100 / candidates.length,
-                        message: `${candidate.projectName} (${i + 1}/${candidates.length})`,
+                        // Which storefront; how many is a count, never a position (handbook, progress).
+                        message: candidate.projectName,
                     });
 
                     try {

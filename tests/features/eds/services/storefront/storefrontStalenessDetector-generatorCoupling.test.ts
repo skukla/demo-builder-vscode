@@ -20,7 +20,7 @@
  * not exist yet.
  */
 
-import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
+import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
 import { getStorefrontEnvVars } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import * as ENV from '@/core/config/envVarKeys';
 

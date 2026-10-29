@@ -64,6 +64,23 @@ describe('aiHandlers — regenerating AI files', () => {
             expect(saveProjectConfigOnly).toHaveBeenCalledTimes(1);
         });
 
+        it('raises the generation failure, not the save failure, when the landed hashes cannot be saved either', async () => {
+            // The save is best-effort. If it fails too, the SC must still be told
+            // why the regenerate failed — not that a manifest could not be written.
+            const saveProjectConfigOnly = jest.fn().mockRejectedValue(new Error('disk full'));
+            (generateAIContextFiles as jest.Mock).mockRejectedValue(new Error('step 2 failed'));
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
+                    getCurrentProject: jest.fn().mockResolvedValue(PROJECT_HEADLESS),
+                    saveProjectConfigOnly,
+                }),
+            });
+
+            await expect(handleRegenerateAiFiles(context)).rejects.toThrow('step 2 failed');
+
+            expect(saveProjectConfigOnly).toHaveBeenCalledWith(PROJECT_HEADLESS);
+        });
+
 
         it('calls generateAIContextFiles using server-side project.path (ignores payload)', async () => {
             (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);

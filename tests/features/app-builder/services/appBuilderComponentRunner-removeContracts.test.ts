@@ -12,6 +12,8 @@
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import { TEST_RUNTIME_ENV } from './appBuilderComponentRunner.runtimeMock';
 import type { Project } from '@/types/base';
+import { createSuccessResult } from '../../../helpers/commandResultFake';
+import { ErrorCode } from '@/types/errorCodes';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 jest.setTimeout(5000);
@@ -24,16 +26,19 @@ const mockListDeclaredPackageNames = jest.fn();
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     detectAppLayout: jest.fn().mockResolvedValue('standalone'),
     listDeclaredPackageNames: (...a: unknown[]) => mockListDeclaredPackageNames(...a),
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
 }));
 
 // =============================================================================
 // Imports (after mocks)
 // =============================================================================
 
-import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
-import { OPERATION_STAGES } from '@/features/app-builder/services/operationStages';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import {
     INTEGRATION_ENTRY,
     MESH_ENTRY,
@@ -118,7 +123,7 @@ describe('removeAppBuilderComponent — the teardown command', () => {
         expect(deps.commandManager.execute).toHaveBeenCalledWith('aio app undeploy', {
             cwd: `/proj/components/${APP_ID}`,
             streaming: true,
-            useNodeVersion: 'auto',
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
             shell: true,
             timeout: TIMEOUTS.LONG,
@@ -133,7 +138,7 @@ describe('removeAppBuilderComponent — the teardown command', () => {
 
         expect(deps.commandManager.execute).toHaveBeenCalledWith(MESH_DELETE_COMMAND, {
             cwd: `/proj/components/${MESH_ID}`,
-            useNodeVersion: 'auto',
+            useNodeVersion: demoBuilderNode(),
             enhancePath: true,
             streaming: true,
             shell: true,
@@ -167,9 +172,12 @@ describe('removeAppBuilderComponent — the teardown command', () => {
     // Reversibility: a teardown that cannot reach Adobe must still let the SC
     // clear the component locally and try again. The remote failure is
     // best-effort by design.
-    it('a failing remote teardown still clears the component locally', async () => {
+    it('a failing remote teardown still clears the component locally when nothing is left', async () => {
         const deps = createDeps();
-        deps.commandManager.execute.mockRejectedValue(new Error('namespace unreachable'));
+        deps.commandManager.execute.mockImplementation(async (command: string) => {
+            if (command.includes('app undeploy')) throw new Error('undeploy refused');
+            return createSuccessResult(command.includes(' list --json') ? '[]' : undefined);
+        });
 
         const result = await removeAppBuilderComponent(integrationProject(), APP_ID, deps);
 
@@ -181,6 +189,21 @@ describe('removeAppBuilderComponent — the teardown command', () => {
         );
         const saved = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         expect(saved.appBuilderComponents?.[APP_ID]).toBeUndefined();
+    });
+    // Owner, 2026-09-26: a complete cleanup, whatever it takes. A namespace that cannot be
+    // checked may still hold the app, so nothing that names it is let go.
+    it('keeps the card, folder and workspace when the namespace cannot be checked', async () => {
+        const deps = createDeps();
+        deps.commandManager.execute.mockRejectedValue(new Error('namespace unreachable'));
+
+        const result = await removeAppBuilderComponent(integrationProject(), APP_ID, deps);
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.COMPONENT_REMOVAL_STOPPED });
+        expect(result.error).toMatch(/could not be checked/);
+        expect(deps.componentManager.removeComponent).not.toHaveBeenCalled();
+        expect(deps.deleteComponentWorkspace).not.toHaveBeenCalled();
+        const saved = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
+        expect(saved.appBuilderComponents?.[APP_ID]).toMatchObject({ removalCleanedUp: true });
     });
 });
 
@@ -262,13 +285,25 @@ describe('removeAppBuilderComponent — a project missing the maps it unwinds', 
 
 describe('removeAppBuilderComponent — republish only for a component that provided vars', () => {
     it('does not republish for an entry whose provided map is empty', async () => {
+        const project = integrationProject();
+        project.appBuilderComponents![APP_ID].providesEnvVars = {};
+        const deps = createDeps();
+
+        await removeAppBuilderComponent(project, APP_ID, deps);
+
+        expect(deps.republishStorefront).not.toHaveBeenCalled();
+    });
+
+    // Project creation records a mesh with no provided map (`updateMeshState`). The
+    // removal used to read that as "feeds nothing", so an Edge Delivery storefront
+    // kept calling the deleted mesh.
+    it('republishes for a mesh whose record names nothing it provides', async () => {
         const project = meshProject();
-        project.appBuilderComponents![MESH_ID].providesEnvVars = {};
         const deps = createDeps();
 
         await removeAppBuilderComponent(project, MESH_ID, deps);
 
-        expect(deps.republishStorefront).not.toHaveBeenCalled();
+        expect(deps.republishStorefront).toHaveBeenCalledTimes(1);
     });
 
     it('republishes for an entry that did provide one', async () => {
@@ -324,11 +359,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass', () => {
 
         await removeAppBuilderComponent(project, APP_ID, deps);
 
-        expect(uninstallAppManagement).toHaveBeenCalledWith(
-            project,
-            { 'web/app': 'https://app/api' },
-            expect.any(Function)
-        );
+        expect(uninstallAppManagement).toHaveBeenCalledWith(project, APP_ID, expect.any(Function));
     });
 
     // A MESH never has a Commerce-side installation, whatever a same-named
@@ -355,7 +386,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass', () => {
             uninstallAppManagement: jest.fn(
                 async (
                     _p: Project,
-                    _urls: Record<string, string> | undefined,
+                    _id: string,
                     report?: (message: string) => void
                 ) => {
                     report?.('Removing the Commerce association...');
@@ -383,7 +414,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass', () => {
             uninstallAppManagement: jest.fn(
                 async (
                     _p: Project,
-                    _urls: Record<string, string> | undefined,
+                    _id: string,
                     report?: (message: string) => void
                 ) => {
                     report?.('Removing the Commerce association...');

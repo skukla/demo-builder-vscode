@@ -35,6 +35,8 @@ jest.mock('@/core/shell/orgContextEnv', () => ({
 }));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
+    // Pass-through: the always-included libraries are tested where they are added.
+    withAlwaysIncludedBlockLibraries: (selected?: string[]) => selected ?? [],
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     getBlockLibraryContentSource: jest.fn().mockReturnValue(null),
@@ -45,13 +47,17 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/edsPipeline', () => ({
-    executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true,
-        contentFilesCopied: 5,
-        libraryPaths: [],
-    }),
-}));
+jest.mock('@/features/eds/services/edsPipeline', () => {
+    // Typed through the canonical fake (EDS-55): a factory may load a module, not import one.
+    const { createMockPipelineResult } = jest.requireActual<
+        typeof import('../../../../helpers/pipelineResultFake')
+    >('../../../../helpers/pipelineResultFake');
+    return {
+        executeEdsPipeline: jest
+            .fn()
+            .mockResolvedValue(createMockPipelineResult({ contentFilesCopied: 5 })),
+    };
+});
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
@@ -232,7 +238,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         // Then: Should return partial success (reset completed, mesh failed)
         expect(result.success).toBe(true);
         expect(result.meshRedeployed).toBe(false);
-        expect(result.error).toContain('authentication');
+        expect(result.error).toContain('Adobe sign-in required');
         expect(result.errorType).toBe('MESH_REDEPLOY_FAILED');
     });
 

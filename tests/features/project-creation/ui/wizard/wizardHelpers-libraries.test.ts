@@ -20,8 +20,10 @@ import {
     getWizardTitle,
     initializeAdobeContextFromImport,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import { editChoicesOf } from '@/features/project-creation/ui/wizard/editChanges';
+import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
+import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 import type { WizardState } from '@/types/webview';
 import type { ImportedSettings } from '@/types/wizard';
 
@@ -34,7 +36,9 @@ const NEUTRAL_AUTH: WizardState['adobeAuth'] = { isAuthenticated: false, isCheck
 
 describe('filterRemovedCustomLibraries', () => {
     it('should return an empty list when nothing was selected', () => {
-        expect(filterRemovedCustomLibraries(undefined, [library('A', 'acme', 'a')])).toStrictEqual([]);
+        expect(filterRemovedCustomLibraries(undefined, [library('A', 'acme', 'a')])).toStrictEqual(
+            []
+        );
         expect(filterRemovedCustomLibraries([], [library('A', 'acme', 'a')])).toStrictEqual([]);
     });
 
@@ -273,7 +277,9 @@ describe('buildProjectConfig', () => {
     it('should resolve no frontend source when the package lists no storefronts at all', () => {
         const packages = [{ id: 'citisignal', name: 'CitiSignal' }];
 
-        expect(buildProjectConfig(base, null, packages as unknown as DemoPackage[]).frontendSource).toBeUndefined();
+        expect(
+            buildProjectConfig(base, null, packages as unknown as DemoPackage[]).frontendSource
+        ).toBeUndefined();
     });
 
     it('should resolve no frontend source when no package list was supplied', () => {
@@ -359,9 +365,23 @@ describe('buildProjectConfig', () => {
             });
         });
 
-        it('should default the site-content reset to false and keep an explicit true', () => {
+        // The site's pages follow the code (owner, 2026-10-19: an Edit from CitiSignal to Bodea
+        // with "Reset to template" kept CitiSignal's pages under Bodea's code).
+        it('should replace the site content on a reset to the template, and not otherwise', () => {
             expect(withEds({})).toMatchObject({ resetSiteContent: false });
-            expect(withEds({ resetSiteContent: true })).toMatchObject({ resetSiteContent: true });
+            expect(withEds({ resetToTemplate: true })).toMatchObject({ resetSiteContent: true });
+        });
+
+        it('should replace the site content when an Edit changes the package', () => {
+            const opened = { ...base, wizardMode: 'edit', edsConfig: {} } as unknown as WizardState;
+            const edit = (selectedPackage: string) =>
+                buildProjectConfig(
+                    { ...opened, selectedPackage, editBaseline: editChoicesOf(opened) } as unknown as WizardState,
+                    null,
+                    [],
+                ).edsConfig;
+            expect(edit('bodea')).toMatchObject({ resetSiteContent: true });
+            expect(edit('citisignal')).toMatchObject({ resetSiteContent: false });
         });
 
         it('should skip the tools install unless the ACO addon was chosen', () => {
@@ -378,6 +398,37 @@ describe('buildProjectConfig', () => {
             );
 
             expect(withAco.edsConfig).toMatchObject({ skipTools: false });
+        });
+
+        it('should hand over the block libraries storefront setup installed, so creation records them', () => {
+            const installed: InstalledBlockLibrary[] = [
+                {
+                    name: 'Isle5 Blocks',
+                    source: { owner: 'adobe', repo: 'isle5', branch: 'main' },
+                    commitSha: 'abc123',
+                    blockIds: ['hero'],
+                    installedAt: '2026-10-09T00:00:00.000Z',
+                },
+            ];
+
+            expect(withEds({ installedBlockLibraries: installed })).toMatchObject({
+                installedBlockLibraries: installed,
+            });
+            expect(withEds({})).not.toHaveProperty('installedBlockLibraries');
+        });
+
+        it('should hand over whether setup built the storefront in full, and no key when setup did not run', () => {
+            expect(withEds({ storefrontBuildComplete: false })).toMatchObject({ storefrontBuildComplete: false });
+            expect(withEds({ storefrontBuildComplete: true })).toMatchObject({ storefrontBuildComplete: true });
+            expect(withEds({})).not.toHaveProperty('storefrontBuildComplete');
+        });
+
+        it('should hand over the broken links storefront setup found, and no key when it found none', () => {
+            const brokenLinks: StorefrontBrokenLink[] = [{ link: '/fr', pages: ['/footer'] }];
+
+            expect(withEds({ brokenLinks })?.brokenLinks).toStrictEqual(brokenLinks);
+            expect(withEds({})).not.toHaveProperty('brokenLinks');
+            expect(withEds({ brokenLinks: [] })).not.toHaveProperty('brokenLinks');
         });
     });
 });

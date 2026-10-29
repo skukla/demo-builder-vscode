@@ -14,6 +14,8 @@
 
 import * as vscode from 'vscode';
 import { getDaLiveAuthService, validateDaLiveTokenStrict } from '../edsHelpers';
+import { daLiveSignedInMessage } from './daLiveAuthPrompt';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { DaLiveAuthStatusPayload, DaLiveLoginOpenedPayload, DaLiveTokenWithOrgResultPayload } from '@/types/webviewPayloads';
@@ -58,14 +60,16 @@ export async function handleCheckDaLiveAuth(
         // setting — the demo's namespace now comes from the wizard's picker.
         const cachedOrgName = authService.getOrgName();
 
-        const isAuth = await authService.isAuthenticated();
+        // The one sign-in reader, so this agrees with get_auth_status and the session
+        // guard. IMS not answering (`unknown`) shows as signed in: the stored token's own
+        // expiry is fine, and a refusal still stops the first DA.live call that meets it.
+        const signIn = await authService.checkSignIn();
 
-        if (isAuth) {
-            const tokenInfo = await authService.getStoredToken();
-            context.logger.debug('[EDS] DA.live auth valid for:', tokenInfo?.email);
+        if (signIn.state === 'valid' || signIn.state === 'unknown') {
+            context.logger.debug('[EDS] DA.live auth valid for:', signIn.token.email);
             await context.sendMessage('dalive-auth-status', {
                 isAuthenticated: true,
-                email: tokenInfo?.email,
+                email: signIn.token.email,
                 setupComplete,
                 orgName: cachedOrgName,
                 bookmarkletUrl,
@@ -198,6 +202,7 @@ export async function handleStoreDaLiveTokenWithOrg(
         });
 
         context.logger.info('[EDS] DA.live token stored, namespace pinned to:', orgName);
+        showSuccessInStatusBar(daLiveSignedInMessage(orgName, validation.email));
 
         // Send success with the picked namespace
         await context.sendMessage('dalive-token-with-org-result', {

@@ -105,7 +105,7 @@ describe('authenticationHandlers - handleAuthenticate - Error Handling', () => {
 			// Permission check is NOT run during login (deferred)
 			expect(mockContext.authManager!.testDeveloperPermissions).not.toHaveBeenCalled();
 			// setOrgRejectedFlag is NOT called (no validation during login)
-			expect(mockContext.authManager!.setOrgRejectedFlag).not.toHaveBeenCalled();
+			expect(mockContext.authManager!.getCacheManager().setOrgClearedDueToValidation).not.toHaveBeenCalled();
 		});
 
 		it('should NOT check permissions during login (deferred to next step)', async () => {

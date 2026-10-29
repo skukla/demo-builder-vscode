@@ -17,9 +17,19 @@
 import * as vscode from 'vscode';
 
 import { hasConversation as hasClaudeConversation } from '@/commands/claudeSessionStore';
+import type { CommandProbe } from '@/features/ai/engine/agentCli';
 import type { Project } from '@/types/base';
 import { createMockExtensionContext } from '../helpers/extensionContextFake';
 import { createMockProject as createMockProjectBase } from '../helpers/projectFake';
+
+/**
+ * The command executor's answer for a machine WITH Claude Code installed — what
+ * every suite but the missing-CLI one assumes. A fresh mock per call, so a suite
+ * can assert what it was asked.
+ */
+export function claudePresent(): CommandProbe {
+    return { commandExists: jest.fn().mockResolvedValue(true) };
+}
 
 // NOTE: each consuming test file MUST declare its own
 //   `jest.mock('@/commands/claudeSessionStore', () => ({ hasConversation: jest.fn(() => false) }))`
@@ -94,7 +104,7 @@ export function makeOpenInClaudeProject(overrides: Partial<Project> = {}): Parti
  */
 export function setupVscodeMocks(opts: {
     /** Engine setting. Defaults to `'claude-code'`. */
-    engine?: 'claude-code';
+    engine?: string;
     /**
      * Workspace folder path to expose via `vscode.workspace.workspaceFolders[0]`.
      * Defaults to `/projects/demo` so existing tests that assume workspace =

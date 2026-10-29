@@ -87,7 +87,7 @@ describe('withTiming', () => {
 
     it('should use correct thresholds for different operations', async () => {
         const operations = [
-            { name: 'isFullyAuthenticated', threshold: 4000, actual: 5000, expectedFormatted: '4.0s' },
+            { name: 'isAuthenticated', threshold: 3000, actual: 4000, expectedFormatted: '3.0s' },
             { name: 'getOrganizations', threshold: 5000, actual: 6000, expectedFormatted: '5.0s' },
             { name: 'login', threshold: 30000, actual: 31000, expectedFormatted: '30.0s' },
         ];

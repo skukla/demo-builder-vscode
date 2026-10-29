@@ -132,7 +132,7 @@ export async function forgetDemo(
     context.logger.info(`[SharedDemo] Forgot ${repo}`);
     if (!deleteRepository) return { forgotten: true };
     try {
-        await getGitHubServices(context.context.secrets).repoOperations.deleteRepository(source.owner, source.repo);
+        await getGitHubServices(context.context.secrets).repoLifecycle.deleteRepository(source.owner, source.repo);
         context.logger.info(`[SharedDemo] Deleted ${repo}, the repository made from its zip`);
         return { forgotten: true, deletedRepository: true };
     } catch (error) {

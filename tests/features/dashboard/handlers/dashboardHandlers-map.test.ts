@@ -50,6 +50,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'openAdminPanel')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'configure')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'openDevConsole')).toBe(true);
+            expect(hasHandler(dashboardHandlers, 'openAemAssets')).toBe(true);
             expect(hasHandler(dashboardHandlers, 'navigateBack')).toBe(true);
         });
 
@@ -132,14 +133,15 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 49 handlers', () => {
+        it('should have exactly 94 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
                 keyof typeof dashboardHandlers
             >;
 
-            // Then: exactly 49, derived in the map's own declaration order so a
+            // Then: exactly 73 — the 49 below, then the additions noted after the
+            // table — derived in the map's own declaration order so a
             // reader can check it against the source top to bottom.
             //
             // NOTE: the previous derivation did not add up — it said "9
@@ -156,13 +158,15 @@ describe('dashboardHandlers', () => {
             //                      openIntegrations, showProjectDashboard,
             //                      openDataInstaller
             //   1  mesh            deployMesh
-            //   8  integrations    add/deploy/redeploy/remove/rename
+            //   9  integrations    add/deploy/redeploy/remove/rename
             //                      AppBuilderComponent, plus the AB-5 pair:
             //                      installAppBuilderComponent (re-run the
             //                      Commerce install without a redeploy) and
             //                      getAppBuilderInstallStatus (live install
             //                      state read), plus getComponentOperationProgress
             //                      (PL-59: the latest step for the progress modal)
+            //                      and backgroundComponentOperation ("Run in
+            //                      background" hands it to a notification)
             //   3  console APIs    listConsoleApis, addConsoleApis, setConsoleApis
             //   1  runtime         listRuntimePackages (the list_runtime_packages
             //                      read: what a removal left running, 2026-09-21)
@@ -175,6 +179,7 @@ describe('dashboardHandlers', () => {
             //                      republishContent
             //   1  reset           resetProject
             //   1  destination     setProjectDestination
+            //   2  ERP integration getErpStatus, resetErpRecords (plan step 05)
             //   5  demo source     probe-shared-demo (the Add a demo package dialog's
             //                      read, shared with the wizard),
             //                      change-demo-source (point a project built on
@@ -211,7 +216,102 @@ describe('dashboardHandlers', () => {
             // the integrations surface's Eventing section — workspace-scoped
             // I/O event providers/registrations, same service as the MCP
             // event tools.
-            expect(types).toHaveLength(49);
+            //
+            // openErpScreen (40 → 41, 2026-09-16): opens the ERP's own screen with
+            // the key only the extension holds.
+            //
+            // reinstallAppBuilderComponent (41 → 42, AB-13): uninstall then
+            // install, only for an app Commerce refused to upgrade in place.
+            //
+            // updateAppBuilderComponent + checkIntegrationUpdates (42 → 44,
+            // AB-13 step 5): Update fetches the newer code before it redeploys,
+            // and the integrations screen asks which integrations have any.
+            //
+            // getIntegrationSettings + saveIntegrationSettings (44 → 46, AB-21): an
+            // integration's Settings — the read, and the save that stores the change
+            // and redeploys what uses it.
+            //
+            // openDebugLogs + getComponentOperationProgress (46 → 48, PL-59, merged
+            // from develop): the progress modal's two requests, already counted in
+            // the table above.
+            //
+            // backgroundComponentOperation (48 → 49, PL-59): "Run in background"
+            // hands the operation to a notification. Also counted in the table above.
+            //
+            // answerOperationPrompt (49 → 50, PL-59, 2026-09-20): the SC answering a
+            // question the work is paused on — an expired sign-in, a missing
+            // prerequisite — now that the modal asks it instead of a notification
+            // beside the modal.
+            //
+            // listRuntimePackages (50 → 51, 2026-09-21): the list_runtime_packages
+            // read — what a removal left running in the Runtime namespace.
+            //
+            // setViewModeOverride (51 → 52, 2026-09-24): the integrations screen's
+            // cards/rows toggle — the shared handler the projects list also registers
+            // (core/handlers/viewModeHandler), under the same name.
+            //
+            // lookupErpRecord + followErpOrder (60 → 62, 2026-09-24): the ERP Admin
+            // page's two reads — one record as both systems hold it, one order's whole
+            // life — behind the agent tools get_erp_record and get_erp_order_trace.
+            //
+            // readErpApi + writeErpApi + listRuntimeActivations + readRuntimeActivation
+            // (66 → 67, 2026-09-25): invokeRuntimeAction — replay a Runtime action with a payload.
+            // (62 → 66, 2026-09-24): the ERP's own API for agents (its screens' reads and
+            // actions without the screen), and what RAN in a Runtime namespace.
+            //
+            // getSetupChecklist + setSetupStep + checkSetupSteps (67 → 70, AB-26x,
+            // 2026-09-25): an integration's demo setup checklist on its flyout.
+            //
+            // deleteUndeclaredRuntimeCode (70 → 71, 2026-09-27): the
+            // delete_undeclared_runtime_code tool — actions an integration left behind in
+            // its own packages, which `aio app deploy` never deletes.
+            //
+            // loadErpDemoData (71 → 72, 2026-09-27): Demo Builder fills the ERP from
+            // Commerce, the copy the integration used to make (AB-26y step 1).
+            //
+            // addErp (72 → 73, 2026-09-28): "Add another ERP" on the ERP integration's
+            // card, and the add_erp tool (AB-16).
+            //
+            // getErpSettings + setErpSettings (73 → 75, AB-16j, 2026-09-29): read and set an
+            // ERP's own settings (ownership, sales-org per website) for agents.
+            //
+            // openAemAssets (75 → 76, EDS-21, 2026-09-30): the More menu's "AEM Assets" —
+            // the bound AEM author's Assets console (demoBuilder.daLive.aemAuthorUrl).
+            // prepareSetupChecks (76 → 77, AB-53, 2026-10-01): the setup guide signs in to
+            // Commerce as it opens, so a check does not wait on Adobe Console.
+            // getErpDemoControls + setErpAppearance + startErpDowntime + endErpDowntime
+            // (77 → 81, AB-59, 2026-10-02): the mock ERP's look and simulated downtime,
+            // moved off its own Settings screen onto its card, and the agent tools for them.
+            // getErpOwnershipOptions (81 → 82, AB-64, 2026-10-02): what "Add another ERP"
+            // offers for "Which products belong to this ERP?" — websites, sources, products, rules.
+            // buildCatalogMenu + removeCatalogMenu (82 → 84, EDS-24, 2026-10-04): the catalog
+            // menu from the Commerce tree and its undo, shared with the agent's two tools.
+            // promoteAppBuilderComponent + unpromoteAppBuilderComponent (84 → 86, AB-1c,
+            // 2026-10-05): save a blank-starter app to its own GitHub repository, and the undo.
+            // buildCatalogMenu + removeCatalogMenu removed (86 → 84, EDS-24 redesign,
+            // 2026-10-05): storefront setup, reset and republish write the category pages.
+            // openSiteAccess (84 → 85, 2026-10-05): the More menu opens the Site access
+            // webview beside the dashboard, as openDataInstaller does.
+            // openStorefrontReport (85 → 86, 2026-10-07): the Storefront Report tile
+            // opens the report beside the dashboard.
+            // getErpAssignOptions + assignErpProducts + undoErpAssignment +
+            // addErpOwnerToAttributeSets + removeErpOwnerFromAttributeSets (86 → 91, AB-74,
+            // 2026-10-09): "Assign products" on an ERP's card and its undo, and the
+            // attribute-set fix the erp-attributes check offers and its undo.
+            // prepareCommerceStore + undoCommerceStorePreparation + setCommerceConfig (91 → 94,
+            // AB-77, 2026-10-10): "Prepare this store" on the integration's card and the guide's
+            // per-step Apply, its undo, and the one settings write outside a catalog step.
+            // +1 (AB-78, 2026-10-15): whether another project already runs an ERP
+            // integration on this Commerce instance, for the Add Integration modal.
+            // openStorefrontReport → getStorefrontReport + takeStorefrontReportRequest
+            // (95 → 96, EDS-64, 2026-10-23): the report is a window over the dashboard,
+            // read on open, and opened by the Command Palette through a held request.
+            // checkForUpdates (96 → 97, EDS-64, 2026-10-23): the report's Adobe update
+            // notice runs Check for Updates.
+            // getStorefrontReport + takeStorefrontReportRequest + checkForUpdates removed
+            // (97 → 94, EDS-64, 2026-10-23): the report window is gone; Diagnostics and the
+            // get_storefront_report tool carry what it said.
+            expect(types).toHaveLength(94);
         });
 
         it('should have handlers as functions', () => {

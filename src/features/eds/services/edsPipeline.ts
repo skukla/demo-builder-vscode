@@ -2,17 +2,25 @@
  * EDS Content Pipeline
  *
  * Shared pipeline that orchestrates the content/publish sequence used by both
- * the setup flow (storefrontSetupHandlers) and the reset flow (edsResetService).
+ * the setup flow (storefrontSetupHandlers) and the reset flow (edsResetContentStep).
  *
  * Operations executed in order:
- * 0. Clear existing DA.live content and unpublish CDN pages (gated by clearExistingContent)
- *    - Uses DA.live Bearer token auth which bypasses "source exists" restriction
+ * 0. Clear existing DA.live content (gated by clearExistingContent). Nothing is
+ *    unpublished here: the site stays up while the content is replaced (EDS-33)
+ * 0.5. Read the storefront's code from the SC's repository, for the paths it loads
+ *    (gated by skipContent; EDS-40). Failing, the copy uses the fixed lists
  * 1. Copy DA.live content from source (gated by skipContent)
  * 2. Create block library from component-definition.json
  * 3. Apply EDS settings (AEM Assets, Universal Editor config)
  * 4. Purge CDN cache (conditional)
  * 5. Publish content to CDN
+ * 5.5. Publish the sheets step 1 copied, by path (step 5 publishes pages only)
  * 6. Publish block library paths
+ * 7. Unpublish the pages Helix still has published that steps 5-6 did not publish,
+ *    product pages excepted (gated by clearExistingContent; EDS-33)
+ * 7.5. Ask the live storefront for every code path the source had, and report what
+ *    is missing (EDS-40). Never fails the pipeline
+ * 8. Pre-warm the catalog's product pages (conditional)
  *
  * @module features/eds/services/edsPipeline
  */
@@ -25,7 +33,16 @@ import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { HelixService } from './helix/helixService';
 import { applyBlockCodePatches } from './patches/codePatchPipelineHelpers';
 import { createPatchReport, addCodeResult, type PatchReport } from './patches/patchReportHelper';
+import {
+    LEFTOVERS_MAY_REMAIN,
+    pageInSource,
+    unpublishLeftoverPages,
+    type LeftoverPagesResult,
+} from './storefront/leftoverPages';
+import { carriedWebPaths, findMissingPages } from './storefront/missingPages';
+import { readStorefrontCodePaths } from './storefrontCodeReader';
 import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
+import { STOREFRONT_JOBS, countLine, itemCount, jobLine } from '@/core/utils/storefrontJobs';
 import type { Project } from '@/types/base';
 import type { BrandAssetsConfig, ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -43,7 +60,7 @@ export type { EdsPipelineProgressCallback };
  * not gaps during the brand-content copy that runs first.
  *
  * Verified rather than assumed: `overlayAccountChrome`
- * (`daLiveContentCopy.ts:761`) seeds its entry points from
+ * (`daLiveAccountChrome.ts`) seeds its entry points from
  * `RUNTIME_SURFACES.authPages` (`runtimeSurfaceInventory.ts`), every one of
  * which is under `/customer/`, then follows references out from those pages.
  *
@@ -63,7 +80,10 @@ export interface EdsPipelineParams {
     templateRepo: string;
 
     // Content management
-    /** Delete all existing DA.live content before populating (true = clean slate) */
+    /**
+     * Delete all existing DA.live content before populating (true = clean slate). Also
+     * turns on step 7: after the republish, unpublish what was not republished.
+     */
     clearExistingContent?: boolean;
     skipContent?: boolean;
     contentSource?: { org: string; site: string; indexPath: string };
@@ -96,10 +116,26 @@ export interface EdsPipelineParams {
     blockCollectionIds?: string[];
     /** DA.live content sources for block library doc pages (.da/library/blocks/) */
     libraryContentSources?: Array<{ org: string; site: string }>;
+    /**
+     * Publish only these blocks' doc pages, and the block list itself. For a caller
+     * that knows which blocks it just added (Configure's block libraries): the other
+     * doc pages are already live, and publishing ~50 of them one at a time is the
+     * slow half of the step. Absent publishes them all — the full rebuild.
+     */
+    publishLibraryBlocksOnly?: string[];
 
     // Publish
     purgeCache?: boolean;
     skipPublish?: boolean;
+
+    /**
+     * Runs after the content copy and right before the bulk content publish, when there is
+     * one. Storefront setup publishes the authored-pages sheet here (EDS-61): the bulk
+     * publish previews every DA.live page, and the overlay would replace an authored page
+     * at a category address the published sheet does not list. Never fatal: a hook that
+     * throws is logged and the publish goes on.
+     */
+    beforeContentPublish?: () => Promise<void>;
 
     /**
      * BYOM overlay URL stamped onto the storefront's Configuration Service
@@ -140,6 +176,16 @@ export interface EdsPipelineResult {
      *  to surface unapplied patches via a single toast (one per create/reset,
      *  not one per patch domain). Always present even when the report is empty. */
     patchReport?: PatchReport;
+    /** What step 7 did with the pages left over from before (EDS-33). Absent when it did not run. */
+    leftoverPages?: LeftoverPagesResult;
+    /**
+     * Every sentence a step had for the SC, in the order the steps ran (EDS-55): pages the
+     * source has that the storefront does not serve (EDS-40), old pages that may still be
+     * live (EDS-33), a block palette that will be empty (EDS-38). Creation's completion
+     * card, the reset's warnings and the agent's caveats all read this one list, so a new
+     * warning is one `warnTheSc` call in its step. Empty when there is nothing to say.
+     */
+    warnings: string[];
 }
 
 // ==========================================================
@@ -206,63 +252,39 @@ async function pipelineApplyBrandAssets(
 }
 
 /**
- * Convert DA.live paths to web paths for Admin API.
- * HTML: /accessories.html -> /accessories, /products/index.html -> /products
- * Non-HTML: kept as-is (e.g. /media_abc.png, /config.json)
- */
-function toWebPaths(daLivePaths: string[]): string[] {
-    return daLivePaths.map((p) => {
-        if (!p.endsWith('.html')) {
-            return p;
-        }
-        // No `i` flag: the guard above is case-sensitive, so anything reaching
-        // this line already ends in a lowercase `.html` and the flag could never
-        // fire. The `$` anchor IS load-bearing — without it a folder named
-        // `docs.html` loses its own extension instead of the page's.
-        let web = p.replace(/\.html$/, '');
-        // `endsWith` alone: a path EQUAL to '/index' also ends with it, so the
-        // equality half could never decide anything.
-        if (web.endsWith('/index')) {
-            web = web.slice(0, -6) || '/';
-        }
-        return web || '/';
-    });
-}
-
-/**
- * Step 0: Clear all existing DA.live content and unpublish from CDN.
+ * Step 0: Clear all existing DA.live content.
  *
  * Uses DA.live Bearer token auth for DELETE operations, which bypasses
  * the Helix Admin API's "source exists" restriction. No fstab.yaml
  * manipulation or Configuration Service config changes needed.
+ *
+ * Nothing is unpublished here (EDS-33, owner decision 2026-10-09). It used to
+ * unpublish every deleted page, which took the storefront offline until step 5
+ * republished, and missed every page live on Helix but already gone from DA.live.
+ * The republish overwrites the pages that still exist; step 7 takes off the rest.
  */
 async function pipelineClearContent(
     services: EdsPipelineServices,
-    context: {
-        daLiveOrg: string;
-        daLiveSite: string;
-        repoOwner: string;
-        repoName: string;
-    },
+    context: { daLiveOrg: string; daLiveSite: string },
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<void> {
-    const { daLiveContentOps, helixService, logger } = services;
-    const { daLiveOrg, daLiveSite, repoOwner, repoName } = context;
+    const { daLiveContentOps, logger } = services;
+    const { daLiveOrg, daLiveSite } = context;
 
     onProgress?.({
         operation: 'content-clear',
-        message: 'Clearing existing DA.live content',
+        message: STOREFRONT_JOBS.clearingContent,
         subMessage: `${daLiveOrg}/${daLiveSite}`,
     });
     logger.info(`[EdsPipeline] Clearing all DA.live content for ${daLiveOrg}/${daLiveSite}`);
 
-    const clearResult = await daLiveContentOps.deleteAllSiteContent(
+    const clearResult = await daLiveContentOps.sourceOps.deleteAllSiteContent(
         daLiveOrg,
         daLiveSite,
         (info) => {
             onProgress?.({
                 operation: 'content-clear',
-                message: `Clearing content (${info.deleted} files removed)`,
+                message: jobLine(STOREFRONT_JOBS.clearingContent, `${info.deleted} files removed`),
                 subMessage: info.current,
             });
         },
@@ -273,65 +295,16 @@ async function pipelineClearContent(
     }
 
     logger.info(`[EdsPipeline] Cleared ${clearResult.deletedCount} files`);
-
-    // Unpublish deleted content from CDN (Helix retains previously-published resources)
-    if (clearResult.deletedPaths.length > 0) {
-        const webPaths = toWebPaths(clearResult.deletedPaths);
-
-        onProgress?.({
-            operation: 'content-clear',
-            message: `Unpublishing ${webPaths.length} CDN pages`,
-        });
-
-        try {
-            // The RESULT is read, not discarded. `unpublishPages` never throws —
-            // per-path failures become counts — so the try/catch below could never
-            // fire, and a reset where every live DELETE was refused reported a
-            // clean run while the stale pages kept serving from the CDN.
-            //
-            // Still non-fatal: the reset republishes over the top and the user has
-            // a working storefront either way. But "52 pages could not be
-            // unpublished" is a fact they need, because the pages that should have
-            // DISAPPEARED are the ones that will not.
-            const unpublished = await helixService.unpublishPages(
-                repoOwner,
-                repoName,
-                'main',
-                webPaths,
-            );
-            if (unpublished.liveFailed > 0) {
-                // previewFailed rides the same warn: stale preview pages
-                // (*.aem.page) are the same class of leftover, just not public.
-                const previewNote =
-                    unpublished.previewFailed > 0
-                        ? ` (${unpublished.previewFailed} preview page${unpublished.previewFailed === 1 ? '' : 's'} also failed)`
-                        : '';
-                logger.warn(
-                    `[EdsPipeline] ${unpublished.liveFailed}/${unpublished.total} pages could not ` +
-                        `be unpublished from the CDN — they will keep serving their old content${previewNote}. ` +
-                        'A refused DA.live session is the usual cause; sign in again and reset to clear them.',
-                );
-                onProgress?.({
-                    operation: 'content-clear',
-                    message: `⚠️ ${unpublished.liveFailed} of ${unpublished.total} pages could not be unpublished`,
-                });
-            }
-        } catch (error) {
-            logger.warn(
-                `[EdsPipeline] CDN unpublish failed (non-fatal): ${(error as Error).message}`,
-            );
-        }
-    }
-
     onProgress?.({
         operation: 'content-clear',
-        message: `Cleared ${clearResult.deletedCount} files`,
+        message: jobLine(STOREFRONT_JOBS.clearingContent, `${clearResult.deletedCount} files removed`),
     });
 }
 
 /**
  * Step 1: Copy content from source to DA.live.
- * @returns Number of files copied.
+ * @returns the number of files copied, the sheets among them to publish by path,
+ *   and the code paths the source had, to look for once published
  */
 async function pipelineCopyContent(
     daLiveContentOps: DaLiveContentOperations,
@@ -345,11 +318,12 @@ async function pipelineCopyContent(
     onProgress?: EdsPipelineProgressCallback,
     accountContentSource?: { org: string; site: string },
     runtimeSurfaceSource?: CodePatchSource,
-): Promise<number> {
+    codePaths?: readonly string[],
+): Promise<{ filesCopied: number; sheetPaths: string[]; codePathsOnSource: string[]; carriedPaths: string[] }> {
     onProgress?.({
         operation: 'content-copy',
-        message: 'Populating DA.live content',
-        subMessage: `from ${contentSource.org}/${contentSource.site}`,
+        message: STOREFRONT_JOBS.copyingContent,
+        subMessage: `From ${contentSource.org}/${contentSource.site}`,
     });
 
     // The brand source has no /customer/* pages by design when an account
@@ -372,13 +346,14 @@ async function pipelineCopyContent(
         `[EdsPipeline] Copying content from ${contentSource.org}/${contentSource.site} to ${daLiveOrg}/${daLiveSite}`,
     );
 
-    const contentResult = await daLiveContentOps.copyContentFromSource(
+    const contentResult = await daLiveContentOps.copyOps.copyContentFromSource(
         fullContentSource,
         daLiveOrg,
         daLiveSite,
         (progress) => {
             const statusMessage =
-                progress.message || `Copying content (${progress.processed}/${progress.total})`;
+                progress.message ||
+                jobLine(STOREFRONT_JOBS.copyingContent, countLine(progress.processed, progress.total, 'file'));
             onProgress?.({
                 operation: 'content-copy',
                 message: statusMessage,
@@ -392,6 +367,7 @@ async function pipelineCopyContent(
         contentPatchSource,
         patchReport,
         runtimeSurfaceSource,
+        codePaths,
     );
 
     if (!contentResult.success) {
@@ -403,30 +379,39 @@ async function pipelineCopyContent(
     // Hybrid packages: overlay the B2B account chrome (/customer/* + /customer/nav)
     // from the canonical B2B content site on top of the brand content.
     let overlaidFiles = 0;
+    const copiedFiles = [...contentResult.copiedFiles];
     if (accountContentSource) {
-        const overlay = await daLiveContentOps.overlayAccountChrome(
+        const overlay = await daLiveContentOps.copyOps.overlayAccountChrome(
             accountContentSource,
             daLiveOrg,
             daLiveSite,
             patchReport,
         );
         overlaidFiles = overlay.totalFiles;
+        copiedFiles.push(...overlay.copiedFiles);
         logger.info(
             `[EdsPipeline] Account-chrome overlay: ${overlaidFiles} file(s) from ${accountContentSource.org}/${accountContentSource.site}`,
         );
     }
 
+    const filesCopied = contentResult.totalFiles + overlaidFiles;
     onProgress?.({
         operation: 'content-copy',
-        message: 'Content populated',
+        message: jobLine(STOREFRONT_JOBS.copyingContent, `${itemCount(filesCopied, 'file')} copied`),
     });
 
-    return contentResult.totalFiles + overlaidFiles;
+    return {
+        filesCopied,
+        sheetPaths: contentResult.sheetPaths,
+        codePathsOnSource: contentResult.codePathsOnSource,
+        carriedPaths: carriedWebPaths(copiedFiles, contentResult.sheetPaths),
+    };
 }
 
 /**
  * Step 5: Publish content to CDN.
- * Treats "No publishable pages" as non-fatal.
+ * Treats "No publishable pages" as non-fatal: nothing was published.
+ * @returns the pages published, or undefined when the publish did not say
  */
 async function pipelinePublishContent(
     helixService: HelixService,
@@ -436,17 +421,17 @@ async function pipelinePublishContent(
     daLiveSite: string,
     logger: Logger,
     onProgress?: EdsPipelineProgressCallback,
-): Promise<void> {
+): Promise<string[] | undefined> {
     onProgress?.({
         operation: 'content-publish',
-        message: 'Publishing content to CDN',
+        message: STOREFRONT_JOBS.publishingPages,
         subMessage: `${repoOwner}/${repoName}`,
     });
 
     logger.info(`[EdsPipeline] Publishing content to CDN for ${repoOwner}/${repoName}`);
 
     try {
-        await helixService.publishAllSiteContent(
+        const published = await helixService.publishAllSiteContent(
             `${repoOwner}/${repoName}`,
             'main',
             daLiveOrg,
@@ -465,6 +450,7 @@ async function pipelinePublishContent(
             },
         );
         logger.info('[EdsPipeline] Content published to CDN');
+        return Array.isArray(published) ? published : undefined;
     } catch (publishError) {
         // No publishable pages is non-fatal (e.g. Custom package with no content source)
         const msg = (publishError as Error).message;
@@ -472,9 +458,9 @@ async function pipelinePublishContent(
             logger.info(
                 '[EdsPipeline] No content pages to publish (site has no publishable content)',
             );
-        } else {
-            throw publishError;
+            return [];
         }
+        throw publishError;
     }
 }
 
@@ -489,7 +475,7 @@ async function pipelineConfigureBlockLibrary(
     services: EdsPipelineServices,
     params: EdsPipelineParams,
     onProgress?: EdsPipelineProgressCallback,
-): Promise<string[]> {
+): Promise<{ paths: string[]; emptyPalette?: string }> {
     const { daLiveContentOps, githubFileOps, logger } = services;
     const {
         repoOwner,
@@ -504,7 +490,10 @@ async function pipelineConfigureBlockLibrary(
 
     onProgress?.({
         operation: 'block-library',
-        message: 'Configuring block library',
+        message: STOREFRONT_JOBS.buildingBlockLibrary,
+        // Which storefront it is building the library into — the same slot, and
+        // the same org/site shape, the other DA.live steps fill.
+        subMessage: `${daLiveOrg}/${daLiveSite}`,
     });
 
     // Copy block doc pages from library content sources via DA.live API.
@@ -531,7 +520,7 @@ async function pipelineConfigureBlockLibrary(
     const compDefOwner = blockCollectionIds ? repoOwner : templateOwner;
     const compDefRepo = blockCollectionIds ? repoName : templateRepo;
 
-    const libResult = await daLiveContentOps.createBlockLibraryFromTemplate(
+    const libResult = await daLiveContentOps.blockLibOps.createBlockLibraryFromTemplate(
         daLiveOrg,
         daLiveSite,
         compDefOwner,
@@ -545,11 +534,16 @@ async function pipelineConfigureBlockLibrary(
         logger.info(`[EdsPipeline] Block library: ${libResult.blocksCount} blocks configured`);
         onProgress?.({
             operation: 'block-library',
-            message: `Block library configured (${libResult.blocksCount} blocks)`,
+            message: jobLine(STOREFRONT_JOBS.buildingBlockLibrary, itemCount(libResult.blocksCount, 'block')),
         });
     }
+    // The palette will be empty (EDS-38): the step warns the SC with it.
+    if (!libResult.success && libResult.error) {
+        logger.warn(`[EdsPipeline] ${libResult.error}`);
+        return { paths: libResult.paths, emptyPalette: libResult.error };
+    }
 
-    return libResult.paths;
+    return { paths: libResult.paths };
 }
 
 /**
@@ -572,7 +566,7 @@ async function copyLibraryDocPages(
             logger.info(
                 `[EdsPipeline] Copying block doc pages from ${libSource.org}/${libSource.site}`,
             );
-            await daLiveContentOps.copyContent(
+            await daLiveContentOps.copyOps.copyContent(
                 { org: libSource.org, site: libSource.site, path: '.da/library/blocks' },
                 { org: daLiveOrg, site: daLiveSite, path: '.da/library/blocks' },
                 { recursive: true },
@@ -601,8 +595,21 @@ async function copyLibraryDocPages(
  */
 interface PipelineContext {
     contentFilesCopied: number;
+    /** The sheets step 1 wrote, as web paths (`/metadata.json`); step 5.5 publishes them. */
+    sheetPaths: string[];
+    /** The site paths the storefront's code loads (step 0.5); undefined when it was not read. */
+    codePaths?: string[];
+    /** The code paths the source had, which step 1 copied; step 7.5 looks for them. */
+    codePathsOnSource: string[];
+    /** Everything else step 1 copied, as web paths; step 7.5 looks for these too. */
+    carriedPaths: string[];
+    /** The sentences for the SC so far (EDS-55); see {@link EdsPipelineResult.warnings}. */
+    warnings: string[];
     libraryPaths: string[];
     patchReport: PatchReport;
+    /** What step 5 published; undefined when it did not run or did not say. */
+    republishedPages?: string[];
+    leftoverPages?: LeftoverPagesResult;
 }
 
 /** Params with every gating flag resolved to a concrete boolean. */
@@ -651,14 +658,20 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: ({ params, services, onProgress }) =>
             pipelineClearContent(
                 services,
-                {
-                    daLiveOrg: params.daLiveOrg,
-                    daLiveSite: params.daLiveSite,
-                    repoOwner: params.repoOwner,
-                    repoName: params.repoName,
-                },
+                { daLiveOrg: params.daLiveOrg, daLiveSite: params.daLiveSite },
                 onProgress,
             ),
+    },
+    // Step 0.5: the storefront's code, read from the SC's own repository, which
+    // holds the final code before the copy in every flow (EDS-40). The paths that
+    // code loads tell the copy what to ask the source for. Non-fatal: unread, the
+    // copy falls back to the fixed lists.
+    {
+        name: 'storefront-code',
+        when: ({ params }) => !params.skipContent,
+        onError: 'continue',
+        failureLog: 'Storefront code read failed',
+        run: pipelineReadStorefrontCode,
     },
     // Step 1: Content Copy
     {
@@ -669,7 +682,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
             if (!params.contentSource) {
                 throw new Error('Content source is required when skipContent is false');
             }
-            ctx.contentFilesCopied = await pipelineCopyContent(
+            const copied = await pipelineCopyContent(
                 services.daLiveContentOps,
                 params.contentSource,
                 params.daLiveOrg,
@@ -683,7 +696,12 @@ const PIPELINE_STEPS: PipelineStep[] = [
                 // ADR-008 consumer: locate this ledger's generated runtime-surfaces.json
                 // (codePatchSource carries owner/repo/path = the patches-repo ledger).
                 params.codePatchSource,
+                ctx.codePaths,
             );
+            ctx.contentFilesCopied = copied.filesCopied;
+            ctx.sheetPaths = copied.sheetPaths;
+            ctx.codePathsOnSource = copied.codePathsOnSource;
+            ctx.carriedPaths = copied.carriedPaths;
         },
     },
     // Step 2: Block Library
@@ -691,11 +709,9 @@ const PIPELINE_STEPS: PipelineStep[] = [
         name: 'block-library',
         when: ({ params }) => params.includeBlockLibrary,
         run: async (env) => {
-            env.ctx.libraryPaths = await pipelineConfigureBlockLibrary(
-                env.services,
-                env.params,
-                env.onProgress,
-            );
+            const library = await pipelineConfigureBlockLibrary(env.services, env.params, env.onProgress);
+            env.ctx.libraryPaths = library.paths;
+            if (library.emptyPalette) warnTheSc(env, 'block-library', library.emptyPalette);
         },
     },
     // Step 2.5: Block-targeting code patches (post-install).
@@ -741,7 +757,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: async ({ params, services, onProgress }) => {
             onProgress?.({
                 operation: 'eds-settings',
-                message: 'Applying EDS configuration',
+                message: STOREFRONT_JOBS.applyingDaLiveSettings,
             });
             const { applyDaLiveOrgConfigSettings } = await import('../handlers/edsHelpers');
             await applyDaLiveOrgConfigSettings(
@@ -759,7 +775,7 @@ const PIPELINE_STEPS: PipelineStep[] = [
         run: async ({ params, services, onProgress }) => {
             onProgress?.({
                 operation: 'cache-purge',
-                message: 'Purging stale cache',
+                message: STOREFRONT_JOBS.clearingCache,
             });
             await services.helixService.purgeCacheAll(params.repoOwner, params.repoName, 'main');
             services.logger.info('[EdsPipeline] Stale cache purged');
@@ -770,8 +786,17 @@ const PIPELINE_STEPS: PipelineStep[] = [
         name: 'content-publish',
         when: ({ params }) => !params.skipPublish,
         skipLog: 'Skipping content publish (skipPublish=true)',
-        run: ({ params, services, onProgress }) =>
-            pipelinePublishContent(
+        run: async ({ params, services, ctx, onProgress }) => {
+            if (params.beforeContentPublish) {
+                try {
+                    await params.beforeContentPublish();
+                } catch (error) {
+                    services.logger.warn(
+                        `[EdsPipeline] Before the content publish: ${error instanceof Error ? error.message : String(error)}`,
+                    );
+                }
+            }
+            ctx.republishedPages = await pipelinePublishContent(
                 services.helixService,
                 params.repoOwner,
                 params.repoName,
@@ -779,7 +804,19 @@ const PIPELINE_STEPS: PipelineStep[] = [
                 params.daLiveSite,
                 services.logger,
                 onProgress,
-            ),
+            );
+        },
+    },
+    // Step 5.5: Sheet Publish — the sheets step 1 copied. Step 5 publishes .html
+    // documents only and skips metadata, redirects and placeholders by name, so a
+    // copied sheet is served only if it is published here, by path. Non-fatal: the
+    // sheets are in DA.live and publishing can be retried.
+    {
+        name: 'sheet-publish',
+        when: ({ params, ctx }) => !params.skipPublish && ctx.sheetPaths.length > 0,
+        onError: 'continue',
+        failureLog: 'Sheet publish failed',
+        run: pipelinePublishSheets,
     },
     // Step 6: Library Publish — non-fatal: library config was created,
     // publishing can be retried.
@@ -790,11 +827,31 @@ const PIPELINE_STEPS: PipelineStep[] = [
         failureLog: 'Block library publish failed',
         run: pipelinePublishLibrary,
     },
+    // Step 7: the pages left over from before the content was replaced (EDS-33).
+    // After the republish, so the storefront stayed up throughout; before the
+    // pre-warm, whose product pages are never on the list anyway. Never throws.
+    {
+        name: 'leftover-pages',
+        when: ({ params }) => params.clearExistingContent && !params.skipPublish,
+        run: pipelineUnpublishLeftovers,
+    },
+    // Step 7.5: is everything the source had on the storefront now (EDS-40)? After
+    // every publish and unpublish above, so it reads the finished site. Never throws.
+    {
+        name: 'page-check',
+        when: ({ params, ctx }) =>
+            !params.skipPublish &&
+            (ctx.codePathsOnSource.length > 0 || ctx.carriedPaths.length > 0),
+        onError: 'continue',
+        failureLog: 'Page check failed',
+        run: pipelineCheckMissingPages,
+    },
     // (Smart 404 plumbing lives entirely in storefront code now:
-    //  - scripts/delayed.js — cold-path action call + Loading state
+    //  - 404.html — cold-path action call + Loading state, inline at the end
+    //    of the body (scripts/delayed.js until 2026-10-29), and the eager
+    //    redirect for Helix-served 404s
     //  - head.html — eager mixed-case → lowercase redirect on 200s
-    //  - 404.html — same eager redirect for Helix-served 404s
-    //  All three are installed by installSmart404Handler from
+    //  All are installed by bringStorefrontUpToDate from
     //  storefrontSetupPhase2 (create/edit) and edsResetRepoHelper (reset). The
     //  DA.live /404 page publish path that briefly lived here didn't help —
     //  Helix uses the static 404.html file, not authored content, on 404s.)
@@ -818,6 +875,41 @@ const PIPELINE_STEPS: PipelineStep[] = [
 ];
 
 /**
+ * Step 5.5 body: preview and publish each copied sheet at its `.json` web path,
+ * through the same single-page route the block library's sheet takes.
+ */
+async function pipelinePublishSheets({ params, services, ctx, onProgress }: PipelineStepEnv) {
+    const { helixService, logger } = services;
+    const count = ctx.sheetPaths.length;
+    onProgress?.({
+        operation: 'sheet-publish',
+        message: jobLine(STOREFRONT_JOBS.publishingSheets, itemCount(count, 'sheet')),
+        subMessage: `${params.repoOwner}/${params.repoName}`,
+    });
+
+    const { publishSheetPaths } = await import('../handlers/edsHelpers');
+    const { published, failed } = await publishSheetPaths(
+        helixService,
+        params.repoOwner,
+        params.repoName,
+        ctx.sheetPaths,
+        logger,
+    );
+    const log = failed > 0 ? logger.warn : logger.info;
+    log.call(logger, `[EdsPipeline] Sheets published: ${published} of ${count}`);
+}
+
+/**
+ * The library paths to publish: all of them, or the block list and the named blocks'
+ * doc pages (`publishLibraryBlocksOnly`).
+ */
+function libraryPathsToPublish(paths: string[], onlyBlocks: string[] | undefined): string[] {
+    if (!onlyBlocks) return paths;
+    const wanted = new Set(onlyBlocks.map((id) => `/.da/library/blocks/${id}`));
+    return paths.filter((path) => path === '/.da/library/blocks.json' || wanted.has(path));
+}
+
+/**
  * Step 6 body: publish the installed library paths, then verify they actually
  * previewed. Say it landed only if it landed — the bulk job reports success for
  * paths that matched nothing, which is how a library that could not preview a
@@ -825,16 +917,15 @@ const PIPELINE_STEPS: PipelineStep[] = [
  */
 async function pipelinePublishLibrary({ params, services, ctx, onProgress }: PipelineStepEnv) {
     const { helixService, daLiveContentOps, logger } = services;
-    // The subMessage slot is carried end-to-end (pipeline callback →
-    // storefront-setup-progress → the wizard's progress view) but this step
-    // never filled it — a 2-minute spinner with a static hint (user-asked
-    // 2026-08-23). Say what is actually happening: how much, then which half.
+    const toPublish = libraryPathsToPublish(ctx.libraryPaths, params.publishLibraryBlocksOnly);
+    // A 2-minute spinner with a static hint was the complaint (user-asked
+    // 2026-08-23). Say what is actually happening: how much, then which half;
+    // the line under it names the site, as the other steps do.
+    const site = `${params.repoOwner}/${params.repoName}`;
     onProgress?.({
         operation: 'library-publish',
-        message: 'Publishing block library',
-        subMessage: `Publishing ${ctx.libraryPaths.length} library ${
-            ctx.libraryPaths.length === 1 ? 'path' : 'paths'
-        }`,
+        message: jobLine(STOREFRONT_JOBS.publishingBlockList, itemCount(toPublish.length, 'page')),
+        subMessage: site,
     });
 
     const { publishLibraryPaths, verifyLibraryPreviewed } = await import('../handlers/edsHelpers');
@@ -842,13 +933,13 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
         helixService,
         params.repoOwner,
         params.repoName,
-        ctx.libraryPaths,
+        toPublish,
         logger,
     );
     onProgress?.({
         operation: 'library-publish',
-        message: 'Publishing block library',
-        subMessage: 'Verifying the library previewed',
+        message: jobLine(STOREFRONT_JOBS.publishingBlockList, 'Checking the block list is live'),
+        subMessage: site,
     });
     const previewed = await verifyLibraryPreviewed(
         params.repoOwner,
@@ -864,7 +955,7 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
         // is the leading suspect when publishing reports success and the CDN
         // still 404s. Print it here, once, where the user is already being told
         // something is wrong.
-        const siteConfig = await daLiveContentOps.readSiteConfigForDiagnostics(
+        const siteConfig = await daLiveContentOps.configOps.readSiteConfigForDiagnostics(
             params.daLiveOrg,
             params.daLiveSite,
         );
@@ -873,6 +964,96 @@ async function pipelinePublishLibrary({ params, services, ctx, onProgress }: Pip
                 (siteConfig ? JSON.stringify(siteConfig) : '(could not be read)'),
         );
     }
+}
+
+/**
+ * Step 7 body: unpublish what Helix still has published that steps 5-6 did not
+ * publish. A result that may leave old pages live goes on the progress line as a
+ * warning, and on the pipeline result for the caller to show.
+ */
+async function pipelineUnpublishLeftovers({ params, services, ctx, onProgress }: PipelineStepEnv) {
+    onProgress?.({
+        operation: 'leftover-pages',
+        message: STOREFRONT_JOBS.removingOldPages,
+        subMessage: `${params.repoOwner}/${params.repoName}`,
+    });
+    const site = { owner: params.repoOwner, repo: params.repoName };
+    const result = await unpublishLeftoverPages(
+        site,
+        { republished: ctx.republishedPages, alsoPublished: ctx.libraryPaths },
+        {
+            helix: services.helixService,
+            logger: services.logger,
+            inSource: pageInSource(services.daLiveContentOps.sourceOps, params.daLiveOrg, params.daLiveSite),
+        },
+    );
+    if (result.kept) await publishMissedPages(site, result.kept, services);
+    ctx.leftoverPages = result;
+    if (LEFTOVERS_MAY_REMAIN.has(result.status)) warnTheSc({ ctx, onProgress }, 'leftover-pages', result.summary);
+    else onProgress?.({ operation: 'leftover-pages', message: result.summary });
+}
+
+/**
+ * Tell the SC something a step could not do (EDS-55): on the progress line now, with the
+ * warning sign, and on the result's `warnings`, which every surface that ends a create
+ * or a reset reads. The one way a step warns.
+ */
+function warnTheSc(
+    env: Pick<PipelineStepEnv, 'ctx' | 'onProgress'>,
+    operation: string,
+    sentence: string,
+): void {
+    env.ctx.warnings.push(sentence);
+    env.onProgress?.({ operation, message: `⚠️ ${sentence}` });
+}
+
+/**
+ * Pages the leftover check listed that DA.live still has: published one at a time
+ * rather than removed, so the page check after this reads them as served. Never
+ * throws; a page that fails stays for the page check to name.
+ */
+async function publishMissedPages(
+    site: { owner: string; repo: string },
+    paths: string[],
+    { helixService, logger }: EdsPipelineServices,
+): Promise<void> {
+    logger.warn(`[EdsPipeline] DA.live still has ${paths.length} page(s) the leftover check listed; publishing, not removing: ${paths.join(' ')}`);
+    for (const path of paths) {
+        try {
+            await helixService.previewAndPublishPage(site.owner, site.repo, path);
+        } catch (error) {
+            logger.warn(`[EdsPipeline] Could not publish ${path}: ${(error as Error).message}`);
+        }
+    }
+}
+
+/**
+ * Step 0.5 body: read the storefront's code for the site paths it loads. One
+ * download, a second or two; it reports no progress line of its own.
+ */
+async function pipelineReadStorefrontCode({ params, services, ctx }: PipelineStepEnv) {
+    ctx.codePaths = await readStorefrontCodePaths(
+        services.githubFileOps.repoArchive,
+        { owner: params.repoOwner, repo: params.repoName },
+        services.logger,
+    );
+}
+
+/**
+ * Step 7.5 body: ask the live storefront for what the source had. A gap goes on the
+ * progress line as a warning, and on the pipeline result for the caller to show.
+ */
+async function pipelineCheckMissingPages({ params, services, ctx, onProgress }: PipelineStepEnv) {
+    const source = params.contentSource;
+    if (!source) return;
+    onProgress?.({ operation: 'page-check', message: STOREFRONT_JOBS.checkingCopiedPages });
+    const result = await findMissingPages(
+        { owner: params.repoOwner, repo: params.repoName },
+        source,
+        { fromCode: ctx.codePathsOnSource, carried: ctx.carriedPaths },
+        services.logger,
+    );
+    if (result.summary) warnTheSc({ ctx, onProgress }, 'page-check', result.summary);
 }
 
 /** Step 8 body: pre-warm the catalog; reporting only, all gating is in the descriptor. */
@@ -922,6 +1103,10 @@ export async function executeEdsPipeline(
 
     const ctx: PipelineContext = {
         contentFilesCopied: 0,
+        sheetPaths: [],
+        codePathsOnSource: [],
+        carriedPaths: [],
+        warnings: [],
         libraryPaths: [],
         // Reuse the caller's report when threaded through (so canonical-phase
         // results from `resetRepoToTemplate` survive into the final result),
@@ -954,6 +1139,8 @@ export async function executeEdsPipeline(
             contentFilesCopied: ctx.contentFilesCopied,
             libraryPaths: ctx.libraryPaths,
             patchReport: ctx.patchReport,
+            ...(ctx.leftoverPages ? { leftoverPages: ctx.leftoverPages } : {}),
+            warnings: ctx.warnings,
         };
     } catch (error) {
         // Re-throw auth errors so callers can offer re-authentication
@@ -967,6 +1154,7 @@ export async function executeEdsPipeline(
             libraryPaths: ctx.libraryPaths,
             patchReport: ctx.patchReport,
             error: errorMessage,
+            warnings: ctx.warnings,
         };
     }
 }

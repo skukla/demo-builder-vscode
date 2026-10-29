@@ -31,11 +31,40 @@ export type PhaseSink = (message: string) => void;
 const storage = new AsyncLocalStorage<PhaseSink[]>();
 
 /**
+ * Something the operation needs a PERSON to do before it can go on — the AEM Code
+ * Sync GitHub App on a new repository, which only its owner can install. A phase
+ * says what the operation is doing; a hand-back says what it is waiting for, and
+ * carries the one action that ends the wait.
+ */
+export interface HandBack {
+    /** What to do, as a sentence a toast can lead with. */
+    title: string;
+    /** Where and why, including that the operation resumes by itself. */
+    detail: string;
+    /** The button that opens the page where it is done. */
+    action?: { label: string; url: string };
+}
+
+/** Somewhere a hand-back can be shown with its button. */
+export type HandBackSink = (handBack: HandBack) => void;
+
+const handBackStorage = new AsyncLocalStorage<HandBackSink[]>();
+
+/**
  * Run `fn` with `sinks` receiving every {@link reportPhase} call made inside it,
  * however deep.
  */
 export function withPhaseSinks<T>(sinks: PhaseSink[], fn: () => Promise<T>): Promise<T> {
     return sinks.length === 0 ? fn() : storage.run(sinks, fn);
+}
+
+/**
+ * Run `fn` with `sinks` receiving every {@link reportHandBack} made inside it.
+ * Installed by the window-side notifier, which is the only place a button can be
+ * rendered; the phase text of the same hand-back still reaches every phase sink.
+ */
+export function withHandBackSinks<T>(sinks: HandBackSink[], fn: () => Promise<T>): Promise<T> {
+    return sinks.length === 0 ? fn() : handBackStorage.run(sinks, fn);
 }
 
 /**
@@ -69,10 +98,64 @@ export function reportPhase(message: string): void {
 }
 
 /**
+ * A sink that reports to the sinks in scope where it is made, wherever it is called
+ * from later. For a scope that takes the lines from deeper in (`withPhaseSinks` replaces
+ * the sinks around it) and still has to tell the agent listening outside it: creation's
+ * integration deploys, 2026-10-16.
+ *
+ * @returns the sink; a no-op when made outside any scope
+ */
+export function phaseSinkHere(): PhaseSink {
+    const sinks = storage.getStore() ?? [];
+    return (message) => {
+        void storage.run(sinks, async () => reportPhase(message));
+    };
+}
+
+/**
  * `reportPhase` as an `onProgress` callback, for the many services that already
  * accept one (`(message, subMessage?) => void`). The sub-message is dropped: it
  * is detail for a progress BAR, and a chat line wants one clause.
  */
 export function phaseReporter(): (message: string, subMessage?: string) => void {
     return (message) => reportPhase(message);
+}
+
+/**
+ * An operation's STEPS as an agent hears them: each step's name once, as it starts
+ * (progress vocabulary slice 3, owner 2026-10-16). A step reports again for every line
+ * under it; those lines are a progress modal's detail, and passing each one on would
+ * repeat the step's name in the chat for every page published. A step returned to
+ * after another is said again.
+ */
+export function stepPhaseReporter(): (stage: string) => void {
+    let last: string | undefined;
+    return (stage) => {
+        if (stage === last) return;
+        last = stage;
+        reportPhase(stage);
+    };
+}
+
+/**
+ * Report that the operation in flight is waiting on the user.
+ *
+ * Reaches the hand-back sinks (a toast with the action's button) AND the phase
+ * sinks as one line, so the chat and the progress card say what the wait is for.
+ * Until 2026-10-08 an agent-run project creation waited up to thirty minutes for
+ * the AEM Code Sync App with the prompt captured into a buffer nobody read: the
+ * card said "Creating the project" and the person was never asked. Same contract
+ * as {@link reportPhase}: a no-op outside a tool call, never throws.
+ */
+export function reportHandBack(handBack: HandBack): void {
+    reportPhase(`Waiting for you — ${handBack.title}`);
+    const sinks = handBackStorage.getStore();
+    if (!sinks) return;
+    for (const sink of sinks) {
+        try {
+            sink(handBack);
+        } catch {
+            // A broken sink is not the caller's problem.
+        }
+    }
 }

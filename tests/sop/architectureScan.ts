@@ -12,30 +12,41 @@
  * divergence the fixture-consolidation work spent a week removing.
  */
 
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
+import { execFileSync, execSync } from 'child_process';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 export const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 
-/** Every tracked source file, both runtimes. Callers narrow with `isWebview`. */
-export const ALL_FILES = (() => {
-    // `ls-files` alone lists TRACKED files only, so a brand-new file is invisible
-    // to every rule in this directory until it is committed. That is not
-    // theoretical: on 2026-08-29 two session-accessor modules passed a green gate
-    // and turned the build red the moment they were committed, because the scan
-    // could not see them at the one time it mattered — before the commit.
-    //
-    // `--others --exclude-standard` adds untracked-but-not-ignored files, so a
-    // new file is judged by the same rules as every existing one, on the run
-    // BEFORE it lands.
-    const out = execSync(
-        `git ls-files --cached --others --exclude-standard ` +
-            `'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx'`,
-        { encoding: 'utf8', cwd: ROOT }
-    ).trim();
-    return [...new Set(out ? out.split('\n') : [])].sort();
-})();
+/**
+ * The files an enforcer should judge: what git lists for these pathspecs, TRACKED
+ * AND UNTRACKED-NOT-IGNORED, that exist on disk. Repo-relative, sorted, unique.
+ *
+ * Plain `git ls-files` lists tracked files only, so a brand-new file is invisible
+ * to the check until it is committed. That is not theoretical: on 2026-08-29 two
+ * session-accessor modules passed a green gate and turned the build red the moment
+ * they were committed, and on 2026-10-03 the overnight loop had to `git add` before
+ * every gate for the same reason (PL-67, which moved every suite here onto this).
+ *
+ * `--others --exclude-standard` adds untracked files git is not ignoring, so a
+ * build artefact is still left out. The existence filter drops a tracked file that
+ * was deleted and not yet staged — `--cached` still lists it, and reading it threw.
+ *
+ * Pathspecs are passed to git verbatim, so they mean what they meant in the
+ * `git ls-files '<spec>'` they replace (a `*` in a git pathspec crosses `/`).
+ */
+export function workingTreeFiles(...pathspecs: string[]): string[] {
+    const out = execFileSync(
+        'git',
+        ['ls-files', '--cached', '--others', '--exclude-standard', '--', ...pathspecs],
+        { encoding: 'utf8', cwd: ROOT, maxBuffer: 16 * 1024 * 1024 }
+    );
+    const files = new Set(out.split('\n').filter(Boolean));
+    return [...files].filter((f) => existsSync(join(ROOT, f))).sort();
+}
+
+/** Every source file, both runtimes, untracked ones included. Callers narrow with `isWebview`. */
+export const ALL_FILES = workingTreeFiles('src/*.ts', 'src/*.tsx', 'src/**/*.ts', 'src/**/*.tsx');
 
 /**
  * Absolute paths to the source files under `dir`, excluding tests.

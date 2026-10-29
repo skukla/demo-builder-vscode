@@ -27,6 +27,18 @@ node .claude/skills/agent-gap-scan/scan.mjs --json               # machine-reada
 node .claude/skills/agent-gap-scan/scan.mjs --write              # save to .rptc/research/gap-finder/
 ```
 
+## Probe calls count as ours, and big transcripts read
+
+Two fixes on 2026-09-30, both found by pointing the scan at the session that was
+running it. A development session reaches the server only through `mcp-live-probe`, so
+every one of its calls is a Bash command — `probe.mjs call <tool> '<json>'` — and the
+scan read a 654-call session as "never called a Demo Builder tool". It now recognises
+that form (tool name and inline JSON) as a call of ours, flagged `viaProbe`. And the
+same transcript was 616 MB, past Node's string limit, so `readFileSync(...).split`
+died before reading a line; transcripts are now read in chunks. Journey mode over
+`--all-projects --session <id>` is how a development session is read; the demo-project
+default still excludes it.
+
 ## ALWAYS pass `--since`, or read the dates
 
 **A finding with no date is not a finding.** The corpus spans months, and without

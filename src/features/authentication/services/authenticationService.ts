@@ -1,43 +1,35 @@
 import * as path from 'path';
-import type { RemoteRenameResult } from './adobeConsoleProjectOps';
-import { isValidTokenResponse } from './authPredicates';
+import { forgetPreviousSignIn, runAdobeLogin, type AdobeSignInDeps, type ForcedSignInWatch } from './adobeSignIn';
 import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
-import type { OrgServicesStore } from './orgServicesSavedCatalog';
+import type { SavedState } from './orgServicesSavedCatalog';
 import { getLogger } from '@/core/logging/debugLogger';
 import { StepLogger } from '@/core/logging/stepLogger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
+import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import {
     createEntityServices,
     type EntityServices,
 } from '@/features/authentication/services/adobeEntityService';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import { AuthenticationErrorFormatter } from '@/features/authentication/services/authenticationErrorFormatter';
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import { withTiming } from '@/features/authentication/services/performanceTracker';
 import { createSignInGate } from '@/features/authentication/services/signInGate';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
-import type {
-    AdobeOrg,
-    AdobeProject,
-    AdobeWorkspace,
-    AdobeContext,
-    AuthTokenValidation,
-    ConsoleOpFailure,
-    S2SDeployCredentials,
-    WorkspaceCredential,
-    WorkspaceS2SCredentialIds,
-    AdobeIdCredentialInput,
-    OrgServiceInfo,
-    ServiceSubscriptionInfo,
-} from '@/features/authentication/services/types';
-import { clearSharedCredentialCache } from '@/features/data-installer/services/commerceCredentialBroker';
+import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
 import type { Logger } from '@/types/logger';
 
 /**
- * Main authentication service - orchestrates all authentication operations
- * Provides high-level authentication methods for the extension
+ * The Adobe session: sign-in, sign-out and "am I signed in?", plus the wiring that
+ * builds the units everything else calls.
+ *
+ * Callers take the unit that OWNS the job: `getEntityServices()` for org, project,
+ * workspace, credential and API reads and writes; `getCacheManager()` for the cached
+ * org/project and validation state; `getTokenManager()` for the token;
+ * `getSdkClient()` for the Console SDK. Until 2026-10-08 this class also carried
+ * thirty-six pass-through methods to those units; they were removed
+ * (decompose-god-file) so a parameter added to an owner no longer has to be threaded
+ * through here too. The sign-in itself lives in `adobeSignIn.ts`.
  */
 export class AuthenticationService {
     private logger: Logger;
@@ -50,15 +42,21 @@ export class AuthenticationService {
     private organizationValidator: OrganizationValidator;
     private sdkClient: AdobeSDKClient;
     private entities: EntityServices | null = null;
+    /** What one sign-in reads and clears (see adobeSignIn). */
+    private readonly signInDeps: AdobeSignInDeps;
     /** Every sign-in goes through here: one at a time (see signInGate). */
     private readonly signIn: (force: boolean) => Promise<boolean>;
+    /** Who hears that a sign-in succeeded (see onDidSignIn). */
+    private readonly signInListeners = new Set<() => void>();
+    /** What a forced sign-in is watched for (see watchForcedSignIns). */
+    private readonly forcedSignInWatches = new Set<ForcedSignInWatch>();
 
     constructor(
         extensionPath: string,
         logger: Logger,
         private commandManager: CommandExecutor,
-        /** Keeps the org's API list across window reloads (`context.globalState`). */
-        private readonly orgServicesStore?: OrgServicesStore,
+        /** Keeps the org's API list and deleted workspace names across reloads (`context.globalState`). */
+        private readonly savedState?: SavedState,
     ) {
         this.logger = logger;
 
@@ -83,13 +81,31 @@ export class AuthenticationService {
         );
         // Note: entityService will be initialized lazily when first needed
         // because it depends on stepLogger which requires async initialization
+        this.signInDeps = {
+            commandManager,
+            cacheManager: this.cacheManager,
+            sdkClient: this.sdkClient,
+            logger,
+            debugLogger: this.debugLogger,
+            stepLogger: () => this.ensureStepLogger(),
+            watchForcedSignIn: async () => {
+                const afters = await Promise.all([...this.forcedSignInWatches].map((watch) => watch()));
+                return async () => {
+                    for (const after of afters) await after();
+                };
+            },
+        };
         this.signIn = createSignInGate({
-            run: (force) => this.runLogin(force),
+            run: async (force) => {
+                const signedIn = await runAdobeLogin(this.signInDeps, force);
+                if (signedIn) this.signInListeners.forEach((listener) => listener());
+                return signedIn;
+            },
             signedInNow: () => {
                 this.cacheManager.clearTokenInspectionCache();
                 return this.tokenManager.isTokenValid();
             },
-            adoptSignIn: () => this.forgetPreviousSignIn(),
+            adoptSignIn: () => forgetPreviousSignIn(this.signInDeps),
             logger,
         });
     }
@@ -130,7 +146,7 @@ export class AuthenticationService {
                 // this same manager says the token has hours left — the state
                 // that had a user signing in three times to no effect.
                 async () => (await this.tokenManager.inspectToken()).valid,
-                this.orgServicesStore,
+                this.savedState,
             );
 
             return stepLogger;
@@ -140,9 +156,11 @@ export class AuthenticationService {
     }
 
     /**
-     * Ensure entity services are initialized (depends on stepLogger)
+     * The entity services — orgReads, projectReads, workspaceReads, credentials,
+     * orgServices, projectOps, resolver, selector — built once the StepLogger they log through is ready. The way in for
+     * every org/project/workspace/credential job: call the service that owns it.
      */
-    private async ensureEntities(): Promise<EntityServices> {
+    async getEntityServices(): Promise<EntityServices> {
         await this.ensureStepLogger();
         if (!this.entities) {
             throw new Error('Entity services failed to initialize');
@@ -171,7 +189,6 @@ export class AuthenticationService {
      * Typical duration: 2-3 seconds (Adobe CLI config read overhead)
      *
      * Use this for dashboard loads and non-critical paths.
-     * For full validation including org context, use isFullyAuthenticated()
      */
     async isAuthenticated(): Promise<boolean> {
         return withTiming('isAuthenticated', async () => {
@@ -194,68 +211,6 @@ export class AuthenticationService {
     }
 
     /**
-     * Full authentication check - validates the token.
-     * Phase 4a: no longer validates/clears an ambient org context (org context is
-     * resolved per-op via ensureOrgContext, not policed as a mutated global).
-     *
-     * For token-only checks, use isAuthenticated()
-     */
-    async isFullyAuthenticated(): Promise<boolean> {
-        return withTiming('isFullyAuthenticated', async () => {
-            // Check cache first
-            const { isAuthenticated, isExpired } = this.cacheManager.getCachedAuthStatus();
-            if (!isExpired && isAuthenticated !== undefined) {
-                return isAuthenticated;
-            }
-
-            try {
-                this.debugLogger.debug('[Auth] Checking authentication status');
-                const stepLogger = await this.ensureStepLogger();
-                stepLogger.logTemplate('adobe-auth', 'operations.checking', {
-                    item: 'authentication status',
-                });
-
-                const isValid = await this.tokenManager.isTokenValid();
-
-                if (isValid) {
-                    // Phase 4a: no longer validate/clear an ambient org context here.
-                    // Org context is not a mutated global to police; reachability is
-                    // resolved per-op via ensureOrgContext + withOrgContext targeting.
-                    stepLogger.logTemplate('adobe-auth', 'statuses.authentication-complete', {});
-                    this.cacheManager.setCachedAuthStatus(true);
-                    return true;
-                } else {
-                    this.logger.info(
-                        '[Auth] Not authenticated with Adobe. Please click "Log in to Adobe" to authenticate.',
-                    );
-                    stepLogger.logTemplate('adobe-auth', 'statuses.not-authenticated', {});
-                    this.cacheManager.setCachedAuthStatus(false);
-                    return false;
-                }
-            } catch (error) {
-                this.debugLogger.error('[Auth] Authentication check failed', error as Error);
-
-                const formatted = AuthenticationErrorFormatter.formatError(error, {
-                    operation: 'authentication-check',
-                    timeout: TIMEOUTS.QUICK,
-                });
-
-                this.logger.error(`[Auth] ${formatted.message}`);
-                this.debugLogger.debug(formatted.technical);
-
-                const stepLogger = await this.ensureStepLogger();
-                stepLogger.logTemplate('adobe-auth', 'error', {
-                    item: 'Authentication check',
-                    error: formatted.title,
-                });
-
-                this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.SHORT);
-                return false;
-            }
-        });
-    }
-
-    /**
      * Login - opens browser and waits for completion. A request while a sign-in is
      * already running joins that one (one browser tab); see signInGate.
      */
@@ -264,116 +219,25 @@ export class AuthenticationService {
     }
 
     /**
-     * Drop what the previous sign-in left cached, so the new token is read afresh:
-     * the SDK client, the auth, validation and token-inspection caches, and the org
-     * and org-list caches (org-list-cache-first would otherwise re-supply the old org
-     * for the cache's short TTL, keeping the wizard on the wrong org).
+     * Hear once each time a sign-in succeeds, whichever screen started it. A screen
+     * that read "signed out" earlier (the dashboard) re-reads on this; without it a
+     * sign-in from Configure left the dashboard saying SIGNED OUT (2026-10-14).
      */
-    private forgetPreviousSignIn(): void {
-        this.sdkClient.clear();
-        this.cacheManager.clearAuthStatusCache();
-        this.cacheManager.clearValidationCache();
-        this.cacheManager.clearTokenInspectionCache();
-        this.cacheManager.setCachedOrganization(undefined);
-        this.cacheManager.clearOrgListCache();
+    onDidSignIn(listener: () => void): { dispose(): void } {
+        this.signInListeners.add(listener);
+        return { dispose: () => this.signInListeners.delete(listener) };
     }
 
-    /** One sign-in: open the browser and wait for it. Callers go through `login`. */
-    private async runLogin(force: boolean): Promise<boolean> {
-        return withTiming('login', async () => {
-            try {
-                const stepLogger = await this.ensureStepLogger();
-                stepLogger.logTemplate('adobe-auth', 'operations.opening-browser', {});
-
-                // If forced login, clear caches BEFORE login
-                if (force) {
-                    this.cacheManager.clearAll();
-                    this.sdkClient.clear();
-                    this.debugLogger.debug(
-                        '[Auth] Cleared caches before forced login (Adobe CLI will clear console context)',
-                    );
-                }
-
-                const loginCommand = force ? 'aio auth login -f' : 'aio auth login';
-
-                this.debugLogger.debug('[Auth] Executing login command, browser should open');
-                stepLogger.logTemplate('adobe-auth', 'statuses.browser-opened', {});
-                stepLogger.logTemplate('adobe-auth', 'operations.waiting-authentication', {});
-
-                const result = await this.commandManager
-                    .execute(loginCommand, { encoding: 'utf8', timeout: TIMEOUTS.AUTH.BROWSER })
-                    .catch((error) => {
-                        this.debugLogger.error('[Auth] Login command failed', error);
-                        const formatted = AuthenticationErrorFormatter.formatError(error, {
-                            operation: 'browser-auth',
-                            timeout: TIMEOUTS.AUTH.BROWSER,
-                        });
-                        this.logger.error(`[Auth] ${formatted.message}`);
-                        this.debugLogger.debug(formatted.technical);
-                        stepLogger.logTemplate('adobe-auth', 'error', {
-                            item: 'Authentication',
-                            error: formatted.title,
-                        });
-                        return null;
-                    });
-
-                if (result && result.code === 0) {
-                    this.debugLogger.debug('[Auth] Login command completed successfully');
-                    const token = result.stdout?.trim();
-
-                    if (isValidTokenResponse(token)) {
-                        this.debugLogger.debug('[Auth] Adobe CLI login successful (exit code 0)');
-                        stepLogger.logTemplate(
-                            'adobe-auth',
-                            'statuses.authentication-complete',
-                            {},
-                        );
-
-                        // The forced path already cleared everything before it began.
-                        if (force) {
-                            this.sdkClient.clear();
-                        } else {
-                            this.forgetPreviousSignIn();
-                        }
-                        this.debugLogger.debug(
-                            '[Auth] Cleared the SDK client and auth caches so the new token is read afresh',
-                        );
-
-                        return true;
-                    } else {
-                        this.debugLogger.warn(
-                            '[Auth] Command succeeded but no valid token in output',
-                        );
-                        this.debugLogger.debug(
-                            `[Auth] Output length: ${result.stdout?.length}, first 100 chars: ${result.stdout?.substring(0, 100)}`,
-                        );
-                    }
-
-                    if (!force) {
-                        this.debugLogger.debug(
-                            '[Auth] Retrying with force flag to ensure fresh authentication',
-                        );
-                        stepLogger.logTemplate('adobe-auth', 'operations.retrying', {
-                            item: 'authentication with fresh login',
-                        });
-                        // Inside the running sign-in, so not through the gate — it
-                        // would join itself and never finish.
-                        return await this.runLogin(true);
-                    }
-                } else {
-                    const exitCode = result?.code ?? 'unknown';
-                    this.debugLogger.debug(
-                        `[Auth] Login command failed with exit code: ${exitCode}`,
-                    );
-                }
-
-                return false;
-            } catch (error) {
-                this.debugLogger.error('[Auth] Login failed', error as Error);
-                this.logger.error('[Auth] Adobe login failed', error as Error);
-                return false;
-            }
-        });
+    /**
+     * Watch every FORCED sign-in for what it ends elsewhere: `watch` runs just before
+     * `aio auth login -f` and its answer once that sign-in succeeds, on every forced path
+     * (the org switch, "Sign in again", and the retry a normal sign-in falls back to).
+     * Measured 2026-10-28: a forced sign-in also ends the DA.live sign-in, so the eds
+     * feature watches for that (`daLiveForcedSignInWatch`).
+     */
+    watchForcedSignIns(watch: ForcedSignInWatch): { dispose(): void } {
+        this.forcedSignInWatches.add(watch);
+        return { dispose: () => this.forcedSignInWatches.delete(watch) };
     }
 
     /**
@@ -386,11 +250,6 @@ export class AuthenticationService {
             // Clear all caches after logout
             this.cacheManager.clearAll(); // Includes token inspection cache
             this.sdkClient.clear();
-            // The shared Commerce credential is cached per service URL, and it was
-            // fetched under THIS user's authorization — the discovery service
-            // validates their IMS token and checks their email domain. Whoever
-            // signs in next must not inherit it.
-            clearSharedCredentialCache();
 
             const stepLogger = await this.ensureStepLogger();
             stepLogger.logTemplate('adobe-auth', 'success', { item: 'Logout' });
@@ -401,15 +260,8 @@ export class AuthenticationService {
     }
 
     /**
-     * Clear all caches
-     */
-    clearCache(): void {
-        this.cacheManager.clearAll(); // Includes token inspection cache
-    }
-
-    /**
      * Get cache manager instance
-     * Used by TokenManager instances to access shared cache
+     * The cached org/project, validation state and auth-status cache live here
      */
     getCacheManager(): AuthCacheManager {
         return this.cacheManager;
@@ -423,25 +275,9 @@ export class AuthenticationService {
         return this.tokenManager;
     }
 
-    /**
-     * Ensure SDK is initialized
-     */
-    async ensureSDKInitialized(): Promise<boolean> {
-        return this.sdkClient.ensureInitialized();
-    }
-
-    /**
-     * Check if organization was cleared due to validation failure
-     */
-    wasOrgClearedDueToValidation(): boolean {
-        return this.cacheManager.wasOrgClearedDueToValidation();
-    }
-
-    /**
-     * Set org rejected flag
-     */
-    setOrgRejectedFlag(): void {
-        this.cacheManager.setOrgClearedDueToValidation(true);
+    /** The Console SDK client (`ensureInitialized` before a fast SDK read). */
+    getSdkClient(): AdobeSDKClient {
+        return this.sdkClient;
     }
 
     /**
@@ -455,7 +291,9 @@ export class AuthenticationService {
         // on a cache miss, getOrganizationsSdkOnly()[0] — SDK-only so the quick
         // check never stalls on `aio console org list`. ID-only targeting is a
         // fine fallback (buildAioConsoleEnv tolerates the missing code/name).
-        const org = this.getCachedOrganization() ?? (await this.getOrganizationsSdkOnly())?.[0];
+        const org =
+            this.cacheManager.getCachedOrganization() ??
+            (await (await this.getEntityServices()).orgReads.getOrganizationsSdkOnly())?.[0];
         if (!org?.id) {
             return this.organizationValidator.testDeveloperPermissions();
         }
@@ -463,387 +301,27 @@ export class AuthenticationService {
         return withOrgContext(target, () => this.organizationValidator.testDeveloperPermissions());
     }
 
-    // Entity Service Methods - Delegating to EntityService
+    // --- Forwarders kept on purpose --------------------------------------------
+    // Each is named by a STRUCTURAL interface this whole service is handed to that
+    // also needs a member of another unit: the org guard's `OrgContextAuthManager`
+    // (getOrganizations + loginAndRestoreProjectContext) and `OrgLister`, and
+    // `OwnershipProjectSource` (getTokenManager + getProjects). Retiring these means
+    // deciding what those interfaces become — a design question, not a move
+    // (2026-10-08).
 
-    /**
-     * Get organizations
-     */
+    /** The orgs the token reaches (`orgReads.getOrganizations`). */
     async getOrganizations(): Promise<AdobeOrg[]> {
-        return withTiming('getOrganizations', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getOrganizations();
-        });
+        return (await this.getEntityServices()).orgReads.getOrganizations();
     }
 
-    /**
-     * Get organizations via the SDK ONLY — never the CLI fallback.
-     *
-     * Non-interactive org read for on-open probes (P1): unlike
-     * {@link getOrganizations} it never runs `aio console org list` (which can
-     * stall ~14.5s and launch a browser). Returns `undefined` when the SDK could
-     * not answer; an empty array is a REAL answer (the token reaches no Console
-     * orgs). Used by the dashboard org-context check so opening a project can't
-     * surprise the user.
-     */
-    async getOrganizationsSdkOnly(): Promise<AdobeOrg[] | undefined> {
-        return withTiming('getOrganizationsSdkOnly', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getOrganizationsSdkOnly();
-        });
+    /** One project by id, SDK only (`projectReads.getProject`); the delete gate's read. */
+    async getProject(target: { orgId: string; projectId: string }): Promise<AdobeProject | undefined> {
+        return (await this.getEntityServices()).projectReads.getProject(target);
     }
 
-    /**
-     * Get projects.
-     *
-     * @param options.orgId - Optional target org. When supplied, the fetch runs
-     *   under org-context targeting (AIO_CONSOLE_* env) so the API targets that
-     *   org WITHOUT mutating the shared global store.
-     */
+    /** Projects, optionally org-targeted (`projectReads.getProjects`). */
     async getProjects(options?: { orgId?: string }): Promise<AdobeProject[]> {
-        return withTiming('getProjects', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getProjects(options);
-        });
-    }
-
-    /**
-     * Projects via the SDK ONLY — never the `aio console` fallback.
-     *
-     * For reads the user did not ask for (P1). Degrades to `[]` rather than
-     * shelling out, which on a stale token would open a browser.
-     */
-    async getProjectsSdkOnly(options?: { orgId?: string }): Promise<AdobeProject[]> {
-        return withTiming('getProjectsSdkOnly', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getProjectsSdkOnly(options);
-        });
-    }
-
-    /**
-     * Get workspaces. `target` threads the selected org + project (webview state) so the
-     * fetch targets them instead of the stale in-memory cache.
-     */
-    async getWorkspaces(target?: {
-        orgId?: string;
-        projectId?: string;
-    }): Promise<AdobeWorkspace[]> {
-        return withTiming('getWorkspaces', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getWorkspaces(target);
-        });
-    }
-
-    /** Workspaces via the SDK ONLY — the sibling of {@link getProjectsSdkOnly}. */
-    async getWorkspacesSdkOnly(target?: {
-        orgId?: string;
-        projectId?: string;
-    }): Promise<AdobeWorkspace[]> {
-        return withTiming('getWorkspacesSdkOnly', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.getWorkspacesSdkOnly(target);
-        });
-    }
-
-    /**
-     * Get OAuth S2S credential for the current workspace.
-     * Returns the client_id needed for ACCS REST API x-api-key header.
-     * Returns undefined if credentials are unavailable (SDK not ready, no workspace selected, etc.)
-     */
-    async getWorkspaceCredential(): Promise<WorkspaceCredential | undefined> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getWorkspaceCredential();
-    }
-
-    /**
-     * Sync a remote Adobe I/O project's title to a renamed demo (best-effort;
-     * never throws past the fetcher — see `renameRemoteProject` there).
-     */
-    async renameRemoteProject(
-        orgId: string,
-        projectId: string,
-        title: string,
-    ): Promise<RemoteRenameResult> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.renameRemoteProject(orgId, projectId, title);
-    }
-
-    /**
-     * Create an OAuth S2S credential on the current workspace.
-     * Returns the new credential with client_id, or undefined on failure.
-     */
-    async createWorkspaceCredential(
-        name: string,
-        description: string,
-    ): Promise<WorkspaceCredential | undefined> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.createWorkspaceCredential(name, description);
-    }
-
-    /**
-     * Create a new Adobe I/O App Builder project in the current organization.
-     * Returns the created project, or a ConsoleOpFailure naming the real reason.
-     */
-    async createProject(
-        name: string,
-        description: string,
-        target?: { orgId?: string },
-    ): Promise<AdobeProject | ConsoleOpFailure> {
-        return withTiming('createProject', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.createProject(name, description, target);
-        });
-    }
-
-    /**
-     * Create a new workspace in the current organization's selected project.
-     * Returns the created workspace, or a ConsoleOpFailure naming the real reason.
-     */
-    async createWorkspace(
-        name: string,
-        description: string,
-        target?: { orgId?: string; projectId?: string },
-    ): Promise<AdobeWorkspace | ConsoleOpFailure> {
-        return withTiming('createWorkspace', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.createWorkspace(name, description, target);
-        });
-    }
-
-    /**
-     * Delete a workspace from the selected project — the reversal of createWorkspace.
-     *
-     * Returns `{ deleted: true }`, or a ConsoleOpFailure naming the real reason. Adobe
-     * refuses to delete the Production workspace; that refusal arrives as an SDK error
-     * and is surfaced rather than guessed at up front.
-     */
-    async deleteWorkspace(
-        workspaceId: string,
-        target?: { orgId?: string; projectId?: string },
-    ): Promise<{ deleted: true } | ConsoleOpFailure> {
-        return withTiming('deleteWorkspace', async () => {
-            const { fetcher } = await this.ensureEntities();
-            return fetcher.deleteWorkspace(workspaceId, target);
-        });
-    }
-
-    // --- ApiSubscriberClient passthroughs (D2 Track A) -------------------------
-    // The 5 subscriber methods the API-mesh subscribe path needs, forwarded to
-    // the fetcher via the existing ensureEntities() seam.
-
-    /** List the org's entitled services (resolves requiredApis → sdkCodes). */
-    async getServicesForOrg(orgId: string): Promise<OrgServiceInfo[]> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getServicesForOrg(orgId);
-    }
-
-    /** The sdk codes a credential is already subscribed to (for skip-if-subscribed). */
-    async getSubscribedServiceCodes(orgId: string, idIntegration: string): Promise<string[]> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getSubscribedServiceCodes(orgId, idIntegration);
-    }
-
-    /** Create an apiKey/AdobeID credential; returns its `id_integration`. */
-    async createAdobeIdCredential(
-        orgId: string,
-        projectId: string,
-        workspaceId: string,
-        input: AdobeIdCredentialInput,
-    ): Promise<string | undefined> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.createAdobeIdCredential(orgId, projectId, workspaceId, input);
-    }
-
-    /** Subscribe apiKey/AdobeID services onto an AdobeID credential. */
-    async subscribeAdobeIdIntegrationToServices(
-        orgId: string,
-        idIntegration: string,
-        serviceInfo: ServiceSubscriptionInfo[],
-    ): Promise<void> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.subscribeAdobeIdIntegrationToServices(orgId, idIntegration, serviceInfo);
-    }
-
-    /** Subscribe OAuth-S2S services onto an S2S credential. */
-    async subscribeOAuthServerToServerIntegrationToServices(
-        orgId: string,
-        idIntegration: string,
-        serviceInfo: ServiceSubscriptionInfo[],
-    ): Promise<void> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.subscribeOAuthServerToServerIntegrationToServices(
-            orgId,
-            idIntegration,
-            serviceInfo,
-        );
-    }
-
-    /** Every credential id in a workspace (read only). */
-    async listCredentialIds(
-        orgId: string,
-        projectId: string,
-        workspaceId: string,
-    ): Promise<string[]> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.listCredentialIds(orgId, projectId, workspaceId);
-    }
-
-    /** Ensure the shared S2S credential exists; returns its `id_integration`. */
-    async ensureOAuthCredentialId(
-        orgId: string,
-        projectId: string,
-        workspaceId: string,
-    ): Promise<string> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.ensureOAuthCredentialId(orgId, projectId, workspaceId);
-    }
-
-    // --- Console-project teardown passthroughs (delete-aio-project) ------------
-
-    /** Get the workspace's existing S2S credential ids, or undefined when none. */
-    async getWorkspaceS2SCredential(
-        orgId: string,
-        projectId: string,
-        workspaceId: string,
-    ): Promise<WorkspaceS2SCredentialIds | undefined> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getWorkspaceS2SCredential(orgId, projectId, workspaceId);
-    }
-
-    /** Create the shared S2S credential on the workspace; returns its ids. */
-    async createWorkspaceS2SCredentialFor(
-        orgId: string,
-        projectId: string,
-        workspaceId: string,
-    ): Promise<WorkspaceS2SCredentialIds> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
-    }
-
-    /**
-     * The workspace S2S credential's full IMS identity (ensure + detail +
-     * secret) — the `AIO_COMMERCE_AUTH_IMS_*` inputs an App Management app's
-     * deploy injects. The secret is per-invocation env only.
-     */
-    async getS2SDeployCredentials(
-        orgId: string,
-        projectId: string,
-        workspaceId: string,
-    ): Promise<S2SDeployCredentials> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.getS2SDeployCredentials(orgId, projectId, workspaceId);
-    }
-
-    /**
-     * Provision an Adobe I/O Runtime namespace on the workspace (idempotent).
-     * App Builder app deploys need one; a workspace we did not create may lack it.
-     * Best-effort — never throws (the deploy-time ensure verifies the result).
-     */
-    async ensureWorkspaceRuntimeNamespace(
-        orgId: string,
-        projectId: string,
-        workspaceId: string,
-    ): Promise<void> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.ensureWorkspaceRuntimeNamespace(orgId, projectId, workspaceId);
-    }
-
-    /** Delete a Console project. SDK errors propagate unchanged (callers map them). */
-    async deleteConsoleProject(orgId: string, projectId: string): Promise<void> {
-        const { fetcher } = await this.ensureEntities();
-        return fetcher.deleteConsoleProject(orgId, projectId);
-    }
-
-    /** Clear the aio console selection (org/project/workspace) after a delete. */
-    async clearConsoleContext(): Promise<void> {
-        const { selector } = await this.ensureEntities();
-        return selector.clearConsoleContext();
-    }
-
-    /**
-     * Get cached organization (fast - no fetch, no CLI calls)
-     * Returns cached org if available, undefined otherwise
-     *
-     * Use this for quick checks where you want to show cached data
-     * without triggering expensive operations.
-     *
-     * Performance: < 1ms (memory read only)
-     */
-    getCachedOrganization(): AdobeOrg | undefined {
-        return this.cacheManager.getCachedOrganization();
-    }
-
-    /**
-     * Set cached organization (explicit cache control)
-     * Use this to ensure organization is cached after selection
-     *
-     * Performance: < 1ms (memory write only)
-     */
-    setCachedOrganization(org: AdobeOrg | undefined): void {
-        this.cacheManager.setCachedOrganization(org);
-    }
-
-    /**
-     * Get cached project (fast - no fetch, no CLI calls)
-     * Returns cached project if available, undefined otherwise
-     *
-     * Use this for quick checks where you want to show cached data
-     * without triggering expensive operations.
-     *
-     * Performance: < 1ms (memory read only)
-     */
-    getCachedProject(): AdobeProject | undefined {
-        return this.cacheManager.getCachedProject();
-    }
-
-    /**
-     * Get cached validation result (fast - no fetch, no API calls)
-     * Returns validation cache if available, undefined otherwise
-     *
-     * Use this to check if a cached org is known to be invalid without
-     * triggering expensive validation operations.
-     *
-     * Performance: < 1ms (memory read only)
-     */
-    getValidationCache(): AuthTokenValidation | undefined {
-        return this.cacheManager.getValidationCache();
-    }
-
-    /**
-     * Get current organization
-     */
-    async getCurrentOrganization(): Promise<AdobeOrg | undefined> {
-        return withTiming('getCurrentOrganization', async () => {
-            const { resolver } = await this.ensureEntities();
-            return resolver.getCurrentOrganization();
-        });
-    }
-
-    /**
-     * Get current project
-     */
-    async getCurrentProject(): Promise<AdobeProject | undefined> {
-        return withTiming('getCurrentProject', async () => {
-            const { resolver } = await this.ensureEntities();
-            return resolver.getCurrentProject();
-        });
-    }
-
-    /**
-     * Get current workspace
-     */
-    async getCurrentWorkspace(): Promise<AdobeWorkspace | undefined> {
-        return withTiming('getCurrentWorkspace', async () => {
-            const { resolver } = await this.ensureEntities();
-            return resolver.getCurrentWorkspace();
-        });
-    }
-
-    /**
-     * Get current context
-     */
-    async getCurrentContext(): Promise<AdobeContext> {
-        const { resolver } = await this.ensureEntities();
-        return resolver.getCurrentContext();
+        return (await this.getEntityServices()).projectReads.getProjects(options);
     }
 
     /**

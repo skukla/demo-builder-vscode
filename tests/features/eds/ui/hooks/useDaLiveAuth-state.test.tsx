@@ -132,11 +132,14 @@ describe('useDaLiveAuth - state it answers with', () => {
     // =========================================================================
 
     describe('signing in keeps the rest of the config', () => {
-        it('carries every field the SC already filled in', async () => {
+        it('carries every field the SC already filled in, the project\'s own DA.live org included', async () => {
             await mount(filledIn());
 
             push('dalive-auth-status', { isAuthenticated: true, orgName: 'verified-org' });
 
+            // The status names the org saved from the LAST sign-in, one value for
+            // every project. It used to replace the project's own here, so an Edit of
+            // a project in another namespace moved it (2026-10-13).
             expect(lastConfig(updateState)).toEqual(
                 expect.objectContaining({
                     accsHost: 'https://accs.example.com',
@@ -144,9 +147,17 @@ describe('useDaLiveAuth - state it answers with', () => {
                     customerGroup: 'wholesale',
                     repoName: 'demo-repo',
                     daLiveSite: 'demo-site',
-                    daLiveOrg: 'verified-org',
+                    daLiveOrg: 'old-org',
                 })
             );
+        });
+
+        it('replaces the project\'s DA.live org on a FRESH sign-in, which names the org on purpose', async () => {
+            await mount(filledIn());
+
+            push('dalive-token-with-org-result', { success: true, orgName: 'verified-org' });
+
+            expect(lastConfig(updateState)?.daLiveOrg).toBe('verified-org');
         });
 
         it('fills the unset ones with an empty string rather than leaving them out', async () => {

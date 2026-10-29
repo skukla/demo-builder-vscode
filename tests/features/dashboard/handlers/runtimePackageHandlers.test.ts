@@ -6,22 +6,15 @@
  * and a namespace that cannot be listed is a refusal — never an empty list.
  */
 
+import { contextWith, mockCommandExecutor } from './runtimePackageHandlers.testUtils';
+
 const mockListRuntimePackages = jest.fn();
+const mockListRuntimeNames = jest.fn();
 const mockRuntimeNamespaceEnv = jest.fn();
 jest.mock('@/features/app-builder/services/runtimeNamespace', () => ({
     listRuntimePackages: (...args: unknown[]) => mockListRuntimePackages(...args),
+    listRuntimeNames: (...args: unknown[]) => mockListRuntimeNames(...args),
     runtimeNamespaceEnv: (...args: unknown[]) => mockRuntimeNamespaceEnv(...args),
-}));
-jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
-    runGuards: jest.fn().mockResolvedValue(undefined),
-}));
-jest.mock('@/core/shell/orgContextEnv', () => ({
-    buildOrgTargetFromProjectAdobe: jest.fn(() => ({ orgId: 'org-1', workspaceId: 'ws-stage' })),
-    withOrgContext: jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn()),
-}));
-const mockCommandExecutor = { execute: jest.fn() };
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: { getCommandExecutor: jest.fn(() => mockCommandExecutor) },
 }));
 
 import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
@@ -29,17 +22,9 @@ import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHand
 import { withOrgContext } from '@/core/shell/orgContextEnv';
 import { ErrorCode } from '@/types/errorCodes';
 import type { Project } from '@/types/base';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const ENV = { AIO_RUNTIME_NAMESPACE: 'ns-stage', AIO_RUNTIME_AUTH: 'fake-test-auth-not-a-secret' };
-
-function contextWith(project: Project | undefined) {
-    const stateManager = createMockStateManager();
-    stateManager.getCurrentProject.mockResolvedValue(project);
-    return createMockHandlerContext({ stateManager });
-}
 
 /** The canonical fake, which carries an Adobe org, project and workspace. */
 function adobeProject(): Project {
@@ -50,6 +35,9 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockRuntimeNamespaceEnv.mockResolvedValue(ENV);
     mockListRuntimePackages.mockResolvedValue(['erp', 'demo-erp']);
+    mockListRuntimeNames.mockImplementation(async (_deps: unknown, kind: string) =>
+        kind === 'trigger' ? ['erp-schedule-heartbeat'] : ['erp-schedule-on-heartbeat'],
+    );
 });
 
 describe('handleListRuntimePackages', () => {
@@ -60,10 +48,21 @@ describe('handleListRuntimePackages', () => {
 
         expect(result).toEqual({
             success: true,
-            data: { namespace: 'ns-stage', packages: ['erp', 'demo-erp'] },
+            data: {
+                namespace: 'ns-stage',
+                packages: ['erp', 'demo-erp'],
+                // AB-58: timers and rules outlive the package they start, so they are listed too.
+                triggers: ['erp-schedule-heartbeat'],
+                rules: ['erp-schedule-on-heartbeat'],
+            },
         });
+        const deps = { commandManager: mockCommandExecutor, logger: context.logger };
+        expect(mockListRuntimeNames.mock.calls).toEqual([
+            [deps, 'trigger', ENV],
+            [deps, 'rule', ENV],
+        ]);
         expect(withOrgContext).toHaveBeenCalledWith(
-            { orgId: 'org-1', workspaceId: 'ws-stage' },
+            { orgId: 'org-1', projectId: 'proj-1', workspaceId: 'ws-stage' },
             expect.any(Function)
         );
         // The list reuses the key fetched for the answer's namespace, not a second fetch.
@@ -107,6 +106,45 @@ describe('handleListRuntimePackages', () => {
             error: 'Sign in to Adobe',
             code: ErrorCode.AUTH_REQUIRED,
         });
+        expect(mockRuntimeNamespaceEnv).not.toHaveBeenCalled();
+    });
+
+    // AB-23: an integration deploys into its own workspace, so "what did it leave
+    // running?" has to be asked THERE — the project's workspace would say "nothing".
+    it("reads an integration's own workspace when given its id", async () => {
+        const project = createMockProject({
+            appBuilderComponents: {
+                'erp-integration': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+                    workspace: { id: 'ws-erp', name: 'erpintegration', title: 'ERP integration' },
+                },
+            },
+        });
+
+        const result = await handleListRuntimePackages(contextWith(project), {
+            componentId: 'erp-integration',
+        });
+
+        expect(result).toMatchObject({ success: true });
+        expect(withOrgContext).toHaveBeenCalledWith(
+            { orgId: 'org-1', projectId: 'proj-1', workspaceId: 'ws-erp' },
+            expect.any(Function)
+        );
+    });
+
+    it('refuses an integration the project does not have, before touching Adobe', async () => {
+        const result = await handleListRuntimePackages(contextWith(adobeProject()), {
+            componentId: 'nope',
+        });
+
+        expect(result).toEqual({
+            success: false,
+            error: 'This project has no integration "nope".',
+            code: ErrorCode.COMPONENT_NOT_FOUND,
+        });
+        expect(runGuards).not.toHaveBeenCalled();
         expect(mockRuntimeNamespaceEnv).not.toHaveBeenCalled();
     });
 

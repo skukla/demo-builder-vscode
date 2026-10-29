@@ -34,24 +34,20 @@ import {
     type VSCodeInfo,
 } from './diagnosticsReport';
 import { BaseCommand } from '@/core/base/baseCommand';
-import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, type DebugLogger } from '@/core/logging/debugLogger';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { probeInExtensionMcpTools } from '@/features/ai/server/mcpToolProbe';
 import { getDaLiveAuthService, resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
-import { pickSampleSku } from '@/features/eds/services/catalogPrewarmService';
+import { pickSampleSku } from '@/features/eds/services/catalogSampleSku';
 import {
     probeConfigService,
     type ConfigServiceProbeResult,
 } from '@/features/eds/services/configService/configServiceProbe';
-import {
-    probeCredentialService,
-    type CredentialServiceProbeResult,
-} from '@/features/eds/services/credentialServiceProbe';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import {
     probeGitHubCredential,
     type CredentialProbeResult,
@@ -60,6 +56,8 @@ import {
     probeStorefrontDelivery,
     type StorefrontProbeResult,
 } from '@/features/eds/services/storefront/storefrontProbe';
+import { readStorefrontReport, type StorefrontReport } from '@/features/eds/services/storefront/storefrontReport';
+import { createStorefrontReportDeps } from '@/features/eds/services/storefront/storefrontReportDeps';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 import { getEdsGithubRepo } from '@/types/typeGuards';
@@ -96,8 +94,9 @@ export async function runDiagnosticsAction(
     if (action === 'Copy Report') {
         await vscode.env.clipboard.writeText(summary);
         // Confirm explicitly: a silent clipboard write is indistinguishable
-        // from a no-op, and the user is about to paste it somewhere.
-        await vscode.window.showInformationMessage('Diagnostic report copied to clipboard.');
+        // from a no-op, and the user is about to paste it somewhere. As every
+        // success reads: a ✅ line that goes by itself (owner, 2026-10-15).
+        showSuccessInStatusBar('Diagnostic report copied to clipboard');
     } else if (action === 'Show Logs') {
         logger.show(false);
     } else if (action === 'Export Log') {
@@ -214,11 +213,10 @@ export class DiagnosticsCommand extends BaseCommand {
             this.logger.debug('Measuring Claude Code storage footprint');
             report.claudeCode = await collectClaudeCodeFootprint();
 
-            // The four remote probes run CONCURRENTLY: each is pure HTTP against
+            // The remote probes run CONCURRENTLY: each is pure HTTP against
             // a different service (GitHub/AEM, the Config Service, aem.live, and
-            // the shared credential service), they share no state, and none reads
-            // another's result — so serialising them only added their latencies
-            // together.
+            // GitHub again for the storefront's origin), they share no state, and none reads another's result — so
+            // serialising them only added their latencies together.
             //
             // The `aio` checks above stay sequential on purpose. The first aio
             // command in a session triggers `aio config set
@@ -226,18 +224,18 @@ export class DiagnosticsCommand extends BaseCommand {
             // only by in-process flags — so running those concurrently would race
             // that write for a saving these three already cover.
             this.logger.debug('Probing GitHub, Config Service and storefront');
-            const [githubCredential, configService, storefront, credentialService] =
+            const [githubCredential, configService, storefront, storefrontOrigin] =
                 await Promise.all([
                     this.checkGitHubCredential(),
                     this.checkConfigService(),
                     this.checkStorefront(),
-                    this.checkCredentialService(),
+                    this.checkStorefrontOrigin(),
                 ]);
             report.githubCredential = githubCredential;
             report.configService = configService;
-            report.credentialService = credentialService;
             report.storefront = storefront?.probe;
             report.storefrontScope = storefront?.scope;
+            report.storefrontOrigin = storefrontOrigin;
 
             // Log the full report, with admin addresses redacted. This buffer is
             // exportable, so dumping the object verbatim would put colleague PII
@@ -355,29 +353,30 @@ export class DiagnosticsCommand extends BaseCommand {
     }
 
     /**
+     * Where the storefront comes from and what Demo Builder wrote into it (EDS-13f):
+     * the storefront report's own computation, so this section and the
+     * get_storefront_report tool cannot disagree. Read-only.
+     * Undefined without an EDS project, and when the read fails outright (each
+     * leg already says "could not read" on its own; a throw is not a finding).
+     */
+    private async checkStorefrontOrigin(): Promise<StorefrontReport | undefined> {
+        const project = await this.stateManager.getCurrentProject();
+        if (!project || !getEdsGithubRepo(project)) return undefined;
+        try {
+            return await readStorefrontReport(project, createStorefrontReportDeps(this.context.secrets, this.logger));
+        } catch (error) {
+            this.logger.debug(`Storefront origin not read: ${(error as Error).message}`);
+            return undefined;
+        }
+    }
+
+    /**
      * Probe whether the DA.live credential can read this storefront's site
      * config, and whether the same credential is accepted by DA.live itself.
      *
      * Returns undefined without an EDS project: there is no site to address,
      * and an invented one would produce a 404 that reads like a real finding.
      */
-    /**
-     * Is the shared Commerce credential service configured and serving this user?
-     *
-     * Runs with or WITHOUT a project open, unlike the probes around it: the
-     * service is a global capability, and the person most likely to need this
-     * answer is someone whose project cannot import — who has no reason to think
-     * the cause is a setting they have never heard of.
-     */
-    private async checkCredentialService(): Promise<CredentialServiceProbeResult> {
-        const project = await this.stateManager.getCurrentProject();
-        const orgId = project?.adobe?.organization;
-        return probeCredentialService({
-            auth: ServiceLocator.getAuthenticationService(),
-            ...(orgId ? { orgId } : {}),
-        });
-    }
-
     private async checkConfigService(): Promise<ConfigServiceProbeResult | undefined> {
         const project = await this.stateManager.getCurrentProject();
         // GitHub owner/repo — NOT the DA.live org/site. The Config Service keys

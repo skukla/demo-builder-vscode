@@ -29,6 +29,10 @@ mainline) is newer than a storefront a colleague wants to add, what should we do
    - A repository GENERATED from the template (Jen's): there is no shared git history, so a
      merge is impossible and the only mechanical path is a reset onto the current
      boilerplate, which throws away the colleague's customisations. Not offered.
+     **Corrected 2026-10-20 (EDS-56):** a reset was not the only path. The 3-way apply of the
+     template's change since a known commit (`5d805a57a`, 2026-09-15) needs no shared history
+     and keeps the edits; Check for Updates' "Adobe boilerplate" row now uses it on a
+     generated repository whose starting commit is known.
 4. **Never refuse on age.** A floor exists only as a warning: below the oldest boilerplate
    our drop-in and configuration assumptions were verified on, the card says "This storefront
    is older than the versions Demo Builder is tested with; some demo features may not work."
@@ -41,3 +45,48 @@ reset onto the current boilerplate for generated repositories, is the one thing 
 would modernise Jen's storefront, and it is the one thing that destroys her work; I recommend
 against it. If a demo must be current, the honest route is for the colleague to regenerate
 from the template themselves and re-add.
+
+## Status 2026-10-03 (unattended run): stopped here for the owner
+
+Steps 01–04 and 07 were built on `loop/2026-10-03-night2-b` (not committed); this step was
+not started. Two facts for the decision:
+
+- The report half of "report, always" now exists: the storefront report (command, agent tool,
+  Diagnostics) shows the storefront's boilerplate version beside Demo Builder's current one
+  (the template's `package.json` at the patches repo's last-known-good). No floor constant
+  and no "older than tested" warning were added: the floor is this step's.
+- The overview's decision 6 says the owner agreed to this recommendation on 2026-09-14, but
+  the backlog item still lists the version gap as an open owner decision. Those disagree.
+
+**The question:** is the policy "report always + fix what fits + offer the fork sync ONLY
+to forks (after EDS-14), never a reset onto the current boilerplate for a generated
+repository, never refuse on age, warn below a floor"? **Recommendation: yes, as written
+above.** If yes, the remaining build is the floor constant with its test and the warning
+line, plus the fork-sync door once EDS-14 lands.
+
+## Decision 2026-10-04: YES, as written
+
+Owner, 2026-10-04 ("Do it!" on the recommendation above): the policy is report always, fix
+what fits, offer the fork sync ONLY to forks, never reset a generated repository onto the
+current boilerplate, never refuse on age, warn below a floor. This settles the disagreement
+noted above: the backlog item (EDS-13f) now says the decision is made.
+
+Built on `loop/2026-10-04-step5` (staged, not committed):
+
+- **The floor**: `OLDEST_TESTED_BOILERPLATE = '6.0.0'` in
+  `src/features/eds/services/storefront/storefrontProvenance.ts`. Source: every patched
+  template in `demo-packages.json` is `adobe-commerce/boilerplate-b2b-template`, pinned by the
+  patches repo's `b2b/last-known-good`; the template's `package.json` there reads 6.0.0
+  (decision 1, read 2026-09-14; not re-read live in this run). Pinned by a test; moved by hand.
+- **The warning** (`boilerplateFloorWarning`): "Built on an older boilerplate (4.x); some fixes
+  may not fit." Only for Adobe's Commerce boilerplate (another package's version is on another
+  scale), never a refusal. Shown on the add dialog's "Built on" row and on the report's first
+  line, which the Storefront Report command, Diagnostics and `get_storefront_report` all render.
+- **Fork sync only for forks**: already true. Check for Updates offers a fork sync only when
+  GitHub says the repository is a fork (`ForkSyncService.checkForkStatus` returns
+  `isFork: false` otherwise; `checkUpdates.ts` filters on it), and EDS-14 (shipped) made a
+  conflict stop instead of resetting. Not built: a "Bring the code up to date with the
+  template" door on the storefront report itself.
+- Known limit: one floor covers one line. The B2C canonical (`hlxsites/aem-boilerplate-commerce`)
+  carries the same package name at 10.x, so a B2C storefront never warns; no B2C template is
+  patched today, so nothing is lost yet.

@@ -6,8 +6,8 @@
  *
  * ## Every tool here passes its target EXPLICITLY. That is the point.
  *
- * `AdobeEntityFetcher.createProject` / `createWorkspace` resolved their target
- * from `cacheManager.getCachedOrganization()` / `getCachedProject()` — the
+ * `AdobeConsoleProjectOps.createProject` / `AdobeConsoleWorkspaceOps.createWorkspace`
+ * resolved their target from `cacheManager.getCachedOrganization()` / `getCachedProject()` — the
  * selection made in the EXTENSION UI. The agent's selection lives somewhere
  * else entirely: `select_org` / `select_project` write only `adobeTargetStore`
  * (`adobeTools.ts:263`) and never touch that cache.
@@ -30,10 +30,12 @@
 
 import { z } from 'zod';
 import { getAdobeTarget } from './adobeTargetStore';
+import { resolveAgentOrg } from './agentOrg';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { stageLine } from '@/core/utils/stageLine';
 import { createTeardownDeps } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
 import { handleRenameAdobeProject } from '@/features/authentication/handlers/renameAdobeProjectHandler';
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
@@ -61,32 +63,28 @@ async function authedManager(ctx: HandlerContext): Promise<HandlerContext['authM
     }
 }
 
+type AuthManager = NonNullable<HandlerContext['authManager']>;
+
 /**
- * The org the agent selected, or an instruction to select one.
+ * The org (via `resolveAgentOrg`: the agent's selection, or the only org the
+ * sign-in reaches) and the agent's selected project.
  *
  * Never falls back to the cached UI selection. A fallback here is precisely the
- * bug: it would succeed against the wrong org rather than telling the agent to
- * choose.
+ * bug: it would succeed against the wrong org or project rather than telling the
+ * agent to choose.
  */
-function requireOrg(): { orgId: string } | { error: string } {
-    const target = getAdobeTarget();
-    if (!target?.orgId) {
-        return { error: 'No org selected. Call list_orgs, then select_org(orgId) first.' };
-    }
-    return { orgId: target.orgId };
-}
-
-function requireProject(): { orgId: string; projectId: string } | { error: string } {
-    const target = getAdobeTarget();
-    if (!target?.orgId) {
-        return { error: 'No org selected. Call list_orgs, then select_org(orgId) first.' };
-    }
-    if (!target.projectId) {
+async function requireProject(
+    mgr: AuthManager,
+): Promise<{ orgId: string; projectId: string } | { error: string }> {
+    const org = await resolveAgentOrg(mgr);
+    if ('error' in org) return org;
+    const projectId = getAdobeTarget()?.projectId;
+    if (!projectId) {
         return {
             error: 'No project selected. Call list_adobe_projects, then select_project(projectId) first.',
         };
     }
-    return { orgId: target.orgId, projectId: target.projectId };
+    return { orgId: org.orgId, projectId };
 }
 
 export function registerAdobeResourceTools(
@@ -99,7 +97,7 @@ export function registerAdobeResourceTools(
             needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
-                'Create an Adobe Developer Console project in the selected org (select_org first). Returns the project, or why it could not be created.',
+                'Create an Adobe Developer Console project in the selected org (select_org first, unless the sign-in reaches only one org). Returns the project, or why it could not be created.',
             inputSchema: {
                 name: z.string().describe('Project title, max 200 characters'),
                 description: z
@@ -110,13 +108,13 @@ export function registerAdobeResourceTools(
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
-            const target = requireOrg();
-            if ('error' in target) return asText(target);
-
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return asText(NEEDS_ADOBE);
 
-            const project = await mgr.createProject(
+            const target = await resolveAgentOrg(mgr);
+            if ('error' in target) return asText(target);
+
+            const project = await (await mgr.getEntityServices()).projectOps.createProject(
                 String(args?.name ?? ''),
                 String(args?.description ?? ''),
                 { orgId: target.orgId },
@@ -150,13 +148,13 @@ export function registerAdobeResourceTools(
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (args: any) => {
-            const target = requireProject();
-            if ('error' in target) return asText(target);
-
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return asText(NEEDS_ADOBE);
 
-            const workspace = await mgr.createWorkspace(
+            const target = await requireProject(mgr);
+            if ('error' in target) return asText(target);
+
+            const workspace = await (await mgr.getEntityServices()).workspaceOps.createWorkspace(
                 String(args?.name ?? ''),
                 String(args?.description ?? ''),
                 { orgId: target.orgId, projectId: target.projectId },
@@ -181,7 +179,7 @@ export function registerAdobeResourceTools(
             description:
                 'Delete a workspace from the SELECTED Adobe project (select_org and select_project first). Requires confirm:true and confirmName equal to the workspace name.',
             inputSchema: {
-                workspaceId: z.string().describe('Workspace id from list_adobe_workspaces'),
+                workspaceId: z.string().describe('Workspace id from list_workspaces'),
                 workspaceName: z
                     .string()
                     .describe('Workspace name — echoed back as confirmName'),
@@ -203,7 +201,7 @@ export function registerAdobeResourceTools(
             // The same name-echo gate as delete_adobe_project. A workspace carries its
             // own credentials and Runtime namespace, so deleting the wrong one costs an
             // SC a redeploy, not just a row.
-            if (args?.confirm !== true || args?.confirmName !== workspaceName) {
+            if (args.confirm !== true || args.confirmName !== workspaceName) {
                 return asText({
                     error:
                         `delete_adobe_workspace permanently deletes "${workspaceName}" and its credentials. ` +
@@ -212,24 +210,32 @@ export function registerAdobeResourceTools(
                 });
             }
 
-            const target = requireProject();
-            if ('error' in target) return asText(target);
-
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return asText(NEEDS_ADOBE);
 
-            const result = await mgr.deleteWorkspace(workspaceId, {
+            const target = await requireProject(mgr);
+            if ('error' in target) return asText(target);
+
+            const { workspaceOps } = await mgr.getEntityServices();
+            const result = await workspaceOps.deleteWorkspace(workspaceId, {
                 orgId: target.orgId,
                 projectId: target.projectId,
+                workspaceName,
             });
 
-            // Adobe refuses to delete the Production workspace. That arrives as an SDK
-            // error rather than something checkable up front, so it reaches the agent as
-            // the reason it actually is instead of a guess made here.
+            // No workspace name is protected — deleting a real project's Production
+            // workspace answered HTTP 200 (measured 2026-09-20). Whatever Adobe does
+            // refuse arrives as an SDK error rather than something checkable up front,
+            // so it reaches the agent as the reason it actually is.
             if (isConsoleOpFailure(result)) {
                 return asText({ deleted: false, error: result.error });
             }
-            return asText({ deleted: true, workspaceId, projectId: target.projectId });
+            return asText({
+                deleted: true,
+                workspaceId,
+                projectId: target.projectId,
+                ...(result.note ? { note: result.note } : {}),
+            });
         },
     );
 
@@ -261,7 +267,7 @@ export function registerAdobeResourceTools(
             // Same extra-strict gate as delete_github_repo: confirm AND an exact
             // name echo. Deleting a Console project destroys its workspaces and
             // credentials with it.
-            if (args?.confirm !== true || args?.confirmName !== projectName) {
+            if (args.confirm !== true || args.confirmName !== projectName) {
                 return asText({
                     error:
                         `delete_adobe_project permanently deletes "${projectName}" and all of its workspaces and ` +
@@ -270,14 +276,15 @@ export function registerAdobeResourceTools(
                 });
             }
 
-            const target = requireOrg();
-            if ('error' in target) return asText(target);
-
             // Step-level debug lines: when this hung headless (AI-5) the args log
             // was the LAST line anywhere, so the hang site was unfindable.
             const ctx = ctxFactory();
             ctx.logger.debug('[delete_adobe_project] checking auth');
-            if (!(await authedManager(ctx))) return asText(NEEDS_ADOBE);
+            const mgr = await authedManager(ctx);
+            if (!mgr) return asText(NEEDS_ADOBE);
+
+            const target = await resolveAgentOrg(mgr);
+            if ('error' in target) return asText(target);
             ctx.logger.debug('[delete_adobe_project] auth ok — starting teardown');
 
             // TeardownTarget already takes orgId/projectId explicitly, so this path
@@ -289,7 +296,7 @@ export function registerAdobeResourceTools(
                 // project itself, and runs long enough that a silent wait reads
                 // as a hang. Step count rides along for the same reason reset's
                 // does.
-                (p) => reportPhase(`${p.message} (${p.step}/${p.totalSteps})`),
+                (p) => reportPhase(stageLine(p.message, { index: p.step, total: p.totalSteps })),
             );
 
             // `items` is the per-step teardown log the dashboard renders. An agent
@@ -330,11 +337,12 @@ export function registerAdobeResourceTools(
                 return asText({ error: 'projectId and title are required' });
             }
 
-            const target = requireOrg();
-            if ('error' in target) return asText(target);
-
             const ctx = ctxFactory();
-            if (!(await authedManager(ctx))) return asText(NEEDS_ADOBE);
+            const mgr = await authedManager(ctx);
+            if (!mgr) return asText(NEEDS_ADOBE);
+
+            const target = await resolveAgentOrg(mgr);
+            if ('error' in target) return asText(target);
 
             // The picker's handler, so the button and the tool validate, gate on the
             // org and word Adobe's refusal identically.

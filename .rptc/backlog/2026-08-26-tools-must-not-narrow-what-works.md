@@ -5,7 +5,7 @@ area: ai
 parent: AI-1
 needs: []
 value: high
-status: open
+status: shipped
 layer: C
 ---
 # Does a tool make the agent faster, or just move where it gets stuck?
@@ -78,3 +78,5 @@ Filed 2026-08-26.
 ## Shipped so far
 
 - 2026-08-26  docs(backlog): drop AI-1k, file AI-1l — the tool was the obstacle (`a16188edb`)
+- 2026-10-20  Answered by the owner (2026-10-20): write the rule and enforce it. Rule in the handbook (section 8) and the mcp-tool-authoring skill; enforcer tests/sop/tool-input-constraints.test.ts with a reasoned ledger of the eleven closed lists.
+- 2026-10-20  feat(sop): a closed list in a tool input is a reasoned decision (`2732448b2`)

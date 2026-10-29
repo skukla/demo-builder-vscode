@@ -1,5 +1,8 @@
 # PL-59 — integration operations show their progress in a modal
 
+> **Phase 2** — the same approach across the whole extension, with a routing table
+> saying which surface each operation reports to and why: `extension-wide.md`.
+
 ## Context
 
 Adding, updating, redeploying or removing an integration takes minutes. Today the SC gets one
@@ -49,7 +52,7 @@ It is already built.
 2. **One typed push channel.** `componentOperationProgress` in `src/types/webviewPayloads.ts`:
    `{ id, stage, step?, expectation?, state: 'running' | 'succeeded' | 'failed', error? }`.
    Sent through the existing live-panel lookup in `showDashboard.ts`
-   (`getLiveProjectPanel`, beside `sendAppBuilderComponentStatusUpdate`).
+   (`getLiveProjectPanel`, beside `sendAppBuilderComponentStatusUpdate`, now in `dashboard/services/projectPanelPushes.ts`).
 3. **The source is `withComponentProgress`** (`appBuilderComponentHandlers.ts`). All four
    operations and the App Management install already go through it. It gets
    `(stage, step)` instead of a single collapsed string. The handler currently flattens them

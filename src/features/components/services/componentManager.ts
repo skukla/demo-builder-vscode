@@ -135,6 +135,7 @@ export class ComponentManager {
                 componentInstance.path,
                 componentDef,
                 false,
+                options.nodeVersion,
             );
             if (!deps.success) {
                 // strictInstall components (App Builder integrations) abort here
@@ -232,8 +233,9 @@ export class ComponentManager {
     public async installNpmDependencies(
         componentPath: string,
         componentDef: TransformedComponentDefinition,
+        nodeVersion?: string,
     ): Promise<{ success: boolean; error?: string }> {
-        return this.dependencies.installNpmDependencies(componentPath, componentDef);
+        return this.dependencies.installNpmDependencies(componentPath, componentDef, nodeVersion);
     }
 
     /**

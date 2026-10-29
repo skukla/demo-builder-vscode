@@ -1,0 +1,48 @@
+---
+id: AB-30
+kind: feature
+area: app-builder
+needs: []
+value: med
+status: shipped
+---
+
+# The ERP integration's Commerce Admin page uses the Commerce back-office design system
+
+Filed 2026-09-24 (owner: the integration's page inside Commerce Admin must "work and look as
+it should" and "use the same design system that the Commerce back office uses").
+
+## What this asks
+
+The integration ships an Admin page (App Management's Admin UI SDK, `src/commerce-backend-ui-2`
+in `skukla/commerce-erp-integration`): Mapping, Status & sync, Follow an order, What crossed.
+It is rendered inside the Commerce Admin, so it must read as part of it: the Admin's type,
+spacing, controls, tables, colours, states — not a React Spectrum page dropped into a frame.
+
+## Facts to establish first (none proven yet)
+
+- Which design system Commerce Admin (ACCS, 2026) actually uses for App Management pages and
+  what the Admin UI SDK provides for it (Spectrum? the Admin's own Luma/backend theme? a
+  component set the SDK ships?). Read the SDK docs and an Adobe-built App Management app
+  before deciding; the answer decides whether this is a restyle or a component swap.
+- What the page looks like today on a real Admin (AB-26m's handoff: nobody has looked with
+  records present). Screenshots of each tab beside a native Admin screen.
+- Whether the page's states (loading, refused sign-in, empty, error) match the Admin's.
+
+## Done when
+
+Each tab screenshotted on the real Admin beside a native screen, with a written list of
+every visible difference and each one either fixed or accepted with a reason. Headless
+fingerprints alone do not close this; the owner looks.
+
+## Related
+
+AB-26 (the ERP programme), AB-26m (the Mapping tab handoff), AB-26u (the walk-through).
+
+## Shipped so far
+
+- 2026-09-28  2026-09-28 owner approved static mockups of the redesigned Admin page (integration branch loop/admin-redesign-mockups, 7cf1f78: Overview, Activity, Settings in the native Admin look; every setting and record kind read from the code; American English; ERP and website as dropdowns). Build started on loop/admin-redesign, closing: confirm status as a dropdown, company names in Activity, company search by name, the ERP on Commerce-made changes, American wording. Deferred: recording product/company changes sent from Commerce; per-ERP split of today's counts. Cosmetic feedback comes after, on the real page.
+- 2026-09-28  2026-09-28 American English: demo-erp main 395d2db deployed to both ERPs (screen, API messages and docs; dates as 'Oct 1, 2026'; the API's overall status word 'Canceled', owner: change it). Still British by design (program-read values): the status code 'cancelled', the event name 'order.cancelled', the reason 'Cancelled in Commerce' (contract). Data map mockup simplified to one screen (loop/data-map-mockup c261118), owner found v1 too busy.
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the redesign is on integration main (f08f72c: Overview, Activity, Settings, Data Map; effdfc9). The body's tab list (Mapping, Status & sync, Follow an order, What crossed) is the old design. Done-when still needs the owner's side-by-side screenshots.
+- 2026-10-06  Shipped 2026-10-05: every commit is on its repository's main, and Justrite deployed demo-erp 5f912cd and the integration c099eb9 (cloned from GitHub main, status deployed at 21:32Z/21:35Z). Any live check this item names is a check, not a reason to hold it open.
+- 2026-10-06  Correction: 7cf1f78 and c261118 are the approved mockup branches and never go to main; the built page (f08f72c, effdfc9) is.

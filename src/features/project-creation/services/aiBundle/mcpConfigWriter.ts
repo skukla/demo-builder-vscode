@@ -31,6 +31,9 @@ import {
 } from './claudeSettingsWriter';
 import type { GeneratedFileWriter } from './generatedFileWriter';
 import { getLogger } from '@/core/logging/debugLogger';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import { EnvironmentSetup } from '@/core/shell/environmentSetup';
+import { nodeFolderEnv } from '@/core/shell/nodeFolder';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
@@ -69,6 +72,11 @@ interface McpConfig {
  *
  * `nodePath` is the pre-resolved Node binary (see `resolveNodePath`); pass it
  * to skip re-resolving when refreshing many projects.
+ *
+ * `defaults` is the ai-defaults declaration, the bundled `ai-defaults.json`
+ * unless a caller hands in another. Production never does; it is the seam a
+ * test uses to supply an entry the bundled file does not have (a config leaf
+ * is injected, never module-mocked).
  */
 export async function writeMcpConfigs(
     projectPath: string,
@@ -76,12 +84,13 @@ export async function writeMcpConfigs(
     extensionDistPath: string,
     writer: GeneratedFileWriter,
     nodePath?: string,
+    defaults: AiDefaults = aiDefaults,
 ): Promise<void> {
     // Resolve the Node binary once and thread it to BOTH the MCP proxy entry
     // and the git-sync hook extractor (which parses tool input via `node -e`).
     const resolvedNode = nodePath ?? (await resolveNodePath());
 
-    const mcpConfig = await buildMcpConfig(extensionDistPath, project, resolvedNode);
+    const mcpConfig = await buildMcpConfig(extensionDistPath, project, resolvedNode, defaults);
     const mcpJson = JSON.stringify(mcpConfig, null, 2);
 
     await writer.write('.claude/mcp.json', mcpJson);
@@ -178,6 +187,7 @@ async function buildMcpConfig(
     extensionDistPath: string,
     project: Project,
     nodePath: string,
+    defaults: AiDefaults,
 ): Promise<McpConfig> {
     // The in-extension MCP server listens on a socket keyed to the OPEN
     // WORKSPACE — under the always-root home-Chat model (PR #36) that's the
@@ -203,15 +213,34 @@ async function buildMcpConfig(
     // applies to any App Builder-adjacent project (storefront, mesh, or
     // attached component); Playwright stays storefront-only.
     const toolsDir = resolveMcpToolsDir(project.path);
-    for (const entry of aiDefaults.mcpServers) {
+    const fnmPath = new EnvironmentSetup().findFnmPath();
+    for (const entry of defaults.mcpServers) {
         if (!aiDefaultsEntryApplies(entry, project)) continue;
-        mcpServers[entry.id] = {
-            command: entry.command,
-            args: entry.args.map((arg) => (path.isAbsolute(arg) ? arg : path.join(toolsDir, arg))),
-        };
+        const args = entry.args.map((arg) => (path.isAbsolute(arg) ? arg : path.join(toolsDir, arg)));
+        mcpServers[entry.id] = launchUnderNode(entry.command, args, fnmPath);
     }
 
     return { mcpServers };
+}
+
+/**
+ * How an ai-defaults server is launched: a `node` server runs on Demo Builder's Node,
+ * the one the tools were installed under (AI-13, PR-1a), as
+ * `fnm exec --using=<major> node <script>` with the entry's `env` pointing fnm at
+ * Demo Builder's Node folder (`nodeFolderEnv`). Without that env, fnm reads the SC's own
+ * folder, which may not have the Node at all. Not an absolute path to the Node: fnm's
+ * patch directories come and go as it updates, and `fnm exec` resolves the major each
+ * time. Measured 2026-10-07: it runs with a bare environment (no fnm shell setup),
+ * which is how an agent spawns a server. Without fnm the entry keeps its declared
+ * command, as before; the install will already have said why.
+ */
+function launchUnderNode(command: string, args: string[], fnmPath: string | null): McpServerEntry {
+    if (command !== 'node' || !fnmPath) return { command, args };
+    return {
+        command: fnmPath,
+        args: ['exec', `--using=${demoBuilderNode()}`, 'node', ...args],
+        env: nodeFolderEnv(),
+    };
 }
 
 /**

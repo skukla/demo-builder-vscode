@@ -4,7 +4,8 @@
  * The atomic-swap machinery: components install into `components.tmp` first,
  * and only after every install succeeds are they swapped into production —
  * preserving the originals on failure. Extracted from `executor.ts`
- * (2026-08-23 god-file decomposition); behavior unchanged.
+ * (2026-08-23 god-file decomposition); behavior unchanged. Also what an Edit
+ * keeps of the project it rebuilds ({@link carriedOverFromEdit}).
  *
  * @module features/project-creation/handlers/executorEditMode
  */
@@ -12,7 +13,9 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type { ProgressTracker } from './shared';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { HandlerContext } from '@/types/handlers';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**
  * Load existing project state for edit mode, used to preserve the original
@@ -38,6 +41,78 @@ async function loadExistingProjectForEdit(
         );
         return undefined;
     }
+}
+
+/**
+ * What an Edit rebuilds, so the edited project's old values must not survive it.
+ * Everything else the project recorded is kept (`buildInitialProject`).
+ *
+ * The default used to be the opposite: `buildInitialProject` listed what to keep,
+ * and every record it forgot was deleted from the manifest by the next Edit. Two of
+ * those were `appBuilderComponents` (each integration's Adobe workspace, so every
+ * Edit made new workspaces and left the old ones deployed) and `aiFileHashes` (so
+ * every Edit overwrote the SC's hand edits to the AI files).
+ */
+const REBUILT_FRESH = [
+    // The rebuild installs every component again; its instances (and the mesh
+    // state on them, whose source hash no longer matches) are written afresh.
+    'componentInstances',
+    // Regenerated from the fresh installation.
+    'componentVersions',
+    // Only valid while the demo runs, and the rebuild stops it.
+    'frontendEnvState',
+    // Installed into the old component folders, which the rebuild replaces.
+    'installedInspectorSdk',
+    // Statuses of what the rebuild deploys and publishes again.
+    'meshStatusSummary',
+    'appStatusSummary',
+    'edsStorefrontState',
+    'edsStorefrontStatusSummary',
+    // Retired: `componentApiPicks` is the one written form of the API picks.
+    'additionalConsoleApis',
+] as const satisfies ReadonlyArray<keyof import('@/types/base').Project>;
+
+/**
+ * The edited project's records, minus what the rebuild makes fresh.
+ *
+ * @param existingProject - the project as it was before the Edit, if this is one
+ * @returns the records to start from; empty on a create
+ */
+function carriedOverFromEdit(
+    existingProject: import('@/types/base').Project | undefined,
+): Partial<import('@/types/base').Project> {
+    if (!existingProject) return {};
+    const kept: Partial<import('@/types/base').Project> = { ...existingProject };
+    for (const key of REBUILT_FRESH) delete kept[key];
+    return kept;
+}
+
+/**
+ * Finish an Edit in which the SC changed nothing (PL-75): save the project and stop.
+ *
+ * The full Finish rebuilt everything even then: it stopped a running demo,
+ * reinstalled every component, redeployed the mesh and every integration,
+ * republished the storefront and re-imported the datapack. The wizard decides
+ * "nothing changed" by comparing the SC's choices with how it opened
+ * (`ui/wizard/editChanges.ts`) and sends what changed: here, nothing.
+ *
+ * @returns true when it handled the Finish; false to run the full path (not an
+ *   unchanged Edit, or the project could not be read)
+ */
+async function saveUnchangedEdit(
+    context: HandlerContext,
+    config: ProjectCreationConfig,
+    progressTracker: ProgressTracker,
+): Promise<boolean> {
+    if (!config.editProjectPath || config.editChanges?.length !== 0) return false;
+    const project = await loadExistingProjectForEdit(config.editProjectPath, context);
+    if (!project) return false;
+    context.logger.info('[Project Edit] Nothing changed: saving only, nothing redeployed');
+    project.lastModified = new Date();
+    await context.stateManager.saveProject(project);
+    // The sentinel the wizard's progress screen finishes on.
+    progressTracker('Project Created', 100, 'No changes to apply');
+    return true;
 }
 
 /**
@@ -80,7 +155,7 @@ async function performAtomicComponentSwap(
     projectPath: string,
     progressTracker: ProgressTracker,
 ): Promise<void> {
-    progressTracker('Applying Changes', 71, 'Swapping components');
+    progressTracker(OPERATION_STAGES.applyingChanges.label, 71, 'Swapping components');
     context.logger.info('[Project Edit] Swapping temporary components with production');
 
     try {
@@ -219,4 +294,10 @@ async function swapComponentsDirectory(
     }
 }
 
-export { loadExistingProjectForEdit, prepareEditModeTempDir, performAtomicComponentSwap };
+export {
+    carriedOverFromEdit,
+    loadExistingProjectForEdit,
+    prepareEditModeTempDir,
+    performAtomicComponentSwap,
+    saveUnchangedEdit,
+};

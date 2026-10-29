@@ -20,6 +20,8 @@ import type { WizardState } from '@/types/webview';
 // Same deterministic service mocks as the sibling useProjectBuilder files.
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => 'optional'),
+    isMeshRequired: (pkg: unknown, stackId: unknown) =>
+        jest.requireActual('../../../../helpers/demoPackageFixtures').isMeshRequiredThroughMock(pkg, stackId),
     getPackageById: jest.fn(),
 }));
 
@@ -185,5 +187,94 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         const call = updateState.mock.calls[0][0];
         expect(call.selectedAppBuilderComponents).toStrictEqual([]);
         expect(call.selectedConsoleApis).toStrictEqual({});
+    });
+});
+
+// The wizard names a pair by the rule the dashboard's add enforces (pairNames), read
+// against the real catalog, so a project created with the pair matches one it is added to.
+describe('useProjectBuilder — naming the ERP pair', () => {
+    it('records the typed name as the ERP\'s and the catalog name as the integration\'s', () => {
+        const { result, updateState } = setup({ componentConfigs: { 'erp-integration': { ERP_BASE_URL: 'x' } } });
+        act(() => {
+            result.current.onAppBuilderComponentToggle('erp-integration', true, 'JustRite ERP Integration');
+        });
+        expect(updateState.mock.calls[0][0].componentConfigs).toEqual({
+            'erp-integration': {
+                ERP_BASE_URL: 'x',
+                INTEGRATION_DISPLAY_NAME: 'ERP Integration',
+                ERP_DISPLAY_NAME: 'JustRite ERP',
+            },
+        });
+    });
+
+    it('a pair added without a name gets the defaults', () => {
+        const { result, updateState } = setup();
+        act(() => {
+            result.current.onAppBuilderComponentToggle('erp-integration', true);
+        });
+        expect(updateState.mock.calls[0][0].componentConfigs?.['erp-integration']).toEqual({
+            INTEGRATION_DISPLAY_NAME: 'ERP Integration',
+            ERP_DISPLAY_NAME: 'Acme ERP',
+        });
+    });
+
+    const NAMED = {
+        selectedAppBuilderComponents: ['erp-integration'],
+        componentConfigs: {
+            'erp-integration': {
+                ERP_BASE_URL: 'x',
+                INTEGRATION_DISPLAY_NAME: 'ERP Integration',
+                ERP_DISPLAY_NAME: 'Acme ERP',
+            },
+        },
+    };
+
+    it('the pencil renames the integration alone', () => {
+        const { result, updateState } = setup(NAMED);
+        act(() => {
+            result.current.onRenameAppBuilderComponent('erp-integration', 'Order Sync');
+        });
+        expect(updateState).toHaveBeenCalledWith({
+            componentConfigs: {
+                'erp-integration': {
+                    ERP_BASE_URL: 'x',
+                    INTEGRATION_DISPLAY_NAME: 'Order Sync',
+                    ERP_DISPLAY_NAME: 'Acme ERP',
+                },
+            },
+        });
+    });
+
+    it('Settings renames the ERP alone, by the rule the add used', () => {
+        const { result, updateState } = setup(NAMED);
+        act(() => {
+            result.current.onRenamePairedSystem('erp-integration', 'Justrite');
+        });
+        expect(updateState).toHaveBeenCalledWith({
+            componentConfigs: {
+                'erp-integration': {
+                    ERP_BASE_URL: 'x',
+                    INTEGRATION_DISPLAY_NAME: 'ERP Integration',
+                    ERP_DISPLAY_NAME: 'Justrite ERP',
+                },
+            },
+        });
+    });
+
+    it('neither rename touches an entry that brings no named system', () => {
+        const { result, updateState } = setup({ selectedAppBuilderComponents: ['erp-sync'] });
+        act(() => {
+            result.current.onRenameAppBuilderComponent('erp-sync', 'Anything');
+            result.current.onRenamePairedSystem('erp-sync', 'Anything');
+        });
+        expect(updateState).not.toHaveBeenCalled();
+    });
+
+    it('an entry that brings no system records no names', () => {
+        const { result, updateState } = setup();
+        act(() => {
+            result.current.onAppBuilderComponentToggle('erp-sync', true, 'Anything');
+        });
+        expect('componentConfigs' in updateState.mock.calls[0][0]).toBe(false);
     });
 });

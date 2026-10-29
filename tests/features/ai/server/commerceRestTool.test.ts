@@ -1,0 +1,481 @@
+/**
+ * run_commerce_rest — a signed GET against the project's Commerce REST API.
+ *
+ * The token request is pinned ARGUMENT BY ARGUMENT against Adobe's Cloud Service
+ * server-to-server guide (`POST /ims/token/v3`, client_credentials, its seven scopes)
+ * and the REST call against that guide's headers (Bearer, x-api-key, x-gw-ims-org-id)
+ * plus what aio-commerce-lib-api builds for SaaS (`<base>/V1/<path>`, a `Store`
+ * header) — all read on 2026-09-24. A mocked fetch cannot see a malformed call, so the
+ * assertions are on the calls, not on the outcome.
+ *
+ * The project fixture is bodea's ACCS shape, the one `commerceQueryTool.test.ts`
+ * uses, plus the ERP integration's own workspace.
+ */
+
+import { resetCommerceRestTokens, restWorkspaceId, validateRestPath } from '@/features/ai/server/commerceRestClient';
+import { registerCommerceRestTool } from '@/features/ai/server/commerceRestTool';
+import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
+import type { Project } from '@/types/base';
+import type { HandlerContext } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
+
+jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
+    getAppBuilderComponentCatalog: jest.fn(() => [
+        { id: 'erp-integration', kind: 'integration', requiredApis: ['CloudIntegrationSDK', 'ACCS-REST-API'] },
+        { id: 'demo-erp', kind: 'system', boundTo: 'erp-integration' },
+        { id: 'commerce-integration-starter-kit', kind: 'integration', requiredApis: ['CloudIntegrationSDK'] },
+    ]),
+}));
+
+function fakeServer() {
+    type Answer = { content: Array<{ text: string }>; isError?: true };
+    const tools = new Map<string, (args: any) => Promise<Answer>>();
+    const declarations = new Map<string, McpToolSchema>();
+    return {
+        registerTool(name: string, def: McpToolSchema, handler: (args: any) => Promise<Answer>) {
+            tools.set(name, handler);
+            declarations.set(name, def);
+        },
+        declaration: (): McpToolSchema => declarations.get('run_commerce_rest')!,
+        call: async (args?: unknown): Promise<Answer> => tools.get('run_commerce_rest')!(args),
+        raw: async (args?: unknown): Promise<string> => (await tools.get('run_commerce_rest')!(args)).content[0].text,
+    };
+}
+
+const ACCS_PROJECT = {
+    name: 'bodea',
+    path: '/p/bodea',
+    adobe: { organization: 'org-1', projectId: 'proj-1', workspace: 'ws-project' },
+    componentSelections: { backend: 'adobe-commerce-accs', frontend: 'eds-storefront' },
+    componentConfigs: {
+        'adobe-commerce-accs': {
+            ACCS_WEBSITE_CODE: 'bodea',
+            ACCS_STORE_CODE: 'bodea_store',
+            ACCS_STORE_VIEW_CODE: 'bodea_us',
+            ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql',
+        },
+        'eds-storefront': {},
+    },
+    componentInstances: {},
+    appBuilderComponents: {
+        mesh: { kind: 'mesh', status: 'deployed', source: { owner: 'skukla', repo: 'mesh' } },
+        'erp-integration': {
+            kind: 'integration',
+            status: 'deployed',
+            source: { owner: 'skukla', repo: 'commerce-erp-integration' },
+            workspace: { id: 'ws-erp', name: 'AcmeERP' },
+        },
+    },
+} satisfies Pick<Project, 'adobe' | 'appBuilderComponents'> & Record<string, unknown>;
+
+const PAAS_PROJECT = {
+    name: 'paas-demo',
+    path: '/p/paas',
+    adobe: { organization: 'org-1', projectId: 'proj-1', workspace: 'ws-project' },
+    componentSelections: { backend: 'adobe-commerce-paas' },
+    componentConfigs: {
+        'adobe-commerce-paas': {
+            ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://demo.adobedemo.com/graphql',
+            ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+            ADOBE_COMMERCE_STORE_CODE: 'main',
+            ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+        },
+    },
+    componentInstances: {},
+};
+
+const CREDENTIALS = {
+    clientId: 'client-abc',
+    clientSecret: 'fake-test-pw-not-a-secret',
+    technicalAccountId: 'ta-1',
+    technicalAccountEmail: 'ta@techacct.adobe.com',
+    imsOrgCode: 'ABC@AdobeOrg',
+};
+
+const getCurrentProject = jest.fn();
+const isAuthenticated = jest.fn();
+const getS2SDeployCredentials = jest.fn();
+const stateManager = createMockStateManager({ getCurrentProject });
+
+function ctx(withAuth = true): HandlerContext {
+    const context = createMockHandlerContext({ stateManager });
+    if (withAuth) {
+        poolUnits(Object.assign(context.authManager as object, { isAuthenticated, getS2SDeployCredentials }));
+    } else {
+        context.authManager = undefined;
+    }
+    return context;
+}
+
+/** Answers the IMS token call, then the REST call, in order. */
+function answering(restStatus: number, restBody: string, tokenStatus = 200) {
+    return jest
+        .fn()
+        .mockResolvedValueOnce({
+            ok: tokenStatus < 300,
+            status: tokenStatus,
+            text: async () => JSON.stringify({ access_token: 'minted-token', expires_in: 86399 }),
+        })
+        .mockResolvedValueOnce({ ok: restStatus < 300, status: restStatus, text: async () => restBody });
+}
+
+let fetchMock: jest.Mock;
+
+function serve(withAuth = true) {
+    const s = fakeServer();
+    registerCommerceRestTool(s, () => ctx(withAuth), fetchMock as unknown as typeof fetch);
+    return s;
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    resetCommerceRestTokens();
+    getCurrentProject.mockResolvedValue(ACCS_PROJECT);
+    isAuthenticated.mockResolvedValue(true);
+    getS2SDeployCredentials.mockResolvedValue(CREDENTIALS);
+    fetchMock = answering(200, '{"items":[{"id":43,"email":"steve@test.com","website_id":2}],"total_count":1}');
+});
+
+describe('declaration', () => {
+    it('is a read that needs the Adobe sign-in', () => {
+        const d = serve().declaration();
+        expect(d.needsAuth).toEqual(['adobe']);
+        expect(d.annotations).toEqual({ readOnlyHint: true, destructiveHint: false });
+    });
+});
+
+describe('the signed GET (args pinned)', () => {
+    it('mints the token with the ERP workspace credential, then GETs /V1/<path> with the Store header', async () => {
+        const out = await serve().raw({ path: 'customers/search?searchCriteria[pageSize]=20' });
+
+        expect(getS2SDeployCredentials).toHaveBeenCalledWith('org-1', 'proj-1', 'ws-erp');
+        const [tokenUrl, tokenInit] = fetchMock.mock.calls[0];
+        expect(tokenUrl).toBe('https://ims-na1.adobelogin.com/ims/token/v3');
+        expect(tokenInit.method).toBe('POST');
+        expect(tokenInit.headers).toEqual({ 'Content-Type': 'application/x-www-form-urlencoded' });
+        expect(Object.fromEntries(new URLSearchParams(tokenInit.body))).toEqual({
+            grant_type: 'client_credentials',
+            client_id: 'client-abc',
+            client_secret: 'fake-test-pw-not-a-secret',
+            org_id: 'ABC@AdobeOrg',
+            scope: 'openid,AdobeID,email,profile,additional_info.roles,additional_info.projectedProductContext,commerce.accs',
+        });
+        const [restUrl, restInit] = fetchMock.mock.calls[1];
+        expect(restUrl).toBe(
+            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/V1/customers/search?searchCriteria[pageSize]=20',
+        );
+        expect(restInit.method).toBe('GET');
+        expect(restInit.headers).toEqual({
+            Authorization: 'Bearer minted-token',
+            'x-api-key': 'client-abc',
+            'x-gw-ims-org-id': 'ABC@AdobeOrg',
+            Accept: 'application/json',
+            Store: 'bodea_us',
+        });
+        expect(JSON.parse(out).total_count).toBe(1);
+    });
+
+    it('a search with no page size gets 20 and says so; an explicit one and a plain read are untouched', async () => {
+        const out = await serve().raw({ path: 'orders?searchCriteria[filter_groups][0][filters][0][field]=status&searchCriteria[filter_groups][0][filters][0][value]=pending' });
+        expect(fetchMock.mock.calls[1][0]).toBe(
+            'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/V1/orders?searchCriteria[filter_groups][0][filters][0][field]=status&searchCriteria[filter_groups][0][filters][0][value]=pending&searchCriteria[pageSize]=20',
+        );
+        expect(out.split('\n')[0]).toBe('[pageSize 20 applied; pass searchCriteria[pageSize] to change it]');
+
+        // The token is cached after the first mint, so from here every fetch is the REST call itself.
+        const restOnly = (body: string) => jest.fn().mockResolvedValue({ ok: true, status: 200, text: async () => body });
+        fetchMock = restOnly('{"items":[]}');
+        await serve().raw({ path: 'customers/search?searchCriteria[pageSize]=5' });
+        expect(String(fetchMock.mock.calls[0][0])).toMatch(/searchCriteria\[pageSize\]=5$/u);
+
+        fetchMock = restOnly('{"id":44}');
+        const plain = await serve().raw({ path: 'customers/44?fields=id' });
+        expect(String(fetchMock.mock.calls[0][0])).toMatch(/customers\/44\?fields=id$/u);
+        expect(plain).toBe('{"id":44}');
+    });
+
+    it('reuses a minted token for the same workspace instead of asking IMS again', async () => {
+        const s = serve();
+        await s.raw({ path: 'customers/43' });
+        fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: async () => '{"id":43}' });
+        await s.raw({ path: 'customers/43' });
+
+        const imsCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('ims/token'));
+        expect(imsCalls).toHaveLength(1);
+    });
+
+    it('reads the workspace credential only to mint, not on every request while the token is good', async () => {
+        // Reading it is three Adobe Console calls, about 12s; every request paid that before.
+        const s = serve();
+        await s.raw({ path: 'customers/43' });
+        fetchMock.mockResolvedValueOnce({ ok: true, status: 200, text: async () => '{"id":43}' });
+        await s.raw({ path: 'customers/43' });
+
+        expect(getS2SDeployCredentials).toHaveBeenCalledTimes(1);
+        const restCalls = fetchMock.mock.calls.filter(([url]) => !String(url).includes('ims/token'));
+        // The second request still carries the credential's public half in its headers.
+        expect(restCalls.at(-1)?.[1]?.headers).toMatchObject({
+            Authorization: 'Bearer minted-token',
+            'x-api-key': CREDENTIALS.clientId,
+            'x-gw-ims-org-id': CREDENTIALS.imsOrgCode,
+        });
+    });
+
+    it('two requests that find no token at once share one credential read and one mint', async () => {
+        // The setup guide signs in as it opens; a check pressed during that wait joins it.
+        const s = serve();
+        await Promise.all([s.raw({ path: 'customers/43' }), s.raw({ path: 'customers/43' })]);
+
+        expect(getS2SDeployCredentials).toHaveBeenCalledTimes(1);
+        const imsCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('ims/token'));
+        expect(imsCalls).toHaveLength(1);
+    });
+
+    it('a failed sign-in is not shared with the next request, which tries again', async () => {
+        getS2SDeployCredentials.mockRejectedValueOnce(new Error('Console 504'));
+        const s = serve();
+        expect(await s.raw({ path: 'customers/43' })).toMatch(/could not sign the request — Console 504/);
+        await s.raw({ path: 'customers/43' });
+        expect(getS2SDeployCredentials).toHaveBeenCalledTimes(2);
+    });
+
+    it('a storeView argument replaces the Store header', async () => {
+        await serve().raw({ path: 'store/websites', storeView: 'default' });
+        expect(fetchMock.mock.calls[1][1].headers.Store).toBe('default');
+    });
+
+    it('a 401 says the credential is not accepted and names the API it needs', async () => {
+        fetchMock = answering(401, '{"message":"Unauthorized"}');
+        const out = await serve().raw({ path: 'customers/43' });
+        expect(out).toContain('HTTP 401');
+        expect(out).toContain('ACCS-REST-API');
+    });
+
+    it('declares the cut on a body over the ceiling', async () => {
+        fetchMock = answering(200, 'x'.repeat(40_000));
+        const out = await serve().raw({ path: 'products' });
+        expect(out.startsWith('[truncated: 40000 chars')).toBe(true);
+    });
+});
+
+describe('a project with no Adobe workspace signs as the SC (AI-72)', () => {
+    // A storefront-only project (EDS + ACCS, no mesh, no integration) has no workspace
+    // to take a credential from. Measured 2026-10-16 on the CitiSignal sandbox: the
+    // store's admin API answered 200 to the SC's own sign-in with no client id, and
+    // 401 to the same token with one. So the call carries the token and no client id.
+    const STOREFRONT_ONLY = { ...ACCS_PROJECT, adobe: undefined, appBuilderComponents: {} };
+    const inspectToken = jest.fn();
+
+    function serveSignedInAs(token: string | undefined) {
+        inspectToken.mockResolvedValue({ valid: Boolean(token), expiresIn: 60, token });
+        const s = fakeServer();
+        registerCommerceRestTool(
+            s,
+            () => {
+                const context = ctx();
+                Object.assign(context.authManager as object, {
+                    getTokenManager: () => ({ inspectToken }),
+                });
+                return context;
+            },
+            fetchMock as unknown as typeof fetch,
+        );
+        return s;
+    }
+
+    beforeEach(() => {
+        getCurrentProject.mockResolvedValue(STOREFRONT_ONLY);
+        fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '[]' });
+    });
+
+    it('sends the SC token with no client id or org header, and mints nothing', async () => {
+        const out = await serveSignedInAs('sc-token').raw({ path: 'store/storeViews' });
+
+        expect(getS2SDeployCredentials).not.toHaveBeenCalled();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        const [url, init] = fetchMock.mock.calls[0];
+        expect(url).toBe('https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/V1/store/storeViews');
+        expect(init.headers).toEqual({
+            Authorization: 'Bearer sc-token',
+            Accept: 'application/json',
+            Store: 'bodea_us',
+        });
+        expect(out).toBe('[]');
+    });
+
+    it('with no token to send, hands back the sign_in step', async () => {
+        const out = await serveSignedInAs(undefined).raw({ path: 'store/storeViews' });
+
+        expect(out).toContain('sign_in(provider:"adobe"');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('a 401 says it was the SC sign-in that was refused, not a workspace credential', async () => {
+        fetchMock = jest.fn().mockResolvedValue({ ok: false, status: 401, text: async () => '{"title":"ErrInvalidOauthToken"}' });
+
+        const out = await serveSignedInAs('sc-token').raw({ path: 'store/storeViews' });
+
+        expect(out).toContain('HTTP 401');
+        expect(out).toContain('your own Adobe sign-in');
+        expect(out).not.toContain('ACCS-REST-API');
+    });
+});
+
+describe('refusals, each before any call', () => {
+    it('a PaaS backend is refused with the reason', async () => {
+        getCurrentProject.mockResolvedValue(PAAS_PROJECT);
+        const out = await serve().raw({ path: 'customers/43' });
+        expect(out).toContain('ACCS backends only');
+        expect(out).toContain('Error:');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('no sign-in hands back the sign_in step', async () => {
+        isAuthenticated.mockResolvedValue(false);
+        const out = await serve().raw({ path: 'customers/43' });
+        expect(out).toContain('sign_in(provider:"adobe"');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('a bad path never reaches the network', async () => {
+        const s = serve();
+        for (const path of ['', '/V1/customers', 'https://evil.example/x', 'customers/../admin', 'a"b']) {
+            expect(await s.raw({ path })).toMatch(/^Error: /);
+        }
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('a refused IMS mint is reported, not thrown', async () => {
+        fetchMock = answering(200, '{}', 400);
+        const out = await serve().raw({ path: 'customers/43' });
+        expect(out).toContain('IMS refused the credential (HTTP 400)');
+    });
+});
+
+/*
+ * AI-10, 2026-10-01: an expired sign-in answered as plain text, and a script read it as a
+ * result. Every answer that is a refusal or a failure carries isError; a read that worked
+ * does not.
+ */
+describe('a refusal is marked as an error, a result is not', () => {
+    it('no sign-in, a bad path, and a Commerce 404 are each isError', async () => {
+        isAuthenticated.mockResolvedValue(false);
+        expect((await serve().call({ path: 'customers/43' })).isError).toBe(true);
+        isAuthenticated.mockResolvedValue(true);
+        expect((await serve().call({ path: '/V1/customers' })).isError).toBe(true);
+        fetchMock = answering(404, '{"message":"No such entity."}');
+        expect((await serve().call({ path: 'customers/43' })).isError).toBe(true);
+    });
+
+    it('a read that worked carries no isError', async () => {
+        const result = await serve().call({ path: 'customers/43' });
+        expect(result.content[0].text).not.toMatch(/^Error: /);
+        expect(result.isError).toBeUndefined();
+    });
+});
+
+/*
+ * The workspace credential kept across window reloads (savedRestCredential): reading it from
+ * Console has been taking a minute after a reload (2026-10-01), minting from a kept copy does
+ * not. A Map stands in for VS Code SecretStorage.
+ */
+describe('the workspace credential kept across reloads', () => {
+    const KEY = 'demoBuilder.commerceRest.credential.ws-erp';
+
+    function storeOf(entries: Record<string, string> = {}) {
+        const map = new Map(Object.entries(entries));
+        return {
+            map,
+            get: jest.fn(async (key: string) => map.get(key)),
+            store: jest.fn(async (key: string, value: string) => void map.set(key, value)),
+            delete: jest.fn(async (key: string) => void map.delete(key)),
+        };
+    }
+
+    function serveWith(store: ReturnType<typeof storeOf>) {
+        const s = fakeServer();
+        registerCommerceRestTool(
+            s,
+            () => {
+                const context = ctx();
+                Object.assign(context.context as object, { secrets: store });
+                return context;
+            },
+            fetchMock as unknown as typeof fetch,
+        );
+        return s;
+    }
+
+    /** IMS answers a token for the client ids it accepts, a 401 for the rest; REST answers {}. */
+    function imsAccepting(...clientIds: string[]) {
+        return jest.fn(async (url: string, init?: { body?: string }) => {
+            if (!String(url).includes('ims/token')) return { ok: true, status: 200, text: async () => '{"id":43}' };
+            const accepted = clientIds.some((id) => String(init?.body ?? '').includes(`client_id=${id}`));
+            return accepted
+                ? { ok: true, status: 200, text: async () => JSON.stringify({ access_token: 'minted-token', expires_in: 86399 }) }
+                : { ok: false, status: 401, text: async () => '{"error":"invalid_client"}' };
+        });
+    }
+
+    it('keeps the credential Console answered, only the three fields the mint needs', async () => {
+        fetchMock = imsAccepting(CREDENTIALS.clientId);
+        const store = storeOf();
+        await serveWith(store).raw({ path: 'customers/43' });
+        expect(getS2SDeployCredentials).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(store.map.get(KEY) ?? '{}')).toStrictEqual({
+            clientId: CREDENTIALS.clientId,
+            clientSecret: CREDENTIALS.clientSecret,
+            imsOrgCode: CREDENTIALS.imsOrgCode,
+        });
+    });
+
+    it('after a reload, signs with the kept credential and never asks Console', async () => {
+        fetchMock = imsAccepting('kept-client');
+        const kept = { clientId: 'kept-client', clientSecret: 'fake-test-pw-not-a-secret', imsOrgCode: 'ABC@AdobeOrg' };
+        const out = await serveWith(storeOf({ [KEY]: JSON.stringify(kept) })).raw({ path: 'customers/43' });
+        expect(out).toContain('"id":43');
+        expect(getS2SDeployCredentials).not.toHaveBeenCalled();
+    });
+
+    it('drops a kept credential IMS refuses, reads Console again, and keeps the new one', async () => {
+        fetchMock = imsAccepting(CREDENTIALS.clientId);
+        const stale = { clientId: 'rotated-away', clientSecret: 'fake-test-pw-not-a-secret', imsOrgCode: 'ABC@AdobeOrg' };
+        const store = storeOf({ [KEY]: JSON.stringify(stale) });
+        const out = await serveWith(store).raw({ path: 'customers/43' });
+        expect(out).toContain('"id":43');
+        expect(store.delete).toHaveBeenCalledWith(KEY);
+        expect(getS2SDeployCredentials).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(store.map.get(KEY) ?? '{}').clientId).toBe(CREDENTIALS.clientId);
+    });
+});
+
+describe('validateRestPath', () => {
+    it('accepts the search syntax Commerce uses and rejects hosts, roots and parent hops', () => {
+        expect(validateRestPath('customers/search?searchCriteria[filter_groups][0][filters][0][field]=email')).toEqual({
+            path: 'customers/search?searchCriteria[filter_groups][0][filters][0][field]=email',
+        });
+        expect(validateRestPath('/customers')).toHaveProperty('error');
+        expect(validateRestPath('http://x/customers')).toHaveProperty('error');
+        expect(validateRestPath('customers/../x')).toHaveProperty('error');
+    });
+});
+
+describe('restWorkspaceId', () => {
+    it("prefers the workspace of an integration whose entry requires ACCS-REST-API, else the project's", () => {
+        expect(restWorkspaceId(ACCS_PROJECT)).toBe('ws-erp');
+        const kitOnly: Pick<Project, 'adobe' | 'appBuilderComponents'> = {
+            adobe: ACCS_PROJECT.adobe,
+            appBuilderComponents: {
+                'commerce-integration-starter-kit': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'adobe', repo: 'commerce-integration-starter-kit' },
+                    workspace: { id: 'ws-kit', name: 'Kit' },
+                },
+            },
+        };
+        expect(restWorkspaceId(kitOnly)).toBe('ws-project');
+    });
+});

@@ -20,6 +20,8 @@ node_modules/**
 # `.gitignore` lists it, which does NOT help: vsce reads .vscodeignore INSTEAD of
 # .gitignore whenever this file exists.
 .jest-cache/**
+# The type-aware lint suite's probe directory (PL-44) — exists only mid-test.
+.eslint-probe/**
 # Editor config, same reasoning.
 .cursor/**
 # Added 2026-09-08 with PL-46's UI tier, for exactly the reason above. ExTester

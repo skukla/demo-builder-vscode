@@ -95,26 +95,11 @@ describe('isStorefrontConfigured', () => {
                 state({
                     edsConfig: authed,
                     storefrontRepoValid: false,
-                    storefrontCodeSyncValid: true,
                 })
             )
         ).toBe(false);
     });
 
-    it('is false when the repo is valid but code-sync is not', () => {
-        expect(
-            isStorefrontConfigured(state({ edsConfig: authed, storefrontRepoValid: true }))
-        ).toBe(false);
-        expect(
-            isStorefrontConfigured(
-                state({
-                    edsConfig: authed,
-                    storefrontRepoValid: true,
-                    storefrontCodeSyncValid: false,
-                })
-            )
-        ).toBe(false);
-    });
 
     it('is false when the EDS config has not been started at all', () => {
         // Nothing is signed in yet, so every read below the first one is
@@ -131,7 +116,6 @@ describe('isStorefrontConfigured', () => {
                 state({
                     edsConfig: { daLiveAuth: { isAuthenticated: true } },
                     storefrontRepoValid: true,
-                    storefrontCodeSyncValid: true,
                 })
             )
         ).toBe(false);
@@ -143,7 +127,6 @@ describe('isStorefrontConfigured', () => {
                 state({
                     edsConfig: authed,
                     storefrontRepoValid: true,
-                    storefrontCodeSyncValid: true,
                 })
             )
         ).toBe(true);

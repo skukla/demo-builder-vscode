@@ -53,7 +53,8 @@ const MALFORMED = [
 function makeServices(createdFullName = 'skukla/brand-new') {
     return {
         githubFileOps: {},
-        githubRepoOps: {
+        githubRepoOps: {},
+        githubRepoLifecycle: {
             createFromTemplate: jest.fn().mockResolvedValue({
                 htmlUrl: `https://github.com/${createdFullName}`,
                 fullName: createdFullName,
@@ -186,7 +187,7 @@ describe('the repo the SC TYPED (existingRepo)', () => {
 
 describe('the reset path', () => {
     const PATCH_FIELDS = {
-        codePatches: ['product-link-sku-encoding'],
+        codePatches: ['pdp-empty-data-redirect'],
         codePatchSource: {
             owner: 'skukla',
             repo: 'eds-demo-patches',
@@ -223,8 +224,7 @@ describe('the reset path', () => {
 
         expect(sentPayloads(context)[1]).toEqual({
             phase: 'repository',
-            message: 'Resetting repository to template',
-            subMessage: 'acme/store',
+            message: 'Resetting the repository: acme/store',
             progress: 6,
         });
     });
@@ -299,14 +299,13 @@ describe('creating a brand-new repo', () => {
         const { context } = await run(config({ repoMode: 'new' }), makeServices(), { ...NEW });
 
         expect(sentPayloads(context).map((p) => p.message)).toEqual([
-            'Creating GitHub repository from template',
+            'Creating the repository: brand-new',
             'Waiting for repository content',
             'Repository ready',
         ]);
         expect(sentPayloads(context)[0]).toEqual({
             phase: 'repository',
-            message: 'Creating GitHub repository from template',
-            subMessage: 'brand-new',
+            message: 'Creating the repository: brand-new',
             progress: 5,
         });
         expect(sentPayloads(context)[1]).toMatchObject({
@@ -321,7 +320,7 @@ describe('creating a brand-new repo', () => {
         const services = makeServices('skukla/brand-new-2');
         await run(config({ repoMode: 'new' }), services, { ...NEW });
 
-        expect(services.githubRepoOps.waitForContent).toHaveBeenCalledWith(
+        expect(services.githubRepoLifecycle.waitForContent).toHaveBeenCalledWith(
             'skukla',
             'brand-new-2',
             expect.any(Object),
@@ -342,7 +341,7 @@ describe('creating a brand-new repo', () => {
             { ...NEW },
         );
 
-        expect(services.githubRepoOps.createFromTemplate).toHaveBeenCalledWith(
+        expect(services.githubRepoLifecycle.createFromTemplate).toHaveBeenCalledWith(
             TEMPLATE.owner,
             TEMPLATE.repo,
             'brand-new',
@@ -358,7 +357,7 @@ describe('creating a brand-new repo', () => {
         const services = makeServices();
         await run(config({ repoMode: 'new', daLiveOrg: '' }), services, { ...NEW });
 
-        expect(services.githubRepoOps.createFromTemplate).toHaveBeenCalledWith(
+        expect(services.githubRepoLifecycle.createFromTemplate).toHaveBeenCalledWith(
             TEMPLATE.owner,
             TEMPLATE.repo,
             'brand-new',

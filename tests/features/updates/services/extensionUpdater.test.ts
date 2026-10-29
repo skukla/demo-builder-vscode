@@ -5,6 +5,7 @@
 
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -51,7 +52,7 @@ describe('ExtensionUpdater', () => {
             async (config, callback) => callback(mockProgress),
         );
         mockWindow.withProgress = mockWithProgress;
-        mockWindow.showInformationMessage = jest.fn();
+        mockWindow.showWarningMessage = jest.fn();
         mockCommands.executeCommand = jest.fn();
         (vscode.Uri as unknown as { file: (path: string) => unknown }).file = jest.fn((path: string) => ({ path }));
     });
@@ -77,7 +78,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should download and install extension update', async () => {
-            (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Reload Now');
+            (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reload Now');
 
             await updater.updateExtension(downloadUrl, newVersion);
 
@@ -105,8 +106,9 @@ describe('ExtensionUpdater', () => {
                 }),
                 expect.any(Function),
             );
-            expect(mockProgress.report).toHaveBeenCalledWith({ message: 'Downloading update' });
-            expect(mockProgress.report).toHaveBeenCalledWith({ message: 'Installing' });
+            // Steps from the stage table, numbered (progress vocabulary slice 7).
+            expect(mockProgress.report).toHaveBeenCalledWith({ message: `${S.downloadingUpdate.label} (1 of 2)` });
+            expect(mockProgress.report).toHaveBeenCalledWith({ message: `${S.installingUpdate.label} (2 of 2)` });
         });
 
         it('should validate GitHub URL before downloading', async () => {
@@ -166,18 +168,18 @@ describe('ExtensionUpdater', () => {
             await expect(updater.updateExtension(downloadUrl, newVersion)).resolves.not.toThrow();
         });
 
-        it('should prompt user to reload after installation', async () => {
+        it('asks to reload after installation (a notification outside the Updates modal)', async () => {
             await updater.updateExtension(downloadUrl, newVersion);
 
-            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-                `Demo Builder updated to v${newVersion}. Reload window to apply changes?`,
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+                `Demo Builder updated to v${newVersion}. Reload the window to start using it?`,
                 'Reload Now',
                 'Later',
             );
         });
 
         it('should reload window if user chooses "Reload Now"', async () => {
-            (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Reload Now');
+            (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reload Now');
 
             await updater.updateExtension(downloadUrl, newVersion);
 
@@ -190,7 +192,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should not reload window if user chooses "Later"', async () => {
-            (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Later');
+            (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Later');
 
             await updater.updateExtension(downloadUrl, newVersion);
 

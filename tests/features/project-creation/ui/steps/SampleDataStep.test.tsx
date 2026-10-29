@@ -143,7 +143,10 @@ describe('SampleDataStep', () => {
         expect(await screen.findByText('You can create this project without a datapack.')).toBeInTheDocument();
     });
 
-    /** Signed in, and the service turned the sign-in away: no Sign In button (2026-10-27). */
+    /**
+     * The SC is signed in and the service turned the sign-in away (2026-10-27, the Stage
+     * deployment): Sign In would hand it the same sign-in, so the step says so and offers none.
+     */
     it('does not ask a signed-in SC to sign in when the service refuses the sign-in', async () => {
         setMockState(refusal("The Data Installer didn't accept your Adobe sign-in.", 'AUTH_FORBIDDEN'));
         renderStep();

@@ -28,6 +28,8 @@ import {
     type MultiSheetConfig,
 } from './daLiveConfigService.testUtils';
 
+import { DaLiveAuthError } from '@/features/eds/services/types';
+
 jest.mock('@/core/utils/sleep');
 
 const emptyConfig: MultiSheetConfig = {
@@ -135,6 +137,54 @@ describe('an HTTP failure surfaces as its own error, not wrapped', () => {
 });
 
 /**
+ * What DA.live said goes on the end of the message, after " - ". A body that
+ * cannot be read adds nothing rather than failing the error itself.
+ */
+describe('the response body is carried into the failure message', () => {
+    let service: DaLiveConfigService;
+
+    beforeEach(() => {
+        ({ service } = setupConfigService());
+    });
+
+    const withBody = (status: number, statusText: string, body: string) => ({
+        ...httpError(status, statusText),
+        text: jest.fn().mockResolvedValue(body),
+    });
+
+    it('on a read', async () => {
+        mockFetch.mockResolvedValue(withBody(400, 'Bad Request', 'no such sheet'));
+
+        await expect(service.getConfig(testOrg, testSite)).rejects.toThrow(
+            /^Failed to read config: 400 Bad Request - no such sheet$/,
+        );
+    });
+
+    it('on an update', async () => {
+        mockFetch.mockResolvedValue(withBody(400, 'Bad Request', 'bad sheet'));
+
+        await expect(service.updateOrgConfig(testOrg, emptyConfig)).rejects.toThrow(
+            /^Failed to update org config: 400 Bad Request - bad sheet$/,
+        );
+    });
+
+    it('adds nothing when the body cannot be read', async () => {
+        const unreadable = () => ({
+            ...httpError(400, 'Bad Request'),
+            text: jest.fn().mockRejectedValue(new Error('stream closed')),
+        });
+        mockFetch.mockResolvedValueOnce(unreadable()).mockResolvedValueOnce(unreadable());
+
+        await expect(service.getOrgConfig(testOrg)).rejects.toThrow(
+            /^Failed to read org config: 400 Bad Request$/,
+        );
+        await expect(service.updateConfig(testOrg, testSite, emptyConfig)).rejects.toThrow(
+            /^Failed to update config: 400 Bad Request$/,
+        );
+    });
+});
+
+/**
  * The other half of the same fork: a transport failure is not ours, so it gets
  * the `Config API error:` prefix that tells the reader the request never got an
  * answer at all.
@@ -169,5 +219,38 @@ describe('a transport failure is re-wrapped', () => {
         await expect(service.updateConfig(testOrg, testSite, emptyConfig)).rejects.toThrow(
             /^Config API error: Network error: socket hang up$/,
         );
+    });
+});
+
+// EDS-54: a config 401 means an expired sign-in OR an identity that does not own the org,
+// and IMS's validate_token tells them apart (valid:false indicts the credential).
+const IMS_VALIDATE =
+    'https://ims-na1.adobelogin.com/ims/validate_token/v1?client_id=darkalley&type=access_token';
+const imsSays = (valid: boolean) => ({ status: 200, json: async () => ({ valid, expires_at: 1 }) });
+describe('DaLiveConfigService — a 401 on a config read', () => {
+    let service: DaLiveConfigService;
+
+    beforeEach(() => {
+        mockFetch.mockReset();
+        ({ service } = setupConfigService());
+    });
+
+    it('is the expired sign-in when IMS no longer accepts the credential', async () => {
+        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce(imsSays(false));
+
+        await expect(service.getOrgConfig(testOrg)).rejects.toBeInstanceOf(DaLiveAuthError);
+        expect(mockFetch.mock.calls[1][0]).toBe(IMS_VALIDATE);
+    });
+
+    it('stays the plain 401 when the credential is fine: this identity does not own the org', async () => {
+        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce(imsSays(true));
+
+        await expect(service.getOrgConfig(testOrg)).rejects.toThrow(/^Failed to read org config: 401 Unauthorized$/);
+    });
+
+    it('stops the access grant with it, rather than logging and carrying on', async () => {
+        mockFetch.mockResolvedValueOnce(httpError(401, 'Unauthorized')).mockResolvedValueOnce(imsSays(false));
+
+        await expect(service.grantUserAccess(testOrg, testSite, 'user@example.com')).rejects.toBeInstanceOf(DaLiveAuthError);
     });
 });

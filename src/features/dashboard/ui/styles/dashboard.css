@@ -133,31 +133,48 @@
     padding: 8px; /* Shadow overflow padding */
 }
 
-/* Stacked, labeled rows + isolated delete footer. No fixed width — the zones
-   take their intrinsic content width and sit left within the standard band (a
-   compact action cluster); the delete divider spans that cluster, not the band. */
+/* Two tiers: the Open zone's big tiles on top, then the secondary groups
+   (Storefront, Build, Share) side by side as compact lists beneath it. A clear
+   first place to look is what makes eighteen actions stop feeling like a wall. */
 .dashboard-zones {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 32px;
     width: fit-content;
 }
 
-/* The action row lays its groups (Primary + Storefront + Build) side by side.
-   Wraps only if the viewport is too narrow. Inter-group gap EQUALS the tile
-   gap (2026-07-09): with the zone headings gone, the row reads as one even
-   strip — grouping semantics are not communicated visually. */
-.dashboard-zone-row {
+.dashboard-zones-secondary {
     display: flex;
-    flex-flow: row wrap;
-    gap: var(--dashboard-tile-gap);
+    flex-wrap: wrap;
     align-items: flex-start;
+    gap: 24px var(--dashboard-tile-gap);
 }
 
+/* Each compact group is exactly one card wide, so on a wide panel the lists
+   sit as columns under the Open cards. Four cards are exactly the 960px content
+   band whose right edge "All Projects" marks; nothing may sit beside them. */
+.dashboard-zone-section--compact {
+    width: var(--dashboard-card-width);
+}
+
+/* One labelled group per job (Open, Storefront, Build, Share), laid out by
+   .dashboard-zones. The headings came back on 2026-10-06: they were dropped on
+   2026-07-09 when everything fit one strip, and the actions no longer do. */
 .dashboard-zone-section {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+/* Same voice as the masthead's status labels (11px uppercase, gray-700), so a
+   row caption reads as a caption rather than a second title. */
+.dashboard-zone-heading {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--spectrum-global-color-gray-700);
 }
 
 /* Each zone lays its tiles out in a horizontal row, wrapping only if the
@@ -168,6 +185,195 @@
     display: flex;
     flex-flow: row wrap;
     gap: var(--dashboard-tile-gap);
+}
+
+/* Open-row cards: wider than the square tiles, icon beside a title and a one-line
+   "where this goes". */
+.dashboard-card-row > .dashboard-action-button {
+    width: var(--dashboard-card-width);
+    height: 72px;
+    aspect-ratio: auto;
+    padding: 12px 14px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    text-align: left;
+    position: relative;
+}
+
+.dashboard-card-row > .dashboard-action-button svg {
+    width: 22px;
+    height: 22px;
+    flex: none;
+}
+
+.dashboard-tile-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+    text-align: left;
+}
+
+/* Spectrum gives every slotted Text in an ActionButton its label styling,
+   centred; both lines of a card read left-aligned. */
+.dashboard-tile-text > * {
+    align-self: stretch;
+    text-align: left;
+}
+
+.dashboard-card-row > .dashboard-action-button .icon-label {
+    margin-top: 0;
+    -webkit-line-clamp: 1;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.dashboard-tile-description {
+    font-size: 11px;
+    line-height: 1.2;
+    color: var(--spectrum-global-color-gray-700);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* A tile's tooltip lets the pointer through. It stays half a second after the pointer
+   leaves (Spectrum's close delay), covering whatever is beside it; Spectrum does not
+   count hovering the tooltip as hovering the tile, so blocking the pointer kept it
+   open for nothing and made the next tile unreachable (owner, 2026-10-17). Where it
+   opens is DashboardTile's `placement`. */
+.dashboard-tile-tooltip {
+    pointer-events: none;
+}
+
+.dashboard-action-button--hero .dashboard-tile-description {
+    color: var(--spectrum-global-color-blue-600);
+}
+
+/* Compact lists: one row per action, icon beside label, no border until
+   hovered — the secondary tier, deliberately quieter than the Open cards. Every
+   rule is scoped to the list, so DashboardTile stays one component. */
+.dashboard-zone-grid.dashboard-compact-list {
+    flex-flow: column nowrap;
+    gap: 2px;
+    /* Pull the rows left by their own padding + border so each icon lines up
+       under the group heading, while the hover fill still has room. */
+    margin-left: -11px;
+}
+
+.dashboard-compact-list .dashboard-action-button {
+    width: 100%;
+    min-width: 160px;
+    height: 32px;
+    aspect-ratio: auto;
+    padding: 0 10px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    position: relative;
+    background: transparent;
+    border-color: transparent;
+}
+
+.dashboard-compact-list .dashboard-action-button:hover,
+.dashboard-compact-list .dashboard-action-button:focus {
+    background: var(--spectrum-global-color-gray-100);
+    border-color: transparent;
+    transform: none;
+    box-shadow: none;
+}
+
+.dashboard-compact-list .dashboard-action-button svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+}
+
+.dashboard-compact-list .dashboard-action-button .icon-label {
+    margin-top: 0;
+    -webkit-line-clamp: 1;
+    text-align: left;
+    font-size: 13px;
+    /* Hug the words, so an inline status sits beside them, not at the far edge. */
+    width: auto;
+}
+
+/* A tile's status: a corner dot on cards, where there is no room for words... */
+.dashboard-tile-status {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dashboard-tile-status-text {
+    display: none;
+}
+
+/* ...and in a compact list, the dot and its word right after the label, so the
+   row says what is wrong without a hover. */
+.dashboard-compact-list .dashboard-tile-status {
+    position: static;
+    margin-left: 2px;
+    /* Spectrum orders the button's label; an unordered child sorts BEFORE it. */
+    order: 3;
+}
+
+.dashboard-compact-list .dashboard-tile-status-text {
+    display: inline;
+    font-size: 11px;
+    white-space: nowrap;
+    /* The house status treatment, as the project and integration cards draw it
+       (owner, 2026-10-26: the dashboard's sentence case read as another font). */
+    color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ...and on a card, the dot and its word as the second line, in place of the
+   description. */
+.dashboard-tile-status--inline {
+    position: static;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.dashboard-tile-status--inline .dashboard-tile-status-text {
+    display: inline;
+    white-space: nowrap;
+    color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dashboard-tile-status-text[data-variant='error'] {
+    color: var(--spectrum-global-color-red-600);
+}
+
+.dashboard-tile-status-text[data-variant='warning'] {
+    color: var(--spectrum-global-color-orange-600);
+}
+
+.dashboard-tile-status-text[data-variant='info'] {
+    color: var(--spectrum-global-color-blue-600);
+}
+
+/* Reset and Delete: the foot of Build, a gap above them so the two destructive
+   actions never read as part of the everyday list. */
+.dashboard-compact-danger {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 12px;
+}
+
+.dashboard-action-button--danger svg,
+.dashboard-action-button--danger .icon-label {
+    color: var(--spectrum-global-color-red-600);
 }
 
 /* ===========================================
@@ -300,10 +506,5 @@
  * size-400) so the tiles still align under the masthead content. */
 .control-panel-single {
     padding: var(--spectrum-global-dimension-size-400);
-}
-
-/* Destructive overflow-menu entry (Delete lives at the bottom of "More"). */
-.menu-item-destructive {
-    color: var(--spectrum-global-color-red-600);
 }
 }

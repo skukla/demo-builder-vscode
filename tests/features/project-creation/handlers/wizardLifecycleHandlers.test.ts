@@ -58,17 +58,18 @@ describe('lifecycleHandlers', () => {
             expect(hasHandler(lifecycleHandlers, 'openExternal')).toBe(true);
         });
 
-        it('should have exactly 10 handlers', () => {
+        it('should have exactly 7 handlers', () => {
             // Given: lifecycleHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(lifecycleHandlers) as Array<
                 keyof typeof lifecycleHandlers
             >;
 
-            // Then: Exactly 10 handlers
+            // Then: Exactly 7 handlers
             // (show-logs removed — the Logs toggle moved to the sidebar utility)
             // 10 → 6: four superseded handlers removed 2026-08-05 (nothing sent them).
-            expect(types).toHaveLength(6);
+            // 6 → 7: backToProject, Edit's last button (2026-10-17).
+            expect(types).toHaveLength(7);
         });
 
         it('should have handlers as functions', () => {

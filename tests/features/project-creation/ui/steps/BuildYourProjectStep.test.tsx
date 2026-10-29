@@ -24,6 +24,7 @@ import { render, screen } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { BuildYourProjectStep } from '@/features/project-creation/ui/steps/BuildYourProjectStep';
+import type { ErpIntegrationHolder } from '@/features/project-creation/ui/hooks/useErpIntegrationHolder';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
@@ -66,10 +67,25 @@ jest.mock('@/features/project-creation/ui/steps/StorefrontStep', () => ({
 }));
 
 jest.mock('@/features/project-creation/ui/steps/IntegrationsStep', () => ({
-    IntegrationsStep: (props: StubBodyProps) => {
+    IntegrationsStep: (
+        props: StubBodyProps & { notice?: React.ReactNode; unavailable?: { ids: readonly string[] } },
+    ) => {
         capturedSetCanProceed.integrations = props.setCanProceed;
-        return <div data-testid="integrations-body">Integrations body</div>;
+        return (
+            <div data-testid="integrations-body" data-unavailable={(props.unavailable?.ids ?? []).join(',')}>
+                Integrations body
+                {props.notice}
+            </div>
+        );
     },
+}));
+
+// Which project already runs an ERP integration on this instance (AB-78); none by
+// default. Only the request is faked: which ids are the ERP integration is the real rule.
+const mockErpHolder = jest.fn((_request: unknown): ErpIntegrationHolder | undefined => undefined);
+jest.mock('@/features/project-creation/ui/hooks/useErpIntegrationHolder', () => ({
+    ...jest.requireActual('@/features/project-creation/ui/hooks/useErpIntegrationHolder'),
+    useErpIntegrationHolder: (request: unknown) => mockErpHolder(request),
 }));
 
 // ---------------------------------------------------------------------------
@@ -131,6 +147,7 @@ function setup(initial: Partial<WizardState> = {}) {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockErpHolder.mockReturnValue(undefined);
     delete capturedSetCanProceed.commerce;
     delete capturedSetCanProceed.storefront;
     delete capturedSetCanProceed.integrations;
@@ -328,7 +345,6 @@ describe('BuildYourProjectStep — Continue gate over non-commerce areas', () =>
             activeBuildArea: 'storefront',
             edsConfig: EDS_AUTHED as WizardState['edsConfig'],
             storefrontRepoValid: true,
-            storefrontCodeSyncValid: true,
         });
         expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });
@@ -390,5 +406,59 @@ describe('BuildYourProjectStep — body receives a NO-OP setCanProceed', () => {
         setCanProceed.mockClear();
         capturedSetCanProceed.commerce(true);
         expect(setCanProceed).not.toHaveBeenCalled();
+    });
+});
+
+describe('BuildYourProjectStep — one ERP integration per Commerce instance (AB-78)', () => {
+    const HELD: ErpIntegrationHolder = {
+        message: 'justrite already has an ERP integration on this Commerce instance. Add your ERP there instead.',
+        ids: ['erp-integration'],
+    };
+    const ON_INTEGRATIONS = {
+        selectedPackage: 'citisignal',
+        selectedStack: 'eds-paas',
+        activeBuildArea: 'integrations',
+        components: { backend: 'adobe-commerce-accs' },
+    } as const;
+    // Signed in, with a destination: nothing but the ERP check can hold Continue.
+    const DEPLOYABLE = {
+        ...ON_INTEGRATIONS,
+        adobeAuth: { isAuthenticated: true, isChecking: false },
+        adobeOrg: { id: 'org-1', code: 'ORG1@AdobeOrg', name: 'Org' },
+        adobeProject: { id: 'proj-1', name: 'Proj' },
+        adobeWorkspace: { id: 'ws-1', name: 'Production' },
+        selectedAppBuilderComponents: ['erp-integration'],
+    } as unknown as Partial<WizardState>;
+
+    it("asks with the wizard's question, and hands Integrations what its modal greys out", () => {
+        mockErpHolder.mockReturnValue(HELD);
+        setup(ON_INTEGRATIONS);
+
+        expect(mockErpHolder).toHaveBeenCalledWith(expect.objectContaining({ backend: 'adobe-commerce-accs' }));
+        expect(screen.getByTestId('integrations-body')).toHaveAttribute('data-unavailable', 'erp-integration');
+    });
+
+    it('says why, and holds Continue, when the ERP integration is already selected', () => {
+        mockErpHolder.mockReturnValue(HELD);
+        const { setCanProceed } = setup(DEPLOYABLE);
+
+        expect(screen.getByTestId('erp-integration-holder')).toHaveTextContent(HELD.message);
+        expect(setCanProceed).toHaveBeenLastCalledWith(false);
+    });
+
+    it('says nothing and holds nothing when it is not selected: the modal greys it out instead', () => {
+        mockErpHolder.mockReturnValue(HELD);
+        const { setCanProceed } = setup({ ...DEPLOYABLE, selectedAppBuilderComponents: [] });
+
+        expect(screen.queryByTestId('erp-integration-holder')).not.toBeInTheDocument();
+        expect(setCanProceed).toHaveBeenLastCalledWith(true);
+    });
+
+    it('says nothing and holds nothing when no project holds the instance — control', () => {
+        const { setCanProceed } = setup(DEPLOYABLE);
+
+        expect(screen.queryByTestId('erp-integration-holder')).not.toBeInTheDocument();
+        expect(screen.getByTestId('integrations-body')).toHaveAttribute('data-unavailable', '');
+        expect(setCanProceed).toHaveBeenLastCalledWith(true);
     });
 });

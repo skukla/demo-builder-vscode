@@ -1,0 +1,164 @@
+{
+    "_about": "AI-1r triage, read handler by handler on 2026-10-03. Checked by coverage.py on every run: a row whose handler or tool is gone, that is now covered by name, or that has no reason, fails the scan. See SKILL.md.",
+    "aliases": {
+        "getProjects": {
+            "tool": "list_projects",
+            "reason": "Both list every Demo Builder project on disk; the tool also marks the current one."
+        },
+        "requestStatus": {
+            "tool": "get_project_status",
+            "reason": "Same derivation (dashboardStatusService); the handler pushes it to the dashboard, the tool returns it."
+        },
+        "republishContent": {
+            "tool": "republish",
+            "reason": "Both call republishStorefrontContent (settings, code and pages to the CDN). Until 2026-10-23 this was `sync_content`, and `republish` published config.json only (EDS-63)."
+        },
+        "exportProject": {
+            "tool": "export_project_settings",
+            "reason": "Same file from the same function (createExportSettings); the tool writes for the current project, which set_current_project picks."
+        },
+        "import-storefront-zip": {
+            "tool": "add_shared_demo",
+            "reason": "add_shared_demo with zipPath runs the same zip-to-repository import (readStorefrontZip + the handler's own refusal check)."
+        },
+        "configure": {
+            "tool": "open_view",
+            "reason": "The handler only runs the demoBuilder.configureProject command; open_view with view=configure runs the same command."
+        },
+        "authenticate": {
+            "tool": "sign_in",
+            "reason": "Adobe browser sign-in through the same authManager.login(); the tool does not pass force."
+        },
+        "reAuthenticate": {
+            "tool": "sign_in",
+            "reason": "Adobe browser sign-in. The handler also restores the project's org context afterwards; agent tools carry that per call (runWithAdobeTarget)."
+        },
+        "check-auth": {
+            "tool": "get_auth_status",
+            "reason": "Adobe authentication status, without the wizard's progress pushes."
+        },
+        "check-dalive-auth": {
+            "tool": "get_auth_status",
+            "reason": "DA.live authentication status and the pinned namespace."
+        },
+        "check-github-auth": {
+            "tool": "get_auth_status",
+            "reason": "GitHub authentication status with the user and their orgs."
+        },
+        "switchOrg": {
+            "tool": "select_org",
+            "reason": "An agent names the org by id and tools run under that target; the forced browser chooser is how a person changes org. ORG_MISMATCH answers point the agent at select_org or sign_in."
+        },
+        "get-github-repos": {
+            "tool": "list_github_repos",
+            "reason": "Same repoOperations.listUserRepositories read."
+        },
+        "get-projects": {
+            "tool": "list_adobe_projects",
+            "reason": "Adobe Console projects in the selected org, through the same authManager.getProjects."
+        },
+        "get-workspaces": {
+            "tool": "list_workspaces",
+            "reason": "Workspaces of the selected Adobe project."
+        },
+        "list-org-console-apis": {
+            "tool": "list_console_apis",
+            "reason": "The org's subscribable Adobe services with which are already covered; the wizard variant only adds in-flight picks that exist in the webview."
+        },
+        "ensure-mesh-api-subscribed": {
+            "tool": "deploy_mesh",
+            "reason": "The mesh deploy core (deployMeshHeadless) subscribes the API Mesh API itself before deploying; add_console_apis subscribes any other API."
+        },
+        "checkCompatibility": {
+            "tool": "validate_component_selection",
+            "reason": "The tool dispatches this handler itself (through a local run helper the scan cannot follow)."
+        },
+        "loadDependencies": {
+            "tool": "validate_component_selection",
+            "reason": "The tool dispatches this handler itself (through a local run helper the scan cannot follow)."
+        },
+        "validateSelection": {
+            "tool": "validate_component_selection",
+            "reason": "The tool dispatches this handler itself (through a local run helper the scan cannot follow)."
+        },
+        "get-components-data": {
+            "tool": "get_component_requirements",
+            "reason": "The tool was first written as a row over this handler, then narrowed to one component; list_components gives the ids."
+        },
+        "getErpDemoControls": {
+            "tool": "run_erp_rest",
+            "reason": "The handler is a GET of the ERP's health route (appearance and downtime); set_erp_appearance's description tells the agent to read it with run_erp_rest on 'health'."
+        },
+        "copyFromExisting": {
+            "tool": "copy_project",
+            "reason": "Both start a project as a copy of one on this machine. The handler opens a picker and then the wizard; the tool takes the source's name and creates through create_project_from_file's own second half, from the same seed the handler opens the wizard with (copySeedFromProject, 2026-10-04)."
+        },
+        "importFromFile": {
+            "tool": "create_project_from_file",
+            "reason": "Both start a project from an exported project file. The handler opens a file picker and then the wizard; the tool takes the file's path and creates through create_project's own path, seeded by the same integration seeding the wizard's import uses (2026-10-03)."
+        },
+        "addSiteAdmin": {
+            "tool": "set_site_admin",
+            "reason": "set_site_admin with admin:true calls the same addSiteAdmin."
+        },
+        "removeSiteAdmin": {
+            "tool": "set_site_admin",
+            "reason": "set_site_admin with admin:false calls the same removeSiteAdmin."
+        },
+        "addContentReader": {
+            "tool": "set_content_reader",
+            "reason": "set_content_reader with read:true calls the same addContentReader."
+        },
+        "removeContentReader": {
+            "tool": "set_content_reader",
+            "reason": "set_content_reader with read:false calls the same removeContentReader."
+        },
+        "waitForSiteAccess": {
+            "tool": "get_site_access",
+            "reason": "The handler polls until the admin role lands and says which way it went; an agent reads the same roster with get_site_access when it wants to know."
+        }
+    },
+    "exclusions": {
+        "log": {
+            "reason": "The webview writing its own log lines to the extension's logger. Channel plumbing."
+        },
+        "ready": {
+            "reason": "The wizard webview announcing it has loaded. Channel plumbing."
+        },
+        "answerOperationPrompt": {
+            "reason": "The progress modal handing back the button the SC pressed. An agent answers through confirm:true on the tool."
+        },
+        "getOperationProgress": {
+            "reason": "A reopened progress modal asking where its operation got to, and taking it back from the notification. Modal plumbing."
+        },
+        "validate": {
+            "reason": "Validates one wizard form field and PUSHES the verdict to the webview; the return value carries no outcome."
+        },
+        "continue-prerequisites": {
+            "reason": "Resumes the wizard's own check loop from an index held in shared state. An agent uses check_prerequisites and install_prerequisite."
+        },
+        "store-dalive-token-with-org": {
+            "reason": "Takes a pasted DA.live credential. An agent must never carry one; connect_dalive hands the paste to the user."
+        },
+        "storefront-setup-cancel": {
+            "reason": "Aborts the wizard's in-flight storefront setup through its own AbortController, behind a modal confirmation. An agent undoes with delete_github_repo and cleanup_dalive_site."
+        },
+        "use-bundle-setup": {
+            "reason": "Closes the wizard and reopens it pre-filled from a bundle's setup. UI navigation; the job behind it, starting a project from an exported file, is create_project_from_file."
+        },
+        "check-erp-integration-holder": {
+            "reason": "Greys the ERP integration out in the Add Integration modal when another project already runs one on this Commerce instance (AB-78). An agent gets the same answer as a refusal from add_integration, add_erp or create_project, before anything is made."
+        }
+    },
+    "gaps": {
+        "check-store-view-products": {
+            "reason": "No tool asks on its own whether a store view shows guests any products. create_project runs the same check (probeStoreViewProducts) on its storeScope and puts the pickers' sentence in its answer's warnings (EDS-46)."
+        },
+        "clear-dalive-auth": {
+            "reason": "No tool signs out of DA.live. Whether an agent should be able to is an owner decision."
+        },
+        "github-change-account": {
+            "reason": "No tool switches the GitHub account (clear the token, force a fresh sign-in). sign_in covers signing in, not changing who."
+        }
+    }
+}

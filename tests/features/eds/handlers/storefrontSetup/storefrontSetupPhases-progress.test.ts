@@ -28,8 +28,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
-    GitHubRepoOperations: jest.fn().mockImplementation(() => ({
+jest.mock('@/features/eds/services/github/githubRepoLifecycle', () => ({
+    GitHubRepoLifecycle: jest.fn().mockImplementation(() => ({
         createFromTemplate: jest.fn(),
         waitForContent: jest.fn(),
     })),
@@ -52,8 +52,11 @@ import {
 } from './storefrontSetupPhases.testUtils';
 import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
+import type { StorefrontBrokenLink, StorefrontSetupProgressPayload } from '@/types/webviewPayloads';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
+import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
 
 const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<typeof executeEdsPipeline>;
 
@@ -82,11 +85,12 @@ async function reportProgress(info: ProgressInfo) {
     // Cleared per call, not per test: a test that reports twice would otherwise
     // read the FIRST run's callback, which is bound to the first context.
     mockExecuteEdsPipeline.mockClear();
-    mockExecuteEdsPipeline.mockResolvedValue({
-        success: true,
-        contentFilesCopied: 0,
-        libraryPaths: [],
-    });
+    mockExecuteEdsPipeline.mockResolvedValue(
+        createMockPipelineResult({
+            contentFilesCopied: 0,
+            libraryPaths: [],
+        })
+    );
 
     await executeStorefrontSetupPhases(
         context,
@@ -104,7 +108,7 @@ async function reportProgress(info: ProgressInfo) {
         (context.sendMessage as jest.Mock).mock.calls.find(
             ([type]) => type === 'storefront-setup-progress'
         ) ?? [];
-    return payload as { phase?: string; progress?: number; message?: string; subMessage?: string };
+    return payload as StorefrontSetupProgressPayload;
 }
 
 beforeEach(() => {
@@ -127,7 +131,10 @@ describe('every pipeline operation maps to a wizard phase and a bar position', (
         ['eds-settings', 'block-library', 63],
         ['cache-purge', 'publish', 66],
         ['content-publish', 'publish', 67],
+        ['sheet-publish', 'publish', 95],
         ['library-publish', 'publish', 95],
+        ['leftover-pages', 'publish', 95],
+        ['page-check', 'publish', 95],
         ['catalog-prewarm', 'publish', 95],
     ])('%s → %s at %i', async (operation, phase, progress) => {
         const payload = await reportProgress({ operation, message: 'working' });
@@ -159,15 +166,49 @@ describe('every pipeline operation maps to a wizard phase and a bar position', (
         expect(payload.progress).toBe(50);
     });
 
-    it('passes the pipeline own words through untouched', async () => {
+    it("puts the pipeline's own words under the step, the step's name said once", async () => {
         const payload = await reportProgress({
             operation: 'content-copy',
-            message: 'Copying content',
-            subMessage: 'demo-org/demo-site',
+            message: 'Copying the content: 40 of 103 files',
+            subMessage: '/products/index',
         });
 
-        expect(payload.message).toBe('Copying content');
-        expect(payload.subMessage).toBe('demo-org/demo-site');
+        expect(payload.stage).toBe(OPERATION_STAGES.copyingContent.label);
+        expect(payload.message).toBe('40 of 103 files');
+    });
+});
+
+// Reset runs the same pipeline and names its steps for what an SC recognises; setup
+// shows the same step for the same work (progress vocabulary, owner 2026-10-16).
+describe("every pipeline operation shows under Reset's step for the same work", () => {
+    it.each([
+        ['content-clear', OPERATION_STAGES.clearingOldContent.label],
+        ['content-copy', OPERATION_STAGES.copyingContent.label],
+        ['block-library', OPERATION_STAGES.settingUpAuthoring.label],
+        ['eds-settings', OPERATION_STAGES.settingUpAuthoring.label],
+        ['cache-purge', OPERATION_STAGES.publishingPages.label],
+        ['content-publish', OPERATION_STAGES.publishingPages.label],
+        ['sheet-publish', OPERATION_STAGES.publishingPages.label],
+        ['library-publish', OPERATION_STAGES.publishingPages.label],
+        ['leftover-pages', OPERATION_STAGES.removingOldPages.label],
+        ['page-check', OPERATION_STAGES.checkingCopiedPages.label],
+        ['catalog-prewarm', OPERATION_STAGES.warmingProductPages.label],
+    ])('%s → %s', async (operation, stage) => {
+        const payload = await reportProgress({ operation, message: 'working' });
+
+        expect(payload.stage).toBe(stage);
+    });
+
+    // The default setup copies no content (no content source): five steps, the
+    // authoring setup the fourth.
+    it("numbers the step from the run's own list", async () => {
+        const payload = await reportProgress({
+            operation: 'block-library',
+            message: 'Building block library',
+        });
+
+        expect(payload.position).toEqual({ index: 4, total: 5 });
+        expect(payload.startedAt).toEqual(expect.any(Number));
     });
 });
 
@@ -265,5 +306,76 @@ describe('the two interpolated positions', () => {
         });
 
         expect(payload.progress).toBe(66);
+    });
+});
+
+/**
+ * What the run hands back once the bar reaches 100.
+ *
+ * The content copy records links to pages the source lacks too on the patch
+ * report it is handed. They are never in the toast: project creation reads them
+ * off THIS result and records them, and the Storefront Report lists them. A
+ * result that dropped them would leave that report saying nothing is broken.
+ */
+describe('the result of a finished run', () => {
+    it('carries the broken links the content copy recorded', async () => {
+        const brokenLinks: StorefrontBrokenLink[] = [{ link: '/fr', pages: ['/footer'] }];
+        mockExecuteEdsPipeline.mockImplementation(async (input) => {
+            if (!input.patchReport) throw new Error('setup hands the pipeline its patch report');
+            input.patchReport.brokenLinks = brokenLinks;
+            return createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] });
+        });
+
+        const result = await executeStorefrontSetupPhases(
+            createSetupContext(),
+            createEdsConfig(),
+            new AbortController().signal,
+            undefined,
+            SERVICES
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.brokenLinks).toStrictEqual(brokenLinks);
+    });
+
+    it('carries the sentence for what the source has that the storefront does not serve (EDS-40)', async () => {
+        const summary = '2 pages the source has are missing from this storefront: /cart, /checkout';
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 0,
+                libraryPaths: [],
+                warnings: [summary],
+            })
+        );
+
+        const result = await executeStorefrontSetupPhases(
+            createSetupContext(),
+            createEdsConfig(),
+            new AbortController().signal,
+            undefined,
+            SERVICES
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.pipelineWarnings).toEqual([summary]);
+    });
+
+    it('carries no such sentence when the storefront serves them all', async () => {
+        mockExecuteEdsPipeline.mockResolvedValue(
+            createMockPipelineResult({
+                contentFilesCopied: 0,
+                libraryPaths: [],
+            })
+        );
+
+        const result = await executeStorefrontSetupPhases(
+            createSetupContext(),
+            createEdsConfig(),
+            new AbortController().signal,
+            undefined,
+            SERVICES
+        );
+
+        expect(result).not.toHaveProperty('pipelineWarnings');
     });
 });

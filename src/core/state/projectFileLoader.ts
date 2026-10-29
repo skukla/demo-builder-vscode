@@ -8,13 +8,13 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
+import { healPartialComponents, migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigration';
 import { migrateApiPicks } from './componentApiPicks';
 import { reconcileComponentSelections } from './componentSelectionReconcile';
 import { validateManifestShape } from './manifestValidation';
 import { stripDuplicateBackendOwnedScope } from '@/core/config/backendOwnedScope';
 import type { ComponentInstance, Project , AiPrompt } from '@/types/base';
-import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import { getComponentInstancesByType, parseJSON } from '@/types/typeGuards';
 
@@ -99,6 +99,7 @@ export interface ProjectManifest {
     selectedAddons?: string[];
     selectedBlockLibraries?: string[];
     customBlockLibraries?: CustomBlockLibrary[];
+    installedBlockLibraries?: InstalledBlockLibrary[];
     aiPrompts?: AiPrompt[];
     aiContextVersion?: number;
     aiFileHashes?: Record<string, string>;
@@ -197,6 +198,7 @@ export class ProjectFileLoader {
                 selectedAddons: manifest.selectedAddons,
                 selectedBlockLibraries: manifest.selectedBlockLibraries,
                 customBlockLibraries: manifest.customBlockLibraries,
+                installedBlockLibraries: manifest.installedBlockLibraries,
                 aiPrompts: manifest.aiPrompts,
                 // Absent on legacy manifests (pre-§E) — loads as undefined.
                 // LEGACY-READ-ONLY once componentApiPicks exists: migrateApiPicks
@@ -215,8 +217,12 @@ export class ProjectFileLoader {
             // read-side migration of legacy meshState/appState is the FALLBACK for
             // old manifests that carry no keyed map (never dropped — projects of
             // arbitrary age must keep loading).
-            project.appBuilderComponents =
-                manifest.appBuilderComponents ?? migrateLegacyToAppBuilderComponents(manifest);
+            // `healPartialComponents`: a record an older build left holding only its
+            // workspace would otherwise throw on the missing `source` and blank the
+            // whole dashboard (2026-09-22).
+            project.appBuilderComponents = healPartialComponents(
+                manifest.appBuilderComponents ?? migrateLegacyToAppBuilderComponents(manifest),
+            );
 
             // Selections vs reality: the dashboard add path records the keyed
             // entry and the component instance but never wrote the selection
@@ -256,7 +262,7 @@ export class ProjectFileLoader {
             // Orphaned config entries: removal deletes a component's
             // componentConfigs entry going forward, but entries stranded by
             // earlier removals live in existing manifests — and two readers
-            // sweep the WHOLE map (envFileGenerator's fallback loop;
+            // sweep the WHOLE map (envVarResolution's fallback loop;
             // configGenerator's merge, where a MESH entry overrides the
             // backend). Runs AFTER reconcileComponentSelections so a freshly
             // reconciled selection counts as live. Read-side only; the on-disk

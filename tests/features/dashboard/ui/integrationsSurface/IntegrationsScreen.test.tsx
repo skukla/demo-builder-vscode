@@ -13,15 +13,12 @@ import {
     DEPLOYED,
     IntegrationsScreen,
     asDisplayName,
-    filterCards,
-    formatDestination,
     captureHandlers,
     getClient,
     resetIntegrationsScreenMocks,
     settleStatus,
 } from './IntegrationsScreen.testUtils';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
 
 beforeEach(() => {
     resetIntegrationsScreenMocks();
@@ -91,25 +88,6 @@ describe('IntegrationsScreen', () => {
 
             expect(screen.getByTestId('grid')).toBeInTheDocument();
             expect(screen.getByTestId('card-a')).toBeInTheDocument();
-        });
-    });
-
-    describe('formatDestination', () => {
-        it('joins project and workspace', () => {
-            expect(formatDestination({ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' })).toBe(
-                'Kukla Mesh · Stage'
-            );
-        });
-
-        it('returns the project alone when there is no workspace', () => {
-            expect(formatDestination({ projectTitle: 'Kukla Mesh' })).toBe('Kukla Mesh');
-        });
-
-        // Undefined, not an empty string — the caller hides the line on undefined,
-        // so returning '' here would render an empty labelled row.
-        it('returns undefined when neither part is known', () => {
-            expect(formatDestination({})).toBeUndefined();
-            expect(formatDestination(undefined)).toBeUndefined();
         });
     });
 
@@ -203,7 +181,8 @@ describe('IntegrationsScreen', () => {
 
                 const band = screen.getByTestId('page-destination');
                 expect(band).toHaveTextContent('Kukla Mesh');
-                expect(band).toHaveTextContent('Stage');
+                // The project only: the project-wide workspace is no integration's.
+                expect(band).not.toHaveTextContent('Stage');
                 // The header keeps the LOCAL project name and nothing else.
                 expect(screen.getByTestId('page-subtitle')).toHaveTextContent('demo-builder-test');
                 expect(screen.getByTestId('page-subtitle')).not.toHaveTextContent('Kukla Mesh');
@@ -254,16 +233,18 @@ describe('IntegrationsScreen', () => {
                 expect(screen.getByTestId('page-destination')).toHaveTextContent(/deploys to/i);
             });
 
-            it('renders no destination row when there is none — control', () => {
-                // DestinationContext returns null on a half-known destination, so
-                // the row must not appear as an empty labelled shell.
+            // 2026-10-15: with no Adobe project the row used to vanish, so an SC on a
+            // storefront-only project had nowhere to choose one before an add.
+            it('offers to choose a destination when there is none', () => {
                 const handlers = captureHandlers();
                 render(
                     <IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />
                 );
                 settleStatus(handlers);
 
-                expect(screen.queryByTestId('page-destination')).not.toBeInTheDocument();
+                const row = screen.getByTestId('page-destination');
+                expect(row).toHaveTextContent('Not chosen yet');
+                expect(screen.getByRole('button', { name: 'Choose' })).toBeInTheDocument();
             });
         });
 
@@ -306,7 +287,9 @@ describe('IntegrationsScreen', () => {
             expect(getClient().postMessage).toHaveBeenCalledWith('requestStatus');
         });
 
-        it('asks the extension to deploy the mesh when the grid says so', async () => {
+        // The mesh deploy takes the same road as an integration's (PL-59 slice 1):
+        // it asks for the modal, and the screen opens one for the mesh card's id.
+        it('deploys the mesh into the progress modal when the grid says so', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handlers = captureHandlers();
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
@@ -314,7 +297,11 @@ describe('IntegrationsScreen', () => {
 
             await user.click(screen.getByRole('button', { name: 'grid-deploy-mesh' }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('deployMesh');
+            expect(getClient().postMessage).toHaveBeenCalledWith('deployMesh', {
+                id: 'mesh',
+                progress: 'modal',
+            });
+            expect(screen.getByTestId('operation-modal')).toHaveAttribute('data-id', 'mesh');
         });
 
         it('asks the extension to re-authenticate when the grid says so', async () => {
@@ -451,23 +438,6 @@ describe('IntegrationsScreen', () => {
             expect(screen.getByTestId('card-a')).toBeInTheDocument();
         });
     });
-    describe('filterCards', () => {
-        const CARDS = [
-            { id: 'a', name: 'ERP Sync', kindLabel: 'Integration', sourceLine: 'acme/erp-sync' },
-            { id: 'b', name: 'Order Flow', kindLabel: 'Integration', sourceLine: 'acme/order' },
-        ] as unknown as IntegrationCardModel[];
-
-        it('matches a query against the card fields', () => {
-            expect(filterCards(CARDS, 'order').map((c) => c.id)).toStrictEqual(['b']);
-        });
-
-        // TRIMMED, not merely truthy: a query of spaces is an empty query. Handing
-        // it to the contains-walk instead would match nothing and blank the grid.
-        it('treats a whitespace-only query as no query at all', () => {
-            expect(filterCards(CARDS, '   ').map((c) => c.id)).toStrictEqual(['a', 'b']);
-        });
-    });
-
     describe('the add flow modal', () => {
         it('is closed until something opens it', () => {
             const handlers = captureHandlers();
@@ -477,15 +447,15 @@ describe('IntegrationsScreen', () => {
             expect(screen.queryByTestId('add-modal')).not.toBeInTheDocument();
         });
 
-        // The band's Add is withheld while the list is empty (the empty state
-        // carries the CTA), so this is the only test that sees it at all.
-        it('opens from the band button once there are cards', async () => {
+        // With cards, the way in is the grid's add card (PL-62); the band has no
+        // Add button. IntegrationsScreen-addCard.test.tsx pins the card's rules.
+        it('opens from the grid\u2019s add card once there are cards', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handlers = captureHandlers();
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
             settleStatus(handlers);
 
-            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+            await user.click(screen.getByRole('button', { name: 'grid-add' }));
 
             expect(screen.getByTestId('add-modal')).toHaveAttribute('data-mode', 'add');
         });
@@ -495,7 +465,7 @@ describe('IntegrationsScreen', () => {
             const handlers = captureHandlers();
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
             settleStatus(handlers);
-            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+            await user.click(screen.getByRole('button', { name: 'grid-add' }));
 
             await user.click(screen.getByRole('button', { name: 'close-modal' }));
 
@@ -548,7 +518,7 @@ describe('IntegrationsScreen', () => {
             );
             settleStatus(handlers);
 
-            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+            await user.click(screen.getByRole('button', { name: 'grid-add' }));
 
             expect(screen.getByTestId('add-modal')).toHaveAttribute('data-catalog-size', '1');
         });
@@ -559,7 +529,7 @@ describe('IntegrationsScreen', () => {
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
             settleStatus(handlers);
 
-            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+            await user.click(screen.getByRole('button', { name: 'grid-add' }));
 
             expect(screen.getByTestId('add-modal')).toHaveAttribute('data-catalog-size', '0');
         });

@@ -11,21 +11,19 @@
  * header, the bundle id, and the two helpers that delegate to shared services.
  */
 
+import { CreateProjectWebviewCommand } from './createProject.testUtils';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
-import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { formatGroupName } from '@/features/project-creation/helpers/formatters';
 import type { Logger } from '@/types/logger';
-import type { SettingsFile } from '@/types/settingsFile';
+import { projectFileV2 } from '../../../helpers/projectFileFixtures';
 import type { EditProjectConfig } from '@/types/wizard';
 import { internals } from '../../../helpers/commandInternals';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-jest.mock('@/core/logging/debugLogger');
-jest.mock('@/features/prerequisites/services/PrerequisitesManager');
 jest.mock('@/features/mesh/services/meshEndpoint', () => ({
     getEndpoint: jest.fn().mockResolvedValue('https://mesh.example/graphql'),
 }));
@@ -136,7 +134,7 @@ describe('execute stores the mode it was opened in', () => {
 
     it('keeps the imported settings for the webview to seed from', async () => {
         const command = buildOpenable();
-        const imported = { selections: { frontend: 'eds-storefront' } } as SettingsFile;
+        const imported = projectFileV2({ selections: { frontend: 'eds-storefront' } });
 
         await command.execute({ importedSettings: imported, sourceDescription: 'a file' });
 

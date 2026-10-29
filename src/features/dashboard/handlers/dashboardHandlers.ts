@@ -21,8 +21,11 @@
  */
 
 import * as vscode from 'vscode';
-import { handleGetDemoPackagePreview, handleSaveDemoPackage, handleRemoveDemoPackage } from './demoPackageHandlers';
-import { handleGetComponentOperationProgress } from './componentOperationProgress';
+import {
+    handleGetDemoPackagePreview,
+    handleSaveDemoPackage,
+    handleRemoveDemoPackage,
+} from './demoPackageHandlers';
 import { handleSetProjectDestination } from './destinationHandlers';
 import {
     handleSyncStorefront,
@@ -37,12 +40,12 @@ import {
     handleOpenDaLive,
     handleOpenAdminPanel,
     handleOpenDevConsole,
+    handleOpenAemAssets,
     handleGetProjectUrls,
 } from './openUrlHandlers';
 import {
     handleConfigure,
     handleNavigateBack,
-    handleOpenDebugLogs,
     handleOpenIntegrations,
     handleShowProjectDashboard,
 } from './panelNavigationHandlers';
@@ -54,7 +57,18 @@ import {
     handleExportProjectSettings,
 } from './projectManagementHandlers';
 import { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
+import { executeCommandForWorkingProject } from '@/core/handlers/projectCommandHelper';
+import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import {
+    handleBackgroundOperation,
+    handleGetOperationProgress,
+    handleOpenDebugLogs,
+    narrateOutcomeToModal,
+    progressSurfaceOf,
+} from '@/core/vscode/operationProgress';
+import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
+import { surfaceShowsItself } from '@/core/vscode/surfaceShowsItself';
 import {
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
@@ -63,19 +77,69 @@ import {
     handleRenameAppBuilderComponent,
 } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import {
+    handlePromoteAppBuilderComponent,
+    handleUnpromoteAppBuilderComponent,
+} from '@/features/dashboard/handlers/appBuilderComponentPromote';
+import {
     handleGetAppBuilderInstallStatus,
     handleInstallAppBuilderComponent,
+    handleReinstallAppBuilderComponent,
 } from '@/features/dashboard/handlers/appManagementInstallHandlers';
+import {
+    handleGetIntegrationSettings,
+    handleSaveIntegrationSettings,
+} from '@/features/dashboard/handlers/componentSettingsHandlers';
 import {
     handleAddConsoleApis,
     handleListConsoleApis,
     handleSetConsoleApis,
 } from '@/features/dashboard/handlers/consoleApiHandlers';
+import { handleAddErp } from '@/features/dashboard/handlers/erpAddHandler';
+import {
+    handleEndErpDowntime,
+    handleGetErpDemoControls,
+    handleSetErpAppearance,
+    handleStartErpDowntime,
+} from '@/features/dashboard/handlers/erpDemoControlHandlers';
+import { handleLoadErpDemoData } from '@/features/dashboard/handlers/erpFillHandler';
+import {
+    handleFollowErpOrder,
+    handleGetErpStatus,
+    handleLookupErpRecord,
+    handleOpenErpScreen,
+    handleReadErpApi,
+    handleWriteErpApi,
+} from '@/features/dashboard/handlers/erpIntegrationHandlers';
+import { erpOwnershipHandlerMap } from '@/features/dashboard/handlers/erpOwnershipHandlerMap';
+import { handleResetErpRecords } from '@/features/dashboard/handlers/erpResetHandlers';
+import {
+    handleGetErpSettings,
+    handleSetErpSettings,
+} from '@/features/dashboard/handlers/erpSettingsHandlers';
+import {
+    handleCheckIntegrationUpdates,
+    handleUpdateAppBuilderComponent,
+} from '@/features/dashboard/handlers/integrationUpdateHandlers';
+import {
+    handleInvokeRuntimeAction,
+    handleListRuntimeActivations,
+    handleReadRuntimeActivation,
+} from '@/features/dashboard/handlers/runtimeActivationHandlers';
+import {
+    handleDeleteUndeclaredRuntimeCode,
+    handleListRuntimePackages,
+} from '@/features/dashboard/handlers/runtimePackageHandlers';
+import { setupHandlerMap } from '@/features/dashboard/handlers/setupHandlerMap';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
-import { handleImportStorefrontZip, handleUseBundleSetup } from '@/features/eds/handlers/importStorefrontZipHandler';
+import {
+    handleImportStorefrontZip,
+    handleUseBundleSetup,
+} from '@/features/eds/handlers/importStorefrontZipHandler';
 import { handleProbeSharedDemo } from '@/features/eds/handlers/probeSharedDemoHandler';
-import { handleListRuntimePackages } from '@/features/dashboard/handlers/runtimePackageHandlers';
+import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
+import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
+import { handleCheckErpIntegrationHolder } from '@/features/project-creation/handlers/erpIntegrationHolderHandler';
 import {
     MessageHandler,
     defineHandlers,
@@ -93,12 +157,12 @@ export {
     handleOpenDaLive,
     handleOpenAdminPanel,
     handleOpenDevConsole,
+    handleOpenAemAssets,
     handleGetProjectUrls,
 } from './openUrlHandlers';
 export {
     handleConfigure,
     handleNavigateBack,
-    handleOpenDebugLogs,
     handleOpenIntegrations,
     handleShowProjectDashboard,
 } from './panelNavigationHandlers';
@@ -152,7 +216,11 @@ async function refuseLifecycleOnEds(
 export const handleStartDemo: MessageHandler = async (context) => {
     const refusal = await refuseLifecycleOnEds(context, 'start');
     if (refusal) return refusal;
-    await vscode.commands.executeCommand('demoBuilder.startDemo');
+    // The tile already shows the transition: the command's own notification
+    // would be a second, slower copy of it (PL-59 R5).
+    await surfaceShowsItself(async () => {
+        await executeCommandForWorkingProject(context, 'demoBuilder.startDemo');
+    });
     // Update demo status only (don't re-check mesh)
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
     return { success: true };
@@ -164,7 +232,11 @@ export const handleStartDemo: MessageHandler = async (context) => {
 export const handleStopDemo: MessageHandler = async (context) => {
     const refusal = await refuseLifecycleOnEds(context, 'stop');
     if (refusal) return refusal;
-    await vscode.commands.executeCommand('demoBuilder.stopDemo');
+    // The tile already shows the transition: the command's own notification
+    // would be a second, slower copy of it (PL-59 R5).
+    await surfaceShowsItself(async () => {
+        await executeCommandForWorkingProject(context, 'demoBuilder.stopDemo');
+    });
     // Update demo status only (don't re-check mesh)
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
     return { success: true };
@@ -184,19 +256,53 @@ export const handleStopDemo: MessageHandler = async (context) => {
 export const handleRestartDemo: MessageHandler = async (context) => {
     const refusal = await refuseLifecycleOnEds(context, 'restart');
     if (refusal) return refusal;
-    await vscode.commands.executeCommand('demoBuilder.restartDemo');
+    // The tile already shows the transition: the command's own notification
+    // would be a second, slower copy of it (PL-59 R5).
+    await surfaceShowsItself(async () => {
+        await executeCommandForWorkingProject(context, 'demoBuilder.restartDemo');
+    });
     // Update demo status only (don't re-check mesh) — same as start/stop.
     setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
     return { success: true };
 };
 
 /**
- * Handle 'deployMesh' message - Deploy API mesh
+ * Handle 'deployMesh' — deploy the API Mesh. From a button that hosts the progress
+ * modal (`progress: 'modal'`), it reports there and answers with the outcome (PL-59
+ * phase 2, rule R1); otherwise it runs the palette command, with its notification.
  */
-export const handleDeployMesh: MessageHandler = async () => {
-    await vscode.commands.executeCommand('demoBuilder.deployMesh');
-    return { success: true };
-};
+export const handleDeployMesh: MessageHandler<{ id?: string; progress?: 'modal' }> =
+    narrateOutcomeToModal(
+        async (context, payload) => {
+            if (progressSurfaceOf(payload) !== 'modal') {
+                await executeCommandForWorkingProject(context, 'demoBuilder.deployMesh');
+                return { success: true };
+            }
+            return deployMeshFromScreen(context, payload?.id ?? MESH_OPERATION_ID);
+        },
+        (payload) => payload.id ?? MESH_OPERATION_ID,
+    );
+
+/**
+ * A handler that opens a standalone webview beside the dashboard — one that
+ * works without a project, so it must not close what the SC was looking at.
+ *
+ * A failed dispatch is reported, not thrown: the dashboard is still perfectly
+ * usable when one surface will not open.
+ */
+function openBesideDashboard(commandId: string, name: string): MessageHandler {
+    return async (context) => {
+        try {
+            context.logger.info(`Opening ${name}`);
+            await vscode.commands.executeCommand(commandId);
+            return { success: true };
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            context.logger.error(`Failed to open ${name}: ${reason}`);
+            return { success: false, error: reason };
+        }
+    };
+}
 
 /**
  * Handle 'openDataInstaller' — open the Data Installer surface.
@@ -209,21 +315,15 @@ export const handleDeployMesh: MessageHandler = async () => {
  * project is open — so browsing it must not close what the user was looking at.
  * The command's own registration records that decision; this dispatches and
  * touches nothing else.
- *
- * A failed dispatch is reported, not thrown: the dashboard is still perfectly
- * usable when one tile's surface will not open.
  */
-export const handleOpenDataInstaller: MessageHandler = async (context) => {
-    try {
-        context.logger.info('Opening Data Installer surface');
-        await vscode.commands.executeCommand('demoBuilder.showDataInstaller');
-        return { success: true };
-    } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        context.logger.error(`Failed to open the Data Installer: ${reason}`);
-        return { success: false, error: reason };
-    }
-};
+export const handleOpenDataInstaller = openBesideDashboard('demoBuilder.showDataInstaller', 'the Data Installer');
+
+/**
+ * Handle 'openSiteAccess' — open the Site access webview for this storefront.
+ * Beside the dashboard for the same reason: Site access is also reachable with
+ * no project at all, from the palette.
+ */
+export const handleOpenSiteAccess = openBesideDashboard('demoBuilder.manageSiteAccess', 'Site Access');
 
 // ============================================================================
 // Handler Map Export (Step 3: Handler Registry Simplification)
@@ -253,10 +353,13 @@ export const dashboardHandlers = defineHandlers({
     configure: handleConfigure,
     openDebugLogs: handleOpenDebugLogs,
     openDevConsole: handleOpenDevConsole,
+    openAemAssets: handleOpenAemAssets,
     getProjectUrls: handleGetProjectUrls,
     navigateBack: handleNavigateBack,
     openIntegrations: handleOpenIntegrations,
+    setViewModeOverride: handleSetViewModeOverride,
     openDataInstaller: handleOpenDataInstaller,
+    openSiteAccess: handleOpenSiteAccess,
     showProjectDashboard: handleShowProjectDashboard,
 
     // Mesh handlers
@@ -266,16 +369,68 @@ export const dashboardHandlers = defineHandlers({
     // The singular id-less addApp/deployApp/redeployApp/removeApp delegates
     // retired with the dormant AppBuilderCard (ADR-011 D3 Step 08).
     addAppBuilderComponent: handleAddAppBuilderComponent,
+    // Whether another project already runs an ERP integration on this Commerce
+    // instance (AB-78), so the Add Integration modal can grey it out.
+    'check-erp-integration-holder': handleCheckErpIntegrationHolder,
     deployAppBuilderComponent: handleDeployAppBuilderComponent,
     redeployAppBuilderComponent: handleRedeployAppBuilderComponent,
     removeAppBuilderComponent: handleRemoveAppBuilderComponent,
     renameAppBuilderComponent: handleRenameAppBuilderComponent,
+    // A blank-starter app saved to its own GitHub repository, and the undo (AB-1c).
+    promoteAppBuilderComponent: handlePromoteAppBuilderComponent,
+    unpromoteAppBuilderComponent: handleUnpromoteAppBuilderComponent,
     // App Management install state (AB-5): the live status read and the
     // install-without-redeploy retry.
     installAppBuilderComponent: handleInstallAppBuilderComponent,
+    reinstallAppBuilderComponent: handleReinstallAppBuilderComponent,
+    updateAppBuilderComponent: handleUpdateAppBuilderComponent,
+    checkIntegrationUpdates: handleCheckIntegrationUpdates,
     getAppBuilderInstallStatus: handleGetAppBuilderInstallStatus,
+    // The ERP integration's two verbs (plan step 05): the ERP's health as the
+    // integration sees it, and the reset that re-mirrors Commerce into it.
+    getErpStatus: handleGetErpStatus,
+    // An ERP's own settings (ownership, sales-org per website) for agents (AB-16j).
+    getErpSettings: handleGetErpSettings,
+    setErpSettings: handleSetErpSettings,
+    resetErpRecords: handleResetErpRecords,
+    // Demo Builder fills the ERP from Commerce (AB-26y step 1).
+    loadErpDemoData: handleLoadErpDemoData,
+    // "Add another ERP" on the integration's card (AB-16); an added ERP is removed from its own card.
+    addErp: handleAddErp,
+    // Which products each ERP owns: the Add dialog's read, Assign products, the set fix (AB-64, AB-74).
+    ...erpOwnershipHandlerMap,
+    openErpScreen: handleOpenErpScreen,
+    // The mock ERP's demo controls on its card (AB-59): its look and a simulated downtime.
+    getErpDemoControls: handleGetErpDemoControls,
+    setErpAppearance: handleSetErpAppearance,
+    startErpDowntime: handleStartErpDowntime,
+    endErpDowntime: handleEndErpDowntime,
+    // The Admin page's two reads, for agents (2026-09-24): one record as both
+    // systems hold it, and one order's whole life across both.
+    lookupErpRecord: handleLookupErpRecord,
+    followErpOrder: handleFollowErpOrder,
+    // The ERP's own API, for agents (2026-09-24): its screens' reads and actions
+    // without the screen — how the ERP → Commerce half is driven headless.
+    readErpApi: handleReadErpApi,
+    writeErpApi: handleWriteErpApi,
+    // What RAN in a Runtime namespace (2026-09-24): the list of recent activations
+    // and one activation's log and result — the read that placed the event fault.
+    listRuntimeActivations: handleListRuntimeActivations,
+    readRuntimeActivation: handleReadRuntimeActivation,
+    invokeRuntimeAction: handleInvokeRuntimeAction,
+    // An integration's Settings (AB-21): the read, and the save that stores then
+    // redeploys.
+    getIntegrationSettings: handleGetIntegrationSettings,
+    saveIntegrationSettings: handleSaveIntegrationSettings,
+    // An integration's demo setup: the checklist (AB-26x) and the demo setup's Apply (AB-77).
+    ...setupHandlerMap,
     // The latest progress of an operation the SC started here, for its modal (PL-59).
-    getComponentOperationProgress: handleGetComponentOperationProgress,
+    getOperationProgress: handleGetOperationProgress,
+    // "Run in background": the operation carries on in a progress notification (PL-59).
+    backgroundOperation: handleBackgroundOperation,
+    // The SC answered a question the work was paused on — a sign-in that expired,
+    // a prerequisite missing, a merge needing a decision (PL-59, owner 2026-09-20).
+    answerOperationPrompt: handleAnswerOperationPrompt,
 
     // Console API access (runtime API subscription — list_console_apis / add_console_apis)
     listConsoleApis: handleListConsoleApis,
@@ -284,6 +439,8 @@ export const dashboardHandlers = defineHandlers({
 
     // What is deployed in the project's Runtime namespace (list_runtime_packages)
     listRuntimePackages: handleListRuntimePackages,
+    // Code an integration left behind in its own packages (delete_undeclared_runtime_code)
+    deleteUndeclaredRuntimeCode: handleDeleteUndeclaredRuntimeCode,
 
     // EDS storefront sync
     syncStorefront: handleSyncStorefront,
@@ -310,7 +467,7 @@ export const dashboardHandlers = defineHandlers({
     // Adobe deploy destination (project-scoped — one target for every integration)
     setProjectDestination: handleSetProjectDestination,
 
-    // "Save as demo package": the description file into the project's own
+    // Share Demo's link form: the description file into the project's own
     // storefront repository, the card on the SC's Welcome step, the checks a
     // project built from it needs, and the undo.
     getDemoPackagePreview: handleGetDemoPackagePreview,

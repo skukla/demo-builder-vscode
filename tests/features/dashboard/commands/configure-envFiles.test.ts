@@ -27,7 +27,7 @@ jest.mock('fs/promises', () => ({
 }));
 
 const mockRegenerateProjectEnvFiles = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
+jest.mock('@/features/project-creation/helpers/envFileRegeneration', () => ({
     regenerateProjectEnvFiles: (...args: unknown[]) => mockRegenerateProjectEnvFiles(...args),
 }));
 
@@ -312,7 +312,9 @@ describe('ConfigureProjectWebviewCommand - env file reads and writes', () => {
             );
         });
 
-        it('forwards the service progress messages to the toast', async () => {
+        // EDS-44: the toast shows one STAGE per step (the house progress, R2). The
+        // service's own lines are steps under that stage; a notification shows the stage.
+        it('shows the config publish as its stage in the toast', async () => {
             mockRepublishStorefrontConfig.mockImplementation(
                 async (opts: { onProgress: (m: string) => void }) => {
                     opts.onProgress('Publishing config.json…');
@@ -327,7 +329,7 @@ describe('ConfigureProjectWebviewCommand - env file reads and writes', () => {
 
             await files(command).republishStorefront(projectWith({}));
 
-            expect(report).toHaveBeenCalledWith({ message: 'Publishing config.json…' });
+            expect(report).toHaveBeenCalledWith({ message: 'Publishing the settings' });
         });
 
         it('persists through the `persist` seam the service is handed', async () => {

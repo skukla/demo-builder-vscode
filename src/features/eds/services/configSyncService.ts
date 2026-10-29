@@ -13,6 +13,7 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import type * as vscode from 'vscode';
+import { configAlreadyLive } from './configAlreadyLive';
 import { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTokenService } from './github/githubTokenService';
 import type { HelixCodePreview } from './helix/helixCapabilities';
@@ -84,6 +85,8 @@ export interface ConfigSyncResult {
     cdnError?: string;
     /** Whether block library CDN was verified (if verifyBlockLibrary was true) */
     blockLibraryVerified?: boolean;
+    /** GitHub and the live storefront had this config.json already: nothing was pushed or published. */
+    unchanged?: boolean;
 }
 
 // ==========================================================
@@ -150,6 +153,10 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
                 'config.json',
             );
             logger.debug(`[ConfigSync] Existing file SHA: ${existingFile?.sha || 'not found'}`);
+            if (await configAlreadyLive(configContent, existingFile, repoOwner, repoName)) {
+                logger.info('[ConfigSync] config.json unchanged on GitHub and already live; nothing to publish');
+                return { ...result, success: true, cdnVerified: true, unchanged: true };
+            }
 
             // Push config.json to GitHub
             logger.debug(
@@ -179,8 +186,11 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
         try {
             logger.debug(`[ConfigSync] Publishing config.json to Helix CDN`);
 
-            // HelixService needs GitHub token for admin API auth
-            // Note: Code preview/publish only requires GitHub auth (no DA.live token)
+            // HelixService needs the GitHub token for admin API auth, and — on any
+            // site carrying a site admin role, which every storefront the extension
+            // sets up now does — the DA.live session as well (`tryAdminBearer`).
+            // Callers that can ask for that session do so before reaching here
+            // (`RepublishParams.ensureDaLiveSession`); a missing one answers 401.
             // No provider passed: HelixService falls back to the one registered at
             // activation. The DA.live session is a per-host singleton, so threading
             // it through every caller would model a plurality that does not exist.
@@ -192,7 +202,7 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
             logger.info(`[ConfigSync] config.json published to Helix CDN`);
 
             // Step 4: Verify CDN accessibility for config.json
-            onProgress?.('Waiting for configuration to reach CDN edge');
+            onProgress?.('Waiting for the CDN');
 
             const verification = await verifyCdnResources(repoOwner, repoName, logger);
 

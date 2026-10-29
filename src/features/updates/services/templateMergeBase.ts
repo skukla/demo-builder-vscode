@@ -27,8 +27,18 @@ type TemplateChangeOutcome =
     | { kind: 'applied'; templateHead: string }
     | { kind: 'unchanged'; templateHead: string }
     | { kind: 'not-in-template' }
-    | { kind: 'conflicts'; conflicts: string[]; restored: boolean }
+    | { kind: 'conflicts'; conflicts: string[]; restored: boolean; templateHead: string }
     | { kind: 'failed'; reason: string };
+
+/**
+ * Left out of every template change: the template's own CI. A repository generated from the
+ * B2B template has none of Adobe's workflows (its cleanup-on-create workflow deletes them),
+ * so applying Adobe's edits to them stops the update on files the storefront does not have.
+ * Measured 2026-10-20: 14 such edits between 71a67e0 and the tested 48bed04, and our own
+ * storefront repositories keep only `sync-from-upstream.yml`. A storefront's own workflows
+ * are its owner's business, not the template's.
+ */
+const NEVER_APPLIED = ['.github'];
 
 interface TemplateChangeRequest {
     /** The recorded template version the change is measured from. */
@@ -37,6 +47,13 @@ interface TemplateChangeRequest {
     preserveFiles: string[];
     /** Where the patch is written — outside the clone's working tree. */
     patchFile: string;
+    /**
+     * The template version to bring the storefront up to. Absent: the template's
+     * latest commit. A thin-layer storefront passes its patches repo's tested
+     * version (ADR-006), never the latest, which nothing has checked its patches
+     * against (owner, 2026-10-16).
+     */
+    target?: string;
 }
 
 /** git's own reason for a failure: its first error line, without the `error:` prefix. */
@@ -58,9 +75,15 @@ export async function readTemplateHead(git: GitStep): Promise<string> {
 }
 
 /**
- * Whether `sha` is a commit on the template's `main`. The old merge recorded the
- * SC's OWN head; diffing from that would replay "turn this storefront into the
- * template" over the SC's edits, so anything off the template's history is refused.
+ * Whether `sha` is one of the template's commits. The old merge recorded the SC's
+ * OWN head; diffing from that would replay "turn this storefront into the
+ * template" over the SC's edits, so a commit that shares no history with the
+ * template is refused.
+ *
+ * A commit the template later REWROTE still counts: it shares history with `main`
+ * without being on it. adobe-commerce/boilerplate-b2b-template re-creates its top
+ * two commits on every upstream sync (2026-10-14: e3f979b became b3bdb016b), and
+ * the diff from the old one to the new head is still the template's own change.
  */
 async function isTemplateCommit(git: GitStep, sha: string): Promise<boolean> {
     const present = async () =>
@@ -70,8 +93,8 @@ async function isTemplateCommit(git: GitStep, sha: string): Promise<boolean> {
         await git(`git fetch template ${sha}`, TIMEOUTS.LONG);
         if (!(await present())) return false;
     }
-    const ancestry = await git(`git merge-base --is-ancestor ${sha} template/main`, TIMEOUTS.NORMAL);
-    return ancestry.code === 0;
+    const shared = await git(`git merge-base ${sha} template/main`, TIMEOUTS.NORMAL);
+    return shared.code === 0;
 }
 
 /**
@@ -85,7 +108,7 @@ async function writePatch(
     range: string,
     request: TemplateChangeRequest,
 ): Promise<boolean> {
-    const excludes = request.preserveFiles.map((file) => `":(exclude)${file}"`);
+    const excludes = [...NEVER_APPLIED, ...request.preserveFiles].map((file) => `":(exclude)${file}"`);
     const pathspec = ['.', ...excludes].join(' ');
     const listChanged = `git diff-tree -r --name-only ${range} -- ${pathspec}`;
     const changed = await git(listChanged, TIMEOUTS.NORMAL);
@@ -105,20 +128,25 @@ async function writePatch(
     return true;
 }
 
-/** A 3-way apply that did not succeed: conflicts (clone restored) or git's reason. */
-async function explainUnapplied(git: GitStep, stderr: string): Promise<TemplateChangeOutcome> {
+/** The files git left unmerged; empty when it names none. */
+async function unmergedFiles(git: GitStep): Promise<string[]> {
     const unmerged = await git(`git diff --name-only --diff-filter=U`, TIMEOUTS.QUICK);
-    const conflicts = unmerged.code === 0 ? unmerged.stdout.trim().split('\n').filter(Boolean) : [];
+    return unmerged.code === 0 ? unmerged.stdout.trim().split('\n').filter(Boolean) : [];
+}
+
+/** A 3-way apply that did not succeed: conflicts (clone restored) or git's reason. */
+async function explainUnapplied(git: GitStep, stderr: string, templateHead: string): Promise<TemplateChangeOutcome> {
+    const conflicts = await unmergedFiles(git);
     if (conflicts.length === 0) {
         return { kind: 'failed', reason: gitReason(stderr) };
     }
     const restored = await git(`git reset --hard HEAD`, TIMEOUTS.QUICK);
-    return { kind: 'conflicts', conflicts, restored: restored.code === 0 };
+    return { kind: 'conflicts', conflicts, restored: restored.code === 0, templateHead };
 }
 
 /**
- * Apply the template's change from `request.base` to the template's latest commit
- * onto the clone's working tree and index. Pushes nothing.
+ * Apply the template's change from `request.base` to `request.target` (default: the
+ * template's latest commit) onto the clone's working tree and index. Pushes nothing.
  */
 export async function applyTemplateChangeSince(
     git: GitStep,
@@ -129,14 +157,46 @@ export async function applyTemplateChangeSince(
         return { kind: 'not-in-template' };
     }
 
-    const templateHead = await readTemplateHead(git);
+    // A target the template no longer carries cannot be measured to: refuse it
+    // rather than fall back to the latest commit, which is exactly what it replaces.
+    if (request.target && !(await isTemplateCommit(git, request.target))) {
+        return { kind: 'failed', reason: `the tested template version ${request.target.slice(0, 7)} could not be fetched` };
+    }
+    const templateHead = request.target ?? (await readTemplateHead(git));
     if (templateHead === base || !(await writePatch(git, `${base} ${templateHead}`, request))) {
         return { kind: 'unchanged', templateHead };
     }
 
     const applied = await git(`git apply --3way --index "${patchFile}"`, TIMEOUTS.NORMAL);
     if (applied.code !== 0) {
-        return explainUnapplied(git, applied.stderr);
+        return explainUnapplied(git, applied.stderr, templateHead);
     }
     return { kind: 'applied', templateHead };
+}
+
+/** How applying a change and keeping its clashes ended (EDS-57). */
+export type KeptChangeOutcome =
+    | { kind: 'kept'; conflicts: string[] }
+    | { kind: 'applied' }
+    | { kind: 'unchanged' }
+    | { kind: 'failed'; reason: string };
+
+/**
+ * Apply the change between two commits already present in the repository, 3-way, and
+ * LEAVE any clash in the working tree with git's markers: the clean files staged, the
+ * clashing ones unmerged. For the project's local storefront copy, where the SC's AI
+ * fixes the clash (EDS-57). Base and target are not re-checked against the template's
+ * history: the throwaway clone's apply did that before a clash was ever kept.
+ */
+export async function applyChangeKeepingConflicts(
+    git: GitStep,
+    request: Omit<TemplateChangeRequest, 'target'> & { target: string },
+): Promise<KeptChangeOutcome> {
+    if (!(await writePatch(git, `${request.base} ${request.target}`, request))) {
+        return { kind: 'unchanged' };
+    }
+    const applied = await git(`git apply --3way --index "${request.patchFile}"`, TIMEOUTS.NORMAL);
+    if (applied.code === 0) return { kind: 'applied' };
+    const conflicts = await unmergedFiles(git);
+    return conflicts.length > 0 ? { kind: 'kept', conflicts } : { kind: 'failed', reason: gitReason(applied.stderr) };
 }

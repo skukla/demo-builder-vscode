@@ -97,11 +97,18 @@ Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must 
   extension. Start here for anything MCP; it assumes no prior knowledge.
 - [systems/mcp-tools.md](systems/mcp-tools.md) — the tool catalogue. **Generated**
   by `npm run docs:tools`.
+- [systems/ai-agents.md](systems/ai-agents.md) — which agents the Chat button opens
+  (Copilot in VS Code by default, or Claude Code), their permissions and readiness.
+- [systems/configure.md](systems/configure.md) — the Configure screen: its tabs, what
+  Save does, which follow-up it offers, and how the agent's `configure_project` shares it.
 - [systems/agent-alerts.md](systems/agent-alerts.md) ·
+  [systems/erp-integration.md](systems/erp-integration.md) ·
   [systems/data-installer.md](systems/data-installer.md) ·
   [systems/prerequisites-system.md](systems/prerequisites-system.md) ·
   [systems/custom-block-libraries.md](systems/custom-block-libraries.md) ·
+  [systems/category-pages.md](systems/category-pages.md) ·
   [systems/project-file-format.md](systems/project-file-format.md) ·
+  [systems/moving-projects.md](systems/moving-projects.md) ·
   [systems/sharing-a-demo.md](systems/sharing-a-demo.md)
 - [systems/logging-system.md](systems/logging-system.md) ·
   [systems/error-logging.md](systems/error-logging.md) ·

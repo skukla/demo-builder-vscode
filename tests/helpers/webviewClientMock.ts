@@ -46,11 +46,6 @@ export const mockPostMessage = jest.fn();
 export const mockRequest = jest.fn();
 export const mockRequestAuth = jest.fn();
 export const mockReady = jest.fn().mockResolvedValue(undefined);
-export const mockGetState = jest.fn();
-export const mockSetState = jest.fn();
-export const mockRequestValidation = jest.fn();
-export const mockReportProgress = jest.fn();
-export const mockRequestProjects = jest.fn();
 export const mockCreateProject = jest.fn();
 export const mockLog = jest.fn();
 
@@ -68,11 +63,6 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
         requestAuth: mockRequestAuth,
         ready: mockReady,
         onMessage: mockOnMessage,
-        getState: mockGetState,
-        setState: mockSetState,
-        requestValidation: mockRequestValidation,
-        reportProgress: mockReportProgress,
-        requestProjects: mockRequestProjects,
         createProject: mockCreateProject,
         log: mockLog,
     },

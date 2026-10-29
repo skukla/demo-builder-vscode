@@ -183,6 +183,22 @@ describe('checkGitHubApp handler', () => {
         expect(String(result.reason)).toMatch(/sign-in|credential/i);
     });
 
+    // EDS-23: an inner 400 is not "no response" — AEM answered, and the answer
+    // cannot say whether the App covers the repository. The reason must say that,
+    // not send the reader to check their connection.
+    it('explains an inner 400 as a status check that cannot say, not a lost connection', async () => {
+        mockIsAppInstalled.mockResolvedValue({ isInstalled: false, codeStatus: 400, transient: true });
+        const context = makeContext();
+
+        const result = await checkGitHubApp(context, REQUEST, SERVICES);
+
+        expect(result).toMatchObject({ isInstalled: false, undetermined: true, codeStatus: 400 });
+        expect(result.installUrl).toBeUndefined();
+        expect(String(result.reason)).toContain('acme-demos/aircraft-demo');
+        expect(String(result.reason)).toMatch(/cannot tell/i);
+        expect(String(result.reason)).not.toMatch(/connection|no response/i);
+    });
+
     it('still offers the install URL when the App is genuinely absent', async () => {
         mockIsAppInstalled.mockResolvedValue({ isInstalled: false, codeStatus: 404 });
         const context = makeContext();
@@ -346,7 +362,7 @@ describe('checkGitHubApp handler', () => {
  *
  * Observed 2026-08-14 editing `demo-builder-test`: the check sent only the GitHub
  * token, admin.hlx.page answered 401 "[admin] not authenticated", and the wizard
- * showed a permanent "Registering...". Cause: writing any `access.admin` role
+ * showed a permanent "Registering". Cause: writing any `access.admin` role
  * makes Adobe set `requireAuth: "auto"`, closing the whole admin API to callers
  * without an accepted admin identity — and storefront setup now pins such a role
  * on every project it registers, so this is the normal state, not an edge case.

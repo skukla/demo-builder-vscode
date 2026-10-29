@@ -10,6 +10,12 @@ import {
 } from './meshDeploymentVerifier.testUtils';
 
 // Mock dependencies
+// The deploy check asks the mesh which host answers (a real HTTP call); these
+// suites exercise the check around it, so the stated address stands.
+jest.mock('@/features/mesh/services/meshEndpoint', () => ({
+    ...jest.requireActual('@/features/mesh/services/meshEndpoint'),
+    answeringEndpoint: jest.fn(async (endpoint: string) => endpoint),
+}));
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(),

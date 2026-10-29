@@ -13,20 +13,20 @@
  * @module types/webviewPayloads
  */
 
-import type { AppBuilderComponentCatalogEntry } from './appBuilderComponents';
+import type { AppBuilderComponentCatalogEntry, ComponentSettings } from './appBuilderComponents';
 import type {
     AppBuilderComponentState,
     AuthoringExperience,
     Project,
     ProjectStatus,
 } from './base';
-import type { CustomBlockLibrary } from './blockLibraries';
+import type { BlockLibrary, CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
 import type { AddedDemo } from './projectFile';
-import type { SettingsFile } from './settingsFile';
+import type { ViewMode } from './viewMode';
 import type { ComponentSelection, CreationProgress, ThemeMode, UnifiedProgress } from './webview';
-import type { EditProjectConfig, WizardStepDefinition } from './wizard';
+import type { EditProjectConfig, ProjectSeed, WizardStepDefinition } from './wizard';
 import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
 
 /**
@@ -39,6 +39,70 @@ export interface DataInstallerInitialData {
     theme: ThemeMode;
     /** Project display name — `''` when no project is selected. */
     projectName: ProjectDisplayName;
+}
+
+/**
+ * `ShowSiteAccessCommand.getInitialData` → the siteAccess bundle.
+ *
+ * Opens with no project too: then only content readers can be managed, for an
+ * org and site the SC types.
+ */
+export interface SiteAccessInitialData {
+    theme: ThemeMode;
+    /** Project display name — `''` when no project is open. */
+    projectName: ProjectDisplayName;
+    /** Whether the open project has a storefront whose access can be managed. */
+    hasStorefront: boolean;
+}
+
+/** Something the Site access screen tells the SC, and what they can do about it. */
+export interface SiteAccessNotice {
+    tone: 'success' | 'warning' | 'error';
+    message: string;
+    /** Pages that fix it, opened in the browser. Only the allow-listed GitHub pages. */
+    links?: SiteAccessLink[];
+    /** The fix is done on GitHub and lands within minutes: offer to check for it. */
+    offerWait?: boolean;
+    /** Access landed, and the refused configuration write can now be repaired. */
+    offerRepair?: boolean;
+}
+
+/** A page a refusal sends the SC to. `id` is resolved to its URL in the extension. */
+export interface SiteAccessLink {
+    id: 'github-app-settings' | 'code-sync-app' | 'github-email-settings';
+    label: string;
+}
+
+/** One person on one of the two lists. */
+export interface SiteAccessPerson {
+    email: string;
+    /** What they hold, in words: "Configuration admin", "Org admin", "Reads content", "Edits content". */
+    role: string;
+    /** Whether Remove is offered. Org admins and writers are shown but not removable here. */
+    removable: boolean;
+}
+
+/** One of the two lists: who administers the site, or who reads its content. */
+export interface SiteAccessList {
+    /** What it is a list FOR: `owner/repo` for admins, `org/site` for readers. */
+    site: string;
+    people: SiteAccessPerson[];
+    /** Whether this identity can add and remove here. */
+    canManage: boolean;
+    /** Why it could not be read or cannot be changed. */
+    notice?: SiteAccessNotice;
+}
+
+/** Both lists. `admins` is absent with no project; `readers` with no DA.live site. */
+export interface SiteAccessView {
+    admins?: SiteAccessList;
+    readers?: SiteAccessList;
+}
+
+/** What a change answers: what happened, and the lists as they are now. */
+export interface SiteAccessChangeResult {
+    notice: SiteAccessNotice;
+    view: SiteAccessView;
 }
 
 /**
@@ -110,12 +174,12 @@ export interface WizardInitialData {
     wizardSteps: WizardStepDefinition[] | null;
     /** All project names — duplicate-name validation. */
     existingProjectNames: string[];
-    /** Full settings file from import/copy — `null` in plain create mode. */
-    importedSettings: SettingsFile | null;
+    /** The project file from Import, or the seed Copy builds — `null` in plain create mode. */
+    importedSettings: ProjectSeed | null;
     /** Edit-mode configuration — `null` in create mode. */
     editProject: EditProjectConfig | null;
     /** Initial view mode for the template gallery (from settings). */
-    projectsViewMode: 'cards' | 'rows';
+    projectsViewMode: ViewMode;
     /** User's saved block library default preferences (from settings). */
     blockLibraryDefaults: string[];
     /** Custom block libraries from VS Code settings. */
@@ -142,8 +206,8 @@ export interface AiOverviewInitialData {
 /**
  * The Configure screen's registry slice: the categorized component buckets
  * (registry entries pass through untransformed) plus the keyed env-var
- * definitions. No `appBuilder` bucket — that mechanism was removed
- * (`c98e5125`); App Builder fields flow via `appBuilderComponentCatalog`.
+ * definitions. No App Builder settings: an integration's settings live on its
+ * tile on the Integrations surface (AB-21), not here.
  */
 export interface ConfigureComponentsData {
     frontends: TransformedComponentDefinition[];
@@ -157,6 +221,20 @@ export interface ConfigureComponentsData {
 /**
  * `ConfigureProjectWebviewCommand.getInitialData` → the configure bundle.
  */
+/**
+ * The block libraries the Configure screen can offer one project: the same three
+ * lists the creation wizard's picker takes. All empty unless the project's stack
+ * is Edge Delivery.
+ */
+export interface ConfigureBlockLibraryChoices {
+    /** Libraries that came with the storefront: shown ticked and locked. */
+    native: BlockLibrary[];
+    /** Catalog libraries the SC may tick or untick. */
+    available: BlockLibrary[];
+    /** Custom libraries from the `demoBuilder.blockLibraries.custom` setting. */
+    customDefaults: CustomBlockLibrary[];
+}
+
 export interface ConfigureInitialData {
     theme: ThemeMode;
     project: Project;
@@ -169,12 +247,8 @@ export interface ConfigureInitialData {
     isEds: boolean;
     /** Resolved authoring experience seeding the radio (EDS only). */
     authoringExperience: AuthoringExperience;
-    /** Catalog entries for the project's selected appBuilderComponents (bucket-3 inputs). */
-    appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
-    /** Resolved provided env values (bucket-2 "connected" sources). */
-    providedEnvVars: Record<string, string>;
-    /** Per-appBuilderComponent "is set" flags for secret vars (booleans only, no values). */
-    appBuilderComponentSecretFlags: Record<string, Record<string, boolean>>;
+    /** The block libraries this project can choose from (EDS only; else empty lists). */
+    blockLibraryChoices: ConfigureBlockLibraryChoices;
     /**
      * Component-declared secrets this project holds, booleans only.
      *
@@ -202,6 +276,18 @@ export interface IntegrationsInitialData {
     commerceStoreStructure?: CommerceStoreStructure;
     /** Stack-filtered catalog for the add-integration picker. */
     appBuilderComponentCatalog: AppBuilderComponentCatalogEntry[];
+    /** The project's demo needs the API Mesh (`isMeshNeededByPackage`). */
+    meshNeededByDemo?: boolean;
+    /**
+     * Each component's Settings, keyed by id: only components that have
+     * something to set. Secrets as "is set" only, never a value.
+     */
+    componentSettings: Record<string, ComponentSettings>;
+    /**
+     * Cards or rows, as the projects list has (`projectsViewMode`): the session's
+     * choice when there is one, else `demoBuilder.integrationsViewMode`.
+     */
+    integrationsViewMode: ViewMode;
     /** Adobe project/workspace TITLES — the shared deploy destination banner. */
     destination: DestinationTitles;
     /** Committed destination ID — the add flow reads presence as a boolean. */
@@ -269,6 +355,11 @@ export interface DashboardStatusUpdatePayload {
     frontendConfigChanged: boolean;
     mesh?: MeshStatusInfo;
     edsStorefrontStatus?: Project['edsStorefrontStatusSummary'];
+    /**
+     * The storefront is behind how Demo Builder builds storefronts now (`storefrontChanges.ts`):
+     * the Reset tile says "Needs reset". Present only when true.
+     */
+    storefrontNeedsReset?: true;
 }
 
 /** `meshStatusUpdate` — mesh-only status push (deploy flows). */
@@ -300,18 +391,139 @@ export interface AppBuilderComponentStatusUpdatePayload {
 }
 
 /**
- * `componentOperationProgress` — one integration operation's progress, for the modal
+ * Where an operation is in a known run of parts. With a `name`, the part is named
+ * after the stage — "Adding Adobe services · Northwind ERP" — and the count is not
+ * shown: when each part is many steps, "(1 of 2)" read as a step count nobody could
+ * relate to anything (owner, 2026-09-21). Without one it is a count of like items,
+ * "(3 of 5)", which is what a count is good for.
+ */
+export interface OperationPosition {
+    index: number;
+    total: number;
+    /** The part in flight, as the SC knows it. */
+    name?: string;
+}
+
+/** One part of a run that changed something, as a row on the success view (`WorkRow`). */
+export interface OperationChange {
+    /** The part, as the SC knows it: "ERP warehouse". */
+    label: string;
+    /** What it changed, then what it leaves by hand, one line each. */
+    lines: string[];
+}
+
+/**
+ * `operationProgress` — one operation's progress, for the modal
  * the SC opened by starting it (PL-59). `stage` is what is happening, `step` the detail
  * of the moment, `expectation` the stage's fixed "how long this usually takes" line.
- * A terminal `state` carries the reason on failure.
+ * A terminal `state` carries the reason on failure, and on success a `warning` when the
+ * run stood but something in it did not (a fill whose prices were not published, AB-26z),
+ * or a `note` when there is something to know and nothing to do (prices still being
+ * published).
  */
-export interface ComponentOperationProgressPayload {
+export interface OperationProgressPayload {
     id: string;
     state: 'running' | 'succeeded' | 'failed';
     stage?: string;
+    /** Which member of a pair this is on, when the operation deploys two. */
+    position?: OperationPosition;
     step?: string;
     expectation?: string;
     error?: string;
+    /** What a run that succeeded could not do, for the SC to read before the modal closes. */
+    warning?: string;
+    /** What a run that succeeded leaves the SC to know; shown as a plain success, not a warning. */
+    note?: string;
+    /**
+     * What a run that succeeded left to know, one line each, listed under its result (an
+     * EDS reset's page notes). A run that carries them waits to be read.
+     */
+    details?: string[];
+    /**
+     * The parts of a run that succeeded that changed something, one row each under its
+     * result: the step, what it changed, what it leaves by hand. A run that carries them
+     * waits to be read.
+     */
+    changes?: OperationChange[];
+    /** Set while the work is paused on a question only the SC can answer. */
+    prompt?: OperationPrompt;
+    /** A next step a run that succeeded offers on its success view (AB-74). */
+    offer?: OperationOffer;
+    /**
+     * When the run began, in ms since the epoch, on every push of it. Stamped where
+     * progress is pushed (`pushOperationProgress`), so a modal opened mid-run still
+     * counts the whole run, not just what it watched.
+     */
+    startedAt?: number;
+    /** How long the whole run took, in ms, on its last push (succeeded or failed). */
+    tookMs?: number;
+}
+
+/**
+ * A next step offered when a run succeeds: "Add another ERP" whose new ERP owns nothing yet
+ * offers "Assign products" for it (AB-74). The screen turns it into the modal's button.
+ */
+export interface OperationOffer {
+    action: 'assign-erp-products';
+    /** The ERP integration. */
+    id: string;
+    /** The ERP's component id. */
+    erp: string;
+    /** The ERP's name. */
+    name: string;
+    /** One sentence under the success title. */
+    message: string;
+}
+
+/**
+ * A question the work cannot continue without — a sign-in that expired, a
+ * prerequisite that is missing, a merge that needs a decision. The modal shows it
+ * in place of the spinner and hands back the action the SC chose.
+ */
+export interface OperationPrompt {
+    /**
+     * The heading: what the SC is asked to do ("Sign in to Adobe"). Every question
+     * with buttons has its own; one generic heading over all of them, "Waiting for
+     * you", said nothing the sentence under it did not (owner, 2026-10-23). A
+     * question with fields sits under the modal's title and needs none.
+     */
+    title?: string;
+    message: string;
+    /** The answers, the first being the one that continues the work. */
+    actions: string[];
+    /**
+     * What the SC has to type for the work to go on — a namespace, a pasted token.
+     * The modal owns these rather than handing off to a VS Code input box, so one
+     * question is one surface (owner, 2026-09-20).
+     */
+    fields?: OperationPromptField[];
+}
+
+/** One thing the SC answers in a question the modal is asking. */
+export interface OperationPromptField {
+    id: string;
+    label: string;
+    /**
+     * What is asked: something typed (the default), a box to tick — answered
+     * `'true'` or `''` — or one of `options`, answered with the option's id. Every
+     * answer is a string, so a question's values stay `Record<string, string>`.
+     */
+    kind?: 'text' | 'checkbox' | 'choice';
+    /** The answers a `choice` offers. */
+    options?: OperationPromptOption[];
+    /** What it is already, so re-asking after an error keeps what was typed. */
+    value?: string;
+    placeholder?: string;
+    /** A line under the field: where to get the value, or what is wrong with it. */
+    description?: string;
+    /** A credential: masked as it is typed. */
+    secret?: boolean;
+}
+
+/** One answer a `choice` field offers. */
+export interface OperationPromptOption {
+    id: string;
+    label: string;
 }
 
 /** `appBuilderComponentsSnapshot` — the full fresh persisted map. */
@@ -350,7 +562,7 @@ export interface CreationFailedPayload {
     error: string;
     isTimeout?: boolean;
     elapsed?: string;
-    /** The one special-cased type; ProjectCreationStep opens the install dialog on it. */
+    /** The one special-cased type; `useGitHubAppPreflight` opens the install dialog on it. */
     errorType?: 'GITHUB_APP_NOT_INSTALLED';
     errorDetails?: { owner: string; repo: string; installUrl: string };
 }
@@ -534,7 +746,7 @@ export interface DaLiveTokenWithOrgResultPayload {
 
 /** `configChanged` — projects-list view-mode setting changed (or re-sent on reveal). */
 export interface ConfigChangedPayload {
-    projectsViewMode: 'cards' | 'rows';
+    projectsViewMode: ViewMode;
 }
 
 /** `projectsUpdated` — the full refreshed project list for the cards/rows grid. */
@@ -593,17 +805,42 @@ export type StorefrontSetupProgressPhase =
     /** The pipeline's own final push; the `storefront-setup-complete` channel follows. */
     | 'complete';
 
-/** `storefront-setup-progress` — pipeline step progress for the wizard. */
+/**
+ * `storefront-setup-progress` — pipeline step progress for the wizard.
+ *
+ * With a `stage` (every working phase, `storefrontSetupProgress.ts`), the stage is line
+ * 1 and `message` is line 2, what it is doing now. Without one (the sign-in wait, the
+ * cancel), `message` is line 1 and `subMessage` line 2.
+ */
 export interface StorefrontSetupProgressPayload {
     phase: StorefrontSetupProgressPhase;
+    /** Line 1: the step, a label from the stage table. */
+    stage?: string;
+    /** The step's place in the run, "(4 of 7)". */
+    position?: OperationPosition;
     message: string;
     subMessage?: string;
+    /** When the run began, in ms since the epoch: the screen's clock counts from it. */
+    startedAt?: number;
     /** 0-100, or -1 while paused for auth recovery. */
     progress: number;
     /** Repo identity, included once known — drives the webview's cancel-cleanup bookkeeping. */
     repoUrl?: string;
     repoOwner?: string;
     repoName?: string;
+}
+
+/**
+ * A link in a storefront's copied content to a page the content site it was
+ * copied from does not have either: a broken link in the source, carried over.
+ * Recorded on the project (`metadata.brokenLinks`); a reset's last view says so, and
+ * Diagnostics lists them. Never a pop-up: nothing was left out of the copy.
+ */
+export interface StorefrontBrokenLink {
+    /** The address the link points at: "/fr". */
+    link: string;
+    /** The copied pages that carry the link: ["/footer"]. */
+    pages: string[];
 }
 
 /** `storefront-setup-complete` — the pipeline finished. */
@@ -616,6 +853,16 @@ export interface StorefrontSetupCompletePayload {
     repoName?: string;
     /** Present when setup finished with caveats (e.g. PDP routing degraded). */
     warnings?: string[];
+    /** Links the copied content carries to pages the source lacks; the project records them. */
+    brokenLinks?: StorefrontBrokenLink[];
+    /**
+     * The block libraries setup installed, for project creation to record on the
+     * project it creates or edits. Setup has no project of its own to write to: in
+     * the wizard it runs before the project exists.
+     */
+    installedBlockLibraries?: InstalledBlockLibrary[];
+    /** Whether the build step's fixes all landed; creation stamps the project with it. */
+    storefrontBuildComplete?: boolean;
 }
 
 /** `storefront-setup-error` — the pipeline failed; the wizard offers Retry. */
@@ -633,6 +880,4 @@ export interface StorefrontGitHubAppRequiredPayload {
     repo: string;
     installUrl: string;
     message: string;
-    /** Helix has no site for this repo — see GitHubAppInstallDialog. */
-    siteUnregistered?: boolean;
 }

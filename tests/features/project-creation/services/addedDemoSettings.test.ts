@@ -51,6 +51,20 @@ describe('parseAddedDemoSettings', () => {
         const [other] = parseAddedDemoSettings([{ ...JEN, createdFromZip: 'yes' }]);
         expect(other).not.toHaveProperty('createdFromZip');
     });
+
+    it('keeps the boilerplate and lineage it read, and drops either when it is not that shape (EDS-13f)', () => {
+        const boilerplate = { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' };
+        const lineage = { templateRepository: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' } };
+        const [read] = parseAddedDemoSettings([{ ...JEN, boilerplate, lineage }]);
+        const [bad] = parseAddedDemoSettings([
+            { ...JEN, boilerplate: { name: 'x' }, lineage: { templateRepository: 'adobe-commerce/x' } },
+        ]);
+
+        expect(read.boilerplate).toEqual(boilerplate);
+        expect(read.lineage).toEqual(lineage);
+        expect(bad).not.toHaveProperty('boilerplate');
+        expect(bad).not.toHaveProperty('lineage');
+    });
 });
 
 describe('isAddedDemo', () => {

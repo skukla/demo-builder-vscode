@@ -27,7 +27,7 @@ jest.setTimeout(5000);
 // =============================================================================
 
 
-jest.mock('@/features/mesh/services/stalenessDetector');
+jest.mock('@/core/state/projectStateSync');
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
@@ -39,9 +39,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn().mockReturnValue({ tokenService: {} }),
 }));
 
-// storefrontRepublishService - the shared pipeline (dynamically imported)
+// storefrontContentRepublishService - the shared pipeline (dynamically imported)
 const mockRepublishStorefrontContent = jest.fn();
-jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
+jest.mock('@/features/eds/services/storefront/storefrontContentRepublishService', () => ({
     republishStorefrontContent: (...args: unknown[]) => mockRepublishStorefrontContent(...args),
 }));
 
@@ -210,6 +210,35 @@ describe('handleRepublishContent', () => {
             ([m]) => m?.type
         );
         expect(posted).toContain('statusUpdate');
+    });
+
+    // EDS-44: after a store change the pipeline replaces the product and category pages.
+    // It needs the local projects (the shared-repository refusal) and reports its own
+    // stages, and the run ends with its one sentence.
+    it('hands the pipeline the state manager and a stage reporter for the store-change steps', async () => {
+        const context = createMockContext(createMockEdsProject());
+
+        await handleRepublishContent(context);
+
+        const [params] = mockRepublishStorefrontContent.mock.calls[0];
+        expect(params.stateManager).toBe(context.stateManager);
+        expect(typeof params.onStage).toBe('function');
+    });
+
+    it('ends with the store-change sentence when the pages were replaced', async () => {
+        const sentence = 'Now on CitiSignal: 11 category pages and 39 product pages published.';
+        mockRepublishStorefrontContent.mockResolvedValue({ success: true, cdnVerified: true, storePages: sentence });
+        const context = createMockContext(createMockEdsProject());
+
+        const result = await handleRepublishContent(context);
+
+        expect(result).toMatchObject({ success: true, note: sentence });
+    });
+
+    it('adds no note when the store did not change', async () => {
+        const result = await handleRepublishContent(createMockContext(createMockEdsProject()));
+
+        expect(result).not.toHaveProperty('note');
     });
 
     it('does NOT push when the republish failed — nothing changed', async () => {

@@ -28,6 +28,7 @@ import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import type { PublicRepoReaders } from '../github/publicGitHubReads';
 import { CANONICAL_STOREFRONT_FILES, classifyRepoForStorefront } from './repoStorefrontReadiness';
 import { parseStorefrontConfigJson } from './servedStorefrontConfig';
+import { asLineage, readBoilerplate } from './storefrontProvenance';
 import { readSharedDemoDescription } from '@/core/state/projectFileReader';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { bundledDemoPackages } from '@/features/components/services/storefrontResolver';
@@ -180,6 +181,7 @@ export async function probeSharedDemo(
 
     const read = new RepoReader(fileOps, owner, repo, logger);
     const description = await read.description();
+    const lineage = asLineage(repository);
     const base: ProbeDraft = {
         outcome: 'read',
         fullName: repository.fullName,
@@ -191,6 +193,8 @@ export async function probeSharedDemo(
         overrides: [],
         warnings: [...description.warnings],
         ...(description.value ? { description: description.value } : {}),
+        // GitHub's record of where the repository came from (EDS-13f); nothing when it records none.
+        ...(lineage ? { lineage } : {}),
     };
 
     if (readiness.kind === 'empty') {
@@ -200,6 +204,8 @@ export async function probeSharedDemo(
     }
 
     const dependencies = await read.dependencies();
+    const boilerplate = readBoilerplate(await read.packageJson());
+    if (boilerplate) base.boilerplate = boilerplate;
     if (readiness.kind === 'not-a-storefront') {
         if (dependencies?.has(HEADLESS_DEPENDENCY)) {
             base.kind = 'headless';
@@ -353,9 +359,17 @@ class RepoReader {
         }
     }
 
+    private packageJsonText: Promise<string | undefined> | undefined;
+
+    /** package.json's text, read once: the dependencies and the boilerplate both come from it. */
+    packageJson(): Promise<string | undefined> {
+        this.packageJsonText ??= this.text('package.json');
+        return this.packageJsonText;
+    }
+
     /** Dependency names from package.json; `undefined` when there is no readable package.json. */
     async dependencies(): Promise<Set<string> | undefined> {
-        const text = await this.text('package.json');
+        const text = await this.packageJson();
         if (!text) return undefined;
         try {
             const parsed = JSON.parse(text) as { dependencies?: Record<string, unknown> };

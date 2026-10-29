@@ -48,9 +48,9 @@ specific phrase for the ones that print prose.
 
 ## Where this still applies
 
-Five modules run `aio console org list` or `workspace list` today:
-`diagnosticsChecks.ts`, `adobeEntityReads.ts`, `authenticationService.ts`,
-`ensureOrgContext.ts`, and `onOpenChecks/orgContextCheck.ts`.
+Six modules run `aio console org list` or `workspace list` today:
+`diagnosticsChecks.ts`, `adobeOrgReads.ts`, `adobeWorkspaceReads.ts`,
+`authenticationService.ts`, `ensureOrgContext.ts`, and `onOpenChecks/orgContextCheck.ts`.
 
 **They do not all handle it the same way**, so check the call site you are changing
 rather than assuming the pattern is already there.

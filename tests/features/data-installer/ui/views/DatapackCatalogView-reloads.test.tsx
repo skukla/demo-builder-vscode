@@ -55,7 +55,7 @@ describe('refresh re-asks with the toggle as it stands now', () => {
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
-                payload: { includeCommunity: true },
+                payload: { includeCommunity: true, includeLibrary: true },
             }),
         );
     });
@@ -160,7 +160,7 @@ describe('the flyout’s Try Again', () => {
         expect(countOf('get-datapack-detail')).toBeGreaterThan(before);
         expect(requestOfType('get-datapack-detail')).toEqual({
             type: 'get-datapack-detail',
-            payload: { datapackName: 'bodea', version: 'main' },
+            payload: { datapackName: 'bodea', version: 'main', store: 'installer' },
         });
     });
 });
@@ -182,8 +182,31 @@ describe('the two doors out of the catalog', () => {
         expect(mockPostMessage).toHaveBeenCalledWith('open-data-installer-settings');
     });
 
+    // 2026-10-29: export is the Data Installer service's own, so the link shows only with
+    // that engine chosen; with Demo Builder's (the default) it offered an export that
+    // cannot work and writes to a catalog other teams share.
+    it.each([
+        ['demo-builder', false],
+        [undefined, false],
+        ['service', true],
+    ] as const)('with the %s engine, shows the export link: %s', async (engine, shown) => {
+        mockRequest.mockResolvedValue({
+            success: true,
+            data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, ...(engine ? { engine } : {}) },
+        });
+        render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+
+        expect(screen.queryByText('Export from this instance') !== null).toBe(shown);
+        expect(screen.getByText('Load from file')).toBeInTheDocument();
+    });
+
     it('opens the export modal from the header link, and closes it again', async () => {
-        resolveWith(CATALOG);
+        mockRequest.mockResolvedValue({
+            success: true,
+            data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine: 'service' },
+        });
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');

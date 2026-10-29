@@ -13,8 +13,8 @@ works, because each file carries a substantial header comment.
 | `claudeSessionStore.ts` | Probes Claude Code's per-cwd conversation store; decides whether `claude --continue` is safe at launch |
 | `configure.ts` | `demoBuilder.configure` — QuickPick to edit .env, redeploy mesh, and related project configuration |
 | `diagnostics.ts` | The diagnostics report (see below) |
-| `manageSiteAccess.ts` | QuickPick over who holds the Configuration Service admin role on the project's storefront. UX only — logic and post-write verification live in `siteAccessManagerHeadless` |
 | `repairSiteConfiguration.ts` | For a legacy project whose DA.live site name differs from the repo name: runs the storefront name migration, then re-runs the refused Configuration Service write, then republishes. Step 2 runs only when step 1 reports `repaired` |
+| `storefrontReport.ts` | Where the current project's storefront comes from, what Demo Builder wrote into it, and each of its fixes, as a markdown document; for an added demo tied to our templates, offers the fixes that fit (modal, default No). Computation and wording live in `storefrontReport.ts` under `features/eds/services/storefront/` (EDS-13f) |
 | `migrateStorefrontNames.ts` | One-shot palette command for projects built before `164fd251`, whose DA.live site name does not match the GitHub repo name |
 | `openInClaude.ts` | Launches the single "home" Claude Code chat terminal (see below) |
 | `ResetAllCommand.ts` | Dev-only full reset — clears extension state, cached credentials and the DA.live auth session, so a first-time experience can be replayed. Lived under `src/core/commands/` until 2026-08-31; it was never core code, just filed there |
@@ -23,13 +23,15 @@ works, because each file carries a substantial header comment.
 | `refreshBlockLibrary.ts` | Dashboard kebab action, EDS-only — a destructive full re-sync of the DA.live block library |
 | `showPromptsPicker.ts` | Prompt QuickPick; dispatches to `openInClaude` (insert) or `openAi` (manage) |
 
-Four modules here are not commands but support them:
+Six modules here are not commands but support them:
 
 | File | Purpose |
 |------|---------|
 | `diagnosticsChecks.ts` | The collection half of Diagnostics — environment, tools, Adobe CLI, capability probes. Free functions, because none needs the command's state |
 | `diagnosticsReport.ts` | The rendering half. Split from collection deliberately: the two change for different reasons |
 | `handlerContextFactory.ts` | Builds a COMPLETE `HandlerContext` for a webview panel. Every panel command used to hand-roll one, and most filled it in partially |
+| `bundledPanelCommand.ts` | Base for every panel whose page is one esbuild bundle (all but the sidebar). Owns the page HTML around the bundle named by `bundleName` and the panel handler context. Lives here, not on `BaseWebviewCommand`, because core may not import the context factory |
+| `standalonePanelCommand.ts` | Extends `BundledPanelCommand` for webviews that stand beside whatever is open and work with no project — the Data Installer and Site access. Adds registering every handler map in one loop, and opening |
 | `orphanedSettings.ts` | Finds settings a user has set that the extension no longer reads — renaming a contributed setting does not migrate the value, so it strands silently |
 
 ## Registration
@@ -123,7 +125,17 @@ Either way the prompt is also copied to the clipboard as a silent fallback. **Do
 reintroduce a timed or delayed paste on spawn** — it was tried twice and always raced
 cold start, because no "TUI ready" signal exists.
 
-`demoBuilder.ai.engine` selects the tool; `'claude-code'` is currently the only value.
+`demoBuilder.ai.engine` names the agent (`copilot-vscode` — the default — or `claude-code`;
+resolved by `resolveEngine` in `features/ai/engine/agentEngine.ts`, where any other value, including the
+`copilot-cli` and `auto` earlier betas accepted, answers the default). `openInClaude.ts` routes
+the Chat launch by engine: Claude Code gets its terminal (`claude -- '<p>'`, built in
+`engine/chatLaunch.ts`); Copilot in VS Code opens VS Code's chat in agent mode
+(`workbench.action.chat.open`). A missing `claude` is named rather than typed into a terminal.
+Copilot CLI stopped being a Chat choice on 2026-10-06 — same subscription and models as the
+panel, so a choice an SC should not have to make (owner); its `~/.copilot/mcp-config.json`
+registration stays, for SCs who run `copilot` themselves. `demoBuilder.ai.permissions`
+(`ask` | `auto` | `full`) adds Claude's own flags to the launch (`--permission-mode auto` /
+`--dangerously-skip-permissions`); VS Code's chat has no launch argument for it, so it follows VS Code's own `chat.permissions.default`.
 
 **Why there is no extension surface.** Launches once routed through the Claude Code
 VS Code extension's URI handler. That was retired because the handler opens a new
@@ -161,9 +173,9 @@ each leg has its own timeout and degrades independently.
 **Authentication is checked before expensive Adobe work, never triggered by
 surprise.** A command that needs Adobe I/O calls `isAuthenticated()` first — a
 token-only check — and on failure asks the user before starting a browser login.
-`isFullyAuthenticated()` also validates the org and is materially slower, so it is
-used only where org validity is the actual question. Silent browser launches are the
-failure this prevents.
+Where the org is the actual question, use `ensureOrgContext` or
+`detectProjectOrgMismatch` (the `adobe-org-context` skill), not a second sign-in check.
+Silent browser launches are the failure this prevents.
 
 **An Adobe CLI timeout is not proof of failure.** The CLI is often slow rather than
 broken, so a catch block that sees success text in `error.stdout` should treat the

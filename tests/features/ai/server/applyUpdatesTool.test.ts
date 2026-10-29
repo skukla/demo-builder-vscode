@@ -1,37 +1,44 @@
 /**
  * apply_updates tool — check mode (no confirm), the up-to-date short-circuit, the
- * running-demo guard, and the apply path. The headless updateApplyService is
- * mocked; this verifies the tool's gating + shaping, not the apply mechanics.
+ * running-demo guard, and the apply path. The headless updateSelections and
+ * updateApplyService are mocked; this verifies the tool's gating + shaping, not
+ * the check or apply mechanics.
  */
 
-jest.mock('@/core/utils/agentPhaseChannel', () => ({
-    reportPhase: jest.fn(),
-}));
-
 jest.mock('@/features/updates/services/updateApplyService', () => ({
-    computeProjectUpdateSelections: jest.fn(),
     applyUpdatesHeadless: jest.fn(),
+}));
+jest.mock('@/features/updates/services/updateSelections', () => ({
+    computeProjectUpdateSelections: jest.fn(),
     countSelections: jest.fn(),
 }));
 
+// Only the pair update is replaced: the probe the check uses stays real.
+jest.mock('@/features/dashboard/handlers/integrationUpdateHandlers', () => ({
+    ...jest.requireActual('@/features/dashboard/handlers/integrationUpdateHandlers'),
+    updateIntegrationPairFor: jest.fn(),
+}));
+
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
-import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { updateIntegrationPairFor } from '@/features/dashboard/handlers/integrationUpdateHandlers';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
 import {
     computeProjectUpdateSelections,
-    applyUpdatesHeadless,
     countSelections,
-} from '@/features/updates/services/updateApplyService';
+} from '@/features/updates/services/updateSelections';
 import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { callRequestsConsent } from '@/features/ai/server/inExtensionMcpServer';
 
 const computeMock = computeProjectUpdateSelections as jest.Mock;
 const applyMock = applyUpdatesHeadless as jest.Mock;
 const countMock = countSelections as jest.Mock;
-const reportPhaseMock = reportPhase as jest.Mock;
 
-const EMPTY = { forkSync: [], template: [], component: [], adobeMcp: [], blockLibrary: [], inspector: [] };
+const EMPTY = { forkSync: [], template: [], boilerplate: [], finish: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [], integration: [] };
 
 function fakeServer() {
 
@@ -91,6 +98,12 @@ describe('apply_updates', () => {
         });
     });
 
+    it('raises the consent dialog when it is told to apply (EDS-51)', () => {
+        expect(callRequestsConsent('apply_updates', { confirm: true })).toBe(true);
+        // A report-only call (no confirm) changes nothing and asks nothing.
+        expect(callRequestsConsent('apply_updates', {})).toBe(false);
+    });
+
     it('declares what it is: no read-only claim, github auth, and a confirm flag', async () => {
         // The annotation block travels to the client in tools/list and the dry run
         // gates on it, so a wrong declaration is a tool an agent applies blind.
@@ -99,7 +112,9 @@ describe('apply_updates', () => {
 
         const def = s.definition();
         expect(def.needsAuth).toStrictEqual(['github']);
-        expect(def.annotations).toStrictEqual({ readOnlyHint: false, destructiveHint: false });
+        // Destructive: it rewrites storefront code, and its conflict reset discards the
+        // user's own edits, so it raises the consent dialog (EDS-51).
+        expect(def.annotations).toStrictEqual({ readOnlyHint: false, destructiveHint: true });
         expect(def.description).toMatch(/apply available updates/);
         expect(def.inputSchema.confirm.isOptional()).toBe(true);
         expect(def.inputSchema.confirm.parse(true)).toBe(true);
@@ -144,12 +159,21 @@ describe('apply_updates', () => {
         computeMock.mockResolvedValueOnce({
             forkSync: [{ owner: 'skukla', repo: 'a-store' }],
             template: [{ x: 1 }, { x: 2 }],
+            boilerplate: [
+                {
+                    base: { template: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' }, commit: '71a67e027b4b288a67f5cda1fc106d2df9a34805' },
+                    tested: '48bed04d072fff094b49a46709b351bd719b287a',
+                },
+            ],
+            finish: [{ clash: { track: 'boilerplate', files: ['blocks/header/header.js'] } }],
             component: [{ componentId: 'mesh', latestVersion: '2.0.0' }],
             adobeMcp: [{ packageName: '@adobe/aem-mcp', latestVersion: '3.1.0' }],
             blockLibrary: [{ library: { name: 'Bodea blocks' } }],
+            blockLibraryInstall: [{ library: { name: 'Demo Builder Blocks' } }],
             inspector: [{ y: 1 }],
+            integration: [{ label: 'ERP Integration and Justrite ERP', otherOrg: false }],
         });
-        countMock.mockReturnValueOnce(7);
+        countMock.mockReturnValueOnce(9);
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -158,11 +182,58 @@ describe('apply_updates', () => {
         expect(res.summary).toStrictEqual({
             forkSync: ['skukla/a-store'],
             template: 2,
+            // A colleague's storefront's Adobe half: from its base to the tested version (EDS-56).
+            boilerplate: ['adobe-commerce/boilerplate-b2b-template 71a67e0 → 48bed04'],
+            // A clash kept to fix with AI, waiting to be finished (EDS-57).
+            finish: ['boilerplate: blocks/header/header.js'],
             component: ['mesh → 2.0.0'],
             adobeMcp: ['@adobe/aem-mcp → 3.1.0'],
             blockLibrary: ['Bodea blocks'],
+            // Reads as an INSTALL, not an update (EDS-28).
+            blockLibraryInstall: ['Demo Builder Blocks: install'],
             inspector: 1,
+            // The pair by name (AB-73); an other-org pair carries the open-the-project note.
+            integration: ['ERP Integration and Justrite ERP'],
         });
+    });
+
+    it('says in its description that it installs a selected block library, and reports the install', async () => {
+        const installResult = {
+            successCount: 1,
+            failCount: 0,
+            errors: [],
+            installed: ['Added 1 block from Demo Builder Blocks to test-storefront.'],
+        };
+        applyMock.mockResolvedValueOnce({
+            forkSync: {}, template: {}, component: {}, adobeMcp: {}, addon: {},
+            blockLibraryInstall: installResult,
+            totalApplied: 1,
+            totalFailed: 0,
+        });
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        expect(s.definition().description).toMatch(/install any block library the project has selected/);
+        const res = await s.call({ confirm: true });
+
+        expect(res.categories.blockLibraryInstall).toStrictEqual(installResult);
+    });
+
+    it("says in its description that a colleague's storefront can get the tested Adobe boilerplate, and reports it", async () => {
+        const boilerplate = { successCount: 1, failCount: 0, errors: [] };
+        applyMock.mockResolvedValueOnce({
+            forkSync: {}, template: {}, boilerplate, component: {}, adobeMcp: {}, addon: {}, blockLibraryInstall: {},
+            integration: {},
+            totalApplied: 1,
+            totalFailed: 0,
+        });
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        expect(s.definition().description).toMatch(/categories\.boilerplate/);
+        const res = await s.call({ confirm: true });
+
+        expect(res.categories.boilerplate).toStrictEqual(boilerplate);
     });
 
     it('refuses to apply while the demo is running', async () => {
@@ -190,20 +261,48 @@ describe('apply_updates', () => {
         );
     });
 
-    it('a template conflict stops by default; resetTemplateOnConflict:true is the only way to reset', async () => {
-        // The reset discards the user's edits to the conflicted files, so it is
-        // never the default and never inferred — the agent has to say so.
+    // Owner, 2026-10-22: the window says what is still waiting after a run; so does the
+    // agent's answer, by the same check run again on the project as it now is.
+    it('says how many updates the same check still finds once it has applied', async () => {
+        const after = { name: 'p', path: '/p', status: 'stopped', version: 'after' };
+        getCurrentProject.mockResolvedValueOnce({ name: 'p', path: '/p', status: 'stopped' }).mockResolvedValueOnce(after);
+        countMock.mockReturnValueOnce(2).mockReturnValueOnce(1);
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
-        await s.call({ confirm: true, resetTemplateOnConflict: true });
-        await s.call({ confirm: true, resetTemplateOnConflict: false });
+        const res = await s.call({ confirm: true });
+
+        expect(res.remaining).toBe(1);
+        expect(computeMock).toHaveBeenCalledTimes(2);
+        expect(computeMock.mock.calls[1][0]).toBe(after);
+        expect(s.definition().description).toMatch(/remaining/);
+    });
+
+    it('answers remaining 0 when nothing is left', async () => {
+        countMock.mockReturnValueOnce(1).mockReturnValueOnce(0);
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        expect((await s.call({ confirm: true })).remaining).toBe(0);
+    });
+
+    it('a clash stops by default; onClash says keep or reset, and nothing else is inferred', async () => {
+        // A reset discards the user's edits to the clashing files and a keep leaves
+        // markers in the local copy, so neither is the default: the agent has to say so.
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        await s.call({ confirm: true });
+        await s.call({ confirm: true, onClash: 'keep' });
+        await s.call({ confirm: true, onClash: 'reset' });
 
         expect(applyMock.mock.calls.map((c) => c[3])).toEqual([
-            { templateConflicts: 'reset' },
             { templateConflicts: 'stop' },
+            { templateConflicts: 'keep' },
+            { templateConflicts: 'reset' },
         ]);
-        expect(s.definition().inputSchema.resetTemplateOnConflict.isOptional()).toBe(true);
+        expect(s.definition().inputSchema.onClash.isOptional()).toBe(true);
+        expect(s.definition().inputSchema.resetTemplateOnConflict).toBeUndefined();
     });
 
     it('hands the updater the selections it just computed', async () => {
@@ -219,13 +318,16 @@ describe('apply_updates', () => {
         expect(applyMock.mock.calls[0][0]).toBe(selections);
     });
 
-    it('both records each phase for the agent and reports it live', async () => {
-        // The array is the after-the-fact record; reportPhase is what the user sees
-        // while the wait is happening, which is when they care. Dropping either
-        // leaves one of the two audiences with nothing.
-        applyMock.mockImplementationOnce(async (_sel: unknown, _ctx: unknown, report: (m: string) => void) => {
-            report('Syncing fork');
-            report('Updating components');
+    it('records each item for the agent and reports each step live, once', async () => {
+        // The array is the after-the-fact record, an item per line; the live phase
+        // is what the user sees while the wait is happening: the step's name from
+        // the stage table, once as it starts, as the dashboard apply shows it
+        // (progress vocabulary slice 8). Dropping either leaves one audience with nothing.
+        type Report = (stage: string, item?: string) => void;
+        applyMock.mockImplementationOnce(async (_sel: unknown, _ctx: unknown, report: Report) => {
+            report(S.syncingSourceRepos.label, 'me/a');
+            report(S.syncingSourceRepos.label, 'me/b');
+            report(S.updatingComponents.label, 'mesh in demo');
             return {
                 forkSync: { successCount: 0, failCount: 0, errors: [] },
                 template: { successCount: 0, failCount: 0, errors: [] },
@@ -239,12 +341,105 @@ describe('apply_updates', () => {
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
+        const heard: string[] = [];
+        const res = await withPhaseSinks([(m) => heard.push(m)], () => s.call({ confirm: true }));
+
+        expect(res.phases).toStrictEqual([
+            `${S.syncingSourceRepos.label}: me/a`,
+            `${S.syncingSourceRepos.label}: me/b`,
+            `${S.updatingComponents.label}: mesh in demo`,
+        ]);
+        expect(heard).toStrictEqual([S.syncingSourceRepos.label, S.updatingComponents.label]);
+    });
+});
+
+// AB-73: integration pairs (an integration and its ERPs) are one more category,
+// reported without confirm and applied with it through the same pair update the
+// card's Update button runs.
+describe('apply_updates — integrations', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        getCurrentProject.mockResolvedValue({ name: 'p', path: '/p', status: 'stopped' });
+        computeMock.mockResolvedValue({ ...EMPTY, component: [{ componentId: 'mesh', latestVersion: '2.0.0' }] });
+        countMock.mockReturnValue(1);
+    });
+
+    const pair = (otherOrg: boolean) => ({
+        project: { name: 'Justrite', path: '/p' },
+        componentId: 'demo-erp',
+        members: ['demo-erp'],
+        label: 'ERP Integration and Justrite ERP',
+        otherOrg,
+    });
+
+    it('says in its description that it covers integrations and their ERPs', () => {
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        expect(s.definition().description).toMatch(/integrations? and (its|their) ERPs?/);
+    });
+
+    it('without confirm, names each pair with newer code, and which must be updated from its own project', async () => {
+        computeMock.mockResolvedValueOnce({ ...EMPTY, integration: [pair(false), pair(true)] });
+        countMock.mockReturnValueOnce(2);
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        const res = await s.call({});
+
+        expect(res.summary.integration).toStrictEqual([
+            'ERP Integration and Justrite ERP',
+            'ERP Integration and Justrite ERP (uses a different Adobe organization: open that project and update it from its Integrations screen)',
+        ]);
+        expect(applyMock).not.toHaveBeenCalled();
+        // The boundary binds the probe (the check and the guard chain's org step);
+        // the service never reaches into the dashboard's handlers for it.
+        expect(computeMock.mock.calls[0][2]).toMatchObject({
+            check: expect.any(Function),
+            inOtherOrg: expect.any(Function),
+            catalog: expect.any(Array),
+        });
+    });
+
+    it('with confirm, hands the apply a context that can run the pair update, and reports the category', async () => {
+        const integration = { successCount: 1, failCount: 0, errors: [], applied: ['Updated from a to b.'] };
+        applyMock.mockResolvedValueOnce({
+            forkSync: {}, template: {}, component: {}, adobeMcp: {}, addon: {}, blockLibraryInstall: {},
+            integration,
+            totalApplied: 1,
+            totalFailed: 0,
+        });
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
         const res = await s.call({ confirm: true });
 
-        expect(res.phases).toStrictEqual(['Syncing fork', 'Updating components']);
-        expect(reportPhaseMock.mock.calls).toStrictEqual([
-            ['Syncing fork'],
-            ['Updating components'],
-        ]);
+        expect(applyMock.mock.calls[0][1]).toMatchObject({ updateIntegrationPair: expect.any(Function) });
+        expect(res.categories.integration).toStrictEqual(integration);
+    });
+
+    it('the pair update it hands over runs the card\'s update under THIS call\'s context', async () => {
+        // The updater only ever sees a function. What it forwards, and under which
+        // context, is decided here and nowhere else.
+        const pairUpdate = updateIntegrationPairFor as jest.Mock;
+        const outcome = { success: true, message: 'Updated from a to b.' };
+        pairUpdate.mockResolvedValueOnce(outcome);
+        applyMock.mockResolvedValueOnce({ totalApplied: 0, totalFailed: 0 });
+        const ctx = ctxFactory();
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, () => ctx);
+        await s.call({ confirm: true });
+        const handed = applyMock.mock.calls[0][1] as {
+            updateIntegrationPair: (project: unknown, id: string, report: unknown) => Promise<unknown>;
+        };
+        const project = { name: 'Justrite', path: '/p' };
+        const report = jest.fn();
+
+        const result = await handed.updateIntegrationPair(project, 'demo-erp', report);
+
+        expect(pairUpdate.mock.calls).toStrictEqual([[ctx, project, 'demo-erp', report]]);
+        expect(pairUpdate.mock.calls[0][0]).toBe(ctx);
+        expect(pairUpdate.mock.calls[0][3]).toBe(report);
+        expect(result).toBe(outcome);
     });
 });

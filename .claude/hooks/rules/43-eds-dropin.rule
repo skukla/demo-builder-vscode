@@ -15,6 +15,7 @@ rule_match() {
     case "$3" in
         */eds/services/configGenerator.ts) return 0 ;;
         */eds/services/quickEditPublisher.ts) return 0 ;;
+        */eds/services/quickEditSnippet.ts) return 0 ;;
         */eds/services/placeholderStubs.ts) return 0 ;;
     esac
     return 1

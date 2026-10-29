@@ -9,6 +9,7 @@
  * mocked to record its target and run the callback (no global mutation).
  */
 
+import './appBuilderComponentRunner.runtimeMock';
 import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import type { Project } from '@/types/base';
 
@@ -23,6 +24,8 @@ jest.setTimeout(5000);
 const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
+    listDeclaredExtensionPoints: jest.fn().mockResolvedValue([]),
+    listDeclaredTriggersAndRules: jest.fn().mockResolvedValue({ triggers: [], rules: [] }),
     detectAppLayout: (...args: unknown[]) => mockDetectAppLayout(...args),
 }));
 
@@ -30,11 +33,9 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import {
-    addAppBuilderComponent,
-    deployAppBuilderComponent,
-    removeAppBuilderComponent,
-} from '@/features/app-builder/services/appBuilderComponentRunner';
+import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
+import { deployAppBuilderComponent } from '@/features/app-builder/services/appBuilderRedeployRun';
+import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
 import {
     MESH_ENTRY,
     INTEGRATION_ENTRY,

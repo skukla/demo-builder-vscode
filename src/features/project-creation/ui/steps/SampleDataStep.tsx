@@ -84,17 +84,21 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
 
     // Pre-select the demo's pack once the catalog is here and nothing is chosen yet.
     // A vanished version falls back to the default rule; the SC can change it.
+    // Not in Edit: the project already chose, and "no datapack" is a choice. A
+    // pre-select there would read as a change, and Finish would import a pack
+    // nobody picked (PL-75).
     const askedName = asked?.name;
     const askedVersion = asked?.version;
     const chosenName = state.datapack?.name;
+    const editing = state.wizardMode === 'edit';
     useEffect(() => {
-        if (!settled || !askedGroup || chosenName !== undefined) return;
+        if (editing || !settled || !askedGroup || chosenName !== undefined) return;
         const version =
             askedVersion && askedGroup.versions.some((v) => v.id.version === askedVersion)
                 ? askedVersion
                 : pickDefaultVersion(askedGroup);
         if (version) updateState({ datapack: { name: askedGroup.name, version } });
-    }, [settled, askedGroup, askedName, askedVersion, chosenName, updateState]);
+    }, [editing, settled, askedGroup, askedName, askedVersion, chosenName, updateState]);
 
     /** Opens VS Code settings at the section the refusal names. */
     const openDataInstallerSettings = useCallback((): void => {

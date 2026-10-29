@@ -1,0 +1,55 @@
+{
+    "duration": 1,
+    "found_count": 2,
+    "include_content": true,
+    "missing_count": 1,
+    "requested_count": 3,
+    "results": [
+        {
+            "data": "[{\"category\":{\"id\":1,\"name\":\"Signs and Labels\"}}]",
+            "found": true,
+            "metadata": {
+                "_id": "6abe711099d2a5395a624b35",
+                "data_type": "categories",
+                "datapack_name": "fixture-capture",
+                "datapack_type": "accs",
+                "version": "v1"
+            },
+            "requested": {
+                "data_type": "categories",
+                "datapack_name": "fixture-capture",
+                "datapack_type": "accs",
+                "version": "v1"
+            }
+        },
+        {
+            "data": "[{\"customer_group\":{\"code\":\"Northgate\"}}]",
+            "found": true,
+            "metadata": {
+                "_id": "6abe711099d2a5395a624b36",
+                "data_type": "customer_groups",
+                "datapack_name": "fixture-capture",
+                "datapack_type": "accs",
+                "version": "v1"
+            },
+            "requested": {
+                "data_type": "customer_groups",
+                "datapack_name": "fixture-capture",
+                "datapack_type": "accs",
+                "version": "v1"
+            }
+        },
+        {
+            "data": null,
+            "found": false,
+            "metadata": null,
+            "requested": {
+                "data_type": "products",
+                "datapack_name": "fixture-capture",
+                "datapack_type": "accs",
+                "version": "v1"
+            }
+        }
+    ],
+    "success": true
+}

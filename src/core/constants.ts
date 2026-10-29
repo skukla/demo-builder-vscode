@@ -235,7 +235,86 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // exactly one file in the repo: this shipped template. An agent following it got
 // "command not found" in every project generated since. Found by reading every
 // document; the fix only reaches existing projects because of this bump.
-export const AI_CONTEXT_VERSION = 32;
+// v33 (2026-09-21): AB-23 slice 6. An integration added since AB-23 runs in an
+// Adobe workspace of its own, and AGENTS.md named only the project's — so an agent
+// looked for the ERP in Production. The Adobe section now lists each integration
+// workspace, and both AGENTS.md and extend-app-builder-app tell agents to pass
+// `componentId` to add_console_apis, which gained it in the same change; without it
+// an API meant for an integration landed on a workspace that integration never uses.
+// v34 (2026-10-03): two tools landed that the bundle never named, so an agent
+// inside a project was not told they exist. AGENTS.md now names reset_project —
+// one reset for both project kinds (it was reset_eds_project and refused a
+// headless project), what it needs and that it cannot be undone — and
+// create-eds-project teaches create_project_from_file: what an exported project
+// file decides, and what it never carries. The old tool name was taught nowhere.
+// v35 (2026-10-04): factual fixes from the AI-files audit
+// (.rptc/research/ai-files-audit-2026-10/), each re-checked against the code. Removed
+// diagnose-demo's mesh .env "trap" (deploy_mesh regenerates the .env since 2026-08-04);
+// open_view takes "projects_list"; register-custom-block now agrees with
+// commerce-block-mapper and AGENTS.md that a block on /products/default shows on real
+// product URLs; header-nav-footer and commerce-block-mapper stop naming nav,
+// breadcrumb and commerce-search blocks the template does not have; nothing
+// gitignores .scraped/ (the project root is not a repository); sync-changes names
+// write_page/publish_page (both confirm:true) for a page and says sync_storefront
+// publishes only the home page; settings live in the project and .env files are
+// generated from them; integrations deploy with deploy_integration.
+// v36 (2026-10-04): a new always-on skill, author-commerce-data (AI-10) — building a
+// demo's catalog in the project's Commerce store from a brief: the order of operations,
+// the silent create failures as rules, bulk loads, the per-customer-group visibility
+// check, and that an "Error:" answer wrote nothing. Without the bump, existing projects
+// never receive it.
+// v37 (2026-10-05): category pages and the catalog menu are written at storefront setup
+// (EDS-24). header-nav-footer says the nav's product menu comes from the catalog-menu line,
+// not typed categories; author-commerce-data says a new category gets its page from
+// sync_content, never from write_page one page at a time. Same unreleased version: a
+// hand-built category page at any address is honored, and the nav's catalog-menu table
+// holds the "category | page" rows that link the menu to it. Same unreleased version again
+// (EDS-27): both skills name check_category_pages / add_category_pages for a category added
+// after setup, and author-commerce-data says Demo Builder looks by itself while the project
+// is open and that the autoAdd setting is the SC's to turn on. Same unreleased version
+// (ADR-024): AGENTS.md says render-pdp writes the real SKU into each product page and that
+// custom blocks link to products with getProductLink.
+// v38 (2026-10-06): the bundle stops naming one agent (Copilot support, AI-12 step 02).
+// "Try asking Claude" became "Try asking", and the tool-servers paragraph no longer tells
+// the agent to reach for `ToolSearch` with an `mcp__server__` prefix — Claude Code's
+// mechanism; Copilot spells an MCP tool `server-tool`. Existing projects only get the
+// neutral text because of this bump.
+// v39 (2026-10-07, AI-13): the ai-defaults tools install and RUN on the Node they need
+// (ai-defaults `nodeVersion`, 24, through fnm) instead of the PATH's: .mcp.json launches each
+// node server as `fnm exec --using=24 node <script>`. And `@dropins/mcp` became
+// `@dropins/ai-tools` (npm's rename; its server lists 20 tools, measured 2026-10-07). Existing projects get both at the
+// next sweep only because of this bump.
+// v40 (2026-10-07, PR-1a): the ai-defaults tools install into Demo Builder's Node folder
+// (`~/.demo-builder/node`), so each .mcp.json node entry now carries
+// `env: { FNM_DIR: <that folder> }`. Without it `fnm exec` read the SC's own fnm, which may
+// not have the Node, and the tool did not start. Existing projects get it only through this bump.
+// v41 (2026-10-13): the sync-changes skill no longer calls `promote_block_to_library` "push
+// back to source library". The tool adds a block to this site's own DA.live block library; it
+// never saved a block for other projects. Existing projects get the corrected skill only
+// through this bump.
+// v42 (2026-10-21, EDS-57): the storefront git-sync hook in .claude/settings.json skips while
+// a storefront update's clash is kept in the local copy (`.git/demo-builder-kept-clash`).
+// An agent's first edit to the clashed file committed and pushed the whole half-applied
+// update, past finish_storefront_update. The home Chat's hook is rewritten at every start;
+// each project's only reaches existing projects through this bump.
+// v43 (2026-10-22, EDS-61): category pages come from the product page overlay, at each
+// category's own url path, filled from the site's /categories/default, and authored pages at
+// those addresses are kept by /authored-category-pages.json. author-commerce-data
+// and header-nav-footer drop check_category_pages, add_category_pages and the autoAdd
+// setting (all removed), and say a new category's page appears on first visit and that
+// sync_content re-publishes every one (so a template edit reaches them). Existing projects
+// would keep naming two removed tools without this bump.
+// v44 (2026-10-23, EDS-63): the agent's `republish` does what the dashboard's Republish
+// does (settings, code and every page), and `sync_content`, which did that job under
+// another name, is removed. sync-changes, diagnose-demo, header-nav-footer and
+// author-commerce-data name `republish`; existing projects would keep naming a removed tool.
+// v45 (2026-10-25): the nav's catalog line is "Commerce: All" / "Commerce: <category>",
+// not "Shop the catalog". header-nav-footer says so; existing projects would keep telling
+// the agent to type the old line.
+// v46 (2026-10-29, EDS-61): AGENTS.md's storefront routing section says the smart-404 recovery
+// script runs inline in 404.html, not scripts/delayed.js (Adobe's B2B template has none), and
+// covers category pages. Existing projects would keep sending an agent to delayed.js.
+export const AI_CONTEXT_VERSION = 46;
 
 /**
  * Component IDs for standardized component instance access

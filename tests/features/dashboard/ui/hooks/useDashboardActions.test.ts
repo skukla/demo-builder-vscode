@@ -94,16 +94,11 @@ describe('useDashboardActions', () => {
 
             expect(result.current.handleStartDemo).toBeDefined();
             expect(result.current.handleStopDemo).toBeDefined();
-            expect(result.current.handleDeployMesh).toBeDefined();
             expect(result.current.handleOpenBrowser).toBeDefined();
             expect(result.current.handleConfigure).toBeDefined();
-            expect(result.current.handleOpenDevConsole).toBeDefined();
-            expect(result.current.handleDeleteProject).toBeDefined();
             expect(result.current.handleNavigateBack).toBeDefined();
             expect(result.current.handleReAuthenticate).toBeDefined();
             expect(result.current.handleEditProject).toBeDefined();
-            expect(result.current.handleRepublishContent).toBeDefined();
-            expect(result.current.handleResetProject).toBeDefined();
         });
 
         it('should return functions for all handlers', () => {
@@ -111,11 +106,8 @@ describe('useDashboardActions', () => {
 
             expect(typeof result.current.handleStartDemo).toBe('function');
             expect(typeof result.current.handleStopDemo).toBe('function');
-            expect(typeof result.current.handleDeployMesh).toBe('function');
             expect(typeof result.current.handleOpenBrowser).toBe('function');
             expect(typeof result.current.handleConfigure).toBe('function');
-            expect(typeof result.current.handleOpenDevConsole).toBe('function');
-            expect(typeof result.current.handleDeleteProject).toBe('function');
             expect(typeof result.current.handleNavigateBack).toBe('function');
             expect(typeof result.current.handleReAuthenticate).toBe('function');
         });
@@ -185,19 +177,6 @@ describe('useDashboardActions', () => {
         });
     });
 
-    describe('Mesh Deploy Action', () => {
-        it('should set transitioning state and send deployMesh message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleDeployMesh();
-            });
-
-            expect(mockSetIsTransitioning).toHaveBeenCalledWith(true);
-            expect(mockPostMessage).toHaveBeenCalledWith('deployMesh');
-        });
-    });
-
     describe('Simple Message Actions', () => {
         it('should send configure message', () => {
             const { result } = renderActionsHook();
@@ -209,24 +188,16 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('configure');
         });
 
-        it('should send openDevConsole message', () => {
+        it('should send openAemAssets message (EDS-21)', () => {
+            // No URL travels with it: the AEM host is a VS Code setting, which only
+            // the extension side can read.
             const { result } = renderActionsHook();
 
             act(() => {
-                result.current.handleOpenDevConsole();
+                result.current.handleOpenAemAssets();
             });
 
-            expect(mockPostMessage).toHaveBeenCalledWith('openDevConsole');
-        });
-
-        it('should send deleteProject message', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleDeleteProject();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('deleteProject');
+            expect(mockPostMessage).toHaveBeenCalledWith('openAemAssets');
         });
 
         it('should send navigateBack message', () => {
@@ -280,24 +251,27 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('editProject');
         });
 
-        it('should send republishContent message', () => {
+        it('should send openSiteAccess message', () => {
             const { result } = renderActionsHook();
 
             act(() => {
-                result.current.handleRepublishContent();
+                result.current.handleOpenSiteAccess();
             });
 
-            expect(mockPostMessage).toHaveBeenCalledWith('republishContent');
+            expect(mockPostMessage.mock.calls).toStrictEqual([['openSiteAccess']]);
         });
 
-        it('should send resetProject message', () => {
+        // Verifying the org is a status request and nothing else: it must not
+        // start a sign-in, which is what reAuthenticate and switchOrg do.
+        it('should re-run the status checks to verify the org, without a sign-in', () => {
             const { result } = renderActionsHook();
 
             act(() => {
-                result.current.handleResetProject();
+                result.current.handleVerifyOrg();
             });
 
-            expect(mockPostMessage).toHaveBeenCalledWith('resetProject');
+            expect(mockPostMessage.mock.calls).toStrictEqual([['requestStatus']]);
+            expect(webviewClient.request).not.toHaveBeenCalled();
         });
     });
 
@@ -330,29 +304,7 @@ describe('useDashboardActions', () => {
         });
     });
 
-    describe('Storefront Actions', () => {
-        it('should send syncStorefront without entering the transitioning state', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleSyncStorefront();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('syncStorefront');
-            expect(mockSetIsTransitioning).not.toHaveBeenCalled();
-        });
-
-        it('should send refreshBlockLibrary without entering the transitioning state', () => {
-            const { result } = renderActionsHook();
-
-            act(() => {
-                result.current.handleRefreshBlockLibrary();
-            });
-
-            expect(mockPostMessage).toHaveBeenCalledWith('refreshBlockLibrary');
-            expect(mockSetIsTransitioning).not.toHaveBeenCalled();
-        });
-    });
+    describe('Storefront Actions', () => {});
 
     describe('Open Live Site Action', () => {
         const LIVE_URL = 'https://main--demo--acme.aem.live/';
@@ -474,10 +426,9 @@ describe('useDashboardActions', () => {
                 result.current.handleStartDemo();
                 result.current.handleStopDemo();
                 result.current.handleRestartDemo();
-                result.current.handleDeployMesh();
             });
 
-            expect(secondSetter).toHaveBeenCalledTimes(4);
+            expect(secondSetter).toHaveBeenCalledTimes(3);
             expect(firstSetter).not.toHaveBeenCalled();
         });
 
@@ -539,10 +490,8 @@ describe('useDashboardActions', () => {
             // All handlers should be stable (same reference)
             expect(result.current.handleStartDemo).toBe(initialHandlers.handleStartDemo);
             expect(result.current.handleStopDemo).toBe(initialHandlers.handleStopDemo);
-            expect(result.current.handleDeployMesh).toBe(initialHandlers.handleDeployMesh);
             expect(result.current.handleConfigure).toBe(initialHandlers.handleConfigure);
-            expect(result.current.handleOpenDevConsole).toBe(initialHandlers.handleOpenDevConsole);
-            expect(result.current.handleDeleteProject).toBe(initialHandlers.handleDeleteProject);
+            expect(result.current.handleOpenAemAssets).toBe(initialHandlers.handleOpenAemAssets);
             expect(result.current.handleNavigateBack).toBe(initialHandlers.handleNavigateBack);
             expect(result.current.handleReAuthenticate).toBe(initialHandlers.handleReAuthenticate);
         });

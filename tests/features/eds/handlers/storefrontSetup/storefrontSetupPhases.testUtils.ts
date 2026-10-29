@@ -16,7 +16,7 @@
  *   @/core/logging            NEEDED (34 fail) — moved HERE
  *   githubFileOperations      NEEDED (30 fail) — moved HERE
  *   timeoutConfig             NEEDED (9 fail)  — 3 variants, stays local
- *   githubRepoOperations      NEEDED           — 2 variants, stays local
+ *   githubRepoLifecycle       NEEDED           — 2 variants, stays local (was githubRepoOperations until the 2026-10-08 split)
  *   blockLibraryLoader        NEEDED (6 fail)  — SPEC-imported, cannot move
  *   blockCollectionHelpers    NEEDED (6 fail)  — SPEC-imported, cannot move
  *   edsPipeline               NEEDED (12 fail) — SPEC-imported, cannot move
@@ -51,6 +51,23 @@ jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
         getFileContent: jest.fn().mockResolvedValue(null),
         createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
+        // A library whose blocks were all present is recorded at its source's
+        // latest commit (EDS-51).
+        getLatestCommitSha: jest.fn().mockResolvedValue('f00dfeed00000000000000000000000000000000'),
+    })),
+}));
+
+/**
+ * The code publish answers "published". Phase 3 FAILS a run whose code did not
+ * reach the CDN (scratch-1022, 2026-10-22), and the real `HelixService` cannot
+ * publish here — it reads a GitHub token from `context.secrets`, which is `{}`.
+ * Until that change the failure was swallowed, so every suite in this family ran
+ * over a failed publish without knowing it. What a failed publish does is pinned in
+ * `storefrontSetupPhase3-confirmCodeSync.test.ts`, not here.
+ */
+jest.mock('@/features/eds/services/helix/helixService', () => ({
+    HelixService: jest.fn().mockImplementation(() => ({
+        previewCode: jest.fn().mockResolvedValue(undefined),
     })),
 }));
 
@@ -79,11 +96,9 @@ export function createSetupContext(
      * What `stateManager.getCurrentProject` resolves.
      *
      * Defaults to `undefined`, which is what three of the four suites had. The
-     * tracking suite needs a real one — its subject saves installed-library metadata
-     * back onto the current project, so with no project the save path never runs and
-     * its assertions silently see zero calls. That is exactly what happened when this
-     * parameter did not exist: two tests failed against a shared context that was
-     * correct for the other three suites.
+     * tracking suite passes a real one to prove setup leaves it ALONE: in the wizard
+     * the open project is not the one being created, and setup once saved its
+     * installed-library records onto it (fixed 2026-10-09).
      */
     currentProject?: unknown,
 ): HandlerContext {

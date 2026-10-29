@@ -69,12 +69,14 @@ describe('DaLiveContentOperations - HTML transformation', () => {
                     blob: async () => new Blob([plainHtml], { type: 'text/html' }),
                 } as Response;
             })
+            // The source page's own head, read for its page metadata: none here.
+            .mockResolvedValueOnce(mockFetchResponse(404))
             .mockImplementationOnce(async (_url: string, options?: RequestInit) => {
                 postedFormData = options?.body as FormData;
                 return mockFetchResponse(200);
             });
 
-        await service.copyContentFromSource(
+        await service.copyOps.copyContentFromSource(
             {
                 org: 'source-org',
                 site: 'source-site',

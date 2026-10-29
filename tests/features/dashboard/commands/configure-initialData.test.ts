@@ -21,17 +21,6 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 
 import { internals } from '../../../helpers/commandInternals';
 import { createMockProject } from '../../../helpers/projectFake';
-jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAvailableAppBuilderComponents: jest.fn(() => []),
-}));
-jest.mock('@/core/state/appBuilderComponentState', () => ({
-    getProvidedEnvVars: jest.fn(() => ({})),
-}));
-jest.mock('@/features/dashboard/handlers/appBuilderComponentSecrets', () => ({
-    loadAppBuilderComponentSecretFlags: jest.fn(async () => ({})),
-    persistAppBuilderComponentSecrets: jest.fn(),
-    splitAppBuilderComponentSecrets: jest.fn(),
-}));
 jest.mock('@/features/components/services/commerceSecretMigration', () => ({
     loadDeclaredSecretFlags: jest.fn(async () => ({})),
     migrateDeclaredSecrets: jest.fn(),
@@ -118,5 +107,36 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
         // The rest of the record survives the injection untouched.
         expect(envVars.ACCS_WEBSITE_CODE.label).toBe('Website code');
         expect(envVars.ACCS_GRAPHQL_ENDPOINT.type).toBe('url');
+    });
+
+    it('offers an Edge Delivery project the block libraries its stack and package allow', async () => {
+        mockStateManager.getCurrentProject.mockResolvedValue(
+            createMockProject({
+                name: 'eds-project',
+                path: '/nonexistent/test/project',
+                selectedStack: 'eds-accs',
+                selectedPackage: 'bodea',
+            }),
+        );
+
+        const data = await internals(command).getInitialData<{
+            blockLibraryChoices: {
+                native: { id: string }[];
+                available: { id: string }[];
+                customDefaults: unknown[];
+            };
+        }>();
+
+        expect(data.blockLibraryChoices.native.map((lib) => lib.id)).toEqual(['bodea-blocks']);
+        // Demo Builder Blocks is always included, never a choice (owner decision 2026-10-15).
+        expect(data.blockLibraryChoices.available.map((lib) => lib.id)).toEqual(['demo-team-blocks']);
+    });
+
+    it('offers a project that is not Edge Delivery no block libraries', async () => {
+        const data = await internals(command).getInitialData<{
+            blockLibraryChoices: { native: unknown[]; available: unknown[] };
+        }>();
+
+        expect(data.blockLibraryChoices).toEqual({ native: [], available: [], customDefaults: [] });
     });
 });

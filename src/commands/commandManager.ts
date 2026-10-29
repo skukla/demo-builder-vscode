@@ -1,9 +1,9 @@
 import * as fsPromises from 'fs/promises';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
-import { ManageSiteAccessCommand } from './manageSiteAccess';
 import { MigrateStorefrontNamesCommand } from './migrateStorefrontNames';
 import { OpenInClaudeCommand } from './openInClaude';
 import { OpenModernizationAgentCommand } from './openModernizationAgent';
@@ -16,14 +16,15 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { openUrl } from '@/core/utils/browserUtils';
 import { formatMinutes } from '@/core/utils/timeFormatting';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ShowIntegrationsCommand } from '@/features/dashboard/commands/showIntegrations';
 import { ShowDataInstallerCommand } from '@/features/data-installer/commands/showDataInstaller';
+import { ShowSiteAccessCommand } from '@/features/eds/commands/showSiteAccess';
 import { getBookmarkletSetupPageUrl } from '@/features/eds/ui/helpers/bookmarkletSetupPage';
 import { getBookmarkletUrl } from '@/features/eds/utils/daLiveTokenBookmarklet';
-import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
@@ -36,6 +37,7 @@ import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
+import { isRecord } from '@/types/typeGuards';
 
 export class CommandManager {
     private context: vscode.ExtensionContext;
@@ -58,11 +60,12 @@ export class CommandManager {
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.showProjectsList', async () => {
+        this.registerCommand('demoBuilder.showProjectsList', async (options?: unknown) => {
             // Close other webviews when showing Projects List (tab replacement)
             ProjectDashboardWebviewCommand.disposeActivePanel();
             ConfigureProjectWebviewCommand.disposeActivePanel();
-            await projectsList.execute();
+            // Check for Updates opens it with the Updates modal (PL-80).
+            await projectsList.execute({ showUpdates: isRecord(options) && options.showUpdates === true });
         });
 
         // Create Project (Webview version)
@@ -168,19 +171,12 @@ export class CommandManager {
 
         // Start Demo
         const startDemo = new StartDemoCommand(this.context, this.stateManager, this.logger);
-        this.registerCommand('demoBuilder.startDemo', () => startDemo.execute());
+        // A screen or agent passes the project it means; the palette passes nothing (AI-15).
+        this.registerCommand('demoBuilder.startDemo', (projectPath?: unknown) => startDemo.execute(projectPath));
 
         // Stop Demo
         const stopDemo = new StopDemoCommand(this.context, this.stateManager, this.logger);
-        this.registerCommand('demoBuilder.stopDemo', () => stopDemo.execute());
-
-        // Delete Project
-        const deleteProject = new DeleteProjectCommand(
-            this.context,
-            this.stateManager,
-            this.logger,
-        );
-        this.registerCommand('demoBuilder.deleteProject', () => deleteProject.execute());
+        this.registerCommand('demoBuilder.stopDemo', (projectPath?: unknown) => stopDemo.execute(projectPath));
 
         // View Status
         const viewStatus = new ViewStatusCommand(this.context, this.stateManager, this.logger);
@@ -196,13 +192,13 @@ export class CommandManager {
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.configureProject', async () => {
-            await configureProject.execute();
+        this.registerCommand('demoBuilder.configureProject', async (projectPath?: unknown) => {
+            await configureProject.execute(projectPath);
         });
 
         // Deploy Mesh
         const deployMesh = new DeployMeshCommand(this.context, this.stateManager, this.logger);
-        this.registerCommand('demoBuilder.deployMesh', () => deployMesh.execute());
+        this.registerCommand('demoBuilder.deployMesh', (projectPath?: unknown) => deployMesh.execute(projectPath));
 
         // Sync Storefront (EDS projects only — runs the same flow as the MCP
         // sync_storefront tool, with VS Code-native conflict resolution UX)
@@ -226,12 +222,13 @@ export class CommandManager {
             refreshBlockLibrary.execute(),
         );
 
-        // Manage Site Access — who administers the storefront's Configuration
-        // Service entry. Palette-visible on purpose: the person who needs to run
-        // it is often NOT the person whose project is broken (a teammate grants
-        // the role on someone else's behalf), so it cannot live only on a
-        // project-scoped surface.
-        const manageSiteAccess = new ManageSiteAccessCommand(
+        // Manage Site Access — the Site access webview: who administers the
+        // storefront's Configuration Service entry and who reads its DA.live
+        // content. Palette-visible on purpose: the person who needs to run it is
+        // often NOT the person whose project is broken (a teammate grants the role
+        // on someone else's behalf), so it is its own webview rather than a modal
+        // on a project-scoped surface.
+        const manageSiteAccess = new ShowSiteAccessCommand(
             this.context,
             this.stateManager,
             this.logger,
@@ -248,19 +245,27 @@ export class CommandManager {
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.repairSiteConfiguration', () =>
-            repairSiteConfiguration.execute(),
+        this.registerCommand('demoBuilder.repairSiteConfiguration', (projectPath?: unknown) =>
+            repairSiteConfiguration.execute(projectPath),
         );
 
         // Check Updates
         const checkUpdates = new CheckUpdatesCommand(this.context, this.stateManager, this.logger);
-        this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
+        // `background`: the startup and four-hourly checks, which notify instead of opening it.
+        this.registerCommand('demoBuilder.checkForUpdates', (options?: unknown) =>
+            checkUpdates.execute({ background: isRecord(options) && options.background === true }),
+        );
 
         // Open in Claude Code (CLI) — terminal launch, always. The URI-handler surface
         // was retired (ADR-019), and with it `demoBuilder.ai.harness`, which this comment
         // named as the pathway for months after the setting stopped existing.
-        // `demoBuilder.ai.engine` selects the tool; `'claude-code'` is its only value.
-        const openInClaude = new OpenInClaudeCommand(this.context, this.stateManager, this.logger);
+        // `demoBuilder.ai.engine` names the agent (features/ai/engine/agentEngine); this
+        // launch still opens Claude Code only until AI-12 step 08 routes it by engine.
+        // The executor is resolved per call: commands are built at activation, and
+        // asking for a service then would pin whatever existed at that moment.
+        const openInClaude = new OpenInClaudeCommand(this.context, this.stateManager, this.logger, {
+            commandExists: (name) => ServiceLocator.getCommandExecutor().commandExists(name),
+        });
         this.registerCommand('demoBuilder.openInClaude', async (...args: unknown[]) => {
             const project = args[0] as Project | undefined;
             await openInClaude.execute(project);
@@ -284,6 +289,13 @@ export class CommandManager {
         // is the one way to get a conversation on the current bundle.
         this.registerCommand('demoBuilder.newAiChat', async () => {
             await openInClaude.execute({ fresh: true });
+        });
+
+        // Pick an Earlier AI Chat — opens Claude Code's own session picker
+        // (`claude --resume`), the way back to a conversation `--continue` no
+        // longer lands on (AI-4b).
+        this.registerCommand('demoBuilder.pickAiChat', async () => {
+            await openInClaude.execute({ pickPast: true });
         });
 
         // Show Prompts Picker — single-purpose prompt QuickPick. Replaces the
@@ -390,9 +402,8 @@ export class CommandManager {
                 },
                 () => auth.login(force),
             );
-            if (ok) {
-                vscode.window.setStatusBarMessage('$(check) Signed in to Adobe', 5000);
-            } else {
+            // Success is announced by the sign-in itself (extension.ts, onDidSignIn).
+            if (!ok) {
                 void vscode.window.showWarningMessage(
                     'Adobe sign-in did not complete. Check the Debug Logs output channel.',
                 );
@@ -412,9 +423,8 @@ export class CommandManager {
                 context: this.context,
                 logger: this.logger,
             });
-            if (result.success) {
-                vscode.window.setStatusBarMessage('$(check) Signed in to DA.live', 5000);
-            } else if (!result.cancelled) {
+            // Success is announced by the sign-in flow itself (daLiveSignedInMessage).
+            if (!result.success && !result.cancelled) {
                 void vscode.window.showWarningMessage(
                     `DA.live sign-in failed${result.error ? `: ${result.error}` : ''}.`,
                 );
@@ -448,10 +458,8 @@ export class CommandManager {
                 { location: vscode.ProgressLocation.Notification, title: 'Signing in to GitHub' },
                 () => signInToGitHub(tokenService, this.logger, { force }),
             );
-            if ('login' in outcome) {
-                vscode.window.setStatusBarMessage(`$(check) Signed in to GitHub as ${outcome.login}`, 5000);
-                return;
-            }
+            // Success is announced by signInToGitHub itself.
+            if ('login' in outcome) return;
             // A cancel is the SC's own choice; only a failure is worth a warning.
             if (!outcome.cancelled) {
                 void vscode.window.showWarningMessage(
@@ -466,14 +474,15 @@ export class CommandManager {
         // without an open project). Per-project .mcp.json remains the default.
         this.registerCommand('demoBuilder.registerGlobalMcp', async () => {
             try {
-                const configPath = await registerGlobalMcp(
+                const written = await registerGlobalMcp(
                     path.join(this.context.extensionPath, 'dist'),
                 );
-                this.logger.info(`[MCP] global registration written to ${configPath}`);
-                void vscode.window.showInformationMessage(
-                    'Demo Builder MCP registered globally in ~/.claude.json. ' +
-                        'Claude Code can now reach a running Demo Builder window from any directory.',
-                );
+                this.logger.info(`[MCP] global registration written to ${written.join(', ')}`);
+                // Just the files, by the paths an SC recognises: the longer sentence this
+                // replaced was cut off in the toast before the second path (2026-10-22).
+                const files = written.map((file) => file.replace(os.homedir(), '~')).join(' and ');
+                // A success: a ✅ line that goes by itself (owner, 2026-10-15).
+                showSuccessInStatusBar(`Registered in ${files}`);
             } catch (error) {
                 this.logger.error('[MCP] global registration failed', error as Error);
                 void vscode.window.showErrorMessage(

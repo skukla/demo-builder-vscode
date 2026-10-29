@@ -17,14 +17,15 @@
 // The shared mock wall FIRST: importing it is what registers the module mocks,
 // and an import of the handler above this line would load it unmocked.
 import {
+    EXISTING_ADOBE,
     NEW_DESTINATION,
     makeDestinationContext,
     makeContextWithComponents,
     mockMove,
     mockPostComponentsSnapshot,
-    mockPostDestination,
-    mockPostMeshStatus,
-    mockPostRowStatus,
+    mockSendDestination,
+    mockSendMeshStatus,
+    mockSendRowStatus,
     mockProgressReport,
     mockRunGuards,
     mockWithProgress,
@@ -34,9 +35,11 @@ import {
     handleSetProjectDestination,
     type SetProjectDestinationPayload,
 } from '@/features/dashboard/handlers/destinationHandlers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 beforeEach(() => {
     resetDestinationMocks();
@@ -70,6 +73,66 @@ describe('handleSetProjectDestination', () => {
         const saved = saveProject.mock.calls.at(-1)?.[0] as { adobe: Record<string, string> };
         expect(saved.adobe.organization).toBe('285361');
         expect(saved.adobe.organizationName).toBe('Adobe Demo System');
+    });
+
+    describe('a project that has no org yet', () => {
+        // Creation from a package that deploys no mesh records no Adobe context, so
+        // the first destination write is where the org has to be filled in. Left
+        // empty (2026-09-30, project `justrite`), the destination read as complete
+        // while every credential read refused it.
+        const { organization: _o, organizationName: _n, ...NO_ORG } = EXISTING_ADOBE;
+        const SIGNED_IN = { id: '285361', name: 'Adobe Demo System' };
+
+        function contextSignedInto(adobe: Record<string, unknown> | undefined) {
+            const made = makeDestinationContext(adobe);
+            (made.context as { authManager: unknown }).authManager =
+                createMockAuthenticationService(
+                    {},
+                    {
+                        entities: {
+                            resolver: {
+                                getCurrentOrganization: jest.fn().mockResolvedValue(SIGNED_IN),
+                            },
+                        },
+                    }
+                );
+            return made;
+        }
+
+        it('records the signed-in org beside the new project and workspace', async () => {
+            const { context, saveProject } = contextSignedInto(NO_ORG);
+
+            const result = await handleSetProjectDestination(context, NEW_DESTINATION);
+
+            expect(result.success).toBe(true);
+            const saved = saveProject.mock.calls.at(-1)?.[0] as { adobe: Record<string, string> };
+            expect(saved.adobe.organization).toBe('285361');
+            expect(saved.adobe.organizationName).toBe('Adobe Demo System');
+        });
+
+        it('completes a destination that already names this project and workspace', async () => {
+            const { context, saveProject } = contextSignedInto({
+                ...NO_ORG,
+                organization: '',
+                projectId: NEW_DESTINATION.project.id,
+                workspace: NEW_DESTINATION.workspace.id,
+            });
+
+            const result = await handleSetProjectDestination(context, NEW_DESTINATION);
+
+            expect(result.data).not.toMatchObject({ unchanged: true });
+            const saved = saveProject.mock.calls.at(-1)?.[0] as { adobe: Record<string, string> };
+            expect(saved.adobe.organization).toBe('285361');
+        });
+
+        it('leaves the org empty when nobody is signed in, rather than inventing one', async () => {
+            const { context, saveProject } = makeDestinationContext(NO_ORG);
+
+            await handleSetProjectDestination(context, NEW_DESTINATION);
+
+            const saved = saveProject.mock.calls.at(-1)?.[0] as { adobe: Record<string, string> };
+            expect(saved.adobe.organization).toBe('');
+        });
     });
 
     it('returns the previous destination so a caller can address the OLD target', async () => {
@@ -138,7 +201,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         // Without this the move is invisible: the progress notification is
         // project-scoped and owns no card, so every row sat at DEPLOYED for the
         // whole run (found by inspection 2026-08-07). Assert the callback actually
-        // reaches postRowStatus rather than merely being passed — a callback wired
+        // reaches sendAppBuilderComponentStatusUpdate rather than merely being passed — a callback wired
         // to nothing looks identical at the call site.
         const { context } = withComponents();
 
@@ -151,7 +214,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         ) => void;
         expect(typeof onRowStatus).toBe('function');
         onRowStatus('erp-sync', 'deploying', 'Deploying Integration');
-        expect(mockPostRowStatus).toHaveBeenCalledWith(
+        expect(mockSendRowStatus).toHaveBeenCalledWith(
             'erp-sync',
             'deploying',
             'Deploying Integration'
@@ -177,8 +240,8 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
         ) => void;
         onRowStatus('eds-accs-mesh', 'deploying', 'Deploying Mesh');
 
-        expect(mockPostMeshStatus).toHaveBeenCalledWith('deploying', 'Deploying Mesh');
-        expect(mockPostRowStatus).not.toHaveBeenCalled();
+        expect(mockSendMeshStatus).toHaveBeenCalledWith('deploying', 'Deploying Mesh');
+        expect(mockSendRowStatus).not.toHaveBeenCalled();
     });
 
     it('refreshes the grid from the persisted map once the move ends', async () => {
@@ -233,7 +296,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
-        expect(mockPostDestination).toHaveBeenCalledWith(
+        expect(mockSendDestination).toHaveBeenCalledWith(
             expect.objectContaining({ projectTitle: 'New Project', workspaceTitle: 'Production' })
         );
     });
@@ -277,13 +340,21 @@ describe('handleSetProjectDestination — telegraph and guards', () => {
         );
     });
 
-    it('reports the destination it is saving, as a step', async () => {
+    // The destination NAMES itself in the title ("Changing destination to New
+    // Project · Stage"), which is fixed for the whole run; the step says what is
+    // happening now. It used to be repeated in both (PL-59 wording).
+    it('names the destination in its title, and the work in its step', async () => {
         const { context } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
+        // The suite drives VS Code through its own stub (`mockWithProgress`).
+        expect(mockWithProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: expect.stringContaining('New Project') }),
+            expect.any(Function)
+        );
         expect(mockProgressReport).toHaveBeenCalledWith(
-            expect.objectContaining({ message: expect.stringContaining('New Project') })
+            expect.objectContaining({ message: OPERATION_STAGES.savingDestination.label })
         );
     });
 

@@ -25,13 +25,12 @@ import {
 } from './appManagementClient';
 import {
     APP_MANAGEMENT_HANDS_BACK,
-    buildAppData,
     deriveAppManagementBaseUrl,
-    deriveCommerceTarget,
     IO_EVENTS_ENV,
     IO_EVENTS_URL,
-    isRetryableInstallFailure,
+    prepareAppManagementCall,
 } from './appManagementInstaller';
+import { isRetryableInstallFailure } from './appManagementInstallFailures';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types/base';
@@ -125,12 +124,14 @@ async function clearRecords(client: UninstallerClient, logger: Logger): Promise<
  * `aio app undeploy` whatever this returns.
  *
  * @param project - the current project (Commerce config + Adobe context)
+ * @param componentId - the app's component id; picks the workspace it lives in
  * @param deployedUrls - the app's persisted per-action URL map
  * @param deps - auth, logging, progress, and the test seams
  * @returns the outcome — uninstalled / skipped (nothing installed) / failed
  */
 export async function uninstallAppManagementApp(
     project: Project,
+    componentId: string,
     deployedUrls: Record<string, string> | undefined,
     deps: AppManagementUninstallDeps,
 ): Promise<AppManagementUninstallResult> {
@@ -144,23 +145,12 @@ export async function uninstallAppManagementApp(
         // Never deployed (or predates URL persistence): nothing installed.
         return { status: 'skipped', detail: 'The app exposes no App Management API.' };
     }
-    const target = deriveCommerceTarget(project);
-    if ('error' in target) {
-        return fail(target.error);
+    const inputs = await prepareAppManagementCall(project, componentId, deps.getAuth, 'uninstall');
+    if ('error' in inputs) {
+        return fail(inputs.error);
     }
-    const appData = buildAppData(project);
-    if ('error' in appData) {
-        return fail(appData.error);
-    }
-    const auth = await deps.getAuth();
-    if (!auth) {
-        return fail('No Adobe sign-in is available to authenticate the uninstall call.');
-    }
-
-    const factory =
-        deps.clientFactory ??
-        ((url: string, clientAuth: AppManagementAuth) => new AppManagementClient(url, clientAuth));
-    const client = factory(baseUrl, auth);
+    const { target, appData, auth } = inputs;
+    const client = deps.clientFactory?.(baseUrl, auth) ?? new AppManagementClient(baseUrl, auth);
 
     try {
         const budget: PollBudget = { roundsLeft: Math.ceil(POLL_BUDGET_MS / POLL_INTERVAL_MS) };

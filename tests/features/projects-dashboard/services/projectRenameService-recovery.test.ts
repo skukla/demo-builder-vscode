@@ -22,6 +22,9 @@ import {
     renameProjectCore,
     resetRenameMocks,
 } from './projectRenameService.testUtils';
+import { commerceSecretKey } from '@/features/components/services/commerceCredentialStore';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 beforeEach(() => {
     resetRenameMocks();
@@ -151,6 +154,34 @@ describe('rollback when the save fails after the move', () => {
     });
 });
 
+describe("the project's secrets follow its path (PL-64)", () => {
+    // Every rename goes through this core: the projects list, the dashboard, Configure and
+    // the agents' rename_project. The secrets used to move only from Configure.
+    const OLD_KEY = commerceSecretKey('/projects/old-name', 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET');
+    const NEW_KEY = commerceSecretKey('/projects/bodea-b2b-demo', 'adobe-commerce-accs', 'ACCS_OAUTH_CLIENT_SECRET');
+    const withSecret = () =>
+        projectToRename({ componentConfigs: { 'adobe-commerce-accs': {} } });
+
+    it('moves them to the new path', async () => {
+        const { secrets, store } = createMockSecretStorage({ [OLD_KEY]: 'fake-test-pw-not-a-secret' });
+
+        const result = await renameProjectCore(renameHandlerContext(secrets), withSecret(), 'Bodea B2B Demo');
+
+        expect(result.success).toBe(true);
+        expect([...store.entries()]).toStrictEqual([[NEW_KEY, 'fake-test-pw-not-a-secret']]);
+    });
+
+    it('leaves them where they were when the rename rolled back', async () => {
+        const { secrets, store } = createMockSecretStorage({ [OLD_KEY]: 'fake-test-pw-not-a-secret' });
+        const context = renameHandlerContext(secrets);
+        failSave(context);
+
+        await renameProjectCore(context, withSecret(), 'Bodea B2B Demo');
+
+        expect([...store.keys()]).toStrictEqual([OLD_KEY]);
+    });
+});
+
 describe('remote Adobe I/O project title sync', () => {
     // The Console project title is set from the demo name when the wizard
     // provisions a project in-app. Renaming the demo re-syncs that title —
@@ -163,9 +194,9 @@ describe('remote Adobe I/O project title sync', () => {
 
     function contextWithAuth(): HandlerContext {
         const ctx = renameHandlerContext();
-        (ctx as unknown as { authManager: unknown }).authManager = {
+        (ctx as unknown as { authManager: unknown }).authManager = poolUnits({
             renameRemoteProject: remoteRename,
-        };
+        });
         return ctx;
     }
 

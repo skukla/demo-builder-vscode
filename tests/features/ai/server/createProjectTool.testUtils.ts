@@ -11,14 +11,19 @@
  * (createProjectTool-validation.test.ts).
  */
 
-import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
+import { registerCopyProjectTool } from '@/features/ai/server/copyProjectTool';
+import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
+import { registerCreateProjectTool, runProjectCreation } from '@/features/ai/server/createProjectTool';
 import { getAdobeTarget, runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
+import { cleanupFailedCreation } from '@/features/project-creation/handlers/creationFailureCleanup';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getGitHubServices, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
+import { probeStoreViewProducts } from '@/features/eds/services/storeViewProducts';
 import {
+    getAutoSelectedOptionalDependencies,
     getAvailableStacksForPackage,
     getResolvedMeshRequirement,
     getSelectablePackages,
@@ -26,9 +31,16 @@ import {
 } from '@/features/components/services/demoPackageLoader';
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/features/project-creation/handlers/executor', () => ({
     executeProjectCreation: jest.fn(async () => undefined),
+}));
+// The real cleanup deletes a folder under the real home directory. Creation is a
+// fake here, so its cleanup must be too; suites assert what it is handed.
+jest.mock('@/features/project-creation/handlers/creationFailureCleanup', () => ({
+    cleanupFailedCreation: jest.fn(async () => undefined),
 }));
 jest.mock('@/features/project-creation/ui/wizard/wizardHelpers', () => ({
     buildProjectConfig: jest.fn(() => ({ projectName: 'assembled' })),
@@ -46,16 +58,31 @@ jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getAvailableStacksForPackage: jest.fn(async () => ['headless-paas', 'eds-paas']),
     getAutoSelectedOptionalDependencies: jest.fn(async () => []),
     getResolvedMeshRequirement: jest.fn(() => false),
+    isMeshRequired: (pkg: unknown, stackId: unknown) =>
+        jest.requireActual('../../../helpers/demoPackageFixtures').isMeshRequiredThroughMock(pkg, stackId),
+    // The backend ids `stacks.json` names for the two EDS stacks (read 2026-09-30).
+    getStackById: jest.fn((id: string) => {
+        if (id === 'eds-accs') return { id, backend: 'adobe-commerce-accs' };
+        if (id === 'eds-paas') return { id, backend: 'adobe-commerce-paas' };
+        return undefined;
+    }),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     // The signed-in account: the tool creates the repository under it by default.
     getGitHubServices: jest.fn(() => ({
-        tokenService: { validateToken: jest.fn(async () => ({ valid: true, user: { login: 'steve' } })) },
+        tokenService: {
+            validateToken: jest.fn(async () => ({ valid: true, user: { login: 'steve' } })),
+        },
     })),
     getDaLiveAuthService: jest.fn(() => ({ isAuthenticated: jest.fn(async () => true) })),
 }));
 jest.mock('@/features/eds/handlers/edsHandlers', () => ({
     edsHandlers: { 'storefront-setup-start': jest.fn() },
+}));
+// The store-view product check (EDS-46) is a live Catalog Service read. It answers
+// `unknown` here unless a suite says otherwise — the answer that adds nothing.
+jest.mock('@/features/eds/services/storeViewProducts', () => ({
+    probeStoreViewProducts: jest.fn(async () => 'unknown'),
 }));
 jest.mock('@/features/ai/server/adobeTargetStore', () => ({
     getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
@@ -63,14 +90,20 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 }));
 
 export {
+    registerCopyProjectTool,
+    registerCreateProjectFromFileTool,
     registerCreateProjectTool,
+    runProjectCreation,
+    getAutoSelectedOptionalDependencies,
     getAdobeTarget,
     runWithAdobeTarget,
     buildProjectConfig,
     executeProjectCreation,
+    cleanupFailedCreation,
     edsHandlers,
     getGitHubServices,
     getDaLiveAuthService,
+    probeStoreViewProducts,
     getAvailableStacksForPackage,
     getResolvedMeshRequirement,
     getSelectablePackages,
@@ -101,18 +134,17 @@ export function defaultStorefrontSetup(): void {
     );
 }
 
- 
 type ToolHandler = (args?: any) => Promise<{ content: Array<{ text: string }> }>;
 
 export interface FakeServer {
     registerTool(name: string, def: McpToolSchema, handler: ToolHandler): void;
     /** The schema block `registerTool` was handed — what `tools/list` shows an agent. */
     definitionOf(): McpToolSchema;
-     
+
     call(args?: unknown): Promise<any>;
 }
 
-export function fakeServer(): FakeServer {
+export function fakeServer(tool = 'create_project'): FakeServer {
     const tools = new Map<string, ToolHandler>();
     const defs = new Map<string, McpToolSchema>();
     return {
@@ -120,14 +152,14 @@ export function fakeServer(): FakeServer {
             tools.set(name, handler);
             defs.set(name, def);
         },
-        definitionOf: () => defs.get('create_project')!,
+        definitionOf: () => defs.get(tool)!,
         async call(args?: unknown) {
-            return JSON.parse((await tools.get('create_project')!(args)).content[0].text);
+            return JSON.parse((await tools.get(tool)!(args)).content[0].text);
         },
     };
 }
 
-export const authManager = {
+export const authManager = poolUnits({
     isAuthenticated: jest.fn(async () => true),
     getCurrentOrganization: jest.fn(async () => ({ id: 'org-1', name: 'Org' })),
     getCurrentProject: jest.fn(async () => ({ id: 'proj-1', name: 'Proj' })),
@@ -141,13 +173,22 @@ export const authManager = {
             name: 'Stage',
         })
     ),
-};
+});
+
+/** The logger every headless context carries (`headlessHandlerContext.ts`). */
+export const toolLogger = createMockLogger();
+
+/** The projects already on disk, as the state manager lists them. Empty unless a suite adds one. */
+export const projectsOnDisk: Array<{ name: string; path: string; lastModified: Date }> = [];
 
 export const ctxFactory = (): HandlerContext =>
     ({
         authManager,
         context: {},
+        logger: toolLogger,
         sendMessage: jest.fn(async () => undefined),
+        stateManager: { getAllProjects: jest.fn(async () => projectsOnDisk) },
+        sharedState: { isAuthenticating: false },
     }) as unknown as HandlerContext;
 
 /** A complete MCP-session Adobe target — org, project AND workspace all chosen. */
@@ -186,7 +227,7 @@ export function toolServer(): FakeServer {
 }
 
 /** The `ProjectConfigSource` `buildProjectConfig` was handed on its first call. */
- 
+
 export function capturedWizardState(): any {
     return (buildProjectConfig as jest.Mock).mock.calls[0][0];
 }

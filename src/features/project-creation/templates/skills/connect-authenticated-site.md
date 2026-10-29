@@ -29,7 +29,7 @@ Use this skill when the user needs to scrape pages behind an authentication wall
    - **Wait for the user to complete login.** They'll click Sign In, possibly do MFA, possibly accept cookies. Do not script any of this — the user drives.
    - When the user signals they're logged in (page shows authenticated state), use `browser_evaluate` to confirm a known authenticated DOM signal (e.g., a "Hi, &lt;name&gt;" greeting or a logged-in nav item).
 
-3. **Save the session state.** Playwright MCP's storage-state APIs can persist cookies + localStorage to a JSON file. Save to `.scraped/<domain>/auth.json`. The path is project-relative and gitignored.
+3. **Save the session state.** Playwright MCP's storage-state APIs can persist cookies + localStorage to a JSON file. Save to `.scraped/<domain>/auth.json` at the project root. The project root is not a git repository, so nothing there is committed; nothing adds `.scraped/` to any `.gitignore`.
 
 4. **Verify the session works.** Open a fresh Playwright context with the saved `storageState`, navigate to a known auth-protected URL, confirm it loads without redirecting to login.
 
@@ -45,7 +45,7 @@ Use this skill when the user needs to scrape pages behind an authentication wall
 
 - **Never** ask the user for their password directly. They type it into the browser themselves.
 - **Never** save credentials anywhere except the Playwright storage-state JSON (cookies + localStorage only).
-- **Never** commit `.scraped/` to git. The project `.gitignore` should already exclude it.
+- **Never** save `.scraped/` inside `components/`. The storefront folder there is a git repository whose automatic commit adds every file (`git add -A`), so a saved session would be pushed to GitHub with the next edit. Keep it at the project root.
 - **Never** share `auth.json` outside the user's machine. Treat it like a credential.
 
 ## When this skill doesn't fit

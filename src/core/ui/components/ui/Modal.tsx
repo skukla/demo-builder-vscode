@@ -19,6 +19,12 @@ export interface ModalProps {
     /** Variant for the built-in close button (default "secondary"). */
     closeVariant?: 'primary' | 'secondary' | 'accent' | 'negative';
     /**
+     * Leave the built-in close button out, when the action buttons are every way on.
+     * The Updates modal asks a question this way: dismissing it would only repeat one
+     * of the answers. Escape still calls `onClose`.
+     */
+    hideClose?: boolean;
+    /**
      * Let the dialog collapse to its CONTENT's height instead of claiming a fixed
      * one. Spectrum's modal Dialog takes a height independent of what is inside it
      * — which is why `.modal-body` has to grow to push the footer down (below). On
@@ -45,24 +51,6 @@ export interface ModalProps {
      */
     wide?: boolean;
     children: ReactNode;
-}
-
-/**
- * The dialog's opt-in size overrides, as one class string.
- *
- * A helper rather than two ternaries inline: chained ternaries are on the
- * project's avoid list and the SOP scan fails on them. Returns undefined when
- * neither applies, so the default Dialog keeps a clean class list.
- */
-function dialogClassName(fitContent: boolean, wide: boolean): string | undefined {
-    const classes: string[] = [];
-    if (fitContent) {
-        classes.push('modal-fit-content');
-    }
-    if (wide) {
-        classes.push('modal-wide');
-    }
-    return classes.length > 0 ? classes.join(' ') : undefined;
 }
 
 /**
@@ -123,6 +111,7 @@ export function Modal({
     onClose,
     closeLabel = 'Close',
     closeVariant = 'secondary',
+    hideClose = false,
     fitContent = false,
     wide = false,
     children,
@@ -132,7 +121,16 @@ export function Modal({
         size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
 
     return (
-        <Dialog size={dialogSize} UNSAFE_className={dialogClassName(fitContent, wide)}>
+        // The opt-in size overrides as literals, so the stylesheet scan can read them in
+        // every bundle that renders a modal; empty → undefined keeps the default Dialog's
+        // class list clean. (A helper built this string until 2026-10-15, which the scan
+        // counted unreadable once per bundle.)
+        <Dialog
+            size={dialogSize}
+            UNSAFE_className={
+                cn(fitContent && 'modal-fit-content', wide && 'modal-wide') || undefined
+            }
+        >
             <Heading>{title}</Heading>
             <Divider />
             <Content UNSAFE_className="modal-content">
@@ -143,9 +141,11 @@ export function Modal({
                 <div className="modal-body">{children}</div>
                 <div className="modal-footer-actions">
                     {/* Close/Cancel on left, primary actions on right (per Spectrum design guidelines) */}
-                    <FocusableButton variant={closeVariant} onPress={onClose}>
-                        {closeLabel}
-                    </FocusableButton>
+                    {!hideClose && (
+                        <FocusableButton variant={closeVariant} onPress={onClose}>
+                            {closeLabel}
+                        </FocusableButton>
+                    )}
                     {actionButtons.map((button, index) => (
                         <FocusableButton
                             key={index}

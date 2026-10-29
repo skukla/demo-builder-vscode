@@ -287,12 +287,12 @@ export const blockToolHandlers = {
         // unsafeHTML refreshes the rendered preview. (ensureBlockDocPages is
         // deliberately non-destructive for the template path — wrong contract
         // for this flow.)
-        const docPage = await daLiveOps.upsertBlockDocPage(ctx.daLiveOrg, ctx.daLiveSite, {
+        const docPage = await daLiveOps.blockLibOps.upsertBlockDocPage(ctx.daLiveOrg, ctx.daLiveSite, {
             id: blockId,
             exampleHtml: safeHtml,
         });
 
-        const sheetResult = await daLiveOps.appendBlockToLibrary(ctx.daLiveOrg, ctx.daLiveSite, {
+        const sheetResult = await daLiveOps.blockLibOps.appendBlockToLibrary(ctx.daLiveOrg, ctx.daLiveSite, {
             blockId,
             title,
         });
@@ -355,7 +355,7 @@ export const blockToolHandlers = {
             error: () => undefined,
         };
         const daLiveOps = new DaLiveContentOperations(staticTokenProvider(daLiveToken), noopLogger);
-        const { docPage, sheet } = await daLiveOps.removeBlockFromLibrary(
+        const { docPage, sheet } = await daLiveOps.blockLibOps.removeBlockFromLibrary(
             ctx.daLiveOrg,
             ctx.daLiveSite,
             { blockId },

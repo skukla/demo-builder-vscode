@@ -10,6 +10,7 @@
 import { handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import type { HandlerContext } from '@/types/handlers';
 import { createAuthHandlerContext, mockOrg, mockProject } from './testUtils';
+import { entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 describe('authenticationHandlers - handleAuthenticate - New Authentication', () => {
 	let mockContext: jest.Mocked<HandlerContext>;
@@ -23,8 +24,8 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should authenticate successfully when not authenticated (normal flow)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-			(mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
 			(mockContext.authManager!.testDeveloperPermissions as jest.Mock).mockResolvedValue({
 				hasPermissions: true,
 			});
@@ -39,8 +40,8 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should send "opening browser" message before login', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-			(mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+			(entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
 			(mockContext.authManager!.testDeveloperPermissions as jest.Mock).mockResolvedValue({
 				hasPermissions: true,
 			});
@@ -59,9 +60,9 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should NOT validate org during login (no validation calls)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			const result = await handleAuthenticate(mockContext);
 
@@ -72,9 +73,9 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should NOT test developer permissions during login', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			const result = await handleAuthenticate(mockContext);
 
@@ -86,22 +87,22 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should NOT clear cache after normal login (only on force)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 
 			// clearCache() only called with force=true
-			expect(mockContext.authManager!.clearCache).not.toHaveBeenCalled();
+			expect(mockContext.authManager!.getCacheManager().clearAll).not.toHaveBeenCalled();
 		});
 
 		it('should log performance metrics for login flow', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 
@@ -120,22 +121,22 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should initialize SDK after successful login', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 
 			// SDK is initialized after login
-			expect(mockContext.authManager!.ensureSDKInitialized).toHaveBeenCalled();
+			expect(mockContext.authManager!.getSdkClient().ensureInitialized).toHaveBeenCalled();
 		});
 
 		it('should fetch organization list after login', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 
@@ -146,9 +147,9 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should fetch and auto-select single org after login (no global mutation)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			const result = await handleAuthenticate(mockContext);
 
@@ -160,22 +161,22 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should auto-select when single organization available (cached, not selected)', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 
 			// Single org is auto-selected: cached + carried in state, never selected.
-			expect(mockContext.authManager!.setCachedOrganization).toHaveBeenCalledWith(mockOrg);
+			expect(mockContext.authManager!.getCacheManager().setCachedOrganization).toHaveBeenCalledWith(mockOrg);
 		});
 
 		it('should return success with "All set!" when single org auto-selected', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			const result = await handleAuthenticate(mockContext);
 
@@ -195,9 +196,9 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should NOT validate organization access during login', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 
@@ -208,15 +209,15 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 			// unasserted negative agrees with whatever the code does.
 			expect(mockContext.authManager!.login).toHaveBeenCalled();
 			expect(mockContext.authManager!.getOrganizations).toHaveBeenCalled();
-			expect(mockContext.authManager!.getValidationCache).not.toHaveBeenCalled();
+			expect(mockContext.authManager!.getCacheManager().getValidationCache).not.toHaveBeenCalled();
 		});
 
 		it('should NOT check developer permissions during login', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 
@@ -227,22 +228,22 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 		it('should NOT set orgRejectedFlag when single org auto-selected', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 
 			// No rejection flag when org is selected
-			expect(mockContext.authManager!.setOrgRejectedFlag).not.toHaveBeenCalled();
+			expect(mockContext.authManager!.getCacheManager().setOrgClearedDueToValidation).not.toHaveBeenCalled();
 		});
 
 		it('should log post-login setup completion', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-			(mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
 			await handleAuthenticate(mockContext);
 

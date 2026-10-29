@@ -153,6 +153,33 @@ describe('applyCanonicalCodePatches', () => {
         ).toBe(true);
     });
 
+    it('reads a target at the commit it is given, so a patched file matches the tested tree (EDS-51)', async () => {
+        const LKG = '48bed04d072fff094b49a46709b351bd719b287a';
+        const fetchMock = jest.fn().mockImplementation((url: string) =>
+            url.includes('code-patches.json')
+                ? Promise.resolve({
+                      ok: true,
+                      json: () =>
+                          Promise.resolve({
+                              patches: [
+                                  { id: 'p', target: 'scripts/canonical.js', description: '', precondition: 'FOO', replacement: 'BAR' },
+                              ],
+                          }),
+                  })
+                : Promise.resolve({ ok: true, text: () => Promise.resolve('content with FOO inside') }),
+        );
+        global.fetch = fetchMock;
+
+        await applyCanonicalCodePatches(new Map(), 'tmpl-owner', 'tmpl-repo', ['p'], SOURCE, mockLogger, LKG);
+
+        const targetFetches = fetchMock.mock.calls
+            .map((c) => c[0] as string)
+            .filter((u) => u.endsWith('/scripts/canonical.js'));
+        expect(targetFetches).toEqual([
+            `https://raw.githubusercontent.com/tmpl-owner/tmpl-repo/${LKG}/scripts/canonical.js`,
+        ]);
+    });
+
     it('preserves existing fileOverrides entries (used as working set, not overwritten)', async () => {
         // fileOverrides has a pre-existing override for head.html. The wrapper
         // should patch THAT content, not re-fetch from template.

@@ -26,18 +26,32 @@ const urlValidator = url('Please enter a valid URL');
 export type FieldValueLookup = (field: UniqueField) => string | number | boolean | undefined;
 
 /**
+ * Whether a field is a secret the project already holds in the keychain. Such a field
+ * reads empty (the screen never sees the value) and is satisfied: the field row shows
+ * "Saved — type to replace" and no error, so validation must not count it missing.
+ */
+export type StoredSecretCheck = (field: UniqueField) => boolean;
+
+/**
  * Validate one field, returning its error message or undefined.
  *
  * @param field - The field to validate
  * @param getValue - Resolves the field's current value
+ * @param isStoredSecret - Whether the field is a secret the project already holds
  * @returns The error message, or undefined when the field is fine
  */
-function validateField(field: UniqueField, getValue: FieldValueLookup): string | undefined {
+function validateField(
+    field: UniqueField,
+    getValue: FieldValueLookup,
+    isStoredSecret: StoredSecretCheck,
+): string | undefined {
     const value = getValue(field);
     const hasValue = value !== undefined && value !== '';
     const hasDefault = field.default !== undefined && field.default !== '';
 
-    if (field.required && !hasValue && !hasDefault) {
+    // A required stored secret counted as missing used to disable Save while its
+    // field showed no error at all (PL-76).
+    if (field.required && !hasValue && !hasDefault && !isStoredSecret(field)) {
         return `${field.label} is required`;
     }
 
@@ -66,17 +80,19 @@ function validateField(field: UniqueField, getValue: FieldValueLookup): string |
  *
  * @param serviceGroups - All service groups, whether or not they are on screen
  * @param getValue - Resolves a field's current value (the same lookup the form displays)
+ * @param isStoredSecret - Whether a field is a secret the project already holds
  * @returns Errors keyed by field key; empty when everything is valid
  */
 export function validateServiceGroups(
     serviceGroups: ServiceGroup[],
     getValue: FieldValueLookup,
+    isStoredSecret: StoredSecretCheck,
 ): Record<string, string> {
     const errors: Record<string, string> = {};
 
     for (const group of serviceGroups) {
         for (const field of group.fields) {
-            const error = validateField(field, getValue);
+            const error = validateField(field, getValue, isStoredSecret);
             if (error !== undefined) errors[field.key] = error;
         }
     }

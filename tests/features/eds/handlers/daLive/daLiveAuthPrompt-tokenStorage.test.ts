@@ -47,6 +47,7 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
     };
 });
 
+import * as vscode from 'vscode';
 import {
     showDaLiveAuthQuickPick,
     createAuthPromptContext,
@@ -125,6 +126,10 @@ describe('when storing the token fails', () => {
         const result = await signInWith(token);
 
         expect(result).toMatchObject({ success: false, error: 'keychain is locked' });
+        // With no modal up, the SC is told in a popup — the only place it would show.
+        expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+            'Authentication failed: keychain is locked',
+        );
     });
 });
 

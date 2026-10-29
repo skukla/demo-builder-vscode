@@ -5,7 +5,7 @@ area: platform
 parent: PL-30
 needs: [PL-11]
 value: high
-status: active
+status: shipped
 ---
 
 # Track 2 — documentation synthesis, and every document enforced

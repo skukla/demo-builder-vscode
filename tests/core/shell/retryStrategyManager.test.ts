@@ -1,3 +1,7 @@
+// Real waits by default; the backoff tests replace them to read what was asked for.
+const mockSleep = jest.fn((ms: number) => jest.requireActual('@/core/utils/sleep').sleep(ms));
+jest.mock('@/core/utils/sleep', () => ({ sleep: (ms: number) => mockSleep(ms) }));
+
 import { RetryStrategyManager } from '@/core/shell/retryStrategyManager';
 import type { RetryStrategy, CommandResult } from '@/core/shell/types';
 import { makeResult, makeStrategy } from './retryStrategyManager.testUtils';
@@ -7,6 +11,7 @@ describe('RetryStrategyManager', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockSleep.mockImplementation((ms: number) => jest.requireActual('@/core/utils/sleep').sleep(ms));
         retryManager = new RetryStrategyManager();
     });
 
@@ -157,44 +162,33 @@ describe('RetryStrategyManager', () => {
             expect(executeFn).toHaveBeenCalledTimes(1);
         });
 
+        // The waits are asserted as ARGUMENTS to sleep, not timed. Timing them read the
+        // wall clock and failed at 299ms against 300 on a loaded machine (2026-10-15);
+        // the cap test below had already been loosened once for the same reason (PL-41).
         it('should apply exponential backoff', async () => {
-            const mockError = new Error('Retry me');
-            const executeFn = jest.fn().mockRejectedValue(mockError);
-
+            mockSleep.mockImplementation(async () => undefined);
+            const executeFn = jest.fn().mockRejectedValue(new Error('Retry me'));
             const strategy: RetryStrategy = makeStrategy({ maxAttempts: 3, initialDelay: 100, maxDelay: 1000, backoffFactor: 2 });
-
-            const startTime = Date.now();
 
             await expect(
                 retryManager.executeWithRetry(executeFn, strategy, 'test command')
             ).rejects.toThrow('Retry me');
 
-            const duration = Date.now() - startTime;
-
-            // First retry: 100ms, second retry: 200ms = 300ms minimum
-            expect(duration).toBeGreaterThanOrEqual(300);
+            expect(mockSleep.mock.calls.map(([ms]) => ms)).toEqual([100, 200]);
             expect(executeFn).toHaveBeenCalledTimes(3);
         });
 
         it('should cap delay at maxDelay', async () => {
-            const mockError = new Error('Retry me');
-            const executeFn = jest.fn().mockRejectedValue(mockError);
-
+            mockSleep.mockImplementation(async () => undefined);
+            const executeFn = jest.fn().mockRejectedValue(new Error('Retry me'));
             const strategy: RetryStrategy = makeStrategy({ maxAttempts: 5, initialDelay: 1000, maxDelay: 100, backoffFactor: 10 });
-
-            const startTime = Date.now();
 
             await expect(
                 retryManager.executeWithRetry(executeFn, strategy, 'test command')
             ).rejects.toThrow('Retry me');
 
-            const duration = Date.now() - startTime;
-
-            // Capped, the four retries wait 100ms each — 400ms. UNCAPPED they
-            // would wait 1000ms, then 10s, then 100s, so any bound in seconds
-            // still fails loudly if the cap breaks. 600ms did not measure the
-            // cap, it measured whether the machine was busy (PL-41).
-            expect(duration).toBeLessThan(5_000);
+            // Uncapped these would be 1000, 10000, 100000 and 1000000.
+            expect(mockSleep.mock.calls.map(([ms]) => ms)).toEqual([100, 100, 100, 100]);
         });
 
         it('should handle network errors with network strategy', async () => {

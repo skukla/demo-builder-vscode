@@ -1,92 +1,80 @@
 /**
- * Deploy-contract runner (Step 08) — unify add / deploy / remove by `kind`.
+ * The App Builder component runner's contract: what every run is handed and what it
+ * answers. The runs add, deploy and remove by `kind`, routing to the two existing deploy
+ * tails (`deployMeshComponent`/`deployAppComponent`) rather than forking them:
  *
- * ONE kind-dispatched path orchestrates the pieces built in steps 01/04/05/06/07
- * plus the two existing deploy tails. It does NOT fork
- * `deployMeshComponent`/`deployAppComponent` — it routes to them by `kind`:
+ * - add (`appBuilderAddRun.ts`): subscribe the UNION of all appBuilderComponents'
+ *   requiredApis (+ baseline) → clone + kind-aware install → dispatch deploy (mesh → mesh
+ *   tail; integration → app tail, applying a derived distinct `ow.package`), all inside
+ *   `withOrgContext` → persist `appBuilderComponents[id]` → if it `providesEnvVars`,
+ *   regenerate + republish the storefront config.
+ * - deploy and update (`appBuilderRedeployRun.ts`): re-run ONLY that component's deploy
+ *   tail (provider-before-consumer ordering for mesh-consuming integrations).
+ * - remove (`appBuilderRemoveRun.ts`): integration → `aio app undeploy`; mesh →
+ *   `aio api-mesh:delete` → clear `appBuilderComponents[id]` → if it provided vars,
+ *   republish WITHOUT them.
  *
- * - add:    subscribe the UNION of all appBuilderComponents' requiredApis (+ baseline) →
- *           clone + kind-aware install → dispatch deploy (mesh → mesh tail;
- *           integration → app tail, applying a derived distinct `ow.package`) — all
- *           inside `withOrgContext` — persist `appBuilderComponents[id]` via accessors → if
- *           it `providesEnvVars`, regenerate + republish the storefront config.
- * - deploy: re-run ONLY that appBuilderComponent's deploy tail (provider-before-consumer
- *           ordering for mesh-consuming integrations).
- * - remove: integration → `aio app undeploy`; mesh → `aio api-mesh:delete` → clear
- *           `appBuilderComponents[id]` → if it provided vars, republish WITHOUT them.
+ * The steps the runs share live in `appBuilderDeploySteps.ts` and the kind dispatch in
+ * `appBuilderDeployDispatch.ts`. Every deploy, add and redeploy, success and failure,
+ * records its outcome through `recordDeployOutcome`, the one keyed deploy-record writer.
  *
- * Every deploy — add and redeploy, success and failure — records its outcome
- * through `recordDeployOutcome`, the one keyed deploy-record writer. The add
- * passes `create: true` so it keys by its own id instead of resolveKeyedComponentId's
- * legacy-migration branch, which would land a second integration on the first
- * one's key.
- *
- * Partial-failure: a clone-OK-but-deploy-failed add persists `status:'error'` and
- * RETAINS the local folder for retry (never clears the entry).
- *
- * Reuse / DI: every external boundary (the two deploy tails, the API subscriber,
- * clone/install, undeploy/delete commands, storefront republish) is injected via
- * {@link AppBuilderComponentRunnerDeps} so the runner is pure orchestration. The production
- * defaults wire the real functions; unit tests mock them.
+ * Every external boundary (the two deploy tails, the API subscriber, clone/install,
+ * undeploy/delete commands, storefront republish) is injected via
+ * {@link AppBuilderComponentRunnerDeps}, so the runs are pure orchestration.
  */
 
-import { recordDeployOutcome, type DeployOutcome } from './appBuilderDeployOutcome';
-import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from './appConfigPackages';
-import { OPERATION_STAGES } from './operationStages';
-import { deriveOwPackage } from './owPackageName';
-import {
-    commandFailure,
-    deleteRuntimePackage,
-    listRuntimePackages,
-    runInNamespace,
-    runtimeNamespaceEnv,
-    type RuntimeNamespaceEnv,
-} from './runtimeNamespace';
+import type { TeardownDeps } from './appBuilderComponentTeardown';
+import type {
+    AppManagementInstallOptions,
+    AppManagementInstallResult,
+} from './appManagementUpgrade';
+import type { CustomIntegrationNodeResolver } from './componentEntry';
+import type { WorkspaceReleaseDeps } from './componentWorkspace';
+import type { CommerceDetachResult } from './erpDetach';
+import type { ErpEventsEnv } from './erpEventsDelivery';
+import type { SourceUpdateResult, UpdateCheckResult } from './integrationSourceUpdate';
+import type { RuntimeCleanupSummary } from './runtimeLeftoverCleanup';
+import type { UndeclaredActionCleanup } from './runtimeUndeclaredActions';
 import type { AppDeploymentResult } from './types';
-import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
-import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
-import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
-import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { explainAdobeAccessFailure } from '@/features/authentication/services/authenticationErrorFormatter';
-import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
 import type {
     ComponentInstallOptions,
     ComponentInstallResult,
 } from '@/features/components/services/types';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { Project , AppBuilderComponentState } from '@/types/base';
+import type { Project } from '@/types/base';
 import type { TransformedComponentDefinition } from '@/types/components';
+import type { ErrorCode } from '@/types/errorCodes';
 import type { Logger } from '@/types/logger';
-import { toError } from '@/types/typeGuards';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 /** Outcome of an add/deploy/remove operation. */
 export interface RunnerResult {
     success: boolean;
     error?: string;
+    /** COMPONENT_REMOVAL_STOPPED: a removal stopped before undeploying (remove only). */
+    code?: ErrorCode;
+    /** Plain-words line on what an update did (update only). */
+    detail?: string;
     /** Post-undeploy Runtime verification (remove only) — see AB-7. */
     runtimeCleanup?: RuntimeCleanupSummary;
+    /** What removal undid of the ERP integration's Commerce writes (remove only). */
+    commerceDetach?: CommerceDetachResult;
+    /**
+     * What the operation could not finish, in plain words for the SC, while the
+     * operation itself stands: a Commerce uninstall that failed or a system not
+     * removed with its integration (remove); a storefront republish whose CDN
+     * publish did not land, so the storefront still serves its previous
+     * config.json (add and deploy).
+     */
+    warnings?: string[];
+    /** The Adobe workspaces a removal deleted, by the name a person reads (remove only). */
+    workspacesDeleted?: string[];
 }
 
-/**
- * What the post-undeploy verification found and did (AB-7). `aio app undeploy`
- * exits 0 while leaving deployed packages behind — measured live 2026-08-28:
- * a full remove "succeeded" in 5.4s with the whole app still serving, and a
- * kit removal left 12 packages. So removal VERIFIES: it lists the namespace
- * and deletes leftovers it can attribute to this integration by name.
- */
-export interface RuntimeCleanupSummary {
-    /** False when the namespace could not be listed — said, never silent. */
-    verified: boolean;
-    /** Leftover packages found after undeploy and deleted. */
-    deleted: string[];
-    /** Leftovers whose delete failed — these are STILL RUNNING. */
-    failed: string[];
-    note?: string;
-}
+export type { RuntimeCleanupSummary };
 
 /** Storefront republish input (mirrors the eds RepublishParams the runner needs). */
 interface RepublishInput {
@@ -95,10 +83,13 @@ interface RepublishInput {
     logger: Logger;
 }
 
-/**
- * Injected collaborators. Production wires the real implementations
- * (see {@link buildDefaultRunnerDeps}); unit tests pass mocks.
- */
+/** Which component a subscribe is for, and whether it is that component's add. */
+export interface SubscribeScope {
+    forComponent: string;
+    /** An add: a new workspace holds nothing yet, so there is no coverage to check. */
+    adding?: boolean;
+}
+
 /**
  * What this runner needs from the component manager: TWO methods.
  *
@@ -116,12 +107,16 @@ export interface ComponentInstaller {
     installComponent(
         project: Project,
         componentDef: TransformedComponentDefinition,
-        options?: ComponentInstallOptions,
+        options?: ComponentInstallOptions
     ): Promise<ComponentInstallResult>;
     removeComponent(project: Project, componentId: string, deleteFiles?: boolean): Promise<void>;
 }
 
-export interface AppBuilderComponentRunnerDeps {
+/**
+ * Injected collaborators. Production wires the real implementations
+ * (see {@link buildDefaultRunnerDeps}); unit tests pass mocks.
+ */
+export interface AppBuilderComponentRunnerDeps extends TeardownDeps {
     componentManager: ComponentInstaller;
     commandManager: CommandExecutor;
     logger: Logger;
@@ -150,7 +145,7 @@ export interface AppBuilderComponentRunnerDeps {
      * showed one static title while the build and deploy ran silently. Optional
      * because the headless/MCP callers have nobody to tell.
      */
-    onProgress?: (message: string, subMessage?: string) => void;
+    onProgress?: (message: string, subMessage?: string, position?: OperationPosition) => void;
     /**
      * Write a component's `.env` from the REGISTRY contract, before its deploy.
      *
@@ -194,6 +189,8 @@ export interface AppBuilderComponentRunnerDeps {
             layout?: 'standalone' | 'extension';
             confirmToolchainRefresh?: () => Promise<boolean>;
             extraEnv?: Record<string, string>;
+            /** Where the whole deploy output goes when it fails (see appDeployment). */
+            failureLogFile?: string;
         }
     ) => Promise<AppDeploymentResult>;
     /**
@@ -219,7 +216,32 @@ export interface AppBuilderComponentRunnerDeps {
      * value goes into the per-invocation env and nowhere else. Optional:
      * mesh/standalone paths and bare unit tests never need it.
      */
-    resolveAppManagementEnv?: (project: Project) => Promise<Record<string, string> | undefined>;
+    resolveAppManagementEnv?: (
+        project: Project,
+        componentId: string
+    ) => Promise<Record<string, string> | undefined>;
+    /**
+     * The deploy env carrying an entry's secrets: its screen key (`systemScreen.ts`,
+     * generated the first time) and its secret settings from SecretStorage
+     * (`componentSettingSecrets.ts`). Returns `{}` for an entry with neither. Carries
+     * live secrets, so it goes into the per-invocation env and nowhere else.
+     */
+    resolveSecretEnv?: (
+        project: Project,
+        entry: AppBuilderComponentCatalogEntry
+    ) => Promise<Record<string, string>>;
+    /**
+     * The event address and publishing credential an ADDED ERP deploys with
+     * (`erpEventsDelivery.ts`, AB-16i), with a note when it deploys without them. Carries a
+     * live secret, so it goes into the per-invocation env and nowhere else. Optional: bare
+     * tests and headless callers without an ERP never need it.
+     */
+    resolveEventsEnv?: (
+        project: Project,
+        entry: AppBuilderComponentCatalogEntry
+    ) => Promise<ErpEventsEnv>;
+    /** Delete an entry's secrets (secret settings, screen key) when the component is removed. */
+    forgetSecrets?: (project: Project, entry: AppBuilderComponentCatalogEntry) => Promise<void>;
     /**
      * Install + associate an app-management lifecycle app after its deploy
      * (appManagementInstaller). Deploy stays green when this fails — the app is
@@ -229,932 +251,147 @@ export interface AppBuilderComponentRunnerDeps {
      */
     installAppManagement?: (
         project: Project,
-        deployedUrls: Record<string, string> | undefined,
-        onProgress?: (message: string) => void
-    ) => Promise<{ status: 'installed' | 'skipped' | 'failed'; detail?: string }>;
+        componentId: string,
+        onProgress?: (message: string) => void,
+        options?: AppManagementInstallOptions
+    ) => Promise<AppManagementInstallResult>;
     /**
-     * Uninstall an app-management lifecycle app from Commerce BEFORE its remove
-     * tears the actions down (appManagementUninstaller). `aio app undeploy`
-     * removes only the actions — the app's installer created I/O Events
-     * registrations, binding packages, and Commerce-side eventing config that
-     * only the app's own uninstall API removes, and once the actions are gone
-     * that API is gone with them. Best-effort: a failure logs and the remove
-     * proceeds. Optional: mesh paths and bare unit tests never need it.
+     * Fill the system an app-management entry serves from Commerce, once its Commerce
+     * install stands (`fillErpForProject`; entries with `fillsSystem`). Filling is demo
+     * setup, so Demo Builder does it rather than the integration (AB-26y). Never fails
+     * the deploy. Optional: deploy-only paths and bare tests never need it.
      */
-    uninstallAppManagement?: (
+    /**
+     * Take a system added from its integration's card out of the integration's list
+     * (`syncErpList`, AB-16) before it is removed. Answers why it could not, or undefined.
+     * Optional: bare tests and integrations that list nothing never need it.
+     */
+    unlistSystem?: (
         project: Project,
-        deployedUrls: Record<string, string> | undefined,
-        onProgress?: (message: string) => void
-    ) => Promise<{ status: 'uninstalled' | 'skipped' | 'failed'; detail?: string }>;
-    /** Union-reconcile API subscriber (step 07). */
+        integrationId: string,
+        systemId: string
+    ) => Promise<string | undefined>;
+    /**
+     * Tell an integration which systems it serves, by the ids and addresses they deploy
+     * with (`syncErpList`, AB-51): after the integration deploys, before its fill asks by
+     * those ids, and after a listed system redeploys. Answers why it could not, or
+     * undefined. Optional: bare tests and integrations that list nothing never need it.
+     */
+    listSystems?: (project: Project, integrationId: string) => Promise<string | undefined>;
+    fillSystem?: (
+        project: Project,
+        entry: AppBuilderComponentCatalogEntry,
+        onStep: (step: string) => void
+    ) => Promise<{ status: 'filled' } | { status: 'failed'; detail: string }>;
+    /** Prepare the store just before `fillSystem`, recorded as Prepare does; never fails the deploy. */
+    prepareStore?: (
+        project: Project,
+        entry: AppBuilderComponentCatalogEntry,
+        onStep: (step: string) => void
+    ) => Promise<{ status: 'prepared'; warning?: string } | { status: 'failed'; detail: string }>;
+    /** The version an app's manifest declares (appManifestVersion); optional for bare tests. */
+    readAppVersion?: (componentPath: string) => Promise<string | undefined>;
+    /**
+     * The commit a clone is at (`readCloneCommit`), recorded as `deployedCommit` by a
+     * deploy that succeeds (AB-71). Optional: without it a deploy records none, and
+     * update trusts the clone as it did before the field existed.
+     */
+    readCloneCommit?: (componentPath: string) => Promise<string | undefined>;
+    /** Fast-forward a clone to its branch (integrationSourceUpdate); update only. */
+    fetchComponentSource?: (componentPath: string, branch: string) => Promise<SourceUpdateResult>;
+    /** Whether a clone's branch has newer commits (integrationSourceUpdate); update check only. */
+    checkComponentSource?: (componentPath: string, branch: string) => Promise<UpdateCheckResult>;
+    /** Reads a custom integration's Node range at the add door (PR-1a step 8); absent = Demo Builder's Node. */
+    resolveCustomIntegrationNode?: CustomIntegrationNodeResolver;
+    /** npm install (and build) in an existing clone, on `nodeVersion`; update only. */
+    installComponentDependencies?: (
+        componentPath: string,
+        definition: TransformedComponentDefinition,
+        nodeVersion: string,
+    ) => Promise<{ success: boolean; error?: string }>;
+    /**
+     * Union-reconcile API subscriber (step 07). `onStep` carries its own short
+     * lines to the screen: this step can hold still for a minute and a stage name
+     * alone reads as frozen (owner, 2026-09-19). `scope` names the ONE component
+     * the subscribe is for, whose workspace it targets; without it the subscribe
+     * is the project-wide reconcile on the project's workspace.
+     */
     subscribeRequiredApis: (
         appBuilderComponents: AppBuilderComponentCatalogEntry[],
-        project: Project
+        project: Project,
+        onStep?: (step: string) => void,
+        scope?: SubscribeScope
     ) => Promise<void>;
+    /**
+     * Give a component being ADDED its own Adobe workspace, and record it on the
+     * component (AB-23).
+     *
+     * Returns a reason when the workspace could not be made. That is a HARD failure,
+     * not best-effort: an add that carried on would deploy into the project's
+     * workspace, where an App Management app's fixed package names overwrite whatever
+     * is already there — the exact collision this item exists to remove.
+     *
+     * A component that is bound to another (an ERP and its integration) joins that
+     * one's workspace rather than making a second, so the unit is one workspace per
+     * ADD rather than per component.
+     */
+    createComponentWorkspace: (
+        project: Project,
+        entry: AppBuilderComponentCatalogEntry,
+        /** Called only when a workspace is actually made, not when one is joined. */
+        onMaking?: () => void
+    ) => Promise<{ error: string } | undefined>;
+    /**
+     * Delete a workspace a removed component held (AB-23), so removal returns the
+     * project to what it was — the reversal the create on add earns.
+     *
+     * Returns a reason rather than throwing. A failure here is a WARNING, not a
+     * failed removal: the component is already undeployed and cleared by the time
+     * this runs, so refusing would leave the SC with a half-removed integration to
+     * argue with. An undeleted workspace is untidy; a stuck removal is not.
+     */
+    deleteComponentWorkspace: (
+        project: Project,
+        workspace: { id: string; name: string }
+    ) => Promise<{ error: string } | undefined>;
+    /**
+     * The extension points a workspace has published in Adobe's registry, by id. The
+     * Admin UI SDK registration behind a Commerce grid column is one of these; `aio app
+     * deploy` publishes it and `aio app undeploy` is what unpublishes it, exit 0 either
+     * way. A removal reads the registry after the undeploy rather than believing it
+     * (2026-10-08: two deployments of one integration showed its columns twice). Optional:
+     * bare tests and the mesh, which publishes nothing, never need it.
+     */
+    workspaceExtensionPointsOf?: (
+        project: Project,
+        workspace: { id: string; name: string }
+    ) => Promise<string[] | { error: string }>;
+    /**
+     * Unpublish extension points from a workspace, answering what the registry holds on a
+     * RE-READ. One of `keys` still in the answer means Adobe kept it, and the removal
+     * stops rather than assume. Optional, with the read above.
+     */
+    removeWorkspaceExtensionPoints?: (
+        project: Project,
+        workspace: { id: string; name: string },
+        keys: string[]
+    ) => Promise<string[] | { error: string }>;
     /** Storefront config regen + republish (step 04 generalized providesEnvVars path). */
-    republishStorefront: (input: RepublishInput) => Promise<{ success: boolean; error?: string }>;
+    republishStorefront: (
+        input: RepublishInput
+    ) => Promise<{ success: boolean; error?: string; cdnError?: string }>;
+    /**
+     * After a deploy, delete the actions the apps at these paths no longer declare, and the
+     * rules and triggers that started them (`runtimeUndeclaredActions.ts`); `aio` never does.
+     * Runs inside the deploy's org context. Absent in tests that do not exercise it.
+     */
+    deleteUndeclaredActions?: (componentPaths: string[]) => Promise<UndeclaredActionCleanup>;
+    /** A workspace's Runtime key, read before a removal deletes it (`componentWorkspaceRelease.ts`). */
+    namespaceKeyOf?: WorkspaceReleaseDeps['namespaceKeyOf'];
+    /** Confirm, in the background, that a deleted workspace's Runtime namespace is gone. */
+    watchNamespaceRemoval?: WorkspaceReleaseDeps['watchNamespaceRemoval'];
     /** Every appBuilderComponent in the project's catalog (for the union subscribe). */
     catalog: AppBuilderComponentCatalogEntry[];
     /** Secret storage forwarded to the republish path. */
     secrets: unknown;
-}
-
-/** Build the org-context target for the project's known Adobe identity. */
-function targetFor(project: Project, deps: AppBuilderComponentRunnerDeps) {
-    return buildOrgTargetFromProjectAdobe(project.adobe, deps.getCachedOrganization());
-}
-
-/** Build a runtime git ComponentDefinition for a catalog entry. */
-function buildDefinition(entry: AppBuilderComponentCatalogEntry): TransformedComponentDefinition {
-    const branch = entry.source.branch ?? 'main';
-    return {
-        id: entry.id,
-        name: entry.name,
-        type: entry.kind === 'mesh' ? 'dependency' : 'app-builder',
-        subType: entry.kind === 'mesh' ? 'mesh' : 'app',
-        source: {
-            type: 'git',
-            url: `https://github.com/${entry.source.owner}/${entry.source.repo}.git`,
-            branch,
-        },
-        configuration: {
-            requiresDeployment: true,
-            deploymentTarget: 'adobe-io',
-            // The entry's declared node feeds the existing fnm machinery in
-            // ComponentDependencies; strictInstall makes a refused npm install
-            // abort the add with npm's own error (AB-3).
-            nodeVersion: entry.nodeVersion,
-            strictInstall: true,
-        },
-    } as TransformedComponentDefinition;
-}
-
-/** Clone + install the catalog entry; return its local path or an error. */
-async function cloneAndInstall(
-    project: Project,
-    entry: AppBuilderComponentCatalogEntry,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<{ path: string } | { error: string }> {
-    const result = await deps.componentManager.installComponent(project, buildDefinition(entry));
-    if (!result.success || !result.component?.path) {
-        return { error: result.error || 'Component installation failed.' };
-    }
-
-    // ATTACH the instance, don't just take its path. `installComponent` builds
-    // it — carrying `subType` off the definition — and returns it; it does not
-    // put it on the project. That is the caller's job, and this caller used to
-    // skip it.
-    //
-    // REGRESSION (2026-08-04, live): a dashboard-added mesh deployed, persisted a
-    // correct keyed entry, republished the storefront — and came back as
-    // `mesh=none` on the next reload with an EMPTY integrations grid. With no
-    // instance persisted, the next project load let `discoverComponents`
-    // synthesize a thin one from the directory alone, with no `subType`, and
-    // `getMeshComponentInstance` matches on `subType === 'mesh'`. The keyed map
-    // and the instance are read by different surfaces, so the projects-list card
-    // said Deployed while the dashboard said none.
-    project.componentInstances = project.componentInstances ?? {};
-    project.componentInstances[entry.id] = result.component;
-
-    return { path: result.component.path };
-}
-
-/** Guard: a mesh-consuming integration requires its provider to be deployed first. */
-function findMissingProvider(
-    project: Project,
-    entry: AppBuilderComponentCatalogEntry,
-): string | undefined {
-    for (const envVar of entry.envSchema ?? []) {
-        const provider = envVar.providedBy;
-        if (provider && !project.appBuilderComponents?.[provider]) {
-            return provider;
-        }
-    }
-    return undefined;
-}
-
-/**
- * Persist `appBuilderComponents[id]` and save; returns the updated project.
- *
- * ALSO syncs the CALLER's project reference in place (like recordDeployOutcome):
- * callers such as the creation executor keep saving their own reference after
- * the runner returns — without the sync, those later saves clobbered the keyed
- * write and a creation-deployed integration vanished from the manifest.
- */
-/**
- * Record an ADD's outcome and save.
- *
- * `create: true` keys the entry by the component's OWN id. Without it the write
- * would go through resolveKeyedComponentId, whose legacy-migration branch reuses
- * the one existing same-kind entry's key — which for an add means the second
- * integration lands on the first one's key and overwrites it.
- */
-/**
- * Run the caller's bundle refresh, swallowing failures.
- *
- * A deploy that succeeded must not report failure because a markdown file could
- * not be rewritten — the bundle is repaired again on the next activation sweep
- * or by "Regenerate AI Files". The log line is the trail.
- */
-async function refreshBundleQuietly(
-    project: Project,
-    deps: AppBuilderComponentRunnerDeps,
-    reason: 'add' | 'remove',
-): Promise<void> {
-    if (!deps.refreshAiBundle) return;
-    try {
-        await deps.refreshAiBundle(project);
-    } catch (err) {
-        deps.logger.warn(
-            `[AppBuilder] Could not refresh the AI bundle after an integration ${reason}: ` +
-                (err instanceof Error ? err.message : String(err)),
-        );
-    }
-}
-
-async function persistOutcome(
-    project: Project,
-    entry: AppBuilderComponentCatalogEntry,
-    outcome: DeployOutcome,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<void> {
-    recordDeployOutcome(project, entry.kind, entry.id, outcome, { create: true });
-    // Record the SELECTION too. Configure's rail and project reset both read the
-    // selection lists rather than the keyed map, and this path is the only live
-    // add — leaving them empty is what made a dashboard-added mesh invisible to
-    // Configure and disposable by reset.
-    reconcileComponentSelections(project);
-    await deps.saveProject(project);
-    // Composition changed — the skill set follows it. Best-effort: a bundle
-    // refresh must never fail a deploy that already landed.
-    await refreshBundleQuietly(project, deps, 'add');
-}
-
-/** Republish the storefront when the project carries provided env vars (else no-op). */
-async function republishIfProvided(
-    project: Project,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<void> {
-    if (Object.keys(getProvidedEnvVars(project)).length === 0) {
-        return;
-    }
-    await deps.republishStorefront({ project, secrets: deps.secrets, logger: deps.logger });
-}
-
-/** Build the persisted AppBuilderComponentState from a successful mesh deploy. */
-/**
- * Build the persisted state from a successful mesh deploy.
- *
- * Captures the STALENESS BASELINE (`envVars` + `sourceHash`) as well as the
- * endpoint. The headless path gets these from `updateMeshState`; this path
- * called nothing equivalent, so a dashboard-added mesh persisted an endpoint
- * with no baseline — and `detectMeshChanges`, finding an empty one, went to
- * Adobe I/O on every window open and gave up ("Failed to parse mesh data").
- * A mesh that can never be found stale can never prompt a redeploy.
- *
- * The two clears mirror updateMeshState: a freshly deployed mesh is no longer
- * a declined update.
- */
-async function meshOutcome(
-    entry: AppBuilderComponentCatalogEntry,
-    data: MeshDeploymentResult['data'],
-    componentPath: string,
-    captureBaseline: AppBuilderComponentRunnerDeps['captureMeshBaseline'],
-): Promise<DeployOutcome> {
-    const endpoint = data?.endpoint ?? '';
-    const { envVars, sourceHash } = await captureBaseline(componentPath);
-    return {
-        status: 'deployed',
-        ...identityOf(entry),
-        endpoint,
-        lastDeployed: new Date().toISOString(),
-        envVars,
-        sourceHash,
-        userDeclinedUpdate: undefined,
-        declinedAt: undefined,
-        providesEnvVars: entry.providesEnvVars?.includes('MESH_ENDPOINT')
-            ? { MESH_ENDPOINT: endpoint }
-            : undefined,
-    };
-}
-
-/** Build the persisted AppBuilderComponentState from a successful integration deploy. */
-function integrationOutcome(
-    entry: AppBuilderComponentCatalogEntry,
-    data: AppDeploymentResult['data'],
-): DeployOutcome {
-    return {
-        status: 'deployed',
-        ...identityOf(entry),
-        url: data?.url,
-        deployedUrls: data?.deployedUrls,
-        lastDeployed: new Date().toISOString(),
-    };
-}
-
-/** The identity a CREATE must supply; an update inherits it from its entry. */
-function identityOf(
-    entry: AppBuilderComponentCatalogEntry,
-): Pick<DeployOutcome, 'name' | 'source'> {
-    return {
-        name: entry.name,
-        source: { owner: entry.source.owner, repo: entry.source.repo, branch: entry.source.branch },
-    };
-}
-
-/**
- * What the SC reads for a failure: Adobe's permission and outage refusals in plain words,
- * anything else as it was written. Adobe's own words still reach Debug Logs.
- */
-function readableFailure(reason: string, logger: Logger): string {
-    const plain = explainAdobeAccessFailure(reason);
-    if (!plain) return reason;
-    logger.warn(`[AppBuilderComponent Runner] Adobe refused: ${reason}`);
-    return plain;
-}
-
-/**
- * A failed deploy's outcome — INCLUDING why it failed.
- *
- * The reason used to be returned to the caller and dropped from state, so a
- * failed add persisted `status:'error'` with nothing to explain it and no surface
- * could answer "why?" once the notification faded. `error` is the one field a
- * failed entry exists to carry.
- */
-function errorOutcome(entry: AppBuilderComponentCatalogEntry, reason: string): DeployOutcome {
-    return { status: 'error', ...identityOf(entry), error: reason };
-}
-
-/** Add-door rejection when the cloned repo's config layout ≠ the catalog entry's. */
-function layoutMismatchError(
-    entry: AppBuilderComponentCatalogEntry,
-    expected: AppConfigLayout,
-    detected: AppConfigLayout | undefined,
-): string {
-    const found =
-        detected === undefined
-            ? 'its app.config.yaml declares neither (missing, unparseable, or empty)'
-            : `its app.config.yaml is ${detected}-shaped`;
-    if (expected === 'standalone') {
-        return (
-            `"${entry.name}" is not a standalone App Builder app — ${found}. A standalone ` +
-            `integration must declare runtime packages under application.runtimeManifest ` +
-            `so its deploy can be package-isolated in the shared workspace.`
-        );
-    }
-    return (
-        `"${entry.name}" is not an extension-layout App Builder app — ${found}. An ` +
-        `extension integration must declare a root extensions: map in app.config.yaml ` +
-        `(the App Management shape).`
-    );
-}
-
-/** Dispatch the deploy by kind; returns success + the outcome to record. */
-async function dispatchDeploy(
-    project: Project,
-    entry: AppBuilderComponentCatalogEntry,
-    componentPath: string,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<{ ok: true; outcome: DeployOutcome } | { ok: false; error: string }> {
-    if (entry.kind === 'mesh') {
-        // The .env must exist before `aio api-mesh` reads it, and it is rewritten
-        // on every deploy — a redeploy after a credential change in Configure must
-        // not ship the previous endpoints. Sits here, in the one kind-dispatched
-        // seam, so add and redeploy cannot drift apart on it.
-        try {
-            // Step in the FIRST arg, matching the deploy tails' convention — the
-            // caller renders arg 1 as the current step.
-            deps.onProgress?.(OPERATION_STAGES.generatingMeshConfig.label);
-            await deps.writeComponentEnv(project, entry.id, componentPath);
-        } catch (error) {
-            // Deploying anyway is the ENOENT this step exists to prevent, so fail
-            // here and let the caller persist status:'error' with the folder kept.
-            return {
-                ok: false,
-                error: `Could not write the mesh .env: ${toError(error).message}`,
-            };
-        }
-        // The mesh tail picks create-vs-update internally (its own verification
-        // resolves the existing mesh); D1 persists no separate meshId to pass.
-        const result = await deps.deployMesh(
-            componentPath,
-            deps.commandManager,
-            deps.logger,
-            deps.onProgress,
-        );
-        if (!result.success) {
-            return { ok: false, error: result.error || 'Mesh deployment failed.' };
-        }
-        // Stamp the mesh id where meshVerifier looks for it. Without it, every
-        // status request fell back to `aio api-mesh:describe` to recover the id,
-        // which costs ~3s and logs a failure. The headless path has always done
-        // this; only this one did not.
-        const meshInstance = project.componentInstances?.[entry.id];
-        if (meshInstance) {
-            meshInstance.metadata = {
-                ...meshInstance.metadata,
-                meshId: result.data?.meshId || '',
-                meshStatus: 'deployed',
-            };
-        }
-        return {
-            ok: true,
-            outcome: await meshOutcome(entry, result.data, componentPath, deps.captureMeshBaseline),
-        };
-    }
-    const owPackage = deriveOwPackage(entry.id);
-    // App Management apps authenticate their actions with the workspace S2S
-    // credential, taken as deploy-time env inputs. Resolved here — the one
-    // kind-dispatched seam — so add and redeploy cannot drift on it. A resolve
-    // failure fails the deploy: without these vars the app deploys BROKEN (its
-    // installer cannot authenticate — the first live install proved it).
-    let extraEnv: Record<string, string> | undefined;
-    if (entry.lifecycle === 'app-management' && deps.resolveAppManagementEnv) {
-        deps.onProgress?.(OPERATION_STAGES.resolvingCommerceCredentials.label);
-        try {
-            extraEnv = await deps.resolveAppManagementEnv(project);
-        } catch (error) {
-            return {
-                ok: false,
-                error: `Could not resolve the app's IMS credentials: ${toError(error).message}`,
-            };
-        }
-    }
-    const result = await deps.deployApp(
-        componentPath,
-        owPackage,
-        deps.commandManager,
-        deps.logger,
-        {
-            onProgress: deps.onProgress,
-            nodeVersion: entry.nodeVersion,
-            layout: entry.layout,
-            confirmToolchainRefresh: deps.confirmToolchainRefresh,
-            extraEnv,
-        },
-    );
-    return result.success
-        ? { ok: true, outcome: integrationOutcome(entry, result.data) }
-        : { ok: false, error: result.error || 'App deployment failed.' };
-}
-
-/**
- * Add an App Builder component: subscribe → clone+install → kind-dispatched deploy (under
- * org-context) → persist → republish (if it provides env vars). On a deploy
- * failure after a successful clone, persists `status:'error'` and retains the
- * local folder for retry.
- */
-export async function addAppBuilderComponent(
-    project: Project,
-    entry: AppBuilderComponentCatalogEntry,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<RunnerResult> {
-    const missingProvider = findMissingProvider(project, entry);
-    if (missingProvider) {
-        return {
-            success: false,
-            error: `Provider "${missingProvider}" is not deployed yet (deploy it first).`,
-        };
-    }
-
-    try {
-        if (entry.nodeVersion) {
-            // Visible, not silent: a first-time fnm install takes ~30s and the
-            // progress channel is the surface every add path already has.
-            deps.onProgress?.(
-            OPERATION_STAGES.preparingNode.label,
-            `Installing Node ${entry.nodeVersion} (one-time install)`,
-        );
-            const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
-            if (nodeError) {
-                return { success: false, error: nodeError };
-            }
-        }
-
-        // The subscribe's org-services fetch alone measured 43.5s cold — the
-        // longest silent stretch in the chain (owner audit, 2026-08-27).
-        deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
-        await deps.subscribeRequiredApis(deps.catalog, project);
-
-        const installed = await cloneAndInstall(project, entry, deps);
-        if ('error' in installed) {
-            return { success: false, error: installed.error };
-        }
-
-        // Add door: the cloned repo's config layout MUST match what the catalog
-        // entry declares (default standalone). A standalone entry needs runtime
-        // packages we can package-isolate in the shared workspace; an extension
-        // entry (App Management apps) needs a root `extensions:` map. Reject a
-        // mismatched or malformed repo here (before any deploy) rather than
-        // silently landing it on the shared default package where it would prune
-        // sibling integrations.
-        if (entry.kind === 'integration') {
-            const expected: AppConfigLayout = entry.layout ?? 'standalone';
-            const detected = await detectAppLayout(installed.path);
-            if (detected !== expected) {
-                return { success: false, error: layoutMismatchError(entry, expected, detected) };
-            }
-        }
-
-        // Transient in-flight marker so pollers can tell this run from a
-        // stale prior outcome; the final outcome overwrites it.
-        project.appBuilderComponents = {
-            ...(project.appBuilderComponents ?? {}),
-            [entry.id]: {
-                kind: entry.kind,
-                status: 'deploying',
-                name: entry.name,
-                source: {
-                    owner: entry.source.owner,
-                    repo: entry.source.repo,
-                    branch: entry.source.branch,
-                },
-            },
-        };
-        await deps.saveProject(project);
-
-        const deployed = await withOrgContext(targetFor(project, deps), () =>
-            dispatchDeploy(project, entry, installed.path, deps),
-        );
-
-        if (!deployed.ok) {
-            const reason = readableFailure(deployed.error, deps.logger);
-            await persistOutcome(project, entry, errorOutcome(entry, reason), deps);
-            return { success: false, error: reason };
-        }
-
-        await persistOutcome(project, entry, deployed.outcome, deps);
-        await installIfAppManagement(project, entry, deps);
-        await republishIfProvided(project, deps);
-        return { success: true };
-    } catch (error) {
-        deps.logger.error('[AppBuilderComponent Runner] add failed', error as Error);
-        return { success: false, error: readableFailure(toError(error).message, deps.logger) };
-    }
-}
-
-/**
- * The post-deploy install pass for `lifecycle: 'app-management'` apps.
- *
- * Runs AFTER the deploy outcome persisted, and never fails the deploy: the app
- * IS deployed — an install failure leaves it dormant with the hands-back
- * recorded on `installation`, which is the owner's automatic-with-hands-back
- * decision (2026-08-27). No-op for every other entry, and when the caller
- * wired no installer (mesh paths, bare tests).
- */
-async function installIfAppManagement(
-    project: Project,
-    entry: AppBuilderComponentCatalogEntry,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<void> {
-    if (entry.lifecycle !== 'app-management' || !deps.installAppManagement) {
-        return;
-    }
-    const state = project.appBuilderComponents?.[entry.id];
-    // The installer's messages carry live detail (retry rounds), so they are the STEP
-    // under one install stage — the stage keeps its expectation line while they change.
-    const result = await deps.installAppManagement(project, state?.deployedUrls, (message) =>
-        deps.onProgress?.(OPERATION_STAGES.installingIntoCommerce.label, message),
-    );
-    if (state) {
-        state.installation = {
-            status: result.status,
-            detail: result.detail,
-            at: new Date().toISOString(),
-        };
-        await deps.saveProject(project);
-    }
-    if (result.status === 'failed') {
-        deps.logger.warn(
-            `[AppBuilderComponent Runner] ${entry.id} deployed but not installed: ${result.detail}`,
-        );
-        deps.onProgress?.(
-            OPERATION_STAGES.installingIntoCommerce.label,
-            result.detail ?? 'Install into Commerce did not finish.',
-        );
-    }
-}
-
-/**
- * Redeploy ONLY the given appBuilderComponent's tail (no re-clone), under org-context.
- * Touches only its own entry.
- */
-export async function deployAppBuilderComponent(
-    project: Project,
-    id: string,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<RunnerResult> {
-    const existing = project.appBuilderComponents?.[id];
-    const componentPath = project.componentInstances?.[id]?.path;
-    if (!existing || !componentPath) {
-        return { success: false, error: `AppBuilderComponent "${id}" not found.` };
-    }
-
-    const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, existing);
-
-    try {
-        if (entry.nodeVersion) {
-            deps.onProgress?.(
-            OPERATION_STAGES.preparingNode.label,
-            `Installing Node ${entry.nodeVersion} (one-time install)`,
-        );
-            const nodeError = await deps.ensureNodeVersion?.(entry.nodeVersion);
-            if (nodeError) {
-                return { success: false, error: nodeError };
-            }
-        }
-
-        // App Management redeploys re-run the union subscribe (adds always did):
-        // the S2S credential these apps deploy with may be freshly created, and
-        // an unsubscribed credential is not ENTITLED to the IMS scopes its
-        // actions request (the baseline AdobeIOManagementAPISDK carries
-        // adobeio_api). Idempotent reconcile — a subscribed credential is a
-        // no-op PUT of the same union.
-        if (entry.lifecycle === 'app-management') {
-            deps.onProgress?.(OPERATION_STAGES.subscribingApis.label);
-            await deps.subscribeRequiredApis(deps.catalog, project);
-        }
-
-        // Transient in-flight marker (see addAppBuilderComponent): without it
-        // the PREVIOUS outcome — often an error — reads as current for the
-        // whole run.
-        existing.status = 'deploying';
-        existing.error = undefined;
-        await deps.saveProject(project);
-
-        const deployed = await withOrgContext(targetFor(project, deps), () =>
-            dispatchDeploy(project, entry, componentPath, deps),
-        );
-        if (!deployed.ok) {
-            // Persist the failure — without this the transient 'deploying'
-            // marker above would outlive a FAILED redeploy and read as stuck
-            // (measured live 2026-08-27: manifest said deploying while the
-            // handler had already returned the build error). The add path has
-            // always persisted its error outcome; this makes redeploy match.
-            const reason = readableFailure(deployed.error, deps.logger);
-            recordDeployOutcome(project, entry.kind, id, errorOutcome(entry, reason));
-            await deps.saveProject(project);
-            return { success: false, error: reason };
-        }
-        recordDeployOutcome(project, entry.kind, id, deployed.outcome);
-        await deps.saveProject(project);
-        await installIfAppManagement(project, entry, deps);
-        await republishIfProvided(project, deps);
-        return { success: true };
-    } catch (error) {
-        deps.logger.error('[AppBuilderComponent Runner] deploy failed', error as Error);
-        return { success: false, error: readableFailure(toError(error).message, deps.logger) };
-    }
-}
-
-/**
- * Reconstruct a catalog entry from persisted state (redeploy fallback).
- *
- * Routed through {@link buildCustomIntegrationEntry} so a SEEDED instance —
- * a kit clone under a user-chosen id — recovers its capability fields
- * (layout/lifecycle/nodeVersion) via source recognition. Hand-building the
- * entry here lost them, and a redeploy of such an instance ran the standalone
- * path against an extension-layout app.
- */
-function entryFromState(
-    id: string,
-    state: AppBuilderComponentState,
-): AppBuilderComponentCatalogEntry {
-    const entry = buildCustomIntegrationEntry(
-        {
-            owner: state.source.owner,
-            repo: state.source.repo,
-            branch: state.source.branch,
-            // Prefer the persisted display name (shell instances carry it) so a
-            // redeploy does not clobber it with the id.
-            name: state.name ?? id,
-        },
-        id,
-    );
-    return {
-        ...entry,
-        kind: state.kind,
-        providesEnvVars: state.providesEnvVars ? Object.keys(state.providesEnvVars) : undefined,
-    };
-}
-
-/**
- * The pre-remove uninstall pass for `lifecycle: 'app-management'` apps.
- *
- * Resolves the entry the same way redeploy does (catalog first, then persisted
- * state through source recognition) so a seeded kit instance under a custom id
- * still identifies as app-management. No-op for every other entry, and when
- * the caller wired no uninstaller. Never throws.
- */
-async function uninstallIfAppManagement(
-    project: Project,
-    id: string,
-    state: AppBuilderComponentState,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<void> {
-    if (!deps.uninstallAppManagement || state.kind !== 'integration') {
-        return;
-    }
-    const entry = deps.catalog.find((c) => c.id === id) ?? entryFromState(id, state);
-    if (entry.lifecycle !== 'app-management') {
-        return;
-    }
-    try {
-        const result = await deps.uninstallAppManagement(project, state.deployedUrls, (message) =>
-            deps.onProgress?.(OPERATION_STAGES.removingFromCommerce.label, message),
-        );
-        if (result.status === 'failed') {
-            deps.logger.warn(
-                `[AppBuilderComponent Runner] ${id} Commerce uninstall did not finish: ${result.detail}`,
-            );
-        }
-    } catch (error) {
-        deps.logger.warn(
-            `[AppBuilderComponent Runner] Commerce uninstall warning: ${toError(error).message}`,
-        );
-    }
-}
-
-/** Tear down the remote artifact for an App Builder component, by kind, under org-context. */
-/**
- * Tear down a component's REMOTE artifacts, leaving the local clone and the keyed
- * state alone.
- *
- * Module-private again: it was briefly exported for the destination migration,
- * which no longer tears anything down — a move deploys to the new destination and
- * leaves the old one serving, because undeploy is the only irreversible step and
- * nobody asked for cleanup. `removeAppBuilderComponent` is the only caller.
- */
-async function teardownRemote(
-    project: Project,
-    id: string,
-    state: AppBuilderComponentState,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<void> {
-    const componentPath = project.componentInstances?.[id]?.path;
-    if (state.kind === 'mesh') {
-        await withOrgContext(targetFor(project, deps), () =>
-            deps.commandManager.execute(MESH_DELETE_COMMAND, {
-                cwd: componentPath,
-                useNodeVersion: 'auto',
-                enhancePath: true,
-                streaming: true,
-                shell: true,
-                timeout: TIMEOUTS.LONG,
-            }),
-        );
-        return;
-    }
-    // With the namespace key, as deploy has it (see runtimeNamespace.ts), and a
-    // refusal is thrown: a silent exit 2 left the ERP pair running on 2026-09-21.
-    const result = await withOrgContext(targetFor(project, deps), async () =>
-        runInNamespace(deps, 'aio app undeploy', await runtimeNamespaceEnv(deps), {
-            cwd: componentPath,
-            streaming: true,
-        }),
-    );
-    if (result.code !== 0) {
-        throw new Error(commandFailure('aio app undeploy', result));
-    }
-}
-
-/**
- * Package names safe to interpolate into an `aio runtime package` command.
- * Declared names come from config FILES; a name outside the Adobe id charset
- * is never deleted (and never quoted into a shell line).
- */
-const RUNTIME_PACKAGE_NAME = /^[A-Za-z0-9@._-]+$/;
-
-/**
- * Verify the undeploy actually cleared the namespace, and delete what it left
- * (AB-7). Attribution is exact and conservative: only packages the app itself
- * names — its declared config packages plus the derived isolation package —
- * are candidates; anything else in the namespace is not ours to touch.
- * Best-effort like the rest of teardown, but never SILENT: the summary lands
- * on the result, and an unverifiable namespace says so.
- */
-async function verifyRuntimeTeardown(
-    project: Project,
-    id: string,
-    expectedPackages: string[],
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<RuntimeCleanupSummary> {
-    const expected = [...new Set([...expectedPackages, deriveOwPackage(id)])].filter((name) =>
-        RUNTIME_PACKAGE_NAME.test(name),
-    );
-    // The key is fetched once and used for the list and every delete. A list that
-    // cannot answer THROWS (runtimeNamespace.ts), so it lands here as "not
-    // verified" — it used to parse the empty output of a failed list as "nothing
-    // deployed" and report the namespace clean.
-    let present: string[];
-    let env: RuntimeNamespaceEnv;
-    try {
-        [env, present] = await withOrgContext(targetFor(project, deps), async () => {
-            const namespaceEnv = await runtimeNamespaceEnv(deps);
-            return [namespaceEnv, await listRuntimePackages(deps, namespaceEnv)] as const;
-        });
-    } catch (error) {
-        return {
-            verified: false,
-            deleted: [],
-            failed: [],
-            note: `Could not list the Runtime namespace to verify the undeploy: ${toError(error).message}`,
-        };
-    }
-
-    const leftovers = expected.filter((name) => present.includes(name));
-    const deleted: string[] = [];
-    const failed: string[] = [];
-    for (const name of leftovers) {
-        try {
-            await withOrgContext(targetFor(project, deps), () => deleteRuntimePackage(deps, name, env));
-            deleted.push(name);
-        } catch (error) {
-            deps.logger.warn(
-                `[AppBuilderComponent Runner] leftover package "${name}" delete failed: ${toError(error).message}`,
-            );
-            failed.push(name);
-        }
-    }
-    if (leftovers.length > 0) {
-        deps.logger.warn(
-            `[AppBuilderComponent Runner] undeploy left ${leftovers.length} package(s) running ` +
-                `(${leftovers.join(', ')}); deleted ${deleted.length}, failed ${failed.length}`,
-        );
-    }
-    return { verified: true, deleted, failed };
-}
-
-/**
- * The project's selections with every mesh dependency dropped.
- *
- * Keyed by the LEGACY component ids (`eds-accs-mesh` and friends), which is what
- * `componentSelections.dependencies` holds — not the catalog ids.
- *
- * @param project - the project whose mesh selection is being revoked
- * @returns componentSelections with mesh dependencies removed
- */
-function withoutMeshDependencies(project: Project): Project['componentSelections'] {
-    const selections = project.componentSelections;
-    if (!selections?.dependencies) return selections;
-    return {
-        ...selections,
-        dependencies: selections.dependencies.filter((dep) => !isMeshComponentId(dep)),
-    };
-}
-
-/**
- * The project's selections with one integration's id dropped from `appBuilder`.
- *
- * The integration counterpart of {@link withoutMeshDependencies}, and it exists
- * for the same reason: a selected-but-absent component is an error state, not a
- * resting one. Found live 2026-08-17 — an `add_integration` / `remove_integration`
- * round trip cleared the keyed entry and the component instance while leaving the
- * id in `componentSelections.appBuilder`.
- *
- * The cost lands at RESET, which rebuilds the component list from the selections
- * (`projectResetService`) and would try to re-clone a component that is gone.
- *
- * NOT `reconcileComponentSelections`: that helper is additive by design, because
- * a wizard selection not yet installed is a legitimate mid-creation state. Its
- * docstring assumed an explicit removal already cleaned up after itself — which
- * was true only for meshes until now.
- *
- * @param project - the project whose integration selection is being revoked
- * @param id - the integration id being removed
- * @returns componentSelections without that id
- */
-function withoutIntegrationSelection(project: Project, id: string): Project['componentSelections'] {
-    const selections = project.componentSelections;
-    if (!selections?.appBuilder) return selections;
-    return {
-        ...selections,
-        appBuilder: selections.appBuilder.filter((entry) => entry !== id),
-    };
-}
-
-/**
- * Remove an App Builder component: kind-dispatched remote teardown (best-effort) → delete the
- * local folder → clear `appBuilderComponents[id]` → if it provided env vars, regenerate the
- * storefront config WITHOUT them.
- */
-export async function removeAppBuilderComponent(
-    project: Project,
-    id: string,
-    deps: AppBuilderComponentRunnerDeps,
-): Promise<RunnerResult> {
-    const state = project.appBuilderComponents?.[id];
-    if (!state) {
-        return { success: false, error: `AppBuilderComponent "${id}" not found.` };
-    }
-
-    const provided = Boolean(
-        state.providesEnvVars && Object.keys(state.providesEnvVars).length > 0,
-    );
-
-    // BEFORE the undeploy, while the app's own API still exists to call: the
-    // uninstall pass removes what the installer created (event registrations,
-    // binding packages, Commerce-side eventing config, the association) —
-    // `aio app undeploy` removes only the actions and leaves all of that behind
-    // (AB-4; residue measured live 2026-08-27). Best-effort like the teardown:
-    // an uninstall failure must never block the remove the user asked for.
-    await uninstallIfAppManagement(project, id, state, deps);
-
-    // The declared package inventory is read BEFORE the undeploy and the local
-    // delete — afterwards the config files it attributes by are gone.
-    const componentPath = project.componentInstances?.[id]?.path;
-    let declaredPackages: string[] = [];
-    if (state.kind !== 'mesh' && componentPath) {
-        declaredPackages = await listDeclaredPackageNames(componentPath).catch(() => []);
-    }
-
-    try {
-        await teardownRemote(project, id, state, deps);
-    } catch (error) {
-        deps.logger.warn(
-            `[AppBuilderComponent Runner] remote teardown warning: ${toError(error).message}`,
-        );
-    }
-
-    // Trust nothing: `aio app undeploy` exits 0 with packages still deployed
-    // (AB-7, measured live). Meshes verify via their own status flow.
-    const runtimeCleanup =
-        state.kind !== 'mesh'
-            ? await verifyRuntimeTeardown(project, id, declaredPackages, deps)
-            : undefined;
-
-    await deps.componentManager.removeComponent(project, id, true);
-
-    const cleared = {
-        ...project,
-        appBuilderComponents: { ...(project.appBuilderComponents ?? {}) },
-        // Removing a MESH revokes the project's claim to one. `hasMesh`
-        // (showDashboard) is instance OR keyed-state OR dependency, so clearing
-        // only the keyed entry left the other two asserting a mesh that no longer
-        // existed: the card kept rendering, stuck on "Checking requirements…",
-        // and its Redeploy answered "This project does not have an API Mesh
-        // component". A selected-but-absent mesh is an error state, not a resting
-        // one — so the selection goes with the component.
-        // Both kinds revoke their selection; they just live in different lists —
-        // the persisted mesh rides `dependencies`, an integration rides
-        // `appBuilder` (ADR-011). Only the mesh half existed until 2026-08-17.
-        componentSelections:
-            state.kind === 'mesh'
-                ? withoutMeshDependencies(project)
-                : withoutIntegrationSelection(project, id),
-        // The component's API picks go with it. `componentApiPicks` records WHICH
-        // integration wanted an API precisely so this moment can answer "is it safe
-        // to drop?" — and nothing was spending that: three writers, no remover.
-        // Left behind, the picks stay in resolveDesiredApis' union, so the next
-        // reconcile PUT keeps subscribing for a component that no longer exists and
-        // Manage APIs keeps listing it.
-        //
-        // Only the ATTRIBUTED key is dropped. UNATTRIBUTED_PICKS_KEY holds picks
-        // made from the union view (Manage APIs) and migrated legacy ones; no
-        // component claims them, so no removal can prove them safe to drop.
-        ...(project.componentApiPicks
-            ? { componentApiPicks: { ...project.componentApiPicks } }
-            : {}),
-        // The component's env-value copies go with it too. Configure's fan-out
-        // writes a shared field only to SELECTED components, but the env/config
-        // generators sweep the WHOLE map — configGenerator with
-        // mesh-overrides-non-mesh priority — so a stranded entry's stale copy of
-        // ADOBE_COMMERCE_URL (etc.) would outvote the backend's fresh value on
-        // the next publish. Same failure shape as the 2026-08-10 wrong-website
-        // bug. `stripOrphanedComponentConfigs` (loader) sweeps entries older
-        // removals already stranded.
-        ...(project.componentConfigs ? { componentConfigs: { ...project.componentConfigs } } : {}),
-    };
-    delete cleared.appBuilderComponents[id];
-    if (cleared.componentApiPicks) {
-        delete cleared.componentApiPicks[id];
-    }
-    if (cleared.componentConfigs) {
-        delete cleared.componentConfigs[id];
-    }
-    // Sync the caller's reference too — a later save from a stale reference
-    // would otherwise RESURRECT the removed integration (see persistOutcome).
-    project.appBuilderComponents = cleared.appBuilderComponents;
-    // Same stale-reference hazard as the entry above: a later save from the
-    // caller's copy would otherwise restore the picks we just dropped.
-    if (cleared.componentApiPicks) {
-        project.componentApiPicks = cleared.componentApiPicks;
-    }
-    if (cleared.componentConfigs) {
-        project.componentConfigs = cleared.componentConfigs;
-    }
-    await deps.saveProject(cleared);
-    // The inverse of the add, and it has always been broken the same way:
-    // remove the last App Builder component and its skills stayed forever.
-    await refreshBundleQuietly(cleared, deps, 'remove');
-
-    if (provided) {
-        await deps.republishStorefront({
-            project: cleared,
-            secrets: deps.secrets,
-            logger: deps.logger,
-        });
-    }
-
-    return { success: true, ...(runtimeCleanup ? { runtimeCleanup } : {}) };
 }

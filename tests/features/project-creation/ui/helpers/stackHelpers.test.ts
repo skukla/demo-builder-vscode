@@ -587,7 +587,6 @@ describe('stackHelpers', () => {
             // dropped on a stack change, so a surviving ✓ would be stale.
             expect(reset.commerceStoreViewChosen).toBe(false);
             expect(reset.storefrontRepoValid).toBe(false);
-            expect(reset.storefrontCodeSyncValid).toBe(false);
         });
     });
 });

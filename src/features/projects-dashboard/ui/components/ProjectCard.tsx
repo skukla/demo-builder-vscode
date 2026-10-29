@@ -9,11 +9,11 @@
  */
 
 import { Flex, Text } from '@adobe/react-spectrum';
-import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useMemo } from 'react';
 import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
+import { PinToggle } from '@/core/ui/components/ui/PinToggle';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -83,25 +83,17 @@ export function ProjectCard({
             onKeyDown={handleKeyDown}
             className="project-card-spectrum"
         >
-            {/* Header Row: Pin indicator (when pinned) + Name + More Menu */}
+            {/* Header Row: Name, then the pin and the More Menu. The pin is a button
+                beside the menu (owner, 2026-10-28): it was a menu row. */}
             <Flex alignItems="center" justifyContent="space-between" gap="size-100">
                 <Flex alignItems="center" gap="size-75" minWidth={0}>
-                    {project.pinned && (
-                        <span
-                            data-testid="project-card-pin-indicator"
-                            aria-label="Pinned"
-                            className="pin-indicator"
-                        >
-                            <PinOn size="XS" />
-                        </span>
-                    )}
                     {/* Rename-in-place: the pencil (hover-revealed) swaps the name
                         for an input; hidden while running (backend rejects) or
                         when the rename callback isn't wired. */}
                     <InlineRenameField
                         name={getProjectDisplayName(project)}
                         textClassName="project-card-spectrum-name"
-                        disabled={isRunning || !actions.onRenameSubmit}
+                        disabled={isRunning || project.status === 'creating' || !actions.onRenameSubmit}
                         // No `normalize`: the field takes the TITLE as typed.
                         // `renameProjectCore` derives the slug from it and moves
                         // the folder to match, so rewriting keystrokes to hyphens
@@ -114,11 +106,18 @@ export function ProjectCard({
                         }
                     />
                 </Flex>
-                <ProjectActionsMenu
-                    project={project}
-                    isRunning={isRunning}
-                    actions={actions}
-                />
+                <Flex alignItems="center" gap="size-50">
+                    <PinToggle
+                        pinned={Boolean(project.pinned)}
+                        subject="project"
+                        onToggle={actions.onPinToggle ? () => actions.onPinToggle?.(project) : undefined}
+                    />
+                    <ProjectActionsMenu
+                        project={project}
+                        isRunning={isRunning}
+                        actions={actions}
+                    />
+                </Flex>
             </Flex>
 
             {/* Brand & Stack Summary */}
@@ -143,13 +142,17 @@ export function ProjectCard({
                 </Flex>
             )}
 
-            {/* Deployment Status Row — mesh + storefront + integrations, worst-of */}
+            {/* Deployment Status Row — mesh + storefront + integrations, worst-of; "Needs
+                reset" when the storefront is behind, in place of "Deployed". */}
             {deployment && (
-                <Flex alignItems="center" gap="size-100">
-                    <StatusDot variant={deployment.variant} size={6} />
-                    <Text UNSAFE_className="project-card-spectrum-status">{deployment.text}</Text>
-                </Flex>
+                <span title={deployment.explanation} data-testid="project-deployment-status">
+                    <Flex alignItems="center" gap="size-100">
+                        <StatusDot variant={deployment.variant} size={6} />
+                        <Text UNSAFE_className="project-card-spectrum-status">{deployment.text}</Text>
+                    </Flex>
+                </span>
             )}
+
         </div>
     );
 }

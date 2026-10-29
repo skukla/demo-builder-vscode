@@ -15,13 +15,19 @@
 # It first waits for any run.sh already going, and the moment that queue ends it
 # stops the redundancy sweep the 2026-09-03 launcher chained after it: two Stryker
 # runs starve each other, so the sweep cannot share the night with run 3. The
-# sweep runs once, at the end, over everything that finished.
+# sweep runs once, when the burn-down is DONE, over everything that finished.
 #
-# FOUR EXITS, all logged: no module has open gaps (done); the stop file (the
-# owner's hand); a run that invoked its batches but moved HEAD by zero commits —
-# an exhausted balance or a broken template would otherwise regenerate the same
-# queue forever; and a queue size that could not be READ, which is not zero and
-# must not be mistaken for it.
+# FIVE EXITS, all logged: no module has open gaps (done); the stop file (the
+# owner's hand); MAX_RUNS; a run that invoked its batches but moved HEAD by zero
+# commits — an exhausted balance or a broken template would otherwise regenerate
+# the same queue forever; and a queue size that could not be READ, which is not
+# zero and must not be mistaken for it.
+#
+# ONLY THE FIRST EXIT RUNS THE SWEEP. It is a five-hour Stryker pass, and after
+# any other exit the loop is going to be started again: on 2026-10-10 the owner
+# paused the loop with the stop file so a feature could run its gate, and the
+# sweep started on 631 candidates and held the machine instead. Every other exit
+# logs one line saying it was skipped, why, and the command to run it by hand.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -36,6 +42,24 @@ SWEEP_MINUTES="${SWEEP_MINUTES:-300}"
 log() { echo "$(date '+%Y-%m-%d %H:%M')  $*" | tee -a "$LOG"; }
 
 log "runs.sh started — LIMIT=$LIMIT MAX_RUNS=$MAX_RUNS  (stop file: $STOP)"
+# The resource guard watches this loop from its first minute to its last, the sweep
+# included: it kills one runaway node/Python process and, if the machine stays short
+# of memory, drops the stop file. It was a hand-started script until 2026-10-10, and
+# the one stretch it missed was the stretch nobody restarted it for.
+GUARD_LOG="$REPO/.rptc/handoff/resource-guard.log"
+python3 "$HERE/resource_guard.py" "$REPO" "$GUARD_LOG" "$$" &
+GUARD_PID=$!
+trap 'kill "$GUARD_PID" 2>/dev/null' EXIT
+log "resource guard started (pid $GUARD_PID; log: $GUARD_LOG)"
+# The whole loop's starting numbers, for `npm run mutation:status`: gaps closed and
+# the pace are measured from this line, across every queue the loop runs. RUNS_LOOP
+# tells run.sh its queues belong to a loop, so status measures from here and not from
+# the latest queue.
+GAPS="$(node scripts/overnight/status.mjs --gaps 2>/dev/null)"
+[[ "$GAPS" =~ ^gaps=[0-9]+\ modules=[0-9]+$ ]] || GAPS="gaps=unknown modules=unknown"
+log "loop start — $GAPS sha=$(git rev-parse --short HEAD) limit=$LIMIT max_runs=$MAX_RUNS"
+log "how far along: npm run mutation:status   (stop after the current run: touch $STOP)"
+export RUNS_LOOP=1
 [[ -f "$STOP" ]] && { rm -f "$STOP"; log "cleared a stale stop file"; }
 
 # 1. A queue already running finishes on its own terms. The patterns are anchored
@@ -52,17 +76,26 @@ if pgrep -f "$RUNNING" >/dev/null; then
         if pgrep -f "$SWEEP" >/dev/null; then
             pkill -f "$SWEEP"
             pkill -f 'stryker run stryker\.redundancy\.config\.json'   # an orphaned child, if any
-            log "stopped the chained redundancy sweep — it runs at the end instead"
+            log "stopped the chained redundancy sweep — it runs when the burn-down is done instead"
             break
         fi
         sleep 2
     done
 fi
 
+# Why the loop ended, in the words the skip line uses. Empty means the burn-down
+# is done, and that is the only ending the sweep follows.
+SKIP_SWEEP=""
 run=0
 while :; do
-    [[ -f "$STOP" ]] && { rm -f "$STOP"; log "stop file found — stopping"; break; }
-    [[ $run -ge $MAX_RUNS ]] && { log "MAX_RUNS=$MAX_RUNS reached — stopping"; break; }
+    if [[ -f "$STOP" ]]; then
+        rm -f "$STOP"; log "stop file found — stopping"
+        SKIP_SWEEP="the loop was stopped by hand"; break
+    fi
+    if [[ $run -ge $MAX_RUNS ]]; then
+        log "MAX_RUNS=$MAX_RUNS reached — stopping"
+        SKIP_SWEEP="MAX_RUNS was reached with gaps still open"; break
+    fi
     run=$((run + 1))
 
     # The generator prints exactly one "queued: N in M batch(es)" line. Read N off
@@ -73,6 +106,7 @@ while :; do
     if [[ ! "$queued" =~ ^[0-9]+$ ]]; then
         log "could not read the queue size from the generator — stopping. Its output:"
         printf '%s\n' "$gen" | tee -a "$LOG"
+        SKIP_SWEEP="the queue size could not be read"
         break
     fi
     if [[ "$queued" -eq 0 ]]; then
@@ -85,7 +119,7 @@ while :; do
     git commit -q -F - <<MSG
 chore(overnight): run $run queue — $queued modules, regenerated from the baseline
 
-Backlog: PL-22
+Backlog: PL-70
 MSG
     before="$(git rev-parse HEAD)"
     log "run $run: $queued modules queued; starting run.sh from $(git rev-parse --short HEAD)"
@@ -96,10 +130,16 @@ MSG
     log "run $run finished: exit=$code, $commits commit(s)"
     if [[ "$commits" -eq 0 ]]; then
         log "run $run produced NO commits — stopping so the same queue does not spin"
+        SKIP_SWEEP="the run produced no commits"
         break
     fi
 done
 
+log "loop end — runs=$run"
+if [[ -n "$SKIP_SWEEP" ]]; then
+    log "redundancy sweep skipped — $SKIP_SWEEP, so the burn-down is not finished. By hand: node scripts/mutationRedundancySweep.mjs --minutes $SWEEP_MINUTES"
+    exit 0
+fi
 log "starting the redundancy sweep over every finished module (--minutes $SWEEP_MINUTES)"
 caffeinate -ims node scripts/mutationRedundancySweep.mjs --minutes "$SWEEP_MINUTES" >> "$LOG" 2>&1
 log "redundancy sweep finished — runs.sh done"

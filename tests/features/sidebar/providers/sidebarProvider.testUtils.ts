@@ -33,11 +33,13 @@ jest.mock('vscode', () => ({
     env: { openExternal: jest.fn().mockResolvedValue(true) },
     workspace: {
         getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue(true) }),
+        onDidChangeConfiguration: jest.fn(() => ({ dispose: jest.fn() })),
     },
     ColorThemeKind: { Light: 1, Dark: 2, HighContrast: 3 },
 }));
 
 import * as vscode from 'vscode';
+import type { CommandProbe } from '@/features/ai/engine/agentCli';
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import {
@@ -114,6 +116,9 @@ export function createMockWebviewView(): MockWebviewView {
     return view;
 }
 
+/** A CLI probe that finds no agent CLI on the PATH. */
+export const noAgentCli: CommandProbe = { commandExists: async () => false };
+
 /** A provider wired to fakes, plus the fakes themselves. */
 export function makeProvider(project: unknown = undefined) {
     const stateful = createStatefulGlobalState();
@@ -126,7 +131,7 @@ export function makeProvider(project: unknown = undefined) {
     });
     const logger = createMockLogger();
     return {
-        provider: new SidebarProvider(context, stateManager, logger),
+        provider: new SidebarProvider(context, stateManager, logger, noAgentCli),
         context,
         stateManager,
         logger,

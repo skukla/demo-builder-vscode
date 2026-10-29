@@ -62,19 +62,51 @@ du -sh .stryker-tmp .stryker-tmp-pl22 2>/dev/null
 ```
 
 
+## "Test runner process ran out of memory" on a long run
+
+Known behaviour, not a new leak: heap accumulates across test files inside one process
+(`.rptc/research/test-file-organization-and-memory-optimization/research.md`, 2025-11-18).
+Plain jest answers it by recycling workers (`workerIdleMemoryLimit: '256MB'` in
+`jest.config.js`, with its measurements in the comment). Stryker's jest runner gets no such
+recycling, so its workers grew until four of them died on 2026-10-10, twenty minutes into
+a nine-module run of 1,112 mutants against 176 suites.
+
+All three Stryker configs now set `maxTestRunnerReuse: 50`: each test runner process is
+restarted after 50 mutant runs (the option and its meaning are in
+`node_modules/@stryker-mutator/core/schema/stryker-schema.json`; 0, the default, means
+never). 50 is a conservative choice, not a measured optimum: a restart costs a few seconds
+and a one-module run of under 200 mutants on four workers never reaches it. Do not edit
+suites to chase this, and measure ONE module per run.
+
 ## Working a module in a loop — the cycle
 
 The sample is a release check. THIS is the working cadence, and every step is
 verifiable, which is what makes it safe to run unattended.
 
 ```bash
-npm run test:mutation:focus        # ~3 min, ONE module
+npm run test:mutation:measure -- src/path/to/module.ts   # focus + a bounded run
 npm run test:mutation:worklist     # the ranked decisions nothing constrains
 # ... read the top line, understand the decision, write the test ...
-npm run test:mutation:focus
+npm run test:mutation:measure -- src/path/to/module.ts
 node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
 npm run gate                       # and only then commit
 ```
+
+**Measure with `test:mutation:measure`, not with `test:mutation:focus` in the
+background.** It is the same focused run with the limits the bare one lacks
+(`scripts/mutationMeasure.mjs`): a GROUP over 400 mutants is refused before it starts
+(exit 2, with each module's count, so it can be split); the whole Stryker process tree
+is killed at 12 minutes (exit 124; `--timeout-min` for one large module); the temp
+directory and the incremental cache are removed on every exit, a signal included; and
+`reports/mutation/run-status.json` records what is being measured and by which pid. It
+prints one final line to paste. It never writes the baseline. `-- --widen` adds the
+importing suites and measures again.
+
+Never wait in a shell loop for a line of Stryker's output, and never run jest with
+`--detectOpenHandles`, `--detectLeaks` or `--watch` to investigate a slow run: on
+2026-10-10 a session did all three and lost the morning (nine files in one run, 45
+minutes, no result). `npm run mutation:status` says how far a burn-down is and whether
+it has stalled, from recorded pids and timestamps (`scripts/overnight/status.mjs`).
 
 **The ratchet is the safety net, and it reads THREE numbers.** A score that falls is a
 regression. A score that RISES while nothing got better tested is also flagged — that
@@ -97,6 +129,35 @@ test:mutation:selftest` holds the controls in both directions, and they run with
 suite via `tests/sop/ratchet-controls.test.ts`. Change the rule and run them; breaking
 it on purpose is how they were checked rather than assumed.
 
+**A row can go stale, and then it is a floor ABOVE the truth.** A row is re-measured only
+when someone measures that module, so a module that changes afterwards keeps its old
+number. On 2026-10-09 three were found by accident: githubAppService.ts pinned at 74.02
+and measuring 70.16, projectResetService.ts 93.51 against 86.06, consoleApiHandlers
+89.53 against 81.05. `npm run test:mutation:stale` lists every such row, oldest first:
+
+- **Stale** means the module, or a suite that mirrors it (the same `mirroringSuites` rule
+  the focused run uses), has a commit the row's own commit does not contain. Any commit
+  counts, comments included — guessing which changes cannot move a score is what a
+  re-measure is for. The `changed` column says whether the MODULE moved (the case that
+  can leave a row too high) or only a suite.
+- **A row's date comes from git**: the newest commit whose diff of baseline.json changed
+  that row. Two git calls read the whole history; the report takes about 9 seconds.
+- **Every write stamps `recorded`** on the rows it measured. Without it a re-measure that
+  found the same numbers would leave the row's text, and so git, unchanged, and the row
+  would read stale forever. Older rows were not backfilled on purpose: one commit
+  stamping all 706 would become every row's recording commit and hide every stale one.
+- **Re-measure them overnight**: `node scripts/mutationSweep.mjs --stale --minutes 480`
+  (`--dry` prints the queue and runs nothing). Here pinning a LOWER score is the point —
+  it corrects a row that was too high — which is why `--stale` implies `--redo`. `npm run
+  sweep` only lists the stale rows; it never starts Stryker at all.
+
+**Where this skill sits in the registry.** Nothing here runs inside `npm run sweep`. The
+pilot and the stale re-measure are the `overnight` cadence in `tests/sop/toolingRegistry.ts`
+— a person starts them when no other test run needs the machine. The focused run and the
+worklist are `on-demand`, steps of a working session. Before 2026-10-09 three of these sat
+in the sweep, which made a half-minute report take hours and collide with other test runs;
+`tooling-registry.test.ts` now fails if any entry that starts Stryker is filed `periodic`.
+
 **Moving to the next module is one command:**
 
 ```bash
@@ -116,6 +177,34 @@ matters and is not a preference: keying everything on the graph multiplies a swe
 24.5x (4.8 hours to ~76) and bought no accuracy on the two modules run under both rules.
 Only 15 modules are still refused, and for those nothing imports them either. Reasoning and
 the four Stryker runs behind it: `.rptc/plans/unmeasured-fifth/attribution-design.md`.
+
+**When the mirror finds a suite that leaves mutants UNCOVERED, widen — once, on evidence.**
+
+```bash
+npm run test:mutation:focus                    # the mirror-only run
+npm run test:mutation:focus:on -- --widen      # adds the importing suites, or exits 3
+npm run test:mutation:focus                    # only if it added any
+```
+
+The mirror is taken INSTEAD of the import graph, so the day a module gains a suite of its
+own name, every suite that reached it through a consumer stops counting. `updateCore.ts`
+got a first suite of four helper cases and would have re-measured with its marker write and
+re-install reported uncovered, against 74.63% with every related suite; the twenty-five
+`appBuilderComponentRunner-*` suites mirror a file that has been declarations only since
+the EDS-8 split. "Uncovered" claims no test goes there, and when an importing suite does,
+the gap it files is work nobody needs. `--widen` reads the report the run just wrote and,
+for each module with a `NoCoverage` mutant, adds the suites jest's graph says import it.
+A module the mirror covered fully is never widened, which keeps the 24.5x cost above off
+the table and leaves every pinned row meaning what it meant. `mutationSweep.mjs` does the
+same second pass by itself, after pinning the mirror-only row. Controls:
+`node scripts/focusModule.selftest.mjs`, run with the suite by
+`tests/scripts/focusModule.test.ts`.
+
+**A file of declarations only has nothing to measure.** Stryker instruments it to zero
+mutants and stops with "No tests were executed", the same line a suite that never reaches
+its module produces. The sweep now tells the two apart (`skip-no-mutants`). A pinned row
+for such a file is a leftover from before its code moved: delete the row and measure the
+files the code went to.
 
 **It picks the jest PROJECT from the suites, not from the file extension.** This repo
 runs two: `node`, and `react` on jsdom, which owns `tests/core/ui/**` and every

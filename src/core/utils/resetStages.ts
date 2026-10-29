@@ -1,0 +1,121 @@
+/**
+ * A storefront reset's steps, in the order they run, each with its line in the one
+ * stage table (`operationStages.ts`, which spreads them into `OPERATION_STAGES`).
+ *
+ * Grouped by what an SC recognises (owner, 2026-10-16 release walk). Until then the
+ * steps followed the code's structure: three were a single quick call, and the last
+ * held nine different jobs, each shown as if it were the step ("Publishing block
+ * library (11 of 11)" read as eleven of eleven libraries). Now a step is one job the
+ * SC can name; what it is doing at the moment is the line under it.
+ *
+ * ORDER IS LOAD-BEARING: the position shown ("6 of 11") is the index here, so the
+ * list follows the order the reset runs its work (`edsResetService.ts`). A step that
+ * has nothing to do is skipped and the count moves on.
+ *
+ * Expectations measured from two resets of the scratch storefront on 2026-10-16
+ * (5 minutes 45 seconds and 5 minutes 41 seconds end to end).
+ */
+
+export const RESET_STAGES = {
+    resettingCode: {
+        label: 'Resetting the code',
+        expectation: 'Usually about a minute',
+        detail: 'Template code, back in your repository',
+    },
+    publishingCodeAndSettings: {
+        label: 'Publishing code, settings',
+        expectation: 'Usually under a minute',
+        detail: 'Code, permissions and site config',
+    },
+    clearingOldContent: {
+        label: 'Clearing old content',
+        expectation: 'Usually under a minute',
+        detail: 'The pages the reset replaces',
+    },
+    copyingContent: {
+        label: 'Copying the content',
+        expectation: 'Usually under a minute',
+        detail: "The demo's pages into DA.live",
+    },
+    settingUpAuthoring: {
+        label: 'Setting up authoring',
+        expectation: 'Usually under a minute',
+        detail: 'The block library and DA.live settings',
+    },
+    publishingPages: {
+        label: 'Publishing the pages',
+        expectation: 'Usually about a minute',
+        detail: 'Pages, sheets and the block library',
+    },
+    removingOldPages: {
+        label: 'Removing old pages',
+        expectation: 'Usually a few seconds',
+        detail: 'Live pages from before the reset',
+    },
+    checkingCopiedPages: {
+        label: 'Checking copied pages',
+        expectation: 'Usually a few seconds',
+        detail: 'The live site serves every demo page',
+    },
+    warmingProductPages: {
+        label: 'Warming product pages',
+        expectation: 'Usually about a minute',
+        detail: 'So the first visit to a product is fast',
+    },
+    // Project creation writes every page new: 50 seconds for 11 category pages
+    // (2026-10-15), where a reset that keeps them takes seconds.
+    addingCatalogMenu: {
+        label: 'Adding the catalog menu',
+        expectation: 'Usually under a minute',
+        detail: 'A page for each store category',
+    },
+    checkingSettings: {
+        label: 'Checking the settings',
+        expectation: 'Usually a few seconds',
+        detail: 'The live site has the new config',
+    },
+    redeployingMesh: {
+        label: 'Redeploying the mesh',
+        expectation: 'Usually a few minutes',
+        detail: 'So the storefront can read the store',
+    },
+} as const;
+
+export type ResetStageKey = keyof typeof RESET_STAGES;
+
+/** A reset step's position: 1-based, in run order. The mesh is last and only when there is one. */
+export const RESET_STEP = Object.fromEntries(
+    Object.keys(RESET_STAGES).map((key, index) => [key, index + 1]),
+) as Readonly<Record<ResetStageKey, number>>;
+
+/**
+ * The reset step each of the shared content pipeline's operations (`edsPipeline.ts`)
+ * belongs to. Storefront setup runs the same pipeline and shows the same steps for it.
+ */
+export const PIPELINE_RESET_STAGE: Readonly<Record<string, ResetStageKey>> = {
+    'content-clear': 'clearingOldContent',
+    'content-copy': 'copyingContent',
+    'block-library': 'settingUpAuthoring',
+    'eds-settings': 'settingUpAuthoring',
+    'cache-purge': 'publishingPages',
+    'content-publish': 'publishingPages',
+    'sheet-publish': 'publishingPages',
+    'library-publish': 'publishingPages',
+    'leftover-pages': 'removingOldPages',
+    'page-check': 'checkingCopiedPages',
+    'catalog-prewarm': 'warmingProductPages',
+};
+
+/** Steps every reset runs; the mesh redeploy adds one. */
+export const RESET_BASE_STEPS = Object.keys(RESET_STAGES).length - 1;
+
+/**
+ * The stage a reset step shows, by its position.
+ *
+ * @param step - the step's position, as reported
+ * @returns its label, or undefined for a position no step has (0: a pre-step notice)
+ */
+export function resetStageLabel(step: number): string | undefined {
+    const key = Object.keys(RESET_STAGES)[step - 1] as ResetStageKey | undefined;
+    return key ? RESET_STAGES[key].label : undefined;
+}

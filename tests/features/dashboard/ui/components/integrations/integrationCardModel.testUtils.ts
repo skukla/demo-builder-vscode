@@ -38,6 +38,57 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
         kind: 'integration',
         source: { owner: 'adobe', repo: 'no-apis-entry', branch: 'main' },
     },
+    // A pair, so the bundled-catalog fallback has something to find.
+    'erp-integration': {
+        id: 'erp-integration',
+        name: 'ERP integration',
+        description: 'the integration',
+        kind: 'integration',
+        // As the bundled catalog has it (AB-16): added once, more ERPs from its card.
+        addOnce: true,
+        // Named from an input, so it can be renamed (AB-16o).
+        nameFromEnvVar: 'INTEGRATION_DISPLAY_NAME',
+        source: { owner: 'skukla', repo: 'commerce-erp-integration', branch: 'main' },
+        // One step Demo Builder can apply (AB-77), so the card offers Prepare this store.
+        setupSteps: [
+            {
+                id: 'price-scope-website',
+                title: 'Set the catalog price scope to Website',
+                why: 'w',
+                where: 'Admin',
+                fix: { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
+            },
+        ],
+    },
+    'demo-erp': {
+        id: 'demo-erp',
+        name: 'ERP',
+        description: 'the ERP it uses',
+        kind: 'system',
+        boundTo: 'erp-integration',
+        systemType: 'ERP',
+        listedAs: { envVar: 'ERP_ID', adapter: 'demo-erp' },
+        source: { owner: 'skukla', repo: 'demo-erp', branch: 'main' },
+    },
+    // Added once like the ERP integration, but no system lists itself under it, and it
+    // declares a setup step whose value is entered once per ERP it uses.
+    'solo-with-setup': {
+        id: 'solo-with-setup',
+        name: 'Solo with setup',
+        description: 'added once, serves no listed system',
+        kind: 'integration',
+        addOnce: true,
+        source: { owner: 'adobe', repo: 'solo-with-setup', branch: 'main' },
+        setupSteps: [
+            {
+                id: 'second-source',
+                title: 'Create a source per ERP',
+                why: 'Orders split by source.',
+                where: 'Stores > Inventory > Sources',
+                enter: ['<ERP name> warehouse'],
+            },
+        ],
+    },
     'app-builder-shell': {
         id: 'app-builder-shell',
         name: 'Custom Integration',
@@ -50,6 +101,7 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
 
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: jest.fn((id: string) => FAKE_CATALOG[id]),
+    getAppBuilderComponentCatalog: jest.fn(() => Object.values(FAKE_CATALOG)),
     isBlankSource: jest.fn(
         (source: { owner: string; repo: string }) =>
             source.owner === 'skukla' && source.repo === 'app-builder-shell',
@@ -103,6 +155,7 @@ function meshEntry(over: Partial<AppBuilderComponentState> = {}): AppBuilderComp
 
 export {
     deriveIntegrationCard,
+    deriveSystemCard,
     deriveMeshCard,
     buildIntegrationCards,
 } from '@/features/dashboard/ui/components/integrations/integrationCardModel';

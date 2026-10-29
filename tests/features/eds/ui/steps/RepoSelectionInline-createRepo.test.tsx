@@ -14,6 +14,7 @@
  * primitives would remove the thing being measured.
  */
 
+import { mockRequest } from '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -21,18 +22,6 @@ import '@testing-library/jest-dom';
 import { settle } from '../../../../helpers/reactSettle';
 import type { WizardState, EDSConfig } from '@/types/webview';
 
-const mockPostMessage = jest.fn();
-const mockOnMessage = jest.fn(() => jest.fn());
-const mockRequest = jest.fn();
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: mockPostMessage,
-        onMessage: mockOnMessage,
-        request: mockRequest,
-        ready: jest.fn().mockResolvedValue(undefined),
-    },
-}));
 
 const TEMPLATE = { templateOwner: 'adobe', templateRepo: 'aem-boilerplate' };
 
@@ -41,6 +30,17 @@ const CREATED = {
     name: 'my-store',
     url: 'https://github.com/testuser/my-store',
     fullName: 'testuser/my-store',
+};
+
+/** A repository already in the cached list, so ordering after a create is observable. */
+const OTHER = {
+    id: 'testuser/older-store',
+    name: 'older-store',
+    fullName: 'testuser/older-store',
+    description: null,
+    isPrivate: false,
+    htmlUrl: 'https://github.com/testuser/older-store',
+    defaultBranch: 'main',
 };
 
 const stateWith = (overrides?: Partial<EDSConfig>): WizardState =>
@@ -88,9 +88,7 @@ describe('RepoSelectionInline — creating a repository', () => {
                 <RepoSelectionInline
                     state={state}
                     updateState={updateState}
-                    phase="repository"
                     onRepoValidChange={jest.fn()}
-                    onCodeSyncValidChange={jest.fn()}
                 />
             </Provider>
         );
@@ -125,9 +123,7 @@ describe('RepoSelectionInline — creating a repository', () => {
                 <RepoSelectionInline
                     state={state}
                     updateState={update}
-                    phase="repository"
                     onRepoValidChange={jest.fn()}
-                    onCodeSyncValidChange={jest.fn()}
                 />
             );
         };
@@ -304,6 +300,24 @@ describe('RepoSelectionInline — creating a repository', () => {
             });
         });
 
+        it('keeps what was typed in the field and shows the GitHub name beneath it', async () => {
+            await renderStateful(stateWith({ repoName: '' }));
+
+            fireEvent.change(nameField(), { target: { value: 'Kukla Just Rite ' } });
+            await settle();
+
+            // Not rewritten under the cursor, as the project-name field is not.
+            expect(nameField()).toHaveValue('Kukla Just Rite ');
+            expect(lastConfigPatch()).toMatchObject({ repoName: 'kukla-just-rite' });
+            expect(screen.getByText(/kukla-just-rite$/)).toBeInTheDocument();
+        });
+
+        it('shows the stored name when it no longer comes from what was typed', async () => {
+            await renderStateful(stateWith({ repoName: 'from-elsewhere' }));
+
+            expect(nameField()).toHaveValue('from-elsewhere');
+        });
+
         it('reports the name error on blur, without changing state', async () => {
             await renderInline(stateWith({ repoName: '-bad-' }));
 
@@ -373,8 +387,11 @@ describe('RepoSelectionInline — creating a repository', () => {
             const creationPatch = updateState.mock.calls
                 .map((c) => c[0]?.edsConfig)
                 .find((cfg) => cfg?.createdRepo);
+            // The name GitHub actually gave the repository wins over the typed one
+            // (it may normalise), and the typed name is what was SENT — pinned above.
             expect(creationPatch).toMatchObject({
-                repoName: 'typed-name',
+                repoName: CREATED.name,
+                daLiveSite: CREATED.name,
                 createdRepo: CREATED,
             });
         });
@@ -484,59 +501,6 @@ describe('RepoSelectionInline — creating a repository', () => {
         });
     });
 
-    describe('after creation, the Code Sync check', () => {
-        it('is armed and runs against the repository just created', async () => {
-            mockRequest.mockImplementation(async (type: string) => {
-                if (type === 'create-github-repo') return { success: true, data: CREATED };
-                return { success: true, isInstalled: true };
-            });
-            await renderStateful(stateWith({ repoName: 'my-store' }));
-
-            fireEvent.click(createButton());
-            await settle();
-
-            await waitFor(() => {
-                expect(mockRequest).toHaveBeenCalledWith('check-github-app', {
-                    owner: 'testuser',
-                    repo: 'my-store',
-                    lenient: true,
-                    skipTrigger: true,
-                });
-            });
-        });
-
-        it('runs on returning to a step whose repository already exists', async () => {
-            mockRequest.mockResolvedValue({ success: true, isInstalled: true });
-
-            await renderInline(stateWith({ repoName: 'my-store', createdRepo: CREATED }));
-
-            await waitFor(() => {
-                expect(mockRequest).toHaveBeenCalledWith('check-github-app', {
-                    owner: 'testuser',
-                    repo: 'my-store',
-                    lenient: true,
-                    skipTrigger: true,
-                });
-            });
-        });
-
-        it('is not run for a created repo missing an owner', async () => {
-            mockRequest.mockResolvedValue({ success: true, isInstalled: true });
-
-            await renderInline(
-                stateWith({
-                    repoName: 'my-store',
-                    createdRepo: { ...CREATED, owner: '' },
-                })
-            );
-            await settle();
-
-            expect(
-                mockRequest.mock.calls.some((c) => c[0] === 'check-github-app')
-            ).toBe(false);
-        });
-    });
-
     describe('what a handler carries from the CURRENT configuration', () => {
         it('Browse keeps the name typed since mount', async () => {
             await renderStateful(stateWith({ repoName: '' }));
@@ -552,17 +516,19 @@ describe('RepoSelectionInline — creating a repository', () => {
             });
         });
 
-        it('a later keystroke keeps what an earlier action recorded', async () => {
+        it('after creation, picking another repository records that pick and keeps the created repo on record', async () => {
             mockRequest.mockResolvedValue({ success: true, data: CREATED });
-            await renderStateful(stateWith({ repoName: 'my-store' }));
+            await renderStateful({ ...stateWith({ repoName: 'my-store' }), githubReposCache: [OTHER] });
 
             fireEvent.click(createButton());
             await settle();
-            fireEvent.change(nameField(), { target: { value: 'renamed' } });
+            fireEvent.click(await screen.findByText('older-store'));
             await settle();
 
             expect(lastConfigPatch()).toMatchObject({
-                repoName: 'renamed',
+                repoMode: 'existing',
+                repoName: 'older-store',
+                existingRepo: OTHER.fullName,
                 createdRepo: CREATED,
             });
         });
@@ -581,7 +547,7 @@ describe('RepoSelectionInline — creating a repository', () => {
             });
         });
 
-        it('Browse then New offers the Create button again (local state reset)', async () => {
+        it('New after creation offers the Create button again (local state reset)', async () => {
             mockRequest.mockResolvedValue({ success: true, data: CREATED });
             const state = stateWith({ repoName: 'my-store' });
             // A populated cache so Browse lands on the list, not its spinner.
@@ -597,10 +563,10 @@ describe('RepoSelectionInline — creating a repository', () => {
 
             fireEvent.click(createButton());
             await settle();
+            // Creation lands on the list with the new repository selected — no Browse
+            // needed any more — so New is the way back to the form.
             expect(screen.queryByRole('button', { name: /^create$/i })).not.toBeInTheDocument();
 
-            fireEvent.click(screen.getByRole('button', { name: /browse/i }));
-            await settle();
             fireEvent.click(screen.getByRole('button', { name: /^new$/i }));
             await settle();
 
@@ -640,10 +606,12 @@ describe('RepoSelectionInline — creating a repository', () => {
             fireEvent.click(screen.getByRole('button', { name: /^new$/i }));
             await settle();
 
+            // The old repository's name is gone; New starts from the project's
+            // own name instead (owner, 2026-10-15).
             expect(lastEdsConfig()).toMatchObject({
                 repoMode: 'new',
-                repoName: '',
-                daLiveSite: '',
+                repoName: 'test-project',
+                daLiveSite: 'test-project',
                 selectedRepo: undefined,
                 existingRepo: undefined,
                 resetToTemplate: false,

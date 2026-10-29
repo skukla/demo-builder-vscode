@@ -23,9 +23,13 @@ import type { AppBuilderComponentState, Project } from '@/types/base';
 export const mockAddAppBuilderComponent = jest.fn();
 export const mockDeployAppBuilderComponent = jest.fn();
 export const mockRemoveAppBuilderComponent = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
+jest.mock('@/features/app-builder/services/appBuilderAddRun', () => ({
     addAppBuilderComponent: (...a: unknown[]) => mockAddAppBuilderComponent(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderRedeployRun', () => ({
     deployAppBuilderComponent: (...a: unknown[]) => mockDeployAppBuilderComponent(...a),
+}));
+jest.mock('@/features/app-builder/services/appBuilderRemoveRun', () => ({
     removeAppBuilderComponent: (...a: unknown[]) => mockRemoveAppBuilderComponent(...a),
 }));
 
@@ -36,13 +40,22 @@ export const mockBuildRunnerDepsContext = jest.fn(async () => ({
     getCachedOrganization: () => undefined,
     secrets: { _secrets: true },
 }));
+export const mockResolveAppManagementAuth = jest.fn();
 jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
     buildDefaultRunnerDeps: (...a: unknown[]) => mockBuildDefaultRunnerDeps(...(a as [])),
     buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
+    resolveAppManagementAuth: (...a: unknown[]) => mockResolveAppManagementAuth(...a),
+}));
+// The ownership pass an ERP's removal runs (AB-70): its own suite's; here what it is handed.
+export const mockApplyErpOwnership = jest.fn();
+jest.mock('@/features/project-creation/services/erpOwnershipReconcile', () => ({
+    applyErpOwnership: (...a: unknown[]) => mockApplyErpOwnership(...a),
 }));
 
 // ---- catalog loader --------------------------------------------------------
 export const mockGetAppBuilderComponentEntry = jest.fn();
+/** The catalog listing — what a second copy's bound systems are read from. */
+export const mockGetAppBuilderComponentCatalog = jest.fn((): unknown[] => []);
 export const mockBuildCustomIntegrationEntry = jest.fn(
     (source: { owner: string; repo: string; branch?: string }) => ({
         id: `${source.owner}-${source.repo}`,
@@ -54,6 +67,7 @@ export const mockBuildCustomIntegrationEntry = jest.fn(
 );
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetAppBuilderComponentEntry(...a),
+    getAppBuilderComponentCatalog: () => mockGetAppBuilderComponentCatalog(),
     buildCustomIntegrationEntry: (...a: unknown[]) =>
         mockBuildCustomIntegrationEntry(...(a as [never])),
     // Pure predicate — run the REAL one so the add-door stack gate is tested
@@ -78,7 +92,7 @@ jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => (
 export const mockSendAppBuilderComponentStatusUpdate = jest.fn();
 export const mockSendAppBuilderComponentsSnapshot = jest.fn();
 export const mockSendMeshStatusUpdate = jest.fn();
-export const mockSendComponentOperationProgress = jest.fn();
+export const mockSendOperationProgress = jest.fn();
 export const mockSendProjectDestinationUpdate = jest.fn();
 /**
  * The status re-run after a set-changing op. Mocked because the real one is a
@@ -86,22 +100,22 @@ export const mockSendProjectDestinationUpdate = jest.fn();
  * refresh happens — and, for rename, that it does not.
  */
 export const mockHandleRequestStatus = jest.fn().mockResolvedValue({ success: true });
-jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({
+jest.mock('@/features/dashboard/handlers/statusHandlers', () => ({
     handleRequestStatus: (...a: unknown[]) => mockHandleRequestStatus(...a),
 }));
 
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
-        sendAppBuilderComponentStatusUpdate: (...a: unknown[]) =>
-            mockSendAppBuilderComponentStatusUpdate(...a),
-        sendAppBuilderComponentsSnapshot: (...a: unknown[]) =>
-            mockSendAppBuilderComponentsSnapshot(...a),
-        sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatusUpdate(...a),
-        sendComponentOperationProgress: (...a: unknown[]) =>
-            mockSendComponentOperationProgress(...a),
-        sendProjectDestinationUpdate: (...a: unknown[]) => mockSendProjectDestinationUpdate(...a),
         refreshStatus: jest.fn(),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAppBuilderComponentStatusUpdate: (...a: unknown[]) =>
+        mockSendAppBuilderComponentStatusUpdate(...a),
+    sendAppBuilderComponentsSnapshot: (...a: unknown[]) =>
+        mockSendAppBuilderComponentsSnapshot(...a),
+    sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatusUpdate(...a),
+    sendProjectDestinationUpdate: (...a: unknown[]) => mockSendProjectDestinationUpdate(...a),
 }));
 
 export {
@@ -113,9 +127,6 @@ export {
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
     postComponentsSnapshot,
-    postDestination,
-    postMeshStatus,
-    postRowStatus,
     resolveAddEntry,
     resolveComponentTarget,
     runGuards,
@@ -158,6 +169,22 @@ export function mockTestDeveloperPermissions(hasPermissions: boolean, error?: st
 }
 
 /** Per-test mock reset + happy-path defaults — call from each spec's beforeEach. */
+/**
+ * The screen a modal-hosted operation reports to: progress goes back to the screen
+ * that started it (its request's `sendMessage`), so this stands in for that screen
+ * and records each progress payload it is sent.
+ */
+export const modalScreen = jest.fn(async (type: string, payload?: unknown): Promise<void> => {
+    if (type === 'operationProgress') mockSendOperationProgress(payload);
+});
+
+/** setupMocks, with the request coming from a screen that shows the modal. */
+export function setupModalMocks(...args: Parameters<typeof setupMocks>): ReturnType<typeof setupMocks> {
+    const mocks = setupMocks(...args);
+    mocks.mockContext.sendMessage = modalScreen;
+    return mocks;
+}
+
 export function resetHandlerMocks(): void {
     jest.clearAllMocks();
     mockAddAppBuilderComponent.mockResolvedValue({ success: true });

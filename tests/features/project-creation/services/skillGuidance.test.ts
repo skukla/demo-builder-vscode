@@ -209,3 +209,64 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
         expect(content()).toMatch(/rewrites the previous/i);
     });
 });
+
+/*
+ * author-commerce-data (AI-10) — each line tied to a wall an agent hit loading a catalog
+ * by hand (2026-09-30 → 10-01, recorded on the backlog item).
+ */
+describe('author-commerce-data', () => {
+    const content = () => skill('author-commerce-data');
+
+    it('ships as an always-on skill, like import-datapack', () => {
+        expect([...DEMO_BUILDER_ALWAYS_ON_SKILLS]).toContain('author-commerce-data');
+    });
+
+    it('keeps the two purposes apart: sharing is a datapack, this is working the store', () => {
+        // Owner, 2026-10-01: "two purposes, kept apart".
+        expect(content()).toMatch(/import-datapack/);
+        expect(content()).toMatch(/Sharing finished data/i);
+    });
+
+    it('shows the plan before the first write', () => {
+        expect(content()).toMatch(/before the first write/i);
+    });
+
+    it('loads products in bulk and says to poll the uuid', () => {
+        // One product per call ran ~35 minutes for 96 creates; one bulk call took 23 s.
+        expect(content()).toMatch(/bulk:true/);
+        expect(content()).toMatch(/bulk_uuid/);
+        expect(content()).toMatch(/bulk\/<uuid>\/status/);
+    });
+
+    it('carries the silent create failures as rules', () => {
+        const c = content();
+        expect(c).toMatch(/category_links.*position/is);
+        expect(c).toMatch(/attribute set/i);
+        expect(c).toMatch(/no PATCH/i);
+        expect(c).toMatch(/lag the index/i);
+        expect(c).toMatch(/Default Source/);
+    });
+
+    it('grants new categories to shared catalogs and verifies per customer group', () => {
+        // The "stuck index" was B2B category permissions for most of a day (EDS-24).
+        const c = content();
+        expect(c).toMatch(/shared catalog/i);
+        expect(c).toMatch(/customerGroupId/);
+        expect(c).toMatch(/LABELS/);
+    });
+
+    it('treats an Error answer as nothing written', () => {
+        // A refusal read as success by a load script (owner note 3, 2026-10-01).
+        expect(content()).toMatch(/wrote NOTHING/);
+    });
+
+    it('names its undo', () => {
+        // Principle 1: whatever can be done can be undone.
+        expect(content()).toMatch(/undo list/i);
+    });
+
+    it('carries no tenant id or instance host (the repository is public)', () => {
+        expect(content()).not.toMatch(/api\.commerce\.adobe\.com\/[A-Za-z0-9]{10,}/);
+        expect(content()).not.toMatch(/p\d{5,}-e\d{5,}/);
+    });
+});

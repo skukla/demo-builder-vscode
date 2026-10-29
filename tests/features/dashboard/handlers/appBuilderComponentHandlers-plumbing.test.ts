@@ -22,20 +22,17 @@ import {
     handleDeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
+    mockAddAppBuilderComponent,
     mockBuildCustomIntegrationEntry,
     mockBuildDefaultRunnerDeps,
     mockDetectProjectOrgMismatch,
     mockEnsureAdobeIOAuth,
+    mockGetAppBuilderComponentCatalog,
     mockGetAppBuilderComponentEntry,
     mockSendAppBuilderComponentStatusUpdate,
     mockSendAppBuilderComponentsSnapshot,
-    mockSendMeshStatusUpdate,
-    mockSendProjectDestinationUpdate,
     mockTestDeveloperPermissions,
     postComponentsSnapshot,
-    postDestination,
-    postMeshStatus,
-    postRowStatus,
     resetHandlerMocks,
     resolveAddEntry,
     resolveComponentTarget,
@@ -68,7 +65,7 @@ describe('runGuards — auth, then org, then permission', () => {
                     projectId: 'p1',
                     workspace: 'Stage',
                 },
-                warningMessage: 'Adobe sign-in required to manage App Builder components.',
+                warningMessage: 'Sign in to Adobe to continue.',
             })
         );
     });
@@ -242,6 +239,17 @@ describe('userSuppliedEnvVars — what a PERSON must type', () => {
         expect(result.hasSecret).toBe(true);
     });
 
+    it('excludes a text var that carries a default — the deploy uses it and Configure can change it', () => {
+        expect(
+            userSuppliedEnvVars(
+                entryWithSchema([
+                    { name: 'ERP_DISPLAY_NAME', label: 'ERP name', type: 'text', default: 'Acme ERP' },
+                    { name: 'ERP_HOST', label: 'Host', type: 'text' },
+                ])
+            )
+        ).toEqual({ names: ['ERP_HOST'], hasSecret: false });
+    });
+
     it('excludes an auto-wired var — naming it sends the user hunting', () => {
         expect(
             userSuppliedEnvVars(
@@ -310,7 +318,7 @@ describe('the sub-step reporter handed to the runner', () => {
         ) => void;
     }
 
-    it('shows the SUB-step alone when the runner supplies one', async () => {
+    it('shows the stage name in the notification, not the step', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         const report = jest.fn();
@@ -322,8 +330,9 @@ describe('the sub-step reporter handed to the runner', () => {
         await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
         reporterFromLastDepsCall()('Deploying custom integration…', 'Running aio app deploy');
 
-        // Joining both produced two-line cards (owner screenshot, 2026-08-27).
-        expect(report).toHaveBeenCalledWith({ message: 'Running aio app deploy' });
+        // The stage is the short set; the step is the modal's long set (PL-59 phase 2,
+        // owner 2026-09-19). Joining both produced two-line cards (2026-08-27).
+        expect(report).toHaveBeenCalledWith({ message: 'Deploying custom integration…' });
     });
 
     it('falls back to the top-level message when there is no sub-step', async () => {
@@ -390,34 +399,7 @@ describe('resolveComponentTarget', () => {
     });
 });
 
-describe('the four push channels', () => {
-    it('posts a row status with its id, status, message and name', async () => {
-        await postRowStatus('erp-sync', 'deploying', 'Cloning…', 'ERP Sync');
-
-        expect(mockSendAppBuilderComponentStatusUpdate).toHaveBeenCalledWith(
-            'erp-sync',
-            'deploying',
-            'Cloning…',
-            'ERP Sync'
-        );
-    });
-
-    it('posts mesh status on the MESH channel — a row push reaches nothing', async () => {
-        await postMeshStatus('deploying', 'Building the mesh…');
-
-        expect(mockSendMeshStatusUpdate).toHaveBeenCalledWith('deploying', 'Building the mesh…');
-        expect(mockSendAppBuilderComponentStatusUpdate).not.toHaveBeenCalled();
-    });
-
-    it('posts the destination titles for the header crumb', async () => {
-        await postDestination({ projectTitle: 'Acme', workspaceTitle: 'Stage' });
-
-        expect(mockSendProjectDestinationUpdate).toHaveBeenCalledWith({
-            projectTitle: 'Acme',
-            workspaceTitle: 'Stage',
-        });
-    });
-
+describe('the components snapshot push', () => {
     it('posts the project persisted components map', async () => {
         const components = {
             'erp-sync': {
@@ -465,7 +447,6 @@ describe('withComponentProgress', () => {
             'erp-sync',
             'deploying',
             expect.any(String),
-            undefined
         );
     });
 
@@ -532,5 +513,86 @@ describe('the no-project door on every handler', () => {
             error: 'No project found',
             code: ErrorCode.PROJECT_NOT_FOUND,
         });
+    });
+});
+
+describe('the add answer names what the SC named', () => {
+    // Measured 2026-09-26: an add of the ERP pair named "Northwind ERP" answered
+    // "ERP Integration", the catalog entry's name, while the tile, the workspace and the
+    // progress title all said Northwind ERP. An agent relayed the wrong name.
+    // Since AB-16o the integration has a name of its own: the typed name names the ERP,
+    // and the answer is the integration's name, the same one the progress title used.
+    // On 2026-10-05 one typed name named BOTH; since 2026-10-06 it names the ERP alone
+    // and the integration keeps its catalog name, because one integration serves every
+    // ERP added to it (pairNames).
+    it('answers with the integration\'s own name, and records both names', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue({
+            ...ERP_ENTRY,
+            name: 'ERP Integration',
+            nameFromEnvVar: 'INTEGRATION_DISPLAY_NAME',
+            envSchema: [
+                { name: 'ERP_DISPLAY_NAME', type: 'text', label: 'ERP name', default: 'Acme ERP' },
+                { name: 'INTEGRATION_DISPLAY_NAME', type: 'text', label: 'Integration name', default: 'ERP Integration' },
+            ],
+        });
+        mockGetAppBuilderComponentCatalog.mockReturnValue([
+            {
+                id: 'erp-db',
+                name: 'ERP',
+                kind: 'system',
+                systemType: 'ERP',
+                boundTo: 'erp-sync',
+                nameFromEnvVar: 'ERP_DISPLAY_NAME',
+            },
+        ]);
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync', name: 'Northwind ERP' });
+
+        expect(result.added).toEqual({ id: 'erp-sync', name: 'ERP Integration', kind: 'integration' });
+        const saved = (mockContext.stateManager.saveProject as jest.Mock).mock.calls[0][0];
+        expect(saved.componentConfigs['erp-sync']).toEqual({
+            INTEGRATION_DISPLAY_NAME: 'ERP Integration',
+            ERP_DISPLAY_NAME: 'Northwind ERP',
+        });
+        mockGetAppBuilderComponentCatalog.mockReturnValue([]);
+    });
+
+    // AB-67: an agent adding the ERP pair names its first ERP through `name`, and an
+    // ERP's name is fixed once added. Asserted on the ARGUMENT the deploy receives,
+    // read by the real deploy-input resolver against the real shipped catalog rows —
+    // a saved-config assertion alone would pass if the name landed under a key the
+    // ERP's deploy never reads.
+    it('hands the deploy a project whose ERP deploys under the typed name', async () => {
+        const catalog = (
+            jest.requireActual('@/features/components/config/app-builder-components.json') as {
+                appBuilderComponents: AppBuilderComponentCatalogEntry[];
+            }
+        ).appBuilderComponents;
+        const integration = catalog.find((entry) => entry.id === 'erp-integration')!;
+        const erp = catalog.find((entry) => entry.id === 'demo-erp')!;
+        const { resolveDeployInputs } = jest.requireActual(
+            '@/features/app-builder/services/deployInputs'
+        ) as typeof import('@/features/app-builder/services/deployInputs');
+        // The real entry declares Commerce backends; the add door's stack gate is real too.
+        const { mockContext } = setupMocks({
+            componentSelections: { backend: 'adobe-commerce-accs', frontend: 'eds-storefront' },
+        });
+        mockTestDeveloperPermissions(true);
+        mockGetAppBuilderComponentEntry.mockReturnValue(integration);
+        mockGetAppBuilderComponentCatalog.mockReturnValue(catalog);
+
+        // Confirmed: the ERP integration's add prepares the store, so without it nothing deploys (2026-10-22).
+        await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Justrite ERP', confirm: true });
+
+        const deployed = mockAddAppBuilderComponent.mock.calls[0][0];
+        expect(resolveDeployInputs(deployed, erp).ERP_DISPLAY_NAME).toBe('Justrite ERP');
+        expect(resolveDeployInputs(deployed, integration).INTEGRATION_DISPLAY_NAME).toBe('ERP Integration');
+        // Control: the same resolver, before the add, answers the default.
+        expect(resolveDeployInputs({ ...deployed, componentConfigs: {} }, erp).ERP_DISPLAY_NAME).toBe(
+            'Acme ERP'
+        );
+        mockGetAppBuilderComponentCatalog.mockReturnValue([]);
     });
 });

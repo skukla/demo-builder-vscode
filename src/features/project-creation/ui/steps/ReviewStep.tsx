@@ -5,12 +5,15 @@ import {
     buildComponentInfoList,
     resolveReviewIntegrationNames,
     resolveServiceNames,
+    reviewStorePreparation,
+    StorePreparationNotice,
 } from './reviewStepHelpers';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import { ContentColumn } from '@/core/ui/components/layout/ContentColumn';
 import { useCanProceed } from '@/core/ui/hooks/useCanProceed';
 import { cn } from '@/core/ui/utils/classNames';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
+import { replacesSiteContent } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
@@ -136,9 +139,17 @@ function deriveGithubRepoInfo(
     return { fullName, mode };
 }
 
-/** Derive DA.live display info from EDS config */
+/**
+ * Derive DA.live display info from EDS config. In Edit the site is the one the
+ * project has; creating a project makes it. (A `siteMode` field was read here and
+ * set nowhere, so Edit called the project's own site "New site"; it was removed,
+ * owner, 2026-10-17.) An Edit says whether its pages are replaced or kept, so a
+ * package change never lands on the old package's pages unannounced (2026-10-19).
+ */
 function deriveDaLiveInfo(
     edsConfig: WizardState['edsConfig'],
+    editing: boolean,
+    replacesPages: boolean,
 ): { org: string; site: string; mode: string } | null {
     if (!edsConfig) return null;
 
@@ -146,7 +157,8 @@ function deriveDaLiveInfo(
     const site = edsConfig.selectedSite?.name || edsConfig.daLiveSite || '';
     if (!site) return null;
 
-    const mode = edsConfig.siteMode === 'existing' ? 'Existing site' : 'New site';
+    let mode = 'New site';
+    if (editing) mode = replacesPages ? 'Existing site, pages replaced' : 'Existing site, pages kept';
     return { org, site, mode };
 }
 
@@ -299,6 +311,10 @@ export function ReviewStep({
     // the config's `components.appBuilder` is a hardcoded-empty legacy field,
     // and reading it here is what made hand-picked integrations invisible on
     // Review for months.
+    // Create (or an Edit's Finish) that adds the ERP integration prepares the store: said here,
+    // before the SC confirms (owner, 2026-10-22).
+    const storePreparation = useMemo(() => reviewStorePreparation(state, stack), [state, stack]);
+
     const integrationNames = useMemo(
         () => resolveReviewIntegrationNames(state, packages ?? [], stacks ?? []),
         [state, packages, stacks],
@@ -336,7 +352,12 @@ export function ReviewStep({
     const hasEdsConfig = hasEdsConfiguration(edsConfig);
 
     const githubRepoInfo = useMemo(() => deriveGithubRepoInfo(edsConfig), [edsConfig]);
-    const daLiveInfo = useMemo(() => deriveDaLiveInfo(edsConfig), [edsConfig]);
+    const editing = state.wizardMode === 'edit';
+    const replacesPages = replacesSiteContent(state);
+    const daLiveInfo = useMemo(
+        () => deriveDaLiveInfo(edsConfig, editing, replacesPages),
+        [edsConfig, editing, replacesPages],
+    );
 
     const aemAssetsEnabled = useMemo(() => {
         return (
@@ -354,7 +375,7 @@ export function ReviewStep({
     return (
         <ContentColumn className="container-wizard">
             <Heading level={2} marginBottom="size-300">
-                {state.projectName}
+                {resolveDisplayName(state.projectTitle, state.projectName)}
             </Heading>
 
             <Divider size="M" marginBottom="size-400" />
@@ -389,6 +410,7 @@ export function ReviewStep({
                     <View />
                 )}
             </div>
+            {storePreparation && <StorePreparationNotice preparation={storePreparation} />}
         </ContentColumn>
     );
 }

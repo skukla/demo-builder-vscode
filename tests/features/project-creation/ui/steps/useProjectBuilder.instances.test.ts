@@ -15,6 +15,8 @@ import { act } from '@testing-library/react';
 // Same deterministic service mocks as the sibling useProjectBuilder files.
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
     getResolvedMeshRequirement: jest.fn(() => 'optional'),
+    isMeshRequired: (pkg: unknown, stackId: unknown) =>
+        jest.requireActual('../../../../helpers/demoPackageFixtures').isMeshRequiredThroughMock(pkg, stackId),
     getPackageById: jest.fn(),
 }));
 

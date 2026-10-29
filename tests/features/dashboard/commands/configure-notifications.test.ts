@@ -39,8 +39,10 @@ const mockRefreshStatus = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
         refreshStatus: (...args: unknown[]) => mockRefreshStatus(...args),
-        sendAuthoringExperienceUpdate: jest.fn().mockResolvedValue(undefined),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAuthoringExperienceUpdate: jest.fn().mockResolvedValue(undefined),
 }));
 
 // ensureAuthAndApply reaches the guard through a dynamic import; jest.mock
@@ -92,6 +94,23 @@ function answerShouldShow(answers: Record<string, unknown>): void {
     (vscode.commands.executeCommand as jest.Mock).mockImplementation((id: string) =>
         Promise.resolve(id in answers ? answers[id] : undefined)
     );
+}
+
+/** An EDS project with one ticked block library its storefront does not have yet (EDS-39). */
+function projectWithLibraryToInstall(): Project {
+    return createMockProject({
+        name: 'Test',
+        path: '/test/project',
+        selectedBlockLibraries: ['demo-builder-blocks'],
+        componentInstances: {
+            'eds-storefront': {
+                id: 'eds-storefront',
+                name: 'EDS Storefront',
+                status: 'ready',
+                metadata: { githubRepo: 'me/demo-storefront' },
+            },
+        },
+    });
 }
 
 const MESH_SHOW = 'demoBuilder._internal.shouldShowMeshNotification';
@@ -174,6 +193,26 @@ describe('ConfigureProjectWebviewCommand - post-save notifications', () => {
             await notifications(command).showPostSaveNotifications(project, NO, YES);
 
             expect(stubs.handleStorefrontOnlyNotification).toHaveBeenCalledWith(project);
+            expect(stubs.handleMeshOnlyNotification).not.toHaveBeenCalled();
+        });
+
+        it('routes to the storefront prompt when only block library work is pending', async () => {
+            const stubs = stubHandlers(true);
+            const pending = projectWithLibraryToInstall();
+
+            await notifications(command).showPostSaveNotifications(pending, NO, NO);
+
+            expect(stubs.handleStorefrontOnlyNotification).toHaveBeenCalledWith(pending);
+            expect(stubs.handleRestartNotification).not.toHaveBeenCalled();
+        });
+
+        it('routes to the combined prompt when the mesh changed and block library work is pending', async () => {
+            const stubs = stubHandlers(true);
+            const pending = projectWithLibraryToInstall();
+
+            await notifications(command).showPostSaveNotifications(pending, YES, NO);
+
+            expect(stubs.handleCombinedMeshStorefrontNotification).toHaveBeenCalledWith(pending);
             expect(stubs.handleMeshOnlyNotification).not.toHaveBeenCalled();
         });
 
@@ -291,6 +330,21 @@ describe('ConfigureProjectWebviewCommand - post-save notifications', () => {
             );
         });
 
+        it('names the block libraries Apply Changes will add or remove', async () => {
+            answerShouldShow({ [MESH_SHOW]: true, [STOREFRONT_SHOW]: true });
+
+            await notifications(command).handleCombinedMeshStorefrontNotification(
+                projectWithLibraryToInstall()
+            );
+
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+                'Configuration saved. Apply changes to mesh and storefront? ' +
+                    'Block libraries: add Demo Builder Blocks.',
+                'Apply Changes',
+                'Later'
+            );
+        });
+
         it('"Apply Changes" deploys the mesh and republishes the RE-READ project', async () => {
             answerShouldShow({ [MESH_SHOW]: true, [STOREFRONT_SHOW]: true });
             (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Apply Changes');
@@ -302,7 +356,7 @@ describe('ConfigureProjectWebviewCommand - post-save notifications', () => {
 
             await notifications(command).handleCombinedMeshStorefrontNotification(project);
 
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh', freshProject.path);
             // The RE-READ project, not the stale one the prompt was raised for:
             // deployMesh rewrites mesh state, so republishing the pre-deploy copy
             // would publish the config that was just superseded.
@@ -388,6 +442,21 @@ describe('ConfigureProjectWebviewCommand - post-save notifications', () => {
             );
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
                 'Configuration saved. Republish storefront to apply changes.',
+                'Republish',
+                'Later'
+            );
+        });
+
+        it('names the block libraries Republish will add or remove', async () => {
+            answerShouldShow({ [STOREFRONT_SHOW]: true });
+
+            await notifications(command).handleStorefrontOnlyNotification(
+                projectWithLibraryToInstall()
+            );
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                'Configuration saved. Republish storefront to apply changes. ' +
+                    'Block libraries: add Demo Builder Blocks.',
                 'Republish',
                 'Later'
             );

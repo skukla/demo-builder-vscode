@@ -41,12 +41,8 @@ export interface UseDashboardActionsReturn {
      * settle delay) to the extension rather than firing stop then start here.
      */
     handleRestartDemo: () => void;
-    /** Deploy API Mesh */
-    handleDeployMesh: () => void;
     /** Sync storefront — git push + Helix preview/publish (EDS projects only) */
-    handleSyncStorefront: () => void;
     /** Refresh DA.live block library from component-definition.json (EDS projects only) */
-    handleRefreshBlockLibrary: () => void;
     /** Open demo in browser (non-EDS projects) */
     handleOpenBrowser: () => void;
     /** Open live site in browser (EDS projects) */
@@ -59,18 +55,18 @@ export interface UseDashboardActionsReturn {
     handleConfigure: () => void;
     /** Open the wizard in edit mode for the current project */
     handleEditProject: () => void;
-    /** Open Adobe Developer Console */
-    handleOpenDevConsole: () => void;
+    /** Open the bound AEM author in Assets View (URL resolved backend-side from the setting) */
+    handleOpenAemAssets: () => void;
+    /** Opens the Site access webview (EDS storefronts). */
+    handleOpenSiteAccess: () => void;
     /** Delete the project */
-    handleDeleteProject: () => void;
     /** Republish DA.live content to CDN (EDS projects only) */
-    handleRepublishContent: () => void;
-    /** Reset the project to its initial state */
-    handleResetProject: () => void;
     /** Navigate back to projects list */
     handleNavigateBack: () => void;
     /** Re-authenticate with Adobe (after session expired) */
     handleReAuthenticate: () => void;
+    /** Re-run the org check (and the other re-runnable status checks) — no sign-in */
+    handleVerifyOrg: () => void;
     /** Forced Adobe account/org switch (after an org mismatch); resolves when the round-trip completes */
     handleSwitchOrg: () => Promise<void>;
 }
@@ -105,19 +101,6 @@ export function useDashboardActions({
         setIsTransitioning(true);
         webviewClient.postMessage('restartDemo');
     }, [setIsTransitioning]);
-
-    const handleDeployMesh = useCallback(() => {
-        setIsTransitioning(true);
-        webviewClient.postMessage('deployMesh');
-    }, [setIsTransitioning]);
-
-    const handleSyncStorefront = useCallback(() => {
-        webviewClient.postMessage('syncStorefront');
-    }, []);
-
-    const handleRefreshBlockLibrary = useCallback(() => {
-        webviewClient.postMessage('refreshBlockLibrary');
-    }, []);
 
     const handleOpenBrowser = useCallback(() => {
         if (isOpeningBrowser) return; // Prevent double-click
@@ -155,20 +138,12 @@ export function useDashboardActions({
         webviewClient.postMessage('editProject');
     }, []);
 
-    const handleOpenDevConsole = useCallback(() => {
-        webviewClient.postMessage('openDevConsole');
+    const handleOpenAemAssets = useCallback(() => {
+        webviewClient.postMessage('openAemAssets');
     }, []);
 
-    const handleDeleteProject = useCallback(() => {
-        webviewClient.postMessage('deleteProject');
-    }, []);
-
-    const handleRepublishContent = useCallback(() => {
-        webviewClient.postMessage('republishContent');
-    }, []);
-
-    const handleResetProject = useCallback(() => {
-        webviewClient.postMessage('resetProject');
+    const handleOpenSiteAccess = useCallback(() => {
+        webviewClient.postMessage('openSiteAccess');
     }, []);
 
     const handleNavigateBack = useCallback(() => {
@@ -177,6 +152,12 @@ export function useDashboardActions({
 
     const handleReAuthenticate = useCallback(() => {
         webviewClient.postMessage('reAuthenticate');
+    }, []);
+
+    // A status request re-runs every re-runnable on-open check, the org check
+    // included — the same path a switch or re-auth ends in, minus the sign-in.
+    const handleVerifyOrg = useCallback(() => {
+        webviewClient.postMessage('requestStatus');
     }, []);
 
     // Request (not fire-and-forget) so the caller gets a definitive completion
@@ -191,21 +172,17 @@ export function useDashboardActions({
         handleStartDemo,
         handleStopDemo,
         handleRestartDemo,
-        handleDeployMesh,
-        handleSyncStorefront,
-        handleRefreshBlockLibrary,
         handleOpenBrowser,
         handleOpenLiveSite,
         handleOpenDaLive,
         handleOpenAdminPanel,
         handleConfigure,
         handleEditProject,
-        handleOpenDevConsole,
-        handleDeleteProject,
-        handleRepublishContent,
-        handleResetProject,
+        handleOpenAemAssets,
+        handleOpenSiteAccess,
         handleNavigateBack,
         handleReAuthenticate,
+        handleVerifyOrg,
         handleSwitchOrg,
     };
 }

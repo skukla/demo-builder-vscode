@@ -1,7 +1,7 @@
 /**
  * Cloud-resource tools (Phase 4) — list and delete the external resources the
  * extension provisions (GitHub repos now; DA.live sites next). Thin adapters
- * over the existing EDS service layer (`getGitHubServices(...).repoOperations`),
+ * over the existing EDS service layer (`getGitHubServices(...)`: reads, lifecycle),
  * reached with a fresh headless context per call — no webview, no modals.
  *
  * Gating: reads need no confirmation; an irreversible deletion uses an
@@ -18,16 +18,22 @@
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
+import { agentSiteCode } from './agentProjectCleanup';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
-    createDaLiveServiceTokenProvider,
-    DaLiveContentOperations,
-    type TokenProvider,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+    getDaLiveAuthService,
+    getGitHubServices,
+    tryCreateDaLiveTokenProvider,
+} from '@/features/eds/handlers/edsHelpers';
+import { type TokenProvider } from '@/features/eds/services/daLive/daLiveApiClient';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
+import { firstUsableDaLiveToken } from '@/features/eds/services/daLive/daLiveTokenChain';
+import { projectsSharingRepo } from '@/features/eds/services/storefront/sharedRepoProjects';
+import { deleteStorefrontRepository } from '@/features/eds/services/storefront/storefrontCodeRemoval';
+import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Silent GitHub auth pre-flight → `true` when a valid token is present. */
@@ -53,47 +59,27 @@ const NEEDS_ADOBE = {
 
 /**
  * Build DA.live org + content operations on the DA.live session when there is
- * one, else on the Adobe IMS token. Returns null when neither is available (the
- * caller turns that into a `needsAuth` handoff).
- *
- * The DA.live token first, because it is the one DA.live accepts: measured live
- * 2026-09-12, the IMS token listed ZERO sites for an org that has many and was
- * refused (403) when asked to list a site the reset tool had just written to
- * with the DA.live token. The IMS path stays as the fallback it always was —
- * it is what the human cleanup command wires, and that command's own behaviour
- * against DA.live is a separate question, filed rather than changed here.
+ * one, else on the Adobe IMS token (`firstUsableDaLiveToken`). Returns null when
+ * neither is available (the caller turns that into a `needsAuth` handoff).
  */
 async function buildDaLiveOps(
     ctx: HandlerContext,
-): Promise<{ org: DaLiveOrgOperations; content: DaLiveContentOperations } | null> {
-    const tokenProvider = (await daLiveTokenProvider(ctx)) ?? (await imsTokenProvider());
+): Promise<{
+    org: DaLiveOrgOperations;
+    content: DaLiveContentOperations;
+    /** Handed on to the shared storefront teardown, which reads it per call. */
+    tokenProvider: TokenProvider;
+} | null> {
+    const tokenProvider = await firstUsableDaLiveToken({
+        daLiveSession: () => getDaLiveAuthService(ctx.context),
+        imsTokenManager: () => ServiceLocator.getAuthenticationService().getTokenManager(),
+    });
     if (!tokenProvider) return null;
     return {
+        tokenProvider,
         org: new DaLiveOrgOperations(tokenProvider, ctx.logger),
         content: new DaLiveContentOperations(tokenProvider, ctx.logger),
     };
-}
-
-/** The DA.live session's token, when the SC has pasted one. */
-async function daLiveTokenProvider(ctx: HandlerContext): Promise<TokenProvider | null> {
-    try {
-        const service = getDaLiveAuthService(ctx.context);
-        if (!(await service.getAccessToken())) return null;
-        return createDaLiveServiceTokenProvider(service);
-    } catch {
-        return null;
-    }
-}
-
-/** The Adobe IMS token, when valid. */
-async function imsTokenProvider(): Promise<TokenProvider | null> {
-    try {
-        const tokenManager = ServiceLocator.getAuthenticationService().getTokenManager();
-        if (!(await tokenManager.inspectToken()).valid) return null;
-        return { getAccessToken: async () => (await tokenManager.inspectToken()).token ?? null };
-    } catch {
-        return null;
-    }
 }
 
 /**
@@ -175,10 +161,10 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_GITHUB);
             }
 
-            const { repoOperations } = getGitHubServices(ctx.context.secrets);
+            const { repoLifecycle } = getGitHubServices(ctx.context.secrets);
             let repo;
             try {
-                repo = await repoOperations.createFromTemplate(
+                repo = await repoLifecycle.createFromTemplate(
                     templateOwner,
                     templateRepo,
                     name,
@@ -208,7 +194,7 @@ export function registerCloudResourceTools(
             let contentReady: boolean | undefined;
             if (args?.waitForContent !== false) {
                 try {
-                    contentReady = await repoOperations.waitForContent(createdOwner, repo.name);
+                    contentReady = await repoLifecycle.waitForContent(createdOwner, repo.name);
                 } catch {
                     contentReady = false;
                 }
@@ -234,7 +220,7 @@ export function registerCloudResourceTools(
             needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Permanently delete a GitHub repository (irreversible). Requires confirm:true and confirmName="owner/repo".',
+                'Permanently delete a GitHub repository (irreversible), and for a storefront its code on aem.live. A storefront is kept (kept:true, deleted:false) when there is no working DA.live sign-in, because its code cannot be removed once the repository is gone. Requires confirm:true and confirmName="owner/repo".',
             inputSchema: {
                 owner: z.string().describe('Repository owner (GitHub username or org)'),
                 repo: z.string().describe('Repository name (not the full owner/repo)'),
@@ -264,8 +250,17 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_GITHUB);
             }
             try {
-                await getGitHubServices(ctx.context.secrets).repoOperations.deleteRepository(owner, repo);
-                return asText({ deleted: true, repo: fullName });
+                // The button's path: a storefront's code on aem.live goes after the repository (EDS-67).
+                const { repoLifecycle, fileOperations } = getGitHubServices(ctx.context.secrets);
+                const { code, kept } = await deleteStorefrontRepository({ owner, repo }, {
+                    files: fileOperations,
+                    deleteRepository: (o, r) => repoLifecycle.deleteRepository(o, r),
+                    tokenProvider: tryCreateDaLiveTokenProvider(ctx.context),
+                    logger: ctx.logger,
+                });
+                // A storefront with no working DA.live sign-in is kept, so its code can go later.
+                if (kept) return asText({ deleted: false, kept: true, repo: fullName, error: kept });
+                return asText({ deleted: true, repo: fullName, ...(code ? { siteCode: agentSiteCode(code) } : {}) });
             } catch (err) {
                 return asText({
                     deleted: false,
@@ -321,10 +316,16 @@ export function registerCloudResourceTools(
             needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                'Delete all content for a DA.live site (irreversible). Requires confirm:true and confirmName="org/site".',
+                'Delete all content for a DA.live site, and take its pages (product pages included; see productPages in the result) off the CDN when the GitHub repo is given (irreversible). The pages to unpublish are what Helix lists as published, so a site whose content is already gone still comes down. stillPublished is false only when the live host was checked afterwards and the pages were gone; publishState (down, still-live, sign-in-refused, unknown) and publishSummary say which, including when it could not be told. Pages still live or AEM refusing the sign-in stop it before the content is deleted (error says so). Requires confirm:true and confirmName="org/site".',
             inputSchema: {
                 org: z.string().describe('DA.live organization name'),
                 site: z.string().describe('DA.live site name'),
+                githubRepo: z
+                    .string()
+                    .optional()
+                    .describe(
+                        'owner/repo for the storefront. WITHOUT it the published pages stay live on the CDN — the unpublish is addressed by repo, not by site',
+                    ),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
                 confirmName: z
                     .string()
@@ -351,12 +352,43 @@ export function registerCloudResourceTools(
                 return asText(NEEDS_ADOBE);
             }
             try {
-                const result = await runWithAdobeTarget(() => ops.content.deleteAllSiteContent(org, site));
+                // The same teardown the delete-project button runs. Until
+                // 2026-09-19 this deleted the SOURCE only, so an agent could
+                // clear a site and leave the storefront serving (AI-9).
+                const ctx = ctxFactory();
+                const { HelixService } = await import('@/features/eds/services/helix/helixService');
+                const torn = await runWithAdobeTarget(() =>
+                    tearDownStorefront(
+                        { daLiveOrg: org, daLiveSite: site, githubRepo: args?.githubRepo },
+                        {
+                            tokenProvider: ops.tokenProvider,
+                            logger: ctx.logger,
+                            initKeyStore: () =>
+                                HelixService.initKeyStore(
+                                    ctx.context.secrets,
+                                    ctx.context.globalState,
+                                ),
+                            makeContentOps: () => ops.content.sourceOps,
+                            // A site, not a project, is being acted on (EDS-26).
+                            otherProjectsOnRepo: (repo) => projectsSharingRepo(ctx.stateManager, repo),
+                        },
+                    ),
+                );
                 return asText({
-                    deleted: result.success,
+                    deleted: torn.contentDeleted,
                     site: fullName,
-                    deletedCount: result.deletedCount,
-                    error: result.error,
+                    deletedCount: torn.deletedCount,
+                    unpublishedPages: torn.unpublishedPages,
+                    stillPublished: torn.stillPublished,
+                    publishState: torn.publishState,
+                    publishSummary: torn.publishSummary,
+                    ...(torn.productPages ? { productPages: torn.productPages.summary } : {}),
+                    ...(torn.stillPublished && !args?.githubRepo
+                        ? {
+                              note: 'The source is gone but the published pages are still live. Call again with githubRepo:"owner/repo" to take them off the CDN.',
+                          }
+                        : {}),
+                    error: torn.error,
                 });
             } catch (err) {
                 if (isOrgMismatchError(err)) return orgMismatchResult();

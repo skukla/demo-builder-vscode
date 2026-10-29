@@ -84,6 +84,22 @@
     height: 16px;
 }
 
+/* One of LoadingDisplay's three rows held to one line (its `steady` prop), so a
+   progress display does not jump as its lines change (owner, 2026-10-16): text that
+   does not fit ends in an ellipsis instead of wrapping, and the full text is in the
+   row's `title`. `max-width` bounds it to the display, which is given a width of its
+   own for the ellipsis to cut at.
+   Here and not in utilities.css: that sheet's rule count is pinned to only shrink
+   (godFileTopLevelRules), and this sheet already reaches every entry that renders
+   LoadingDisplay (stylesheet-bundles.test.ts checks it). */
+.loading-display-row {
+    display: block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* ===========================================
    LoadingOverlay Component Styles
    SOP §11: Extracted from inline style objects
@@ -617,6 +633,22 @@ div[class*="spectrum"] input[type="search"] {
     align-items: center;
     flex: var(--pin-flex, 0 0 auto);
     color: var(--spectrum-global-color-gray-700);
+}
+
+/* PinToggle (2026-10-28): the pin as a button on the card. Pinned: always shown.
+   Unpinned: hidden but keeping its space, so the name and menu beside it never move;
+   the card that hosts it reveals it on hover or focus, in its own feature's sheet. */
+.pin-toggle {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+.pin-toggle--pinned {
+    color: var(--spectrum-global-color-gray-800);
+}
+.pin-toggle--unpinned {
+    visibility: hidden;
+    color: var(--spectrum-global-color-gray-600);
 }
 }
 

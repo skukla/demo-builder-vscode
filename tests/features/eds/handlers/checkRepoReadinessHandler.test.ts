@@ -55,7 +55,7 @@ describe('handleCheckRepoReadiness', () => {
         // notice saying something is wrong without saying what.
         classify.mockResolvedValue({
             kind: 'not-a-storefront',
-            missing: ['scripts/scripts.js', 'scripts/delayed.js'],
+            missing: ['scripts/scripts.js', '404.html'],
         });
 
         const result = await handleCheckRepoReadiness(
@@ -65,7 +65,7 @@ describe('handleCheckRepoReadiness', () => {
 
         expect(result.readiness).toEqual({
             kind: 'not-a-storefront',
-            missing: ['scripts/scripts.js', 'scripts/delayed.js'],
+            missing: ['scripts/scripts.js', '404.html'],
         });
     });
 

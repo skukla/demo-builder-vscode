@@ -7,9 +7,8 @@
 import * as semver from 'semver';
 import { parseInstalledVersions, isValidVersionFamily } from './NodeVersionParser';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { readNodeFolderList } from '@/core/shell/nodeFolder';
 import { formatDuration } from '@/core/utils/timeFormatting';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Logger } from '@/types/logger';
 
 interface VersionSatisfactionResult {
@@ -53,12 +52,7 @@ export async function checkVersionSatisfaction(
     }
 
     try {
-        const fnmListResult = await commandManager.execute('fnm list', {
-            timeout: TIMEOUTS.PREREQUISITE_CHECK,
-            shell: DEFAULT_SHELL,
-        });
-
-        const installedVersions = parseInstalledVersions(fnmListResult.stdout);
+        const installedVersions = parseInstalledVersions(await readNodeFolderList(commandManager));
         const semverRange = `${requiredFamily}.x`;
 
         // Check if any installed version satisfies the required family

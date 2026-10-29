@@ -3,11 +3,12 @@
  *
  * The hook computes its whole initial state once, from three mutually exclusive
  * inputs: an edit project, imported settings, or neither. Each produces a
- * different EDS config (edit assumes the stored auth is unproven; import assumes
- * it is good), a different wizard mode, and a different Adobe context. These
- * tests pin all three.
+ * different EDS config (edit reopens the project's own storefront with its
+ * sign-ins unproven; import and create seed none), a different wizard mode, and
+ * a different Adobe context. These tests pin all three.
  */
 
+import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import type { ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 import { editProjectWith, renderWizard, stateFor } from './useWizardState.testUtils';
 
@@ -94,54 +95,30 @@ describe('edit mode seeds an EDS config whose auth is unproven', () => {
     });
 });
 
-describe('import mode seeds an EDS config whose auth is already good', () => {
-    it('marks both sides authenticated and carries the DA.live org onto the auth', () => {
-        const eds = stateFor({ importedSettings: { edsConfig: FULL_EDS } }).edsConfig;
+describe('import and copy seed no storefront and no sign-in (PL-56d)', () => {
+    // An import used to open with the SENDER's repository selected and both
+    // GitHub and DA.live marked signed in, without checking either. Now the
+    // receiver is asked exactly as for a new project.
+    it('ignores a copied project\'s own storefront: the copy creates its own', () => {
+        expect(stateFor({ importedSettings: { edsConfig: FULL_EDS } }).edsConfig).toBeUndefined();
+    });
 
-        expect(eds).toEqual({
-            accsHost: '',
-            storeViewCode: '',
-            customerGroup: '',
-            repoName: 'acme-site',
-            daLiveOrg: 'acme-da',
-            daLiveSite: 'acme-site-da',
-            githubAuth: {
-                isAuthenticated: true,
-                user: { login: 'acme-org', email: null, name: null, avatarUrl: null },
+    it('ignores the sender\'s storefront in a project file: it is provenance only', () => {
+        const state = stateFor({
+            importedSettings: {
+                source: {
+                    project: 'acme',
+                    extension: '1.0.0',
+                    storefront: { githubRepo: 'acme-org/acme-site', daLiveOrg: 'acme-da' },
+                },
             },
-            daLiveAuth: { isAuthenticated: true, org: 'acme-da' },
-            repoUrl: 'https://github.com/acme-org/acme-site',
-            repoMode: 'existing',
-            selectedRepo: {
-                id: 'acme-org/acme-site',
-                name: 'acme-site',
-                fullName: 'acme-org/acme-site',
-                htmlUrl: 'https://github.com/acme-org/acme-site',
-            },
-            selectedSite: { id: 'acme-site-da', name: 'acme-site-da' },
         });
+
+        expect(state.edsConfig).toBeUndefined();
     });
 
-    it('leaves the GitHub half unset when the repo is missing', () => {
-        const eds = stateFor({
-            importedSettings: { edsConfig: { githubOwner: 'acme-org', daLiveOrg: 'd' } },
-        }).edsConfig;
-
-        expect(eds?.githubAuth).toBeUndefined();
-        expect(eds?.repoMode).toBeUndefined();
-        expect(eds?.selectedRepo).toBeUndefined();
-    });
-
-    it('leaves the DA.live half unset when the org is missing', () => {
-        const eds = stateFor({
-            importedSettings: { edsConfig: { githubOwner: 'o', repoName: 'r' } },
-        }).edsConfig;
-
-        expect(eds?.daLiveAuth).toBeUndefined();
-    });
-
-    it('has no EDS config for an import that carried none', () => {
-        expect(stateFor({ importedSettings: {} }).edsConfig).toBeUndefined();
+    it('CONTROL: edit mode still reopens the project\'s own storefront', () => {
+        expect(stateFor({ editProject: editProjectWith({ edsConfig: FULL_EDS }) }).edsConfig).toBeDefined();
     });
 });
 
@@ -230,7 +207,7 @@ describe('mode, name and selections', () => {
     });
 
     it('opens in import mode and takes the source project name', () => {
-        const state = stateFor({ importedSettings: { source: { project: 'acme' } } });
+        const state = stateFor({ importedSettings: { source: { project: 'acme', extension: '1.0.0' } } });
 
         expect(state.wizardMode).toBe('import');
         expect(state.projectName).toBe('acme');
@@ -238,7 +215,7 @@ describe('mode, name and selections', () => {
 
     it('makes the imported name unique against the projects that already exist', () => {
         const state = stateFor({
-            importedSettings: { source: { project: 'acme' } },
+            importedSettings: { source: { project: 'acme', extension: '1.0.0' } },
             existingProjectNames: ['acme'],
         });
 
@@ -295,6 +272,19 @@ describe('mode, name and selections', () => {
     it('leaves components unset for an edit project that stored no selections', () => {
         expect(stateFor({ editProject: editProjectWith({}) }).components).toBeUndefined();
         expect(stateFor({ editProject: editProjectWith({}) }).selectedBackend).toBeUndefined();
+    });
+
+    it('restores the backend selection on import too, so the Commerce cards open pre-selected', () => {
+        const state = stateFor({
+            importedSettings: { selections: { backend: 'adobe-commerce-accs' } },
+        });
+
+        expect(state.wizardMode).toBe('import');
+        expect(state.selectedBackend).toBe('adobe-commerce-accs');
+    });
+
+    it('chooses no backend when creating from nothing', () => {
+        expect(stateFor({}).selectedBackend).toBeUndefined();
     });
 
     it('takes the component defaults when creating with no import', () => {
@@ -364,15 +354,10 @@ describe('mode, name and selections', () => {
         expect(stateFor({ editProject: editProjectWith({}) }).componentConfigs).toStrictEqual({});
     });
 
-    it('falls back to the flat API list when the keyed picks object is present but empty', () => {
-        const state = stateFor({
-            editProject: editProjectWith({
-                componentApiPicks: {},
-                additionalConsoleApis: ['CCAPI'],
-            }),
-        });
+    it('seeds no API picks when the keyed picks object is present but empty', () => {
+        const state = stateFor({ editProject: editProjectWith({ componentApiPicks: {} }) });
 
-        expect(state.selectedConsoleApis).toEqual({ __existing__: ['CCAPI'] });
+        expect(state.selectedConsoleApis).toBeUndefined();
     });
 
     it('starts on the first enabled step', () => {
@@ -384,5 +369,82 @@ describe('mode, name and selections', () => {
         });
 
         expect(result.current.state.currentStep).toBe('build-your-project');
+    });
+});
+
+/**
+ * CAN THE CONFIG BUILDER'S TWO WARNINGS FIRE? (PL-40) — yes, from a saved project.
+ *
+ * `buildProjectConfig` warns when a stack is selected with no package, and when
+ * the selected stack id resolves to nothing. A fresh wizard run cannot produce
+ * either state, and the MCP `create_project` tool refuses both before it builds.
+ * Edit and import are the open door: they seed `selectedStack` and
+ * `selectedPackage` straight from the saved file, each on its own, with no check
+ * against the stacks this build ships. These tests drive that chain end to end —
+ * saved settings, through the hook, into the builder — and count the warning.
+ *
+ * The count is asserted, and the ids each warning names: each state trips exactly
+ * one of the two branches, and a state that resolves trips neither.
+ *
+ * PL-65: the warnings go to a sink the CALLER hands in — the wizard hands the
+ * extension's Debug Logs channel — rather than the webview console, where no SC
+ * looks. So the sink is what these tests watch, and the console must stay quiet.
+ */
+describe('a saved project the build cannot resolve still reaches the config builder', () => {
+    let warn: jest.Mock;
+    let consoleWarn: jest.SpyInstance;
+
+    beforeEach(() => {
+        warn = jest.fn();
+        consoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('warns once, and builds no components, for a stack id this build does not ship', () => {
+        const state = stateFor({
+            editProject: editProjectWith({
+                selectedPackage: 'citisignal',
+                selectedStack: 'a-stack-this-build-lacks',
+            } as ImportedSettings),
+        });
+
+        const config = buildProjectConfig(state, undefined, undefined, warn);
+
+        expect(state.selectedStack).toBe('a-stack-this-build-lacks');
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("'a-stack-this-build-lacks'"));
+        expect(consoleWarn).not.toHaveBeenCalled();
+        expect(config.components).toBeUndefined();
+    });
+
+    it('warns once for a stack that arrives with no package', () => {
+        const state = stateFor({
+            importedSettings: { selectedStack: 'eds-accs' } as ImportedSettings,
+        });
+
+        const config = buildProjectConfig(state, undefined, undefined, warn);
+
+        expect(state.selectedPackage).toBeUndefined();
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("'eds-accs'"));
+        expect(consoleWarn).not.toHaveBeenCalled();
+        // The stack itself resolves, so the components are still built.
+        expect(config.components?.frontend).toBeDefined();
+    });
+
+    it('CONTROL: stays silent when the saved stack and package both resolve', () => {
+        const state = stateFor({
+            editProject: editProjectWith({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-accs',
+            } as ImportedSettings),
+        });
+
+        buildProjectConfig(state, undefined, undefined, warn);
+
+        expect(warn).not.toHaveBeenCalled();
     });
 });

@@ -16,7 +16,11 @@
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config({
-    files: ['tests/**/*.ts', 'tests/**/*.tsx'],
+    // `.eslint-probe/` is where tests/sop/eslint-type-aware.test.ts plants the file
+    // that proves this config still works. It sits outside `tests/` so the suites
+    // that walk that tree cannot meet it mid-run (PL-44) — and it has to be named
+    // HERE, in the same object, or the probe is linted with no rules at all.
+    files: ['tests/**/*.ts', 'tests/**/*.tsx', '.eslint-probe/**/*.ts'],
     extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
         parserOptions: {

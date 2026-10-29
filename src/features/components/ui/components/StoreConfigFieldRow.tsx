@@ -4,7 +4,8 @@
  * Renders a single config field with commerce-store-aware routing:
  * - Connection fields: always shown
  * - Store group fields: hidden until connection fields are complete
- * - Website code: shows discovery progress and store selection pickers
+ * - Website code: shows discovery progress and store selection pickers, and (ACCS)
+ *   a one-line warning when the chosen store view shows guests no products
  * - Store/view code fields: skipped (rendered by StoreSelectionRow)
  * - Other fields: standard renderer
  *
@@ -18,12 +19,10 @@ import {
     isWebsiteCodeField,
 } from '../../config/storeFieldHelpers';
 import type { ServiceGroup, UniqueField } from '../hooks/useComponentConfig';
-import type { CredentialServiceState } from '../hooks/useCredentialService';
 import type { StoreListItem } from '../hooks/useStoreDiscovery';
-import { BrokeredCredentialFields } from './BrokeredCredentialFields';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
 import { StoreSelectionRow } from './StoreSelectionRow';
-import { ACCS_OAUTH_CLIENT_ID, ACCS_OAUTH_CLIENT_SECRET } from '@/core/config/envVarKeys';
+import { StoreViewProductsNotice } from './StoreViewProductsNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 
 export interface StoreConfigFieldRowProps {
@@ -45,13 +44,6 @@ export interface StoreConfigFieldRowProps {
     /** Called when user clicks the Re-detect button to re-run store discovery */
     onRefresh?: () => void;
     /**
-     * Whether the shared service will serve a Commerce credential.
-     *
-     * Absent for callers that never probe (PaaS, and any surface that has not
-     * adopted it) — the OAuth fields then render exactly as they always did.
-     */
-    credentialService?: CredentialServiceState;
-    /**
      * Component-declared secrets the project holds, booleans only.
      *
      * A migrated value is in the OS keychain and never reaches this webview, so a
@@ -59,6 +51,11 @@ export interface StoreConfigFieldRowProps {
      * from "not configured", and a save would write the blank over it.
      */
     secretFlags?: Record<string, Record<string, boolean>>;
+    /**
+     * The ACCS GraphQL endpoint store detection keyed on (`useAutoStoreDetect`).
+     * Present only on ACCS; the store-view product check asks Catalog Service here.
+     */
+    accsEndpoint?: string;
 }
 
 export function StoreConfigFieldRow({
@@ -78,8 +75,8 @@ export function StoreConfigFieldRow({
     getStoreGroupItems,
     getStoreViewItems,
     onRefresh,
-    credentialService,
     secretFlags,
+    accsEndpoint,
 }: StoreConfigFieldRowProps): React.ReactNode {
     // A stored secret with no typed value: show that one EXISTS rather than an
     // empty box, and drop the error — the field is satisfied, just not visible.
@@ -151,6 +148,11 @@ export function StoreConfigFieldRow({
                     getStoreGroupItems={getStoreGroupItems}
                     getStoreViewItems={getStoreViewItems}
                 />
+                <StoreViewProductsNotice
+                    group={group}
+                    getFieldValue={getFieldValue}
+                    accsEndpoint={accsEndpoint}
+                />
                 {onRefresh && (
                     <Flex marginTop="size-100" marginStart="size-50">
                         <Button
@@ -168,31 +170,6 @@ export function StoreConfigFieldRow({
 
     if (isStoreCodeField(field.key) && !fetchError) {
         /* Store/view fields rendered by StoreSelectionRow — skip */
-        return null;
-    }
-
-    if (credentialService && field.key === ACCS_OAUTH_CLIENT_ID) {
-        /*
-         * The OAuth pair renders as ONE unit from the id row, because the
-         * "use my own instead" disclosure covers both halves and a sibling row
-         * cannot own half a toggle. Same shape as the store cascade above.
-         */
-        return (
-            <BrokeredCredentialFields
-                idField={field}
-                secretField={group.fields.find((f) => f.key === ACCS_OAUTH_CLIENT_SECRET)}
-                status={credentialService.status}
-                loading={credentialService.loading}
-                getFieldValue={getFieldValue}
-                updateField={updateField}
-                validationErrors={validationErrors}
-                touchedFields={touchedFields}
-            />
-        );
-    }
-
-    if (credentialService && field.key === ACCS_OAUTH_CLIENT_SECRET) {
-        /* Rendered above, with its pair — skip. */
         return null;
     }
 

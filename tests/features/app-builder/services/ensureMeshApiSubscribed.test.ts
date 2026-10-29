@@ -39,7 +39,10 @@ import { withOrgContext } from '@/core/shell/orgContextEnv';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import {
+    createMockAuthenticationService,
+    entityServicesOf,
+} from '../../../helpers/authenticationServiceFake';
 const MESH = 'GraphQLServiceSDK';
 const MGMT = 'AdobeIOManagementAPISDK';
 
@@ -76,19 +79,40 @@ function createAuthService(): jest.Mocked<AuthenticationService> {
     // The canonical fake, with the four methods this suite drives. It was a bare
     // four-method literal reaching `ensureMeshApiSubscribed` through `as any` at
     // nine call sites — and that param is typed `AuthenticationService`, which has 44.
-    return createMockAuthenticationService({
-        getServicesForOrg: jest.fn().mockResolvedValue([
-            { code: MESH, name: 'API Mesh', platformList: ['apiKey'], domainMandatory: true },
-            { code: MGMT, name: 'I/O Management API', platformList: ['oauth_server_to_server'] },
-        ]),
-        createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int'),
-        subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
-        subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
-        ensureOAuthCredentialId: jest.fn().mockResolvedValue('oauth-int'),
-        // Default: nothing subscribed yet → the subscribe paths proceed.
-        getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
-        getCachedOrganization: jest.fn().mockReturnValue(undefined),
-    });
+    return createMockAuthenticationService(
+        {},
+        {
+            entities: {
+                orgServices: {
+                    getServicesForOrg: jest.fn().mockResolvedValue([
+                        {
+                            code: MESH,
+                            name: 'API Mesh',
+                            platformList: ['apiKey'],
+                            domainMandatory: true,
+                        },
+                        {
+                            code: MGMT,
+                            name: 'I/O Management API',
+                            platformList: ['oauth_server_to_server'],
+                        },
+                    ]),
+                    subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+                    subscribeOAuthServerToServerIntegrationToServices: jest
+                        .fn()
+                        .mockResolvedValue(undefined),
+                    // Default: nothing subscribed yet → the subscribe paths proceed.
+                    getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
+                    getSubscribedServices: jest.fn().mockResolvedValue([]),
+                },
+                credentials: {
+                    createAdobeIdCredential: jest.fn().mockResolvedValue('apikey-int'),
+                    ensureOAuthCredentialId: jest.fn().mockResolvedValue('oauth-int'),
+                },
+            },
+            cache: { getCachedOrganization: jest.fn().mockReturnValue(undefined) },
+        }
+    );
 }
 
 describe('ensureMeshApiSubscribed', () => {
@@ -114,13 +138,17 @@ describe('ensureMeshApiSubscribed', () => {
             logger,
         });
 
-        expect(authService.createAdobeIdCredential).toHaveBeenCalledWith(
+        expect(
+            entityServicesOf(authService).credentials.createAdobeIdCredential
+        ).toHaveBeenCalledWith(
             'org-1',
             'proj-1',
             'ws-1',
             expect.objectContaining({ platform: 'apiKey', domain: 'localhost:3000' })
         );
-        expect(authService.subscribeAdobeIdIntegrationToServices).toHaveBeenCalledWith(
+        expect(
+            entityServicesOf(authService).orgServices.subscribeAdobeIdIntegrationToServices
+        ).toHaveBeenCalledWith(
             'org-1',
             'apikey-int',
             expect.arrayContaining([expect.objectContaining({ sdkCode: MESH })])
@@ -136,8 +164,13 @@ describe('ensureMeshApiSubscribed', () => {
             logger,
         });
 
-        expect(authService.ensureOAuthCredentialId).toHaveBeenCalledWith('org-1', 'proj-1', 'ws-1');
-        expect(authService.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
+        expect(
+            entityServicesOf(authService).credentials.ensureOAuthCredentialId
+        ).toHaveBeenCalledWith('org-1', 'proj-1', 'ws-1');
+        expect(
+            entityServicesOf(authService).orgServices
+                .subscribeOAuthServerToServerIntegrationToServices
+        ).toHaveBeenCalledWith(
             'org-1',
             'oauth-int',
             expect.arrayContaining([expect.objectContaining({ sdkCode: MGMT })])
@@ -176,7 +209,9 @@ describe('ensureMeshApiSubscribed', () => {
 
     it('still subscribes (idempotent union) when an existing cred id is returned', async () => {
         const authService = createAuthService();
-        authService.ensureOAuthCredentialId.mockResolvedValue('existing-int');
+        entityServicesOf(authService).credentials.ensureOAuthCredentialId.mockResolvedValue(
+            'existing-int'
+        );
 
         await expect(
             ensureMeshApiSubscribed({
@@ -185,7 +220,10 @@ describe('ensureMeshApiSubscribed', () => {
                 logger,
             })
         ).resolves.toEqual(expect.any(Array));
-        expect(authService.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalled();
+        expect(
+            entityServicesOf(authService).orgServices
+                .subscribeOAuthServerToServerIntegrationToServices
+        ).toHaveBeenCalled();
     });
 
     it('returns the resolved+subscribed API list (union incl. baseline) with names', async () => {
@@ -217,7 +255,7 @@ describe('ensureMeshApiSubscribed', () => {
         });
 
         expect(result).toStrictEqual([]);
-        expect(authService.getServicesForOrg).not.toHaveBeenCalled();
+        expect(entityServicesOf(authService).orgServices.getServicesForOrg).not.toHaveBeenCalled();
         expect(withOrgContext).not.toHaveBeenCalled();
     });
 
@@ -267,7 +305,7 @@ describe('ensureMeshApiSubscribed', () => {
         });
 
         expect(result).toStrictEqual([]);
-        expect(authService.getServicesForOrg).not.toHaveBeenCalled();
+        expect(entityServicesOf(authService).orgServices.getServicesForOrg).not.toHaveBeenCalled();
         expect(withOrgContext).not.toHaveBeenCalled();
     });
 });
@@ -278,7 +316,22 @@ describe('subscriberTarget', () => {
             orgId: 'org-1',
             projectId: 'proj-1',
             workspaceId: 'ws-1',
+            commerceTenant: undefined,
         });
+    });
+
+    it("carries the configured Commerce tenant, which picks a service's product profile", () => {
+        const project = {
+            ...createProject(),
+            componentConfigs: {
+                'eds-storefront': {
+                    ACCS_GRAPHQL_ENDPOINT:
+                        'https://na1-sandbox.api.commerce.adobe.com/Tenant123abc/graphql',
+                },
+            },
+        };
+
+        expect(subscriberTarget(project).commerceTenant).toBe('Tenant123abc');
     });
 
     it('answers empty ids — never throws — for a target with no adobe block', () => {
@@ -289,6 +342,114 @@ describe('subscriberTarget', () => {
             orgId: '',
             projectId: '',
             workspaceId: '',
+            commerceTenant: undefined,
+        });
+    });
+});
+
+describe("subscriberTarget — a component's own workspace (AB-23)", () => {
+    // The subscribe entitles a WORKSPACE's credential, so the id chosen here decides
+    // which workspace gains the access: the wrong one deploys without it.
+    function projectWithOwnWorkspace(): Project {
+        const deployed = {
+            kind: 'integration',
+            status: 'deployed',
+            source: { owner: 'demo-org', repo: 'erp-sync' },
+        } as const;
+        return {
+            ...createProject(),
+            appBuilderComponents: {
+                'erp-sync': { ...deployed, workspace: { id: 'ws-own', name: 'erpsync' } },
+                'plain-app': deployed,
+            },
+        };
+    }
+
+    it('targets the workspace the named component holds', () => {
+        expect(subscriberTarget(projectWithOwnWorkspace(), 'erp-sync').workspaceId).toBe('ws-own');
+    });
+
+    it("targets the project's workspace when no component is named", () => {
+        expect(subscriberTarget(projectWithOwnWorkspace()).workspaceId).toBe('ws-1');
+    });
+
+    it("targets the project's workspace for a component that records none of its own", () => {
+        expect(subscriberTarget(projectWithOwnWorkspace(), 'plain-app').workspaceId).toBe('ws-1');
+    });
+
+    it("targets the project's workspace for a component the project does not have", () => {
+        expect(subscriberTarget(projectWithOwnWorkspace(), 'never-added').workspaceId).toBe('ws-1');
+    });
+
+    it("targets the project's workspace when the project has no components at all", () => {
+        expect(subscriberTarget(createProject(), 'erp-sync').workspaceId).toBe('ws-1');
+    });
+});
+
+describe('subscriberTarget — the remembered Commerce product profile', () => {
+    const TENANT = 'Tenant123abc';
+    const ENDPOINT = `https://na1-sandbox.api.commerce.adobe.com/${TENANT}/graphql`;
+
+    function projectRemembering(tenant: string, endpoint?: string): Project {
+        const base = createProject();
+        return {
+            ...base,
+            adobe: {
+                ...base.adobe,
+                commerceProfile: { tenant, id: 'profile-1', productId: 'product-1' },
+            },
+            componentConfigs: endpoint
+                ? { 'eds-storefront': { ACCS_GRAPHQL_ENDPOINT: endpoint } }
+                : {},
+        };
+    }
+
+    it('hands back the profile chosen for the tenant the project still points at', () => {
+        expect(
+            subscriberTarget(projectRemembering(TENANT, ENDPOINT)).commerceProfile
+        ).toStrictEqual({
+            tenant: TENANT,
+            id: 'profile-1',
+            productId: 'product-1',
+        });
+    });
+
+    it('withholds a profile chosen for another tenant', () => {
+        // A project moved to another Commerce instance: the old profile would be
+        // accepted by the subscribe and grant access to the wrong instance.
+        const target = subscriberTarget(projectRemembering('OtherTenant9', ENDPOINT));
+
+        expect(target).toStrictEqual({
+            orgId: 'org-1',
+            projectId: 'proj-1',
+            workspaceId: 'ws-1',
+            commerceTenant: TENANT,
+        });
+    });
+
+    it('withholds the profile when the project configures no Commerce endpoint', () => {
+        const target = subscriberTarget(projectRemembering(TENANT));
+
+        expect(target).toStrictEqual({
+            orgId: 'org-1',
+            projectId: 'proj-1',
+            workspaceId: 'ws-1',
+            commerceTenant: undefined,
+        });
+    });
+
+    it('carries no profile key for a project that never remembered one', () => {
+        const base = createProject();
+        const target = subscriberTarget({
+            ...base,
+            componentConfigs: { 'eds-storefront': { ACCS_GRAPHQL_ENDPOINT: ENDPOINT } },
+        });
+
+        expect(target).toStrictEqual({
+            orgId: 'org-1',
+            projectId: 'proj-1',
+            workspaceId: 'ws-1',
+            commerceTenant: TENANT,
         });
     });
 });

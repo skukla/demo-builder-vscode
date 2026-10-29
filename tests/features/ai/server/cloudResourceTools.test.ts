@@ -387,8 +387,19 @@ describe('cloud-resource tools (DA.live)', () => {
                 confirm: true,
                 confirmName: 'acme/shop',
             });
-            expect(res).toEqual({ deleted: true, site: 'acme/shop', deletedCount: 7 });
-            expect(mockDeleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop');
+            // Without a repo the pages stay live, and the answer says so rather
+            // than reading as a finished teardown (AI-9).
+            expect(res).toEqual({
+                deleted: true,
+                site: 'acme/shop',
+                deletedCount: 7,
+                stillPublished: true,
+                publishState: 'unknown',
+                publishSummary: expect.stringContaining('No GitHub repository'),
+                note: expect.stringContaining('githubRepo'),
+            });
+            // The teardown hands over a count callback for the line under its step.
+            expect(mockDeleteAllSiteContent).toHaveBeenCalledWith('acme', 'shop', expect.any(Function));
         });
 
         it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {

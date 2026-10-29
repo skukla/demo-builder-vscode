@@ -19,6 +19,7 @@ import {
     boundProvider,
     makeHarness,
 } from './consoleProjectTeardown.testUtils';
+import { READ_ONLY_PROJECT_REFUSAL } from '../../../helpers/adobeConsoleRefusals';
 
 describe('teardownConsoleProject failure handling', () => {
     describe('access token and workspace-listing failures', () => {
@@ -373,6 +374,20 @@ describe('teardownConsoleProject failure handling', () => {
             expect(error).toMatch(/submitted for approval/i);
             expect(error).toMatch(/revoke/i);
             expect(error).toMatch(/shared package/i);
+        });
+
+        // AB-18: a refusal that DOES name its cause gets that cause in plain words,
+        // not the list of blockers that apply only when Adobe names none.
+        it('explains a read-only project refusal instead of guessing at blockers', async () => {
+            const harness = makeHarness();
+            harness.deps.deleteConsoleProject.mockRejectedValue(new Error(READ_ONLY_PROJECT_REFUSAL));
+
+            const result = await teardownConsoleProject(harness.deps, TARGET);
+
+            const error = result.items[result.items.length - 1].error ?? '';
+            expect(error).toContain('Read-only project cannot be deleted');
+            expect(error).toContain('not a developer on every product profile');
+            expect(error).not.toMatch(/submitted for approval/i);
         });
     });
 });

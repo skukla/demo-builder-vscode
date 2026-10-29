@@ -18,8 +18,9 @@ import type { DashboardInitialData } from '@/types/webviewPayloads';
 import { internals } from '../../../helpers/commandInternals';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockProject } from '../../../helpers/projectFake';
+import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { getEwCanvasBranch, resolveProjectAuthoringExperience } from '@/features/eds/handlers/edsHelpers';
 import { readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 
@@ -84,6 +85,62 @@ describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () 
         const data = await initialData(createMockProject({ demo }));
 
         expect(data.demo?.demoPackageName).toBe('Isle5 (renamed on the card)');
+    });
+
+    it('picks the card from the SAME repository among several, and names none when no card reads from it', async () => {
+        const demo = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
+        const other = makeAddedDemo({ name: 'Another demo', source: { owner: 'sam', repo: 'other-demo' } });
+        (readAddedDemos as jest.Mock).mockReturnValue([other, { ...demo, name: 'Isle5 card' }]);
+
+        const matched = await initialData(createMockProject({ demo }));
+        expect(matched.demo?.demoPackageName).toBe('Isle5 card');
+
+        (readAddedDemos as jest.Mock).mockReturnValue([other]);
+        const unmatched = await initialData(createMockProject({ demo }));
+        expect(unmatched.demo).toBeDefined();
+        expect('demoPackageName' in (unmatched.demo ?? {})).toBe(false);
+    });
+});
+
+describe('ProjectDashboardWebviewCommand - the Author Content URL', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        vscode.window.activeColorTheme = { kind: vscode.ColorThemeKind.Dark };
+    });
+
+    function edsProject(): Project {
+        return createMockProject({
+            selectedStack: 'eds-accs',
+            componentInstances: {
+                'eds-storefront': {
+                    ...edsStorefrontInstance(),
+                    metadata: { githubRepo: 'acme/demo-storefront' },
+                },
+            },
+        });
+    }
+
+    it("opens the project's own DA.live site, in the authoring experience resolved for THAT project", async () => {
+        const project = edsProject();
+        (resolveProjectAuthoringExperience as jest.Mock).mockReturnValue('experience-workspace');
+        (getEwCanvasBranch as jest.Mock).mockReturnValue('canvas-branch');
+
+        const data = await initialData(project);
+
+        expect(resolveProjectAuthoringExperience).toHaveBeenCalledWith(project);
+        expect(data.edsDaLiveUrl).toBe(
+            'https://da.live/canvas?nx=canvas-branch#/acme/demo-storefront/index'
+        );
+        expect(ProjectDashboardWebviewCommand.authoringUrlFor(project)).toBe(data.edsDaLiveUrl);
+    });
+
+    it('opens the classic editor when that is the experience the project resolves to', async () => {
+        (resolveProjectAuthoringExperience as jest.Mock).mockReturnValue('da-live-classic');
+        (getEwCanvasBranch as jest.Mock).mockReturnValue('');
+
+        const data = await initialData(edsProject());
+
+        expect(data.edsDaLiveUrl).toBe('https://da.live/#/acme/demo-storefront');
     });
 });
 

@@ -26,7 +26,6 @@
         "open_url",
         "open_view",
         "promote_block_to_library",
-        "publish_page",
         "redeploy_integration",
         "refresh_block_library",
         "reload_window",
@@ -35,7 +34,6 @@
         "repair_site_configuration",
         "republish",
         "reset_datapack",
-        "reset_eds_project",
         "restart_demo",
         "select_org",
         "select_project",
@@ -50,9 +48,7 @@
         "start_datapack_import",
         "start_demo",
         "stop_demo",
-        "sync_content",
-        "sync_storefront",
-        "write_page"
+        "sync_storefront"
     ],
     "_what": "THE NAMED FLOOR (AI-1q done-condition): every entry is a tool deliberately not exercised by unattended prompts, with its reason. The list may only SHRINK (a tool gaining a prompt leaves), and every entry MUST have a reason — enforced by toolPromptCoverage.test.ts.",
     "reasons": {
@@ -80,7 +76,6 @@
         "open_url": "tier 3: opens UI in the owner’s window (panel/browser/terminal); a sleeping-window battery must never trigger it; registration + handler tests cover it",
         "open_view": "tier 3: opens UI in the owner’s window (panel/browser/terminal); a sleeping-window battery must never trigger it; registration + handler tests cover it",
         "promote_block_to_library": "tier 3: confirm-gated destructive op; headless runs have no consent channel (the modal fallback would hang an unattended run); the gate refusal itself is probe-verified",
-        "publish_page": "tier 3: cloud write (deploys/publishes/creates/deletes remote resources); represented by handler tests + descriptor/consent checks; exercised only in owner-present supervised journeys",
         "redeploy_integration": "tier 3: cloud write (deploys/publishes/creates/deletes remote resources); represented by handler tests + descriptor/consent checks; exercised only in owner-present supervised journeys",
         "refresh_block_library": "tier 3: confirm-gated destructive op; headless runs have no consent channel (the modal fallback would hang an unattended run); the gate refusal itself is probe-verified",
         "reload_window": "tier 3: confirm-gated destructive op; headless runs have no consent channel (the modal fallback would hang an unattended run); the gate refusal itself is probe-verified (tears down the host mid-measurement)",
@@ -89,7 +84,6 @@
         "repair_site_configuration": "tier 3: cloud write (deploys/publishes/creates/deletes remote resources); represented by handler tests + descriptor/consent checks; exercised only in owner-present supervised journeys",
         "republish": "tier 3: cloud write (deploys/publishes/creates/deletes remote resources); represented by handler tests + descriptor/consent checks; exercised only in owner-present supervised journeys",
         "reset_datapack": "tier 3: requires a live authenticated backend/service the scratch project deliberately lacks",
-        "reset_eds_project": "tier 3: confirm-gated destructive op; headless runs have no consent channel (the modal fallback would hang an unattended run); the gate refusal itself is probe-verified",
         "restart_demo": "tier 3: opens UI in the owner’s window (panel/browser/terminal); a sleeping-window battery must never trigger it; registration + handler tests cover it (spawns demo terminals)",
         "select_org": "permanent deferral (owner decision 2026-08-28): honest readOnlyHint for agents, but writes session state that would change measurement conditions mid-sweep (see tier1-queue.json)",
         "select_project": "permanent deferral (owner decision 2026-08-28): honest readOnlyHint for agents, but writes session state that would change measurement conditions mid-sweep (see tier1-queue.json)",
@@ -104,8 +98,6 @@
         "start_datapack_import": "tier 3: requires a live authenticated backend/service the scratch project deliberately lacks",
         "start_demo": "tier 3: opens UI in the owner’s window (panel/browser/terminal); a sleeping-window battery must never trigger it; registration + handler tests cover it (spawns demo terminals)",
         "stop_demo": "tier 3: opens UI in the owner’s window (panel/browser/terminal); a sleeping-window battery must never trigger it; registration + handler tests cover it (acts on demo terminals)",
-        "sync_content": "tier 3: cloud write (deploys/publishes/creates/deletes remote resources); represented by handler tests + descriptor/consent checks; exercised only in owner-present supervised journeys",
-        "sync_storefront": "tier 3: cloud write (deploys/publishes/creates/deletes remote resources); represented by handler tests + descriptor/consent checks; exercised only in owner-present supervised journeys",
-        "write_page": "tier 3: cloud write (deploys/publishes/creates/deletes remote resources); represented by handler tests + descriptor/consent checks; exercised only in owner-present supervised journeys"
+        "sync_storefront": "tier 3: cloud write (deploys/publishes/creates/deletes remote resources); represented by handler tests + descriptor/consent checks; exercised only in owner-present supervised journeys"
     }
 }

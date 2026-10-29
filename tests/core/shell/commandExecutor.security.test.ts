@@ -199,29 +199,6 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             expect(mockExeca).toHaveBeenCalled();
         });
 
-        it('should accept "auto" keyword, resolve version, and validate resolved version', async () => {
-            // Given: "auto" keyword (user input is valid)
-            mockEnvironmentSetup.findAdobeCLINodeVersion.mockResolvedValue('18');
-
-            const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess);
-
-            const options: ExecuteOptions = { useNodeVersion: 'auto' };
-
-            // When: Executing command
-            const promise = commandExecutor.execute('npm install', options);
-
-            process.nextTick(() => {
-                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
-            });
-
-            // Then: Command executes successfully (resolved version also validated)
-            const result = await promise;
-            expect(result.code).toBe(0);
-            expect(mockExeca).toHaveBeenCalled();
-            expect(mockEnvironmentSetup.findAdobeCLINodeVersion).toHaveBeenCalled();
-        });
-
         it('should accept "current" keyword and call execa()', async () => {
             // Given: "current" keyword
             const mockSubprocess = createMockExecaSubprocess();
@@ -288,42 +265,6 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
     // =================================================================
 
     describe('defense-in-depth: resolved version validation', () => {
-        it('should validate resolved version from findAdobeCLINodeVersion()', async () => {
-            // Given: "auto" resolves to a valid version
-            mockEnvironmentSetup.findAdobeCLINodeVersion.mockResolvedValue('20');
-
-            const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess);
-
-            const options: ExecuteOptions = { useNodeVersion: 'auto' };
-
-            // When: Executing command
-            const promise = commandExecutor.execute('npm install', options);
-
-            process.nextTick(() => {
-                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
-            });
-
-            // Then: Resolved version is validated and command succeeds
-            const result = await promise;
-            expect(result.code).toBe(0);
-            expect(mockExeca).toHaveBeenCalled();
-        });
-
-        it('should block malicious resolved version from findAdobeCLINodeVersion()', async () => {
-            // Given: "auto" resolves to a malicious version (defense-in-depth scenario)
-            mockEnvironmentSetup.findAdobeCLINodeVersion.mockResolvedValue('20; rm -rf /');
-
-            const options: ExecuteOptions = { useNodeVersion: 'auto' };
-
-            // When: Executing command
-            const promise = commandExecutor.execute('npm install', options);
-
-            // Then: Resolved malicious version is blocked BEFORE execa()
-            await expect(promise).rejects.toThrow(/invalid Node.js version format/i);
-            expect(mockExeca).not.toHaveBeenCalled();
-        });
-
         it('should skip validation for "current" keyword (not interpolated)', async () => {
             // Given: "current" keyword (uses fnm env, not interpolated into --using=)
             const mockSubprocess = createMockExecaSubprocess();

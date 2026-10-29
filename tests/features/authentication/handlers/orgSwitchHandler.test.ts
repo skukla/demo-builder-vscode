@@ -22,7 +22,9 @@ jest.mock(
         window: {
             // The forced sign-in runs behind the browser-opening notification
             // (withBrowserSignInNotice) — run the task straight through.
-            withProgress: jest.fn(async (_options: unknown, task: () => unknown) => task()),
+            withProgress: jest.fn(async (_options: unknown, task: (progress: unknown, token: unknown) => unknown) =>
+                task({ report: jest.fn() }, { isCancellationRequested: false, onCancellationRequested: jest.fn() }),
+            ),
         },
         ProgressLocation: { Notification: 15, Window: 10 },
     }),

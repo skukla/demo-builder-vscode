@@ -132,6 +132,25 @@ describe('ProjectFileLoader — legacy appBuilderComponent migration', () => {
         expect(project!.publishKeyRegisteredAt).toBeUndefined();
     });
 
+    // 2026-10-05: the record was never read back, so the update check offered the same
+    // block-library install after every run.
+    it('loads installedBlockLibraries from the manifest into the project', async () => {
+        const installed = [
+            {
+                name: 'Demo Builder Blocks',
+                source: { owner: 'skukla', repo: 'demo-builder-blocks', branch: 'main' },
+                commitSha: 'abc123',
+                blockIds: [],
+                installedAt: '2026-10-05T15:38:19.000Z',
+            },
+        ];
+        primeFsWithManifest({ name: 'legacy-demo', installedBlockLibraries: installed });
+
+        const project = await new ProjectFileLoader(makeLogger()).loadProject(PROJECT_PATH, () => []);
+
+        expect(project?.installedBlockLibraries).toEqual(installed);
+    });
+
     it('does not write the manifest file during load (read-only migration in D1)', async () => {
         primeFsWithManifest({
             name: 'legacy-demo',
@@ -536,7 +555,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
         const loader = new ProjectFileLoader(makeLogger());
         const reloaded = await loader.loadProject(PROJECT_PATH, () => []);
 
-        const settings = extractSettingsFromProject(reloaded!, false);
+        const settings = extractSettingsFromProject(reloaded!);
 
         expect(settings.appBuilderComponentSources).toEqual({
             'firefly-image-gen': {
@@ -546,7 +565,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
                 name: 'Firefly Image Gen',
             },
         });
-        expect(settings.additionalConsoleApis).toBeUndefined();
+        expect(settings).not.toHaveProperty('additionalConsoleApis');
         expect(settings.componentApiPicks).toEqual({ __existing__: ['FireflySDK'] });
     });
 });

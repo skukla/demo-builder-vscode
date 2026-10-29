@@ -344,9 +344,73 @@ describe('LoadingDisplay', () => {
                 <LoadingDisplay message="Loading" helperText="This usually takes a minute" />
             );
 
-            expect(container.querySelector('.italic')).toHaveTextContent(
+            // Queried by the class that actually styles it: `.italic` was asked
+            // for in the markup but defined in no stylesheet, so it never did
+            // anything (2026-09-19).
+            expect(container.querySelector('.text-gray-500')).toHaveTextContent(
                 'This usually takes a minute'
             );
+        });
+    });
+
+    /**
+     * `steady`: the three rows hold one line each, so a long or missing line cannot
+     * move the spinner (owner, 2026-10-16: "make it so that the lines don't jump").
+     */
+    describe('steady', () => {
+        const LONG =
+            'Publishing the pages: /products/outdoor/very-long-category-name/a-product-page-with-a-long-name';
+
+        /** The row a piece of text sits on: the element carrying the one-line class. */
+        const rowOf = (text: string): HTMLElement | null =>
+            screen.getByTitle(text).closest('.loading-display-row');
+
+        it('keeps a long sub-message on one row, with the full text on hover', () => {
+            renderWithProviders(<LoadingDisplay steady message="Publishing the pages" subMessage={LONG} />);
+
+            const hover = screen.getByTitle(LONG);
+            expect(hover).toHaveTextContent(LONG);
+            expect(rowOf(LONG)).toHaveClass('text-sm', 'text-gray-600');
+        });
+
+        it('holds the stage and the expectation to one row each too', () => {
+            renderWithProviders(
+                <LoadingDisplay steady message="Copying the content (4 of 9)" helperText="Usually a minute" />
+            );
+
+            expect(rowOf('Copying the content (4 of 9)')).toHaveClass('text-lg', 'font-medium');
+            expect(rowOf('Usually a minute')).toHaveClass('text-xs', 'text-gray-500');
+        });
+
+        it('keeps the helper row when there is no helper text, so its height stays', () => {
+            const { container } = renderWithProviders(<LoadingDisplay steady message="Starting" />);
+
+            const helper = container.querySelector('.text-gray-500');
+            expect(helper).toHaveClass('loading-display-row');
+            expect(helper?.textContent).toBe(' ');
+        });
+
+        it('bounds the display to its container, so the ellipsis has a width to cut at', () => {
+            const { container } = renderWithProviders(<LoadingDisplay steady message="Starting" />);
+
+            // Centred flex parents size a child to its widest unbroken line; a
+            // no-wrap row would otherwise widen the whole display past the pane.
+            expect(screen.getByRole('status')).toHaveClass('w-full');
+            const [, inner] = Array.from(
+                container.querySelectorAll<HTMLElement>('[data-testid="spectrum-flex"]')
+            );
+            expect(inner).toHaveClass('w-full');
+        });
+
+        it('changes nothing when it is off', () => {
+            const { container } = renderWithProviders(
+                <LoadingDisplay message="Publishing the pages" subMessage={LONG} />
+            );
+
+            expect(container.querySelector('.loading-display-row')).not.toBeInTheDocument();
+            expect(container.querySelector('[title]')).not.toBeInTheDocument();
+            expect(container.querySelector('.text-gray-500')).not.toBeInTheDocument();
+            expect(screen.getByRole('status')).not.toHaveClass('w-full');
         });
     });
 });

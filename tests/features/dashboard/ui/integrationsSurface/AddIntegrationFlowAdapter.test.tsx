@@ -87,6 +87,17 @@ describe('AddIntegrationFlowAdapter', () => {
             });
             expect(modalProps().state.adobeOrg).toEqual({ id: 'org-1' });
         });
+
+        // A project with no Adobe org (no integration and no mesh at creation, so nothing
+        // signed it in) starts signed out, as the wizard does, so the flow walks its own
+        // sign-in, project and workspace stages (release walk 2026-10-28). Said signed in
+        // with no org, the sign-in step opened on "Select Your Organization".
+        it('starts signed out on a project with no Adobe org, so the flow signs in itself', () => {
+            renderAdapter({ adobeOrgId: undefined, adobeProjectId: undefined, adobeWorkspaceId: undefined });
+
+            expect(modalProps().state.adobeAuth).toEqual({ isAuthenticated: false, isChecking: false });
+            expect(modalProps().state.adobeOrg).toBeUndefined();
+        });
     });
 
     // REGRESSION (2026-08-03): the adapter's updateState swallowed every write
@@ -310,7 +321,36 @@ describe('AddIntegrationFlowAdapter', () => {
 
             modalProps().builder.onAppBuilderComponentToggle('erp-sync', true);
 
-            expect(onAddStarted).toHaveBeenCalledWith('erp-sync', CATALOG[0].name);
+            // The payload rides along: the modal's Retry re-sends this add rather
+            // than deploying something that may never have been persisted
+            // (owner, 2026-09-20).
+            expect(onAddStarted).toHaveBeenCalledWith('erp-sync', CATALOG[0].name, {
+                id: 'erp-sync',
+                apis: undefined,
+                name: undefined,
+            });
+        });
+
+        // AB-23: adding a kind the project already has adds a numbered copy. The
+        // screen names the copy itself, so its progress modal follows the copy — the
+        // add handler would otherwise report under an id the modal never opened.
+        it('names a second copy of a kind the project has, and follows it', () => {
+            const onAddStarted = jest.fn();
+            renderAdapter({ onAddStarted, appBuilderComponents: { 'erp-sync': INTEGRATION } });
+
+            modalProps().builder.onAppBuilderComponentToggle('erp-sync', true);
+
+            expect(mockPostMessage).toHaveBeenCalledWith('addAppBuilderComponent', {
+                progress: 'modal',
+                id: 'erp-sync',
+                instanceId: 'erp-sync-2',
+            });
+            expect(onAddStarted).toHaveBeenCalledWith('erp-sync-2', 'ERP Sync 2', {
+                id: 'erp-sync',
+                instanceId: 'erp-sync-2',
+                apis: undefined,
+                name: undefined,
+            });
         });
 
         it('reports an unnamed custom add as owner-repo, named for the repo', () => {
@@ -319,7 +359,10 @@ describe('AddIntegrationFlowAdapter', () => {
 
             modalProps().builder.onAddCustomAppBuilderComponent({ owner: 'acme', repo: 'custom-app' });
 
-            expect(onAddStarted).toHaveBeenCalledWith('acme-custom-app', 'custom-app');
+            expect(onAddStarted).toHaveBeenCalledWith('acme-custom-app', 'custom-app', {
+                source: { owner: 'acme', repo: 'custom-app' },
+                apis: undefined,
+            });
         });
 
         it('reports a named instance by the id and name the SC gave it', () => {
@@ -331,7 +374,12 @@ describe('AddIntegrationFlowAdapter', () => {
                 { id: 'firefly-gen', name: 'Firefly Gen' },
             );
 
-            expect(onAddStarted).toHaveBeenCalledWith('firefly-gen', 'Firefly Gen');
+            expect(onAddStarted).toHaveBeenCalledWith('firefly-gen', 'Firefly Gen', {
+                source: { owner: 'skukla', repo: 'app-builder-shell' },
+                name: 'Firefly Gen',
+                instanceId: 'firefly-gen',
+                apis: undefined,
+            });
         });
 
         it('a DESELECT posts nothing (there is no staged draft to un-stage here)', () => {

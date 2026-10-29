@@ -28,8 +28,8 @@ export const SERVER_DISPLAY_NAME = 'Demo Builder';
 
 /**
  * Words that must not be sentence-cased. Tool names are snake_case, so an
- * acronym arrives indistinguishable from a word — "reset_eds_project" became
- * "Reset eds project", which reads as a typo in a dialog a producer is being
+ * acronym arrives indistinguishable from a word — "reset_eds_project" (the name
+ * `reset_project` had until 2026-10-03) became "Reset eds project", which reads as a typo in a dialog a producer is being
  * asked to approve.
  */
 /**

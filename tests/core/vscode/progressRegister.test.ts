@@ -11,8 +11,12 @@
  */
 
 import * as vscode from 'vscode';
-import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
-import { cardInFlightLabel, timedSteps, withProgressRegister } from '@/core/vscode/progressRegister';
+import { hasActivePhaseSinks, reportPhase, withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import {
+    cardInFlightLabel,
+    timedSteps,
+    withProgressRegister,
+} from '@/core/vscode/progressRegister';
 
 /** Capture the reporter withProgress hands the task. */
 function stubWithProgress(): {
@@ -141,6 +145,36 @@ describe('withProgressRegister', () => {
  * — so this helper must NOT stack a second notification on that path. The
  * owner counted three cards for one deploy.
  */
+// Found on the 2026-10-16 release walk: Sync Storefront and Refresh Blocks started
+// from the dashboard without its modal opened TWO notifications, the dashboard's and
+// the command's own, because nothing told the command one was already narrating.
+describe('withProgressRegister — work nested inside it', () => {
+    it('is told a notification is narrating, so nested work reports into it', async () => {
+        const { report } = stubWithProgress();
+        let nestedSawNarrator = false;
+
+        await withProgressRegister({ title: 'Syncing the storefront' }, async () => {
+            // What a nested command's own progress checks before opening one.
+            nestedSawNarrator = hasActivePhaseSinks();
+            reportPhase('Pushing to GitHub');
+        });
+
+        expect(nestedSawNarrator).toBe(true);
+        expect(report).toHaveBeenCalledWith({ message: 'Pushing to GitHub' });
+        expect(vscode.window.withProgress).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports its own steps once, not twice', async () => {
+        const { report } = stubWithProgress();
+
+        await withProgressRegister({ title: 'Syncing the storefront' }, async (step) => {
+            step('Saving your changes');
+        });
+
+        expect(report.mock.calls).toEqual([[{ message: 'Saving your changes' }]]);
+    });
+});
+
 describe('withProgressRegister — inside an agent tool call', () => {
     it('opens NO notification of its own; steps flow to the phase sinks', async () => {
         const { report } = stubWithProgress();
@@ -257,6 +291,99 @@ describe('withProgressRegister — operations with no card', () => {
     });
 });
 
+/**
+ * A card channel with no label (the label is optional, the channel is a separate
+ * option): the card is told an EMPTY line, on every path, never `undefined` and
+ * never some other text.
+ */
+describe('withProgressRegister — a card channel with no label', () => {
+    it('pushes an empty line from the notification path', async () => {
+        stubWithProgress();
+        const pushCardStatus = jest.fn();
+
+        await withProgressRegister({ title: 'Deploying', pushCardStatus }, async () => undefined);
+
+        expect(pushCardStatus.mock.calls).toStrictEqual([['']]);
+    });
+
+    it('pushes an empty line from inside an agent tool call', async () => {
+        stubWithProgress();
+        const pushCardStatus = jest.fn();
+
+        await withPhaseSinks([jest.fn()], () =>
+            withProgressRegister({ title: 'Deploying', pushCardStatus }, async () => undefined)
+        );
+
+        expect(pushCardStatus.mock.calls).toStrictEqual([['']]);
+    });
+
+    it('pushes an empty line when the steps are shown in a modal', async () => {
+        stubWithProgress();
+        const pushCardStatus = jest.fn();
+
+        await withProgressRegister(
+            { title: 'Deploying', pushCardStatus, inModal: true },
+            async () => undefined
+        );
+
+        expect(pushCardStatus.mock.calls).toStrictEqual([['']]);
+    });
+});
+
+/**
+ * The modal surface (PL-59). The SC opened a modal by starting the operation and
+ * the caller sends its steps there, so this helper must narrate them NOWHERE: no
+ * notification, and no phase sink either, or two surfaces show the same step.
+ */
+describe('withProgressRegister — steps shown in a modal', () => {
+    it('opens no notification, tells the card its line once, and returns the work’s result', async () => {
+        const { report } = stubWithProgress();
+        const pushCardStatus = jest.fn();
+
+        const result = await withProgressRegister(
+            {
+                title: 'Deploying',
+                cardLabel: 'Deploying Integration',
+                pushCardStatus,
+                inModal: true,
+            },
+            async (step) => {
+                step('Checking requirements');
+                return 'done';
+            }
+        );
+
+        expect(result).toBe('done');
+        expect(vscode.window.withProgress).not.toHaveBeenCalled();
+        expect(report).not.toHaveBeenCalled();
+        expect(pushCardStatus.mock.calls).toStrictEqual([['Deploying Integration']]);
+    });
+
+    it('sends its steps to no phase sink, even inside an agent tool call', async () => {
+        stubWithProgress();
+        const sink = jest.fn();
+
+        await withPhaseSinks([sink], () =>
+            withProgressRegister({ title: 'Deploying', inModal: true }, async (step) => {
+                step('Checking requirements');
+            })
+        );
+
+        expect(sink).not.toHaveBeenCalled();
+    });
+
+    it('runs a card-less operation without reaching for a card channel', async () => {
+        stubWithProgress();
+
+        const result = await withProgressRegister(
+            { title: 'Changing destination', inModal: true },
+            async () => 'done'
+        );
+
+        expect(result).toBe('done');
+    });
+});
+
 describe('timedSteps', () => {
     // Owner, 2026-09-18: an update's steps reached only the notification, which
     // is gone when it closes, so a stalled step left nothing in the Debug Logs.
@@ -285,6 +412,25 @@ describe('timedSteps', () => {
             'Subscribing Adobe APIs',
             'Subscribing Adobe APIs took 1m 1s',
             'finished in 1m 2s',
+        ]);
+    });
+
+    // A poller re-reporting its line is one step still running, not a new one:
+    // "Installing into Commerce…" was logged four times for one install (2026-09-21).
+    it('treats the same message again as the same step, timed as one', () => {
+        const lines: string[] = [];
+        const steps = timedSteps((line) => lines.push(line));
+
+        steps.step('Installing into Commerce');
+        jest.advanceTimersByTime(5000);
+        steps.step('Installing into Commerce');
+        jest.advanceTimersByTime(5000);
+        steps.finish();
+
+        expect(lines).toStrictEqual([
+            'Installing into Commerce',
+            'Installing into Commerce took 10.0s',
+            'finished in 10.0s',
         ]);
     });
 

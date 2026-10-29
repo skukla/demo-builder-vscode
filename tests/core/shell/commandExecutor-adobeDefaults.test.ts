@@ -14,6 +14,7 @@
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 import {
     createMockExecaSubprocess,
@@ -52,6 +53,20 @@ describe('the shell an aio command runs in', () => {
         expect(execaOptions.shell).toBe(DEFAULT_SHELL);
     });
 
+    it('defaults to the platform shell even when no Node version wraps the command', async () => {
+        // The Node wrap names a shell of its own, which hid this default: with the
+        // wrap declined, the Adobe CLI default is the only thing between `aio` and
+        // execa treating the whole command line as one executable name.
+        const { executor } = build();
+
+        const { execaOptions } = await runThroughExeca(executor, mockExeca, 'aio console where', {
+            configureTelemetry: false,
+            useNodeVersion: null,
+        });
+
+        expect(execaOptions.shell).toBe(DEFAULT_SHELL);
+    });
+
     it('keeps a shell the caller chose', async () => {
         const { executor } = build();
 
@@ -76,48 +91,26 @@ describe('the shell an aio command runs in', () => {
     });
 });
 
-describe('the Adobe CLI Node version', () => {
-    it('is ensured before an ordinary aio command', async () => {
-        const { deps, executor } = build();
+describe("Demo Builder's Node for aio commands", () => {
+    it('runs an aio command that names no Node on Demo Builder\'s Node (PR-1a)', async () => {
+        const { executor } = build();
 
-        await runThroughExeca(executor, mockExeca, 'aio console where', {
+        const { execaCommand } = await runThroughExeca(executor, mockExeca, 'aio console where', {
             configureTelemetry: false,
         });
 
-        expect(deps.environmentSetup.ensureAdobeCLINodeVersion).toHaveBeenCalled();
+        expect(execaCommand).toBe(`/usr/local/bin/fnm exec --using=${demoBuilderNode()} aio console where`);
     });
 
-    it('is NOT ensured for a bare version probe', async () => {
-        // `aio -v` exists to be cheap. Ensuring the Node version first would run
-        // another aio invocation to answer a question about aio.
-        const { deps, executor } = build();
+    it('keeps a Node the caller named', async () => {
+        const { executor } = build();
 
-        await runThroughExeca(executor, mockExeca, 'aio -v', { configureTelemetry: false });
+        const { execaCommand } = await runThroughExeca(executor, mockExeca, 'aio console where', {
+            configureTelemetry: false,
+            useNodeVersion: '22',
+        });
 
-        expect(deps.environmentSetup.ensureAdobeCLINodeVersion).not.toHaveBeenCalled();
-    });
-
-    it('is AWAITED — the command does not start until it finishes', async () => {
-        const { deps, executor } = build();
-        let release!: () => void;
-        (deps.environmentSetup.ensureAdobeCLINodeVersion as jest.Mock).mockReturnValue(
-            new Promise<void>((resolve) => {
-                release = resolve;
-            }),
-        );
-        const subprocess = createMockExecaSubprocess();
-        mockExeca.mockReturnValue(subprocess);
-
-        const promise = executor.execute('aio console where', { configureTelemetry: false });
-        await settle();
-        expect(mockExeca).not.toHaveBeenCalled();
-
-        release();
-        await settle();
-        simulateSubprocessComplete(subprocess, 'ok', '', 0);
-        await promise;
-
-        expect(mockExeca).toHaveBeenCalled();
+        expect(execaCommand).toBe('/usr/local/bin/fnm exec --using=22 aio console where');
     });
 });
 

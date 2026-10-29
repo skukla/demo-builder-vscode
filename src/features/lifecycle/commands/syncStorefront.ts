@@ -8,7 +8,8 @@
  * What this wrapper adds on top of the service:
  *   1. Token discovery via `GitHubTokenService` (the MCP path reads env vars
  *      instead, see `src/mcp-server.ts`).
- *   2. `withProgress` notification + `showInputBox` commit message prompt.
+ *   2. `withProgress` notification + the commit message prompt (the dashboard's
+ *      progress modal when the tile started it, else `showInputBox`).
  *   3. Non-technical-user conflict resolution flow when `git push` is
  *      rejected AS NON-FAST-FORWARD: auto `git pull --rebase`; if rebase
  *      produces conflict markers, opens VS Code's Source Control view and
@@ -28,10 +29,18 @@ import { isManagedStorefrontFile } from './managedStorefrontFiles';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { COMPONENT_IDS } from '@/core/constants';
 import { PollingService } from '@/core/shell/pollingService';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { reportStep } from '@/core/utils/operationStepChannel';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import {
+    askDuringOperation,
+    askForDetailsDuringOperation,
+    modalIsAsking,
+} from '@/core/vscode/operationPrompt';
 import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { HelixApiError } from '@/features/eds/services/helix/helixApiClient';
+import { CONFLICT_MARKER_RE } from '@/features/eds/services/storefront/keptClashMark';
 import {
     PushRejectedError,
     syncAndPublish,
@@ -42,43 +51,90 @@ import type { Project } from '@/types/base';
 const execFile = promisify(childProcess.execFile);
 
 /**
- * Matches `git`'s standard 3-way merge conflict markers. The regex is
- * intentionally lenient on the trailing portion of each marker so we still
- * detect markers when the file has trailing CRLF/whitespace.
+ * What the sync answers, so a caller can END its progress honestly (PL-59). The
+ * palette ignores it — the command still shows its own toasts and dialogs — but
+ * the dashboard's progress modal must know whether to close or to show why.
  */
-const CONFLICT_MARKER_RE = /^(<{7}|={7}|>{7})( |$)/m;
+export interface SyncStorefrontOutcome {
+    success: boolean;
+    error?: string;
+    /** No commit message, or a refusal the command already reported. */
+    cancelled?: boolean;
+}
+
+const DEFAULT_COMMIT_MESSAGE = 'Demo Builder: sync local changes';
+
+/** The progress a sync step is reported on when no progress modal is showing it. */
+type SyncProgress = vscode.Progress<{ message?: string }>;
+
+/**
+ * Report a step of the sync: line 1 of the progress modal when the dashboard started
+ * it, else the notification's message (progress vocabulary slice 2, owner
+ * 2026-10-16). Sent as a plain line inside the modal, the first one froze as the step
+ * for the whole run.
+ */
+function stepOn(progress: SyncProgress): (stage: string) => void {
+    return (stage) => {
+        if (!reportStep(stage)) progress.report({ message: stage });
+    };
+}
 
 export class SyncStorefrontCommand extends BaseCommand {
-    async execute(): Promise<void> {
+    /**
+     * The commit message: in the dashboard's progress modal when the tile started
+     * the sync (picker-to-modal), else an input box at the top of the window. A
+     * blank message in the modal is the default, since Sync was pressed.
+     */
+    private async askCommitMessage(): Promise<string | undefined> {
+        if (!modalIsAsking()) {
+            return this.showInputBox({
+                prompt: 'Commit message',
+                value: DEFAULT_COMMIT_MESSAGE,
+                placeHolder: 'Describe what changed',
+            });
+        }
+        const asked = await askForDetailsDuringOperation({
+            message: 'Sync your local storefront changes to GitHub and republish them.',
+            fields: [
+                {
+                    id: 'message',
+                    label: 'Commit message',
+                    value: DEFAULT_COMMIT_MESSAGE,
+                    placeholder: 'Describe what changed',
+                },
+            ],
+            actions: ['Sync'],
+        });
+        if (asked.action !== 'Sync') return undefined;
+        return asked.values.message?.trim() || DEFAULT_COMMIT_MESSAGE;
+    }
+
+    async execute(): Promise<SyncStorefrontOutcome> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
             await this.showWarning('No project loaded.');
-            return;
+            return { success: false, error: 'No project loaded.', cancelled: true };
         }
 
         const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
         if (!storefrontPath) {
-            await this.showError(
-                'This project does not have an EDS storefront — Sync Storefront only applies to EDS projects.',
-            );
-            return;
+            const error =
+                'This project does not have an EDS storefront — Sync Storefront only applies to EDS projects.';
+            await this.showError(error);
+            return { success: false, error };
         }
 
         try {
             await fsPromises.stat(path.join(storefrontPath, '.git'));
         } catch {
-            await this.showError(
-                'Storefront repository not initialized. Re-create the project or run the EDS setup step.',
-            );
-            return;
+            const error =
+                'Storefront repository not initialized. Re-create the project or run the EDS setup step.';
+            await this.showError(error);
+            return { success: false, error };
         }
 
-        const commitMessage = await this.showInputBox({
-            prompt: 'Commit message',
-            value: 'Demo Builder: sync local changes',
-            placeHolder: 'Describe what changed',
-        });
-        if (!commitMessage) return; // user cancelled
+        const commitMessage = await this.askCommitMessage();
+        if (!commitMessage) return { success: false, cancelled: true }; // user cancelled
 
         const { tokenService } = getGitHubServices(this.context.secrets);
         const tokenEntry = await tokenService.getToken();
@@ -92,13 +148,14 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         const result = await this.withProgress('Syncing storefront', async (progress) => {
             try {
-                progress.report({ message: 'Saving your storefront changes' });
+                stepOn(progress)(OPERATION_STAGES.savingChanges.label);
                 return await syncAndPublish({
                     storefrontPath,
                     commitMessage,
                     githubRepo,
                     githubToken,
                     daLiveToken,
+                    onStep: stepOn(progress),
                 });
             } catch (err) {
                 if (err instanceof PushRejectedError && err.reason === 'ruleset') {
@@ -130,7 +187,7 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         if (rulesetRejection) {
             await this.showError(rulesetRejection.message, rulesetRejection);
-            return;
+            return { success: false, error: rulesetRejection.message };
         }
 
         // Report the plain-sync outcome AFTER the progress notification closes.
@@ -139,7 +196,10 @@ export class SyncStorefrontCommand extends BaseCommand {
         // held the "Saving your storefront changes…" spinner open until the user dismissed it.
         if (result) {
             await this.reportSyncResult(result, project);
+            return { success: true };
         }
+        // The rebase path reported its own outcome; nothing left to say here.
+        return { success: false, cancelled: true };
     }
 
     /**
@@ -152,7 +212,7 @@ export class SyncStorefrontCommand extends BaseCommand {
      */
     private async handlePushRejected(args: {
         storefrontPath: string;
-        progress: vscode.Progress<{ message?: string }>;
+        progress: SyncProgress;
         githubToken?: string;
         daLiveToken?: string;
         githubRepo?: { owner: string; site: string; branch?: string };
@@ -161,7 +221,8 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         // Plain words: a producer syncing a storefront has never heard of a
         // rebase, and this fires during an operation they cannot cancel.
-        progress.report({ message: 'Someone else changed the storefront — merging their work in' });
+        const step = stepOn(progress);
+        step(OPERATION_STAGES.mergingChanges.label);
 
         const rebaseOutcome = await this.attemptRebase(storefrontPath);
         if (rebaseOutcome === 'clean') {
@@ -200,11 +261,14 @@ export class SyncStorefrontCommand extends BaseCommand {
         }
 
         // Conflict path — open Source Control, poll until clear, decide based on user action.
-        const action = await vscode.window.showWarningMessage(
-            'Demo Builder pulled the latest changes and found conflicts that need your input. ' +
-                'Resolve each conflict in the Source Control panel (Accept Current / Incoming / Both buttons), ' +
-                'then click Continue. Cancel undoes the pull and leaves your storefront exactly as it was.',
-            { modal: true },
+        const action = await askDuringOperation(
+            {
+                title: 'Resolve the conflicts',
+                message:
+                    'Demo Builder pulled the latest changes and found conflicts that need your input. ' +
+                    'Resolve each conflict in the Source Control panel (Accept Current / Incoming / Both buttons), ' +
+                    'then click Continue. Cancel undoes the pull and leaves your storefront exactly as it was.',
+            },
             'Continue',
             'Cancel and Reset',
         );
@@ -215,9 +279,7 @@ export class SyncStorefrontCommand extends BaseCommand {
             return;
         }
 
-        progress.report({
-            message: 'Waiting for you to resolve the overlapping changes in Source Control',
-        });
+        step(OPERATION_STAGES.waitingForMerge.label);
         await this.revealStorefrontConflicts(storefrontPath);
 
         try {
@@ -237,7 +299,7 @@ export class SyncStorefrontCommand extends BaseCommand {
             return;
         }
 
-        progress.report({ message: 'Finishing the merge' });
+        step(OPERATION_STAGES.finishingMerge.label);
         try {
             await execFile('git', ['-C', storefrontPath, 'rebase', '--continue']);
         } catch (err) {
@@ -328,7 +390,7 @@ export class SyncStorefrontCommand extends BaseCommand {
 
     private async completePushAfterRebase(args: {
         storefrontPath: string;
-        progress: vscode.Progress<{ message?: string }>;
+        progress: SyncProgress;
         githubToken?: string;
         daLiveToken?: string;
         githubRepo?: { owner: string; site: string; branch?: string };
@@ -347,8 +409,8 @@ export class SyncStorefrontCommand extends BaseCommand {
         // commits push through the same code path as a fresh sync — token
         // injection, push semantics, and Helix preview+publish all stay in
         // one place. The rebase has already produced the commits we want to
-        // push, so we skip the stage + commit phase.
-        progress.report({ message: 'Pushing to GitHub' });
+        // push, so we skip the stage + commit phase. The service names the push
+        // and the code publish as they start.
         let result: SyncAndPublishResult;
         try {
             result = await syncAndPublish({
@@ -358,6 +420,7 @@ export class SyncStorefrontCommand extends BaseCommand {
                 daLiveToken,
                 githubRepo,
                 skipCommit: true,
+                onStep: stepOn(progress),
             });
         } catch (err) {
             if (err instanceof HelixApiError) {

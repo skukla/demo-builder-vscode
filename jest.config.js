@@ -1,3 +1,20 @@
+// Node 24's V8 can crash a Jest worker in its garbage collector: SIGSEGV at 0xe in
+// `ClearStaleLeftTrimmedPointerVisitor::VisitRootPointers`, a random suite each run,
+// reported as "A jest worker process ... was terminated by another process:
+// signal=SIGSEGV". It is a V8 bug in the Sparkplug baseline compiler
+// (https://github.com/nodejs/node/issues/62393), fixed in Node 25+ and not yet in any
+// 24.x release. Measured here 2026-10-13: Node 24.21.0 crashed 7 full runs of 7; with
+// `--no-sparkplug`, 2 of 2 clean at the same speed.
+//
+// Jest hands each worker the parent's `process.execArgv` when it forks it, so adding
+// the flag here reaches every worker however the run was started (`npm run gate`,
+// `npx jest`, the pre-push hook). Node refuses it in NODE_OPTIONS. Remove this when the
+// Node 24 release in use carries the V8 fix and repeated full runs without it stop
+// producing `node-*.ips` crash reports in ~/Library/Logs/DiagnosticReports.
+if (!process.execArgv.includes('--no-sparkplug')) {
+  process.execArgv.push('--no-sparkplug');
+}
+
 module.exports = {
   roots: ['<rootDir>/tests'],
 
@@ -93,7 +110,6 @@ module.exports = {
         '^@/services/(.*)$': '<rootDir>/src/services/$1',
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
-        '^@/utils/(.*)$': '<rootDir>/src/utils/$1',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
         '^@octokit/core$': '<rootDir>/tests/__mocks__/@octokit/core.ts',
@@ -161,7 +177,6 @@ module.exports = {
         '^@/services/(.*)$': '<rootDir>/src/services/$1',
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
-        '^@/utils/(.*)$': '<rootDir>/src/utils/$1',
         // Style mocks
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         // Adobe Spectrum mocks - prevents loading ~6MB library

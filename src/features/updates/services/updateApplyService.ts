@@ -1,91 +1,83 @@
 /**
- * Headless update-apply service.
- *
- * The `perform*` functions in `commands/updateExecutor.ts` drive updates from the
- * QuickPick command — they own the UI shell (running-demo prompts, progress
- * notifications, summary toasts). This module is the modal-free counterpart used
- * by the MCP `apply_updates` tool: it computes what's available for a project and
- * applies it, returning structured per-category results instead of showing UI.
+ * The update apply: the ONE path both surfaces use (PL-80). The MCP `apply_updates`
+ * tool and the Updates modal on the projects list each hand it the set
+ * `updateSelections.ts` computed, and it returns structured per-category results
+ * instead of showing UI. Until 2026-10-20 the Check for Updates picker had its own
+ * apply beside this one (`commands/updateExecutor.ts`, deleted).
  *
  * The substantive work lives in shared services (ForkSyncService, TemplateSync-
  * Service, ComponentUpdater, ...) and — for the snapshot/marker-bearing block
- * library logic — in `applyBlockLibraryUpdateResolved`, which both paths call.
- * The only thing that diverges here is the thin per-item loop + result shaping.
+ * library logic — in `applyBlockLibraryUpdateResolved`. This module is the thin
+ * per-item loop and the result shaping.
  *
  * Headless block-library policy: when `demoBuilder.blockLibraries.syncBehavior`
  * is `ask` (which would prompt in the UI), this resolves to the SAFE `disabled`
  * action — it records the upstream marker without overwriting local edits, and
  * reports the library as deferred. Set the behavior to `enabled` to apply.
+ *
+ * A caller with a person to ask (the Updates modal, PL-80) passes `questions`: the
+ * `ask` setting and a template merge conflict are then asked rather than defaulted.
+ * One that shows each update as it goes passes `onItem` (`updateApplyEach.ts`).
  */
 
 import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
-import { getTemplateSource, shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
-import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
-import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
+import { describeUpdateLeftOut } from '@/features/eds/services/addedEntriesRecord';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
+import {
+    applyBlockLibraryInstall,
+    describeInstallOutcome,
+} from '@/features/updates/services/blockLibraryInstall';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
+import { applyIntegrationUpdates } from '@/features/updates/services/integrationUpdates';
+import { refreshLocalStorefronts } from '@/features/updates/services/localStorefrontRefresh';
+import { eachItem, watchingDone, type DescribeItem, type ItemObserver } from '@/features/updates/services/updateApplyEach';
+import { applyFinish } from '@/features/updates/services/updateApplyFinish';
 import {
-    TemplateSyncService,
-    type TemplateSyncResult,
-} from '@/features/updates/services/templateSyncService';
-import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
+    answeredClashOutcome,
+    emptyResult,
+    mergeInto,
+    outcomeOf,
+    type ApplyUpdatesResult,
+    type CategoryResult,
+    type ItemOutcome,
+} from '@/features/updates/services/updateApplyResult';
+import {
+    applyBoilerplate,
+    applyTemplate,
+    type OnProgress,
+    type TemplateConflictPolicy,
+    type UpdateQuestions,
+} from '@/features/updates/services/updateApplyTemplate';
 import {
     applyBlockLibraryUpdateResolved,
     updateCommitShaWithRollback,
     type UpdateContext,
 } from '@/features/updates/services/updateCore';
-import { UpdateManager } from '@/features/updates/services/updateManager';
+import type { UpdateSelections } from '@/features/updates/services/updateSelections';
+import { inOrder, projectsOf, selectionsWhere } from '@/features/updates/services/updateSelectionsByProject';
+import { shouldSkipBlockLibrary } from '@/features/updates/services/updateSources';
 import type { Project } from '@/types/base';
-import type { InstalledBlockLibrary } from '@/types/blockLibraries';
-import type { HandlerContext } from '@/types/handlers';
 
-// ==========================================================
-// Types
-// ==========================================================
+export type { TemplateConflictPolicy, UpdateQuestions } from '@/features/updates/services/updateApplyTemplate';
 
-/** Minimal, UI-free selection fields each apply core needs. */
-export interface UpdateSelections {
-    forkSync: Array<{ owner: string; repo: string; branch: string }>;
-    template: Array<{ project: Project }>;
-    component: Array<{
-        project: Project;
-        componentId: string;
-        latestVersion: string;
-        downloadUrl?: string;
-    }>;
-    adobeMcp: Array<{ project: Project; packageName: string; latestVersion: string }>;
-    blockLibrary: Array<{ project: Project; library: InstalledBlockLibrary; latestCommit: string }>;
-    inspector: Array<{ project: Project; latestCommit: string }>;
+/** How an apply decides what a person would be asked, and who hears each item. */
+export interface ApplyUpdatesOptions {
+    templateConflicts?: TemplateConflictPolicy;
+    questions?: UpdateQuestions;
+    onItem?: ItemObserver;
+    /** Project paths, first to last: the order the Updates modal lists them in. */
+    projectOrder?: readonly string[];
+    /** Told as each project's local copy starts and ends being brought up to GitHub. */
+    onLocalCopy?: (project: Project, outcome: ItemOutcome) => void;
 }
 
-/** Per-category outcome. */
-export interface CategoryResult {
-    successCount: number;
-    failCount: number;
-    /** Human-readable per-item failures (sanitized). */
-    errors: string[];
-    /** Block libraries deferred under the headless 'ask' → 'disabled' policy. */
-    deferred?: string[];
-}
+/** A library kept under the `ask` setting: the core records only its name. */
+const KEPT_BLOCKS: DescribeItem = (result) => outcomeOf(result, () => 'Not updated — your blocks were kept.');
 
-/** Aggregate outcome across all categories. */
-export interface ApplyUpdatesResult {
-    forkSync: CategoryResult;
-    template: CategoryResult;
-    component: CategoryResult;
-    adobeMcp: CategoryResult;
-    addon: CategoryResult;
-    totalApplied: number;
-    totalFailed: number;
-}
-
-type OnProgress = (message: string) => void;
-
-function emptyResult(): CategoryResult {
-    return { successCount: 0, failCount: 0, errors: [] };
-}
 
 // ==========================================================
 // Per-category apply cores (modal-free)
@@ -100,7 +92,7 @@ async function applyForkSync(
     if (items.length === 0) return result;
     const svc = new ForkSyncService(ctx.secrets, ctx.logger);
     for (const item of items) {
-        onProgress?.(`Syncing fork ${item.owner}/${item.repo}`);
+        onProgress?.(S.syncingSourceRepos.label, `${item.owner}/${item.repo}`);
         try {
             const r = await svc.syncFork(item.owner, item.repo, item.branch);
             if (r.success) {
@@ -126,57 +118,6 @@ async function applyForkSync(
     return result;
 }
 
-/**
- * What a headless template update does when the merge stops on conflicts.
- * `stop` (the default) reports the files and changes nothing; `reset` replaces
- * them with the template's version — only when the caller asked for exactly that.
- */
-export type TemplateConflictPolicy = 'stop' | 'reset';
-
-export interface ApplyUpdatesOptions {
-    templateConflicts?: TemplateConflictPolicy;
-}
-
-async function syncTemplateHeadless(
-    svc: TemplateSyncService,
-    project: Project,
-    policy: TemplateConflictPolicy,
-): Promise<TemplateSyncResult> {
-    const merged = await svc.syncWithTemplate(project, { strategy: 'merge' });
-    if (merged.success || !merged.conflicts?.length || policy !== 'reset') return merged;
-    return svc.syncWithTemplate(project, { strategy: 'reset' });
-}
-
-async function applyTemplate(
-    items: UpdateSelections['template'],
-    ctx: UpdateContext,
-    onProgress?: OnProgress,
-    policy: TemplateConflictPolicy = 'stop',
-): Promise<{ result: CategoryResult; succeededPaths: Set<string> }> {
-    const result = emptyResult();
-    const succeededPaths = new Set<string>();
-    if (items.length === 0) return { result, succeededPaths };
-    const svc = new TemplateSyncService(ctx.secrets, ctx.logger, ctx.commandManager);
-    for (const { project } of items) {
-        onProgress?.(`Syncing template for ${project.name}`);
-        try {
-            const r = await syncTemplateHeadless(svc, project, policy);
-            if (r.success) {
-                await svc.updateLastSyncedCommit(project, r.syncedCommit, ctx.stateManager);
-                succeededPaths.add(project.path);
-                result.successCount++;
-                ctx.logger.info(`[Updates] Template synced for ${project.name} (${r.strategy})`);
-            } else {
-                throw new Error(r.error || 'Unknown error');
-            }
-        } catch (error) {
-            result.failCount++;
-            result.errors.push(`${project.name}: ${sanitizeErrorForLogging(error as Error)}`);
-            ctx.logger.error(`[Updates] Template sync failed for ${project.name}`, error as Error);
-        }
-    }
-    return { result, succeededPaths };
-}
 
 async function applyComponents(
     items: UpdateSelections['component'],
@@ -186,7 +127,7 @@ async function applyComponents(
     const result = emptyResult();
     if (items.length === 0) return result;
 
-    // Group by project so we save once per project (mirrors performComponentUpdates).
+    // Group by project so we save once per project.
     const byProject = new Map<string, { project: Project; items: UpdateSelections['component'] }>();
     for (const item of items) {
         const entry = byProject.get(item.project.path) ?? { project: item.project, items: [] };
@@ -198,7 +139,9 @@ async function applyComponents(
     for (const { project, items: updates } of byProject.values()) {
         for (const update of updates) {
             if (!update.downloadUrl) continue;
-            onProgress?.(`Updating ${update.componentId} in ${project.name}`);
+            // Its display name, not its id: line 2 reads as a phrase (owner, 2026-10-16).
+            const shown = project.componentInstances?.[update.componentId]?.name ?? update.componentId;
+            onProgress?.(S.updatingComponents.label, `${shown} in ${project.name}`);
             try {
                 await updater.updateComponent(
                     project,
@@ -232,14 +175,13 @@ async function applyAdobeMcp(
     const result = emptyResult();
     // No empty-list return here: unlike its siblings this core constructs no
     // service, so the loop below already does nothing for nothing.
-    // The npm-update → regenerate → persist sequence lives in the ONE shared
-    // core (adobeMcpUpdateCore.ts), which the interactive sibling
-    // `performAdobeMcpUpdates` also calls. This loop only shapes results.
+    // The npm-update → regenerate → persist sequence lives in its own core
+    // (adobeMcpUpdateCore.ts). This loop only shapes results.
     // (Until 2026-08-04 this path carried its own copy that ran `npm update`
     // in the STOREFRONT dir — a silent no-op that re-offered the same update
     // forever. The shared core is what makes that drift impossible now.)
     for (const { project, packageName, latestVersion } of items) {
-        onProgress?.(`Updating ${packageName} → ${latestVersion} in ${project.name}`);
+        onProgress?.(S.updatingAiTools.label, `${packageName} ${latestVersion} in ${project.name}`);
         try {
             await applyAdobeMcpUpdate(project, packageName, latestVersion, ctx);
             result.successCount++;
@@ -261,15 +203,19 @@ async function applyAddons(
     succeededTemplatePaths: Set<string>,
     ctx: UpdateContext,
     onProgress?: OnProgress,
+    questions?: UpdateQuestions,
 ): Promise<CategoryResult> {
     const result = emptyResult();
 
-    // Headless 'ask' → safe 'disabled' (record marker; do not overwrite local edits).
+    // 'ask' asks a person when there is one; headless, it is the safe 'disabled'
+    // (record the marker; do not overwrite local edits).
     const setting = vscode.workspace
         .getConfiguration('demoBuilder.blockLibraries')
         .get<'ask' | 'enabled' | 'disabled'>('syncBehavior', 'ask');
-    const effectiveBehavior: 'enabled' | 'disabled' =
-        setting === 'enabled' ? 'enabled' : 'disabled';
+    const behaviorFor = async (item: UpdateSelections['blockLibrary'][number]): Promise<'enabled' | 'disabled'> => {
+        if (setting !== 'ask') return setting === 'enabled' ? 'enabled' : 'disabled';
+        return (await questions?.replaceLibraryBlocks(item.library.name, item.project)) ? 'enabled' : 'disabled';
+    };
 
     for (const item of blockLibraries) {
         if (shouldSkipBlockLibrary(item.library, item.project, succeededTemplatePaths)) {
@@ -278,12 +224,14 @@ async function applyAddons(
             );
             continue;
         }
-        onProgress?.(`Updating block library ${item.library.name}`);
+        onProgress?.(S.updatingAddOns.label, item.library.name);
         try {
-            await applyBlockLibraryUpdateResolved(item, effectiveBehavior, ctx);
-            // 'ask' always resolves to 'disabled' above, so the setting alone says
-            // whether this was a deferral rather than the user's own choice.
-            if (setting === 'ask') {
+            const behavior = await behaviorFor(item);
+            const leftOut = await applyBlockLibraryUpdateResolved(item, behavior, ctx);
+            const note = describeUpdateLeftOut(item, leftOut);
+            if (note) (result.leftOut ??= []).push(note);
+            // Kept under 'ask', by a person's answer or by the headless default: not applied.
+            if (setting === 'ask' && behavior === 'disabled') {
                 (result.deferred ??= []).push(item.library.name);
             } else {
                 result.successCount++;
@@ -299,7 +247,7 @@ async function applyAddons(
     }
 
     for (const item of inspector) {
-        onProgress?.(`Updating Inspector SDK in ${item.project.name}`);
+        onProgress?.(S.updatingAddOns.label, `Inspector SDK in ${item.project.name}`);
         try {
             await updateCommitShaWithRollback(
                 item.project.installedInspectorSdk,
@@ -323,14 +271,97 @@ async function applyAddons(
     return result;
 }
 
+/**
+ * Install each selected-but-missing block library. Not gated by
+ * `syncBehavior`: an install only adds block folders that are not in the
+ * storefront yet (see blockLibraryInstall.ts), and the caller's `confirm:true`
+ * is the consent for the commit it makes.
+ */
+async function applyBlockLibraryInstalls(
+    items: UpdateSelections['blockLibraryInstall'],
+    ctx: UpdateContext,
+    onProgress?: OnProgress,
+): Promise<CategoryResult> {
+    const result = emptyResult();
+    for (const item of items) {
+        onProgress?.(S.addingBlockLibraries.label, item.library.name);
+        try {
+            const outcome = await applyBlockLibraryInstall(item, ctx);
+            result.successCount++;
+            (result.installed ??= []).push(describeInstallOutcome(outcome, getProjectDisplayName(item.project)));
+        } catch (error) {
+            result.failCount++;
+            result.errors.push(`${item.library.name}: ${sanitizeErrorForLogging(error as Error)}`);
+            ctx.logger.error(
+                `[Updates] Failed to install block library "${item.library.name}"`,
+                error as Error,
+            );
+        }
+    }
+    return result;
+}
+
 // ==========================================================
 // Orchestrator
 // ==========================================================
 
+/** The categories an apply reports, each the sum of its projects'. */
+type CategoryKey = Exclude<keyof ApplyUpdatesResult, 'totalApplied' | 'totalFailed'>;
+
+/** What every core in one apply shares. */
+interface ApplyRun {
+    ctx: UpdateContext;
+    onProgress?: OnProgress;
+    options: ApplyUpdatesOptions;
+    onItem?: ItemObserver;
+    /** The items that applied, when told item by item; unknown otherwise. */
+    done?: ReadonlySet<object>;
+}
+
 /**
- * Apply all selected updates headlessly, in the same category order the QuickPick
- * command uses (fork → template → components → Adobe MCP → add-ons), threading
- * template-sync successes into the add-on dedup.
+ * One project's updates, in its kinds' order, each added to its category's result; then
+ * its local copy brought up to what they wrote.
+ */
+async function applyProject(s: UpdateSelections, run: ApplyRun, into: Record<CategoryKey, CategoryResult>): Promise<void> {
+    const { ctx, onProgress, onItem } = run;
+    const { questions, templateConflicts: policy } = run.options;
+    const add = (key: CategoryKey, result: CategoryResult): void => mergeInto(into[key], result);
+    // First among the storefront writes: a fixed clash finishes before anything else moves the repository.
+    add('finish', await eachItem('finish', s.finish, (some) => applyFinish(some, ctx, onProgress, questions), onItem));
+    const succeededPaths = new Set<string>();
+    add('template', await eachItem('template', s.template, async (some) => {
+        const applied = await applyTemplate(some, ctx, onProgress, policy, questions);
+        applied.succeededPaths.forEach((path) => succeededPaths.add(path));
+        return applied.result;
+    }, onItem, answeredClashOutcome));
+    add('boilerplate', await eachItem('boilerplate', s.boilerplate, (some) =>
+        applyBoilerplate(some, ctx, onProgress, policy, questions), onItem, answeredClashOutcome));
+    add('component', await eachItem('component', s.component, (some) => applyComponents(some, ctx, onProgress), onItem));
+    add('adobeMcp', await eachItem('adobeMcp', s.adobeMcp, (some) => applyAdobeMcp(some, ctx, onProgress), onItem));
+    // Libraries first, then the Inspector SDK: one category, as the agent reads it.
+    add('addon', await eachItem('blockLibrary', s.blockLibrary, (some) =>
+        applyAddons(some, [], succeededPaths, ctx, onProgress, questions), onItem, KEPT_BLOCKS));
+    add('addon', await eachItem('inspector', s.inspector, (some) =>
+        applyAddons([], some, succeededPaths, ctx, onProgress, questions), onItem));
+    add('blockLibraryInstall', await eachItem('blockLibraryInstall', s.blockLibraryInstall, (some) =>
+        applyBlockLibraryInstalls(some, ctx, onProgress), onItem));
+    add('integration', await eachItem('integration', s.integration, (some) =>
+        applyIntegrationUpdates(some, ctx, onProgress), onItem));
+    // Every kind above that writes a storefront writes it on GitHub; the local copy agents
+    // edit is brought up to it here (EDS-57). Told item by item, only what applied wrote.
+    const wrote = [...s.template, ...s.boilerplate, ...s.blockLibrary, ...s.blockLibraryInstall]
+        .filter((item) => !run.done || run.done.has(item))
+        .map((item) => item.project);
+    if (wrote.length > 0) await refreshLocalStorefronts(wrote, ctx, onProgress, run.options.onLocalCopy);
+}
+
+/**
+ * Apply all selected updates: the template repositories first, since a project's template
+ * update reads from them, then one project at a time (in `projectOrder`, the Updates
+ * modal's, when given), each in its kinds' order (`PROJECT_SELECTION_KINDS`). It ran by
+ * kind across every project until 2026-10-21, which moved the modal's run out of the
+ * order it lists (owner). Each category's result is the sum of its projects', so the
+ * agent reads the same totals either way.
  */
 export async function applyUpdatesHeadless(
     selections: UpdateSelections,
@@ -338,150 +369,26 @@ export async function applyUpdatesHeadless(
     onProgress?: OnProgress,
     options: ApplyUpdatesOptions = {},
 ): Promise<ApplyUpdatesResult> {
-    const forkSync = await applyForkSync(selections.forkSync, ctx, onProgress);
-    const { result: template, succeededPaths } = await applyTemplate(
-        selections.template,
-        ctx,
-        onProgress,
-        options.templateConflicts,
-    );
-    const component = await applyComponents(selections.component, ctx, onProgress);
-    const adobeMcp = await applyAdobeMcp(selections.adobeMcp, ctx, onProgress);
-    const addon = await applyAddons(
-        selections.blockLibrary,
-        selections.inspector,
-        succeededPaths,
-        ctx,
-        onProgress,
-    );
-
-    const cats = [forkSync, template, component, adobeMcp, addon];
+    const { onItem, done } = watchingDone(options.onItem);
+    const run: ApplyRun = { ctx, onProgress, options, onItem, done };
+    const into: Record<CategoryKey, CategoryResult> = {
+        forkSync: await eachItem('forkSync', selections.forkSync, (some) => applyForkSync(some, ctx, onProgress), onItem),
+        finish: emptyResult(),
+        template: emptyResult(),
+        boilerplate: emptyResult(),
+        component: emptyResult(),
+        adobeMcp: emptyResult(),
+        addon: emptyResult(),
+        blockLibraryInstall: emptyResult(),
+        integration: emptyResult(),
+    };
+    for (const project of inOrder(projectsOf(selections), options.projectOrder)) {
+        await applyProject(selectionsWhere(selections, (p) => p.path === project.path), run, into);
+    }
+    const cats = Object.values(into);
     return {
-        forkSync,
-        template,
-        component,
-        adobeMcp,
-        addon,
-        totalApplied: cats.reduce((s, c) => s + c.successCount, 0),
-        totalFailed: cats.reduce((s, c) => s + c.failCount, 0),
+        ...into,
+        totalApplied: cats.reduce((sum, c) => sum + c.successCount, 0),
+        totalFailed: cats.reduce((sum, c) => sum + c.failCount, 0),
     };
-}
-
-// ==========================================================
-// Selection computation (single project)
-// ==========================================================
-
-/**
- * Compute available updates for ONE project across all categories, reusing the
- * same checker services the QuickPick command uses. Each category degrades
- * independently — a checker failure logs and yields an empty list rather than
- * aborting the whole computation.
- */
-export async function computeProjectUpdateSelections(
-    project: Project,
-    handlerCtx: HandlerContext,
-): Promise<UpdateSelections> {
-    const { secrets } = handlerCtx.context;
-    const logger = handlerCtx.logger;
-    const selections: UpdateSelections = {
-        forkSync: [],
-        template: [],
-        component: [],
-        adobeMcp: [],
-        blockLibrary: [],
-        inspector: [],
-    };
-
-    // Fork sync
-    try {
-        const source = getTemplateSource(project);
-        if (source) {
-            const status = await new ForkSyncService(secrets, logger).checkForkStatus(
-                source.owner,
-                source.repo,
-            );
-            if (status?.isFork && status.behindBy > 0) {
-                selections.forkSync.push({
-                    owner: source.owner,
-                    repo: source.repo,
-                    branch: status.defaultBranch || 'main',
-                });
-            }
-        }
-    } catch (error) {
-        logger.warn(`[Updates] Fork sync check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    // Template
-    try {
-        const t = await new TemplateUpdateChecker(secrets, logger).checkForUpdates(project);
-        if (t?.hasUpdates) selections.template.push({ project });
-    } catch (error) {
-        logger.warn(`[Updates] Template check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    // Components
-    try {
-        const results = await new UpdateManager(
-            handlerCtx.context,
-            logger,
-        ).checkAllProjectsForUpdates([project]);
-        for (const r of results) {
-            const outdated = r.outdatedProjects.some((o) => o.project.path === project.path);
-            if (outdated && r.releaseInfo?.downloadUrl) {
-                selections.component.push({
-                    project,
-                    componentId: r.componentId,
-                    latestVersion: r.latestVersion,
-                    downloadUrl: r.releaseInfo.downloadUrl,
-                });
-            }
-        }
-    } catch (error) {
-        logger.warn(`[Updates] Component check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    // Adobe MCP
-    try {
-        const a = await new AdobeMcpUpdateChecker(secrets, logger).checkForUpdates(project);
-        if (a?.hasUpdate)
-            selections.adobeMcp.push({
-                project,
-                packageName: a.packageName,
-                latestVersion: a.latestVersion,
-            });
-    } catch (error) {
-        logger.warn(`[Updates] Adobe MCP check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    // Add-ons (block libraries + inspector)
-    try {
-        const checker = new AddonUpdateChecker(secrets, logger);
-        for (const u of await checker.checkBlockLibraries(project)) {
-            selections.blockLibrary.push({
-                project,
-                library: u.library,
-                latestCommit: u.latestCommit,
-            });
-        }
-        const insp = await checker.checkInspectorSdk(project);
-        if (insp?.hasUpdate)
-            selections.inspector.push({ project, latestCommit: insp.latestCommit });
-    } catch (error) {
-        logger.warn(`[Updates] Add-on check failed: ${sanitizeErrorForLogging(error as Error)}`);
-    }
-
-    return selections;
-}
-
-/** Total number of pending updates across a selection set. */
-export function countSelections(selections: UpdateSelections): number {
-    return (
-        selections.forkSync.length +
-        selections.template.length +
-        selections.component.length +
-        selections.adobeMcp.length +
-        selections.blockLibrary.length +
-        selections.inspector.length
-    );
 }

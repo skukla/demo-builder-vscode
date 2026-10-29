@@ -1,0 +1,250 @@
+/**
+ * Demo Builder fills the ERP from Commerce (AB-26y step 1, owner 2026-09-25): the copy that
+ * gives a demo ERP its products, customers and structure, run by Demo Builder rather than by
+ * the integration, because copying Commerce is demo setup and not something a real
+ * integration does.
+ *
+ * It reads Commerce with the project's signed client, asks the ERP integration which
+ * settings are in force (each website's sales organisation, which products this ERP owns —
+ * decided across every ERP's rule, `ownedSkusAcross`, AB-72), and writes the ERP through its
+ * ordinary import: partners and the structure first, then products in batches, the way the
+ * integration's mirror did.
+ *
+ * @module features/app-builder/services/erpFill
+ */
+
+import { seedFrom, type CommercePost, type ErpSeed } from './erpFillPricing';
+import { listCompanies, listCustomerGroupCodes, listProducts, listSharedCatalogs, listSources, listStock, listVariantAttributes, listWebsites, storeConfigs, tierPricesFor } from './erpFillReaders';
+import {
+    ownedRowOf,
+    partnersFrom,
+    productsFrom,
+    salesOrgOf,
+    structureFrom,
+    structureWebsites,
+    type CommerceCompanyRow,
+    type CommerceProductRow,
+    type ErpPartnerRow,
+    type ErpProductRow,
+    type ErpSettings,
+    type ErpStructure,
+} from './erpFillRows';
+import { describeOwnsAcross, ownedSkusAcross, ownsRuleOf } from './erpOwnership';
+import type { CommerceGet } from '@/types/commerceWire';
+import type { ErpOwnsEntry } from '@/types/erpOwnership';
+
+/** The integration's settings in force (`GET erp/settings?websites=`). */
+export interface ResolvedErpSettings {
+    default: ErpSettings;
+    websites: Record<string, ErpSettings>;
+}
+
+/** One body of the ERP's `POST admin/import`. */
+export interface ErpImportBody {
+    partners?: ErpPartnerRow[];
+    products?: ErpProductRow[];
+    projectName?: string;
+    structure?: ErpStructure;
+    /** The one-time pricing seed (AB-44), sent last so its groups and lists follow the records. */
+    seed?: ErpSeed;
+}
+
+/** One row of the integration's key map (its `erp/keymap`): which Commerce record is which ERP record. */
+export interface ErpKeyMapEntry {
+    kind: 'customer';
+    commerce: string;
+    erp: string;
+    /** The ERP the pair belongs to, by its list id; absent = the integration's first ERP. */
+    erpId?: string;
+}
+
+export interface ErpFillDeps {
+    get: CommerceGet;
+    /** A Commerce POST, for the tier-price read the pricing seed needs; absent → no price lists seeded. */
+    post?: CommercePost;
+    settings: (websiteCodes: string[]) => Promise<ResolvedErpSettings>;
+    /** The ERP's id in the integration's list, the one its rule is resolved for. */
+    listId: string;
+    /**
+     * The rules of the OTHER ERPs the integration serves (AB-72): which products this ERP
+     * owns is decided across every rule (a product rule first, then the ERP on everything,
+     * then website rules), never by its own rule alone.
+     */
+    otherErps: () => Promise<ErpOwnsEntry[]>;
+    /** The ERP's import; throws with the ERP's own words when it refuses. */
+    importRecords: (body: ErpImportBody) => Promise<void>;
+    /**
+     * Hand the integration the key map, whole. `false` when the integration keeps none: one
+     * deployed before it had `erp/keymap`, which must still fill (it matches by Commerce ids).
+     */
+    saveKeyMap: (entries: ErpKeyMapEntry[]) => Promise<boolean>;
+    onProgress?: (message: string) => void;
+    /**
+     * Products that moved between ERPs: only these of the ERP's own are sent, and the
+     * customers, structure and key map, which a move does not change, are left as they are
+     * (owner, 2026-10-19: moving one product re-sent all 223). The pricing seed still runs on
+     * everything the ERP owns: the ERP adds a price list per seed, so a seed of the moved
+     * products alone would change how it prices the rest. Absent, everything is sent.
+     */
+    onlySkus?: readonly string[];
+    /**
+     * The project's own Commerce website (its store scope): the home of the ERP's default
+     * sales organisation in the structure it is sent (`structureWebsites`). Absent, every
+     * website is named, as before.
+     */
+    homeWebsite?: string;
+}
+
+export interface ErpFillResult {
+    partners: number;
+    products: number;
+    /** Products another ERP owns once every rule is applied, left out. */
+    skipped: number;
+    /** What this ERP owns, in words, when something was left out. */
+    owns?: string;
+    /** Customers in the key map handed to the integration; absent when it keeps none. */
+    paired?: number;
+}
+
+/**
+ * Products per import request: small, so each request stays well under Runtime's 1 MB
+ * limit and progress moves more than once for a typical demo catalogue (the mirror's
+ * reasoning, `PRODUCT_BATCH`).
+ */
+export const PRODUCT_BATCH = 25;
+
+function batches<T>(rows: T[], size: number): T[][] {
+    const out: T[][] = [];
+    for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
+    // An empty catalog still sends one products import: that is what stamps the ERP's last import.
+    return out.length > 0 ? out : [[]];
+}
+
+/** What Commerce and the integration say, read in one pass. */
+async function readEverything(deps: ErpFillDeps) {
+    const [products, stock, companies, sourceNames, websites, configs] = await Promise.all([
+        listProducts(deps.get),
+        listStock(deps.get),
+        listCompanies(deps.get),
+        listSources(deps.get),
+        listWebsites(deps.get),
+        storeConfigs(deps.get),
+    ]);
+    const settings = await deps.settings(websites.map((site) => site.code));
+    const attributeIds = [...new Set(products.flatMap((p) => p.optionAttributeIds))];
+    const attributes = await listVariantAttributes(deps.get, attributeIds);
+    return { products, stock, companies, sourceNames, websites, configs, settings, attributes };
+}
+
+/**
+ * Fill the ERP from Commerce as it stands.
+ *
+ * @param deps - Commerce, the integration's settings, the ERP's import
+ * @param projectName - the demo's name, for the ERP's default customer
+ * @returns how many partners and products went in, and what was left out
+ */
+export async function fillErp(deps: ErpFillDeps, projectName: string): Promise<ErpFillResult> {
+    deps.onProgress?.('Reading Commerce');
+    const read = await readEverything(deps);
+    const settingsByWebsite = new Map(
+        read.websites.map((site) => [site.id, read.settings.websites[site.code] ?? {}]),
+    );
+    const salesOrgByWebsite = new Map(
+        read.websites.map((site) => [site.id, salesOrgOf(settingsByWebsite.get(site.id)).salesOrg]),
+    );
+    const rule = ownsRuleOf(read.settings.default);
+    const websiteCodeById = new Map(read.websites.map((site) => [site.id, site.code]));
+    const rows = read.products.map((p) => ownedRowOf(p, websiteCodeById));
+    const ownedSkus = ownedSkusAcross(rows, [...(await deps.otherErps()), { erp: deps.listId, owns: rule }], deps.listId);
+    const owned = read.products.filter((p) => ownedSkus.has(p.sku));
+    const partners = partnersFrom(read.companies, read.websites, salesOrgByWebsite);
+    const only = deps.onlySkus ? new Set(deps.onlySkus) : undefined;
+    const sent = only ? owned.filter((product) => only.has(product.sku)) : owned;
+    const products = productsFrom(sent, read.stock, read.sourceNames, read.attributes);
+
+    if (!only) {
+        deps.onProgress?.(`Sending ${partners.length} customers`);
+        const sites = structureWebsites(read.websites, settingsByWebsite, deps.homeWebsite);
+        const structure = structureFrom(sites, read.configs, settingsByWebsite);
+        await deps.importRecords({ partners, projectName, structure });
+    }
+    let done = 0;
+    // In order: the count shown is the count imported so far.
+    for (const batch of batches(products, PRODUCT_BATCH)) {
+        await deps.importRecords({ products: batch });
+        done += batch.length;
+        deps.onProgress?.(`Sent ${done} of ${products.length} products`);
+    }
+    // The one-time pricing seed (AB-44): adopt Commerce's custom shared-catalog pricing — a group
+    // per catalog, each company's group, the catalogs' tier prices as price lists — after the
+    // records it references. Best-effort: a store without shared catalogs seeds nothing.
+    await seedPricing(deps, read.companies, owned);
+    // Last, so the map never names a customer the ERP does not hold yet.
+    // Paired from the companies: the rows the ERP takes carry no Commerce id.
+    const keyMap = read.companies.map(
+        (company, index): ErpKeyMapEntry => ({
+            kind: 'customer',
+            commerce: String(company.id),
+            erp: partners[index].id,
+        }),
+    );
+    // A move changes no customer, so the key map stays as the integration holds it.
+    const kept = only ? false : await deps.saveKeyMap(keyMap);
+    if (!kept && !only) deps.onProgress?.('The integration keeps no key map yet; update it to have one');
+    const skipped = read.products.length - owned.length;
+    return {
+        partners: only ? 0 : partners.length,
+        products: products.length,
+        skipped,
+        ...(skipped > 0 ? { owns: describeOwnsAcross(rule) } : {}),
+        ...(kept ? { paired: keyMap.length } : {}),
+    };
+}
+
+/**
+ * Read Commerce's custom shared catalogs and their tier prices and send them to the ERP as its
+ * price groups and price lists (AB-44). Best-effort and last: a store without shared catalogs
+ * seeds nothing, and a read that fails leaves the filled ERP as it was rather than failing the
+ * fill. `post` is needed for the tier prices; without it only the groups and memberships seed.
+ */
+async function seedPricing(
+    deps: ErpFillDeps,
+    companies: CommerceCompanyRow[],
+    owned: CommerceProductRow[],
+): Promise<void> {
+    try {
+        const catalogs = await listSharedCatalogs(deps.get);
+        if (catalogs.length === 0) return;
+        const groupIds = [
+            ...catalogs.map((catalog) => catalog.customerGroupId),
+            ...companies
+                .map((company) => company.customerGroupId)
+                .filter((id): id is number => id !== null),
+        ];
+        const groupCodes = await listCustomerGroupCodes(deps.get, groupIds);
+        const ownedSkus = new Set(owned.map((product) => product.sku));
+        const tierPrices = deps.post ? await tierPricesFor(deps.post, [...ownedSkus]) : [];
+        const seed = seedFrom({
+            catalogs,
+            groupCodes,
+            companies,
+            tierPrices,
+            ownedSkus,
+            startingDate: new Date().toISOString().slice(0, 10),
+        });
+        if (
+            seed.priceGroups.length === 0 &&
+            seed.partnerGroups.length === 0 &&
+            seed.contracts.length === 0
+        )
+            return;
+        deps.onProgress?.(
+            `Seeding ${seed.priceGroups.length} price group(s) from Commerce's shared catalogs`,
+        );
+        await deps.importRecords({ seed });
+    } catch (error) {
+        deps.onProgress?.(
+            `Pricing seed skipped: ${error instanceof Error ? error.message : String(error)}`,
+        );
+    }
+}

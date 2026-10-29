@@ -14,13 +14,17 @@ import { DataInstallerWriteClient } from '@/features/data-installer/services/dat
 import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
 import type { Project } from '@/types/base';
 
-jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
-}));
 // `PollingService` reads the GLOBAL logger at construction, and the extension
 // host initializes that at activation — which no handler test does. Without this
 // the detached watch dies in its own try/catch and simply never starts, showing
 // up as "watchImportJob was not called" rather than as a logger error.
+// These suites drive the SERVICE engine. Demo Builder's own is the default since 2026-10-28,
+// so they say which one they mean rather than lean on the default. A jest.fn, so a suite that
+// needs the other engine can still choose it.
+jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
+    ...jest.requireActual('@/features/data-installer/services/dataInstallerConfig'),
+    selectedDatapackEngine: jest.fn(() => 'service'),
+}));
 jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
@@ -74,6 +78,8 @@ export function makeStores() {
  */
 export const PAAS_PROJECT: Partial<Project> = {
     name: 'demo-a',
+    // Every project has one; a removal looks beside it for Demo Builder's install record (DI-5).
+    path: '/nonexistent/projects/demo-a',
     componentSelections: { backend: 'adobe-commerce-paas' },
     componentConfigs: {
         'adobe-commerce-paas': {

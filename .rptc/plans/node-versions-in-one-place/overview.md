@@ -1,0 +1,112 @@
+# Plan: Node versions in one place (PR-1a)
+
+**Item:** [[PR-1a]] (child of [[PR-1]]). **Research:**
+`.rptc/research/node-version-management/research.md` (see "Revision, 2026-10-07" and "Live
+verification"). **Status:** steps 0 to 9 built 2026-10-07, step 10 partly (see its note);
+then a pattern audit against the handbook (three reviewers) and its fixes; steps 11 to 14 to
+build. The code's names changed in the audit; this file uses the current ones.
+
+## Goal
+
+Demo Builder keeps no Node version of its own. Each component already says which Node it
+accepts, in its own `package.json` `engines.node`; Demo Builder reads those ranges, picks ONE
+Node that all of them accept, runs everything on it from its own Node folder, and removes what
+it no longer needs. A version rises only when a delivered component's range demands it.
+
+## Decisions (owner, 2026-10-07)
+
+1. **One Node for everything Demo Builder ships**, worked out from the components' ranges, never
+   typed by a person. The rule: the LOWEST long-term-support Node major that every range accepts,
+   at its newest patch. Lowest, so it rises only when a range's floor rises (newest would move
+   new machines to the next LTS on its own).
+2. **Worked out at release time**, across the whole catalog (not per project: a project without
+   the ERP integration would otherwise pick 22 while another picks 24). A release script reads
+   every range and writes the answer into a generated file; it fails when the ranges do not
+   overlap, so a conflict is caught by us, never by an SC. Nothing on an SC's machine depends on
+   reaching GitHub to know its Node.
+3. **Code we do not own follows the same rule at runtime.** The Adobe CLI's range is part of the
+   release-time answer (read from npm). An integration an SC brings from its own repo is read when
+   it is added: reuse the shared Node if its range accepts it, otherwise install the lowest LTS
+   it does accept.
+4. **Demo Builder's own Node folder**, `~/.demo-builder/node/` (fnm's `FNM_DIR`). Everything in it
+   is Demo Builder's, so removing what is unused is always safe; the SC's own fnm is never touched
+   except by the one-time cleanup they confirm (decision 6).
+5. **Unused Nodes are removed automatically** from that folder: anything that is not the shared
+   Node, not what an installed component was last installed under, and not what an outside
+   integration needs.
+6. **The versions earlier releases put in the SC's own fnm are removed once**, with one
+   confirmation: majors 18, 20, 22, 24 ticked, the SC's fnm default listed but not ticked.
+7. The ingestion tool waits on [[DI-4]] (its repo is private and unreadable today).
+
+## Live evidence (2026-10-07)
+
+On Node 24 from `~/.demo-builder/node`: both older mesh repos built, deployed and answered
+queries in a throwaway workspace (deleted after); the headless storefront served its home page;
+the Adobe CLI 11.1.4 and mesh plugin 5.7.3 installed with no engine warnings. The two mesh repos'
+ranges were out of date (14 to 18 only) and the storefront declared none; fixed in the repos
+(`f35b082`, `596d916`, `6b26bbc`). The probe (`npm run node:resolve`, `scripts/resolve-node-version.mjs`) now
+resolves ONE Node, 24.21.0, for everything.
+
+## Steps
+
+| # | Step | Status | Cloud? |
+|---|---|---|---|
+| 0 | Live checks on Node 24 | done | yes (approved) |
+| 1 | One lookup that answers "which Node runs this" (now `core/shell/demoBuilderNode.ts`) | done; step 7 swapped its source | no |
+| 2 | Demo Builder's own Node folder; one call ensures a Node and the Adobe CLI under it | done | no |
+| 3 | Every caller asks that lookup; "auto", the directory scan and the fallback "20"s gone | done | no |
+| 4 | One runner, one reader of what is installed, start uses the folder | done | no |
+| 5 | Prerequisites use one Node set for the CLI and its plugins | done; step 8 simplified plugins | no |
+| 6 | Update records the Node it installed under; `.node-version` no longer written | done | no |
+| 7 | **The release-time resolver and generated file; catalog `nodeVersion` fields deleted** | done | no (reads GitHub/npm) |
+| 8 | **Custom integrations at runtime; plugins installed once** | done | no |
+| 9 | **A release that moves the Node moves installed components with it, in the background** | done (an activation upkeep sweep) | no |
+| 10 | The AI bundle and terminals use the folder | AI tool launch lines and terminals done; the Demo Builder connection and git-sync hook moved to step 11 | no |
+| 11 | **Cleanup: unused Nodes in the folder, the one-time shared-fnm cleanup, uninstall** | to build | no (local, confirmed where it touches the SC's fnm) |
+| 12 | **What the SC sees: the prerequisites step, the add confirmation and progress, the post-update Node, Diagnostics** | to build | no |
+| 13 | Docs, skills, backlog | to build | no |
+| 14 | Live verification on the owner's machine | to build | yes, with the owner's OK |
+
+Each step is a commit with the gate green.
+
+## Where things live now (after the audit)
+
+| Job | Module |
+|---|---|
+| Demo Builder's Node, and a custom integration's | `core/shell/demoBuilderNode.ts` (`demoBuilderNode`, `nodeForAppBuilderEntry`, `nodeForInstall`) over `core/shell/config/node-version.generated.json` |
+| The rule that picks a Node from ranges | `core/shell/nodeRangeRule.ts` |
+| Which sources the release reads | `features/components/services/nodeResolution.ts` + `scripts/resolve-node-version.mjs` (`npm run node:resolve`) |
+| Demo Builder's Node folder (`~/.demo-builder/node`) and the fnm command forms | `core/shell/nodeFolder.ts` |
+| Ensure a Node and the Adobe CLI under it | `core/shell/ensureNodeVersion.ts` (`toolInstalledUnder` is the one "installed?" check) + `features/components/services/nodeEnsure.ts` (commands from the prerequisites manager) |
+| What is installed in the folder | `readNodeFolderList` / `listNodeFolderMajors` in `MultiVersionDetector.ts` |
+| A custom integration's Node at the add door | `features/app-builder/services/customIntegrationNode.ts` + `withCustomIntegrationNode` |
+| Moving installed components when the Node moves | `features/components/services/demoBuilderNodeSweep.ts`, last in the activation upkeep chain |
+| The house check | `tests/sop/node-versions-from-components.test.ts` |
+
+## Migration of an existing installation
+
+| What | How it moves | Step |
+|---|---|---|
+| The machine | The first command that needs the shared Node installs it, with the Adobe CLI, into the folder | 2 (done) |
+| Installed components | Moved to the new Node in the background right after the update that moves it (a running demo catches up after it stops); until then, and if a reinstall fails, they keep running on the Node they were installed under | 6, 9 |
+| The AI bundle | Rewritten by the activation sweep (`AI_CONTEXT_VERSION` bump) | 10 |
+| Adobe sign-in and plugins | Carry over: both live in the SC's user folders, not in a Node (verified 2026-10-07) | none |
+| The SC's own fnm | One confirmation removes what Demo Builder used to install there | 11 |
+| Uninstalling Demo Builder | Its folder is deleted | 11 |
+
+## Surfaces to hit
+
+- **Config field in three places:** step 7 deletes `nodeVersion` from `components.json`,
+  `app-builder-components.json`, `ai-defaults.json`, their schemas and their types together.
+- **Release:** the `cut-release` skill runs the resolver; `tests/sop` pins that the generated
+  file covers exactly the catalog's sources (offline), so adding a component without
+  re-resolving fails the build.
+- **Human and agent surfaces:** prerequisites, integration adds and Start reach both through the
+  same handlers; step 11's shared-fnm cleanup gets a read tool and a confirm-gated tool.
+- **Mocks:** suites that fake the register or the folder.
+
+## Undo
+
+Every step is a commit. The generated file is regenerated by one command. Anything removed from
+the SC's own fnm comes back with `fnm install <major>`; anything removed from the folder comes
+back the next time something needs it.

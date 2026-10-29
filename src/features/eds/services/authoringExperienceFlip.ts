@@ -18,10 +18,8 @@
 
 import * as vscode from 'vscode';
 import { applyDaLiveOrgConfigSettings, getDaLiveAuthService } from '../handlers/edsHelpers';
-import {
-    DaLiveContentOperations,
-    createDaLiveServiceTokenProvider,
-} from './daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from './daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from './daLive/daLiveTokenProviders';
 import { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTokenService } from './github/githubTokenService';
 import type { HelixCodePreview } from './helix/helixCapabilities';
@@ -29,6 +27,7 @@ import { HelixService } from './helix/helixService';
 import { installQuickEdit } from './quickEditPublisher';
 import { republishStorefrontConfig } from './storefront/storefrontRepublishService';
 import { COMPONENT_IDS } from '@/core/constants';
+import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import type { AuthoringExperience, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -115,8 +114,16 @@ async function reapplyEditorPath(
     { context, logger }: AuthoringExperienceFlipDeps,
 ): Promise<'ok' | 'warn'> {
     const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
-    const daLiveOrg = edsInstance?.metadata?.daLiveOrg as string | undefined;
-    const daLiveSite = edsInstance?.metadata?.daLiveSite as string | undefined;
+    // Both halves fall back to the repo: the DA.live org IS the GitHub namespace
+    // and the site name IS the repo name. Read raw, the guard below was true for
+    // every migrated project — the loader strips a site that equals the repo — so
+    // "a missing DA org/site is a no-op" quietly became "this never runs"
+    // (owner sweep, 2026-09-20).
+    const githubRepo = edsInstance?.metadata?.githubRepo as string | undefined;
+    const daLiveOrg =
+        (edsInstance?.metadata?.daLiveOrg as string | undefined) ?? githubRepo?.split('/')[0];
+    const daLiveSite =
+        (edsInstance?.metadata?.daLiveSite as string | undefined) ?? githubRepo?.split('/')[1];
     if (!daLiveOrg || !daLiveSite) {
         return 'ok';
     }
@@ -200,6 +207,7 @@ async function regenerateStorefrontConfig(
             secrets: context.secrets,
             logger,
             persist: saveProject,
+            ensureDaLiveSession: () => ensureDaLiveAuth({ context, logger }, '[Configure]'),
         });
         if (!result.success) {
             logger.warn(

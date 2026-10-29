@@ -296,7 +296,7 @@ describe('ApiAccessPicker', () => {
 
         it('shows a meaningful sdk code but hides GUID and name-equal codes', () => {
             const { container } = renderPicker({ apis: MIXED });
-            const codes = Array.from(container.querySelectorAll('.intflow-api-code')).map(
+            const codes = Array.from(container.querySelectorAll('.checkbox-row-detail')).map(
                 (el) => el.textContent
             );
             expect(codes).toEqual(['GraphQLServiceSDK']);
@@ -335,8 +335,8 @@ describe('ApiAccessPicker', () => {
         it('shows the display name primary with the code as secondary text', () => {
             renderPicker();
             const label = screen.getByText('Adobe Analytics').closest('label');
-            expect(label?.querySelector('.intflow-api-name')?.textContent).toBe('Adobe Analytics');
-            expect(label?.querySelector('.intflow-api-code')?.textContent).toBe('AnalyticsSDK');
+            expect(label?.querySelector('.checkbox-row-label')?.textContent).toBe('Adobe Analytics');
+            expect(label?.querySelector('.checkbox-row-detail')?.textContent).toBe('AnalyticsSDK');
         });
     });
 
@@ -361,7 +361,7 @@ describe('ApiAccessPicker', () => {
             const { container } = renderPicker({
                 apis: withOwnership({ ownership: 'other-required', requiredBy: ['ERP Sync'] }),
             });
-            expect(container.querySelector('.intflow-api-reason')?.textContent).toBe(
+            expect(container.querySelector('.checkbox-row-reason')?.textContent).toBe(
                 'Required by ERP Sync'
             );
         });
@@ -373,7 +373,7 @@ describe('ApiAccessPicker', () => {
                     requiredBy: ['ERP Sync', 'Firefly App'],
                 }),
             });
-            expect(container.querySelector('.intflow-api-reason')?.textContent).toBe(
+            expect(container.querySelector('.checkbox-row-reason')?.textContent).toBe(
                 'Required by ERP Sync and Firefly App'
             );
         });
@@ -383,7 +383,7 @@ describe('ApiAccessPicker', () => {
             const { container } = renderPicker({
                 apis: withOwnership({ ownership: 'baseline', requiredBy: [] }),
             });
-            expect(container.querySelector('.intflow-api-reason')).toBeNull();
+            expect(container.querySelector('.checkbox-row-reason')).toBeNull();
         });
 
         it('says nothing when the holder is unrecoverable', () => {
@@ -391,7 +391,7 @@ describe('ApiAccessPicker', () => {
             const { container } = renderPicker({
                 apis: withOwnership({ ownership: 'other-required', requiredBy: [] }),
             });
-            expect(container.querySelector('.intflow-api-reason')).toBeNull();
+            expect(container.querySelector('.checkbox-row-reason')).toBeNull();
         });
 
         it('says nothing on a row the asking integration can itself uncheck', () => {
@@ -403,7 +403,7 @@ describe('ApiAccessPicker', () => {
                     requiredBy: [],
                 }),
             });
-            expect(container.querySelector('.intflow-api-reason')).toBeNull();
+            expect(container.querySelector('.checkbox-row-reason')).toBeNull();
         });
     });
 });

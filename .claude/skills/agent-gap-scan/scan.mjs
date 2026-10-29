@@ -36,7 +36,17 @@
  * "model temporarily unavailable". Those say nothing about our surface. Shape 3
  * counts only errors that came back from OUR tools and are not one of those.
  */
-import { readFileSync, readdirSync, writeFileSync, statSync, existsSync, mkdirSync } from 'node:fs';
+import {
+    closeSync,
+    existsSync,
+    mkdirSync,
+    openSync,
+    readFileSync,
+    readSync,
+    readdirSync,
+    statSync,
+    writeFileSync,
+} from 'node:fs';
 import { join, basename, dirname } from 'node:path';
 import { homedir } from 'node:os';
 
@@ -163,9 +173,33 @@ function batteryPrompts() {
     }
 }
 
+/**
+ * The lines of a transcript, read in chunks. `readFileSync(...).split('\n')` dies on a
+ * long session — Node refuses a string over ~512 MB (`ERR_STRING_TOO_LONG`), and the
+ * 2026-09-30 ERP session was 616 MB — so a scan of exactly the journeys worth reading
+ * could not read them. Synchronous on purpose: every caller is.
+ */
+function* linesOf(file) {
+    const fd = openSync(file, 'r');
+    const buf = Buffer.alloc(8 * 1024 * 1024);
+    let rest = '';
+    try {
+        for (;;) {
+            const n = readSync(fd, buf, 0, buf.length, null);
+            if (n === 0) break;
+            const parts = (rest + buf.toString('utf8', 0, n)).split('\n');
+            rest = parts.pop();
+            yield* parts;
+        }
+        if (rest) yield rest;
+    } finally {
+        closeSync(fd);
+    }
+}
+
 /** The first thing the human said, or null if nothing was said. */
 function firstUserText(file) {
-    for (const line of readFileSync(file, 'utf8').split('\n')) {
+    for (const line of linesOf(file)) {
         if (!line.trim()) continue;
         let d;
         try { d = JSON.parse(line); } catch { continue; }
@@ -202,7 +236,7 @@ function readSession(file) {
     const results = new Map();
     let userTurns = 0;
     let day = null;
-    for (const line of readFileSync(file, 'utf8').split('\n')) {
+    for (const line of linesOf(file)) {
         if (!line.trim()) continue;
         let d;
         try { d = JSON.parse(line); } catch { continue; }
@@ -226,8 +260,14 @@ function readSession(file) {
         for (const c of content) {
             if (!c || typeof c !== 'object') continue;
             if (c.type === 'tool_use') {
-                calls.push({ id: c.id, name: c.name || '', input: c.input || {}, day });
-                events.push({ kind: 'call', id: c.id, name: c.name || '' });
+                // A call made through the live probe (`probe.mjs call <tool> '<json>'`) IS
+                // one of our calls, wearing Bash. Development sessions reach the server
+                // that way only, so without this every one of them read as "never called
+                // a Demo Builder tool" — the 2026-09-30 ERP session made 654 such calls.
+                const viaProbe = probeCall(c);
+                const name = viaProbe ? OUR_PREFIX + viaProbe.tool : c.name || '';
+                calls.push({ id: c.id, name, input: viaProbe ? viaProbe.input : c.input || {}, day, viaProbe: !!viaProbe });
+                events.push({ kind: 'call', id: c.id, name });
             } else if (c.type === 'tool_result') {
                 let txt = c.content;
                 if (Array.isArray(txt)) txt = txt.map((x) => (x && x.text) || '').join(' ');
@@ -236,6 +276,24 @@ function readSession(file) {
         }
     }
     return { file, calls, events, results, userTurns, day };
+}
+
+const PROBE_CALL = /probe\.mjs\s+call\s+(?:--force\s+\S+\s+)?([a-z][a-z0-9_]*)(?:\s+('([^']*)'|"((?:[^"\\]|\\.)*)"))?/u;
+
+/**
+ * The Demo Builder tool a Bash command calls through the live probe, with its JSON
+ * arguments when they were given inline (a `"$(cat file)"` argument reads as none).
+ */
+function probeCall(block) {
+    if (!/__Bash$|^Bash$/.test(block.name || '')) return null;
+    const m = PROBE_CALL.exec(String((block.input || {}).command || ''));
+    if (!m) return null;
+    let input = {};
+    const raw = m[3] ?? (m[4] ? m[4].replace(/\\"/g, '"') : undefined);
+    if (raw) {
+        try { input = JSON.parse(raw); } catch { input = {}; }
+    }
+    return { tool: m[1], input };
 }
 
 /** The leading binary of each segment of a shell command. */

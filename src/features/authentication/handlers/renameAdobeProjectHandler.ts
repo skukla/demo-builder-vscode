@@ -95,7 +95,8 @@ export async function handleRenameAdobeProject(
         return { ...(await sendOrgMismatch(context, 'rename-adobe-project', ctxResult)) };
     }
 
-    const renamed = await context.authManager.renameRemoteProject(orgId, projectId, title);
+    const { projectOps } = await context.authManager.getEntityServices();
+    const renamed = await projectOps.renameRemoteProject(orgId, projectId, title);
     if (!renamed.ok) {
         context.logger.warn(`[Project] Adobe refused to rename ${projectId}: ${renamed.error}`);
         return {

@@ -3,7 +3,7 @@
  *
  * Both {@link contentPatchRegistry} and {@link codePatchRegistry} fetch
  * `{file}.json` patch ledgers from a GitHub-hosted `eds-demo-patches`-style
- * repo with the same shape (`{ patches: T[] }`), the same per-source
+ * repo with the same shape (`{ patches: T[], retired?: R[] }`), the same per-source
  * caching, and the same failure-evicts-from-cache discipline. This module
  * is the one place that knows the HTTP shape + URL convention.
  *
@@ -25,11 +25,22 @@ interface PatchSourceLike {
     path: string;
 }
 
-interface PatchFetchResponse<T> {
+interface PatchFetchResponse<T, R> {
     patches?: T[];
+    retired?: R[];
 }
 
-const sharedCache = new Map<string, Promise<unknown[]>>();
+/**
+ * One ledger file as read: its patches, and the patches it retired (EDS-62). `retired`
+ * names what Demo Builder used to write and now takes back out; a ledger with none
+ * answers an empty list.
+ */
+export interface ExternalLedger<T, R> {
+    patches: T[];
+    retired: R[];
+}
+
+const sharedCache = new Map<string, Promise<ExternalLedger<unknown, unknown>>>();
 
 /** Resolved git ref per `owner/repo`. Only successful tag resolutions are
  *  cached — see {@link resolveRef}. */
@@ -98,27 +109,26 @@ export async function resolvePatchRef(
 /**
  * Fetch an external patches-style JSON ledger with per-source caching.
  *
- * The expected file shape is `{ patches: T[] }`. Returns the `patches`
- * array (or `[]` if the field is missing). Throws on HTTP error or fetch
- * timeout — callers translate that into the appropriate non-applied
- * result + warning.
+ * The expected file shape is `{ patches: T[], retired?: R[] }`. Returns both lists (each
+ * `[]` when the field is missing). Throws on HTTP error or fetch timeout — callers
+ * translate that into the appropriate non-applied result + warning.
  *
  * @param source - `{owner, repo, path}` of the patches repo + family directory
  * @param fileName - File name within `path`, e.g. `'patches.json'` or `'code-patches.json'`
  * @param logger - Logger for `[Patch]` info/warn lines
  */
-export function fetchExternalPatches<T>(
+export function fetchExternalLedger<T, R = never>(
     source: PatchSourceLike,
     fileName: string,
     logger: Logger,
-): Promise<T[]> {
+): Promise<ExternalLedger<T, R>> {
     const cacheKey = `${source.owner}/${source.repo}/${source.path}/${fileName}`;
     const cached = sharedCache.get(cacheKey);
-    if (cached) return cached as Promise<T[]>;
+    if (cached) return cached as Promise<ExternalLedger<T, R>>;
 
     logger.info(`[Patch] Fetching ${fileName} from ${source.owner}/${source.repo}`);
 
-    const promise = (async () => {
+    const promise = (async (): Promise<ExternalLedger<T, R>> => {
         const ref = await resolvePatchRef(source.owner, source.repo, logger);
         const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${ref}/${source.path}/${fileName}`;
         const response = await fetch(url, {
@@ -127,14 +137,29 @@ export function fetchExternalPatches<T>(
         if (!response.ok) {
             throw new Error(`Failed to fetch ${fileName}: ${response.status} ${response.statusText}`);
         }
-        const data = (await response.json()) as PatchFetchResponse<T>;
-        return data.patches ?? [];
+        const data = (await response.json()) as PatchFetchResponse<T, R>;
+        return { patches: data.patches ?? [], retired: data.retired ?? [] };
     })();
 
-    sharedCache.set(cacheKey, promise as Promise<unknown[]>);
+    sharedCache.set(cacheKey, promise as Promise<ExternalLedger<unknown, unknown>>);
     promise.catch(() => sharedCache.delete(cacheKey));
 
     return promise;
+}
+
+/**
+ * {@link fetchExternalLedger}'s `patches` alone: what both patch registries apply.
+ *
+ * @param source - `{owner, repo, path}` of the patches repo + family directory
+ * @param fileName - File name within `path`, e.g. `'patches.json'` or `'code-patches.json'`
+ * @param logger - Logger for `[Patch]` info/warn lines
+ */
+export async function fetchExternalPatches<T>(
+    source: PatchSourceLike,
+    fileName: string,
+    logger: Logger,
+): Promise<T[]> {
+    return (await fetchExternalLedger<T>(source, fileName, logger)).patches;
 }
 
 /**

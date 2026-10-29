@@ -215,15 +215,10 @@ describe('SearchHeader action-button group', () => {
 });
 
 describe('SearchHeader search-field focus', () => {
-    it('does not steal focus by default', () => {
+    // A screen with a search filter focuses nothing on load (owner, 2026-10-01).
+    it('never takes focus on load', () => {
         renderHeader();
 
         expect(document.activeElement).not.toBe(screen.getByPlaceholderText('Type to filter'));
-    });
-
-    it('takes focus when the caller asks for it', () => {
-        renderHeader({ autoFocus: true });
-
-        expect(document.activeElement).toBe(screen.getByPlaceholderText('Type to filter'));
     });
 });

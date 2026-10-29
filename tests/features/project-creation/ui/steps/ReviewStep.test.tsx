@@ -98,6 +98,22 @@ describe('ReviewStep', () => {
             expect(screen.getByRole('heading', { name: 'my-demo-project' })).toBeInTheDocument();
         });
 
+        // The heading showed the folder name ("my-commerce-demo") where every other
+        // screen shows the project's own name (owner, 2026-10-17).
+        it('heads the review with the project name, not its folder name', () => {
+            render(
+                <Provider theme={defaultTheme}>
+                    <ReviewStep
+                        state={{ ...completeState, projectTitle: 'My Demo Project' } as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                    />
+                </Provider>
+            );
+
+            expect(screen.getByRole('heading', { name: 'My Demo Project' })).toBeInTheDocument();
+        });
+
         it('should display project name', () => {
             render(
                 <Provider theme={defaultTheme}>

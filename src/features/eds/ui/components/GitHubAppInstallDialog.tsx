@@ -8,7 +8,7 @@
 import { Text } from '@adobe/react-spectrum';
 import LinkOut from '@spectrum-icons/workflow/LinkOut';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     CODE_SYNC_INSTALL_ACTION,
     CODE_SYNC_RECHECK_ACTION,
@@ -17,9 +17,11 @@ import {
 } from '../helpers/codeSyncInstallContent';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { SuccessStateDisplay } from '@/core/ui/components/feedback/SuccessStateDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface GitHubAppInstallDialogProps {
     /** GitHub repository owner */
@@ -30,17 +32,6 @@ interface GitHubAppInstallDialogProps {
     installUrl: string;
     /** Error message from code sync failure */
     message: string;
-    /**
-     * Helix has no SITE for this repo (outer HTTP 404), as opposed to knowing
-     * the site and reporting no code sync for it (`code.status: 404`).
-     *
-     * `/status` reports on the site, so this says NOTHING about whether the App
-     * is installed — and an install cannot resolve it. Measured on
-     * skukla/kukla-bodea 2026-08-20: GitHub listed the repo under the AEM Code
-     * Sync installation and the endpoint 404'd anyway. Drives a different title,
-     * body and action order below.
-     */
-    siteUnregistered?: boolean;
     /** Called when app installation is detected */
     onInstallDetected: () => void;
 }
@@ -49,11 +40,24 @@ export function GitHubAppInstallDialog({
     owner,
     repo,
     installUrl,
-    siteUnregistered = false,
     onInstallDetected,
 }: GitHubAppInstallDialogProps) {
     const [isChecking, setIsChecking] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const [isDetected, setIsDetected] = useState(false);
+    // Held in a ref: a caller's inline callback is a new function each render, and
+    // as an effect dependency it would restart the hold on every redraw.
+    const onDetected = useRef(onInstallDetected);
+    onDetected.current = onInstallDetected;
+
+    // A found app is confirmed for a glance before setup carries on, so the SC
+    // sees that "Check Again" worked (owner, 2026-10-15). Same hold as a finished
+    // operation's result.
+    useEffect(() => {
+        if (!isDetected) return undefined;
+        const timer = setTimeout(() => onDetected.current(), TIMEOUTS.UI.RESULT_GLANCE);
+        return () => clearTimeout(timer);
+    }, [isDetected]);
 
     const handleOpenInstallPage = () => {
         // Open the URL in the system browser via VS Code API
@@ -72,7 +76,7 @@ export function GitHubAppInstallDialog({
             }>('check-github-app', { owner, repo, lenient: true });
 
             if (result.success && result.isInstalled) {
-                onInstallDetected();
+                setIsDetected(true);
             } else {
                 setHasError(true);
             }
@@ -84,6 +88,16 @@ export function GitHubAppInstallDialog({
         }
     };
 
+    if (isDetected) {
+        return (
+            <SuccessStateDisplay
+                title="AEM Code Sync is installed"
+                message={`${owner}/${repo} is connected. Continuing setup.`}
+                height="auto"
+            />
+        );
+    }
+
     // Show loading state while checking for app installation
     if (isChecking) {
         return (
@@ -94,51 +108,6 @@ export function GitHubAppInstallDialog({
                     subMessage={`Verifying ${owner}/${repo}`}
                 />
             </CenteredFeedbackContainer>
-        );
-    }
-
-    // Helix has no site for this repo. An install flow cannot fix that, so it is
-    // not what this screen leads with -- Check Again is the action, and Install
-    // App stays only as a secondary "if you have not already".
-    if (siteUnregistered) {
-        return (
-            <StatusDisplay
-                variant="info"
-                title="Waiting for Adobe to register your repository"
-                height="auto"
-                actions={[
-                    {
-                        label: CODE_SYNC_RECHECK_ACTION,
-                        icon: <Refresh />,
-                        variant: 'accent',
-                        onPress: handleCheckInstallation,
-                    },
-                    {
-                        label: CODE_SYNC_INSTALL_ACTION,
-                        icon: <LinkOut />,
-                        variant: 'secondary',
-                        onPress: handleOpenInstallPage,
-                    },
-                ]}
-            >
-                <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                    {`Adobe does not have a site for ${owner}/${repo} yet. This usually ` +
-                        'settles within a minute or two of the repository being set up.'}
-                </Text>
-                {hasError && (
-                    <Text
-                        UNSAFE_className="text-sm text-orange-700 text-center"
-                        marginTop="size-200"
-                    >
-                        {/* Deliberately NOT "the App is missing". We cannot see the App
-                            from here, and saying so is what sent someone through eleven
-                            reinstalls. If it never settles, AEM Code Sync not being
-                            installed is ONE possible cause, offered as such. */}
-                        ⚠️ Still not registered. If this persists, check that AEM Code
-                        Sync has access to this repository.
-                    </Text>
-                )}
-            </StatusDisplay>
         );
     }
 

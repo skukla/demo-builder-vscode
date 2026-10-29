@@ -4,7 +4,7 @@ kind: question
 area: platform
 needs: []
 value: high
-status: active
+status: shipped
 parent: PL-11
 ---
 
@@ -226,3 +226,4 @@ need this decision resolved.
 - 2026-09-08  feat(tests): drive the real VS Code UI — the sidebar, opened the way a user opens it (`a6fa1af43`)
 - 2026-09-08  docs(backlog): PL-46 step one shipped, and a new load-only sighting on PL-41 (`08e00da73`)
 - 2026-09-08  feat(tests): activation runs in a real VS Code — 864 lines nothing had entered (`f192a1c17`)
+- 2026-10-03  Reconciled 2026-10-03 (second pass): the question was answered by the owner on 2026-09-08 (f192a1c17, a6fa1af43 in beta.146). The multi-surface UI tests it stopped short of are filed as their own item. Note: the shipped sidebar UI test passes only because no editor webview is open when it runs.

@@ -1,7 +1,7 @@
 /**
  * `componentSelections` must not disagree with what is actually installed.
  *
- * The live dashboard add path is `appBuilderComponentRunner.addAppBuilderComponent`,
+ * The live dashboard add path is `appBuilderAddRun.addAppBuilderComponent`,
  * and it never wrote `componentSelections` at all. The only code that maintained
  * those lists lived in a parallel add/remove service from the singular model
  * with ZERO callers, deleted alongside this fix. So every mesh and every

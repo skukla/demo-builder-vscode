@@ -36,6 +36,11 @@ describe('BrandGallery — the Add a demo package card', () => {
         expect(addCard()).toHaveClass('dimmed');
     });
 
+    it('is not dimmed before any package is selected', () => {
+        renderGallery({ onAddDemo: jest.fn() });
+        expect(addCard()).not.toHaveClass('dimmed');
+    });
+
     it('steps aside while the grid is being filtered', () => {
         renderGallery({ onAddDemo: jest.fn() });
         fireEvent.change(screen.getByPlaceholderText('Filter packages'), { target: { value: 'Other' } });

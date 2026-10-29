@@ -191,7 +191,7 @@ describe('wizardHelpers - state & config', () => {
     describe('initializeProjectName', () => {
         it('should return unique name from imported source', () => {
             const imported: ImportedSettings = {
-                source: { project: 'my-demo' },
+                source: { project: 'my-demo', extension: '1.0.0' },
             };
 
             const result = initializeProjectName(imported, ['other-project']);
@@ -201,7 +201,7 @@ describe('wizardHelpers - state & config', () => {
 
         it('should generate unique name when source name is taken', () => {
             const imported: ImportedSettings = {
-                source: { project: 'my-demo' },
+                source: { project: 'my-demo', extension: '1.0.0' },
             };
 
             const result = initializeProjectName(imported, ['my-demo']);

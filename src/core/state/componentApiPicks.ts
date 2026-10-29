@@ -34,32 +34,65 @@ export interface ApiPickSource {
     componentApiPicks?: Record<string, string[]>;
     /** LEGACY — pre-attribution picks; read only when no keyed map exists. */
     additionalConsoleApis?: string[];
+    /** Which owners have a workspace of their own (AB-23), and so are not the project's. */
+    appBuilderComponents?: Record<string, { workspace?: unknown }>;
+}
+
+/** Whether an owner's picks belong to a workspace of its own rather than the project's. */
+function hasOwnWorkspace(project: ApiPickSource, owner: string): boolean {
+    return Boolean(project.appBuilderComponents?.[owner]?.workspace);
 }
 
 /**
  * Owner key for picks that predate attribution. Migrated projects' flat
  * `additionalConsoleApis` land here because their real owner is unrecoverable —
- * no owner is guessed. Mirrors the wizard's `RESERVED_EXISTING_KEY`, which
- * models the same "we already lost this once" case in edit-mode seeding.
+ * no owner is guessed. A version-1 project file's flat list folds here too
+ * (`readProjectFile`). Mirrors the wizard's `RESERVED_EXISTING_KEY`, which
+ * keeps the key out of the rows and the instance ids.
  */
 export const UNATTRIBUTED_PICKS_KEY = '__existing__';
 
 /**
- * The union of every integration's picks — the `desired` extras handed to
- * `subscribeRequiredApis`, which adds baseline + catalog `requiredApis` on top.
+ * The `desired` extras handed to `subscribeRequiredApis`, which adds the baseline
+ * and the catalog `requiredApis` on top.
+ *
+ * WITHOUT a component id this is the PROJECT workspace's list: every owner's picks
+ * except those of an integration with a workspace of its own, whose APIs belong there
+ * (found 2026-09-21 — Production was being handed them). WITH one it is that
+ * component's picks — because under AB-23 a component has a workspace of its own
+ * and subscribing the project's union there would entitle its credential to APIs
+ * belonging to integrations that do not live in it. Each of those is a product
+ * profile attached to a credential nothing in that workspace uses.
+ *
+ * UNATTRIBUTED picks ride along with every component, deliberately. Their owner
+ * is unrecoverable by construction ({@link UNATTRIBUTED_PICKS_KEY}), so leaving
+ * them out of a NEW workspace would silently drop an API an SC added by hand,
+ * and there is no way to tell which component wanted it.
  *
  * Falls back to the legacy flat field when no keyed map exists, so a project
- * loaded by a path that has not migrated still reports its real set. Returning
- * an empty list there would be actively destructive: the subscribe PUT sets
- * extras to EXACTLY this list, so an empty union unsubscribes everything.
+ * loaded by a path that has not migrated still reports its real set.
+ *
+ * This used to warn that "the subscribe PUT sets extras to EXACTLY this list, so
+ * an empty union unsubscribes everything". That stopped being true on 2026-09-19,
+ * when the subscriber began merging, and the claim is checkable rather than taken
+ * on trust: `buildSubscriptionList` keeps every current subscription whose code is
+ * not in `removing` and only ADDS from the needed list, `reconcileCredential` is
+ * the single PUT site and is shared by both credential paths, and
+ * `subscriptionList.test.ts` pins the exact case the old warning described —
+ * "drops only what is being removed" passes an EMPTY needed list and ACCS-REST-API
+ * survives with its profile. Narrowing this list adds fewer, never removes.
  *
  * @param project - the project to read (keyed map wins over the legacy field)
+ * @param componentId - narrow to this component's picks plus the unattributed ones
  * @returns deduped sdk codes; empty when nothing is picked
  */
-export function resolveDesiredApis(project: ApiPickSource): string[] {
+export function resolveDesiredApis(project: ApiPickSource, componentId?: string): string[] {
     const keyed = project.componentApiPicks;
     if (keyed) {
-        return [...new Set(Object.values(keyed).flat())];
+        const owners = componentId
+            ? [componentId, UNATTRIBUTED_PICKS_KEY]
+            : Object.keys(keyed).filter((owner) => !hasOwnWorkspace(project, owner));
+        return [...new Set(owners.flatMap((owner) => keyed[owner] ?? []))];
     }
     return [...new Set(project.additionalConsoleApis ?? [])];
 }
@@ -107,7 +140,9 @@ export function migrateApiPicks<T extends ApiPickSource>(project: T): T {
  * - a code with no prior owner lands in {@link UNATTRIBUTED_PICKS_KEY} — it was
  *   added from the union view, so there is genuinely no owner to infer, and
  *   guessing one is worse than recording that we do not know;
- * - an owner left with nothing is removed rather than kept as an empty key.
+ * - an owner left with nothing is removed rather than kept as an empty key;
+ * - an integration with a workspace of its own is not in the list being edited, so
+ *   its picks are kept exactly as they are (AB-23).
  *
  * @param project - the project whose picks are being edited (legacy flat field migrates)
  * @param desired - the full desired extras set, exactly as the user left it
@@ -125,6 +160,11 @@ export function applyDesiredApis(
     const next: Record<string, string[]> = {};
     const claimed = new Set<string>();
     for (const [owner, codes] of Object.entries(current)) {
+        // Not in the list being edited: its APIs live on its own workspace.
+        if (hasOwnWorkspace(project, owner)) {
+            next[owner] = codes;
+            continue;
+        }
         const kept = [...new Set(codes)].filter((code) => wanted.has(code));
         if (kept.length === 0) continue;
         next[owner] = kept;

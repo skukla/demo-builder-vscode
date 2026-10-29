@@ -288,6 +288,8 @@ jest.mock('@spectrum-icons/workflow/AlertCircle', () => ({
 
 export interface TestContext {
     mockPostMessage: jest.Mock;
+    /** The request channel — a reset asks for its modal through this (PL-59). */
+    mockRequest: jest.Mock;
     mockOnMessage: jest.Mock;
     messageHandlers: Map<string, (data: any) => void>;
     triggerMessage: (type: string, data: any) => void;
@@ -298,6 +300,7 @@ export function setupTestContext(): TestContext {
 
     const { webviewClient } = require('@/core/ui/utils/WebviewClient');
     const mockPostMessage = webviewClient.postMessage as jest.Mock;
+    const mockRequest = webviewClient.request as jest.Mock;
     const mockOnMessage = webviewClient.onMessage as jest.Mock;
 
     // Setup onMessage to store handlers
@@ -317,6 +320,7 @@ export function setupTestContext(): TestContext {
 
     return {
         mockPostMessage,
+        mockRequest,
         mockOnMessage,
         messageHandlers,
         triggerMessage,

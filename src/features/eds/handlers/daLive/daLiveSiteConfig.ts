@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import { DaLiveConfigService } from '../../services/daLive/daLiveConfigService';
 import { DaLiveContentOperations } from '../../services/daLive/daLiveContentOperations';
 import { type TokenProvider } from '../../services/daLive/daLiveOrgOperations';
+import { DaLiveAuthError } from '../../services/types';
 import { getEwCanvasBranch } from '../authoringExperience';
 import { maskEmail } from '@/core/utils/maskEmail';
 import type { AuthoringExperience } from '@/types/base';
@@ -120,7 +121,7 @@ export async function applyDaLiveOrgConfigSettings(
         // unreachable by construction.
         const appliedKeys = Object.keys(updates);
 
-        const result = await daLiveContentOps.applySiteConfig(
+        const result = await daLiveContentOps.configOps.applySiteConfig(
             daLiveOrg,
             daLiveSite,
             updates,
@@ -173,7 +174,8 @@ export async function applyDaLiveOrgConfigSettings(
  * This enables Universal Editor access and site management capabilities.
  *
  * This should be called from all EDS flows: creation, reset, republish.
- * Non-fatal: logs warnings on failure but does not throw.
+ * Non-fatal: logs warnings on failure but does not throw, except for an expired DA.live
+ * sign-in (`DaLiveAuthError`), which every later DA.live step would hit too (EDS-54).
  *
  * @param tokenProvider - Token provider for DA.live API authentication
  * @param daLiveOrg - DA.live organization name
@@ -200,6 +202,9 @@ export async function configureDaLivePermissions(
         }
         return result;
     } catch (error) {
+        // The one failure that is not "non-fatal": an expired sign-in fails every DA.live
+        // step after this one too (EDS-54).
+        if (error instanceof DaLiveAuthError) throw error;
         const errorMessage = (error as Error).message;
         logger.warn(`[DaLivePermissions] Error: ${errorMessage}`);
         return { success: false, error: errorMessage };

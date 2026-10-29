@@ -13,15 +13,71 @@
  * @module types/webviewRequests
  */
 
+import type { ComponentSettings, SetupConfigFixItem } from './appBuilderComponents';
 import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
-import type { CommerceStoreStructure } from './commerceStore';
+import type { CommerceStoreStructure, StoreViewCodes, StoreViewProducts } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
 import type { DaLiveContentSource } from './demoPackages';
-import type { AddedDemo, RememberedDemo, SharedDemoDescription, StorefrontKind } from './projectFile';
-import type { SettingsFile } from './settingsFile';
+import type { ErpProductSelection } from './erpAssign';
+import type { ErpOwnsRule } from './erpOwnership';
+import type { ErrorCode } from './errorCodes';
+import type {
+    AddedDemo,
+    ProjectFile,
+    RememberedDemo,
+    SharedDemoDescription,
+    StorefrontBoilerplate,
+    StorefrontKind,
+    StorefrontLineage,
+} from './projectFile';
+import type { ViewMode, ViewModeList } from './viewMode';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
+
+/**
+ * `check-store-view-products` — does a guest see any products in the store view
+ * the SC just picked? (EDS-46) Sent by the store pickers on the wizard's Business
+ * Structure step and on Configure, once all three codes are chosen.
+ */
+export interface CheckStoreViewProductsRequest extends StoreViewCodes {
+    /** The check runs on ACCS only; anything else answers `unknown`. */
+    backendType: 'accs' | 'paas';
+    /** The ACCS GraphQL endpoint the SC entered on the Connection step. */
+    endpoint: string;
+}
+
+/** The answer. Always `success: true`: a check that could not run says `unknown`. */
+export interface CheckStoreViewProductsResponse {
+    success: true;
+    data: { verdict: StoreViewProducts };
+}
+
+/**
+ * `check-erp-integration-holder` — does another local project already run an ERP
+ * integration on this Commerce instance? (AB-78) One Commerce instance runs one.
+ * The wizard sends its choices; the dashboard sends nothing, meaning the open
+ * project. Both grey out the ERP integration in the Add Integration modal on a yes.
+ */
+export interface CheckErpIntegrationHolderRequest {
+    /** The backend the wizard chose, e.g. `adobe-commerce-accs`. Omitted: the open project. */
+    backend?: string;
+    /** The values the wizard has for it; the instance's address is among them. */
+    componentConfigs?: ComponentConfigs;
+    /** The project being edited, never its own holder. */
+    editProjectPath?: string;
+}
+
+/** The answer. Always `success: true`; no holder (or no instance yet) is an empty `data`. */
+export interface CheckErpIntegrationHolderResponse {
+    success: true;
+    data: {
+        /** The project that runs it. */
+        holder?: string;
+        /** The one line saying so, and where to add the ERP instead. */
+        message?: string;
+    };
+}
 
 /**
  * `probe-shared-demo` — read a colleague's repository before "Add a demo package"
@@ -60,12 +116,12 @@ export interface ImportStorefrontZipResult {
     dropped?: number;
     isPrivate?: boolean;
     /** A demo bundle's setup part, when the zip carried one; the dialog offers to start from it. */
-    setup?: SettingsFile;
+    setup?: ProjectFile;
 }
 
 /** Start a project from a bundle's setup, on the card its storefront became. */
 export interface UseBundleSetupRequest {
-    setup: SettingsFile;
+    setup: ProjectFile;
     demo: AddedDemo;
 }
 
@@ -88,6 +144,18 @@ export type SharedDemoProbeResult =
     | { outcome: 'unreadable'; reason: string }
     | SharedDemoRead;
 
+/**
+ * The SC's reach into a colleague's DA.live site (EDS-22): `authored` can list it;
+ * `published-only` was refused (403), and `reader` is the address to grant;
+ * `not-signed-in` has no DA.live sign-in, or one DA.live refused (401);
+ * `unknown` got no usable answer.
+ */
+export type AuthoredContentAccess =
+    | { level: 'authored' }
+    | { level: 'published-only'; reader: string | null }
+    | { level: 'not-signed-in' }
+    | { level: 'unknown' };
+
 export interface SharedDemoRead {
     outcome: 'read';
     /** The repository as GitHub names it now; differs from the request after a rename. */
@@ -109,6 +177,15 @@ export interface SharedDemoRead {
     b2bSource?: SharedDemoValueSource;
     /** The description file's content, when the repository carries one that validates. */
     description?: SharedDemoDescription;
+    /** The `package.json` name and version the storefront's code was built on (EDS-13f). */
+    boilerplate?: StorefrontBoilerplate;
+    /** The template or fork parent GitHub records for the repository; absent when it records none (EDS-13f). */
+    lineage?: StorefrontLineage;
+    /**
+     * Whether the SC can read the content site's AUTHORED tree on DA.live, or
+     * only its published pages (EDS-22). Absent when there is no content site.
+     */
+    contentAccess?: AuthoredContentAccess;
     /** Which read values the description file replaced, in the result's field names. */
     overrides: string[];
     /** Things the SC should hear, in plain words. */
@@ -177,11 +254,11 @@ export interface ChangeDemoSourceRequest {
 }
 
 /**
- * "Save as demo package" (step 09). `getDemoPackagePreview` answers what the
- * card would carry and what a project built from it will need; `saveDemoPackage`
- * writes the description file, puts the card on the SC's own Welcome step
- * and answers the link; `removeDemoPackage` undoes exactly what saveDemoPackage
- * did.
+ * The Share dialog's link form (step 09, merged with Export 2026-10-22).
+ * `getDemoPackagePreview` answers what the card would carry and what a project
+ * built from it will need; `saveDemoPackage` writes the description file, puts
+ * the card on the SC's own Welcome step unless asked not to, and answers the
+ * link; `removeDemoPackage` undoes exactly what saveDemoPackage did.
  */
 export interface DemoPackageCheck {
     id: 'repository' | 'index' | 'datapack' | 'custom-app';
@@ -192,7 +269,10 @@ export interface DemoPackageCheck {
 }
 
 export interface DemoPackagePreview {
-    /** Prefilled from the brand or demo the project was built on; the SC edits before writing. */
+    /**
+     * What the description file says when the file is ours; otherwise prefilled
+     * from the brand or demo the project was built on. The SC edits before writing.
+     */
     draft: { name: string; description: string };
     checks: DemoPackageCheck[];
     /** The link a colleague pastes into "Add a demo package". */
@@ -206,6 +286,11 @@ export interface DemoPackagePreview {
 export interface SaveDemoPackageRequest {
     name: string;
     description: string;
+    /**
+     * Put the card on the SC's own Welcome step (default true). False writes the
+     * file only, and takes an existing card off the list.
+     */
+    addToWelcome?: boolean;
 }
 
 export interface SaveDemoPackageResult {
@@ -214,8 +299,8 @@ export interface SaveDemoPackageResult {
     file: 'written' | 'unchanged' | 'skipped';
     /** Why the file was skipped, when it was. */
     fileReason?: string;
-    /** The card is on the SC's own Welcome step now (always, after a save). */
-    onList: true;
+    /** Whether the card is on the SC's own Welcome step after this save. */
+    onList: boolean;
     checks: DemoPackageCheck[];
 }
 
@@ -325,6 +410,12 @@ export interface ProjectCreationConfig {
     frontendSource?: FrontendSource;
     // Edit mode: re-use existing project directory (editProjectPath presence signals edit mode)
     editProjectPath?: string;
+    // Edit mode: the choices the SC changed (PL-75; `editChangesOf`). Empty: Finish
+    // only saves. Absent: unknown, so Finish rebuilds.
+    editChanges?: string[];
+    // Edit mode: the new name the SC typed, applied after the Edit by the shared
+    // rename (`renameAfterEdit`). The name fields above keep the original meanwhile.
+    editRenameTo?: string;
     // EDS-specific configuration (for Edge Delivery Services stacks)
     edsConfig?: {
         repoName: string;
@@ -355,6 +446,12 @@ export interface ProjectCreationConfig {
         // Preflight completion fields (set by StorefrontSetupStep)
         preflightComplete?: boolean;
         repoUrl?: string;
+        /** Links the setup's content copy found to pages the source lacks, recorded on the project. */
+        brokenLinks?: import('./webviewPayloads').StorefrontBrokenLink[];
+        /** The block libraries setup installed: saved onto THIS project, not the open one. */
+        installedBlockLibraries?: import('./blockLibraries').InstalledBlockLibrary[];
+        /** Present when setup built the storefront: whether its fixes all landed (storefrontChanges.ts). */
+        storefrontBuildComplete?: boolean;
         // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
         // Patch IDs to apply during reset (from demo-packages.json)
         patches?: string[];
@@ -396,7 +493,6 @@ export interface ComponentDataDTO {
     id: string;
     name: string;
     description?: string;
-    features?: string[];
     dependencies?: {
         required?: string[];
         optional?: string[];
@@ -410,7 +506,16 @@ export interface ComponentDataDTO {
         deploymentTarget?: string;
         [key: string]: unknown;
     };
-    recommended?: boolean;
+}
+
+/**
+ * `setViewModeOverride` — a list's cards/rows toggle, kept for the session over
+ * that list's `demoBuilder.*ViewMode` setting. One message for every list that
+ * offers the toggle; `list` says which (`core/handlers/viewModeHandler`).
+ */
+export interface SetViewModeOverridePayload {
+    list: ViewModeList;
+    viewMode: ViewMode;
 }
 
 /** The `data` half of the `get-components-data` response. */
@@ -487,7 +592,7 @@ export interface StorefrontSetupStartPayload {
     selectedPackage?: string;
     /** Selected stack ID (e.g. 'eds-accs') — needed to resolve package-derived settings */
     selectedStack?: string;
-    /** The storefront row when the project is built on an added demo: the phases read it for the repo branch, the pages and the dry check. */
+    /** The storefront row when the project is built on an added demo: the phases read it for the repo branch and the pages. */
     demo?: AddedDemo;
     edsConfig: {
         repoName: string;
@@ -538,10 +643,10 @@ export interface StorefrontSetupStartPayload {
             id: string;
             name: string;
         };
-        // Whether to reset existing site content (repopulate with demo data)
-        // Only applies when selectedSite is set (existing site mode)
+        // Whether the existing site's pages are replaced with the package's: a reset to
+        // the template, or a package change in an Edit (`replacesSiteContent`).
         resetSiteContent?: boolean;
-        // Created repository info (set when the repo was created in RepoSelectionInline)
+        // Created repository info (set when the repo was created by useRepoCreation)
         // If present, skip repo creation in StorefrontSetupStep
         createdRepo?: {
             owner: string;
@@ -634,12 +739,116 @@ export interface DestinationRef {
 export interface SetProjectDestinationRequestPayload {
     project?: DestinationRef;
     workspace?: DestinationRef;
+    /** The id the screen's progress modal follows, when one started it (PL-59). */
+    id?: string;
+    progress?: 'modal';
 }
+
+/**
+ * `saveIntegrationSettings` — change an integration's Settings from its tile, then
+ * redeploy what uses them. Secrets travel here once, from the masked field to
+ * SecretStorage; they never come back.
+ */
+export interface SaveIntegrationSettingsRequestPayload {
+    id?: string;
+    /** Text settings to set, by var name. */
+    values?: Record<string, string>;
+    /** Secret settings to store, by var name. */
+    secrets?: Record<string, string>;
+}
+
+/** What `saveIntegrationSettings` answers. (A type, not an interface, so it is a HandlerResponse.) */
+export type SaveIntegrationSettingsResult = {
+    success: boolean;
+    error?: string;
+    code?: ErrorCode;
+    /** The change was stored (it may still have failed to redeploy). */
+    saved?: boolean;
+    /** The component's settings after the save. */
+    settings?: ComponentSettings;
+};
 
 /**
  * `addAppBuilderComponent` — add (and deploy) an App Builder integration on a
  * live project: a catalog entry by `id`, or a custom source by owner/repo.
  */
+/** `addErp` — "Add another ERP" on the ERP integration's card (AB-16). */
+export interface AddErpRequestPayload {
+    /** The ERP integration's component id. */
+    id?: string;
+    /** The new ERP's name, unique in the project (compared without case). */
+    name?: string;
+    /**
+     * Which products it owns (AB-64), as the dialog's picker chose; absent = the default, the
+     * attribute `erp_owner=<its list id>` (the agent surface). What the other ERPs' rules
+     * become is the handler's to decide from the store (AB-72), never the dialog's.
+     */
+    owns?: ErpOwnsRule;
+    /** `true` adds; without it the handler answers the preview only (AB-75). The dialog sends it. */
+    confirm?: boolean;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
+}
+
+/**
+ * The ERP verbs of "Assign products" (AB-74): `getErpAssignOptions`, `assignErpProducts` and
+ * `undoErpAssignment`. `id` is the ERP integration, `erp` the ERP's component id. A call
+ * without `confirm: true` previews and writes nothing.
+ */
+export interface ErpAssignRequestPayload {
+    id?: string;
+    erp?: string;
+    /** Which products, for `assignErpProducts`. */
+    selection?: ErpProductSelection;
+    confirm?: boolean;
+    /** `'modal'` when the SC started it from the integrations screen (PL-59). */
+    progress?: 'modal';
+}
+
+/**
+ * `addErpOwnerToAttributeSets` / `removeErpOwnerFromAttributeSets` (AB-74): `id` is the ERP
+ * integration. Without `confirm: true` it answers which sets it would change.
+ */
+export interface ErpOwnerSetsRequestPayload {
+    id?: string;
+    confirm?: boolean;
+    progress?: 'modal';
+}
+
+/**
+ * `prepareCommerceStore` (AB-77): `id` is the integration whose setup steps are applied.
+ * Without `confirm: true` it previews (reads only). `stepIds` limits the run to those steps
+ * (the setup guide's per-step Apply); absent, every applicable step.
+ */
+export interface PrepareStoreRequestPayload {
+    id?: string;
+    confirm?: boolean;
+    stepIds?: string[];
+    progress?: 'modal';
+}
+
+/**
+ * `undoCommerceStorePreparation` (AB-77): put back what the demo setup's Apply recorded, every
+ * step newest first, or the one `stepId` names. Without `confirm: true` it says what it would put back.
+ */
+export interface UndoStorePreparationRequestPayload {
+    id?: string;
+    confirm?: boolean;
+    stepId?: string;
+    progress?: 'modal';
+}
+
+/**
+ * `setCommerceConfig` (AB-77): write one or more settings through `PUT /V1/system/config`.
+ * Without `confirm: true` it previews. `undo: true` puts back the values the last write
+ * recorded on the project (`commerceConfigChange`), ignoring `items`.
+ */
+export interface SetCommerceConfigRequestPayload {
+    items?: SetupConfigFixItem[];
+    confirm?: boolean;
+    undo?: boolean;
+}
+
 export interface AddAppBuilderComponentRequestPayload {
     id?: string;
     source?: { owner: string; repo: string };
@@ -667,6 +876,18 @@ export interface AddAppBuilderComponentRequestPayload {
      * not subscribed, and Manage APIs opened with nothing checked (2026-08-04).
      */
     apis?: string[];
+    /**
+     * The Adobe project and workspace the SC chose in the add's own destination steps,
+     * sent only when the project had none. Saved before anything is made: an add that
+     * left it on screen ran with no project, and its workspace was made in the project
+     * cached from earlier (Justrite's, 2026-10-15).
+     */
+    destination?: { project: DestinationRef; workspace: DestinationRef };
+    /**
+     * For an entry whose add prepares the store (the ERP integration): `true` runs the add;
+     * without it the answer is what the preparation will change, and nothing is added.
+     */
+    confirm?: boolean;
 }
 
 /** `rename-adobe-project` — change an Adobe I/O project's title (never its name or id). */

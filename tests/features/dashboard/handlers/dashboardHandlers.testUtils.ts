@@ -12,8 +12,9 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 // Mock dependencies
-jest.mock('@/features/mesh/services/stalenessDetector');
+jest.mock('@/core/state/projectStateSync');
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         // ADR-015 (2026-08-28): handlers resolve these when assembling runner
@@ -41,6 +42,7 @@ jest.mock(
         window: {
             activeColorTheme: { kind: 1 }, // Light theme
             showWarningMessage: jest.fn().mockResolvedValue('Cancel'), // Default: user cancels
+            showInformationMessage: jest.fn().mockResolvedValue(undefined),
             // Slow per-integration ops (add/remove/deploy) run inside a progress
             // notification — the mock must INVOKE the task or the handler's result
             // never materializes and every one of them reads as a failure.
@@ -58,6 +60,11 @@ jest.mock(
         },
         Uri: {
             parse: jest.fn((url: string) => ({ toString: () => url })),
+        },
+        // getProjectUrls reads demoBuilder.daLive.aemAuthorUrl (EDS-21). Unset by
+        // default: no AEM author bound, so no aemAssets URL.
+        workspace: {
+            getConfiguration: jest.fn(() => ({ get: jest.fn(() => undefined) })),
         },
     }),
     { virtual: true }
@@ -140,16 +147,18 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
 
     // Setup auth service mock (used by handleRequestStatus)
     const { ServiceLocator } = require('@/core/di/serviceLocator');
-    ServiceLocator.getAuthenticationService.mockReturnValue({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getTokenStatus: jest
-            .fn()
-            .mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 60 }),
-        getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        // On-open org-context check uses the SDK-only read (never the CLI fallback).
-        // Default to [] → the check resolves to 'unknown' without a browser/stall.
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
-    });
+    ServiceLocator.getAuthenticationService.mockReturnValue(
+        poolUnits({
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+            getTokenStatus: jest
+                .fn()
+                .mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 60 }),
+            getCachedOrganization: jest.fn().mockReturnValue(undefined),
+            // On-open org-context check uses the SDK-only read (never the CLI fallback).
+            // Default to [] → the check resolves to 'unknown' without a browser/stall.
+            getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
+        })
+    );
 
     /**
      * FOUR erasures lived in this one object — `panel`, `context`, `stateManager`
@@ -165,10 +174,7 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
     const base = createMockHandlerContext({
         panel: createMockWebviewPanel(),
         // The VS Code ExtensionContext seam (secrets used by the appBuilderComponent runner deps).
-        context: createMockExtensionContext(
-            { secrets: createMockSecretStorage().secrets },
-            '/ext'
-        ),
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }, '/ext'),
         stateManager,
         logger: createMockLogger(),
         sendMessage: jest.fn(),

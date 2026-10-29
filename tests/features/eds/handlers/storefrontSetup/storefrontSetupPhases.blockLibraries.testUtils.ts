@@ -26,18 +26,20 @@ jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
 }));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
+    // Pass-through: the always-included libraries are tested where they are added.
+    withAlwaysIncludedBlockLibraries: (selected?: string[]) => selected ?? [],
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
-jest.mock('@/features/eds/services/edsPipeline', () => ({
-    executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true,
-        contentFilesCopied: 0,
-        libraryPaths: [],
-    }),
-}));
+jest.mock('@/features/eds/services/edsPipeline', () => {
+    // Typed through the canonical fake (EDS-55): a factory may load a module, not import one.
+    const { createMockPipelineResult } = jest.requireActual<
+        typeof import('../../../../helpers/pipelineResultFake')
+    >('../../../../helpers/pipelineResultFake');
+    return { executeEdsPipeline: jest.fn().mockResolvedValue(createMockPipelineResult()) };
+});
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
@@ -48,8 +50,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
-    GitHubRepoOperations: jest.fn().mockImplementation(() => ({
+jest.mock('@/features/eds/services/github/githubRepoLifecycle', () => ({
+    GitHubRepoLifecycle: jest.fn().mockImplementation(() => ({
         createFromTemplate: jest.fn().mockResolvedValue({
             fullName: 'owner/repo',
             htmlUrl: 'https://github.com/owner/repo',
@@ -91,4 +93,3 @@ export const mockIsBlockLibraryAvailableForPackage =
 export const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<
     typeof executeEdsPipeline
 >;
-

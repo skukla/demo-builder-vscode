@@ -3,11 +3,12 @@
  * Used by both project creation wizard and manual deploy command
  */
 
+import { answeringEndpoint } from './meshEndpoint';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation/validators/AdobeResourceValidator';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -93,7 +94,9 @@ async function processMeshStatus(
         const deployedMeshId = meshData.meshId || meshData.mesh_id;
         let deployedEndpoint: string | undefined;
         if (deployedMeshId) {
-            deployedEndpoint = await getEndpoint(deployedMeshId, commandManager, logger);
+            const stated = await getEndpoint(deployedMeshId, commandManager, logger);
+            // What Adobe states is not proof it answers there (2026-09-21) — ask.
+            deployedEndpoint = stated ? await answeringEndpoint(stated) : undefined;
         } else {
             logger?.warn('[Mesh Verification] No meshId found in response, cannot retrieve endpoint');
         }
@@ -150,7 +153,7 @@ export async function waitForMeshDeployment(
             const verifyResult = await commandManager.execute('aio api-mesh get', {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
                 shell: true,
             });
@@ -193,7 +196,7 @@ async function getEndpoint(
             {
                 timeout: TIMEOUTS.NORMAL,
                 configureTelemetry: false,
-                useNodeVersion: getMeshNodeVersion(),
+                useNodeVersion: demoBuilderNode(),
                 enhancePath: true,
             },
         );

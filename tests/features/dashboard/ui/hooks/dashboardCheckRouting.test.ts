@@ -22,6 +22,7 @@ function createActions(): jest.Mocked<CheckRoutingActions> {
         setOrgStatus: jest.fn(),
         setOrgMismatch: jest.fn(),
         setOrgCurrentName: jest.fn(),
+        setOrgSignedOut: jest.fn(),
         setMcpHealing: jest.fn(),
         setAiToolingMissing: jest.fn(),
         setProjectStatus: jest.fn(),
@@ -40,14 +41,16 @@ describe('routeCheckOutcome', () => {
                 {
                     checkId: CHECK_IDS.DEMO_SOURCE,
                     status: 'warning',
-                    message: "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.",
+                    message:
+                        "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.",
                     data: { demoName: 'Isle5 by Jen', unreachable: true, contentUnreachable: true },
                 } as CheckOutcome<OrgContextCheckData>,
-                actions,
+                actions
             );
 
             expect(actions.setDemoSourceIssue).toHaveBeenCalledWith({
-                message: "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.",
+                message:
+                    "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.",
                 data: { demoName: 'Isle5 by Jen', unreachable: true, contentUnreachable: true },
             });
             expect(actions.setOrgMismatch).not.toHaveBeenCalled();
@@ -56,6 +59,28 @@ describe('routeCheckOutcome', () => {
         it('clears the notice on any other outcome', () => {
             const actions = createActions();
             routeCheckOutcome({ checkId: CHECK_IDS.DEMO_SOURCE, status: 'ok' }, actions);
+            expect(actions.setDemoSourceIssue).toHaveBeenCalledWith(undefined);
+        });
+
+        // Both halves have to hold. A sentence on a non-warning outcome is not
+        // an issue (the check answered fine), and a warning with no sentence
+        // has nothing for the notice to say.
+        it('clears the notice when a non-warning outcome carries a message', () => {
+            const actions = createActions();
+            routeCheckOutcome(
+                {
+                    checkId: CHECK_IDS.DEMO_SOURCE,
+                    status: 'ok',
+                    message: 'The demo source answers.',
+                },
+                actions
+            );
+            expect(actions.setDemoSourceIssue).toHaveBeenCalledWith(undefined);
+        });
+
+        it('clears the notice when a warning carries no message', () => {
+            const actions = createActions();
+            routeCheckOutcome({ checkId: CHECK_IDS.DEMO_SOURCE, status: 'warning' }, actions);
             expect(actions.setDemoSourceIssue).toHaveBeenCalledWith(undefined);
         });
     });
@@ -69,6 +94,17 @@ describe('routeCheckOutcome', () => {
             expect(actions.setOrgStatus).toHaveBeenCalledWith('pending');
             expect(actions.setOrgMismatch).toHaveBeenCalledWith(undefined);
             expect(actions.setOrgCurrentName).toHaveBeenCalledWith(undefined);
+            expect(actions.setOrgSignedOut).toHaveBeenCalledWith(false);
+        });
+
+        it.each([
+            [{ signedOut: true }, true],
+            [undefined, false],
+        ])('records signedOut from an unknown outcome (%o → %s)', (data, signedOut) => {
+            const actions = createActions();
+            routeCheckOutcome({ checkId: CHECK_IDS.ORG_CONTEXT, status: 'unknown', data }, actions);
+
+            expect(actions.setOrgSignedOut).toHaveBeenCalledWith(signedOut);
         });
 
         it('should record the resolved outcome with mismatch and org name', () => {

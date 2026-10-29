@@ -59,7 +59,7 @@ export interface AgentAlertCopy {
      * attention and none of them can be checked.
      *
      * An EMPTY array means the tool acts on the current project and takes no
-     * argument naming it — `republish`, `sync_content`, `reset_eds_project`.
+     * argument naming it — `republish`, `reset_project`.
      * The dialog names the open project instead, so the reader is never asked
      * to approve an unnamed target.
      *
@@ -108,7 +108,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_project: {
         action: 'Delete this project',
         consequence:
-            "Removes the project folder and settings from this machine; cloud resources stay. This can't be undone.",
+            "Removes the project from this machine, and its GitHub repository and DA.live site if the agent asked or your cleanup setting deletes everything. This can't be undone.",
         target: ['name'],
         sessionGrant: false,
     },
@@ -135,6 +135,43 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['projectName', 'title'],
         sessionGrant: false,
     },
+    invoke_runtime_action: {
+        action: 'Run a Runtime action',
+        consequence:
+            "Runs one deployed action in the project's Adobe I/O Runtime namespace with the payload given, as if Commerce or a timer had called it; the action may write to Commerce or the ERP.",
+        target: ['action'],
+        sessionGrant: false,
+    },
+    write_erp_rest: {
+        action: 'Change something in the ERP',
+        consequence:
+            'Acts on the demo ERP the way its screens do; the ERP then sends the change to Commerce, where it lands on real products, companies or orders.',
+        target: ['method', 'path'],
+        sessionGrant: false,
+    },
+    set_erp_settings: {
+        action: "Change an ERP's settings",
+        consequence:
+            'Changes which products this ERP owns and, per website, its sales organisation on the deployed integration — it changes how orders and companies route to this ERP.',
+        target: ['erp', 'website'],
+        sessionGrant: false,
+    },
+    start_erp_downtime: {
+        action: 'Simulate downtime on the demo ERP',
+        consequence:
+            'The demo ERP refuses every call until the time is up or the downtime is ended, so orders sent to it meanwhile wait and are sent again once it is back.',
+        target: ['erp', 'minutes'],
+        sessionGrant: false,
+    },
+    write_commerce_rest: {
+        action: 'Change data in the Commerce store',
+        consequence:
+            "Sends this write to the project's live Commerce instance: it changes real store data, and a delete can't be undone.",
+        // The method and the path ARE the decision: "DELETE customers/43" reads as
+        // what it is. The body can be long and is in the debug log.
+        target: ['method', 'path'],
+        sessionGrant: false,
+    },
     delete_adobe_workspace: {
         action: 'Delete an Adobe workspace',
         consequence:
@@ -157,6 +194,22 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['path'],
         sessionGrant: false,
     },
+    write_page: {
+        action: 'Write a page',
+        consequence:
+            "Replaces the page's content on DA.live, which the live storefront is built from; when publishing, visitors see it at once.",
+        // `publish` too: a write that goes live and one that waits for the next
+        // publish are different decisions, as granting and revoking are for
+        // set_site_admin. Not session-grantable: the page's old content is replaced.
+        target: ['path', 'publish'],
+        sessionGrant: false,
+    },
+    publish_page: {
+        action: 'Publish a page',
+        consequence: "Puts the page's current DA.live content on the live storefront; visitors see it at once.",
+        target: ['path'],
+        sessionGrant: false,
+    },
     forget_added_demo: {
         action: 'Forget an added demo',
         consequence:
@@ -171,10 +224,27 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: [],
         sessionGrant: false,
     },
-    reset_eds_project: {
-        action: 'Reset this storefront',
+    apply_updates: {
+        action: "Apply this project's updates",
         consequence:
-            "Replaces the storefront's code and content with the original template. Anything customised here is lost.",
+            "Rewrites the storefront's code and redeploys components and integrations to their newer versions; with onClash reset, files that clash with your own edits are replaced.",
+        target: [],
+        // Not repeatable on one approval: it rewrites code, and the conflict reset
+        // discards the user's own edits (EDS-51).
+        sessionGrant: false,
+    },
+    finish_storefront_update: {
+        action: 'Finish the storefront update fixed with AI',
+        consequence:
+            "Pushes the fixed update to the storefront's GitHub repository, which updates the live site; with leave, drops the fix in the local copy instead.",
+        target: ['project'],
+        // Each finish pushes to the live site: never repeatable on one approval.
+        sessionGrant: false,
+    },
+    reset_project: {
+        action: 'Reset this project',
+        consequence:
+            "Puts the project back to its starting point: a storefront's code and content return to the original template, a headless project's components are deleted and installed again. Anything customised there is lost.",
         target: [],
         sessionGrant: false,
     },
@@ -185,26 +255,122 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
+    reinstall_integration: {
+        action: 'Reinstall an integration in Commerce',
+        consequence:
+            'Removes the integration from Commerce and installs it again; its saved settings may reset to their defaults.',
+        target: ['id'],
+        // The uninstall removes what the app set up in Commerce.
+        sessionGrant: false,
+    },
+    delete_undeclared_runtime_code: {
+        action: 'Delete code an integration left behind',
+        consequence:
+            "Deletes the Runtime actions in the integration's own packages that its config no longer declares, and the timers and rules that started them. Nothing it still uses is touched.",
+        target: ['componentId'],
+        // The code is gone for good, though a redeploy of an older version brings it back.
+        sessionGrant: false,
+    },
+    save_app_to_github: {
+        action: 'Save the app to a new GitHub repository',
+        consequence:
+            "Creates a public repository on your GitHub account or organisation and pushes the app's files to it, leaving out secrets and build output; anyone can see it.",
+        target: ['owner', 'repoName'],
+        sessionGrant: false,
+    },
+    delete_app_github_repo: {
+        action: "Delete the app's GitHub repository",
+        consequence:
+            'Deletes the repository Demo Builder created for this app, with anything pushed to it since; the app on this computer stays, and this cannot be undone.',
+        target: ['id'],
+        sessionGrant: false,
+    },
     remove_integration: {
         action: 'Remove an integration',
         consequence:
-            'Undeploys the integration from Adobe Runtime and deletes its files. Anything calling it stops working.',
+            'Undeploys the integration, deletes its files and its Adobe workspace. Anything calling it stops working. ' +
+            'If it was associated in Commerce Admin under Apps > App Management, it stays listed there: unassociate it there first.',
         target: ['id'],
         // The deployment could be redeployed, but the local files are deleted.
         sessionGrant: false,
     },
-    delete_event_registration: {
-        action: 'Delete an event registration',
+    add_erp: {
+        action: 'Add another ERP',
         consequence:
-            'Stops Adobe I/O event delivery for this registration. Anything consuming its journal or webhook goes quiet.',
-        target: ['registrationId'],
+            "Creates an Adobe workspace for a new ERP, deploys it there, adds it to the ERP integration's list, saves which products it (and an existing ERP still owning everything) owns, and fills it from Commerce.",
+        target: ['name'],
+        sessionGrant: false,
+    },
+    load_erp_demo_data: {
+        action: 'Load demo data into the ERPs',
+        consequence:
+            "Copies Commerce's products, companies and websites into every ERP (or the one named); a value changed by hand in an ERP is set back to Commerce's. Then publishes each ERP's customer prices into the companies' shared catalogs in Commerce.",
+        target: ['id', 'erp'],
+        sessionGrant: false,
+    },
+    assign_erp_products: {
+        action: 'Assign products to an ERP',
+        consequence:
+            'Writes the ERP\'s tag on the chosen products in Commerce, so they move to it from whichever ERP owns them now. The previous tags are recorded, and Undo last assignment on the ERP\'s card puts them back.',
+        target: ['erp'],
+        sessionGrant: false,
+    },
+    add_erp_owner_to_attribute_sets: {
+        action: 'Add erp_owner to the attribute sets',
+        consequence:
+            'Adds the erp_owner attribute to every attribute set the store\'s products use that lacks it. Demo Builder records which, and the setup guide can take it out again.',
+        target: ['id'],
+        sessionGrant: false,
+    },
+    undo_erp_assignment: {
+        action: "Undo an ERP's last assignment",
+        consequence:
+            'Puts back the tag each product had before that assignment, in Commerce, on the products that still carry it, so they return to the ERP that owned them.',
+        target: ['erp'],
+        sessionGrant: false,
+    },
+    remove_erp_owner_from_attribute_sets: {
+        action: 'Take erp_owner out of the attribute sets',
+        consequence:
+            'Removes the erp_owner attribute from the attribute sets Demo Builder added it to. It refuses while a product in them is tagged.',
+        target: ['id'],
+        sessionGrant: false,
+    },
+    prepare_commerce_store: {
+        action: 'Apply the demo setup to the Commerce store',
+        consequence:
+            "Writes the integration's setup steps into the live Commerce store: settings at the default and the website scope, the erp_owner and brand attributes, a warehouse and stock, and a shared catalog per company without one. Each step is checked first and skipped when already done; what was changed is recorded so each step can be undone.",
+        target: ['id'],
+        sessionGrant: false,
+    },
+    undo_commerce_store_preparation: {
+        action: "Undo the demo setup's changes in Commerce",
+        consequence:
+            'Puts back what the demo setup recorded in the live Commerce store: settings to their previous values, and the attributes, stock and shared catalogs it created deleted (a source it created is disabled, since Commerce cannot delete one).',
+        target: ['id', 'stepId'],
+        sessionGrant: false,
+    },
+    set_commerce_config: {
+        action: 'Change Commerce settings',
+        consequence:
+            "Writes the named settings into the live Commerce store at the default or the project's website scope, and records the previous values so the same tool can put them back.",
+        target: [],
+        sessionGrant: false,
+    },
+    reset_erp_records: {
+        action: 'Reset the ERP records',
+        consequence:
+            "Cancels every open order the ERPs hold (the rest keep a note; a cancelled order cannot be reopened), undoes the credit limits and company blocks the ERPs set in Commerce, wipes every record in every ERP the integration serves and fills each from Commerce again.",
+        target: ['id'],
         sessionGrant: false,
     },
     delete_event_provider: {
         action: 'Delete an event provider',
         consequence:
-            'Deletes the provider and its registrations from the workspace. Events of these types stop publishing.',
-        target: ['providerId'],
+            "Deletes the Adobe I/O event provider, and the registrations named with it, from the open project's workspace. Events of its types stop publishing, and anything consuming those registrations goes quiet.",
+        // The label, not the id: nobody can verify a provider id by reading it,
+        // and the tool refuses when the label does not match the provider.
+        target: ['providerLabel'],
         sessionGrant: false,
     },
     migrate_storefront_name: {
@@ -247,19 +413,15 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     },
     republish: {
         action: 'Republish the storefront',
+        // The second sentence is EDS-44: after a store change the same call replaces the
+        // old store's product and category pages, which the consent has to say.
         consequence:
-            'Pushes the current configuration live. Visitors see the change within minutes.',
+            'Pushes the settings, code and every page live, as the Republish button does. Visitors ' +
+            "see it within minutes. If the store changed, its product and category pages are replaced " +
+            "with the new store's.",
         target: [],
         // Repeatable and recoverable, and it fires several times in one flow -
         // the case a grant exists for.
-        sessionGrant: true,
-    },
-    sync_content: {
-        action: 'Publish all storefront content',
-        consequence:
-            'Pushes every page, asset and config change to the live site. Visitors see it within minutes.',
-        target: [],
-        // Same as republish: run it again and the previous state returns.
         sessionGrant: true,
     },
     start_datapack_import: {
@@ -276,6 +438,27 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // The pack and the store it is captured FROM. `confirmName` is the
         // proof-of-intent echo, not the target.
         target: ['datapackName', 'version', 'commerceInstance'],
+        sessionGrant: false,
+    },
+    copy_library_datapack_to_installer: {
+        action: 'Copy a library datapack into the Data Installer',
+        consequence:
+            "Adds this pack to the Data Installer's shared catalogue so it can be installed. Other teams will see it, and the extension cannot remove it again.",
+        target: ['datapackName', 'version'],
+        sessionGrant: false,
+    },
+    delete_library_datapack: {
+        action: 'Delete a library datapack',
+        consequence:
+            'Removes this pack and all its data from the datapack library. It cannot be brought back except by loading its file again.',
+        target: ['datapackName', 'version'],
+        sessionGrant: false,
+    },
+    load_datapack_zip: {
+        action: 'Load a datapack file into a store',
+        consequence:
+            'Adds the pack in this file to the datapack library, or to the Data Installer catalogue other teams share.',
+        target: ['path', 'target'],
         sessionGrant: false,
     },
 };

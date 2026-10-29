@@ -1,0 +1,423 @@
+/**
+ * The progress modal shows a question the work is paused on (PL-59, owner 2026-09-20).
+ *
+ * Republishing put this modal on screen saying "Checking requirements / Your DA.live
+ * sign-in" while a notification asked for that sign-in. The question belongs here,
+ * and these assertions are about what the modal RENDERS and what it posts back —
+ * the extension half is `tests/core/vscode/operationPrompt.test.ts`.
+ */
+
+import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import React from 'react';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
+
+jest.mock('@adobe/react-spectrum', () => ({
+    DialogContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Flex: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Text: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+    TextField: ({ label, type, value, onChange, description }: any) => (
+        <label>
+            {label}
+            <input
+                aria-label={label}
+                type={type === 'password' ? 'password' : 'text'}
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+            />
+            {description ? <span data-testid={`${label}-description`}>{description}</span> : null}
+        </label>
+    ),
+}));
+
+
+
+// The real Modal, reduced to what these assertions read: its title, its buttons and
+// its dismiss affordance. Buttons carry their label, which is what a guard supplies.
+jest.mock('@/core/ui/components/ui/Modal', () => ({
+    Modal: ({ title, actionButtons = [], closeLabel, onClose, children }: any) => (
+        <div role="dialog" aria-label={title}>
+            {children}
+            <button onClick={onClose}>{closeLabel}</button>
+            {actionButtons.map((button: any) => (
+                <button key={button.label} data-variant={button.variant} onClick={button.onPress}>
+                    {button.label}
+                </button>
+            ))}
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/feedback/LoadingDisplay', () => ({
+    LoadingDisplay: ({ message }: { message: string }) => <div data-testid="loading">{message}</div>,
+}));
+
+jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
+    StatusDisplay: ({ variant, title, message, centerMessage }: any) => (
+        <div data-testid="status" data-variant={variant} data-centred={String(Boolean(centerMessage))}>
+            <span>{title}</span>
+            <span>{message}</span>
+        </div>
+    ),
+}));
+
+const mockPostMessage = jest.fn();
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+    webviewClient: { postMessage: (...args: unknown[]) => mockPostMessage(...args) },
+}));
+
+let progress: OperationProgressPayload | null = null;
+jest.mock('@/core/ui/hooks/useOperationProgress', () => ({
+    useOperationProgress: () => progress,
+}));
+
+// The mocks hoist above this import; the component must bind to them, not the real ones.
+import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
+
+const OPERATION = {
+    id: 'republish:bodea',
+    title: 'Republishing Bodea',
+    failureTitle: "Couldn't republish Bodea",
+    successTitle: 'Bodea republished',
+    run: 1,
+    resume: false,
+};
+
+function renderModal(): { onRetry: jest.Mock; onClose: jest.Mock } {
+    const onRetry = jest.fn();
+    const onClose = jest.fn();
+    render(<OperationProgressModal operation={OPERATION} onRetry={onRetry} onClose={onClose} />);
+    return { onRetry, onClose };
+}
+
+const user = (): ReturnType<typeof userEvent.setup> =>
+    userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    progress = null;
+});
+
+it('shows the question in place of the spinner', () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        stage: 'Checking requirements',
+        prompt: { message: 'Your DA.live session has expired.', actions: ['Sign In'] },
+    };
+
+    renderModal();
+
+    expect(screen.getByTestId('status')).toHaveAttribute('data-variant', 'warning');
+    expect(screen.getByText('Your DA.live session has expired.')).toBeInTheDocument();
+    expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
+});
+
+it('offers each answer, the one that continues the work first', () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { message: 'Conflicts need your input.', actions: ['Continue', 'Cancel and Reset'] },
+    };
+
+    renderModal();
+
+    expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute(
+        'data-variant',
+        'accent',
+    );
+    expect(screen.getByRole('button', { name: 'Cancel and Reset' })).toHaveAttribute(
+        'data-variant',
+        'secondary',
+    );
+});
+
+// The Adobe sign-in guard asks "Sign In" / "Cancel", and the modal's own dismiss
+// already says Cancel: the reset showed both, side by side (2026-10-23).
+it('shows one Cancel when the question offers its own', () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { message: 'Your Adobe sign-in has expired.', actions: ['Sign In', 'Cancel'] },
+    };
+
+    renderModal();
+
+    expect(screen.getAllByRole('button', { name: 'Cancel' })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument();
+});
+
+it('hands the chosen answer back to the work waiting on it', async () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { message: 'Your DA.live session has expired.', actions: ['Sign In'] },
+    };
+    const { onClose } = renderModal();
+
+    await user().click(screen.getByRole('button', { name: 'Sign In' }));
+
+    expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', {
+        id: OPERATION.id,
+        answer: 'Sign In',
+        // A question with no fields still carries the (empty) form values, so the
+        // extension side reads one shape whatever it asked for.
+        values: {},
+    });
+    // The work carries on and the modal goes back to narrating it, so answering is
+    // not closing.
+    expect(onClose).not.toHaveBeenCalled();
+});
+
+// Backgrounding an unanswered question would leave the work waiting with nothing
+// left to answer it, so the dismiss affordance says Cancel and IS the answer.
+it('cancels rather than backgrounding while it waits', async () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { message: 'Your DA.live session has expired.', actions: ['Sign In'] },
+    };
+    const { onClose } = renderModal();
+
+    await user().click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', {
+        id: OPERATION.id,
+        answer: undefined,
+        values: {},
+    });
+    expect(mockPostMessage).not.toHaveBeenCalledWith('backgroundOperation', expect.anything());
+    expect(onClose).toHaveBeenCalled();
+});
+
+it('still offers Run in background when nothing is being asked', async () => {
+    progress = { id: OPERATION.id, state: 'running', stage: 'Publishing pages' };
+    renderModal();
+
+    await user().click(screen.getByRole('button', { name: 'Run in background' }));
+
+    expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
+        id: OPERATION.id,
+        title: OPERATION.title,
+    });
+});
+
+// The target under a short title, not inside a long one that wrapped (2026-10-28).
+describe('an operation with a subject', () => {
+    const WITH_SUBJECT = { ...OPERATION, title: 'Changing destination', subject: 'Kukla Test App 2 · Production' };
+
+    it('titles the modal short and shows the subject on its own line', () => {
+        progress = { id: OPERATION.id, state: 'running', stage: 'Redeploying' };
+        render(<OperationProgressModal operation={WITH_SUBJECT} onRetry={jest.fn()} onClose={jest.fn()} />);
+
+        expect(screen.getByRole('dialog', { name: 'Changing destination' })).toBeInTheDocument();
+        expect(screen.getByText('Kukla Test App 2 · Production')).toBeInTheDocument();
+    });
+
+    it('names the subject in the background notification', async () => {
+        progress = { id: OPERATION.id, state: 'running', stage: 'Redeploying' };
+        render(<OperationProgressModal operation={WITH_SUBJECT} onRetry={jest.fn()} onClose={jest.fn()} />);
+
+        await user().click(screen.getByRole('button', { name: 'Run in background' }));
+
+        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
+            id: OPERATION.id,
+            title: 'Changing destination: Kukla Test App 2 · Production',
+        });
+    });
+});
+
+describe('a question that needs something typed', () => {
+    const SIGN_IN = {
+        message: 'Sign in to DA.live.',
+        actions: ['Sign In', 'Open DA.live'],
+        fields: [
+            { id: 'orgName', label: 'DA.live namespace', value: 'acme' },
+            { id: 'token', label: 'Token', secret: true, description: 'That token was refused.' },
+        ],
+    };
+
+    it('renders the fields, masking the credential', () => {
+        progress = { id: OPERATION.id, state: 'running', prompt: SIGN_IN };
+
+        renderModal();
+
+        expect(screen.getByText('Sign in to DA.live.')).toBeInTheDocument();
+        expect(screen.getByLabelText('DA.live namespace')).toHaveValue('acme');
+        expect(screen.getByLabelText('Token')).toHaveAttribute('type', 'password');
+        expect(screen.getByTestId('Token-description')).toHaveTextContent('That token was refused.');
+    });
+
+    it('hands back what was typed with the action', async () => {
+        progress = { id: OPERATION.id, state: 'running', prompt: SIGN_IN };
+        renderModal();
+
+        await user().type(screen.getByLabelText('Token'), 'eyJnew');
+        await user().click(screen.getByRole('button', { name: 'Sign In' }));
+
+        expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', {
+            id: OPERATION.id,
+            answer: 'Sign In',
+            values: { orgName: 'acme', token: 'eyJnew' },
+        });
+    });
+
+    // Going to da.live must not cost what is already typed: the values ride along,
+    // and the extension asks again with them.
+    it('carries the values through the trip to da.live', async () => {
+        progress = { id: OPERATION.id, state: 'running', prompt: SIGN_IN };
+        renderModal();
+
+        await user().click(screen.getByRole('button', { name: 'Open DA.live' }));
+
+        expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', {
+            id: OPERATION.id,
+            answer: 'Open DA.live',
+            values: { orgName: 'acme', token: '' },
+        });
+    });
+});
+
+describe('the end of a run', () => {
+    // It used to vanish the instant the run succeeded, so an operation the SC had
+    // watched ended by saying nothing (owner, 2026-09-20).
+    it('shows the success, then closes itself once it has been read', async () => {
+        progress = { id: OPERATION.id, state: 'succeeded' };
+        const { onClose } = renderModal();
+
+        const status = screen.getByTestId('status');
+        expect(status).toHaveAttribute('data-variant', 'success');
+        expect(screen.getByText('Bodea republished')).toBeInTheDocument();
+        expect(onClose).not.toHaveBeenCalled();
+
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+        });
+
+        expect(onClose).toHaveBeenCalled();
+    });
+
+    // Centred under the centred tick and title (owner, 2026-10-16); a failure's reason
+    // can run to several lines, so it stays left-aligned.
+    it('centres the success message', () => {
+        progress = { id: OPERATION.id, state: 'succeeded', note: 'Added Demo Team Block Collection (9 blocks).' };
+        renderModal();
+
+        expect(screen.getByTestId('status')).toHaveAttribute('data-centred', 'true');
+    });
+
+    it("leaves a failure's reason left-aligned — control", () => {
+        progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
+        renderModal();
+
+        expect(screen.getByTestId('status')).toHaveAttribute('data-centred', 'false');
+    });
+
+    // A failure has a reason to read and a Retry to press, so it waits.
+    it('leaves a failure on screen', async () => {
+        progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
+        const { onClose } = renderModal();
+
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
+        });
+
+        expect(screen.getByText("Couldn't republish Bodea")).toBeInTheDocument();
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    // Neither ending has anything left to narrate, so neither offers the background.
+    it('offers Close rather than Run in background once it has ended', () => {
+        progress = { id: OPERATION.id, state: 'succeeded' };
+        renderModal();
+
+        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: 'Run in background' }),
+        ).not.toBeInTheDocument();
+    });
+});
+
+// A success with something left to do (AB-26x: an install that leaves demo setup steps)
+// says what is left and offers it, and waits for the SC rather than closing by itself.
+describe('a next step on success', () => {
+    const NEXT = { message: 'Next: 2 setup steps in Commerce for the demo.', action: 'Open demo setup' };
+
+    function renderWithNext(): { onClose: jest.Mock; onPress: jest.Mock } {
+        const onClose = jest.fn();
+        const onPress = jest.fn();
+        render(
+            <OperationProgressModal
+                operation={OPERATION}
+                onRetry={jest.fn()}
+                onClose={onClose}
+                next={{ ...NEXT, onPress }}
+            />,
+        );
+        return { onClose, onPress };
+    }
+
+    it('says what is left under the success title, and offers it', () => {
+        progress = { id: OPERATION.id, state: 'succeeded' };
+        renderWithNext();
+
+        expect(screen.getByText('Bodea republished')).toBeInTheDocument();
+        expect(screen.getByText(NEXT.message)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Open demo setup' })).toHaveAttribute('data-variant', 'accent');
+    });
+
+    it('waits for the SC instead of closing by itself', async () => {
+        progress = { id: OPERATION.id, state: 'succeeded' };
+        const { onClose } = renderWithNext();
+
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
+        });
+
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('closes, then starts the next step', async () => {
+        progress = { id: OPERATION.id, state: 'succeeded' };
+        const { onClose, onPress } = renderWithNext();
+
+        await user().click(screen.getByRole('button', { name: 'Open demo setup' }));
+
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not offered while the work is still running', () => {
+        progress = { id: OPERATION.id, state: 'running', stage: 'Deploying' };
+        renderWithNext();
+
+        expect(screen.queryByRole('button', { name: 'Open demo setup' })).not.toBeInTheDocument();
+    });
+});
+
+// AB-74: a next step the RUN offered (`offer`), turned into a button by the screen. "Add
+// another ERP" whose new ERP owns nothing offers "Assign products" this way.
+describe('a next step the run offered', () => {
+    const OFFER = {
+        action: 'assign-erp-products' as const,
+        id: 'erp-integration',
+        erp: 'demo-erp-2',
+        name: 'Accuform ERP',
+        message: 'Next: Accuform ERP owns no products yet. Assign products to it.',
+    };
+
+    it("shows the screen's button for it on success, and starts it after closing", async () => {
+        progress = { id: OPERATION.id, state: 'succeeded', offer: OFFER };
+        const onClose = jest.fn();
+        const onPress = jest.fn();
+        const offerStep = jest.fn(() => ({ message: OFFER.message, action: 'Assign products', onPress }));
+        render(<OperationProgressModal operation={OPERATION} onRetry={jest.fn()} onClose={onClose} offerStep={offerStep} />);
+
+        expect(offerStep).toHaveBeenCalledWith(OFFER);
+        expect(screen.getByText(OFFER.message)).toBeInTheDocument();
+        await user().click(screen.getByRole('button', { name: 'Assign products' }));
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(onPress).toHaveBeenCalledTimes(1);
+    });
+});

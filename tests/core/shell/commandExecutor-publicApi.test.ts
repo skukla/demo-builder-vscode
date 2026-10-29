@@ -15,6 +15,7 @@
 
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { CommandSequencer } from '@/core/shell/commandSequencer';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 import { createMockExecaSubprocess, simulateSubprocessComplete } from './commandExecutor.testUtils';
@@ -78,6 +79,18 @@ describe('commandExists', () => {
 
         expect(execaCalls()[0].command).toBe('which git');
         expect(deps.environmentSetup.findNpmGlobalPaths).toHaveBeenCalled();
+    });
+
+    it('runs `which` through a SHELL — without one execa takes "which git" as a file name', async () => {
+        // Measured 2026-10-03 against execa 5.1.1: `execa('which ls', {shell: false})`
+        // fails with empty stdout, so this probe answered "absent" for every tool.
+        // The mocked execa above answers whatever it is handed, which is why the
+        // suite stayed green; the shell option is the argument that matters.
+        const { executor } = build();
+
+        await executor.commandExists('git');
+
+        expect(execaCalls()[0].options.shell).toBeTruthy();
     });
 
     it('reports the tool as present when `which` printed a path', async () => {
@@ -150,9 +163,9 @@ describe('executeSequence', () => {
 
         await executor.executeSequence([{ command: 'aio console where' }]);
 
-        // useNodeVersion:'auto' — resolved to 18 by the environment and wrapped.
+        // Demo Builder's Node wraps it (PR-1a).
         expect(execaCalls()[0].command).toBe(
-            '/usr/local/bin/fnm exec --using=18 aio console where',
+            `/usr/local/bin/fnm exec --using=${demoBuilderNode()} aio console where`,
         );
         // enhancePath:true — the npm global bin directories are prepended.
         expect((execaCalls()[0].options.env as NodeJS.ProcessEnv).PATH).toContain(
@@ -204,7 +217,7 @@ describe('executeParallel', () => {
         await executor.executeParallel([{ command: 'aio console where' }]);
 
         expect(execaCalls()[0].command).toBe(
-            '/usr/local/bin/fnm exec --using=18 aio console where',
+            `/usr/local/bin/fnm exec --using=${demoBuilderNode()} aio console where`,
         );
         expect((execaCalls()[0].options.env as NodeJS.ProcessEnv).PATH).toContain(
             '/usr/local/lib/node_modules/.bin',

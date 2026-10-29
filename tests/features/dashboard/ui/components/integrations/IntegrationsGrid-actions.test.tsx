@@ -71,7 +71,7 @@ describe('IntegrationsGrid actions', () => {
             // The flyout stays shut. The progress modal opening is the point of
             // the Deploy (PL-59), so the check names the flyout, not any dialog.
             expect(
-                screen.queryByRole('dialog', { name: 'custom-app details' }),
+                screen.queryByRole('dialog', { name: 'custom-app details' })
             ).not.toBeInTheDocument();
             expect(getClient().postMessage).toHaveBeenCalledWith('deployAppBuilderComponent', {
                 progress: 'modal',
@@ -128,21 +128,28 @@ describe('IntegrationsGrid actions', () => {
             });
         });
 
-        it('routes a stale card Update to redeployAppBuilderComponent', async () => {
+        it('routes a card with a recorded update to updateAppBuilderComponent, not a bare redeploy', async () => {
             const user = setupUser();
             renderGrid({
                 appBuilderComponents: {
-                    'custom-app': { ...DEPLOYED_INTEGRATION, status: 'stale' },
+                    'custom-app': {
+                        ...DEPLOYED_INTEGRATION,
+                        updateAvailable: { commit: 'abc123', checkedAt: '2026-09-17T00:00:00Z' },
+                    },
                 },
             });
 
             const tile = card('custom-app', 'Update needed');
             await user.click(within(tile).getByRole('button', { name: /^update$/i }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('redeployAppBuilderComponent', {
+            expect(getClient().postMessage).toHaveBeenCalledWith('updateAppBuilderComponent', {
                 progress: 'modal',
                 id: 'custom-app',
             });
+            expect(getClient().postMessage).not.toHaveBeenCalledWith(
+                'redeployAppBuilderComponent',
+                expect.anything()
+            );
         });
 
         it('routes Install into Commerce to installAppBuilderComponent (AB-5)', async () => {
@@ -167,7 +174,7 @@ describe('IntegrationsGrid actions', () => {
             });
         });
 
-        it("routes the drawer's Open Commerce Admin to the dashboard tile's openAdminPanel", async () => {
+        it("routes the kebab's Open Commerce Admin to the dashboard tile's openAdminPanel", async () => {
             const user = setupUser();
             renderGrid({
                 appBuilderComponents: {
@@ -178,24 +185,27 @@ describe('IntegrationsGrid actions', () => {
                 },
             });
 
-            // The link lives on the drawer's Commerce-install row.
-            await user.click(card('custom-app', 'Deployed'));
-            await user.click(screen.getByText('Open Commerce Admin'));
+            // The kebab is the ONE home of this verb since the flyout's install row
+            // shrank to a line (2026-10-01); it used to be a link there too.
+            const tile = card('custom-app', 'Deployed');
+            await user.click(within(tile).getByRole('button', { name: /^open commerce admin$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('openAdminPanel', {});
         });
 
         // Open moved from the card FACE to the kebab (a healthy card is calm), so
         // this is a menu item scoped to the tile now.
-        it('routes the deployed card Open to openLiveSite with the primary url', async () => {
+        // Open is the integration's Adobe workspace in the Developer Console (owner,
+        // 2026-09-21) — the extension resolves which workspace from the id.
+        it("routes the card's Open to the Developer Console, naming the integration", async () => {
             const user = setupUser();
             renderGrid({ appBuilderComponents: oneDeployed() });
 
             const tile = card('custom-app', 'Deployed');
-            await user.click(within(tile).getByRole('button', { name: /^open$/i }));
+            await user.click(within(tile).getByRole('button', { name: 'Open in Developer Console' }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('openLiveSite', {
-                url: 'https://custom-app.example.com',
+            expect(getClient().postMessage).toHaveBeenCalledWith('openDevConsole', {
+                componentId: 'custom-app',
             });
         });
     });
@@ -353,9 +363,7 @@ describe('IntegrationsGrid actions', () => {
 
             await openRemove(user);
 
-            expect(
-                screen.getByRole('dialog', { name: 'Remove custom-app' })
-            ).toBeInTheDocument();
+            expect(screen.getByRole('dialog', { name: 'Remove custom-app' })).toBeInTheDocument();
             expect(getClient().postMessage).not.toHaveBeenCalledWith(
                 'removeAppBuilderComponent',
                 expect.anything()
@@ -498,37 +506,6 @@ describe('IntegrationsGrid actions', () => {
         });
     });
 
-    /**
-     * The grid offers no add affordance.
-     *
-     * It used to end with a dashed "+ Add integration" tile that opened the same
-     * modal instance as the sticky header's button — two doors, one room. The
-     * projects grid, one click away, has never had one: it shows exactly one add
-     * affordance in every state, while this screen always showed two.
-     *
-     * The tile also cost more than it looked. As a grid participant it had to be
-     * kept dimensionally in sync with real cards, it affected wrapping, and it
-     * was half the reason row-equalisation needed fixing. A header button is
-     * inert by comparison — and it never scrolls away, whereas the tile drifted
-     * to the end of the grid as integrations accumulated, hardest to find
-     * exactly when the list was longest.
-     *
-     * The empty state keeps its own CTA; it renders instead of the grid, so it
-     * was never the tile's job.
-     */
-    describe('no add affordance', () => {
-        it('renders no add tile', () => {
-            renderGrid({ appBuilderComponents: twoDeployed() });
-
-            expect(screen.queryByTestId('integration-add-tile')).not.toBeInTheDocument();
-        });
-
-        it('ends with the last integration card, nothing after it', () => {
-            const { container } = renderGrid({ appBuilderComponents: twoDeployed() });
-
-            const grid = container.querySelector('.integrations-grid') as HTMLElement;
-            const cards = screen.getAllByRole('button', { name: /, Deployed$/ });
-            expect(grid.lastElementChild).toBe(cards[cards.length - 1]);
-        });
-    });
+    // The add card at the grid's end (PL-62) has its own suite:
+    // IntegrationsGrid-addCard.test.tsx.
 });

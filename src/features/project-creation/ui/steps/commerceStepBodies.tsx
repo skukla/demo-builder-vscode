@@ -15,7 +15,9 @@
 import React from 'react';
 import { ChoiceCard } from '../components/ChoiceCard';
 import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
+import { COMMERCE_SET_IN_CONFIGURE } from './editLocks';
 import { SampleDataStep } from './SampleDataStep';
+import { SetInConfigureNote } from './SetInConfigureNote';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
 
@@ -71,24 +73,36 @@ export interface SectionBodyContext {
     updateState: (partial: Partial<WizardState>) => void;
     /** The single ConnectStoreStepContent (rendered only by a config step's body). */
     configForm: React.ReactNode;
+    /** Edit leaves the settings steps to Configure: Backend says so, once. */
+    setInConfigure: boolean;
 }
 
 /** Build the body node for a section (backend cards / sign-in / config form). */
 export function sectionBody(id: CommerceSectionId, ctx: SectionBodyContext): React.ReactNode {
     if (id === 'backend') {
         return (
-            <div className="choice-grid" role="listbox" data-testid="backend-cards">
-                {Object.keys(BACKEND_LABELS).map((backend) => (
-                    <BackendCard
-                        key={backend}
-                        backend={backend}
-                        pkgName={ctx.pkgName}
-                        available={ctx.availableBackends.includes(backend)}
-                        selected={ctx.selectedBackend === backend}
-                        onSelect={ctx.onBackendSelect}
+            <>
+                <div className="choice-grid" role="listbox" data-testid="backend-cards">
+                    {Object.keys(BACKEND_LABELS).map((backend) => (
+                        <BackendCard
+                            key={backend}
+                            backend={backend}
+                            pkgName={ctx.pkgName}
+                            available={ctx.availableBackends.includes(backend)}
+                            selected={ctx.selectedBackend === backend}
+                            onSelect={ctx.onBackendSelect}
+                        />
+                    ))}
+                </div>
+                {/* Said once, quietly: the three settings steps are not in Edit's strip. */}
+                {ctx.setInConfigure && (
+                    <SetInConfigureNote
+                        text={COMMERCE_SET_IN_CONFIGURE}
+                        state={ctx.state}
+                        testId="commerce-set-in-configure"
                     />
-                ))}
-            </div>
+                )}
+            </>
         );
     }
     if (id === 'signin') {

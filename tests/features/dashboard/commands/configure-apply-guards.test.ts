@@ -36,8 +36,10 @@ const mockRefreshStatus = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     ProjectDashboardWebviewCommand: {
         refreshStatus: (...args: unknown[]) => mockRefreshStatus(...args),
-        sendAuthoringExperienceUpdate: jest.fn().mockResolvedValue(undefined),
     },
+}));
+jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
+    sendAuthoringExperienceUpdate: jest.fn().mockResolvedValue(undefined),
 }));
 
 // ensureAuthAndApply reaches the guard through a dynamic import; jest.mock
@@ -143,9 +145,11 @@ describe('ConfigureProjectWebviewCommand - apply prompts and their guards', () =
                 createMockProject({ status: 'running' })
             );
 
+            // The button does what the message says (PL-76): it used to read
+            // "Redeploy Mesh" and only redeploy, leaving the demo on its old .env.
             expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
                 'Configuration saved. Redeploy mesh and restart demo to apply changes.',
-                'Redeploy Mesh',
+                'Redeploy and Restart',
                 'Later'
             );
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
@@ -177,10 +181,46 @@ describe('ConfigureProjectWebviewCommand - apply prompts and their guards', () =
                 createMockProject({ status: 'stopped' })
             );
 
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh');
+            // AI-15: for this screen's project, named by its path.
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.deployMesh', '/test/project');
             expect(sendMessage).toHaveBeenLastCalledWith('deployment-status', {
                 isDeploying: false,
             });
+        });
+
+        it('"Redeploy and Restart" redeploys, THEN restarts a running demo (PL-76)', async () => {
+            answerShouldShow({ [MESH_SHOW]: true });
+            (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Redeploy and Restart');
+            mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+            notifications(command).communicationManager = { sendMessage: jest.fn() };
+
+            await notifications(command).handleMeshOnlyNotification(
+                createMockProject({ status: 'running' })
+            );
+
+            const ids = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(
+                ([id]) => id as string
+            );
+            const deploy = ids.indexOf('demoBuilder.deployMesh');
+            const stop = ids.indexOf('demoBuilder.stopDemo');
+            const start = ids.indexOf('demoBuilder.startDemo');
+            expect(deploy).toBeGreaterThanOrEqual(0);
+            expect(stop).toBeGreaterThan(deploy);
+            expect(start).toBeGreaterThan(stop);
+        });
+
+        it('"Redeploy Mesh" leaves a stopped demo alone', async () => {
+            answerShouldShow({ [MESH_SHOW]: true });
+            (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Redeploy Mesh');
+            mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+            notifications(command).communicationManager = { sendMessage: jest.fn() };
+
+            await notifications(command).handleMeshOnlyNotification(
+                createMockProject({ status: 'stopped' })
+            );
+
+            const commandsRun = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(([id]) => id);
+            expect(commandsRun).not.toContain('demoBuilder.startDemo');
         });
 
         it('"Later" saves the decline when one was recorded', async () => {
@@ -243,7 +283,7 @@ describe('ConfigureProjectWebviewCommand - apply prompts and their guards', () =
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
         });
 
-        it('offers a single Restart Demo action and spends the flag', async () => {
+        it('offers Restart Demo and Later, and spends the flag', async () => {
             answerShouldShow({ [RESTART_SHOW]: true });
 
             const shown = await notifications(command).handleRestartNotification();
@@ -254,7 +294,8 @@ describe('ConfigureProjectWebviewCommand - apply prompts and their guards', () =
             );
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
                 'Configuration saved. Restart the demo to apply changes.',
-                'Restart Demo'
+                'Restart Demo',
+                'Later'
             );
         });
 

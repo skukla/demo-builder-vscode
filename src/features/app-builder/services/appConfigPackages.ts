@@ -109,6 +109,18 @@ export async function detectAppLayout(componentPath: string): Promise<AppConfigL
 }
 
 /**
+ * The extension points an app declares: the keys of the root `extensions:` map
+ * (`commerce/backend-ui/<n>` for an Admin UI SDK app). `aio app deploy` publishes these
+ * on the workspace in Adobe's registry, and `aio app undeploy` is what unpublishes them,
+ * so a removal reads them BEFORE the local folder goes to know what to look for there.
+ * A standalone app, or an unreadable config, declares none.
+ */
+export async function listDeclaredExtensionPoints(componentPath: string): Promise<string[]> {
+    const extensions = (await readConfigDoc(componentPath))?.extensions;
+    return extensions && typeof extensions === 'object' ? Object.keys(extensions) : [];
+}
+
+/**
  * Rewrite a standalone app's `app.config.yaml` so its runtime packages carry the
  * derived distinct `owPackage` (the isolation transform above). No-op when there
  * are no standalone packages to rename — that case is caught at the add door, and
@@ -145,11 +157,50 @@ export async function applyIsolatedPackages(
  * rule as provider bindings.
  */
 export async function listDeclaredPackageNames(componentPath: string): Promise<string[]> {
-    const names = new Set<string>();
-    const doc = await readConfigDoc(componentPath);
-    for (const name of Object.keys(doc?.application?.runtimeManifest?.packages ?? {})) {
-        names.add(name);
+    return Object.keys(await declaredPackageBlocks(componentPath));
+}
+
+/** The timers and rules an app declares inside its packages, by name. */
+export interface DeclaredTriggersAndRules {
+    triggers: string[];
+    rules: string[];
+}
+
+/**
+ * The triggers and rules an app declares, read from the same package blocks as
+ * {@link listDeclaredPackageNames}.
+ *
+ * They live beside a package's actions in the config, but in Runtime they are
+ * separate, namespace-level entities: deleting a package does not delete them.
+ * On 2026-09-21 a failed undeploy left the ERP's one-minute timer and its rule
+ * firing at code that was being removed, and the leftover clean-up — which
+ * knew only packages — could not see them.
+ */
+export async function listDeclaredTriggersAndRules(
+    componentPath: string,
+): Promise<DeclaredTriggersAndRules> {
+    const triggers = new Set<string>();
+    const rules = new Set<string>();
+    for (const block of Object.values(await declaredPackageBlocks(componentPath))) {
+        const entities = block as { triggers?: unknown; rules?: unknown } | null | undefined;
+        for (const name of Object.keys(asRecord(entities?.triggers))) triggers.add(name);
+        for (const name of Object.keys(asRecord(entities?.rules))) rules.add(name);
     }
+    return { triggers: [...triggers], rules: [...rules] };
+}
+
+/** A parsed YAML value as a map, or an empty one when it is not a map. */
+function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+/** Every package block the app declares, its own and its extensions' `$include`s. */
+async function declaredPackageBlocks(componentPath: string): Promise<RuntimePackages> {
+    const blocks: RuntimePackages = {};
+    const doc = await readConfigDoc(componentPath);
+    Object.assign(blocks, doc?.application?.runtimeManifest?.packages ?? {});
     for (const entry of Object.values(doc?.extensions ?? {})) {
         const include = (entry as { $include?: unknown } | undefined)?.$include;
         if (typeof include !== 'string') {
@@ -176,9 +227,113 @@ export async function listDeclaredPackageNames(componentPath: string): Promise<s
         } catch {
             continue;
         }
-        for (const name of Object.keys(extDoc?.runtimeManifest?.packages ?? {})) {
-            names.add(name);
+        Object.assign(blocks, extDoc?.runtimeManifest?.packages ?? {});
+    }
+    return blocks;
+}
+
+/** The annotation that makes `aio app deploy` require the four IMS_OAUTH_S2S values. */
+const INCLUDE_IMS_CREDENTIALS = 'include-ims-credentials';
+
+/** Whether a parsed config value declares the annotation as true, anywhere inside it. */
+function asksForImsCredentials(value: unknown): boolean {
+    // An array needs no branch of its own: its entries are its indices and items,
+    // and an index is never the annotation's name.
+    if (!value || typeof value !== 'object') return false;
+    return Object.entries(value).some(
+        ([key, inner]) => (key === INCLUDE_IMS_CREDENTIALS && inner === true) || asksForImsCredentials(inner),
+    );
+}
+
+/** Parse a YAML file, or `undefined` when it is missing or unparseable. */
+async function readYaml(file: string): Promise<unknown> {
+    try {
+        return yaml.parse(await fsPromises.readFile(file, 'utf-8'));
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * Whether any action of the app carries `include-ims-credentials: true`.
+ *
+ * With it, `aio app deploy` refuses to run unless the workspace's OAuth
+ * server-to-server credential is in the environment as `IMS_OAUTH_S2S_*`
+ * (aio-lib-runtime `getIncludeIMSCredentialsAnnotationInputs`, read 2026-09-15).
+ * App Builder Database apps need it; the demo ERP is one. Reads `app.config.yaml`
+ * and each extension's `$include`d file; a missing or unreadable file declares nothing.
+ */
+export async function declaresIncludeImsCredentials(componentPath: string): Promise<boolean> {
+    const doc = (await readYaml(appConfigPath(componentPath))) as AppConfigDoc | undefined;
+    if (asksForImsCredentials(doc?.application)) return true;
+    for (const entry of Object.values(doc?.extensions ?? {})) {
+        const include = (entry as { $include?: unknown } | undefined)?.$include;
+        if (typeof include !== 'string') continue;
+        if (asksForImsCredentials(await readYaml(path.join(componentPath, include)))) return true;
+    }
+    return false;
+}
+
+/** One Runtime action an app declares: its package, its name, and whether it is a web action. */
+export interface DeclaredAction {
+    packageName: string;
+    actionName: string;
+    web: boolean;
+}
+
+/** `web: yes` parses as the STRING "yes" under YAML 1.2, so the flag is read by value. */
+function isWebAction(def: unknown): boolean {
+    // Only null and undefined cannot be read from; a scalar simply carries neither flag.
+    if (!def) return false;
+    const { web, 'web-export': webExport } = def as { web?: unknown; 'web-export'?: unknown };
+    const flag = web ?? webExport;
+    if (flag === true) return true;
+    return typeof flag === 'string' && ['yes', 'true', 'raw'].includes(flag.toLowerCase());
+}
+
+/** A package's actions map, following one `$include` relative to the file that holds it. */
+async function actionsOf(pkg: unknown, baseDir: string): Promise<Record<string, unknown>> {
+    const actions = (pkg as { actions?: unknown } | undefined)?.actions;
+    if (!actions || typeof actions !== 'object') return {};
+    const include = (actions as { $include?: unknown }).$include;
+    if (typeof include !== 'string') return actions as Record<string, unknown>;
+    const included = await readYaml(path.join(baseDir, include));
+    return included && typeof included === 'object' ? (included as Record<string, unknown>) : {};
+}
+
+/** Every action under a packages map, resolved against `baseDir`. */
+async function actionsIn(packages: RuntimePackages | undefined, baseDir: string): Promise<DeclaredAction[]> {
+    const out: DeclaredAction[] = [];
+    for (const [packageName, pkg] of Object.entries(packages ?? {})) {
+        for (const [actionName, def] of Object.entries(await actionsOf(pkg, baseDir))) {
+            out.push({ packageName, actionName, web: isWebAction(def) });
         }
     }
-    return [...names];
+    return out;
+}
+
+/**
+ * Every Runtime action the app declares, in both layouts.
+ *
+ * This is how the deployed URLs of an EXTENSION-layout app are found: `aio app get-url`
+ * cannot read that layout (exit 2, "reading 'packages'"), and `aio app deploy` prints
+ * only the static SPA URL for it — measured on a real redeploy, 2026-09-16. The config
+ * is also what scopes the answer to THIS app, where a namespace listing would include
+ * every other app deployed beside it.
+ *
+ * An include's own `$include`s resolve against the directory of the file that names
+ * them, which is the aio convention (`./actions/x/actions.config.yaml` sits beside
+ * the ext.config.yaml, not at the repository root). Unreadable files declare nothing.
+ */
+export async function listDeclaredActions(componentPath: string): Promise<DeclaredAction[]> {
+    const doc = (await readYaml(appConfigPath(componentPath))) as AppConfigDoc | undefined;
+    const found = await actionsIn(doc?.application?.runtimeManifest?.packages, componentPath);
+    for (const entry of Object.values(doc?.extensions ?? {})) {
+        const include = (entry as { $include?: unknown } | undefined)?.$include;
+        if (typeof include !== 'string') continue;
+        const file = path.join(componentPath, include);
+        const ext = (await readYaml(file)) as { runtimeManifest?: { packages?: RuntimePackages } } | undefined;
+        found.push(...(await actionsIn(ext?.runtimeManifest?.packages, path.dirname(file))));
+    }
+    return found;
 }

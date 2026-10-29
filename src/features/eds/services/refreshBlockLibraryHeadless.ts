@@ -5,7 +5,12 @@
  * `component-definition.json` (the destructive full-rebuild path, for users who
  * hand-edit `component-definition.json` outside the AI promote flow). Runs
  * `executeEdsPipeline` with `includeBlockLibrary: true` / `skipContent: true` /
- * `skipPublish: false`, retrying once on a mid-pipeline DA.live token expiry.
+ * `skipPublish: true`, retrying once on a mid-pipeline DA.live token expiry.
+ *
+ * `skipPublish: true` skips the SITE's pages, never the library's: the library
+ * publish runs whenever the rebuild produced library paths. It was `false` until
+ * 2026-10-15, which re-published every page of the site (86 on the measured run,
+ * 17s) on each refresh, for a change that touches none of them.
  *
  * Two callers share this core:
  *   - `RefreshBlockLibraryCommand` — the dashboard kebab action, which wraps it
@@ -17,15 +22,14 @@
  */
 
 import type * as vscode from 'vscode';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import {
     ensureDaLiveAuth,
     getDaLiveAuthService,
     getGitHubServices,
 } from '@/features/eds/handlers/edsHelpers';
-import {
-    createDaLiveServiceTokenProvider,
-    DaLiveContentOperations,
-} from '@/features/eds/services/daLive/daLiveContentOperations';
+import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
@@ -35,6 +39,17 @@ import type { Logger } from '@/types/logger';
 
 const LOG_PREFIX = '[RefreshBlockLibrary]';
 const MAX_RETRIES = 1;
+
+/**
+ * The refresh's steps, by the pipeline operation that starts each (progress
+ * vocabulary slice 2, owner 2026-10-16). An operation not named here (a block code
+ * patch, brand assets) is part of the step before it.
+ */
+const STEP_OF_OPERATION: Readonly<Record<string, string>> = {
+    'block-library': OPERATION_STAGES.buildingBlockLibrary.label,
+    'eds-settings': OPERATION_STAGES.applyingDaLiveSettings.label,
+    'library-publish': OPERATION_STAGES.publishingBlockList.label,
+};
 
 /** Result of a headless block-library refresh. */
 export interface RefreshBlockLibraryHeadlessResult {
@@ -53,8 +68,14 @@ export interface RefreshBlockLibraryHeadlessDeps {
     /** Extension context — needed to resolve DA.live/GitHub services. */
     context: vscode.ExtensionContext;
     logger: Logger;
-    /** Progress messages (the command bridges these to a progress notification). */
+    /** Progress messages, plain (Configure's Republish shows them under its own step). */
     onProgress?: (message: string) => void;
+    /**
+     * Each progress message with the step it belongs to: "Building block library",
+     * "Applying DA.live settings", "Publishing the block list". The dashboard's Refresh
+     * Blocks shows the step as line 1 and the message under it.
+     */
+    onStep?: (stage: string, message: string) => void;
     /**
      * Helix seam. Defaults to a service built from this call's logger and the
      * context's GitHub/DA.live token sources — production never passes it.
@@ -65,6 +86,12 @@ export interface RefreshBlockLibraryHeadlessDeps {
      * optional field and removes a module wall.
      */
     helixService?: HelixService;
+    /**
+     * Publish only these blocks' doc pages and the block list: the blocks a caller
+     * just added. Absent publishes every doc page, the full rebuild the dashboard's
+     * Refresh Block Library is for.
+     */
+    publishOnlyBlocks?: string[];
 }
 
 /**
@@ -79,7 +106,7 @@ export interface RefreshBlockLibraryHeadlessDeps {
 export async function refreshBlockLibraryHeadless(
     deps: RefreshBlockLibraryHeadlessDeps,
 ): Promise<RefreshBlockLibraryHeadlessResult> {
-    const { project, context, logger, onProgress } = deps;
+    const { project, context, logger } = deps;
 
     const paramsResult = extractResetParams(project);
     if (!paramsResult.success) {
@@ -99,8 +126,15 @@ export async function refreshBlockLibraryHeadless(
     const helixService =
         deps.helixService ?? new HelixService(logger, githubTokenService, tokenProvider);
 
+    let stage: string = OPERATION_STAGES.buildingBlockLibrary.label;
+    // Every message reaches both callers: plain, and under the step it belongs to.
+    const say = (message: string): void => {
+        deps.onProgress?.(message);
+        deps.onStep?.(stage, message);
+    };
     const reportProgress = (info: { operation: string; message: string }): void => {
-        onProgress?.(info.message);
+        stage = STEP_OF_OPERATION[info.operation] ?? stage;
+        say(info.message);
     };
 
     // Deliberately NOT withDaLiveAuthRetry (daLiveAuthRetry.ts), examined
@@ -123,7 +157,8 @@ export async function refreshBlockLibraryHeadless(
                     templateRepo: params.templateRepo,
                     includeBlockLibrary: true,
                     skipContent: true,
-                    skipPublish: false,
+                    skipPublish: true,
+                    ...(deps.publishOnlyBlocks ? { publishLibraryBlocksOnly: deps.publishOnlyBlocks } : {}),
                     // Load-bearing: pass an empty array (truthy in JS) so
                     // executeEdsPipeline rebuilds from the USER's repo's
                     // component-definition.json — not the template's. Blocks
@@ -146,7 +181,7 @@ export async function refreshBlockLibraryHeadless(
                 logger.warn(
                     `${LOG_PREFIX} DA.live token expired, attempting re-auth (attempt ${attempt})`,
                 );
-                onProgress?.('DA.live session expired. Please re-authenticate');
+                say('DA.live session expired. Please re-authenticate');
                 const authResult = await ensureDaLiveAuth(handlerContext, LOG_PREFIX);
                 if (!authResult.authenticated) {
                     return authResult.cancelled
@@ -160,7 +195,7 @@ export async function refreshBlockLibraryHeadless(
                               error: `DA.live re-authentication failed: ${authResult.error}`,
                           };
                 }
-                onProgress?.('Resuming block library refresh');
+                say('Resuming block library refresh');
                 continue;
             }
             logger.error(

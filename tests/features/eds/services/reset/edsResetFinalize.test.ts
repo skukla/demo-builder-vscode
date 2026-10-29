@@ -1,0 +1,405 @@
+/**
+ * RENAMED from `edsResetService-finalize.test.ts` on 2026-10-08 (EDS-8 split by job):
+ * the final steps and the result moved to `edsResetFinalize.ts`.
+ * A suite is paired with the module it is named for. Still driven through the
+ * public entry point; no assertion changed in the rename.
+ *
+ * EDS Reset Service — the final steps and the RESULT.
+ *
+ * CDN verification, the optional mesh redeploy, state persistence, the
+ * skipped-config-write signal, and the mapping of each failure to the result
+ * the handler surfaces. Steps 0 through 11 live in
+ * `edsResetService-orchestration.test.ts`.
+ */
+
+import {
+    REPO_RESULT,
+    mockExecuteEdsPipeline,
+    mockPublishConfig,
+    mockRedeployApiMesh,
+    mockResetRepoToTemplate,
+    mockVerifyCdnResources,
+    resetOrchestrationMocks,
+    runReset,
+} from './edsResetService.orchestrationHarness';
+
+import { PAAS_GRAPHQL_ENDPOINT } from '@/core/config/envVarKeys';
+import { STOREFRONT_CHANGES } from '@/features/eds/services/storefront/storefrontChanges';
+import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
+import type { Project } from '@/types/base';
+import { createResetContext, meshDeps } from './edsResetService.testUtils';
+import { createMockProject, edsStorefrontInstance } from '../../../../helpers/projectFake';
+
+jest.setTimeout(5000);
+
+beforeEach(resetOrchestrationMocks);
+
+describe('executeEdsReset - CDN verification', () => {
+    it('does not verify the CDN unless asked', async () => {
+        await runReset();
+
+        expect(mockVerifyCdnResources).not.toHaveBeenCalled();
+    });
+
+    it('verifies config.json on the CDN when asked and reports the outcome', async () => {
+        const { context, progress } = await runReset({ verifyCdn: true });
+
+        expect(mockVerifyCdnResources).toHaveBeenCalledWith(
+            'test-owner',
+            'test-repo',
+            context.logger
+        );
+        expect(progress).toContainEqual({
+            step: 11,
+            totalSteps: 11,
+            message: 'Checking the settings',
+        });
+        expect(progress).toContainEqual({
+            step: 11,
+            totalSteps: 11,
+            message: 'Settings checked',
+        });
+    });
+
+    it('reports a still-propagating config when CDN verification times out', async () => {
+        mockVerifyCdnResources.mockResolvedValue({ configVerified: false });
+
+        const { result, progress } = await runReset({ verifyCdn: true });
+
+        expect(progress).toContainEqual({
+            step: 11,
+            totalSteps: 11,
+            message: 'Waiting for the settings',
+        });
+        expect(progress).not.toContainEqual(
+            expect.objectContaining({ message: 'Settings checked' })
+        );
+        expect(result.success).toBe(true);
+    });
+});
+
+describe('executeEdsReset - mesh redeploy', () => {
+    it('does not redeploy the mesh unless asked, and says so on the result', async () => {
+        const { result, progress } = await runReset();
+
+        expect(mockRedeployApiMesh).not.toHaveBeenCalled();
+        expect(result).toStrictEqual({
+            success: true,
+            filesReset: 5,
+            contentCopied: 3,
+            meshRedeployed: false,
+        });
+        expect(progress[0].totalSteps).toBe(11);
+    });
+
+    it('redeploys the mesh with the project, repo, counts and deps, adding a twelfth step', async () => {
+        const { result, progress, project, context } = await runReset({ redeployMesh: true });
+
+        expect(mockRedeployApiMesh).toHaveBeenCalledWith(
+            project,
+            'test-owner',
+            'test-repo',
+            context,
+            expect.any(Function),
+            5,
+            3,
+            meshDeps
+        );
+        expect(result).toStrictEqual({
+            success: true,
+            filesReset: 5,
+            contentCopied: 3,
+            meshRedeployed: true,
+        });
+        expect(progress[0].totalSteps).toBe(12);
+    });
+
+    it('returns the partial result from a failed mesh redeploy without saving the project', async () => {
+        const partial = {
+            success: true,
+            filesReset: 5,
+            contentCopied: 3,
+            meshRedeployed: false,
+            error: 'Reset completed but mesh redeployment failed: boom',
+            errorType: 'MESH_REDEPLOY_FAILED',
+        };
+        mockRedeployApiMesh.mockResolvedValue(partial);
+
+        const { result, context } = await runReset({ redeployMesh: true });
+
+        expect(result).toBe(partial);
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    // The early return used to drop a config write that also failed: the reset said only
+    // that the mesh was not redeployed (2026-10-23).
+    it('keeps a failed config write on a failed mesh redeploy, after the mesh sentence', async () => {
+        mockPublishConfig.mockResolvedValue({ configWritten: false });
+        mockRedeployApiMesh.mockResolvedValue({
+            success: true,
+            filesReset: 5,
+            contentCopied: 3,
+            meshRedeployed: false,
+            error: 'Reset completed but mesh redeployment failed: boom',
+            errorType: 'MESH_REDEPLOY_FAILED',
+        });
+
+        const { result } = await runReset({ redeployMesh: true });
+
+        expect(result.error).toBe(
+            'Reset completed but mesh redeployment failed: boom ' +
+                'The site configuration could not be written, so product detail pages ' +
+                'will not load. Run "Demo Builder: Repair Site Configuration" to finish it.',
+        );
+    });
+});
+
+describe('executeEdsReset - state persistence and the result', () => {
+    it('saves the project as published with the storefront env vars from its configs', async () => {
+        const project = createMockProject({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            componentConfigs: {
+                'commerce-paas': { [PAAS_GRAPHQL_ENDPOINT]: 'https://commerce.example/graphql' },
+            },
+        });
+
+        const { context } = await runReset({ project });
+
+        expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+        expect(project.edsStorefrontStatusSummary).toBe('published');
+        expect(project.edsStorefrontState?.envVars).toStrictEqual({
+            [PAAS_GRAPHQL_ENDPOINT]: 'https://commerce.example/graphql',
+        });
+    });
+
+    it('still saves a project that has no component configs at all', async () => {
+        const project = createMockProject({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            componentConfigs: undefined,
+        });
+
+        const { result, context } = await runReset({ project });
+
+        expect(result.success).toBe(true);
+        expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+        expect(project.edsStorefrontState?.envVars).toStrictEqual({});
+    });
+
+    it('surfaces a skipped config write on the otherwise successful result', async () => {
+        mockPublishConfig.mockResolvedValue({ configWritten: false });
+
+        const { result } = await runReset();
+
+        expect(result).toStrictEqual({
+            success: true,
+            filesReset: 5,
+            contentCopied: 3,
+            meshRedeployed: false,
+            errorType: 'CONFIG_WRITE_FAILED',
+            error:
+                'The site configuration could not be written, so product detail pages ' +
+                'will not load. Run "Demo Builder: Repair Site Configuration" to finish it.',
+        });
+    });
+});
+
+describe('executeEdsReset - error mapping', () => {
+    it('maps a missing GitHub App to a structured result carrying the install URL', async () => {
+        mockResetRepoToTemplate.mockRejectedValue(
+            new GitHubAppNotInstalledError(
+                'test-owner',
+                'test-repo',
+                'https://github.com/apps/aem-code-sync'
+            )
+        );
+
+        const { result } = await runReset();
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'GitHub App not installed. Code sync requires the AEM Code Sync app.',
+            errorType: 'GITHUB_APP_NOT_INSTALLED',
+            errorDetails: {
+                owner: 'test-owner',
+                repo: 'test-repo',
+                installUrl: 'https://github.com/apps/aem-code-sync',
+            },
+        });
+    });
+
+    it('maps any other failure to a plain error result', async () => {
+        mockResetRepoToTemplate.mockRejectedValue(new Error('tree API 500'));
+
+        const { result } = await runReset();
+
+        expect(result).toStrictEqual({ success: false, error: 'tree API 500' });
+    });
+});
+
+describe('executeEdsReset - keeping or replacing the content', () => {
+    it('keeps the current content when asked: the pipeline neither clears nor copies pages', async () => {
+        await runReset({ keepContent: true, contentSource: { org: 'jen', site: 'isle5-content' } });
+
+        expect(mockExecuteEdsPipeline).toHaveBeenCalledWith(
+            expect.objectContaining({ clearExistingContent: false, skipContent: true }),
+            expect.anything(),
+            expect.anything(),
+        );
+    });
+
+    it('clears and copies content by default', async () => {
+        await runReset({ contentSource: { org: 'jen', site: 'isle5-content' } });
+
+        expect(mockExecuteEdsPipeline).toHaveBeenCalledWith(
+            expect.objectContaining({ clearExistingContent: true, skipContent: false }),
+            expect.anything(),
+            expect.anything(),
+        );
+    });
+});
+
+describe('executeEdsReset - the synced commit record', () => {
+    // What "Check for Updates" compares against. Reset replaces the repository with
+    // a revision of the template, so the record has to move with it.
+    const RECORDED_SHA = '1111111111111111111111111111111111111111';
+    const RESET_SHA = '2222222222222222222222222222222222222222';
+    const STOREFRONT_METADATA = {
+        templateOwner: 'template-owner',
+        templateRepo: 'template-repo',
+        lastSyncedCommit: RECORDED_SHA,
+    };
+    /** The stamp a finished reset writes: the newest storefront change this version knows. */
+    const BUILT = { storefrontBuiltThrough: STOREFRONT_CHANGES[STOREFRONT_CHANGES.length - 1].since };
+
+    function storefrontProject(): Project {
+        return createMockProject({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            componentInstances: {
+                'eds-storefront': { ...edsStorefrontInstance(), metadata: { ...STOREFRONT_METADATA } },
+            },
+        });
+    }
+
+    function storefrontMetadata(project: Project): Record<string, unknown> | undefined {
+        return project.componentInstances?.['eds-storefront']?.metadata;
+    }
+
+    /** A context whose save captures the storefront record AS SAVED, not as it ends up. */
+    function contextCapturingSaves(): { context: ReturnType<typeof createResetContext>; saved: unknown[] } {
+        const context = createResetContext();
+        const saved: unknown[] = [];
+        (context.stateManager.saveProject as jest.Mock).mockImplementation(async (p: Project) => {
+            saved.push({ ...storefrontMetadata(p) });
+        });
+        return { context, saved };
+    }
+
+    it('saves the commit the repository was reset onto, keeping the rest of the record', async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+        const { context, saved } = contextCapturingSaves();
+
+        const { result } = await runReset({ project: storefrontProject() }, context);
+
+        expect(result.success).toBe(true);
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, ...BUILT }]);
+    });
+
+    it('records what the repository is built on now, read back after the reset (EDS-13f)', async () => {
+        const boilerplate = { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' };
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA, boilerplate });
+        const { context, saved } = contextCapturingSaves();
+
+        await runReset({ project: storefrontProject() }, context);
+
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, boilerplate, ...BUILT }]);
+    });
+
+    // EDS-56: reset returns the code to its source's, so the Adobe base is the source's
+    // again; the record goes, and the next check finds it from the source.
+    it("forgets the recorded Adobe base, which described the code the reset replaced", async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+        const { context, saved } = contextCapturingSaves();
+        const project = storefrontProject();
+        (storefrontMetadata(project) as Record<string, unknown>).boilerplateBase = { commit: RECORDED_SHA };
+
+        await runReset({ project }, context);
+
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, ...BUILT }]);
+    });
+
+    it('leaves the recorded commit alone when the reset fails after the repository step', async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+        mockExecuteEdsPipeline.mockResolvedValue({ success: false, error: 'content copy failed' });
+        const project = storefrontProject();
+
+        const { result } = await runReset({ project });
+
+        expect(result.success).toBe(false);
+        expect(storefrontMetadata(project)).toStrictEqual(STOREFRONT_METADATA);
+    });
+
+    it('leaves the recorded commit alone when the reset could not tell which commit it used', async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: undefined });
+        const { context, saved } = contextCapturingSaves();
+
+        const { result } = await runReset({ project: storefrontProject() }, context);
+
+        expect(result.success).toBe(true);
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, ...BUILT }]);
+    });
+
+    // The "Needs reset" status reads this stamp (storefrontChanges.ts): a reset is what clears it.
+    it('stamps the storefront as built the way Demo Builder builds storefronts now', async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+        const project = storefrontProject();
+        (storefrontMetadata(project) as Record<string, unknown>).storefrontBuildIncomplete = true;
+        const { context, saved } = contextCapturingSaves();
+
+        await runReset({ project }, context);
+
+        expect(saved).toStrictEqual([{ ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, ...BUILT }]);
+    });
+
+    it("marks the build incomplete when the build step's own fixes did not all land", async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA, buildComplete: false });
+        const { context, saved } = contextCapturingSaves();
+
+        await runReset({ project: storefrontProject() }, context);
+
+        expect(saved).toStrictEqual([
+            { ...STOREFRONT_METADATA, lastSyncedCommit: RESET_SHA, ...BUILT, storefrontBuildIncomplete: true },
+        ]);
+    });
+
+    it('does not invent a storefront record for a project that has none', async () => {
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA });
+        const project = createMockProject({
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            componentInstances: {},
+        });
+
+        const { result } = await runReset({ project });
+
+        expect(result.success).toBe(true);
+        expect(project.componentInstances).toStrictEqual({});
+    });
+
+    // Found by the first mutation run of edsResetFinalize on its own (EDS-8,
+    // 2026-10-08): every project above carried a componentInstances record, so the
+    // guard for a project with none at all was never reached.
+    it('records nothing, and still succeeds, for a project with no component instances', async () => {
+        const boilerplate = { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' };
+        mockResetRepoToTemplate.mockResolvedValue({ ...REPO_RESULT, templateCommitSha: RESET_SHA, boilerplate });
+        const project = createMockProject({ selectedPackage: 'citisignal', selectedStack: 'eds-paas' });
+        delete project.componentInstances;
+
+        const { result } = await runReset({ project });
+
+        expect(result.success).toBe(true);
+        expect(project.componentInstances).toBeUndefined();
+    });
+});

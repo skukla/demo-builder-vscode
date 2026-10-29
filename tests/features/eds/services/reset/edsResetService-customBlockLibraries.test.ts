@@ -17,6 +17,8 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 // =============================================================================
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
+    // Pass-through: the always-included libraries are tested where they are added.
+    withAlwaysIncludedBlockLibraries: (selected?: string[]) => selected ?? [],
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     getBlockLibraryContentSource: jest.fn(),
@@ -52,13 +54,17 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/edsPipeline', () => ({
-    executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true,
-        contentFilesCopied: 5,
-        libraryPaths: [],
-    }),
-}));
+jest.mock('@/features/eds/services/edsPipeline', () => {
+    // Typed through the canonical fake (EDS-55): a factory may load a module, not import one.
+    const { createMockPipelineResult } = jest.requireActual<
+        typeof import('../../../../helpers/pipelineResultFake')
+    >('../../../../helpers/pipelineResultFake');
+    return {
+        executeEdsPipeline: jest
+            .fn()
+            .mockResolvedValue(createMockPipelineResult({ contentFilesCopied: 5 })),
+    };
+});
 
 // Mock fetch for placeholder files
 global.fetch = jest.fn().mockResolvedValue({ ok: false });
@@ -157,12 +163,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
         const context = createResetContext();
 
         // When: Executing reset
-        await executeEdsReset(
-            resetParams(project),
-            context,
-            mockTokenProvider,
-            meshDeps
-        );
+        await executeEdsReset(resetParams(project), context, mockTokenProvider, meshDeps);
 
         // Then: installBlockCollections (plural) called ONCE with all sources combined
         expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
@@ -195,12 +196,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
         const context = createResetContext();
 
         // When: Executing reset
-        await executeEdsReset(
-            resetParams(project),
-            context,
-            mockTokenProvider,
-            meshDeps
-        );
+        await executeEdsReset(resetParams(project), context, mockTokenProvider, meshDeps);
 
         // Then: installBlockCollections (plural) called with only built-in source
         expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);

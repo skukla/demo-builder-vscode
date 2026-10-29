@@ -16,6 +16,7 @@ import {
 } from '@/features/components/services/commerceCredentialStore';
 import {
     declaredSecretKeys,
+    forgetProjectCommerceSecrets,
     hydrateDeclaredSecrets,
     loadDeclaredSecretFlags,
     migrateDeclaredSecrets,
@@ -621,5 +622,28 @@ describe('what the migration reports', () => {
         );
 
         expect(lines).toStrictEqual([]);
+    });
+});
+
+describe('forgetting a deleted project', () => {
+    it('asks for every declared secret under every component the project configured, and says how many', async () => {
+        const secrets = workingStore();
+        const declared = [...declaredSecretKeys()];
+
+        const asked = await forgetProjectCommerceSecrets(PROJECT, ['adobe-commerce-accs', 'adobe-commerce-paas'], secrets);
+
+        const expected = ['adobe-commerce-accs', 'adobe-commerce-paas'].flatMap((componentId) =>
+            declared.map((varName) => commerceSecretKey(PROJECT, componentId, varName)),
+        );
+        expect(declared.length).toBeGreaterThan(0);
+        expect(secrets.delete.mock.calls.map(([key]) => key)).toStrictEqual(expected);
+        expect(asked).toBe(expected.length);
+    });
+
+    it('asks for nothing when the project configured no component', async () => {
+        const secrets = workingStore();
+
+        expect(await forgetProjectCommerceSecrets(PROJECT, [], secrets)).toBe(0);
+        expect(secrets.delete).not.toHaveBeenCalled();
     });
 });

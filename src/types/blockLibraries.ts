@@ -17,6 +17,12 @@ export interface BlockLibrary {
      */
     defaultForPackages?: string[];
     default?: boolean;
+    /**
+     * Installed in every storefront the stack types and packages allow, whatever was
+     * ticked; never offered as a choice and never removed. Each block in such a library
+     * reaches every author's block list, so it holds only general-purpose blocks.
+     */
+    alwaysIncluded?: boolean;
     /** DA.live content source containing block documentation pages (.da/library/blocks/) */
     contentSource?: { org: string; site: string };
 }
@@ -42,8 +48,40 @@ export interface LibraryVersionInfo {
     source: AddonSource;
     /** Commit SHA of the source repo at installation time */
     commitSha: string;
-    /** Block IDs installed from this library */
+    /**
+     * Block IDs whose folders this library copied into the storefront (at
+     * install, and by an update that copies a new one). A block in here whose
+     * folder is gone was removed by hand, so an update does not copy it back.
+     */
     blockIds: string[];
+    /**
+     * The authoring entries the extension itself added to the storefront's three
+     * authoring files from this library. Absent when it added none, and on
+     * records written before 2026-10-09.
+     */
+    addedEntries?: AddedComponentEntries;
+}
+
+/**
+ * Entry ids the extension added to a storefront's authoring files, one list per
+ * kind of entry. An id in here that is no longer in its file was removed by
+ * hand, so an install or update leaves it out instead of putting it back.
+ */
+export interface AddedComponentEntries {
+    /** `component-definition.json`: ids of `groups[].components[]` entries. */
+    definition: string[];
+    /** `component-filters.json`: block ids added to the `section` filter's `components`. */
+    sectionFilter: string[];
+    /** `component-filters.json`: ids of whole filter entries (e.g. `tabs`). */
+    filters: string[];
+    /** `component-models.json`: ids of model entries. */
+    models: string[];
+    /**
+     * `component-definition.json`: ids of entries whose HTML example
+     * (`plugins.da.unsafeHTML`) the extension filled in. Absent when it filled
+     * none, and on records written before the field existed.
+     */
+    htmlExamples?: string[];
 }
 
 /** Persisted tracking data with installation timestamp */

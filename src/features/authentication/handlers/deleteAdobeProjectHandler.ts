@@ -15,7 +15,9 @@
 import * as vscode from 'vscode';
 import { resolveOrgContext, sendOrgMismatch } from './projectHandlers';
 import { BASELINE_API } from '@/core/constants';
+import { stageLine } from '@/core/utils/stageLine';
 import { validateOrgId, validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
+import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
     teardownConsoleProject,
@@ -55,19 +57,28 @@ export interface DeleteAdobeProjectPayload {
 export function createTeardownDeps(authService: AuthenticationService): TeardownDeps {
     return {
         getWorkspaces: async ({ orgId, projectId }) => {
-            const workspaces = await authService.getWorkspaces({ orgId, projectId });
+            const { workspaceReads } = await authService.getEntityServices();
+            const workspaces = await workspaceReads.getWorkspaces({ orgId, projectId });
             return workspaces.map((workspace) => ({ id: workspace.id, name: workspace.name }));
         },
-        getWorkspaceS2SCredential: (orgId, projectId, workspaceId) =>
-            authService.getWorkspaceS2SCredential(orgId, projectId, workspaceId),
-        createWorkspaceS2SCredentialFor: (orgId, projectId, workspaceId) =>
-            authService.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId),
-        subscribeManagementApi: (orgId, idIntegration) =>
-            authService.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, [
+        getWorkspaceS2SCredential: async (orgId, projectId, workspaceId) => {
+            const { credentials } = await authService.getEntityServices();
+            return credentials.getWorkspaceS2SCredential(orgId, projectId, workspaceId);
+        },
+        createWorkspaceS2SCredentialFor: async (orgId, projectId, workspaceId) => {
+            const { credentials } = await authService.getEntityServices();
+            return credentials.createWorkspaceS2SCredentialFor(orgId, projectId, workspaceId);
+        },
+        subscribeManagementApi: async (orgId, idIntegration) => {
+            const { orgServices } = await authService.getEntityServices();
+            return orgServices.subscribeOAuthServerToServerIntegrationToServices(orgId, idIntegration, [
                 { sdkCode: BASELINE_API, licenseConfigs: null, roles: null },
-            ]),
-        deleteConsoleProject: (orgId, projectId) =>
-            authService.deleteConsoleProject(orgId, projectId),
+            ]);
+        },
+        deleteConsoleProject: async (orgId, projectId) => {
+            const { projectOps } = await authService.getEntityServices();
+            return projectOps.deleteConsoleProject(orgId, projectId);
+        },
         getAccessToken: async () => {
             const inspection = await authService.getTokenManager().inspectToken();
             if (!inspection.valid || !inspection.token) {
@@ -133,11 +144,11 @@ function runTeardownWithProgress(
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Deleting Adobe project',
+            title: 'Deleting the Adobe project',
             cancellable: false,
         },
         (progress) => teardownConsoleProject(deps, target, (p) =>
-            progress.report({ message: `Step ${p.step}/${p.totalSteps}: ${p.message}` })),
+            progress.report({ message: stageLine(p.message, { index: p.step, total: p.totalSteps }) })),
     );
 }
 
@@ -157,9 +168,10 @@ async function clearSelectionIfCurrent(
         return;
     }
     try {
-        const cached = context.authManager?.getCachedProject();
+        const cached = context.authManager?.getCacheManager().getCachedProject();
         if (cached?.id === projectId) {
-            await context.authManager?.clearConsoleContext();
+            await context.authManager?.getEntityServices()
+                .then((units) => units.selector.clearConsoleContext());
         }
     } catch (clearError) {
         context.debugLogger.debug('[Project] Post-delete selection clear failed:', clearError);
@@ -191,19 +203,26 @@ function countDeleted(result: ConsoleProjectTeardownResult, kind: 'registration'
     return result.items.filter((item) => item.kind === kind && item.outcome === 'deleted').length;
 }
 
-/** Success toast: what was deleted, with entity counts. */
-function buildSuccessMessage(result: ConsoleProjectTeardownResult, title: string): string {
+/** What else went with the project, for Debug Logs: the success line names only the project. */
+function describeRemoved(result: ConsoleProjectTeardownResult): string {
     const registrations = countDeleted(result, 'registration');
     const providers = countDeleted(result, 'provider');
-    return `Deleted Adobe project "${title}" `
-        + `(${registrations} event registration(s) and ${providers} event provider(s) removed).`;
+    return `${registrations} event registration(s) and ${providers} event provider(s) removed`;
 }
 
-/** Failure warning: names every failed item; the delete is safely retryable. */
+/**
+ * Failure warning: names every failed item WITH Adobe's reason for it; the delete is
+ * safely retryable. The reason was collected per item and dropped here until
+ * 2026-10-09, when "Read-only project cannot be deleted" reached the owner as
+ * `Failed: project "Kukla Bodea Mesh"` and nothing else.
+ */
 function buildFailureMessage(result: ConsoleProjectTeardownResult, title: string): string {
     const failed = result.items
         .filter((item) => item.outcome === 'failed')
-        .map((item) => `${item.kind} "${item.label ?? item.id}"`)
+        .map((item) => {
+            const name = `${item.kind} "${item.label ?? item.id}"`;
+            return item.error ? `${name} (${item.error})` : name;
+        })
         .join(', ');
     return `Could not delete Adobe project "${title}". Failed: ${failed}. `
         + 'The project was NOT deleted. Already-removed items stay removed; '
@@ -219,7 +238,10 @@ async function finalizeTeardown(
     if (result.projectDeleted) {
         await clearSelectionIfCurrent(context, result, target.projectId);
         await refreshProjects(context, target.orgId);
-        void vscode.window.showInformationMessage(buildSuccessMessage(result, target.title));
+        // As every success reads (owner, 2026-10-15): a ✅ line that goes by itself. An
+        // information notification stayed in the corner until closed (2026-10-28).
+        context.debugLogger.debug(`[Project] Deleted Adobe project "${target.title}": ${describeRemoved(result)}`);
+        showSuccessInStatusBar(`Deleted Adobe project "${target.title}"`);
     } else {
         void vscode.window.showWarningMessage(buildFailureMessage(result, target.title));
     }

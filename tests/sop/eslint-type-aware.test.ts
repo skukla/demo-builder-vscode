@@ -41,14 +41,25 @@ const RULE = '@typescript-eslint/no-unnecessary-type-assertion';
  * unnecessary assertions of its own — the findings were its, at lines 394 and 405,
  * not the snippet's. Every neutral filename returned nothing.
  *
- * So a real file it is. The probe lives under `tests/tmp-probe/` rather than
- * `tests/sop/`: jest runs suites in parallel, and the first version planted the file
- * in a directory other scanners walk, which raced and blew one of them up with
- * ENOENT. The scanners now tolerate a file vanishing mid-walk — a latent bug this
- * surfaced — but not planting it in their path is the actual fix.
+ * So a real file it is — and WHERE it lives is load-bearing (PL-44). Jest runs
+ * suites in parallel, and some twenty of them walk `tests/`. The probe was first
+ * planted in `tests/sop/`, then in `tests/tmp-probe/`; both are inside that walk,
+ * so a walker could list the file and find it gone a moment later (ENOENT, five
+ * victims, each patched one at a time). It now has a directory of its own at the
+ * repo root, `.eslint-probe/`, which no walker of `tests/` or `src/` can reach.
+ *
+ * It cannot simply go to a system temp directory: a file outside the config's
+ * `files` globs gets NO rules and one outside `tsconfig.test.json` cannot be
+ * type-checked, so eslint exits 0 having proved nothing. `.eslint-probe/` is
+ * therefore named in three places that must stay in step — `eslint.casts.mjs`
+ * (`files`), `tsconfig.test.json` (`include`) and, so it never ships or gets
+ * committed, `.vscodeignore` + `.gitignore`. The first test below pins the two
+ * that would otherwise fail SILENTLY.
  */
+const PROBE_DIR = '.eslint-probe';
+
 function lintSnippet(code: string): Array<{ ruleId: string | null }> {
-    const dir = path.join(repoRoot, 'tests/tmp-probe');
+    const dir = path.join(repoRoot, PROBE_DIR);
     const probe = path.join(dir, 'probe.ts');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(probe, code);
@@ -57,7 +68,7 @@ function lintSnippet(code: string): Array<{ ruleId: string | null }> {
         try {
             out = execFileSync(
                 'npx',
-                ['eslint', '--config', CONFIG, '--no-ignore', '-f', 'json', 'tests/tmp-probe/probe.ts'],
+                ['eslint', '--config', CONFIG, '--no-ignore', '-f', 'json', `${PROBE_DIR}/probe.ts`],
                 { cwd: repoRoot, encoding: 'utf8', timeout: 180_000 }
             );
         } catch (e) {
@@ -81,6 +92,15 @@ describe('the type-aware lint config can still see a pointless cast', () => {
         // config still works but becomes unusable, so pin the choice.
         expect(body).toContain("project: './tsconfig.test.json'");
         expect(body).not.toMatch(/^\s*projectService:\s*true/m);
+    });
+
+    it('the probe directory is covered by the lint config and by the tsconfig it reads', () => {
+        // Drop either and the probe is linted with no rules, or not parsed at all —
+        // and the CONTROL below would still pass, because silence is what it expects.
+        const config = fs.readFileSync(path.join(repoRoot, CONFIG), 'utf8');
+        const tsconfig = fs.readFileSync(path.join(repoRoot, 'tsconfig.test.json'), 'utf8');
+        expect(config).toContain(`'${PROBE_DIR}/**/*.ts'`);
+        expect(tsconfig).toContain(`"${PROBE_DIR}/**/*"`);
     });
 
     it('finds an unnecessary assertion that is really there', () => {

@@ -33,7 +33,10 @@ const logger = createMockDebugLogger();
     it('confirms the copy so the user knows it worked', async () => {
         await runDiagnosticsAction('Copy Report', SUMMARY, logger);
 
-        expect(vscode.window.showInformationMessage).toHaveBeenCalled();
+        // A ✅ status-bar line that goes by itself, as every success reads (owner, 2026-10-15).
+        expect((vscode.window.setStatusBarMessage as jest.Mock).mock.calls[0][0]).toBe(
+            '✅ Diagnostic report copied to clipboard'
+        );
     });
 
     it('still reveals the channel for Show Logs', async () => {

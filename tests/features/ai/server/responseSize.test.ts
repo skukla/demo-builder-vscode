@@ -18,55 +18,9 @@
  * anything. This is the only way this suite can see past a refusal message.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
-import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
-import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
-import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
-import { registerDescriptorTools, type ToolDescriptor } from '@/features/ai/server/toolDescriptors';
-import type { HandlerMap, HandlerResponse } from '@/types/handlers';
-import { RESPONSE_CEILINGS } from './responseCeilings';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import type { HandlerResponse } from '@/types/handlers';
+import { ALL, harness } from './responseSize.testUtils';
 
-/** Registers the rows and invokes them exactly as the MCP server does. */
-function harness(descriptors: ToolDescriptor[], response: HandlerResponse) {
-    const tools = new Map<
-        string,
-        (args: unknown) => Promise<{ content: Array<{ text: string }> }>
-    >();
-    const server = {
-        registerTool(
-            name: string,
-            _def: unknown,
-            handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>
-        ) {
-            tools.set(name, handler);
-        },
-    };
-    // Any type resolves to a handler returning `response`, so no real handler —
-    // and therefore no service, no network, no filesystem — is reachable.
-    const stub: HandlerMap = new Proxy({} as HandlerMap, {
-        get: () => async () => response,
-        has: () => true,
-        ownKeys: () => [],
-    });
-
-    registerDescriptorTools(
-        server,
-        descriptors.map((d) => ({ ...d, map: stub })),
-        () => createMockHandlerContext()
-    );
-    return {
-        names: () => [...tools.keys()],
-        async sizeOf(name: string, args: Record<string, unknown> = {}): Promise<number> {
-            // confirm:true is safe — see the module docstring. Without it a gated
-            // row returns its refusal and the success path stays unmeasured.
-            const out = await tools.get(name)!({ confirm: true, ...args });
-            return Buffer.byteLength(out.content[0].text, 'utf8');
-        },
-    };
-}
 
 const bigRows = (n: number) =>
     Array.from({ length: n }, (_, i) => ({
@@ -115,7 +69,11 @@ const PAYLOADS: Record<string, HandlerResponse> = {
             kind: 'eds',
             contentSource: { org: 'jen', site: 'isle5-demo' },
             contentPublished: { indexFound: true, pageCount: 42 },
-            storeCodes: { websiteCode: 'isle5', storeCode: 'isle5_store', storeViewCode: 'isle5_us' },
+            storeCodes: {
+                websiteCode: 'isle5',
+                storeCode: 'isle5_store',
+                storeViewCode: 'isle5_us',
+            },
             b2b: 'on',
             b2bSource: 'config-json',
             description: {
@@ -123,7 +81,9 @@ const PAYLOADS: Record<string, HandlerResponse> = {
                 version: 1,
                 name: 'Isle5 by Jen',
                 description: 'x'.repeat(300),
-                configDefaults: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`KEY_${i}`, `value-${i}`])),
+                configDefaults: Object.fromEntries(
+                    Array.from({ length: 12 }, (_, i) => [`KEY_${i}`, `value-${i}`])
+                ),
                 blockLibraries: ['isle5', 'demo-team-blocks'],
                 integrations: ['erp-sync', 'loyalty'],
                 datapack: { name: 'isle5', version: '2026.09' },
@@ -174,16 +134,6 @@ const PAYLOADS: Record<string, HandlerResponse> = {
 /** Generic oversized payload for rows that declare no projector. */
 const GENERIC: HandlerResponse = { success: true, data: { items: bigRows(400) } };
 
-const ALL = [
-    ...READ_DESCRIPTORS,
-    ...STATUS_DESCRIPTORS,
-    ...ACTION_DESCRIPTORS,
-    // Group 8. Added the moment the array existed, because the alternative is
-    // the failure this file already documents twice: a guard whose scope quietly
-    // stops matching what it guards. Eight rows registered by `extension.ts` and
-    // classified by nothing would have looked exactly like a clean run.
-    ...DATA_INSTALLER_DESCRIPTORS,
-];
 const SHAPED = ALL.filter((d) => d.shape).map((d) => d.tool);
 
 describe('descriptor tools — response size', () => {
@@ -328,6 +278,20 @@ describe('rows with no output safety net are classified', () => {
         'set_console_apis',
         'set_project_destination',
         'add_console_apis',
+        // Category 2, read before listing: `handleDeleteUndeclaredRuntimeCode` returns
+        // `{namespace, deleted, failed}`, or a named refusal.
+        'delete_undeclared_runtime_code',
+        // Category 2, read before listing: `handleLoadErpDemoData` returns
+        // `{id, erp, loaded: {partners, products, skipped, owns?}}`, or a named refusal.
+        'load_erp_demo_data',
+        // Category 2, read before listing: `handleAddErp` returns
+        // `{added: {id, name, kind}, integration, erpList, owns, existingOwns, warning?}`, or a
+        // named refusal (AB-64 added the two rules, each an id, a short rule and a sentence).
+        'add_erp',
+        // Category 2, read before listing (AB-74): both answer `{confirmed, …}` or a named refusal.
+        ...['assign_erp_products', 'add_erp_owner_to_attribute_sets'],
+        ...['undo_erp_assignment', 'remove_erp_owner_from_attribute_sets'],
+        ...['prepare_commerce_store', 'undo_commerce_store_preparation', 'set_commerce_config'], // AB-77: `{confirmed, steps}`
         // Category 2, read before listing: `handleListRuntimePackages` returns
         // `{data: {namespace, packages}}` or a named refusal (runtimePackageHandlers.ts).
         'list_runtime_packages',
@@ -349,12 +313,14 @@ describe('rows with no output safety net are classified', () => {
         'remove_integration',
         'rename_project',
         'save_ai_prompt',
+        'save_app_to_github', // AB-1c: `{repository}` and `{deleted}`, one repository each
+        'delete_app_github_repo',
         'start_demo',
         'stop_demo',
         // Group 5. `restart_demo` is category 1 — success IS the outcome, and
-        // `get_project_status` confirms it. `set_current_project` and
-        // `set_project_pinned` are category 2: `handleSelectProject` returns
-        // `{data: {project}}` and `handleSetProjectPinned` returns `{pinned: {…}}`.
+        // `get_project_status` confirms it. `set_project_pinned` is category 2:
+        // `handleSetProjectPinned` returns `{pinned: {…}}`. (`set_current_project` left
+        // the descriptor table on 2026-10-19, AI-15.)
         //
         // `set_project_pinned` was FILED HERE AS CATEGORY 1 and that was wrong —
         // it claimed a confirming read that did not exist. Probing it live
@@ -365,7 +331,6 @@ describe('rows with no output safety net are classified', () => {
         // itself — "paired with a confirming read" is a claim about ANOTHER tool,
         // and nothing here checks it.
         'restart_demo',
-        'set_current_project',
         'set_project_pinned',
         // Group 7. Category 2, verified by reading the handler: every branch of
         // `handleInstallPrerequisite` now names its outcome — `{installed: {id,
@@ -396,6 +361,73 @@ describe('rows with no output safety net are classified', () => {
         // `{data: {id, persisted, live}}` (appManagementInstallHandlers.ts).
         'install_integration',
         'get_integration_install_status',
+        // Same handler body as install_integration (runInstallPass), so the
+        // same three-field record.
+        'reinstall_integration',
+        // `handleUpdateAppBuilderComponent` returns `{success, detail}` (one
+        // sentence); `handleCheckIntegrationUpdates` returns `{data: {updates:
+        // [{id, available, detail?}]}}` (integrationUpdateHandlers.ts).
+        'update_integration',
+        'check_integration_updates',
+        // The ERP pair (plan step 05), category 2, read before listing:
+        // `handleGetErpStatus` returns `{id, integration, erp, live}` and
+        // `handleResetErpRecords` returns `{id, erp, report}` — both fixed
+        // shapes the STUB cannot see.
+        'get_erp_status',
+        'reset_erp_records',
+        // `handleOpenErpScreen` returns `{id, erp, screenUrl}` — fixed shape,
+        // and never the key.
+        'open_erp_screen',
+        // The Admin page's two reads (2026-09-24), read before listing:
+        // `handleLookupErpRecord` returns `{id, erp, lookup}` where lookup holds a
+        // handful of labelled rows; `handleFollowErpOrder` returns
+        // `{id, erp, orderNumber, trace}` — one order's steps.
+        'get_erp_record',
+        'get_erp_order_trace',
+        // The ERP's own API and what ran in Runtime (2026-09-24), read before listing:
+        // `handleReadErpApi`/`handleWriteErpApi` return `{id, erp, method, path, answer}` with
+        // the answer cut at 30,000 chars; `handleListRuntimeActivations` returns
+        // `{namespace, activations}` (at most 50 rows); `handleReadRuntimeActivation` returns
+        // `{namespace, activationId, logs, result}`.
+        'run_erp_rest',
+        'write_erp_rest',
+        'list_runtime_activations',
+        'read_runtime_activation',
+        // `handleInvokeRuntimeAction` returns `{namespace, activationId, status, success,
+        // durationMs, result, logs}` with the logs compacted and cut (2026-09-25).
+        'invoke_runtime_action',
+        // An integration's Settings (AB-21), read before listing:
+        // `handleGetIntegrationSettings` returns `{id, settings: {fields, connected}}`
+        // and `saveIntegrationSettings` returns `{success, saved, settings}` —
+        // fixed shapes, and never a secret's value.
+        'get_integration_settings',
+        'set_integration_settings',
+        // An ERP's own settings (AB-16j): `handleGetErpSettings` returns
+        // `{id, erp, website, settings}` and `handleSetErpSettings` returns
+        // `{id, erp, website, entry}` — bounded, fixed shapes.
+        'get_erp_settings',
+        'set_erp_settings',
+        // The demo ERP's controls (AB-59): each returns `{id, erp}` and the ERP's
+        // `appearance` (three ids) or its `maintenance` (an end time and a sentence).
+        'set_erp_appearance',
+        'start_erp_downtime',
+        'end_erp_downtime',
+        // The demo setup checklist (AB-26x): each returns `{items}`, one row per step the
+        // catalog entry declares, with fixed fields.
+        'get_setup_checklist',
+        'set_setup_step',
+        'check_setup_steps',
+        // Datapack files, read before listing (`datapackZipHandlers.ts`): save answers
+        // `{path, bytes, dataTypes}` (or `{cancelled}`), open answers
+        // `{path, datapackName, version, displayName, dataTypes, …}` and load answers
+        // `{datapackName, version, target, pack, stored, failed}` — fixed fields.
+        'save_datapack_zip',
+        'open_datapack_zip',
+        'load_datapack_zip',
+        // `{datapackName, version, deleted}` on success.
+        'delete_library_datapack',
+        // `{datapackName, version, target, pack, stored, failed}`, as load answers.
+        'copy_library_datapack_to_installer',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {
@@ -417,208 +449,5 @@ describe('rows with no output safety net are classified', () => {
         for (const tool of NO_SAFETY_NET) {
             expect(await h.sizeOf(tool)).toBeGreaterThan(2);
         }
-    });
-});
-
-// ─── audit coverage ──────────────────────────────────────────────────────────
-//
-// The table is only a guard while it keeps up with the surface. This asserts the
-// relationship in both directions, because either drift is a silent hole: a new
-// tool with no recorded size is one nobody is watching, and a stale entry is a
-// ceiling defending a tool that no longer exists.
-describe('the ceiling table tracks the tool surface', () => {
-    const descriptorTools = ALL.map((d) => d.tool);
-
-    // Exempt: rows whose response is a fixed short status by construction and
-    // which no measurement has ever found large. Listed rather than inferred,
-    // so adding a tool cannot silently join them.
-    const EXEMPT = new Set([
-        'regenerate_ai_files',
-        'start_demo',
-        'stop_demo',
-        'rename_project',
-        // `add_integration` joins its three siblings: its response is
-        // `{added: {id, name, kind}}` — three short strings, bounded by
-        // nothing that scales with project or catalog size.
-        'add_integration',
-        // `rename_integration` returns two short strings. `set_console_apis`
-        // returns `{code, name?}` per subscribed API — the same shape and the
-        // same credential-bounded union `add_console_apis` already returns
-        // exempt. `set_project_destination` returns the destination refs plus a
-        // move summary, bounded by the project's integration COUNT.
-        'rename_integration',
-        'set_console_apis',
-        'set_project_destination',
-        'deploy_integration',
-        'redeploy_integration',
-        'remove_integration',
-        'deploy_mesh',
-        'delete_mesh',
-        'save_ai_prompt',
-        'delete_ai_prompt',
-        'export_project_settings',
-        'refresh_block_library',
-        'add_console_apis',
-        'check_mesh',
-        'check_datapack_service',
-        'get_store_structure',
-        'get_project_urls',
-        'get_datapack',
-        'list_datapack_data_types',
-        'find_datapacks',
-        'list_installed_datapacks',
-        'get_datapack_activity',
-        'verify_ai_setup',
-        'list_ai_prompts',
-        'list_console_apis',
-        // Group 5. `restart_demo` mirrors start/stop_demo. `set_project_pinned`
-        // is a boolean write. `set_current_project` returns ONE project record
-        // — the same shape `get_project` already carries a 12,000-byte ceiling
-        // for, and bounded the same way.
-        'restart_demo',
-        'set_current_project',
-        'set_project_pinned',
-        // Group 7. Four short strings on the install branch, two on the
-        // manual one — bounded by nothing that scales with the machine or
-        // the stack.
-        'install_prerequisite',
-        // Group 8's three job-handle writes. Each returns an activation id or
-        // a short per-type outcome list — bounded by the number of DATA TYPES
-        // in one datapack, not by how much data moved.
-        'start_datapack_import',
-        'reset_datapack',
-        'start_datapack_export',
-        // A target reference and a status record. Both fixed-shape.
-        'get_datapack_import_target',
-        'get_datapack_import_status',
-        // AB-5 pair. `install_integration` returns one three-field install
-        // record. `get_integration_install_status` returns that record plus
-        // the live status and FAILED step names — bounded by the app's own
-        // installer step count (the kit's whole tree measured ~23 nodes),
-        // not by anything that scales with the project.
-        'install_integration',
-        'get_integration_install_status',
-    ]);
-
-    it('records a ceiling for every DESCRIPTOR tool that is not deliberately exempt', () => {
-        // Rows built but not yet driven against a live extension. Distinct from
-        // EXEMPT on purpose: exempt is a decision, this is an IOU. A ceiling is a
-        // live measurement, and inventing one from the stub harness would record a
-        // number no production payload ever produced. These get promoted to real
-        // ceilings in the same F5 pass that first exercises them; anything left
-        // here after that pass is a tool nobody actually ran.
-        //
-        // Group 8's three variable-size rows. Each returns something whose size
-        // depends on a live service — a merchant's store hierarchy, the service's
-        // validation verdict, a page of real catalog items — and inventing a
-        // number for any of them from the stub would record a size no production
-        // payload ever produces. The three fixed-shape writes and two fixed-shape
-        // reads are EXEMPT above on their shape; these are the ones that need a
-        // measurement.
-        // Empty again: Group 8's three variable-size rows were probed against a
-        // real Data Installer and now carry measured ceilings. A row lands here
-        // only between being built and being probed.
-        // list_runtime_packages: one name per package, so its size is the size of
-        // somebody's namespace. Measured on the first live call, then promoted.
-        const PENDING_LIVE_MEASUREMENT = new Set<string>(['list_runtime_packages']);
-
-        const missing = descriptorTools.filter(
-            (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t)
-        );
-        expect(missing).toStrictEqual([]);
-
-        // An IOU that is already paid is rot in the other direction.
-        const paid = [...PENDING_LIVE_MEASUREMENT].filter((t) => RESPONSE_CEILINGS[t]);
-        expect(paid).toStrictEqual([]);
-    });
-
-    /**
-     * The check above walks DESCRIPTOR rows. Tools registered directly — the
-     * `*Tools.ts` modules and `registerProjectTools` in `src/mcp-server.ts` — never
-     * pass through it, so until 2026-08-24 nothing asserted anything about what
-     * they return. Measured that day: 57 directly-registered tools, 47 carrying a
-     * ceiling anyway and **10 with neither a ceiling nor an exemption**.
-     *
-     * This is the same shape as the bug the response-envelope guard shipped with —
-     * its first version scanned one directory and missed ten tools in
-     * `src/mcp-server.ts`, caught by two reviewers independently. A guard that
-     * covers one of two registration paths reads as full coverage and is not.
-     *
-     * The ten are listed as IOUs rather than given invented ceilings: several
-     * (`create_project`, `reset_eds_project`, `apply_updates`) return
-     * progress/summary payloads whose real size only a live run produces, and a
-     * number guessed from a stub records a size production never emits. Promote
-     * each to a real ceiling — or to EXEMPT, if a live look shows a fixed short
-     * status — as an F5 pass exercises it.
-     */
-    it('records a ceiling, an exemption, or an IOU for every DIRECTLY-registered tool', () => {
-        const registrarSrc = [
-            'src/mcp-server.ts',
-            ...fs
-                .readdirSync(path.join(__dirname, '../../../../src/features/ai/server'))
-                .filter((f) => f.endsWith('.ts'))
-                .map((f) => `src/features/ai/server/${f}`),
-        ];
-        const registered = new Set<string>();
-        for (const rel of registrarSrc) {
-            const src = fs.readFileSync(path.join(__dirname, '../../../../', rel), 'utf-8');
-            for (const m of src.matchAll(/registerTool\(\s*['"]([a-z0-9_]+)/g)) {
-                registered.add(m[1]);
-            }
-        }
-        const directOnly = [...registered].filter((t) => !descriptorTools.includes(t));
-
-        // Control: the direct path must be non-empty, or this test proves nothing.
-        expect(directOnly.length).toBeGreaterThan(20);
-
-        /**
-         * Directly-registered tools awaiting a live measurement (2026-08-24).
-         * Shrinking this list is the work; adding to it silently is the rot.
-         */
-        const DIRECT_PENDING = new Set<string>([
-            'apply_updates',
-            'create_project',
-            'delete_project',
-            'edit_project',
-            'get_settings',
-            'open_url',
-            'open_view',
-            'reset_eds_project',
-            'set_setting',
-            'sign_in',
-        ]);
-
-        const unwatched = directOnly.filter(
-            (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !DIRECT_PENDING.has(t)
-        );
-        expect(unwatched).toStrictEqual([]);
-
-        // Same both-directions rule as above: a paid IOU left listed is rot.
-        const paidDirect = [...DIRECT_PENDING].filter((t) => RESPONSE_CEILINGS[t] || EXEMPT.has(t));
-        expect(paidDirect).toStrictEqual([]);
-
-        // The exemption list needs the same two-way check as the ceilings, or it
-        // rots in the direction nothing notices: an entry that names no descriptor
-        // row can never match, so it sits there reading as a decision. Found this
-        // way — `apply_updates` is a bespoke tool and was never in scope here.
-        const stale = [...EXEMPT].filter((t) => !descriptorTools.includes(t));
-        expect(stale).toStrictEqual([]);
-    });
-
-    it('has no ceiling for a tool that no longer exists', async () => {
-        // Every recorded name must still be a real tool somewhere in the surface.
-        // Descriptor rows are checked here; the bespoke ones are asserted by the
-        // suites that drive them, which fail on an unknown name.
-        const { readdirSync, readFileSync } = await import('fs');
-        const dir = 'src/features/ai/server';
-        const sources = readdirSync(dir)
-            .filter((f) => f.endsWith('.ts'))
-            .map((f) => readFileSync(`${dir}/${f}`, 'utf8'))
-            .join('\n');
-        const mcpServer = readFileSync('src/mcp-server.ts', 'utf8');
-        const blob = sources + mcpServer;
-
-        const orphans = Object.keys(RESPONSE_CEILINGS).filter((t) => !blob.includes(`'${t}'`));
-        expect(orphans).toStrictEqual([]);
     });
 });

@@ -8,6 +8,7 @@
 import { handleCheckAuth, handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import type { HandlerContext } from '@/types/handlers';
 import { createAuthHandlerContext, mockOrg, mockProject, mockOrgs } from './testUtils';
+import { entityServicesOf } from '../../../helpers/authenticationServiceFake';
 
 /**
  * The fields these tests read off an `auth-status` push. The handler sends
@@ -40,9 +41,9 @@ describe('authenticationHandlers - Message Patterns', () => {
 
             it('should NOT change message text based on internal state', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-                (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-                (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+                (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+                (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+                (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
                 await handleCheckAuth(mockContext);
 
@@ -59,8 +60,8 @@ describe('authenticationHandlers - Message Patterns', () => {
             it('should use constant "Signing in" when starting authentication', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-                (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+                (entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+                (entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
 
                 await handleAuthenticate(mockContext);
 
@@ -74,7 +75,7 @@ describe('authenticationHandlers - Message Patterns', () => {
 
             it('should use constant message for force=true login', async () => {
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+                (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
                 (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
 
                 await handleAuthenticate(mockContext, { force: true });
@@ -91,7 +92,7 @@ describe('authenticationHandlers - Message Patterns', () => {
                 // Even when already authenticated, loading message is constant
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+                (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
                 (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
 
                 await handleAuthenticate(mockContext, { force: true });
@@ -107,12 +108,12 @@ describe('authenticationHandlers - Message Patterns', () => {
 
             it('should maintain message constancy during SDK init', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockImplementation(async () => {
+                (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockImplementation(async () => {
                     // SDK init in progress
                 });
-                (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
-                (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
-                (mockContext.authManager!.wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
+                (entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+                (entityServicesOf(mockContext.authManager!).resolver.getCurrentProject as jest.Mock).mockResolvedValue(mockProject);
+                (mockContext.authManager!.getCacheManager().wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
 
                 await handleAuthenticate(mockContext, { force: false });
 
@@ -128,7 +129,7 @@ describe('authenticationHandlers - Message Patterns', () => {
             it('should NOT leak org selection state in loading message', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+                (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
                 (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue(mockOrgs); // Multiple orgs
 
                 await handleAuthenticate(mockContext);
@@ -151,9 +152,9 @@ describe('authenticationHandlers - Message Patterns', () => {
             it('should show "All set!" when single org auto-selected', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+                (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
                 (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
-                (mockContext.authManager!.setCachedOrganization as jest.Mock).mockReturnValue(undefined);
+                (mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
 
                 await handleAuthenticate(mockContext);
 
@@ -172,7 +173,7 @@ describe('authenticationHandlers - Message Patterns', () => {
             it('should show "Sign-in complete" when multiple orgs need selection', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+                (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
                 (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue(mockOrgs);
 
                 await handleAuthenticate(mockContext);
@@ -192,7 +193,7 @@ describe('authenticationHandlers - Message Patterns', () => {
             it('should show "No organizations found" when zero orgs', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+                (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
                 (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([]);
 
                 await handleAuthenticate(mockContext);
@@ -227,7 +228,7 @@ describe('authenticationHandlers - Message Patterns', () => {
 
             it('should update subMessage for fresh login on force', async () => {
                 (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+                (mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
                 (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
 
                 await handleAuthenticate(mockContext, { force: true });
@@ -310,9 +311,9 @@ describe('authenticationHandlers - Message Patterns', () => {
                 };
 
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(maliciousOrg);
-                (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-                (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+                (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(maliciousOrg);
+                (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+                (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
                 await handleCheckAuth(mockContext);
 
@@ -371,9 +372,9 @@ describe('authenticationHandlers - Message Patterns', () => {
         describe('visual consistency requirements', () => {
             it('should always include all required fields in auth-status messages', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-                (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-                (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+                (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+                (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+                (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
                 await handleCheckAuth(mockContext);
 
@@ -392,9 +393,9 @@ describe('authenticationHandlers - Message Patterns', () => {
 
             it('should maintain consistent field presence in final messages', async () => {
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-                (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
-                (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
-                (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+                (mockContext.authManager!.getCacheManager().getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+                (mockContext.authManager!.getCacheManager().getCachedProject as jest.Mock).mockReturnValue(mockProject);
+                (mockContext.authManager!.getCacheManager().getValidationCache as jest.Mock).mockReturnValue(null);
 
                 await handleCheckAuth(mockContext);
 

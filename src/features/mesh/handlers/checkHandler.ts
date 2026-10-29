@@ -161,7 +161,9 @@ export async function handleCheckApiMesh(
     // the cached org on an id match (less leaky than ID-only). The workspace is
     // the one resolved above (payload first), so it's supplied explicitly rather
     // than left to the builder's own project.adobe.workspace read.
-    const cachedOrg = ServiceLocator.getAuthenticationService().getCachedOrganization();
+    const cachedOrg = ServiceLocator.getAuthenticationService()
+        .getCacheManager()
+        .getCachedOrganization();
     const target: OrgContextTarget = buildOrgTargetFromProjectAdobe(
         { organization: effectiveOrgId, projectId: effectiveProjectId, workspace: workspaceId },
         cachedOrg,

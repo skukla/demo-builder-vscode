@@ -135,10 +135,10 @@ export const defaultProps = {
     handleOpenBrowser: jest.fn(),
     handleOpenAdminPanel: jest.fn(),
     handleConfigure: jest.fn(),
-    handleOpenDevConsole: jest.fn(),
+    handleOpenAemAssets: jest.fn(),
     handleDeleteProject: jest.fn(),
     handleEditProject: jest.fn(),
-    handleExportProject: jest.fn(),
+    handleShareDemo: jest.fn(),
     handleResetProject: jest.fn(),
     handleRestartDemo: jest.fn(),
 };

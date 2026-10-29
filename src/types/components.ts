@@ -162,7 +162,6 @@ export interface RawComponentDefinition {
         };
         configFiles?: Record<string, ConfigFileDefinition>;
         port?: number;
-        nodeVersion?: string;
         /**
          * Treat a failed `npm install` as FATAL for this component. Default
          * (absent) keeps the historical warn-and-continue, which suits
@@ -247,22 +246,6 @@ export interface RawComponentRegistry {
     tools?: Record<string, RawComponentDefinition>;
     services?: Record<string, ServiceDefinition>;
     envVars?: Record<string, Omit<EnvVarDefinition, 'key'>>;
-    presets?: PresetDefinition[];
-}
-
-/**
- * PresetDefinition - Component preset
- */
-export interface PresetDefinition {
-    id: string;
-    name: string;
-    description?: string;
-    selections: {
-        frontend: string;
-        backend: string;
-        dependencies: string[];
-        integrations?: string[];
-    };
 }
 
 /**
@@ -291,7 +274,6 @@ export interface ComponentRegistry {
     };
     services?: Record<string, ServiceDefinition>;
     envVars?: Record<string, Omit<EnvVarDefinition, 'key'>>;
-    presets?: PresetDefinition[];
 }
 
 /**
@@ -303,7 +285,6 @@ export interface ComponentSelection {
     dependencies?: string[];
     integrations?: string[];
     services?: ServiceDefinition[];
-    preset?: string;
 }
 
 /**

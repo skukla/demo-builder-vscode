@@ -130,3 +130,4 @@ placeholder — needs real design" (`.rptc/backlog/appbuilder-deployable-model/o
 - 2026-08-27  docs(backlog): workspace-per-app reasoning corrected + workspace deletion proven programmable (`a7d545579`)
 - 2026-08-27  docs(backlog): multiplicity spike settled — many apps per instance, one per workspace (`4acebc556`)
 - 2026-08-31  2026-08-31  Status corrected backlog -> spiked (loop hygiene pass): the multiplicity spike settled on 2026-08-27 and the owner challenge was resolved the same night, so feasibility is ANSWERED while the build is not decided — which is precisely what spiked means. It had read 'not started' for four days.
+- 2026-10-03  Reconciled 2026-10-03 (second pass): two of the three prerequisites are now built: the update path (AB-13, integrationUpdateCheck.ts) and a workspace per integration (AB-23). The catalog has four entries, not one.

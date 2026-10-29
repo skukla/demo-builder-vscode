@@ -41,13 +41,55 @@ const MENU_ROWS: Partial<Record<CardAction, { label: string; icon: string }>> = 
     update: { label: 'Update', icon: 'redeploy' },
     retry: { label: 'Retry', icon: 'reset' },
     install: { label: 'Install into Commerce', icon: 'play' },
+    reinstall: { label: 'Reinstall in Commerce', icon: 'reset' },
     'sign-in': { label: 'Sign in', icon: 'admin' },
     // The deliberate ones.
     open: { label: 'Open', icon: 'globe' },
+    'open-admin': { label: 'Open Commerce Admin', icon: 'admin' },
     redeploy: { label: 'Redeploy', icon: 'redeploy' },
+    settings: { label: 'Settings', icon: 'settings' },
     'manage-apis': { label: 'Manage APIs', icon: 'apiAccess' },
+    // The ERP integration's: another ERP beside the one it has (AB-16).
+    'add-erp': { label: 'Add another ERP', icon: 'add' },
     remove: { label: 'Remove', icon: 'delete' },
+    'remove-anyway': { label: 'Remove anyway', icon: 'delete' },
+    // A system card's own verbs.
+    'load-demo-data': { label: 'Fill from Commerce', icon: 'loadData' },
+    // Its simulated downtime (AB-59), in a modal.
+    'simulate-downtime': { label: 'Simulate downtime', icon: 'downtime' },
+    // Tag Commerce products for this ERP, and put the tags back (AB-74).
+    'assign-products': { label: 'Assign products', icon: 'edit' },
+    'undo-assignment': { label: 'Undo last assignment', icon: 'reset' },
+    // The integration's alone: a reset covers every ERP it serves (owner, 2026-10-01).
+    'reset-records': { label: 'Reset ERPs', icon: 'reset' },
+    // A blank-starter app's own repository (AB-1c), and its undo.
+    'save-to-github': { label: 'Save to GitHub', icon: 'export' },
+    'delete-github-repo': { label: 'Delete its GitHub repository', icon: 'delete' },
 };
+
+/**
+ * An action's label and icon on THIS card. The few that read differently per card say
+ * which thing they act on: "Open" is a system's own screen or an integration's Developer
+ * Console workspace, and an integration's fill covers every ERP it serves. Shared by the
+ * card's menu and the flyout's action list, so the two can never name a verb differently.
+ *
+ * @param model - the card the action is on
+ * @param action - the verb
+ * @returns its label and icon name
+ */
+export function actionRowFor(
+    model: IntegrationCardModel,
+    action: CardAction,
+): { label: string; icon?: string } {
+    if (action === 'open') {
+        return { label: model.isSystem ? `Open ${model.name}` : 'Open in Developer Console', icon: 'globe' };
+    }
+    if (action === 'load-demo-data' && !model.isSystem) {
+        return { label: 'Fill ERPs from Commerce', icon: 'loadData' };
+    }
+    const row = MENU_ROWS[action];
+    return { label: row?.label ?? action, ...(row?.icon ? { icon: row.icon } : {}) };
+}
 
 export interface IntegrationActionsMenuProps {
     model: IntegrationCardModel;
@@ -75,11 +117,10 @@ export function IntegrationActionsMenu({
             onAction={(key) => onAction(model, key as CardAction)}
         >
             {model.menuActions.map((action) => {
-                const row = MENU_ROWS[action];
-                const label = row?.label ?? action;
+                const { label, icon } = actionRowFor(model, action);
                 return (
                     <Item key={action} textValue={label}>
-                        {renderMenuIcon(row?.icon)}
+                        {renderMenuIcon(icon)}
                         <Text>{label}</Text>
                     </Item>
                 );

@@ -33,11 +33,11 @@ Site chrome appears on every page. The Mod Agent processes pages individually, s
    - Any promo bar above the header
 
 2. **Use existing EDS chrome blocks as starting points.** The EDS Storefront boilerplate ships these block types:
-   - `header` — global header block
-   - `nav` — primary navigation
-   - `breadcrumb` — breadcrumb component
+   - `header` — global header block; it loads the primary navigation from the `/nav` page as a fragment (there is no separate `nav` block)
    - `footer` — global footer block
    - `commerce-mini-cart` — drop-in cart icon
+
+   There is no breadcrumb block in the boilerplate; if the reference has one, it is a new block.
 
    Don't recreate them from scratch. Extend their CSS and markup to match the scraped reference. If the reference forces you to introduce a brand-new chrome block (rare — most cases extend existing ones), call the `register-custom-block` skill (or directly invoke `promote_block_to_library`) after writing the source files so the block appears in DA.live's authoring picker.
 
@@ -53,17 +53,19 @@ Site chrome appears on every page. The Mod Agent processes pages individually, s
 
 5. **Wire commerce affordances into chrome.**
    - Mini-cart icon → wires to the `commerce-cart` drop-in for count + dropdown
-   - Search input → wires to `commerce-search` drop-in if present
+   - Search input → the header's search already loads the product discovery drop-in (`@dropins/storefront-product-discovery`); restyle it rather than adding another
    - Account icon → wires to the auth drop-in
    - Locale switcher → wires to the project's locale config
 
-6. **For nav structure**: read the reference's nav from the scrape and replicate the hierarchy in the project's `nav.docx` (Document Authoring) or `nav.md` (markdown). EDS pulls nav content from the document, not from hardcoded markup.
+6. **For nav structure**: read the reference's nav from the scrape and replicate the hierarchy in the storefront's `nav` page in DA.live (read it with `read_page` on `/nav`; change it with `write_page`, which asks the user first and needs `confirm: true`). EDS pulls nav content from that page, not from hardcoded markup.
+
+   **Product categories come from Commerce, not from typing.** When the storefront has the Demo Builder Blocks library, the nav already holds a "Commerce: All" line and a `catalog-menu` block, written at storefront setup: in the browser the line becomes one menu entry per Commerce category the shopper may see, and each category has its own page at its url path (`/signs`): an authored page there, or else the one the product page overlay makes from the `/categories/default` template. Keep that line where the reference shows its product menu; `Commerce: <category name>` places one category and its sub-categories. A storefront whose menu block predates 2026-10-25 reads "Shop the catalog" instead; Demo Builder writes whichever its block reads, so keep the spelling the nav already has. Do not type the category tree into the nav or write category pages by hand. A category added in Commerce later appears in the menu at once; `republish` publishes its page and every other one again. The `catalog-menu` table may hold two-cell rows, a category's url path then a page (`signs | /safety-signage`): each links that category's menu entry to a page somewhere other than its own address. Demo Builder writes one for every hand-built category page it finds; keep those rows, and add or edit one to point a category at a different page.
 
 ## What NOT to do
 
 - **Don't hardcode brand-specific menu items in nav block code.** Put them in the nav document. EDS authoring expects nav content to be editable by content authors, not developers.
 - **Don't duplicate the chrome per page.** Site chrome is global; it lives once and renders everywhere.
-- **Don't ship the reference's mega-menu structure verbatim** if it includes real product categories. Replace with demo-appropriate categories from the demo's catalog.
+- **Don't ship the reference's mega-menu structure verbatim** if it includes real product categories. Replace it with the demo's own categories — the catalog-menu line draws them from Commerce.
 - **Don't omit a11y attributes.** Headers, nav, and footer need proper ARIA landmarks (`<header>`, `<nav role="navigation">`, `<footer>`, skip-to-content link). Adobe's existing chrome blocks ship these — don't strip them.
 
 ## Verification

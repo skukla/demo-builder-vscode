@@ -7,7 +7,7 @@
 
 import type * as vscode from 'vscode';
 import type { CustomBlockLibrary } from './blockLibraries';
-import type { ComponentSelection, ComponentConfigs } from './components';
+import type { ComponentSelection } from './components';
 import type { Logger } from './logger';
 import type { StateManager } from './state';
 import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
@@ -128,9 +128,8 @@ export interface ApiServicesConfig {
  * need for manual state synchronization after handler calls.
  */
 export interface SharedState {
-    // Component selection and data
+    // Component selection
     currentComponentSelection?: ComponentSelection;
-    componentsData?: ComponentConfigs;
 
     // Prerequisites tracking
     currentPrerequisites?: PrerequisiteDefinition[];
@@ -196,6 +195,19 @@ export interface HandlerContext {
 
     // Shared state (by reference - changes persist automatically)
     sharedState: SharedState;
+
+    /**
+     * The project one agent connection works on (AI-15). Set when the agent creates or
+     * picks a project, and from then on every tool on that connection acts on it while
+     * the person's current project stays where they left it. Absent on screens, which
+     * pin their project in their panel instead.
+     */
+    agentWorkingProject?: AgentWorkingProject;
+}
+
+/** An agent connection's own project: unset means it follows the person's current one. */
+export interface AgentWorkingProject {
+    path?: string;
 }
 
 /**

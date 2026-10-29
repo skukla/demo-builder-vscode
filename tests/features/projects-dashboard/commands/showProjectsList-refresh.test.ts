@@ -23,6 +23,8 @@ jest.mock('@/core/handlers/dispatchHandler', () => ({
 import * as vscode from 'vscode';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { whileRunning } from '@/core/state/projectWorkRunning';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import type { Project } from '@/types/base';
@@ -64,11 +66,7 @@ type Built = {
 function build(): Built {
     const stateManager = createMockStateManager();
     const logger = createMockLogger();
-    const command = new ShowProjectsListCommand(
-        createMockExtensionContext(),
-        stateManager,
-        logger,
-    );
+    const command = new ShowProjectsListCommand(createMockExtensionContext(), stateManager, logger);
     const sendMessage = jest.fn().mockResolvedValue(undefined);
     internals(command).sendMessage = sendMessage;
     return { command, stateManager, logger, sendMessage };
@@ -143,7 +141,7 @@ describe('ShowProjectsListCommand — refreshing the webview', () => {
                 listedAt('/p/broken'),
             ]);
             stateManager.loadProjectFromPath.mockImplementation(async (p: string) =>
-                p === '/p/broken' ? null : projectAt(p),
+                p === '/p/broken' ? null : projectAt(p)
             );
 
             await internals(command).refreshProjectsList();
@@ -199,7 +197,9 @@ describe('ShowProjectsListCommand — message wiring', () => {
     function wire() {
         const built = build();
         const onStreaming = jest.fn();
-        let configListener: ((e: { affectsConfiguration: (k: string) => boolean }) => void) | undefined;
+        let configListener:
+            | ((e: { affectsConfiguration: (k: string) => boolean }) => void)
+            | undefined;
         (vscode.workspace.onDidChangeConfiguration as jest.Mock).mockImplementation((cb) => {
             configListener = cb;
             return { dispose: jest.fn() };
@@ -207,7 +207,12 @@ describe('ShowProjectsListCommand — message wiring', () => {
 
         internals(built.command).initializeMessageHandlers({ onStreaming });
 
-        return { ...built, onStreaming, fireConfigChange: (e: Parameters<NonNullable<typeof configListener>>[0]) => configListener?.(e) };
+        return {
+            ...built,
+            onStreaming,
+            fireConfigChange: (e: Parameters<NonNullable<typeof configListener>>[0]) =>
+                configListener?.(e),
+        };
     }
 
     it('registers one streaming handler per registered message type', () => {
@@ -227,7 +232,7 @@ describe('ShowProjectsListCommand — message wiring', () => {
             projectsListHandlers,
             { handlerContext: true },
             'getProjects',
-            { some: 'payload' },
+            { some: 'payload' }
         );
         expect(result).toEqual({ dispatched: true });
     });
@@ -273,6 +278,103 @@ describe('ShowProjectsListCommand — message wiring', () => {
     });
 });
 
+describe('ShowProjectsListCommand — reloading when a project file changes', () => {
+    // An agent creating a project while the list was open left the list stale until
+    // the SC navigated away and back (owner, 2026-10-16).
+    type Listener = () => void;
+    type FakeWatcher = {
+        onDidCreate: jest.Mock;
+        onDidChange: jest.Mock;
+        onDidDelete: jest.Mock;
+        dispose: jest.Mock;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    function wireWithWatcher() {
+        const built = build();
+        withChannel(built.command);
+        const listeners: Listener[] = [];
+        const watcher: FakeWatcher = {
+            onDidCreate: jest.fn((l: Listener) => listeners.push(l)),
+            onDidChange: jest.fn((l: Listener) => listeners.push(l)),
+            onDidDelete: jest.fn((l: Listener) => listeners.push(l)),
+            dispose: jest.fn(),
+        };
+        (vscode.workspace.createFileSystemWatcher as jest.Mock).mockReturnValue(watcher);
+        const refresh = jest.fn().mockResolvedValue(undefined);
+        internals(built.command).refreshProjectsList = refresh;
+        internals(built.command).initializeMessageHandlers({ onStreaming: jest.fn() });
+        return { ...built, watcher, listeners, refresh };
+    }
+
+    it("watches every project's file under the projects root", () => {
+        process.env.DEMO_BUILDER_PROJECTS_DIR = '/root/projects';
+        try {
+            wireWithWatcher();
+        } finally {
+            delete process.env.DEMO_BUILDER_PROJECTS_DIR;
+        }
+
+        const pattern = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.calls[0][0];
+        expect(pattern.baseUri.fsPath).toBe('/root/projects');
+        expect(pattern.pattern).toBe('*/.demo-builder.json');
+    });
+
+    it('reloads on a create, a change and a delete', () => {
+        const { watcher, listeners } = wireWithWatcher();
+
+        expect(watcher.onDidCreate).toHaveBeenCalled();
+        expect(watcher.onDidChange).toHaveBeenCalled();
+        expect(watcher.onDidDelete).toHaveBeenCalled();
+        expect(listeners).toHaveLength(3);
+    });
+
+    it('reloads once after a burst of writes, not once per write', () => {
+        const { listeners, refresh } = wireWithWatcher();
+
+        listeners[0]();
+        listeners[1]();
+        listeners[1]();
+        expect(refresh).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(TIMEOUTS.UI.PROJECT_LIST_SETTLE);
+
+        expect(refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('reloads when a creation starts and when it ends, with no file to watch', async () => {
+        // An Edge Delivery project has no file until its storefront is set up (PL-82).
+        const { refresh } = wireWithWatcher();
+
+        await whileRunning('/p/canary', 'creating', async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.PROJECT_LIST_SETTLE);
+            expect(refresh).toHaveBeenCalledTimes(1);
+        });
+        jest.advanceTimersByTime(TIMEOUTS.UI.PROJECT_LIST_SETTLE);
+
+        expect(refresh).toHaveBeenCalledTimes(2);
+    });
+
+    it('stops watching, and drops a pending reload, when the panel goes', () => {
+        const { command, watcher, listeners, refresh } = wireWithWatcher();
+
+        listeners[0]();
+        (command as unknown as { disposables: { dispose: () => void } }).disposables.dispose();
+        jest.advanceTimersByTime(TIMEOUTS.UI.PROJECT_LIST_SETTLE);
+
+        expect(watcher.dispose).toHaveBeenCalled();
+        expect(refresh).not.toHaveBeenCalled();
+    });
+});
+
 describe('ShowProjectsListCommand — panel content and teardown', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -282,15 +384,17 @@ describe('ShowProjectsListCommand — panel content and teardown', () => {
         const { command } = build();
 
         await expect(
-            (command as unknown as { getWebviewContent: () => Promise<string> }).getWebviewContent(),
+            (command as unknown as { getWebviewContent: () => Promise<string> }).getWebviewContent()
         ).rejects.toThrow('Panel must be created before getting webview content');
     });
 
     it('reports a dark theme as dark and everything else as light', async () => {
         const { command } = build();
-        const getInitialData = (command as unknown as {
-            getInitialData: () => Promise<{ theme: string }>;
-        }).getInitialData;
+        const getInitialData = (
+            command as unknown as {
+                getInitialData: () => Promise<{ theme: string }>;
+            }
+        ).getInitialData;
 
         (vscode.window.activeColorTheme as { kind: number }).kind = vscode.ColorThemeKind.Dark;
         expect((await getInitialData.call(command)).theme).toBe('dark');

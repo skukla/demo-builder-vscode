@@ -15,27 +15,7 @@ import {
 } from '@/features/ai/server/toolDescriptors';
 import type { HandlerContext, HandlerMap, HandlerResponse } from '@/types/handlers';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-
-/** Fake McpServer capturing registrations. */
-function fakeServer() {
-    const tools = new Map<
-        string,
-        { inputSchema: any; def: any; handler: (args: any) => Promise<any> }
-    >();
-    return {
-        registerTool(
-            name: string,
-            def: { inputSchema?: unknown },
-            handler: (args: any) => Promise<any>
-        ) {
-            // The WHOLE definition is kept: annotations travel to the client in
-            // tools/list and the dry run gates on them, so dropping them here would
-            // leave the declaration unconstrained.
-            tools.set(name, { inputSchema: def.inputSchema, def, handler });
-        },
-        tools,
-    };
-}
+import { fakeServer } from './toolDescriptors.testUtils';
 
 const ctxFactory = () => createMockHandlerContext();
 
@@ -53,6 +33,13 @@ describe('defaultShape', () => {
         // it whenever `data` is present would silently drop every sibling field.
         const res = { success: true, data: { a: 1 }, warning: 'partial' } as unknown as HandlerResponse;
         expect(defaultShape(res)).toBe('{"data":{"a":1},"warning":"partial"}');
+    });
+
+    it('answers text when a success carries no data at all', () => {
+        // JSON.stringify(undefined) is undefined, not a string: the MCP SDK rejected the
+        // result and redeploy_integration answered an RPC error after a deploy that had
+        // worked (measured live, 2026-09-27).
+        expect(defaultShape({ success: true, data: undefined } as HandlerResponse)).toBe('Done.');
     });
 
     it('strips the success flag and keeps remaining fields', () => {
@@ -93,6 +80,11 @@ describe('defaultShape', () => {
         // on every call. Only a failure carrying MORE than error/code earns JSON.
         const res = { success: false, error: 'plain' } as unknown as HandlerResponse;
         expect(defaultShape(res)).toBe('Error: plain');
+    });
+
+    it('says the operation failed when a failure carries no reason at all', () => {
+        // An agent handed "Error: " or "Error: undefined" has nothing to report.
+        expect(defaultShape({ success: false } as HandlerResponse)).toBe('Error: operation failed');
     });
 
     it('never pretty-prints (no newlines)', () => {

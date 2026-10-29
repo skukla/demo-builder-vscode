@@ -21,6 +21,7 @@ import { extractAioErrorDetail, fetchRuntimeCredentials } from './runtimeCredent
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { CommandResult } from '@/core/shell/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -45,7 +46,7 @@ export interface RuntimeNamespaceEnv {
 export async function runtimeNamespaceEnv(
     deps: RuntimeNamespaceDeps,
 ): Promise<RuntimeNamespaceEnv> {
-    const creds = await fetchRuntimeCredentials(deps.commandManager, deps.logger, 'auto');
+    const creds = await fetchRuntimeCredentials(deps.commandManager, deps.logger, demoBuilderNode());
     return { AIO_RUNTIME_NAMESPACE: creds.namespace, AIO_RUNTIME_AUTH: creds.auth };
 }
 
@@ -66,7 +67,7 @@ export function runInNamespace(
     return deps.commandManager.execute(command, {
         ...(options.cwd ? { cwd: options.cwd } : {}),
         ...(options.streaming ? { streaming: true } : {}),
-        useNodeVersion: 'auto',
+        useNodeVersion: demoBuilderNode(),
         enhancePath: true,
         shell: true,
         timeout: TIMEOUTS.LONG,
@@ -81,40 +82,107 @@ export function commandFailure(command: string, result: CommandResult): string {
 }
 
 /**
- * The names of the packages deployed in the targeted workspace's namespace.
+ * The Runtime entities a removal cleans up. Rules and triggers are namespace-level
+ * and outlive the package whose actions they drive, so each kind is its own list.
+ */
+export type RuntimeEntityKind = 'rule' | 'trigger' | 'package';
+
+/** What an app declares in Runtime, by kind — the only names removal may delete. */
+export interface DeclaredRuntime {
+    packages: string[];
+    triggers: string[];
+    rules: string[];
+}
+
+/**
+ * Names safe to interpolate into an `aio runtime` command. Declared names come from config
+ * FILES and deployed ones from a listing; a name outside the Adobe id charset is never
+ * deleted (and never quoted into a shell line).
+ */
+export const RUNTIME_ENTITY_NAME = /^[A-Za-z0-9@._-]+$/;
+
+/** Rules first (they point at triggers and actions), then triggers, then packages. */
+export const CLEANUP_ORDER: readonly RuntimeEntityKind[] = ['rule', 'trigger', 'package'];
+
+/** A leftover as a person reads it: a bare package name, else "rule x" / "trigger x". */
+export const leftoverLabel = (kind: RuntimeEntityKind, name: string): string =>
+    kind === 'package' ? name : `${kind} ${name}`;
+
+/**
+ * The names of one kind of entity in the targeted workspace's namespace.
  *
  * @param env - reuse a namespace env already fetched; fetched when omitted
  * @throws When the namespace cannot be listed — a failure is never an empty list
  */
-export async function listRuntimePackages(
+export async function listRuntimeNames(
     deps: RuntimeNamespaceDeps,
+    kind: RuntimeEntityKind,
     env?: RuntimeNamespaceEnv,
 ): Promise<string[]> {
-    const command = 'aio runtime package list --json';
+    const command = `aio runtime ${kind} list --json`;
     const result = await runInNamespace(deps, command, env ?? (await runtimeNamespaceEnv(deps)));
     if (result.code !== 0) {
         throw new Error(commandFailure(command, result));
     }
     const parsed = parseJSON<Array<{ name?: string }>>(result.stdout.trim());
     if (!Array.isArray(parsed)) {
-        throw new Error(`${command}: the answer was not a list of packages`);
+        throw new Error(`${command}: the answer was not a list`);
     }
     return parsed.map((entry) => entry.name ?? '').filter(Boolean);
 }
 
 /**
- * Delete one package and everything in it.
+ * The names of the packages deployed in the targeted workspace's namespace.
+ *
+ * @param env - reuse a namespace env already fetched; fetched when omitted
+ * @throws When the namespace cannot be listed — a failure is never an empty list
+ */
+export function listRuntimePackages(
+    deps: RuntimeNamespaceDeps,
+    env?: RuntimeNamespaceEnv,
+): Promise<string[]> {
+    return listRuntimeNames(deps, 'package', env);
+}
+
+/**
+ * Delete one entity; a package goes with everything in it.
  *
  * @throws When the CLI refuses
  */
-export async function deleteRuntimePackage(
+export async function deleteRuntimeEntity(
     deps: RuntimeNamespaceDeps,
+    kind: RuntimeEntityKind,
     name: string,
     env: RuntimeNamespaceEnv,
 ): Promise<void> {
-    const command = `aio runtime package delete ${name} --recursive`;
-    const result = await runInNamespace(deps, command, env);
+    const command = `aio runtime ${kind} delete ${name}${kind === 'package' ? ' --recursive' : ''}`;
+    let result = await runInNamespace(deps, command, env);
+    if (kind === 'package' && result.code !== 0 && PACKAGE_NOT_EMPTY.test(commandFailure(command, result))) {
+        await deletePackageActions(deps, name, env);
+        result = await runInNamespace(deps, command, env);
+    }
     if (result.code !== 0) {
         throw new Error(commandFailure(command, result));
+    }
+}
+
+/**
+ * The refusal a recursive package delete sometimes answers. Measured 2026-09-26 removing the
+ * ERP pair: three of eleven packages answered "package not empty (contains N entities) (409
+ * Conflict)". The same shapes rebuilt in a throwaway package deleted cleanly, so the cause
+ * was not found; emptying the package one action at a time and asking again is the recovery.
+ */
+const PACKAGE_NOT_EMPTY = /package not empty/u;
+
+/** An action name Runtime allows; anything else never reaches the CLI. */
+const ACTION_NAME = /^[A-Za-z0-9_.-]+$/u;
+
+/** Delete every action still in one package, each on its own. A failed delete is left for the retry to report. */
+async function deletePackageActions(deps: RuntimeNamespaceDeps, pkg: string, env: RuntimeNamespaceEnv): Promise<void> {
+    const listed = await runInNamespace(deps, `aio runtime action list ${pkg} --json`, env);
+    const parsed = listed.code === 0 ? parseJSON<Array<{ name?: string }>>(listed.stdout.trim()) : undefined;
+    const names = Array.isArray(parsed) ? parsed.map((a) => a.name ?? '').filter((n) => ACTION_NAME.test(n)) : [];
+    for (const action of names) {
+        await runInNamespace(deps, `aio runtime action delete ${pkg}/${action}`, env);
     }
 }

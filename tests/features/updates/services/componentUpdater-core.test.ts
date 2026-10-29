@@ -8,10 +8,6 @@
  * - Snapshot lifecycle
  */
 
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import type { Logger } from '@/types/logger';
-import type { Project } from '@/types/base';
-
 import {
     CommandExecutor,
     ComponentUpdater,
@@ -19,8 +15,12 @@ import {
     fs,
     setupUpdater,
 } from './componentUpdater.testUtils';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
+import type { Logger } from '@/types/logger';
+import type { Project } from '@/types/base';
+
 import { createMockProject } from '../../../helpers/projectFake';
-jest.mock('@/core/validation/URLValidator');
 
 describe('ComponentUpdater - Core Workflow', () => {
     let updater: ComponentUpdater;
@@ -251,7 +251,6 @@ describe('ComponentUpdater - Core Workflow', () => {
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
-                        nodeVersion: '20',
                     },
                 }),
             }));
@@ -289,7 +288,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 'npm install --no-fund',
                 expect.objectContaining({
                     cwd: '/path/to/project/components/commerce-mesh',
-                    useNodeVersion: '20',
+                    useNodeVersion: demoBuilderNode(),
                 })
             );
 
@@ -298,7 +297,7 @@ describe('ComponentUpdater - Core Workflow', () => {
                 'npm run build -- --force',
                 expect.objectContaining({
                     cwd: '/path/to/project/components/commerce-mesh',
-                    useNodeVersion: '20',
+                    useNodeVersion: demoBuilderNode(),
                 })
             );
         });
@@ -354,7 +353,6 @@ describe('ComponentUpdater - Core Workflow', () => {
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
-                        nodeVersion: '20',
                     },
                 }),
             }));
@@ -417,7 +415,6 @@ describe('ComponentUpdater - Core Workflow', () => {
                     name: 'Commerce Mesh',
                     configuration: {
                         buildScript: 'build',
-                        nodeVersion: '20',
                     },
                 }),
             }));

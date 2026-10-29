@@ -1,0 +1,180 @@
+/**
+ * updateApplyService — the block-library INSTALL category (EDS-28), headless.
+ *
+ * A library the project has selected but never received is a pending item in
+ * `apply_updates`' check, and is installed on apply. `findUninstalledBlockLibraries`
+ * and `applyBlockLibraryInstall` are REAL; the installer they call
+ * (`installBlockLibraryFiles`) is the fake, so the subject is the argument it
+ * is handed and the record written from its answer. The installer itself is
+ * driven for real in blockLibraryInstall.test.ts.
+ */
+
+// FIRST: this module owns the jest.mock calls the imports below must see.
+import {
+    edsProject,
+    emptySelections,
+    installedLibrary,
+    makeCtx,
+    mockInstallBlockLibraryFiles,
+    recordsIntegrationProbe,
+    resetFakes,
+} from './updateApplyService.testUtils';
+import * as vscode from 'vscode';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import blockLibraries from '@/features/components/config/block-libraries.json';
+import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
+import {
+    computeProjectUpdateSelections,
+    countSelections,
+} from '@/features/updates/services/updateSelections';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+
+function catalogEntry(id: string) {
+    const entry = blockLibraries.libraries.find((l) => l.id === id);
+    if (!entry) throw new Error(`${id} is not in block-libraries.json`);
+    return { name: entry.name, source: entry.source };
+}
+
+/** An optional library the SC can tick (Demo Builder Blocks is always included, 2026-10-15). */
+const LIBRARY = catalogEntry('demo-team-blocks');
+/** The record every storefront has; `edsProject()` carries it, so it is kept when overriding. */
+const DEMO_BUILDER = catalogEntry('demo-builder-blocks');
+
+function setSyncBehavior(value: 'ask' | 'enabled' | 'disabled'): void {
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+        get: jest.fn((_k: string, def: unknown) => value ?? def),
+    });
+}
+
+beforeEach(() => {
+    resetFakes();
+});
+
+describe('computeProjectUpdateSelections — block library installs', () => {
+    it('selects a library the project selected but has no record of, resolved from the catalog', async () => {
+        const project = edsProject({ selectedBlockLibraries: ['demo-team-blocks'] });
+
+        const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
+
+        expect(sel.blockLibraryInstall).toEqual([{ project, library: LIBRARY }]);
+        expect(countSelections(sel)).toBe(1);
+    });
+
+    it('selects nothing once the library is recorded', async () => {
+        const project = edsProject({
+            selectedBlockLibraries: ['demo-team-blocks'],
+            installedBlockLibraries: [
+                installedLibrary(DEMO_BUILDER.name, DEMO_BUILDER.source),
+                installedLibrary(LIBRARY.name, LIBRARY.source),
+            ],
+        });
+
+        const sel = await computeProjectUpdateSelections(project, createMockHandlerContext(), recordsIntegrationProbe());
+
+        expect(sel.blockLibraryInstall).toStrictEqual([]);
+        expect(countSelections(sel)).toBe(0);
+    });
+});
+
+describe('applyUpdatesHeadless — block library installs', () => {
+    // A line that may be one of several projects' names its project, by the title the SC
+    // typed rather than its folder name (owner, 2026-10-16).
+    it("names the project by its title in what it says was added", async () => {
+        const project = edsProject({ selectedBlockLibraries: ['demo-team-blocks'], title: 'My Commerce Demo' });
+        mockInstallBlockLibraryFiles.mockResolvedValue({
+            success: true,
+            blocksCount: 1,
+            blockIds: ['commerce-nav'],
+            libraryVersions: [{ ...LIBRARY, commitSha: 'src-1', blockIds: ['commerce-nav'] }],
+        });
+        const sel = { ...emptySelections(), blockLibraryInstall: [{ project, library: LIBRARY }] };
+
+        const res = await applyUpdatesHeadless(sel, makeCtx(), jest.fn());
+
+        expect(res.blockLibraryInstall?.installed).toEqual([`Added 1 block from ${LIBRARY.name} to My Commerce Demo.`]);
+    });
+
+    it('hands the installer the project and library, records the result, and says what was added', async () => {
+        const ctx = makeCtx();
+        const onProgress = jest.fn();
+        const project = edsProject({ selectedBlockLibraries: ['demo-team-blocks'] });
+        const recordsBefore = [...(project.installedBlockLibraries ?? [])];
+        mockInstallBlockLibraryFiles.mockResolvedValue({
+            success: true,
+            blocksCount: 1,
+            blockIds: ['commerce-nav'],
+            libraryVersions: [{ ...LIBRARY, commitSha: 'src-1', blockIds: ['commerce-nav'] }],
+        });
+        const sel = { ...emptySelections(), blockLibraryInstall: [{ project, library: LIBRARY }] };
+
+        const res = await applyUpdatesHeadless(sel, ctx, onProgress);
+
+        expect(mockInstallBlockLibraryFiles).toHaveBeenCalledTimes(1);
+        expect(mockInstallBlockLibraryFiles).toHaveBeenCalledWith({ project, library: LIBRARY }, ctx);
+        expect(onProgress).toHaveBeenCalledWith(S.addingBlockLibraries.label, LIBRARY.name);
+        expect(project.installedBlockLibraries).toEqual([
+            ...recordsBefore,
+            {
+                ...LIBRARY,
+                commitSha: 'src-1',
+                blockIds: ['commerce-nav'],
+                installedAt: expect.any(String),
+            },
+        ]);
+        expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
+        expect(res.blockLibraryInstall).toEqual({
+            successCount: 1,
+            failCount: 0,
+            errors: [],
+            installed: [`Added 1 block from ${LIBRARY.name} to demo.`],
+        });
+        expect(res.totalApplied).toBe(1);
+    });
+
+    it.each(['ask', 'disabled'] as const)(
+        'installs under syncBehavior "%s" — that setting guards updates, not a first install',
+        async (behavior) => {
+            setSyncBehavior(behavior);
+            const project = edsProject();
+            mockInstallBlockLibraryFiles.mockResolvedValue({
+                success: true,
+                blocksCount: 1,
+                blockIds: ['commerce-nav'],
+                libraryVersions: [{ ...LIBRARY, commitSha: 'src-1', blockIds: ['commerce-nav'] }],
+            });
+            const sel = { ...emptySelections(), blockLibraryInstall: [{ project, library: LIBRARY }] };
+
+            const res = await applyUpdatesHeadless(sel, makeCtx());
+
+            expect(mockInstallBlockLibraryFiles).toHaveBeenCalledTimes(1);
+            expect(res.blockLibraryInstall.successCount).toBe(1);
+            expect(res.addon.deferred).toBeUndefined();
+        },
+    );
+
+    it('reports a failed install by library name, records nothing, and counts it failed', async () => {
+        const ctx = makeCtx();
+        const project = edsProject();
+        const recordsBefore = [...(project.installedBlockLibraries ?? [])];
+        mockInstallBlockLibraryFiles.mockRejectedValue(new Error('No blocks found in source libraries'));
+        const sel = { ...emptySelections(), blockLibraryInstall: [{ project, library: LIBRARY }] };
+
+        const res = await applyUpdatesHeadless(sel, ctx);
+
+        expect(res.blockLibraryInstall).toEqual({
+            successCount: 0,
+            failCount: 1,
+            errors: [`${LIBRARY.name}: No blocks found in source libraries`],
+        });
+        expect(res.totalFailed).toBe(1);
+        expect(project.installedBlockLibraries).toStrictEqual(recordsBefore);
+        expect(ctx.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('never calls the installer when no install is selected', async () => {
+        const res = await applyUpdatesHeadless(emptySelections(), makeCtx());
+
+        expect(mockInstallBlockLibraryFiles).not.toHaveBeenCalled();
+        expect(res.blockLibraryInstall).toEqual({ successCount: 0, failCount: 0, errors: [] });
+    });
+});

@@ -160,12 +160,15 @@ describe('select_project — validation within the stored org', () => {
 
         await server.call('select_project', { projectId: 'proj-1' });
 
-        expect(auth.getProjects).toHaveBeenCalledWith({ orgId: 'org-2' });
+        // One project, never the org's list: an agent waited on all 780 to check one id.
+        expect(auth.getProject).toHaveBeenCalledWith({ orgId: 'org-2', projectId: 'proj-1' });
+        expect(auth.getProjects).not.toHaveBeenCalled();
     });
 
-    // An id that matches nothing must refuse. The count is the whole answer —
-    // enumerating the org here cost 111,748 bytes in a real one.
-    it('refuses an unknown id with a count, not a selection', async () => {
+    // An id that matches nothing must refuse, pointing at the search. It reported the
+    // org's project count until 2026-10-28; reading one project, there is no count.
+    // Enumerating the org here once cost 111,748 bytes in a real one.
+    it('refuses an unknown id, not a selection', async () => {
         const auth = makeAuth();
         const server = fakeServer();
         registerAdobeTools(server, ctxFactoryWith(auth));
@@ -174,7 +177,8 @@ describe('select_project — validation within the stored org', () => {
         const res = await server.call('select_project', { projectId: 'not-a-project' });
 
         expect(String(res.error)).toMatch(/Unknown projectId: not-a-project/);
-        expect(res.projectsInOrg).toBe(1);
+        expect(String(res.error)).toMatch(/list_adobe_projects with a search term/);
+        expect(res.projectsInOrg).toBeUndefined();
         expect(res.selected).toBeUndefined();
     });
 });

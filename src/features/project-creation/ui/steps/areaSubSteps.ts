@@ -116,8 +116,8 @@ const commerceDriver: AreaSubStepDriver = {
     },
     entry(state, atEnd) {
         const steps = commerceDriver.subSteps(state);
-        const id = atEnd ? steps[steps.length - 1]?.id : firstOpen(steps);
-        return id ? { activeCommerceStep: id as WizardState['activeCommerceStep'] } : {};
+        const id = atEnd ? steps[steps.length - 1].id : firstOpen(steps);
+        return { activeCommerceStep: id as WizardState['activeCommerceStep'] };
     },
     isComplete(state, subStepId) {
         return isCommerceStepComplete(
@@ -169,8 +169,8 @@ const storefrontDriver: AreaSubStepDriver = {
     },
     entry(state, atEnd) {
         const steps = storefrontDriver.subSteps(state);
-        const id = atEnd ? steps[steps.length - 1]?.id : firstOpen(steps);
-        return id ? { activeStorefrontStep: id as WizardState['activeStorefrontStep'] } : {};
+        const id = atEnd ? steps[steps.length - 1].id : firstOpen(steps);
+        return { activeStorefrontStep: id as WizardState['activeStorefrontStep'] };
     },
     isComplete(state, subStepId) {
         return isStorefrontStepComplete(

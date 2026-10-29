@@ -59,9 +59,9 @@ jest.mock('@/features/app-builder/services/runtimeCredentials', () => ({
 // ---- services --------------------------------------------------------------
 const mockEnsureWorkspaceRuntimeNamespace = jest.fn(async () => undefined);
 const mockCommandExecutor = { execute: jest.fn() };
-const mockAuthService = {
+const mockAuthService = poolUnits({
     ensureWorkspaceRuntimeNamespace: mockEnsureWorkspaceRuntimeNamespace,
-};
+});
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: () => mockAuthService,
@@ -71,6 +71,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 
 import type { AdobeConfig } from '@/types/base';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import {
     ensureWorkspaceRuntimeReady,
@@ -79,6 +80,7 @@ import {
     INTEGRATION_ENTRY,
     MESH_ENTRY,
 } from './executorAppBuilderPhase.testUtils';
+import { poolUnits } from '../../../helpers/authenticationServiceFake';
 
 const context = createMockHandlerContext();
 
@@ -182,7 +184,7 @@ describe('ensureWorkspaceRuntimeReady — when a deployable app is selected', ()
         expect(mockEnsureWorkspaceRuntime).toHaveBeenCalledWith(
             mockCommandExecutor,
             context.logger,
-            'auto',
+            demoBuilderNode(),
             expect.any(Function),
         );
     });

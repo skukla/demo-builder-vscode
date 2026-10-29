@@ -166,11 +166,11 @@ describe('handleAddAppBuilderComponent', () => {
         expect(mockAddAppBuilderComponent).toHaveBeenCalled();
     });
 
-    it('refuses a SECOND extension-layout app from the same source (fixed package names)', async () => {
-        // Extension-layout deploys skip the per-id ow-package rewrite, so two
-        // apps from one source in one workspace overwrite each other on Runtime
-        // whatever ids we mint (AB-2 spike). The id-collision check cannot see a
-        // seeded instance under a new name; the same-source scan must.
+    // Extension-layout apps ship fixed Runtime package names, so two from one source
+    // in ONE workspace overwrite each other (AB-2 spike, 2026-08-27). This was refused
+    // until every add got a workspace of its own (AB-23): the second copy now lands in
+    // its own, and nothing it deploys can reach the first.
+    it('adds a SECOND extension-layout app from the same source, now that each add has its own workspace', async () => {
         const { mockContext } = setupMocks({
             componentSelections: { backend: 'adobe-commerce-paas' },
             appBuilderComponents: {
@@ -192,10 +192,8 @@ describe('handleAddAppBuilderComponent', () => {
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'stock-sync' });
 
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('fixed internal package names');
-        expect(result.error).toContain('Order Sync');
-        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+        expect(result.success).toBe(true);
+        expect(mockAddAppBuilderComponent).toHaveBeenCalled();
     });
 
     it('control: a second STANDALONE app from the same source still adds (ids isolate it)', async () => {
@@ -236,7 +234,7 @@ describe('handleAddAppBuilderComponent', () => {
         );
     });
 
-    it('routes to Configure FIRST when the entry needs bucket-3 user inputs', async () => {
+    it('refuses an entry that needs values, deploys nothing and opens nothing', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({
@@ -244,19 +242,22 @@ describe('handleAddAppBuilderComponent', () => {
             envSchema: [{ name: 'ERP_API_KEY', type: 'secret', label: 'ERP API Key' }],
         });
 
-        await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
 
-        // Routed to Configure, not silently deployed with a missing secret.
+        // Not deployed with a missing secret, and no panel: Configure Project no
+        // longer holds integration settings (AB-21); the add that asks for them
+        // is AB-22.
         const vscode = require('vscode');
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.configureProject');
+        const commandsRun = (vscode.commands.executeCommand as jest.Mock).mock.calls.map(([id]) => id);
+        expect(commandsRun).not.toContain('demoBuilder.configureProject');
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
+        expect(result).toMatchObject({ success: false });
+        expect(result.error).toMatch(/not supported yet\. Nothing was added\.$/);
     });
 
-    // This branch used to return `{success: true}` for opening a panel and adding
-    // NOTHING. Neither the grid, an agent, nor a human reading the transcript
-    // could tell that from a completed add. It is the defect the `needsUser`
-    // handoff convention was written against.
-    it('does NOT report success for the Configure route — nothing was added', async () => {
+    // Refusing must never read as success: neither the grid, an agent, nor a
+    // human reading the transcript could tell that from a completed add.
+    it('does NOT report success for an entry that needs values — nothing was added', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({
@@ -274,7 +275,7 @@ describe('handleAddAppBuilderComponent', () => {
 
     // `blocked`, like a guard refusal: nothing ran, so the row must not be
     // painted red as though a deploy had failed.
-    it('does not post an error row status for the Configure route', async () => {
+    it('does not post an error row status for an entry that needs values', async () => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({
@@ -326,7 +327,6 @@ describe('handleAddAppBuilderComponent', () => {
             'erp-sync',
             'error',
             expect.stringContaining('clone failed'),
-            undefined
         );
     });
 });
@@ -600,21 +600,8 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
  * name, which is what makes several of them legitimate.
  */
 describe('handleAddAppBuilderComponent — duplicate ids', () => {
-    it('refuses a catalog entry already present, without calling the runner', async () => {
-        const { mockContext } = setupMocks({
-            appBuilderComponents: {
-                'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync', branch: 'main' } },
-            },
-        });
-        mockTestDeveloperPermissions(true);
-
-        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
-
-        expect(result.success).toBe(false);
-        expect(result.error).toMatch(/already/i);
-        expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
-    });
-
+    // A catalog entry already present is now added as a numbered copy (AB-23) —
+    // pinned in the edges suite's same-id gate. A custom source still refuses:
     it('refuses a custom source whose derived id is already present', async () => {
         mockBuildCustomIntegrationEntry.mockReturnValue({
             id: 'acme-erp-sync',
@@ -671,5 +658,71 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
 
         expect(result.success).toBe(true);
         expect(mockAddAppBuilderComponent).toHaveBeenCalled();
+    });
+});
+
+/**
+ * A republish that did not land reaches BOTH surfaces (2026-09-24).
+ *
+ * The runner carries it as a warning; the handler shows the SC a warning
+ * notification and hands an agent `data.warning`, the way a removal's leftovers
+ * already travel. The durable signal — the Republish tile staying amber — is the
+ * service's job and pinned in its own suite.
+ */
+describe('add and deploy — a storefront republish warning reaches the SC and the agent', () => {
+    const WARNING =
+        'The storefront still serves its previous config.json: No DA.live session — ' +
+        'sign in to DA.live and republish from the dashboard.';
+
+    beforeEach(() => {
+        resetHandlerMocks();
+    });
+
+    it('an add with a republish warning still reports what it added, plus the warning', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+        mockAddAppBuilderComponent.mockResolvedValue({ success: true, warnings: [WARNING] });
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        expect(result.added).toEqual({ id: 'erp-sync', name: 'ERP Sync', kind: 'integration' });
+        expect((result.data as { warning?: string }).warning).toBe(WARNING);
+        const vscode = require('vscode');
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(WARNING);
+    });
+
+    it('a deploy with a republish warning answers success with the warning on data', async () => {
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                'erp-sync': {
+                    kind: 'integration' as const,
+                    status: 'deployed' as const,
+                    name: 'ERP Sync',
+                    source: { owner: 'acme', repo: 'erp-sync', branch: 'main' },
+                },
+            },
+        });
+        mockTestDeveloperPermissions(true);
+        mockDeployAppBuilderComponent.mockResolvedValue({ success: true, warnings: [WARNING] });
+
+        const result = await handleDeployAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        expect((result.data as { warning?: string }).warning).toBe(WARNING);
+        const vscode = require('vscode');
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(WARNING);
+    });
+
+    it('control: a clean add or deploy shows no warning toast', async () => {
+        const { mockContext } = setupMocks();
+        mockTestDeveloperPermissions(true);
+
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
+
+        expect(result.success).toBe(true);
+        expect(result.data).toBeUndefined();
+        const vscode = require('vscode');
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
 });

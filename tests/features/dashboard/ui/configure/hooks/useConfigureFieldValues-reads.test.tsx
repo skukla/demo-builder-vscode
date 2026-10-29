@@ -217,8 +217,10 @@ describe('useConfigureFieldValues - reading values back', () => {
         });
 
         it('renders a numeric stored value as a string', () => {
-            const { result } = render();
-            act(() => result.current.stageAppBuilderComponentValue('headless', 'STORE_CODE', '7'));
+            const { result } = render(
+                undefined,
+                createMockProject({ componentConfigs: { headless: { STORE_CODE: 7 } } })
+            );
 
             expect(result.current.getFieldValue(textField)).toBe('7');
         });

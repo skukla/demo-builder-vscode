@@ -11,7 +11,6 @@ import {
     installBlockCollections,
 } from '@/features/eds/services/blockCollectionHelpers';
 import type { Logger } from '@/types/logger';
-import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { AddonSource } from '@/types/demoPackages';
 import {
     createComponentDef,
@@ -20,12 +19,13 @@ import {
     createDestComponentFilters,
     createBlockFileEntries,
     setupBlockCollectionMocks,
+    type MockGithubFileOps,
 } from './blockCollectionHelpers.testUtils';
 
 describe('installBlockCollections', () => {
     const SOURCE_A: AddonSource = { owner: 'adobe', repo: 'isle5', branch: 'main' };
     const SOURCE_B: AddonSource = { owner: 'partner', repo: 'custom-blocks', branch: 'v2' };
-    let mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    let mockGithubFileOps: MockGithubFileOps;
     let mockLogger: jest.Mocked<Logger>;
 
     /**

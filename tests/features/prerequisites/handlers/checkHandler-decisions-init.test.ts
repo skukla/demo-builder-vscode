@@ -14,12 +14,10 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
     return {
         ...actual,
         getNodeVersionMapping: jest.fn(),
-        getNodeVersionIdMapping: jest.fn(),
         checkPerNodeVersionStatus: jest.fn(),
         areDependenciesInstalled: jest.fn(),
         hasNodeVersions: jest.fn(),
         getNodeVersionKeys: jest.fn(),
-        getPluginNodeVersions: jest.fn(),
         handlePrerequisiteCheckError: jest.fn(),
     };
 });
@@ -44,7 +42,6 @@ import type { PrerequisiteCheckState } from '@/types/handlers';
 beforeEach(() => {
     jest.clearAllMocks();
     (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({});
-    (shared.getNodeVersionIdMapping as jest.Mock).mockResolvedValue({});
     (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
     (shared.hasNodeVersions as jest.Mock).mockImplementation(
         (m: Record<string, string>) => !!m && Object.keys(m).length > 0,

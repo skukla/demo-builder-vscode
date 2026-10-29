@@ -9,38 +9,10 @@
  * it as a test suite — it contains no `describe`/`it` blocks.
  */
 
-/** Create a component-definition.json with specified blocks */
-export function createComponentDef(
-    blocks: Array<{ title: string; id: string; unsafeHTML?: string }>,
-): string {
-    return JSON.stringify({
-        groups: [{
-            id: 'blocks',
-            title: 'Blocks',
-            components: blocks.map(b => ({
-                title: b.title,
-                id: b.id,
-                plugins: b.unsafeHTML ? { da: { unsafeHTML: b.unsafeHTML } } : undefined,
-            })),
-        }],
-    });
-}
-
-/** Create a destination component-definition.json with existing blocks */
-export function createDestComponentDef(
-    blocks: Array<{ title: string; id: string }> = [
-        { title: 'Hero', id: 'hero' },
-        { title: 'Cards', id: 'cards' },
-    ],
-): string {
-    return JSON.stringify({
-        groups: [{
-            id: 'blocks',
-            title: 'Blocks',
-            components: blocks.map(b => ({ title: b.title, id: b.id })),
-        }],
-    });
-}
+// The component-definition builders live in tests/helpers/ because suites in
+// other feature directories (updates, ai) build the same file.
+import { createComponentDef, createDestComponentDef } from '../../../helpers/componentDefinitionFixtures';
+export { createComponentDef, createDestComponentDef };
 
 /** Create a source component-filters.json */
 export function createComponentFilters(
@@ -118,7 +90,7 @@ export function createBlockFileEntries(
  * calls would let the caller stop writing files without a single test noticing.
  *
  * The retry and the never-force rule are pinned where they live, against the
- * real implementation, in `githubFileOperations-branchRef.test.ts`.
+ * real implementation, in `githubTreeCommits-branchRef.test.ts`.
  *
  * @param mock - the mocked GitHubFileOperations to install the behaviour on
  */
@@ -153,7 +125,19 @@ export function delegateCommitTreeToBranch(mock: {
 }
 
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+import type { GitHubTreeCommits } from '@/features/eds/services/github/githubTreeCommits';
 import type { Logger } from '@/types/logger';
+
+/**
+ * The file-operations double, plus the three Git Data primitives the suites READ
+ * their observations off. Since the 2026-10-08 split those primitives live on
+ * `GitHubTreeCommits`, not on the file operations the installer is handed; the
+ * fake keeps them because `delegateCommitTreeToBranch` routes the one call the
+ * installer makes through them, which is what lets sixty assertions keep reading
+ * `createTree` / `createCommit` unchanged.
+ */
+export type MockGithubFileOps = jest.Mocked<GitHubFileOperations> &
+    jest.Mocked<Pick<GitHubTreeCommits, 'createTree' | 'createCommit' | 'updateBranchRef'>>;
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 /** The blocks these suites discover unless a test names others. */
@@ -161,7 +145,7 @@ export const DEFAULT_BLOCKS = ['hero-cta', 'newsletter', 'search-bar'];
 
 export interface BlockCollectionHarness {
     mockLogger: jest.Mocked<Logger>;
-    mockGithubFileOps: jest.Mocked<GitHubFileOperations>;
+    mockGithubFileOps: MockGithubFileOps;
 }
 
 /**
@@ -185,7 +169,7 @@ export function setupBlockCollectionMocks(): BlockCollectionHarness {
         createCommit: jest.fn(),
         updateBranchRef: jest.fn(),
         commitTreeToBranch: jest.fn(),
-    } as unknown as jest.Mocked<GitHubFileOperations>;
+    } as unknown as MockGithubFileOps;
 
     delegateCommitTreeToBranch(
         mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0]
@@ -202,7 +186,7 @@ export function setupBlockCollectionMocks(): BlockCollectionHarness {
  * exercise dynamic discovery.
  */
 export function setupSuccessfulInstall(
-    mockGithubFileOps: jest.Mocked<GitHubFileOperations>,
+    mockGithubFileOps: MockGithubFileOps,
     sourceComponentDef: string | null,
     destComponentDef: string = createDestComponentDef(),
     blockIds: string[] = DEFAULT_BLOCKS,
@@ -247,7 +231,7 @@ export function setupSuccessfulInstall(
  * per repository calls this first and overrides afterwards, which is what the
  * two suites already did by hand.
  */
-export function primeCommitPath(mockGithubFileOps: jest.Mocked<GitHubFileOperations>): void {
+export function primeCommitPath(mockGithubFileOps: MockGithubFileOps): void {
     mockGithubFileOps.getBlobContent.mockResolvedValue('content');
     mockGithubFileOps.getFileContent.mockResolvedValue(null);
     mockGithubFileOps.getBranchInfo.mockResolvedValue({

@@ -8,11 +8,11 @@
 
 import { Flex, Text } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
-import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useMemo } from 'react';
 import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
+import { PinToggle } from '@/core/ui/components/ui/PinToggle';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -45,7 +45,7 @@ export function ProjectRow({
 }: ProjectRowProps) {
     const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect);
 
-    const { statusText, statusVariant } = getProjectStatusDisplay(project);
+    const { statusText, statusVariant, statusExplanation } = getProjectStatusDisplay(project);
     const componentSummary = useMemo(() => getComponentSummary(project), [project]);
 
     const ariaLabel = `${getProjectDisplayName(project)}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;
@@ -60,27 +60,15 @@ export function ProjectRow({
             className="project-row"
         >
             <Flex alignItems="center" justifyContent="space-between" width="100%">
-                {/* Left: Status dot + Pin (when pinned) + Name + Components */}
+                {/* Left: Status dot + Name + Components */}
                 <Flex alignItems="center" gap="size-150">
                     <StatusDot variant={statusVariant} size={8} />
-                    {project.pinned && (
-                        <span
-                            data-testid="project-row-pin-indicator"
-                            aria-label="Pinned"
-                            className="pin-indicator"
-                            // ProjectRow's pin was the one WITHOUT `flex: 0 0 auto`,
-                            // so it keeps the default shrink behaviour it had.
-                            style={{ '--pin-flex': '0 1 auto' } as React.CSSProperties}
-                        >
-                            <PinOn size="XS" />
-                        </span>
-                    )}
                     {/* Rename-in-place, matching the card grid: hover pencil,
                         hidden while running or when the callback isn't wired. */}
                     <InlineRenameField
                         name={getProjectDisplayName(project)}
                         textClassName="project-row-name"
-                        disabled={isRunning || !actions.onRenameSubmit}
+                        disabled={isRunning || project.status === 'creating' || !actions.onRenameSubmit}
                         // No `normalize`: the field takes the TITLE as typed.
                         // `renameProjectCore` derives the slug from it and moves
                         // the folder to match, so rewriting keystrokes to hyphens
@@ -97,14 +85,22 @@ export function ProjectRow({
                     )}
                 </Flex>
 
-                {/* Right: More menu + Status text + Chevron */}
+                {/* Right: Pin + More menu + Status text + Chevron. The pin is a button
+                    beside the menu, as on the card (owner, 2026-10-28). */}
                 <Flex alignItems="center" gap="size-150">
+                    <PinToggle
+                        pinned={Boolean(project.pinned)}
+                        subject="project"
+                        onToggle={actions.onPinToggle ? () => actions.onPinToggle?.(project) : undefined}
+                    />
                     <ProjectActionsMenu
                         project={project}
                         isRunning={isRunning}
                         actions={actions}
                     />
-                    <Text UNSAFE_className="project-row-status">{statusText}</Text>
+                    <span title={statusExplanation} data-testid="project-row-status">
+                        <Text UNSAFE_className="project-row-status">{statusText}</Text>
+                    </span>
                     <ChevronRight size="S" UNSAFE_className="project-row-chevron" />
                 </Flex>
             </Flex>

@@ -1,0 +1,28 @@
+{
+    "operations_list": [
+        {
+            "id": 0,
+            "status": 1,
+            "result_message": "Service execution success Magento\\Catalog\\Api\\ProductRepositoryInterface\\Proxy::save",
+            "error_code": null
+        },
+        {
+            "id": 1,
+            "status": 1,
+            "result_message": "Service execution success Magento\\Catalog\\Api\\ProductRepositoryInterface\\Proxy::save",
+            "error_code": null
+        },
+        {
+            "id": 2,
+            "status": 1,
+            "result_message": "Service execution success Magento\\Catalog\\Api\\ProductRepositoryInterface\\Proxy::save",
+            "error_code": null
+        }
+    ],
+    "user_type": 2,
+    "bulk_id": "799a59c0-09ca-4d60-b432-2953986c1c38",
+    "description": "Topic async.magento.catalog.api.productrepositoryinterface.save.put",
+    "start_time": "2026-10-10 00:19:08",
+    "user_id": 1,
+    "operation_count": 3
+}

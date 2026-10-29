@@ -16,10 +16,18 @@
  */
 
 import { CATALOG_API_KEY, PAAS_ADMIN_PASSWORD } from '@/core/config/envVarKeys';
+import type { ProjectFile } from '@/types/projectFile';
 import type { SettingsFile } from '@/types/settingsFile';
 
-/** A version-1 export as the serializer writes it today, secrets included. */
-export function settingsFileV1WithSecrets(): SettingsFile {
+/**
+ * A v1 file as it sits on disk when written before 2026-10: the current type
+ * plus the `includesSecrets` stamp, which left `SettingsFile` with the flag it
+ * labelled (PL-56c). Old files still carry it, so the reader is tested with it.
+ */
+export type SettingsFileV1OnDisk = SettingsFile & { includesSecrets: boolean };
+
+/** A version-1 export as the serializer wrote it before 2026-10, secrets included. */
+export function settingsFileV1WithSecrets(): SettingsFileV1OnDisk {
     return {
         version: 1,
         exportedAt: '2026-09-11T00:00:00.000Z',
@@ -57,7 +65,6 @@ export function settingsFileV1WithSecrets(): SettingsFile {
         selectedAddons: [],
         selectedBlockLibraries: ['bodea-blocks'],
         customBlockLibraries: [],
-        installedBlockLibraries: [],
         edsConfig: {
             daLiveOrg: 'someone',
             daLiveSite: 'bodea-demo',
@@ -75,5 +82,27 @@ export function settingsFileV1WithSecrets(): SettingsFile {
         },
         additionalConsoleApis: ['CommerceCloudService'],
         componentApiPicks: { 'someone-pricing-app': ['CommerceCloudService'] },
+    };
+}
+
+/**
+ * A minimal version-2 project file as the writer emits it (`createExportSettings`),
+ * with the sender's storefront as provenance. Extend it with a spread.
+ */
+export function projectFileV2(overrides: Partial<ProjectFile> = {}): ProjectFile {
+    return {
+        kind: 'project',
+        version: 2,
+        exportedAt: '2026-10-03T00:00:00.000Z',
+        source: {
+            project: 'bodea',
+            extension: '1.0.0-test',
+            storefront: { githubRepo: 'sender/kukla-bodea', daLiveOrg: 'sender' },
+        },
+        selections: {},
+        configs: {},
+        selectedPackage: 'bodea',
+        selectedStack: 'eds-accs',
+        ...overrides,
     };
 }

@@ -1,11 +1,13 @@
 /**
- * The fetch fakes both write-client suites build their responses from.
+ * The fetch fakes the write-client and export-client suites build their
+ * responses from.
  *
- * The client takes its `fetchImpl` and its token provider by parameter, so
+ * Both clients take their `fetchImpl` and token provider by parameter, so
  * there is no module wall here at all — only the two shapes of canned response
- * (a JSON body, and whatever text the service actually sent) and the client
+ * (a JSON body, and whatever text the service actually sent) and a client
  * wired to them.
  */
+import { DataInstallerExportClient } from '@/features/data-installer/services/dataInstallerExportClient';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 
 /** The action namespace every URL in these suites is built from. */
@@ -47,4 +49,14 @@ export function makeClient(fetchImpl: jest.Mock, log?: (line: string) => void) {
 /** The JSON body of one recorded request. */
 export function bodyOf(fetchImpl: jest.Mock, call = 0): Record<string, unknown> {
     return JSON.parse(fetchImpl.mock.calls[call][1].body);
+}
+
+/** The export client, wired the same way. */
+export function makeExportClient(fetchImpl: jest.Mock, log?: (line: string) => void) {
+    return new DataInstallerExportClient({
+        baseUrl: BASE,
+        getToken: async () => 'ims-token',
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+        ...(log ? { log } : {}),
+    });
 }

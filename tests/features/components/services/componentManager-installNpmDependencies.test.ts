@@ -5,13 +5,14 @@
  * - Installs dependencies for already-cloned component
  * - Runs build script if configured
  * - Handles missing package.json
- * - Uses correct Node version
+ * - Runs on Demo Builder's Node
  *
  * This method supports phase-based project creation where
  * clone and npm install are separate operations.
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
+import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { TransformedComponentDefinition } from '@/types/components';
 import { Logger } from '@/types/logger';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
@@ -90,33 +91,7 @@ describe('ComponentManager - installNpmDependencies', () => {
     });
 
     describe('Node version handling', () => {
-        it('should use configured Node version', async () => {
-            mockFileExists();
-
-            const componentDef: TransformedComponentDefinition = {
-                id: 'test-component',
-                name: 'Test Component',
-                type: 'frontend',
-                source: {
-                    type: 'git',
-                    url: 'https://github.com/test/repo.git'
-                },
-                configuration: {
-                    nodeVersion: '20.11.0'
-                }
-            };
-
-            await componentManager.installNpmDependencies('/test/path', componentDef);
-
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'npm install',
-                expect.objectContaining({
-                    useNodeVersion: '20.11.0'
-                })
-            );
-        });
-
-        it('should use default Node version when not configured', async () => {
+        it("runs npm install on Demo Builder's Node", async () => {
             mockFileExists();
 
             const componentDef: TransformedComponentDefinition = {
@@ -134,7 +109,7 @@ describe('ComponentManager - installNpmDependencies', () => {
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'npm install',
                 expect.objectContaining({
-                    useNodeVersion: null
+                    useNodeVersion: demoBuilderNode(),
                 })
             );
         });
