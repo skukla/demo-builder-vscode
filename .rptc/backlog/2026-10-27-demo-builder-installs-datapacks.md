@@ -58,3 +58,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-28  docs(rptc): datapack-engine plan updates (`364018383`)
 - 2026-10-28  fix(data-installer): the Data Installer service is sent no Commerce secrets (DI-5) (`c69e7a7b3`)
 - 2026-10-28  docs(plan): the datapack hybrid, settings layers, and publishing to the Data Installer (DI-5) (`45abdfc72`)
+- 2026-10-28  merge: Demo Builder's own datapack engine into the release candidate (DI-5) (`ac48e6512`)
