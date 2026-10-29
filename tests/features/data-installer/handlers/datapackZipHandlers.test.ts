@@ -104,11 +104,11 @@ describe('save-datapack-zip', () => {
             source: 'library',
             datapackName: 'justrite',
             version: 'v1',
-            path: 'out',
+            path: 'out.zip',
         });
 
         expect(mockAccess).toHaveBeenCalledWith(expect.anything(), 'library');
-        const written = path.join(dir, 'out');
+        const written = path.join(dir, 'out.zip');
         expect(result).toMatchObject({
             success: true,
             data: { path: written, dataTypes: ['categories'] },
@@ -129,6 +129,20 @@ describe('save-datapack-zip', () => {
         });
 
         expect(fs.existsSync(path.join(dir, 'justrite-v1.datapack.zip'))).toBe(true);
+    });
+
+    // Found on the first live run, 2026-10-29: `datapacks`, meant as a folder, became a file
+    // named `datapacks`, which the screen's Open dialog (zip files only) cannot show.
+    it('makes a folder that does not exist yet when the path does not end in .zip', async () => {
+        const result = await save(contextFor(createMockProject({ path: dir }), false), {
+            datapackName: 'justrite',
+            version: 'v1',
+            path: 'datapacks',
+        });
+
+        const written = path.join(dir, 'datapacks', 'justrite-v1.datapack.zip');
+        expect(result).toMatchObject({ success: true, data: { path: written } });
+        expect(fs.existsSync(written)).toBe(true);
     });
 
     it('refuses an agent path outside the project, and writes nothing', async () => {

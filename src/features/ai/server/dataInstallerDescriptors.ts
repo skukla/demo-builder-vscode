@@ -91,7 +91,8 @@ const IMPORT_TARGET = {
         .describe(
             'Store VIEW code, from list_datapack_import_scopes. Omit to use the project’s; ' +
                 'send with websiteCode to override',
-        ),    // Which store holds the pack (DI-5). The service installs only from its own catalog; Demo
+        ),
+    // Which store holds the pack (DI-5). The service installs only from its own catalog; Demo
     // Builder's engine reads either, so a library pack is installed without copying it first.
     source: z.enum(['installer', 'library']).optional().describe('Which store holds the pack: installer (default) or library. A library pack needs the demo-builder engine'),
 };
@@ -288,7 +289,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             source: z.enum(['installer', 'library']).optional().describe('Which store to read it from (default installer)'),
             path: z
                 .string()
-                .describe('Where to write the file, inside the project. A folder gets <name>-<version>.datapack.zip'),
+                .describe(
+                    'Where to write the file, inside the project. A path not ending in .zip is a folder ' +
+                        '(made if missing) and gets <name>-<version>.datapack.zip',
+                ),
         },
     },
     {
@@ -346,10 +350,11 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Make a datapack library pack installable: copy it into the Data Installer, then ' +
-            'install it with start_datapack_import. **Writes into the SHARED catalog** — needs ' +
-            'confirm:true and confirmName equal to the pack name, never overwrites an existing ' +
-            'pack, and cannot be undone from the extension.',
+            "Copy a datapack library pack into the Data Installer's catalog, for the Data Installer " +
+            'service to install. Not needed to install it here: start_datapack_import takes ' +
+            'source:"library". **Writes into the SHARED catalog** — needs confirm:true and ' +
+            'confirmName equal to the pack name, never overwrites an existing pack, and cannot be ' +
+            'undone from the extension.',
         map: importHandlers,
         type: 'copy-library-datapack-to-installer',
         confirm: true,

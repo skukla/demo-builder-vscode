@@ -1,9 +1,10 @@
 /**
- * "Copy to the Data Installer" — make a library pack installable.
+ * "Copy to the Data Installer" — put a library pack in the Data Installer's catalog.
  *
- * Install runs through the Data Installer, which does not hold library packs, so the
- * pack is copied there first; once every data type has landed, the same flyout offers
- * Import. The copy writes into the catalog other teams share and the extension cannot
+ * Shown only with the service engine chosen, which installs from its own catalog alone:
+ * Demo Builder's engine installs a library pack directly (`DatapackDetailPanel`). Once
+ * every data type has landed, the same flyout offers Import. The copy writes into the
+ * catalog other teams share and the extension cannot
  * remove it again, so the button says so before it is pressed, and the press is the
  * confirmation (the handler also wants the pack name back, which this sends).
  *

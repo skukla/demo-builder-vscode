@@ -113,7 +113,11 @@ export function failure(
     };
 }
 
-/** An agent's path, resolved inside the open project; a directory gets the default file name. */
+/**
+ * An agent's path, resolved inside the open project. When saving (`defaultName` given), a
+ * path that does not end in `.zip` is a folder, made if missing, and gets the default file
+ * name: a file without `.zip` is one the screen's Open dialog cannot show.
+ */
 async function projectPath(
     context: HandlerContext,
     given: string,
@@ -125,8 +129,10 @@ async function projectPath(
             'Open a project first: a datapack file path must be inside it.',
         );
     let candidate = path.isAbsolute(given) ? given : path.join(project.path, given);
-    if (defaultName && fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
-        candidate = path.join(candidate, defaultName);
+    if (defaultName && !candidate.toLowerCase().endsWith('.zip')) {
+        const folder = assertPathInsideSync(candidate, project.path);
+        await fs.promises.mkdir(folder, { recursive: true });
+        candidate = path.join(folder, defaultName);
     }
     return assertPathInsideSync(candidate, project.path);
 }
