@@ -153,7 +153,64 @@ describe('save-datapack-zip', () => {
         });
 
         expect(result.success).toBe(false);
+        expect(result.error).toMatch(/must be inside the project/);
         expect(fs.existsSync(path.join(os.tmpdir(), 'elsewhere.zip'))).toBe(false);
+    });
+
+    // Found on the live step 05 test, 2026-10-29: `exports/new.zip` failed with "[UNKNOWN]"
+    // because its folder did not exist; a folder path was already made when missing.
+    it('makes the folders a .zip path names when they do not exist yet', async () => {
+        const result = await save(contextFor(createMockProject({ path: dir }), false), {
+            datapackName: 'justrite',
+            version: 'v1',
+            path: 'exports/2026/out.zip',
+        });
+
+        const written = path.join(dir, 'exports', '2026', 'out.zip');
+        expect(result).toMatchObject({ success: true, data: { path: written } });
+        expect(readDatapackZip(fs.readFileSync(written)).id).toEqual(ID);
+    });
+
+    it('refuses a .zip path whose missing folders lead out of the project, making none of them', async () => {
+        const outside = path.join(path.dirname(dir), `${path.basename(dir)}-outside`);
+
+        const result = await save(contextFor(createMockProject({ path: dir }), false), {
+            datapackName: 'justrite',
+            version: 'v1',
+            path: path.join('..', path.basename(outside), 'new', 'out.zip'),
+        });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/must be inside the project/) });
+        expect(fs.existsSync(outside)).toBe(false);
+    });
+
+    it('refuses a .zip path through a link inside the project that points out of it', async () => {
+        const outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'datapack-linked-')));
+        fs.symlinkSync(outside, path.join(dir, 'link'));
+
+        const result = await save(contextFor(createMockProject({ path: dir }), false), {
+            datapackName: 'justrite',
+            version: 'v1',
+            path: 'link/new/out.zip',
+        });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/must be inside the project/) });
+        expect(fs.existsSync(path.join(outside, 'new'))).toBe(false);
+    });
+
+    it('says why a save failed when the disk refused it, not the generic line', async () => {
+        fs.writeFileSync(path.join(dir, 'blocker'), 'a file, not a folder');
+
+        const result = await save(contextFor(createMockProject({ path: dir }), false), {
+            datapackName: 'justrite',
+            version: 'v1',
+            path: 'blocker/out.zip',
+        });
+
+        expect(result).toMatchObject({
+            success: false,
+            error: expect.stringMatching(/blocker is a file, not a folder/),
+        });
     });
 
     it('asks with the save dialog from the panel, offering the pack name; cancelled when dismissed', async () => {

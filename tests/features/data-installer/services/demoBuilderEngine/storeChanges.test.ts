@@ -175,6 +175,56 @@ describe('previewChanges, counted the way a save counts', () => {
     });
 });
 
+/**
+ * The inventory as the three list reads answer it. Every ACCS store has the `default` source,
+ * `Default Stock` and the link between them; the live step 05 test (2026-10-29) showed that link
+ * under "add" on every preview, even right after an install.
+ */
+const INVENTORY = {
+    'inventory/sources?searchCriteria[pageSize]=200': {
+        items: [
+            { source_code: 'default', name: 'Default Source', enabled: true },
+            { source_code: 'carvelo_off', name: 'Carvelo - Closed', enabled: false },
+        ],
+    },
+    'inventory/stocks?searchCriteria[pageSize]=200': { items: [{ stock_id: 1, name: 'Default Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'base' }] } }] },
+    'inventory/stock-source-links?searchCriteria[pageSize]=200': { items: [{ stock_id: 1, source_code: 'default', priority: 1 }] },
+};
+const INVENTORY_PACK = {
+    sources: {
+        sources: [
+            { source: { source_code: 'default', name: 'Default Source' } },
+            { source: { source_code: 'carvelo_off', name: 'Carvelo - Closed' } },
+            { source: { source_code: 'carvelo_broadway', name: 'Carvelo - Broadway' } },
+        ],
+    },
+    stocks: { stocks: [{ stock: { name: 'Default Stock' } }, { stock: { name: 'Carvelo' } }] },
+    stock_source_links: {
+        stockSourceLinks: [
+            { stockSourceLink: { stock_id: 'Default Stock', source_code: 'default' } },
+            { stockSourceLink: { stock_id: 'Carvelo', source_code: 'carvelo_broadway' } },
+        ],
+    },
+};
+
+describe('previewChanges, inventory counted the way install treats it', () => {
+    it('counts a source, stock or link the store already has as already in the store, as install leaves it alone', async () => {
+        const { d, ctx } = await deps(true, INVENTORY, INVENTORY_PACK);
+
+        const preview = await previewChanges(d, PACK, 'installer');
+        const kind = (name: string) => preview.kinds.find((k) => k.kind === name);
+
+        // A switched-off source is switched on by install, and recorded: a change, so it is not "in the store".
+        expect(kind('sources')).toMatchObject({ add: { count: 2, names: ['carvelo_off', 'carvelo_broadway'] }, inStore: { count: 1, names: ['default'] } });
+        expect(kind('stocks')).toMatchObject({ add: { count: 1, names: ['Carvelo'] }, inStore: { count: 1, names: ['Default Stock'] } });
+        expect(kind('stock_source_links')).toMatchObject({
+            add: { count: 1, names: ['Carvelo/carvelo_broadway'] },
+            inStore: { count: 1, names: ['Default Stock/default'] },
+        });
+        expect(ctx.sent).toStrictEqual([]);
+    });
+});
+
 describe('saveStoreChanges, with the installed version\'s own rows', () => {
     it('saves a pack product the store already had, read from the store with its SKU exact', async () => {
         const { d, written, write } = await deps(

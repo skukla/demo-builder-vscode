@@ -36,8 +36,10 @@ import { productLookups } from './productLookups';
 import { rebaseRecord } from './recordFingerprints';
 import { type KeptContainer, containersLine, decideRemovals } from './removers';
 import { type KindPlan, type PlannedObject, keptLine, keptOf, planRepeat, removalsOf } from './repeatInstall';
-import { readProducts } from './storeCopies';
+import { LINK_KIND, SOURCE_KIND, STOCK_KIND } from './stockKinds';
+import { onceInventory, readProducts } from './storeCopies';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import type { Inventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 /** What both actions need: the project's store, where its packs are read, and its path. */
@@ -78,8 +80,10 @@ export interface KindChanges {
     add: Named;
     /**
      * Rows the store already has that this engine did not make: installing leaves them as they
-     * are, and a save takes them into the new version. Told apart for products, attributes and
-     * sets, the kinds a save reads by the pack's own names; for the rest they count under `add`.
+     * are. Told apart for products, attributes and sets (which a save then takes into the new
+     * version, as it reads them by the pack's own names) and for sources, stocks and their links
+     * (which install uses as they are, `stockKinds.ts`; a switched-off source is switched on, so it
+     * counts under `add`). For categories they count under `add`.
      */
     inStore: Named;
     remove: Named;
@@ -112,9 +116,29 @@ async function openStore(deps: StoreChangesDeps, pack: DatapackId): Promise<Kind
     return { ...commerce, recorder, session: sessionFor(target), log: deps.log };
 }
 
-/** Which of these pack rows the store already has, for the kinds a save reads by name. */
-async function alreadyInStore(ctx: KindContext, kind: string, keys: string[]): Promise<Set<string>> {
+/**
+ * Which of these inventory rows the store already has, matched the way install matches them
+ * (`stockKinds.ts`): a source by code, and only while switched on; a stock by name; a link by its
+ * stock's name and source code.
+ */
+async function inventoryInStore(inventory: () => Promise<Inventory>, kind: string, keys: string[]): Promise<Set<string>> {
+    const { sources, stocks, links } = await inventory();
+    const present = new Set<string>();
+    if (kind === SOURCE_KIND) for (const s of sources) if (s.enabled !== false) present.add(s.source_code);
+    if (kind === STOCK_KIND) for (const s of stocks) present.add(s.name);
+    if (kind === LINK_KIND) {
+        const nameOf = new Map(stocks.map((s) => [s.stock_id, s.name]));
+        for (const l of links) present.add(`${nameOf.get(l.stock_id) ?? ''}/${l.source_code}`);
+    }
+    return new Set(keys.filter((key) => present.has(key)));
+}
+
+const INVENTORY_KINDS = new Set([SOURCE_KIND, STOCK_KIND, LINK_KIND]);
+
+/** Which of these pack rows the store already has, for the kinds told apart (see `inStore`). */
+async function alreadyInStore(ctx: KindContext, kind: string, keys: string[], inventory: () => Promise<Inventory>): Promise<Set<string>> {
     if (keys.length === 0) return new Set();
+    if (INVENTORY_KINDS.has(kind)) return inventoryInStore(inventory, kind, keys);
     if (kind === 'products') {
         // Commerce matches a SKU whatever its case (install's own lookup does too).
         const found = new Set((await readProducts(ctx, keys)).map((p) => p.sku.toLowerCase()));
@@ -136,10 +160,11 @@ const keyOfObject = (object: CreatedObject) => object.key ?? object.id;
 
 async function summarize(ctx: KindContext, plans: readonly KindPlan[], kept: readonly KeptContainer[]): Promise<KindChanges[]> {
     const keptHere = new Set(kept.map((k) => k.object));
+    const inventory = onceInventory(ctx);
     return Promise.all(
         plans.map(async ({ kind, objects, added }) => {
             const keyed = (test: (o: PlannedObject) => boolean) => objects.filter(test).map((o) => keyOfObject(o.object));
-            const there = await alreadyInStore(ctx, kind, added);
+            const there = await alreadyInStore(ctx, kind, added, inventory);
             return {
                 kind,
                 update: named(keyed((o) => o.outcome === 'update')),

@@ -113,10 +113,50 @@ export function failure(
     };
 }
 
+/** The deepest part of a path that already exists: the project itself, at worst. */
+function nearestExisting(candidate: string): string {
+    let existing = path.resolve(candidate);
+    while (!fs.existsSync(existing) && path.dirname(existing) !== existing) {
+        existing = path.dirname(existing);
+    }
+    return existing;
+}
+
+const outsideProject = (given: string) =>
+    new DatapackTransferError(
+        `${given} is not in the open project: a datapack file path must be inside the project.`,
+    );
+
 /**
- * An agent's path, resolved inside the open project. When saving (`defaultName` given), a
- * path that does not end in `.zip` is a folder, made if missing, and gets the default file
- * name: a file without `.zip` is one the screen's Open dialog cannot show.
+ * Check a path that may not exist yet against the project, through the part of it that does
+ * (`assertPathInsideSync` follows links there, and refuses a path whose folder is missing).
+ * What is left below that part is plain names, so it cannot lead anywhere else.
+ */
+function existingPartInside(candidate: string, base: string, given: string): string {
+    const existing = nearestExisting(candidate);
+    try {
+        return assertPathInsideSync(existing, base);
+    } catch {
+        throw outsideProject(given);
+    }
+}
+
+/** Make the folders a save names, inside the project; refuse a file that stands in the way. */
+async function makeFolderInside(folder: string, base: string, given: string): Promise<void> {
+    const existing = existingPartInside(folder, base, given);
+    if (!fs.statSync(existing).isDirectory()) {
+        throw new DatapackTransferError(
+            `${path.basename(existing)} is a file, not a folder, so the datapack cannot be saved inside it.`,
+        );
+    }
+    await fs.promises.mkdir(folder, { recursive: true });
+}
+
+/**
+ * An agent's path, resolved inside the open project. When saving (`defaultName` given), the
+ * folders it names are made if missing (live test, 2026-10-29), and a path that does not end in
+ * `.zip` is a folder that gets the default file name: a file without `.zip` is one the screen's
+ * Open dialog cannot show.
  */
 async function projectPath(
     context: HandlerContext,
@@ -129,12 +169,40 @@ async function projectPath(
             'Open a project first: a datapack file path must be inside it.',
         );
     let candidate = path.isAbsolute(given) ? given : path.join(project.path, given);
-    if (defaultName && !candidate.toLowerCase().endsWith('.zip')) {
-        const folder = assertPathInsideSync(candidate, project.path);
-        await fs.promises.mkdir(folder, { recursive: true });
-        candidate = path.join(folder, defaultName);
+    existingPartInside(candidate, project.path, given);
+    if (defaultName) {
+        const isFile = candidate.toLowerCase().endsWith('.zip');
+        const folder = isFile ? path.dirname(candidate) : candidate;
+        await makeFolderInside(folder, project.path, given);
+        if (!isFile) candidate = path.join(folder, defaultName);
     }
-    return assertPathInsideSync(candidate, project.path);
+    try {
+        return assertPathInsideSync(candidate, project.path);
+    } catch {
+        // The part that exists is inside, so only a missing folder is left (open and load).
+        throw new DatapackTransferError(`There is no datapack file at ${given}.`);
+    }
+}
+
+/** Why the disk refused a write, in words an SC can act on, for the errors that have them. */
+const DISK_REFUSALS: Record<string, string> = {
+    EACCES: 'Demo Builder is not allowed to write there',
+    EPERM: 'Demo Builder is not allowed to write there',
+    EROFS: 'that disk cannot be written to',
+    ENOSPC: 'the disk is full',
+    EISDIR: 'a folder of that name is already there',
+    ENAMETOOLONG: 'the path is too long',
+};
+
+/** Write the file, saying why when the disk refuses. Anything else keeps the generic line. */
+async function writeZip(target: string, bytes: Uint8Array): Promise<void> {
+    try {
+        await fs.promises.writeFile(target, bytes);
+    } catch (error) {
+        const why = DISK_REFUSALS[(error as NodeJS.ErrnoException).code ?? ''];
+        if (!why) throw error;
+        throw new DatapackTransferError(`The datapack could not be saved to ${target}: ${why}.`);
+    }
 }
 
 async function saveTarget(
@@ -188,7 +256,7 @@ export const datapackZipHandlers = defineHandlers({
             const target = await saveTarget(context, payload.path, datapackZipName(id));
             if (!target) return { success: true, data: { cancelled: true } };
             const bytes = buildDatapackZip(pack);
-            await fs.promises.writeFile(target, bytes);
+            await writeZip(target, bytes);
             context.logger.info(
                 `${LOG_PREFIX} Saved ${id.name}@${id.version} from ${storeLabel(source)} as ${target} (${pack.items.length} data types)`,
             );

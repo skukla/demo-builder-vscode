@@ -338,8 +338,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             path: z
                 .string()
                 .describe(
-                    'Where to write the file, inside the project. A path not ending in .zip is a folder ' +
-                        '(made if missing) and gets <name>-<version>.datapack.zip',
+                    'Where to write the file, inside the project; folders it names are made if missing. ' +
+                        'A path not ending in .zip is a folder and gets <name>-<version>.datapack.zip',
                 ),
         },
     },
