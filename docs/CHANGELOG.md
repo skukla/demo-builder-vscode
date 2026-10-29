@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Adobe boilerplate update applies to a storefront that has not been reset since beta.152.** Adobe's tested boilerplate deletes `scripts/delayed.js`, and a storefront not reset since beta.152 still had Demo Builder's Inspector loader and first-visit page script in that file, so the update stopped with "patch failed: scripts/delayed.js:1" and was offered again every time. The update now moves those two scripts to `head.html` and `404.html` first, as a reset does, and then applies Adobe's change. Any real clash with your own edits is then offered as a clash, with Fix with AI.
+
 ## [1.0.0-beta.152] - 2026-10-29
 
 ### Added

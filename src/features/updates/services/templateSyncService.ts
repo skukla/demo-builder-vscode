@@ -154,6 +154,8 @@ export class TemplateSyncService {
         // which nothing has checked against its fixes (EDS-51).
         const tested = lkgSource ? await readLkgSha(lkgSource, this.logger) : undefined;
         if (lkgSource && !tested) return failure('merge', TESTED_VERSION_UNREADABLE);
+        // What this reports comes from the same call after the update, so it is not kept here.
+        if (tested) await this.moveScriptsOutOfDelayedJs(project);
         const merged = await withCheckout(this.deps, 'merge', target, preserveFiles, (checkout) =>
             this.mergeFromBase(checkout, target, { base, tested, preserveFiles, fixes: Boolean(tested) }, project),
         );
@@ -188,7 +190,8 @@ export class TemplateSyncService {
             templateRepo: base.template.repo,
         };
         const preserveFiles = [...DEFAULT_PRESERVE_FILES];
-        return withCheckout(this.deps, 'merge', target, preserveFiles, (checkout) =>
+        const pieces = await this.moveScriptsOutOfDelayedJs(project);
+        const merged = await withCheckout(this.deps, 'merge', target, preserveFiles, (checkout) =>
             this.mergeFromBase(
                 checkout,
                 target,
@@ -196,6 +199,23 @@ export class TemplateSyncService {
                 project,
             ),
         );
+        return pieces.length === 0 ? merged : { ...merged, notes: [...(merged.notes ?? []), ...pieces] };
+    }
+
+    /**
+     * Put Demo Builder's scripts where they now live (`head.html`, `404.html`) and take the
+     * old copies out of `scripts/delayed.js`, BEFORE the tested boilerplate is applied.
+     *
+     * The tested boilerplate deletes `delayed.js` (Adobe, 2026-07-30), and git cannot delete
+     * a file that differs from the version the change starts from. A storefront not reset
+     * since beta.152 still carries Demo Builder's two blocks there, so every update stopped
+     * with "patch failed: scripts/delayed.js:1" and was offered again (JustRite, 2026-10-29).
+     * Once the blocks are out, the file is Adobe's own again (measured on JustRite: byte-equal).
+     *
+     * @returns one plain line per piece that could not be put back
+     */
+    private moveScriptsOutOfDelayedJs(project: Project): Promise<string[]> {
+        return restoreDemoBuilderPieces(project, this.github.fileOperations, this.logger);
     }
 
     /**

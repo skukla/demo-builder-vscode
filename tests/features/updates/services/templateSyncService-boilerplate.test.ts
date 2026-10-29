@@ -13,11 +13,24 @@ import {
     applyStops,
     edsProject,
     gitCalls,
+    mockExecute,
     pushed,
     resetFakes,
     service,
 } from './templateSyncService.testUtils';
 import type { BoilerplateBase } from '@/features/updates/services/boilerplateBase';
+
+const mockRestorePieces = jest.fn();
+jest.mock('@/features/updates/services/thinLayerUpdate', () => ({
+    ...jest.requireActual('@/features/updates/services/thinLayerUpdate'),
+    restoreDemoBuilderPieces: (...a: unknown[]) => mockRestorePieces(...a),
+}));
+// A thin-layer storefront's tested version is read from the patches repo, over the network.
+const mockReadLkgSha = jest.fn();
+jest.mock('@/features/eds/services/patches/lkgReader', () => ({
+    ...jest.requireActual('@/features/eds/services/patches/lkgReader'),
+    readLkgSha: (...a: unknown[]) => mockReadLkgSha(...a),
+}));
 
 const BASE_SHA = '71a67e027b4b288a67f5cda1fc106d2df9a34805';
 const TESTED_SHA = '48bed04d072fff094b49a46709b351bd719b287a';
@@ -32,8 +45,64 @@ const BASE: BoilerplateBase = {
 const colleagueStorefront = () =>
     edsProject({ templateOwner: 'kmanns', templateRepo: 'justrite', lastSyncedCommit: '5ac7b52a52a5af2fa71137a591c8a6e5e3826a9b' });
 
+/** How many git commands had run when Demo Builder's scripts were moved; -1 if never. */
+let gitCallsAtMove = -1;
+
 beforeEach(() => {
     resetFakes();
+    gitCallsAtMove = -1;
+    mockRestorePieces.mockImplementation(async () => {
+        gitCallsAtMove = gitCalls().length;
+        return [];
+    });
+});
+
+describe("syncBoilerplate: Demo Builder's scripts leave delayed.js first", () => {
+    // Adobe's tested boilerplate deletes scripts/delayed.js, and git cannot delete a file our
+    // blocks still sit in: JustRite's update stopped on "patch failed: scripts/delayed.js:1"
+    // and was offered again every time (2026-10-29).
+    it('moves them before the clone the change is applied in exists', async () => {
+        answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
+        const project = colleagueStorefront();
+
+        await service().syncBoilerplate(project, { base: BASE, tested: TESTED_SHA });
+
+        expect(mockRestorePieces).toHaveBeenCalledWith(project, expect.anything(), expect.anything());
+        expect(gitCallsAtMove).toBe(0);
+        expect(gitCalls().length).toBeGreaterThan(0);
+    });
+
+    it('says what could not be put back, beside the update', async () => {
+        answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
+        mockRestorePieces.mockResolvedValue(['The missing-product page handling could not be put back: x.']);
+
+        const result = await service().syncBoilerplate(colleagueStorefront(), { base: BASE, tested: TESTED_SHA });
+
+        expect(result).toMatchObject({
+            success: true,
+            notes: ['The missing-product page handling could not be put back: x.'],
+        });
+    });
+
+    it("moves them first on a storefront built on Demo Builder's tested boilerplate too", async () => {
+        answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
+        mockReadLkgSha.mockResolvedValue(TESTED_SHA);
+        const project = edsProject({ lkgSource: BASE.lkgSource });
+
+        await service().syncWithTemplate(project, { strategy: 'merge' });
+
+        // Once before the clone, and once after the push as it always ran.
+        expect(mockRestorePieces).toHaveBeenCalledTimes(2);
+        expect(mockRestorePieces.mock.invocationCallOrder[0]).toBeLessThan(mockExecute.mock.invocationCallOrder[0]);
+    });
+
+    it('moves nothing on a storefront that follows its template with no tested version', async () => {
+        answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
+
+        await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(mockRestorePieces).not.toHaveBeenCalled();
+    });
 });
 
 describe("syncBoilerplate: a colleague's storefront to Adobe's tested boilerplate", () => {
@@ -79,5 +148,6 @@ describe("syncBoilerplate: a colleague's storefront to Adobe's tested boilerplat
 
         expect(result.success).toBe(false);
         expect(gitCalls()).toStrictEqual([]);
+        expect(mockRestorePieces).not.toHaveBeenCalled();
     });
 });
