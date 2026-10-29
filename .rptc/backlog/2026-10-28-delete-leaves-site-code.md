@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: backlog
+status: active
 ---
 
 # Deleting a storefront leaves its code on aem.live
@@ -41,3 +41,8 @@ gets it: the dashboard delete and the agent's `delete_project` keep the project 
 (the stop EDS-65 uses), `delete_github_repo` answers `deleted:false, kept:true`, Manage
 GitHub Repositories lists it as kept, and `CleanupService` (the storefront setup cancel)
 reports it on the GitHub row.
+
+## Shipped so far
+
+- 2026-10-28  fix(eds): a storefront delete removes the site's code, and stops when DA.live is signed out (`a2072e04f`)
+- 2026-10-28  docs(backlog): EDS-67, deleting a storefront leaves its code on aem.live (`bd14299c3`)

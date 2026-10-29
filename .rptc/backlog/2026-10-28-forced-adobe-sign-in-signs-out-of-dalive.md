@@ -49,3 +49,4 @@ again also signed you out of DA.live." with the existing DA.live sign-in as the 
   dialog; any other agent call says it in the chat narration, plus the notification.
 
 ## Shipped so far
+- 2026-10-28  fix(eds): a storefront delete removes the site's code, and stops when DA.live is signed out (`a2072e04f`)

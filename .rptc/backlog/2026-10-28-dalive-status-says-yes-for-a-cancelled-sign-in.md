@@ -50,3 +50,4 @@ Still on the local expiry check, not this reader: the agent tool guards
 would add an IMS call to every DA.live tool call; not done here.
 
 ## Shipped so far
+- 2026-10-28  fix(eds): a storefront delete removes the site's code, and stops when DA.live is signed out (`a2072e04f`)

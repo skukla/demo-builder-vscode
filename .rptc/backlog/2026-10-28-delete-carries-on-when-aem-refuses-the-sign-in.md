@@ -42,3 +42,4 @@ A 401/403 from AEM is "sign-in refused", not "can't tell":
 (`liveFailed`) still reads `still-live`, which already stopped.
 
 ## Shipped so far
+- 2026-10-28  fix(eds): a storefront delete removes the site's code, and stops when DA.live is signed out (`a2072e04f`)
