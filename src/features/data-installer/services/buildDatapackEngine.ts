@@ -72,8 +72,19 @@ export function buildDatapackEngine(id: DatapackEngineId, access: DatapackEngine
 }
 
 /**
+ * The store-wide scope, as the Store header names it. The service writes there too (catalog
+ * spec §0), so a pack's values are the store's defaults on whichever website it lands.
+ */
+const STORE_WIDE = 'all';
+
+/**
  * The project's own signed Commerce access, the one the ERP work opens, or why there is none.
  * Shared by the engine and by the preview and save of store changes (step 05).
+ *
+ * It reads and writes store-wide, never through the project's own store view: a pack lands on
+ * the website and store view the install names, which need not be the project's. Through the
+ * project's, a reinstall's price change landed on JustRite's store view while the test website
+ * kept the old price (live, 2026-10-29).
  */
 export function projectCommerce(
     access: Pick<DatapackEngineAccess, 'project' | 'authManager' | 'secrets'>,
@@ -81,7 +92,7 @@ export function projectCommerce(
     const { authManager } = access;
     return async () =>
         authManager
-            ? commerceClientForProject(access.project, authManager, access.secrets)
+            ? commerceClientForProject(access.project, authManager, access.secrets, undefined, STORE_WIDE)
             : { refusal: 'Adobe sign-in is required to write to this project\'s store.' };
 }
 

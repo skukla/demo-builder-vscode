@@ -140,14 +140,17 @@ export async function commerceGetForProject(
  * "Assign products" and the attribute-set fix write with (AB-74). The write takes the bulk
  * route when asked (`V1/async/bulk`), and waits as long as every signed call does
  * (`requestRest`: TIMEOUTS.LONG, past the 120 s a product save took on ACCS).
+ *
+ * @param storeView - the Store header for every call; absent, the project's own store view
  */
 export async function commerceClientForProject(
     project: Project,
     authManager: AuthenticationService,
     credentials: CredentialStore | undefined,
     fetchImpl: typeof fetch = globalThis.fetch,
+    storeView?: string,
 ): Promise<{ get: CommerceGet; send: CommerceSend } | { refusal: string }> {
-    const rest = await resolveRestTargetFor(project, authManager, undefined, fetchImpl, credentials);
+    const rest = await resolveRestTargetFor(project, authManager, storeView, fetchImpl, credentials);
     if ('refusal' in rest) return { refusal: rest.refusal.replace(/^Error: /u, '') };
     return {
         get: commerceGet(rest, fetchImpl),

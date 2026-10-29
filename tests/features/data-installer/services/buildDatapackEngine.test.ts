@@ -4,10 +4,21 @@
  * catalog and signs with the project's own Commerce access.
  */
 
-import { buildDatapackEngine, engineThatInstalled, type DatapackEngineAccess } from '@/features/data-installer/services/buildDatapackEngine';
+import {
+    buildDatapackEngine,
+    engineThatInstalled,
+    projectCommerce,
+    type DatapackEngineAccess,
+} from '@/features/data-installer/services/buildDatapackEngine';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { InstallRecordError, installRecordPath, openInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { NOW, PACK, PROJECT, memoryFiles } from './demoBuilderEngine/demoBuilderEngine.testUtils';
 import { createMockProject } from '../../../helpers/projectFake';
+
+const mockCommerceClientForProject = jest.fn();
+jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
+    commerceClientForProject: (...a: unknown[]) => mockCommerceClientForProject(...a),
+}));
 
 function access(overrides: Partial<DatapackEngineAccess> = {}): DatapackEngineAccess {
     return {
@@ -41,6 +52,22 @@ describe('buildDatapackEngine', () => {
                 dataTypes: ['categories'],
             }),
         ).resolves.toEqual({ usable: false, reason: "Adobe sign-in is required to write to this project's store." });
+    });
+});
+
+describe('projectCommerce', () => {
+    // A pack lands on the website and store view the install names, which need not be the
+    // project's own. Writing through the project's store view put a reinstall's price change on
+    // JustRite's store view while the test website kept the old one (live, 2026-10-29). The
+    // service writes store-wide too (catalog spec §0).
+    it("writes store-wide, never through the project's own store view", async () => {
+        mockCommerceClientForProject.mockResolvedValue({ get: jest.fn(), send: jest.fn() });
+        const project = createMockProject({ path: '/projects/frescopa' });
+        const authManager = {} as AuthenticationService;
+
+        await projectCommerce({ project, authManager, secrets: undefined })();
+
+        expect(mockCommerceClientForProject).toHaveBeenCalledWith(project, authManager, undefined, undefined, 'all');
     });
 });
 
