@@ -5,7 +5,8 @@
  *
  * A category or an attribute set this engine made is kept while it holds anything the engine did
  * not make, or is not taking out in the same removal: Commerce deletes a category's children with
- * it, and (by Magento's schema, from memory, not yet checked live) a set's products with it.
+ * it and leaves its products in no category, and (by Magento's schema, from memory, not yet checked
+ * live) deletes a set's products with it.
  *
  * @module features/data-installer/services/demoBuilderEngine/removers
  */
@@ -69,9 +70,9 @@ export interface KeptContainer {
 
 const keyOfObject = (kind: string, id: string) => `${kind}\u0000${id}`;
 
-/** The products in a set, by SKU; none when the store has no such search. */
-async function productsInSet(get: CommerceGet, setId: string): Promise<string[]> {
-    const criteria = `&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=${segment(setId)}`;
+/** The products in a set or a category, by SKU; none when the store has no such search. */
+async function productsWhere(get: CommerceGet, field: 'attribute_set_id' | 'category_id', id: string): Promise<string[]> {
+    const criteria = `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${segment(id)}`;
     try {
         return (await readAllPages<{ sku: string }>(get, 'products', criteria)).map((p) => p.sku);
     } catch (error) {
@@ -84,12 +85,16 @@ async function productsInSet(get: CommerceGet, setId: string): Promise<string[]>
 async function heldByOthers(get: CommerceGet, object: CreatedObject, taking: ReadonlySet<string>): Promise<KeptContainer | undefined> {
     if (object.kind === 'categories') {
         const category = await readOrNull<StoreCategory>(get, `categories/${segment(object.id)}`);
+        const name = category?.name ?? object.id;
         const others = (category?.children ?? '').split(',').map((id) => id.trim()).filter((id) => id !== '' && !taking.has(keyOfObject('categories', id)));
-        if (others.length === 0) return undefined;
-        return { object, kind: 'category', name: category?.name ?? object.id, count: others.length, holds: 'category' };
+        if (others.length > 0) return { object, kind: 'category', name, count: others.length, holds: 'category' };
+        // Its products too: deleting the category would leave the SC's own in no category at all.
+        const products = (await productsWhere(get, 'category_id', object.id)).filter((sku) => !taking.has(keyOfObject('products', sku)));
+        if (products.length === 0) return undefined;
+        return { object, kind: 'category', name, count: products.length, holds: 'product' };
     }
     if (object.kind === 'attribute_sets') {
-        const others = (await productsInSet(get, object.id)).filter((sku) => !taking.has(keyOfObject('products', sku)));
+        const others = (await productsWhere(get, 'attribute_set_id', object.id)).filter((sku) => !taking.has(keyOfObject('products', sku)));
         if (others.length === 0) return undefined;
         const set = await readOrNull<{ attribute_set_name?: string }>(get, `products/attribute-sets/${segment(object.id)}`);
         return { object, kind: 'set', name: set?.attribute_set_name ?? object.id, count: others.length, holds: 'product' };

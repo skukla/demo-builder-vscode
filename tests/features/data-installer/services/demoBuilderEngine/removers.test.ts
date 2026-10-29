@@ -17,6 +17,8 @@ import { fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const inSet = (id: string) =>
     page('products', `&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=${id}`);
+const inCategory = (id: string) =>
+    page('products', `&searchCriteria[filterGroups][0][filters][0][field]=category_id&searchCriteria[filterGroups][0][filters][0][value]=${id}`);
 const category = (id: number, name: string, children: string): StoreCategory => ({ id, name, path: `1/2/${id}`, children });
 
 const obj = (kind: string, id: string): CreatedObject => ({ kind, id });
@@ -44,6 +46,34 @@ describe('decideRemovals', () => {
             { object: obj('categories', '42'), kind: 'category', name: 'Wall Racks', count: 1, holds: 'category' },
             { object: obj('categories', '41'), kind: 'category', name: 'Racks', count: 1, holds: 'category' },
         ]);
+    });
+
+    // Live, 2026-10-29: the rule asked a category only about child categories, so removing the
+    // pack deleted Bagged Coffee with the SC's own product in it, and the product was left in no
+    // category at all.
+    it('keeps a category with a product the SC added in it, but not for the pack\'s own products', async () => {
+        const ctx = await fakeContext({
+            'categories/42': category(42, 'Bagged Coffee', ''),
+            [inCategory('42')]: { items: [{ sku: 'lt5-hbmr211' }, { sku: 'lt5-mine-1' }], total_count: 2 },
+        });
+
+        const decided = await decideRemovals(ctx.get, [obj('products', 'lt5-hbmr211'), obj('categories', '42')]);
+
+        expect(decided.take).toEqual([obj('products', 'lt5-hbmr211')]);
+        expect(decided.kept).toEqual([
+            { object: obj('categories', '42'), kind: 'category', name: 'Bagged Coffee', count: 1, holds: 'product' },
+        ]);
+    });
+
+    it('takes out a category whose products are all the pack\'s own', async () => {
+        const ctx = await fakeContext({
+            'categories/42': category(42, 'Bagged Coffee', ''),
+            [inCategory('42')]: { items: [{ sku: 'lt5-hbmr211' }], total_count: 1 },
+        });
+
+        const decided = await decideRemovals(ctx.get, [obj('products', 'lt5-hbmr211'), obj('categories', '42')]);
+
+        expect(decided.kept).toStrictEqual([]);
     });
 
     it('keeps a set with products the SC added in it, but not for the pack\'s own products', async () => {
