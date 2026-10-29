@@ -61,3 +61,5 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-10-28  merge: Demo Builder's own datapack engine into the release candidate (DI-5) (`ac48e6512`)
 - 2026-10-29  fix(data-installer): a layout the store does not offer stays at its default (`ae8942af4`)
 - 2026-10-29  fix(data-installer): library packs install directly; a save path without .zip is a folder (`cd7cdc0f2`)
+- 2026-10-29  feat(core): one rule for "is this still as we left it?" (datapack step 04) (`9946364d8`)
+- 2026-10-29  fix(data-installer): no export into the shared catalog while Demo Builder's engine is chosen (`c2d9eb1f7`)

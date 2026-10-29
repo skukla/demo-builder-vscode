@@ -40,11 +40,7 @@
 
 import { Flex, Switch } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-    groupDatapacks,
-    pickDefaultVersion,
-    type DatapackGroup,
-} from '../../services/datapackCatalog';
+import { groupDatapacks, type DatapackGroup } from '../../services/datapackCatalog';
 import type {
     CatalogPage,
     DataItemInventory,
@@ -55,12 +51,12 @@ import type {
     Page,
 } from '../../types';
 import { CatalogHeaderActions } from '../components/CatalogHeaderActions';
-import { DatapackCard } from '../components/DatapackCard';
+import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
 import { ImportDatapackModal } from '../components/ImportDatapackModal';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
-import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
+import { useSaveStoreChanges } from '../hooks/useSaveStoreChanges';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
@@ -221,6 +217,26 @@ export function DatapackCatalogView(): React.JSX.Element {
         }
     }, [loadProjectContext, loadInstalled, commerceInstance]);
 
+    /**
+     * "Save store changes to this pack" (datapack-engine step 05): offered only for the pack the
+     * project holds, and only with Demo Builder's engine chosen, the one that keeps a record of
+     * what it made to read back. Closing its window reads the catalog and the project again,
+     * since the library now holds a new version and the project records it.
+     */
+    const afterSave = useCallback((): void => {
+        loadProjectContext({});
+        refresh();
+    }, [loadProjectContext, refresh]);
+    const storeChanges = useSaveStoreChanges(afterSave);
+    const held = projectContext.value?.datapack;
+    const holdsSelected = held !== undefined && held.name === selected?.name && held.version === selected.version;
+    const saveStoreChanges = storeChanges.save;
+    const displayName = detail.value?.detail.displayName;
+    const offerSave = useCallback(
+        (id: DatapackId): void => saveStoreChanges(id, displayName ?? id.name, selectedStore),
+        [saveStoreChanges, displayName, selectedStore],
+    );
+
     const retryDetail = useCallback((): void => {
         if (selected) {
             loadDetail({ datapackName: selected.name, version: selected.version, store: selectedStore });
@@ -297,15 +313,15 @@ export function DatapackCatalogView(): React.JSX.Element {
                         The datapack library could not be listed: {value.libraryError}
                     </p>
                 ) : null}
-                {renderBody({
-                    groups,
-                    filtered,
-                    query,
-                    versions,
-                    pickVersion,
-                    openDetail,
-                    installedPacks,
-                })}
+                <DatapackCatalogGrid
+                    groups={groups}
+                    filtered={filtered}
+                    query={query}
+                    versions={versions}
+                    pickVersion={pickVersion}
+                    openDetail={openDetail}
+                    installedPacks={installedPacks}
+                />
             </FullScreenSurface>
 
             <DatapackDetailPanel
@@ -319,7 +335,9 @@ export function DatapackCatalogView(): React.JSX.Element {
                 onImport={openImport}
                 onRemoved={removedFromLibrary}
                 installsFromLibrary={value?.engine === 'demo-builder'}
+                onSaveStoreChanges={holdsSelected && value?.engine === 'demo-builder' ? offerSave : undefined}
             />
+            {storeChanges.progressWindow}
 
             {/* Only what the service HOLDS is importable — the inventory, never
                 the pack's declared types. Mounted while `importing` is set, so
@@ -362,53 +380,3 @@ interface ProjectSampleData {
  * import from the modal began writing the same field, at which point the bar
  * invited the user to install what they had just installed.
  */
-
-/**
- * Whether a card wears the installed check. Installed means the Data Installer put it
- * on this instance; a library pack of the same name is not that pack.
- */
-function installedHere(group: DatapackGroup, installedPacks?: ReadonlySet<string>): boolean {
-    return group.store === 'installer' && (installedPacks?.has(group.name) ?? false);
-}
-
-/** Pick the one body state to show under the header. */
-function renderBody(args: {
-    groups: DatapackGroup[];
-    filtered: DatapackGroup[];
-    query: string;
-    versions: Record<string, string>;
-    pickVersion: (name: string, version: string) => void;
-    openDetail: (id: DatapackId, store: DatapackStoreName) => void;
-    /** Every pack believed installed on this instance — one check per card. */
-    installedPacks?: ReadonlySet<string>;
-}): React.JSX.Element {
-    const { groups, filtered, query, versions, pickVersion, openDetail, installedPacks } = args;
-
-    if (groups.length === 0) {
-        return (
-            <EmptyState
-                title="No datapacks found"
-                description="The service returned no datapacks. Turn on community datapacks to include entries that are not shared."
-            />
-        );
-    }
-
-    if (filtered.length === 0) {
-        return <div className="datapack-catalog-empty">No datapacks match &quot;{query}&quot;</div>;
-    }
-
-    return (
-        <div className="datapack-grid">
-            {filtered.map((group) => (
-                <DatapackCard
-                    key={group.key}
-                    group={group}
-                    selectedVersion={versions[group.key] ?? pickDefaultVersion(group) ?? ''}
-                    onVersionChange={(version) => pickVersion(group.key, version)}
-                    onOpen={openDetail}
-                    isInstalled={installedHere(group, installedPacks)}
-                />
-            ))}
-        </div>
-    );
-}

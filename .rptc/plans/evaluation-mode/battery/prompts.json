@@ -1425,5 +1425,23 @@
             "copy_library_datapack_to_installer"
         ],
         "why": "Datapack store step 05 (owner, 2026-10-01): install runs through the Data Installer, so a library pack is copied there first. Tier 3: it writes into the catalog other teams share and the extension cannot remove it again, so it never runs unattended; represented by datapackLibraryHandlers.test and the consent gate. Listed so the tool is judged, not grandfathered."
+    },
+    {
+        "id": "preview-datapack-changes",
+        "prompt": "What would reinstalling Frescopa change?",
+        "expect": [
+            "preview_datapack_changes"
+        ],
+        "cwd": "project",
+        "why": "Datapack-engine step 05: installing a pack again updates and removes what it made and keeps what the SC changed in the Admin, so an agent asked what a reinstall would do must read it rather than run the install to find out. A read: counts per kind and a few names, never rows."
+    },
+    {
+        "id": "save-store-changes-to-pack",
+        "prompt": "I changed some prices in the Admin. Make that the Frescopa pack.",
+        "expect": [
+            "save_store_changes_to_pack"
+        ],
+        "cwd": "project",
+        "why": "Datapack-engine step 05: the store changes and the pack follows. The tool saves the store's copy as a new version in the library and keeps the old one; without it an agent would try start_datapack_export, which writes into the shared catalog and has failed to save since August. Confirm-gated, so what this judges is findability."
     }
 ]

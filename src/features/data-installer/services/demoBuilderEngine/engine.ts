@@ -21,6 +21,8 @@ import type { CredentialCheck, ImportRequest } from '../dataInstallerWriteClient
 import type { DatapackEngine } from '../datapackEngine';
 import { type RecordFiles, nodeRecordFiles, openInstallRecord } from './installRecord';
 import { resolveEngineTarget, sessionFor } from './installTarget';
+import { containersLine } from './removers';
+import { keptLine } from './repeatInstall';
 import { type PackItems, installPack, removePack, unsupportedKinds } from './runPack';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -42,6 +44,8 @@ const NO_TARGET = 'Choose the website and store view to install into first.';
 interface Job {
     perType: Record<string, DataTypeStatus>;
     reason?: string;
+    /** What installing again kept because the SC had changed it (step 05), in one line. */
+    note?: string;
     startedAt: number;
     finishedAt?: number;
 }
@@ -71,11 +75,12 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     const now = deps.now ?? (() => new Date());
     const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString());
     let current: string | undefined;
-    await installPack({ ...commerce, recorder, session: sessionFor(target), log: deps.log }, items, (kind) => {
+    const outcome = await installPack({ ...commerce, recorder, session: sessionFor(target), log: deps.log }, items, (kind) => {
         if (current) job.perType[current] = 'success';
         current = kind;
         job.perType[kind] = 'processing';
     });
+    job.note = [keptLine(outcome.kept), containersLine(outcome.containers)].filter(Boolean).join(' ') || undefined;
     if (current) job.perType[current] = 'success';
 }
 
@@ -129,6 +134,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
             start(deps, jobs, request, async (job) => {
                 const result = await removePack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id });
                 if (result.noRecord) throw new Error('Demo Builder did not install this pack in this project, so there is nothing of its to remove.');
+                job.note = containersLine(result.kept);
                 for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';
             }),
         async getJobStatus(activationId) {
@@ -137,6 +143,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 activationId,
                 perType: { ...(job?.perType ?? {}) },
                 hasRecord: job !== undefined,
+                ...(job?.note ? { note: job.note } : {}),
                 ...(job?.finishedAt !== undefined ? { processingTimeMs: job.finishedAt - job.startedAt } : {}),
             };
         },

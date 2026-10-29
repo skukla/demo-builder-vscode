@@ -40,6 +40,21 @@ describe('a finished job that succeeded', () => {
         expect(result?.details).toBeUndefined();
     });
 
+    it('adds the one line saying what installing again kept, under the count (step 05)', () => {
+        const result = outcomeOf({
+            outcome: 'success',
+            perType: { products: 'success' as DataTypeStatus },
+            note: 'Kept 2 things you had changed in the Admin.',
+        });
+
+        expect(result).toEqual({
+            variant: 'success',
+            title: 'Import finished',
+            message: 'All 1 data types succeeded.',
+            details: ['Kept 2 things you had changed in the Admin.'],
+        });
+    });
+
     it('calls a reset a REMOVAL', () => {
         expect(outcomeOf({ outcome: 'success', operation: 'reset' })?.title).toBe(
             'Removal finished'
@@ -76,6 +91,12 @@ describe('a finished job that did not fully succeed', () => {
         const result = outcomeOf({ outcome: 'partial', perType: troubled });
 
         expect(result?.details).toEqual(['Products: failed']);
+    });
+
+    it('still says what it kept when some types did not finish', () => {
+        const result = outcomeOf({ outcome: 'partial', perType: troubled, note: 'Kept 1 thing you had changed in the Admin.' });
+
+        expect(result?.details).toEqual(['Kept 1 thing you had changed in the Admin.', 'Products: failed']);
     });
 
     it('carries the record’s reason through as the message', () => {

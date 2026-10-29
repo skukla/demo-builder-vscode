@@ -184,6 +184,8 @@ export interface JobStatusSnapshot {
      * starting" without the grace window, so the runner needs it explicitly.
      */
     hasRecord: boolean;
+    /** What the job kept and why, in one line: Demo Builder's engine on a repeat install (step 05). */
+    note?: string;
 }
 
 /**
@@ -240,6 +242,8 @@ export interface ImportJobRecord {
     perType: Record<string, DataTypeStatus>;
     /** Why it did not all succeed: `never-registered`, `unwatchable`, and an `error` or `partial` run the engine explained. */
     reason?: string;
+    /** What it kept and why, in one line ("Kept 2 things you had changed in the Admin."). */
+    note?: string;
     processingTimeMs?: number;
 }
 

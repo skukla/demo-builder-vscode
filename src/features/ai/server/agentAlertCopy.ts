@@ -427,7 +427,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_import: {
         action: 'Import sample data',
         consequence:
-            'Writes products and categories into the live Commerce instance. Takes several minutes and cannot be paused.',
+            'Writes products and categories into the live Commerce instance, and installing again updates or removes what the pack made earlier, keeping anything changed in the Admin. Takes several minutes and cannot be paused.',
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },
@@ -444,6 +444,13 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         action: 'Copy a library datapack into the Data Installer',
         consequence:
             "Adds this pack to the Data Installer's shared catalogue so it can be installed. Other teams will see it, and the extension cannot remove it again.",
+        target: ['datapackName', 'version'],
+        sessionGrant: false,
+    },
+    save_store_changes_to_pack: {
+        action: "Save the store's changes to a datapack",
+        consequence:
+            "Saves this pack as the project's store now holds it, as a new version in the datapack library; the version installed is kept, and nothing in Commerce changes.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },

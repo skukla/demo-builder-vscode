@@ -86,6 +86,28 @@ describe('demoBuilderEngine install', () => {
         expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'categories', id: '40' }]);
     });
 
+    it('says in one line what installing again kept, because the SC had changed it in the Admin', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, () => '2026-10-27T18:00:00.000Z');
+        await recorder.record({ kind: 'categories', id: '40', key: 'Sale', fingerprint: 'as the install left it', wrote: 'the row it installed' });
+        const { engine, ctx } = await engineWith(
+            {
+                [SETS_PAGE]: { items: [], total_count: 0 },
+                'categories/40': { id: 40, name: 'Summer Sale', path: '1/2/40', children: '' },
+                'categories/2': { id: 2, name: 'Default Category', path: '1/2' },
+            },
+            () => ({ id: 41 }),
+            { files },
+        );
+
+        const { activationId } = await engine.startImport(request());
+        const status = await settle(engine, activationId);
+
+        expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
+        expect(status.note).toBe('Kept 1 thing you had changed in the Admin.');
+        expect(ctx.sent).toStrictEqual([]);
+    });
+
     it('marks the failing kind and every later one as failed, and says why', async () => {
         const { engine } = await engineWith({ [SETS_PAGE]: { items: [], total_count: 0 } }, () => ({ id: 40 }));
 
@@ -160,6 +182,18 @@ describe('demoBuilderEngine removal', () => {
 
         expect(ctx.sent).toEqual([{ method: 'DELETE', path: 'categories/40', body: undefined }]);
         expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
+    });
+
+    it('says in one line which container it kept because it holds what the SC added', async () => {
+        const { engine, ctx, files } = await engineWith({ 'categories/40': { id: 40, name: 'Sale', path: '1/2/40', children: '77' } }, () => true);
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({ kind: 'categories', id: '40' });
+
+        const { activationId } = await engine.startDelete(request());
+        const status = await settle(engine, activationId);
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
+        expect(status.note).toBe('Kept the category Sale: it holds 1 category you added.');
     });
 
     it('fails, saying so, when this engine never installed the pack here', async () => {

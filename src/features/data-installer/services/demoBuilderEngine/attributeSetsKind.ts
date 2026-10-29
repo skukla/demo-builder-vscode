@@ -18,7 +18,7 @@
  */
 
 import { z } from 'zod';
-import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, segment } from './kindContext';
+import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, ownedId, segment } from './kindContext';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import { pickAttributeGroup, readSetGroups } from '@/features/app-builder/services/erpOwnerAttributeSets';
 import type { CommerceAttributeSetList, CommerceSend, CommerceSetAttribute } from '@/types/commerceWire';
@@ -104,6 +104,11 @@ export async function installAttributeSets(ctx: KindContext, rows: readonly Attr
     await loadStoreSets(ctx);
     for (const { attributeSet, skeletonId } of rows) {
         const name = attributeSet.attribute_set_name;
+        // One this engine made is known by its id, renamed in the Admin or not; one the SC
+        // deleted since stays deleted (step 05).
+        const owned = ownedId(ctx.session, ATTRIBUTE_SET_KIND, name);
+        if (owned === null) continue;
+        if (owned !== undefined) ctx.session.setIds.set(name, Number(owned));
         const existing = ctx.session.setIds.get(name);
         if (existing !== undefined) {
             const ours = ctx.recorder.has(ATTRIBUTE_SET_KIND, String(existing));
@@ -127,6 +132,7 @@ export async function installAssignments(ctx: KindContext, rows: readonly Assign
     await loadStoreSets(ctx);
     const inSet = new Map<number, Set<string>>();
     for (const row of rows) {
+        if (ownedId(ctx.session, ASSIGNMENT_KIND, `${row.attributeSetId}/${row.attributeCode}`) === null) continue;
         const setId = ctx.session.setIds.get(row.attributeSetId);
         if (setId === undefined) throw new Error(`The store has no attribute set named ${row.attributeSetId}.`);
         if (!inSet.has(setId)) {

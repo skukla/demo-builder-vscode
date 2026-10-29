@@ -30,7 +30,20 @@ export interface CreatedObject {
     id: string;
     /** What a changed setting held before the install, for removal to restore. */
     previous?: unknown;
+    /**
+     * The pack's own name for it (a SKU, a category's place in the tree, a set's name), read
+     * from the store right after it was written. A repeat install finds the pack's row by this,
+     * so a thing renamed in the Admin is still known as ours (step 05).
+     */
+    key?: string;
+    /** The store's copy in pack form, hashed when it was written: what "edited since" compares. */
+    fingerprint?: string;
+    /** The pack's row, hashed as it was installed: what "the pack changed" compares. */
+    wrote?: string;
 }
+
+/** What an update may change about an object; the kind and id say which one. */
+export type ObjectUpdate = Pick<CreatedObject, 'kind' | 'id'> & Partial<Pick<CreatedObject, 'key' | 'fingerprint' | 'wrote'>>;
 
 /** What the file holds. */
 export interface InstallRecord {
@@ -55,6 +68,10 @@ export interface InstallRecorder {
     readonly created: readonly CreatedObject[];
     has(kind: string, id: string): boolean;
     record(object: CreatedObject): Promise<void>;
+    /** Change what is kept about an object already recorded; nothing for one that is not. */
+    update(update: ObjectUpdate): Promise<void>;
+    /** The object of a kind the pack names `key`; an object recorded with no key answers by its id. */
+    byKey(kind: string, key: string): CreatedObject | undefined;
     drop(object: Pick<CreatedObject, 'kind' | 'id'>): Promise<void>;
 }
 
@@ -74,7 +91,16 @@ const recordSchema = z.object({
     pack: z.object({ name: z.string(), version: z.string() }),
     engine: z.literal('demo-builder'),
     startedAt: z.string(),
-    created: z.array(z.object({ kind: z.string(), id: z.string(), previous: z.unknown().optional() })),
+    created: z.array(
+        z.object({
+            kind: z.string(),
+            id: z.string(),
+            previous: z.unknown().optional(),
+            key: z.string().optional(),
+            fingerprint: z.string().optional(),
+            wrote: z.string().optional(),
+        }),
+    ),
 });
 
 function packLabel(pack: DatapackId): string {
@@ -164,6 +190,13 @@ export async function openInstallRecord(
             record.created.push(object);
             await save();
         },
+        async update(update) {
+            const index = indexOf(update.kind, update.id);
+            if (index < 0) return;
+            record.created[index] = { ...record.created[index], ...update };
+            await save();
+        },
+        byKey: (kind, key) => record.created.find((o) => o.kind === kind && (o.key ?? o.id) === key),
         async drop({ kind, id }) {
             const index = indexOf(kind, id);
             if (index < 0) return;
@@ -171,6 +204,14 @@ export async function openInstallRecord(
             await save();
         },
     };
+}
+
+/**
+ * Write a whole record under the pack it names: a capture moves the record to the version it
+ * saved, so the store and that version start out as one another (step 05).
+ */
+export async function writeInstallRecord(files: RecordFiles, projectPath: string, record: InstallRecord): Promise<void> {
+    await files.write(installRecordPath(projectPath, record.pack), `${JSON.stringify(record, null, 2)}\n`);
 }
 
 /** What removal takes away, in the order it takes it: the reverse of creation. */

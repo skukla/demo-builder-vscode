@@ -71,6 +71,12 @@ export interface DatapackDetailPanelProps {
      * so with it chosen a library pack offers Copy to the Data Installer instead (DI-5).
      */
     installsFromLibrary: boolean;
+    /**
+     * "Save store changes to this pack" was pressed (datapack-engine step 05). Handed in only for
+     * the pack the open project holds, installed by Demo Builder's engine; the button shows
+     * exactly when it is. The catalog hosts the progress window, as it hosts the import modal.
+     */
+    onSaveStoreChanges?: (id: DatapackId) => void;
 }
 
 export function DatapackDetailPanel({
@@ -84,6 +90,7 @@ export function DatapackDetailPanel({
     onImport,
     onRemoved,
     installsFromLibrary,
+    onSaveStoreChanges,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selected?.name ?? 'Datapack';
 
@@ -112,6 +119,7 @@ export function DatapackDetailPanel({
                                 onImport={onImport}
                                 onRemoved={onRemoved}
                                 installsFromLibrary={installsFromLibrary}
+                                onSaveStoreChanges={onSaveStoreChanges}
                             />
                         ) : null}
                     </div>
@@ -154,19 +162,27 @@ function canImport(args: {
  * A Data Installer pack: Import and Save as file. A library pack: Import when Demo Builder's
  * engine is chosen (it reads the library itself), else Copy to the Data Installer (the service
  * installs only from its own catalog; Import is offered once the copy lands); then Save as
- * file, and Remove when it is the SC's own.
+ * file, and Remove when it is the SC's own. Either, when it is the pack the open project
+ * holds: Save store changes to this pack.
  */
 function PanelActions({
     detail,
     onImport,
     onRemoved,
     installsFromLibrary,
+    onSaveStoreChanges,
 }: {
     detail: DatapackDetail;
     onImport: (id: DatapackId) => void;
     onRemoved: () => void;
     installsFromLibrary: boolean;
+    onSaveStoreChanges?: (id: DatapackId) => void;
 }): React.JSX.Element {
+    const saveStoreChanges = onSaveStoreChanges ? (
+        <Button variant="secondary" onPress={() => onSaveStoreChanges(detail.id)}>
+            Save store changes to this pack
+        </Button>
+    ) : null;
     if (detail.store !== 'library') {
         return (
             <div className="db-drawer-actions">
@@ -174,6 +190,7 @@ function PanelActions({
                     Import
                 </Button>
                 <SaveDatapackFileButton id={detail.id} />
+                {saveStoreChanges}
             </div>
         );
     }
@@ -187,6 +204,7 @@ function PanelActions({
                     </Button>
                 ) : null}
                 <SaveDatapackFileButton id={detail.id} source="library" />
+                {saveStoreChanges}
                 {detail.mine ? (
                     <RemoveFromLibraryButton id={detail.id} onRemoved={onRemoved} />
                 ) : null}

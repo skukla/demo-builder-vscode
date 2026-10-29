@@ -130,12 +130,16 @@ function terminalResult(record: ImportJobRecord): ResultContent {
     // content and so clipped BOTH ends: the tick off the top, the last type off
     // the bottom. The big check was there the whole time, pushed out of frame by
     // detail that added nothing.
+    // What installing again kept because the SC had changed it (step 05): one line, the
+    // first of any detail, since it is the one thing the SC did not ask to happen.
+    const kept = record.note ? [record.note] : [];
     if (record.outcome === 'success') {
         const count = Object.keys(record.perType).length;
         return {
             variant: 'success',
             title: `${op} finished`,
             message: `All ${count} data types succeeded.`,
+            ...(kept.length > 0 ? { details: kept } : {}),
         };
     }
 
@@ -146,7 +150,7 @@ function terminalResult(record: ImportJobRecord): ResultContent {
         variant: OUTCOME_VARIANT[record.outcome] ?? 'info',
         title: describeOutcome(record, op),
         message: record.reason,
-        details: describePerType(record.perType, { troubledOnly: true }),
+        details: [...kept, ...describePerType(record.perType, { troubledOnly: true })],
     };
 }
 

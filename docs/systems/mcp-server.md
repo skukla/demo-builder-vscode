@@ -709,6 +709,24 @@ kept). Both answer `storePages`, the one sentence the SC reads in Configure ("No
 CitiSignal: 11 category pages and 39 product pages published. 30 old product pages
 removed."). One service does it for every door (`storeScopePages.ts`).
 
+### Installing a datapack again, and saving the store back (datapack-engine step 05, 2026-10-29)
+
+With Demo Builder's engine, `start_datapack_import` on a pack it already installed in the project
+brings what it made up to the pack, takes out what the pack no longer has, and keeps anything
+changed in the Admin. It never overwrites that: the outcome `get_datapack_import_status` reads
+carries one line, `note` ("Kept 2 things you had changed in the Admin."). The start itself still
+answers only the job's id, so that line arrives with the outcome, not with the start.
+`preview_datapack_changes` (a read) says beforehand what an install would do: counts per data kind
+and at most three names per count, never rows. `save_store_changes_to_pack` (confirm-gated) saves
+the store's copy of the pack as a new version in the datapack library (what the install record
+lists and the installed version's own products, attributes and sets, read from the store), keeps
+the version installed, moves the project onto the new version, and changes nothing in Commerce; it
+is undone by `delete_library_datapack` on the new version. Every removal path, `reset_datapack`
+included, keeps a category or set the pack made that holds something it did not, and the
+outcome's `note` says so ("Kept the set Racks: it holds 2 products you added."). Both read the store with the project's own
+credential, behind the same org guard as the import. Plan:
+`.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
+
 ### Integrations live in Adobe workspaces of their own (AB-23)
 
 Since 2026-09-21 every integration an SC adds gets an Adobe workspace of its own,

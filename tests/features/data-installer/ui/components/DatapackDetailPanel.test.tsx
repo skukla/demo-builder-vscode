@@ -409,3 +409,37 @@ describe('DatapackDetailPanel — a library pack', () => {
         ).not.toBeInTheDocument();
     });
 });
+
+/**
+ * "Save store changes to this pack" (datapack-engine step 05). The catalog offers it only for
+ * the pack the open project holds, installed by Demo Builder's engine, so the flyout shows it
+ * exactly when it is handed the callback, and raises it with the pack's id: the catalog hosts
+ * the progress window, as it hosts the import modal, rather than a dialog inside the drawer.
+ */
+describe('Save store changes to this pack', () => {
+    const LABEL = 'Save store changes to this pack';
+
+    it('is not offered when the catalog does not ask for it', () => {
+        renderPanel();
+
+        expect(screen.queryByRole('button', { name: LABEL })).not.toBeInTheDocument();
+    });
+
+    it('raises the pack it was pressed for, from a Data Installer pack', () => {
+        const onSaveStoreChanges = jest.fn();
+        renderPanel({ onSaveStoreChanges });
+
+        fireEvent.click(screen.getByRole('button', { name: LABEL }));
+
+        expect(onSaveStoreChanges).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
+    });
+
+    it('is offered on a library pack too', () => {
+        const onSaveStoreChanges = jest.fn();
+        renderPanel({ detail: makeDetail({ store: 'library', mine: true }), installsFromLibrary: true, onSaveStoreChanges });
+
+        fireEvent.click(screen.getByRole('button', { name: LABEL }));
+
+        expect(onSaveStoreChanges).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
+    });
+});

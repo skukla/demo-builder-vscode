@@ -16,7 +16,7 @@
  */
 
 import { z } from 'zod';
-import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, readOrNull, segment } from './kindContext';
+import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, ownedId, readOrNull, segment } from './kindContext';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const ATTRIBUTE_KIND = 'product_attributes';
@@ -65,6 +65,8 @@ export async function installAttributes(ctx: KindContext, rows: readonly Attribu
         if (SWATCH_INPUTS.has(row.attribute.frontend_input)) {
             throw new Error(`The attribute ${code} is a swatch, which Demo Builder does not install yet.`);
         }
+        // One this engine made and the SC deleted since stays deleted (step 05).
+        if (ownedId(ctx.session, ATTRIBUTE_KIND, code) === null) continue;
         const existing = await readOrNull<object>(ctx.get, `products/attributes/${segment(code)}`);
         if (existing && !ctx.recorder.has(ATTRIBUTE_KIND, code)) {
             await addMissingOptions(ctx, code, row.attribute.options ?? []);
@@ -98,7 +100,7 @@ async function readOptions(ctx: KindContext, code: string): Promise<StoreOption[
  * read back by label rather than taken from the POST's answer, whose shape no live answer in
  * this repo records.
  */
-async function addMissingOptions(ctx: KindContext, code: string, options: readonly PackOption[]): Promise<void> {
+export async function addMissingOptions(ctx: KindContext, code: string, options: readonly PackOption[]): Promise<void> {
     const have = await readOptions(ctx, code);
     const missing = options.filter((o) => !have.some((h) => sameLabel(h.label, o.label)));
     for (const option of missing) {

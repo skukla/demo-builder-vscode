@@ -59,3 +59,11 @@ export async function fakeContext(
         },
     };
 }
+
+/** The first page of a Commerce search, as `readAllPages` asks for it. */
+export const page = (path: string, criteria = '') =>
+    `${path}?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100${criteria}`;
+
+/** One equals filter, as the engine's lookups write it. */
+export const by = (field: string, value: string) =>
+    `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(value)}`;

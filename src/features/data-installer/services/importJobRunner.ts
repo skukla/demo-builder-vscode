@@ -77,6 +77,8 @@ export interface ImportJobResult {
      * and `partial`, what the engine says (Demo Builder's names the object and the cause).
      */
     reason?: string;
+    /** What the engine kept and why, in one line (Demo Builder's engine, installing again). */
+    note?: string;
     processingTimeMs?: number;
 }
 
@@ -194,6 +196,7 @@ export async function watchImportJob(args: {
         outcome,
         perType,
         ...(reason ? { reason } : {}),
+        ...(latest?.note ? { note: latest.note } : {}),
         ...(latest?.processingTimeMs !== undefined
             ? { processingTimeMs: latest.processingTimeMs }
             : {}),

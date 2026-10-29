@@ -34,6 +34,33 @@ export interface CommerceBulkStatus {
     operation_count?: number;
 }
 
+/**
+ * One product as `GET products` (a search page's item) answers it: the Bodea sandbox's
+ * answer, captured 2026-09-27 (tests/fixtures/commerce-rest/products-page.json), in the fields
+ * the datapack engine reads and writes back. Everything else a product carries passes through.
+ */
+export interface CommerceProduct {
+    id?: number;
+    sku: string;
+    name?: string;
+    attribute_set_id?: number | string;
+    type_id?: string;
+    created_at?: string;
+    updated_at?: string;
+    custom_attributes?: Array<{ attribute_code: string; value: unknown }>;
+    extension_attributes?: {
+        website_ids?: Array<number | string>;
+        category_links?: Array<{ category_id: string | number; position?: number }>;
+        stock_item?: Record<string, unknown>;
+        configurable_product_options?: Array<{ attribute_id: string | number; values?: Array<{ value_index: string | number }>; [key: string]: unknown }>;
+        configurable_product_links?: Array<string | number>;
+        [key: string]: unknown;
+    };
+    tier_prices?: Array<{ customer_group_id: string | number; [key: string]: unknown }>;
+    media_gallery_entries?: unknown[];
+    [key: string]: unknown;
+}
+
 /** `GET products?…&fields=items[sku,attribute_set_id],total_count`: one page. */
 export interface CommerceProductSetPage {
     items?: Array<{ sku?: string; attribute_set_id?: number }>;

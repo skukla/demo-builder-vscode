@@ -38,6 +38,32 @@ export interface CatalogSession {
     websiteCode?: string;
     /** The same website, by id: a pack's products are put on it, whatever website they named. */
     websiteId?: number;
+    /**
+     * What a repeat install already knows about the pack's rows from the install record (step
+     * 05), by `ownedKey(kind, key)`: the id of the thing this engine made for the row, or `null`
+     * when the SC has deleted it since, which is kept. A kind's install uses the id rather than
+     * searching by name, so a thing renamed in the Admin is not made a second time.
+     */
+    owned?: Map<string, string | null>;
+    /**
+     * The SKUs an earlier, finished install made (hashed in the record; step 05). Quantities are
+     * not set again for these: a product's fingerprint leaves its stock out, so a quantity the SC
+     * changed in the Admin could not be told from one the pack set.
+     */
+    productsBefore?: ReadonlySet<string>;
+}
+
+/** The key `CatalogSession.owned` holds a row under. */
+export function ownedKey(kind: string, key: string): string {
+    return `${kind}\u0000${key}`;
+}
+
+/**
+ * What this engine made for a pack row, from a repeat install's plan: its id, `null` when the
+ * SC has deleted it since (leave it deleted), or `undefined` when nothing is recorded.
+ */
+export function ownedId(session: CatalogSession, kind: string, key: string): string | null | undefined {
+    return session.owned?.get(ownedKey(kind, key));
 }
 
 /** What a kind's install is handed. */

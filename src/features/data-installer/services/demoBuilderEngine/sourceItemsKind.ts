@@ -39,9 +39,13 @@ export function parseSourceItems(records: unknown): SourceItemsPack {
     return parsed.data;
 }
 
-/** Set the quantities of the products this install made, a batch at a time. */
+/**
+ * Set the quantities of the products this install made, a batch at a time. Installing again
+ * sets none for a product an earlier install made (step 05): its quantities may be the SC's.
+ */
 export async function installSourceItems(ctx: KindContext, pack: SourceItemsPack): Promise<void> {
-    const ours = pack.sourceItems.filter((item) => ctx.recorder.has(PRODUCT_KIND, item.sku));
+    const before = ctx.session.productsBefore ?? new Set<string>();
+    const ours = pack.sourceItems.filter((item) => ctx.recorder.has(PRODUCT_KIND, item.sku) && !before.has(item.sku));
     for (let start = 0; start < ours.length; start += BATCH) {
         await ctx.send('POST', 'inventory/source-items', { sourceItems: ours.slice(start, start + BATCH) });
     }

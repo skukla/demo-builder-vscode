@@ -21,7 +21,8 @@
  */
 
 import { z } from 'zod';
-import { deleteIfPresent, type KindContext, segment } from './kindContext';
+import { deleteIfPresent, type KindContext, ownedId, segment } from './kindContext';
+import { keyOf } from './packForm';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const CATEGORY_KIND = 'categories';
@@ -77,12 +78,20 @@ async function findChild(ctx: KindContext, parentId: number, name: string): Prom
     return answer?.items?.find((c) => c.name === name && Number(c.parent_id) === parentId)?.id;
 }
 
-/** Find the category under its parent, or make it and record it. */
+/**
+ * Find the category under its parent, or make it and record it. One this engine made before is
+ * known by its id, renamed in the Admin or not; one the SC deleted since answers undefined, and
+ * is left deleted (step 05).
+ */
 async function findOrCreate(
     ctx: KindContext,
     category: CategoryFields & Record<string, unknown>,
     parentId: number,
-): Promise<number> {
+    path: string,
+): Promise<number | undefined> {
+    const owned = ownedId(ctx.session, CATEGORY_KIND, keyOf(CATEGORY_KIND, { category: { ...category, path } }) ?? '');
+    if (owned === null) return undefined;
+    if (owned !== undefined) return Number(owned);
     const existing = await findChild(ctx, parentId, category.name);
     if (existing !== undefined) return Number(existing);
     const created = (await ctx.send('POST', 'categories', body(category, parentId))) as FoundCategory | null;
@@ -100,7 +109,11 @@ function depth(path: string): number {
 /** Install the tree, shallowest first, so every parent exists before its children. */
 export async function installCategories(ctx: KindContext, pack: CategoryPack): Promise<void> {
     if (pack.root_category) {
-        const id = await findOrCreate(ctx, pack.root_category, TREE_ROOT_ID);
+        const id = await findOrCreate(ctx, pack.root_category, TREE_ROOT_ID, '');
+        if (id === undefined) {
+            ctx.log(`left the pack's categories out: the SC deleted its root, ${pack.root_category.name}`);
+            return;
+        }
         ctx.session.rootCategory = { id, name: pack.root_category.name };
     }
     const rows = [...pack.categories].sort((a, b) => depth(a.category.path) - depth(b.category.path));
@@ -108,12 +121,21 @@ export async function installCategories(ctx: KindContext, pack: CategoryPack): P
     // path ("Default Category/…"); here that means this store's root, whatever it is called.
     const rootLabel = pack.root_category?.name ?? rows[0]?.category.path.split('/')[0] ?? '';
     const byPath = new Map<string, number>([[rootLabel, ctx.session.rootCategory.id]]);
+    // Under a category the SC deleted: left out with it.
+    const deleted = new Set<string>();
     for (const { category } of rows) {
+        const own = `${category.path}/${category.name}`;
+        if (deleted.has(category.path)) {
+            deleted.add(own);
+            continue;
+        }
         const parentId = byPath.get(category.path);
         if (parentId === undefined) {
             throw new Error(`The category ${category.name} sits under "${category.path}", which the pack does not make.`);
         }
-        byPath.set(`${category.path}/${category.name}`, await findOrCreate(ctx, category, parentId));
+        const id = await findOrCreate(ctx, category, parentId, category.path);
+        if (id === undefined) deleted.add(own);
+        else byPath.set(own, id);
     }
 }
 

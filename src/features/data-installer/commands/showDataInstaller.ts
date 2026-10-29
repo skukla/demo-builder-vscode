@@ -11,6 +11,7 @@
 
 import { StandalonePanelCommand } from '@/commands/standalonePanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { handleGetOperationProgress, handleOpenDebugLogs } from '@/core/vscode/operationProgress';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
@@ -31,6 +32,17 @@ const WEBVIEW_ID = 'demoBuilder.dataInstaller';
  */
 const settingsHandlers: HandlerMap = {
     'open-data-installer-settings': handleOpenDataInstallerSettings,
+};
+
+/**
+ * The house progress window's own two messages (`OperationProgressModal`), which "Save store
+ * changes to this pack" opens (datapack-engine step 05): where a reopened run is, and the Debug
+ * Logs a failure offers. Screen-only for the same reason as the settings link: an agent has no
+ * window to reopen. `backgroundOperation` and `answerOperationPrompt` are already in the import map.
+ */
+const progressWindowHandlers: HandlerMap = {
+    getOperationProgress: handleGetOperationProgress,
+    openDebugLogs: handleOpenDebugLogs,
 };
 
 export class ShowDataInstallerCommand extends StandalonePanelCommand<DataInstallerInitialData> {
@@ -54,7 +66,7 @@ export class ShowDataInstallerCommand extends StandalonePanelCommand<DataInstall
      * purpose. The panel needs both, so it registers their union.
      */
     protected handlerMaps(): readonly HandlerMap[] {
-        return [dataInstallerHandlers, importHandlers, settingsHandlers];
+        return [dataInstallerHandlers, importHandlers, settingsHandlers, progressWindowHandlers];
     }
 
     /**

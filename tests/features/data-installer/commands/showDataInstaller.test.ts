@@ -117,12 +117,16 @@ describe('ShowDataInstallerCommand', () => {
             // Plus `open-data-installer-settings`, which is in NEITHER map on
             // purpose: it opens a VS Code pane, so it has no business in the read
             // map the MCP descriptors mirror. Named here rather than derived,
-            // because being outside both maps is the whole point of it.
+            // because being outside both maps is the whole point of it. The same goes
+            // for the house progress window's two messages, which "Save store changes to
+            // this pack" opens (datapack-engine step 05).
             expect(registered).toEqual(
                 [
                     ...getRegisteredTypes(dataInstallerHandlers),
                     ...getRegisteredTypes(importHandlers),
                     'open-data-installer-settings',
+                    'getOperationProgress',
+                    'openDebugLogs',
                 ].sort()
             );
         });

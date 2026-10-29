@@ -14,8 +14,8 @@
  * @module features/data-installer/handlers/importJobWatch
  */
 
-import type { DatapackEngine } from '../services/datapackEngine';
 import type { ImportRequest } from '../services/dataInstallerWriteClient';
+import type { DatapackEngine } from '../services/datapackEngine';
 import { watchImportJob } from '../services/importJobRunner';
 import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
 import { progressLabel, progressStep, summarizeProgress } from '../ui/importProgress';
@@ -94,9 +94,11 @@ async function watchAndRecord(
                 });
             },
         });
+        // What a repeat install kept goes with the success, for a notification to say too.
+        const kept = result.note ? { note: result.note } : {};
         await pushOperationProgress(
             result.outcome === 'success'
-                ? { id: DATAPACK_OPERATION_ID, state: 'succeeded' }
+                ? { id: DATAPACK_OPERATION_ID, state: 'succeeded', ...kept }
                 : {
                       id: DATAPACK_OPERATION_ID,
                       state: 'failed',
@@ -108,6 +110,7 @@ async function watchAndRecord(
             outcome: result.outcome,
             perType: result.perType,
             ...(result.reason ? { reason: result.reason } : {}),
+            ...(result.note ? { note: result.note } : {}),
             ...(result.processingTimeMs !== undefined
                 ? { processingTimeMs: result.processingTimeMs }
                 : {}),

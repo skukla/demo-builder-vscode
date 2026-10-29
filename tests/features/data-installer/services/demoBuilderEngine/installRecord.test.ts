@@ -15,6 +15,7 @@ import {
     openInstallRecord,
     readInstallRecord,
     removalOrder,
+    writeInstallRecord,
 } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { NOW, PACK, PROJECT, memoryFiles } from './demoBuilderEngine.testUtils';
 
@@ -101,6 +102,78 @@ describe('openInstallRecord', () => {
         await recorder.drop({ kind: 'products', id: 'BD-100' });
 
         expect(stored(files)).toMatchObject({ created: [{ kind: 'categories', id: '41' }] });
+    });
+});
+
+describe('what the record keeps about each object (step 05)', () => {
+    it('keeps the pack\'s own name for an object and the two hashes a repeat install compares', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'categories', id: '41' });
+
+        await recorder.update({ kind: 'categories', id: '41', key: 'Products', fingerprint: 'store-hash', wrote: 'row-hash' });
+
+        expect(stored(files)).toMatchObject({
+            created: [{ kind: 'categories', id: '41', key: 'Products', fingerprint: 'store-hash', wrote: 'row-hash' }],
+        });
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created[0]).toEqual({
+            kind: 'categories',
+            id: '41',
+            key: 'Products',
+            fingerprint: 'store-hash',
+            wrote: 'row-hash',
+        });
+    });
+
+    it('keeps what an update does not name, such as the value a setting had before', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'sources', id: 'east', previous: { enabled: false } });
+
+        await recorder.update({ kind: 'sources', id: 'east', fingerprint: 'h' });
+
+        expect(recorder.created).toEqual([{ kind: 'sources', id: 'east', previous: { enabled: false }, fingerprint: 'h' }]);
+    });
+
+    it('updates nothing it has no record of', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+
+        await recorder.update({ kind: 'categories', id: '41', fingerprint: 'h' });
+
+        expect(recorder.created).toStrictEqual([]);
+        expect(files.data.size).toBe(0);
+    });
+
+    it('finds an object by the pack\'s name for it, so a category renamed in the Admin is still ours', async () => {
+        const recorder = await openInstallRecord(memoryFiles(), PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'categories', id: '41' });
+        await recorder.update({ kind: 'categories', id: '41', key: 'Products' });
+        await recorder.record({ kind: 'products', id: 'vrrack' });
+
+        expect(recorder.byKey('categories', 'Products')?.id).toBe('41');
+        // A record from before keys were kept: an id that is its own name still answers.
+        expect(recorder.byKey('products', 'vrrack')?.id).toBe('vrrack');
+        expect(recorder.byKey('categories', 'Other')).toBeUndefined();
+    });
+});
+
+describe('writeInstallRecord', () => {
+    it('writes a whole record under its own pack, as a capture does for the new version', async () => {
+        const files = memoryFiles();
+        const next = { name: 'bodea-main', version: '1.2.0-saved-20261029-1830' };
+
+        await writeInstallRecord(files, PROJECT, {
+            format: 1,
+            pack: next,
+            engine: 'demo-builder',
+            startedAt: '2026-10-27T18:00:00.000Z',
+            created: [{ kind: 'products', id: 'vrrack', key: 'vrrack', fingerprint: 'a', wrote: 'b' }],
+        });
+
+        expect((await readInstallRecord(files, PROJECT, next))?.created).toEqual([
+            { kind: 'products', id: 'vrrack', key: 'vrrack', fingerprint: 'a', wrote: 'b' },
+        ]);
     });
 });
 

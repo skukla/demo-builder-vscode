@@ -46,6 +46,13 @@ import type { HandlerResponse } from '@/types/handlers';
  * earlier draft of this schema said otherwise and taught an agent to make a call
  * that always fails; the live probe caught it on the second invocation.
  */
+/**
+ * Which store holds a pack, for the two step-05 rows: the preview reads the pack from it, and the
+ * save reads the installed version's own rows from it, so products the store already had are kept
+ * in the new version.
+ */
+const PACK_SOURCE = z.enum(['installer', 'library']).optional().describe('Which store holds the pack: installer or library. Omitted: the preview reads the installer, the save tries the library then the installer');
+
 const DATAPACK_ID = {
     datapackName: z.string().describe('Datapack name from find_datapacks'),
     version: z.string().describe('Datapack version, e.g. main (required — there is no "latest")'),
@@ -208,6 +215,42 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         // a request is well-formed — the opposite of why it exists.
     },
 
+    // ── installing again, and saving the store back (datapack-engine step 05) ──
+    {
+        tool: 'preview_datapack_changes',
+        needsAuth: ['adobe'],
+        // Reads the pack and the project's store; writes nothing to either, nor to the record.
+        readOnly: true,
+        description:
+            'What installing a datapack again would change in this project\'s store: by data kind, how many ' +
+            'things Demo Builder made would be updated to the pack, added, removed, or kept because they were ' +
+            'changed in the Admin, with a few names each. Writes nothing. installed:false means Demo Builder ' +
+            'never installed the pack here, so every row would be new.',
+        map: importHandlers,
+        type: 'preview-datapack-changes',
+        inputSchema: {
+            ...DATAPACK_ID,
+            source: PACK_SOURCE,
+            dataTypes: z.array(z.string()).optional().describe('Only these data kinds; all the pack holds when omitted'),
+        },
+    },
+    {
+        tool: 'save_store_changes_to_pack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Save the store\'s copy of a datapack Demo Builder installed in this project as a NEW version of it in ' +
+            'the datapack library, with the categories, set, attributes and quantities its products need. The ' +
+            'version installed is kept; undo by deleting the new one with delete_library_datapack. Answers the ' +
+            'new version. Nothing in Commerce changes.',
+        map: importHandlers,
+        type: 'save-store-changes-to-pack',
+        // Gated twice, as reset_datapack is: the row refuses before dispatch, and the same flag
+        // satisfies the handler's own confirm check.
+        confirm: true,
+        inputSchema: { ...DATAPACK_ID, source: PACK_SOURCE },
+    },
+
     // ── writes ──────────────────────────────────────────────────────────────
     {
         tool: 'start_datapack_import',
@@ -215,7 +258,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Import a datapack into a live Commerce instance. Returns an activationId as soon as ' +
-            'the job starts — poll get_datapack_import_status for the outcome. Validate first.',
+            'the job starts — poll get_datapack_import_status for the outcome. Validate first. ' +
+            'Installing a pack again updates and removes what it made before and keeps what was ' +
+            'changed in the Admin; the outcome\'s note says what it kept, and preview_datapack_changes ' +
+            'says it beforehand.',
         map: importHandlers,
         type: 'start-datapack-import',
         confirm: true,
@@ -227,7 +273,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             "Remove a datapack's data from the Commerce instance so the project can be reused. " +
-            'Cannot be undone. Returns an activationId; poll get_datapack_import_status.',
+            'Cannot be undone. Returns an activationId; poll get_datapack_import_status. With the ' +
+            'demo-builder engine, a category or set the pack made that holds things it did not make ' +
+            "is kept, and the outcome's note says which.",
         map: importHandlers,
         type: 'reset-datapack',
         // Gated TWICE, and that is not redundant. The handler has always required

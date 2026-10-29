@@ -160,7 +160,15 @@ describe('the ceiling table tracks the tool surface', () => {
         // list_runtime_packages: one name per package, so its size is the size of
         // somebody's namespace. Measured on the first live call, then promoted.
         // assign_erp_products (AB-74): its unknown SKUs are as long as what was pasted.
-        const PENDING_LIVE_MEASUREMENT = new Set<string>(['list_runtime_packages', 'assign_erp_products']);
+        // preview_datapack_changes and save_store_changes_to_pack (datapack-engine step 05): the
+        // preview's size is the number of kinds a pack holds, at most three names each, and the
+        // plan sets its ceiling from Frescopa and Bodea measured live; neither has run live yet.
+        const PENDING_LIVE_MEASUREMENT = new Set<string>([
+            'list_runtime_packages',
+            'assign_erp_products',
+            'preview_datapack_changes',
+            'save_store_changes_to_pack',
+        ]);
 
         const missing = descriptorTools.filter(
             (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t)

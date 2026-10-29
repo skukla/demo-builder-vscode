@@ -21,6 +21,7 @@
 
 import { ADOBE_PROJECT_STAGES } from './adobeProjectStages';
 import { CREATION_STAGES } from './creationStages';
+import { DATAPACK_STAGES } from './datapackStages';
 import { RESET_STAGES } from './resetStages';
 import { STOREFRONT_STAGES } from './storefrontStages';
 import { UPDATE_STAGES } from './updateStages';
@@ -264,6 +265,8 @@ export const OPERATION_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'Running npm install',
     },
+    // "Save store changes to this pack" on a datapack's flyout (`datapackStages.ts`).
+    ...DATAPACK_STAGES,
     // Check for Updates and applying what it found (`updateStages.ts`).
     ...UPDATE_STAGES,
 } as const satisfies Record<string, OperationStage>;

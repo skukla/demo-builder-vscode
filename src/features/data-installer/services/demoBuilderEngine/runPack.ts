@@ -14,18 +14,10 @@
  */
 
 import type { DatapackId } from '../../types';
+import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
+import { installAttributes, parseAttributeRows } from './attributesKind';
+import { installCategories, parseCategoryPack } from './categoriesKind';
 import {
-    installAssignments,
-    installAttributeSets,
-    parseAssignmentRows,
-    parseAttributeSetRows,
-    removeAssignment,
-    removeAttributeSet,
-} from './attributeSetsKind';
-import { installAttributes, parseAttributeRows, removeAttribute, removeAttributeOption } from './attributesKind';
-import { installCategories, parseCategoryPack, removeCategory } from './categoriesKind';
-import {
-    type CreatedObject,
     type RecordFiles,
     forgetInstallRecord,
     openInstallRecord,
@@ -33,7 +25,10 @@ import {
     removalOrder,
 } from './installRecord';
 import type { KindContext } from './kindContext';
-import { installProducts, parseProductRows, removeProduct } from './productsKind';
+import { installProducts, parseProductRows } from './productsKind';
+import { recordFingerprints } from './recordFingerprints';
+import { type KeptContainer, type RemovalAccess, decideRemovals, takeBack } from './removers';
+import { type KeptThing, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat } from './repeatInstall';
 import { installSourceItems, parseSourceItems } from './sourceItemsKind';
 import {
     installSources,
@@ -42,11 +37,7 @@ import {
     parseSources,
     parseStockSourceLinks,
     parseStocks,
-    removeSource,
-    removeStock,
-    removeStockSourceLink,
 } from './stockKinds';
-import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 
 /** A pack's rows, by data kind, as its items hold them. */
 export type PackItems = Record<string, unknown>;
@@ -86,42 +77,42 @@ export function unsupportedKinds(items: PackItems): string[] {
     return Object.keys(items).filter((kind) => !INSTALLABLE_KINDS.includes(kind));
 }
 
+/** What an install did beyond writing the pack: the SC's own changes it kept. */
+export interface InstallOutcome {
+    /** What it kept because the SC changed or deleted it in the Admin. */
+    kept: KeptThing[];
+    /** Containers it did not take out because they hold what the engine did not make. */
+    containers: KeptContainer[];
+}
+
 /**
- * Install every kind the pack holds, in order.
+ * Install every kind the pack holds, in order. Installing again brings what this engine made up
+ * to the pack, takes out what the pack no longer has, and keeps the SC's own edits
+ * (`repeatInstall.ts`); then everything made or changed is read back and hashed.
  *
  * @param onKind - called as each kind starts, for progress
  * @throws UnsupportedKindsError before any write, when the pack holds a kind not listed above
  */
-export async function installPack(ctx: KindContext, items: PackItems, onKind: (kind: string) => void = () => undefined): Promise<void> {
+export async function installPack(ctx: KindContext, items: PackItems, onKind: (kind: string) => void = () => undefined): Promise<InstallOutcome> {
     const unsupported = unsupportedKinds(items);
     if (unsupported.length > 0) throw new UnsupportedKindsError(unsupported);
+    const plans = await planRepeat(ctx, items, ctx.recorder.created);
+    ctx.session.owned = ownedFrom(plans);
+    // Hashed means an earlier install finished with it; one that stopped part-way left its
+    // products unhashed, and a re-run still sets their quantities.
+    ctx.session.productsBefore = new Set(
+        ctx.recorder.created.filter((o) => o.kind === 'products' && o.fingerprint !== undefined).map((o) => o.id),
+    );
     for (const step of STEPS) {
         if (!(step.kind in items)) continue;
         onKind(step.kind);
+        await applyUpdates(ctx, plans, step.kind);
         await step.install(ctx, items[step.kind]);
     }
+    const containers = await applyRemovals(ctx, plans);
+    await recordFingerprints(ctx, items);
+    return { kept: keptOf(plans), containers };
 }
-
-/** Commerce access for removal. */
-export interface RemovalAccess {
-    get: CommerceGet;
-    send: CommerceSend;
-}
-
-type Remover = (commerce: RemovalAccess, object: CreatedObject) => Promise<void>;
-
-/** How each recorded kind is taken back. */
-const REMOVERS: Record<string, Remover> = {
-    attribute_sets: (c, o) => removeAttributeSet(c.send, o.id),
-    product_attributes: (c, o) => removeAttribute(c.send, o.id),
-    attribute_options: (c, o) => removeAttributeOption(c.send, o.id),
-    attribute_assign_to_set: (c, o) => removeAssignment(c.send, o.id),
-    categories: (c, o) => removeCategory(c.send, o.id),
-    stocks: (c, o) => removeStock(c, o),
-    sources: (c, o) => removeSource(c, o.id),
-    stock_source_links: (c, o) => removeStockSourceLink(c.send, o.id),
-    products: (c, o) => removeProduct(c.send, o.id),
-};
 
 /** What a removal did. */
 export interface RemovalResult {
@@ -129,11 +120,17 @@ export interface RemovalResult {
     removed: number;
     /** True when the pack had no record: this engine never installed it here. */
     noRecord: boolean;
+    /**
+     * Containers the pack made that were kept because they hold what the engine did not make
+     * (step 05). They stay on the record, so a later removal takes them once they are empty.
+     */
+    kept: KeptContainer[];
 }
 
 /**
  * Take back everything the record lists, newest first, dropping each from the record as it
- * goes; delete the record once it is empty.
+ * goes; keep a category or set that holds what the engine did not make (`decideRemovals`); delete
+ * the record once it is empty.
  *
  * @throws Error naming the object when Commerce refuses one; what was taken back stays off the
  *   record, so running it again carries on from there
@@ -144,20 +141,13 @@ export async function removePack(
     target: { projectPath: string; pack: DatapackId },
 ): Promise<RemovalResult> {
     const record = await readInstallRecord(files, target.projectPath, target.pack);
-    if (!record) return { removed: 0, noRecord: true };
+    if (!record) return { removed: 0, noRecord: true, kept: [] };
     const recorder = await openInstallRecord(files, target.projectPath, target.pack, () => record.startedAt);
-    let removed = 0;
-    for (const object of removalOrder(record)) {
-        const remover = REMOVERS[object.kind];
-        if (!remover) throw new Error(`The install record lists a ${object.kind}, which Demo Builder cannot take back.`);
-        try {
-            await remover(commerce, object);
-        } catch (error) {
-            throw new Error(`Could not take back ${object.kind} ${object.id}: ${error instanceof Error ? error.message : String(error)}`);
-        }
+    const { take, kept } = await decideRemovals(commerce.get, removalOrder(record));
+    for (const object of take) {
+        await takeBack(commerce, object);
         await recorder.drop(object);
-        removed += 1;
     }
-    await forgetInstallRecord(files, target.projectPath, target.pack);
-    return { removed, noRecord: false };
+    if (kept.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
+    return { removed: take.length, noRecord: false, kept };
 }

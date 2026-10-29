@@ -12,7 +12,7 @@ import {
     installPack,
     removePack,
 } from '@/features/data-installer/services/demoBuilderEngine/runPack';
-import { NOW, PACK, PROJECT, type SentCall, fakeContext, memoryFiles } from './demoBuilderEngine.testUtils';
+import { NOW, PACK, PROJECT, type SentCall, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';
 
 describe('installPack', () => {
     it('runs the kinds the pack holds in the store\'s order, whatever order the pack lists them in', async () => {
@@ -68,14 +68,36 @@ describe('removePack', () => {
             { method: 'DELETE', path: 'products/vrrack', body: undefined },
             { method: 'DELETE', path: 'categories/41', body: undefined },
         ]);
-        expect(result).toEqual({ removed: 2, noRecord: false });
+        expect(result).toEqual({ removed: 2, noRecord: false, kept: [] });
         expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
+    });
+
+    it('keeps a set the pack made that holds products the SC added, taking out only what the pack put in', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'attribute_sets', id: '12' });
+        await recorder.record({ kind: 'products', id: 'vrrack' });
+        const ctx = await fakeContext({
+            [page('products', '&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=12')]: {
+                items: [{ sku: 'vrrack' }, { sku: 'their-a' }, { sku: 'their-b' }],
+                total_count: 3,
+            },
+            'products/attribute-sets/12': { attribute_set_id: 12, attribute_set_name: 'Racks' },
+        });
+
+        const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(ctx.sent).toEqual<SentCall[]>([{ method: 'DELETE', path: 'products/vrrack', body: undefined }]);
+        expect(result.removed).toBe(1);
+        expect(result.kept).toEqual([expect.objectContaining({ kind: 'set', name: 'Racks', count: 2, holds: 'product' })]);
+        // Still on the record, so a later removal takes it once the SC's products are gone.
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'attribute_sets', id: '12' }]);
     });
 
     it('answers that there is no record when this engine never installed the pack', async () => {
         const ctx = await fakeContext();
 
-        await expect(removePack(ctx, memoryFiles(), { projectPath: PROJECT, pack: PACK })).resolves.toEqual({ removed: 0, noRecord: true });
+        await expect(removePack(ctx, memoryFiles(), { projectPath: PROJECT, pack: PACK })).resolves.toEqual({ removed: 0, noRecord: true, kept: [] });
         expect(ctx.sent).toStrictEqual([]);
     });
 

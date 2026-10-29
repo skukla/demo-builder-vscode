@@ -20,7 +20,7 @@
 
 import { z } from 'zod';
 import type { CreatedObject } from './installRecord';
-import { SOURCE_CODE, deleteIfPresent, type KindContext, readOrNull, segment } from './kindContext';
+import { SOURCE_CODE, deleteIfPresent, type KindContext, ownedId, readOrNull, segment } from './kindContext';
 import { readInventory, sellsTo, setSourceEnabled } from '@/features/app-builder/services/storePreparation/warehouseFix';
 import type { CommerceGet, CommerceInventoryStock, CommerceSend } from '@/types/commerceWire';
 
@@ -65,6 +65,8 @@ export const parseStockSourceLinks = (records: unknown) => parse(linksSchema, re
 export async function installSources(ctx: KindContext, pack: SourcesPack): Promise<void> {
     const { sources } = await readInventory(ctx.get);
     for (const { source } of pack.sources) {
+        // A source, stock or link this engine made and the SC deleted since stays deleted (step 05).
+        if (ownedId(ctx.session, SOURCE_KIND, source.source_code) === null) continue;
         const existing = sources.find((s) => s.source_code === source.source_code);
         if (!existing) {
             await ctx.send('POST', 'inventory/sources', { source });
@@ -84,6 +86,7 @@ export async function installStocks(ctx: KindContext, pack: StocksPack): Promise
     if (!websiteCode) throw new Error('The install target names no website, so the pack\'s stocks have nothing to sell to.');
     const { stocks } = await readInventory(ctx.get);
     for (const { stock } of pack.stocks) {
+        if (ownedId(ctx.session, STOCK_KIND, stock.name) === null) continue;
         if (stocks.some((s) => s.name === stock.name)) continue;
         const previous: StockPrevious = { websiteCode, stockId: stocks.find((s) => sellsTo(s, websiteCode))?.stock_id };
         const body: { stock: CommerceInventoryStock } = {
@@ -101,6 +104,7 @@ export async function installStocks(ctx: KindContext, pack: StocksPack): Promise
 export async function installStockSourceLinks(ctx: KindContext, pack: LinksPack): Promise<void> {
     const { stocks, links } = await readInventory(ctx.get);
     for (const { stockSourceLink: link } of pack.stockSourceLinks) {
+        if (ownedId(ctx.session, LINK_KIND, `${link.stock_id}/${link.source_code}`) === null) continue;
         const stockId = stocks.find((s) => s.name === link.stock_id)?.stock_id;
         if (stockId === undefined) throw new Error(`The store has no stock named ${link.stock_id}.`);
         if (links.some((l) => l.stock_id === stockId && l.source_code === link.source_code)) continue;

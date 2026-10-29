@@ -20,7 +20,7 @@ import type { DatapackId, DatapackStoreName } from '../types';
 import type { DataInstallerClient } from './dataInstallerClient';
 import { type DatapackEngine, type DatapackEngineId, type ServiceEngineAccess, buildServiceEngine } from './datapackEngine';
 import { readPackFromStore } from './datapackTransfer';
-import { demoBuilderEngine } from './demoBuilderEngine/engine';
+import { type DemoBuilderEngineDeps, demoBuilderEngine } from './demoBuilderEngine/engine';
 import { type RecordFiles, nodeRecordFiles, readInstallRecord } from './demoBuilderEngine/installRecord';
 import type { PackItems } from './demoBuilderEngine/runPack';
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
@@ -39,8 +39,15 @@ export interface DatapackEngineAccess extends ServiceEngineAccess {
     secrets: CredentialStore | undefined;
 }
 
-/** A pack's rows by kind, read from the store that holds it. */
-async function readFromStore(access: DatapackEngineAccess, id: DatapackId, source: DatapackStoreName): Promise<PackItems> {
+/**
+ * A pack's rows by kind, read from the store that holds it. Shared by the engine and by the
+ * preview and save of store changes (step 05), which read a pack the same way.
+ */
+export async function readPackItems(
+    access: Pick<DatapackEngineAccess, 'catalog' | 'libraryCatalog'>,
+    id: DatapackId,
+    source: DatapackStoreName,
+): Promise<PackItems> {
     if (source === 'library' && !access.libraryCatalog) throw new Error('The datapack library cannot be read from here.');
     const catalog = source === 'library' && access.libraryCatalog ? await access.libraryCatalog() : access.catalog;
     const file = await readPackFromStore(catalog, id, source);
@@ -56,16 +63,26 @@ async function readFromStore(access: DatapackEngineAccess, id: DatapackId, sourc
  */
 export function buildDatapackEngine(id: DatapackEngineId, access: DatapackEngineAccess, log: (line: string) => void): DatapackEngine {
     if (id === 'service') return buildServiceEngine(access, log);
-    const { authManager } = access;
     return demoBuilderEngine({
-        commerce: async () =>
-            authManager
-                ? commerceClientForProject(access.project, authManager, access.secrets)
-                : { refusal: 'Adobe sign-in is required to write to this project\'s store.' },
-        readPack: (pack, _dataTypes, source) => readFromStore(access, pack, source),
+        commerce: projectCommerce(access),
+        readPack: (pack, _dataTypes, source) => readPackItems(access, pack, source),
         projectPath: access.project.path,
         log,
     });
+}
+
+/**
+ * The project's own signed Commerce access, the one the ERP work opens, or why there is none.
+ * Shared by the engine and by the preview and save of store changes (step 05).
+ */
+export function projectCommerce(
+    access: Pick<DatapackEngineAccess, 'project' | 'authManager' | 'secrets'>,
+): DemoBuilderEngineDeps['commerce'] {
+    const { authManager } = access;
+    return async () =>
+        authManager
+            ? commerceClientForProject(access.project, authManager, access.secrets)
+            : { refusal: 'Adobe sign-in is required to write to this project\'s store.' };
 }
 
 /**

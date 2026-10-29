@@ -37,6 +37,10 @@ import '@/core/ui/styles/step-scaffold.css';
 import '@/core/ui/styles/shared-ui.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
+// .work-row-* and .checkbox-row-* — the house progress window's rows, which "Save store changes
+// to this pack" opens (datapack-engine step 05).
+import '@/core/ui/styles/checkbox-row.css';
+import '@/core/ui/styles/work-row.css';
 // Feature-scoped: this is the ONLY entry that loads it, so its classes exist in
 // this bundle and nowhere else.
 import './styles/data-installer.css';

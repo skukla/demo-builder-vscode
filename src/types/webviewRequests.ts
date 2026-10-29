@@ -896,3 +896,30 @@ export interface RenameAdobeProjectRequestPayload {
     projectId: string;
     title: string;
 }
+
+/**
+ * `save-store-changes-to-pack` (datapack-engine step 05): the pack's flyout asks for the store's
+ * copy of a pack Demo Builder installed in the open project to be saved as a new version of it
+ * in the datapack library. `preview-datapack-changes` takes the same name and version.
+ */
+export interface SaveStoreChangesRequest {
+    datapackName: string;
+    version: string;
+    /** Must be true: nothing is saved by default. */
+    confirm: true;
+    /** Which store holds the pack, so the save reads the installed version's own rows there. */
+    source?: 'installer' | 'library';
+    /** Started from the flyout's button, so its progress goes to the screen's progress window. */
+    progress?: 'modal';
+}
+
+/** What a save answers on success: the new version, the one it was saved from, and one sentence. */
+export interface SaveStoreChangesResult {
+    datapackName: string;
+    version: string;
+    previousVersion: string;
+    /** How many of each data kind the new version holds. */
+    counts: Record<string, number>;
+    /** The one sentence the SC reads: "Bodea now matches this store. What it held before is kept." */
+    message: string;
+}

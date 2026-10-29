@@ -14,7 +14,7 @@ import {
     parseProductRows,
     removeProduct,
 } from '@/features/data-installer/services/demoBuilderEngine/productsKind';
-import { type SentCall, fakeContext } from './demoBuilderEngine.testUtils';
+import { type SentCall, by, fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const VR_RACK = {
     product: {
@@ -53,11 +53,6 @@ const CABLE = {
         type_id: 'configurable',
     },
 };
-
-const page = (path: string, criteria = '') =>
-    `${path}?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100${criteria}`;
-const by = (field: string, value: string) =>
-    `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(value)}`;
 
 /** A store with the Default set, the racks category under root 2, and the Platinum Buyer group. */
 const STORE: Record<string, unknown> = {

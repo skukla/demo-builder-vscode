@@ -19,6 +19,8 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { DatapackSummary } from '@/features/data-installer/types';
 
 const mockRequest = webviewClient.request as jest.Mock;
+/** What the view posts without waiting for an answer, such as a save started in the progress window. */
+const mockPost = webviewClient.postMessage as jest.Mock;
 
 /**
  * The type and payload of the most recent request.
@@ -157,6 +159,7 @@ const INVENTORY_WITH_GAP = {
 export { DatapackCatalogView } from '@/features/data-installer/ui/views/DatapackCatalogView';
 export {
     mockRequest,
+    mockPost,
     requestOfType,
     lastRequest,
     makeSummary,

@@ -46,6 +46,12 @@ export const DESTINATION_OPERATION_ID = 'destination';
  */
 export const DATAPACK_OPERATION_ID = 'datapack';
 
+/**
+ * "Save store changes to this pack": a pack's flyout writes the store's copy of it into the
+ * library. One at a time, like an import, so it names the operation rather than the pack.
+ */
+export const DATAPACK_SAVE_OPERATION_ID = 'datapack-save';
+
 /** Applying an edit from the Manage APIs modal. */
 export const CONSOLE_APIS_OPERATION_ID = 'console-apis';
 

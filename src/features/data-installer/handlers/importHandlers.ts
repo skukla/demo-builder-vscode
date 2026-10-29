@@ -35,6 +35,7 @@ import { datapackZipHandlers } from './datapackZipHandlers';
 import { exportHandlers } from './exportHandlers';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { importTargetHandlers } from './importTargetHandlers';
+import { storeChangesHandlers } from './storeChangesHandlers';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { handleBackgroundOperation } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
@@ -76,6 +77,8 @@ export const importHandlers = defineHandlers({
     ...datapackZipHandlers,
     // Library pack actions: remove your own, copy one into the Data Installer.
     ...datapackLibraryHandlers,
+    // What installing again would change, and saving the store's copy as a new version (step 05).
+    ...storeChangesHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,

@@ -145,6 +145,18 @@ describe('watchImportJob', () => {
      * "Importing" for the whole run, sometimes minutes. This callback is the
      * only new thing needed: the push and the render hang off it.
      */
+    it('carries the engine\'s one line about what it kept onto the result (step 05)', async () => {
+        const { promise } = runWith([
+            snap({ categories: 'processing' }),
+            snap({ categories: 'success', products: 'success' }, { note: 'Kept 2 things you had changed in the Admin.' }),
+        ]);
+
+        const result = await promise;
+
+        expect(result.outcome).toBe('success');
+        expect(result.note).toBe('Kept 2 things you had changed in the Admin.');
+    });
+
     describe('progress reporting', () => {
         it('reports each poll as it happens, not once at the end', async () => {
             const seen: Array<Record<string, string>> = [];

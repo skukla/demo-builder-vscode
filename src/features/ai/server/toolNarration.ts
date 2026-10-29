@@ -129,6 +129,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     validate_component_selection: 'Checking the component choices',
     // "same request body as the real thing, without writing".
     validate_datapack_import: 'Checking the sample-data import',
+    // "What installing a datapack again would change ... Writes nothing."
+    preview_datapack_changes: 'Previewing the datapack changes',
     verify_ai_setup: 'Checking the AI setup',
 
     // ── Projects ────────────────────────────────────────────────────────
@@ -261,6 +263,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     load_datapack_zip: 'Loading a datapack file',
     delete_library_datapack: 'Deleting a library datapack',
     copy_library_datapack_to_installer: 'Copying a pack to the installer',
+    // "Save the store's copy ... as a NEW version of it in the datapack library".
+    save_store_changes_to_pack: 'Saving store changes to the pack',
 
     // ── Environment and session ─────────────────────────────────────────
     install_prerequisite: 'Installing the required tool',
