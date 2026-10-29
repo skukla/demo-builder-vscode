@@ -167,7 +167,7 @@ The cold path runs once per SKU across all visitors to a storefront. Every subse
 | `prepublish-pdp` trigger action | `accs-discovery-service`, deployed | Validates the PDP path, resolves the product (`lib/pdp-product.js`, fail-open — a confirmed-absent product → 404, no publish), relays Helix admin preview/publish for the product's **canonical** path, and returns that path so the snippet redirects there |
 | Configuration Service registration with overlay URL | This repo (`ConfigurationService.registerSite` / `updateSiteConfig` with `byomOverlayUrl`) | Wires the overlay into the site config with `{ url, type: "markup", suffix: ".html" }` — shape matches canonical `aem-commerce-prerender` setup wizard |
 | **Catalog pre-warming at create/reset** | This repo (`catalogPrewarmService.ts` + pipeline step) | Enumerates the Commerce catalog via Catalog Service GraphQL and pre-publishes every SKU's PDP URL via batches of 5 to `prepublish-pdp`. Equivalent to one cycle of the canonical scheduled poller. v1 supports ACCS storefronts; PaaS follow-up tracked separately. |
-| Smart-404 snippet install step | This repo (`pdp404HandlerPublisher.ts` + pipeline step) | Vendors three pieces into the storefront: (1) cold-path action call + spinner UI in `scripts/delayed.js`, (2) eager mixed-case → lowercase redirect in `head.html`, (3) same eager redirect in static `404.html` |
+| Smart-404 snippet install step | This repo (`pdp404HandlerPublisher.ts` + pipeline step) | Vendors three pieces into the storefront: (1) cold-path action call + spinner UI in `scripts/delayed.js`, for product and category addresses, (2) eager mixed-case → lowercase product redirect plus the cold-path `<main>` hide in `head.html`, (3) same eager script in static `404.html`. Each is a marked block, rewritten in place when it changes |
 | `demoBuilder.byom.enabled` setting | This repo | Master toggle; when off, no overlay registers and no 404 publishes |
 | `demoBuilder.byom.overlayUrl` setting | This repo | Override for non-default deployments. Defaults to the team's shared deployment. |
 
@@ -260,7 +260,10 @@ steps aside for the paths a public sheet, `/authored-category-pages.json`, lists
 renders category pages only on a site where that sheet exists. The extension writes the
 sheet, then publishes the category pages, at setup, reset and republish (generated ones
 through the authenticated Helix path, on ACCS); the smart-404 snippet asks for any other
-missing lowercase path, and the action refuses all but a listed category's; the
+missing path of category shape (every segment `[a-z0-9-]`) with a "Loading…" state, and
+the action refuses all but a category the store has (404: the storefront's own 404 comes
+back; 503: the shopper goes to a search filtered to the category; a refused
+product-shaped address always goes to `/404`); the
 generated-page removal takes them down (`removeCategoryPages`, shared with product pages).
 Full write-up: `docs/systems/category-pages.md`.
 

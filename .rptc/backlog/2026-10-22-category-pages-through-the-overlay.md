@@ -52,6 +52,12 @@ category path from any other missing path (and returns 404 otherwise); caching a
 invalidation; existing projects' written pages (the migration); the watcher (EDS-27)
 becomes unnecessary; what the agent surface says.
 
+## Next (2026-10-29)
+
+Plan: `.rptc/plans/category-pages-any-catalog/overview.md` — any catalog arrangement: the
+`/products/a/b` store check, first-visit publishing for categories, the menu linking each
+category's own address. After the beta.152 cut.
+
 ## Shipped so far
 
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)

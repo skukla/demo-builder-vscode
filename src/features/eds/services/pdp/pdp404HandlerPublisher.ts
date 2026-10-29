@@ -15,6 +15,7 @@ import {
     derivePrepublishUrl,
     extractCspNonce,
     replaceMarkedBlock,
+    SMART_404_HEAD_MARKER_END,
     SMART_404_HEAD_MARKER_START,
     SMART_404_HEAD_SNIPPET_TEMPLATE,
     SMART_404_MARKER_END,
@@ -212,44 +213,60 @@ export async function installSmart404Handler(
 }
 
 /**
- * Vendor the eager mixed-case redirect script into `head.html`. Same
- * shape as the delayed.js install: read, idempotent-check, commit.
+ * The page with its eager block made current: the block added (before `</head>`, or
+ * appended when there is none) where there is no marker, or swapped in place where an
+ * older one is, so a changed script reaches a storefront that already has one (EDS-61
+ * taught it category addresses). Null when there is nothing to do or nothing safe to do:
+ * the block is already current, the block is half-marked (where it ends is a guess), or
+ * the page has no nonced script to take the CSP nonce from (the script would be blocked).
  *
- * Non-fatal at every step. Failures degrade the UX (visible 404 flash
- * persists until `delayed.js` fires) but never break the storefront.
- */
-/**
- * The eager redirect, inserted into a 404.html's text. Helix serves this file on 404
- * responses for unknown paths, bypassing `head.html`, so the snippet head.html carries
- * has to be here too. Inserted before `</head>` so it runs during head parsing, before
- * body paint; appended when there is no `</head>`.
- *
- * Pure: `planStorefrontRepairs` reads the file and `bringStorefrontUpToDate` writes it.
- * Answers null when there is nothing to do or nothing safe to do: the snippet is already
- * there, or the page has no nonced script tag to take the CSP nonce from (the snippet
- * would be blocked).
- *
- * @param html - the 404.html as read
+ * @param html - the page as read (`head.html` or `404.html`)
+ * @param file - the page's name, for the log
  * @param logger - says why it skipped
- * @returns the page with the redirect, or null
  */
-export function withEagerRedirect(html: string, logger: Logger): string | null {
-    if (html.includes(SMART_404_HEAD_MARKER_START)) {
-        logger.info('[PDP404] Eager redirect already present in 404.html — skipping');
-        return null;
-    }
+function withCurrentEagerBlock(html: string, file: string, logger: Logger): string | null {
     const nonce = extractCspNonce(html);
     if (!nonce) {
         logger.warn(
-            '[PDP404] 404.html has no nonced script tag — skipping eager redirect on 404.html (delayed.js fallback still active)',
+            `[PDP404] ${file} has no nonced script tag — skipping eager redirect (delayed.js fallback still active)`,
         );
         return null;
     }
     const snippet = SMART_404_HEAD_SNIPPET_TEMPLATE.replace(/__NONCE__/g, nonce);
+    if (html.includes(SMART_404_HEAD_MARKER_START)) {
+        const replaced = replaceMarkedBlock(html, SMART_404_HEAD_MARKER_START, SMART_404_HEAD_MARKER_END, snippet);
+        if (replaced === null || replaced === html) {
+            logger.info(`[PDP404] Eager redirect already current in ${file} — skipping`);
+            return null;
+        }
+        return replaced;
+    }
     const headClose = html.lastIndexOf('</head>');
     return headClose >= 0 ? html.slice(0, headClose) + snippet + html.slice(headClose) : html + snippet;
 }
 
+/**
+ * The eager redirect, made current in a 404.html's text. Helix serves this file on 404
+ * responses for unknown paths, bypassing `head.html`, so the snippet head.html carries
+ * has to be here too. Inserted before `</head>` so it runs during head parsing, before
+ * body paint; appended when there is no `</head>`; an older copy is swapped in place.
+ *
+ * Pure: `planStorefrontRepairs` reads the file and `bringStorefrontUpToDate` writes it.
+ *
+ * @param html - the 404.html as read
+ * @param logger - says why it skipped
+ * @returns the page with the current redirect, or null when there is nothing to write
+ */
+export function withEagerRedirect(html: string, logger: Logger): string | null {
+    return withCurrentEagerBlock(html, '404.html', logger);
+}
+
+/**
+ * Make the eager script in `head.html` current: read, add or swap the block, commit.
+ *
+ * Non-fatal at every step. Failures degrade the UX (visible 404 flash
+ * persists until `delayed.js` fires) but never break the storefront.
+ */
 async function installSmart404HeadRedirect(
     githubFileOps: GitHubFileOperations,
     repoOwner: string,
@@ -261,35 +278,18 @@ async function installSmart404HeadRedirect(
         logger.warn('[PDP404] head.html not found — skipping eager redirect install');
         return;
     }
-    if (existing.content.includes(SMART_404_HEAD_MARKER_START)) {
-        logger.info('[PDP404] Eager redirect already present in head.html — skipping');
-        return;
-    }
-    // Detect the CSP nonce from an existing nonced script. If none is
-    // found, the storefront either doesn't use CSP nonces or our
-    // detector can't recognize the convention — either way, we can't
-    // be sure our inline script will execute, so skip rather than
-    // ship a snippet that will be silently blocked.
-    const nonce = extractCspNonce(existing.content);
-    if (!nonce) {
-        logger.warn(
-            '[PDP404] head.html has no nonced script tag — skipping eager redirect (delayed.js fallback still active)',
-        );
-        return;
-    }
-    const snippet = SMART_404_HEAD_SNIPPET_TEMPLATE.replace(/__NONCE__/g, nonce);
+    const content = withCurrentEagerBlock(existing.content, 'head.html', logger);
+    if (content === null) return;
     try {
         await githubFileOps.createOrUpdateFile(
             repoOwner,
             repoName,
             'head.html',
-            existing.content + snippet,
+            content,
             'chore(demo-builder): vendor smart 404 eager redirect into head.html',
             existing.sha,
         );
-        logger.info(
-            `[PDP404] Vendored eager redirect into head.html (${repoOwner}/${repoName}, nonce="${nonce}")`,
-        );
+        logger.info(`[PDP404] Vendored eager redirect into head.html (${repoOwner}/${repoName})`);
     } catch (error) {
         const reason = (error as Error).message ?? 'unknown';
         logger.warn(

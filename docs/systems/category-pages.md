@@ -103,7 +103,7 @@ it: a made-up path stays a 404.
 | Reset (dashboard, `reset_project`) | Takes the sheet out, and the template and switch while unedited, before re-copying the content; then the sheet, the category pages and the switch again | `eds/services/reset/edsResetCatalogMenu.ts` |
 | Republish (dashboard, `republish`) | The sheet before the bulk content publish; after it, the sheet again, then every category page; pages of categories the store no longer has come down | `eds/services/storefront/storefrontContentRepublishService.ts` |
 | Republish after a store change (EDS-44: Configure, dashboard, `republish`) | The same, for the new store: the old store's category pages come down | `eds/services/storefront/storeScopePages.ts` (`replaceCatalogMenuStep`) |
-| A shopper opens a page nobody published | The smart-404 script asks `prepublish-pdp` to publish it, then reloads; when the action refuses, the storefront's own 404 stays as it was | `eds/services/pdp/pdp404Snippet.ts` |
+| A shopper opens a page nobody published | At a category address (every segment `[a-z0-9-]`) or a product address, the smart-404 script shows "Loading…" ("Loading product…" on a product address), asks `prepublish-pdp` to publish it, then reloads. A product-shaped address (`/products/<a>/<b>`) that is refused goes to `/404`, whatever the reason. Any other category address goes, when the store could not be asked (503), to a search filtered to the category, as the menu does; when there is no such category, the storefront's own 404 comes back. Any other path is left alone, with no request | `eds/services/pdp/pdp404Snippet.ts` |
 
 All of the first four call one step file, `eds/services/catalogMenu/catalogMenuStep.ts`,
 on a site built by `catalogMenuSiteDeps.ts`, and one run goes in this order:
@@ -246,8 +246,13 @@ its sentence as `categoryPages`. See `docs/systems/mcp-server.md`.
   a B2B website until a shared catalog grants the category.
 - The block also checks, as the current shopper, that each category has products to show.
 - The library is off by default until the first watched live run.
-- **The smart-404 script asks the action for any lowercase missing path** (a category's
-  address cannot be told by its shape): one action call per such 404, refused by the
-  action for anything that is not a category on an opted-in site.
+- **The smart-404 script asks the action for any missing path of category shape**
+  (every segment `[a-z0-9-]`; a category's address cannot be told from a missing page by
+  its shape): one action call per such 404, refused by the action for anything that is not
+  a category. A path with a dot, an underscore or a capital costs nothing.
+- **A storefront gets a changed smart-404 script at its next reset, or its next update to
+  Demo Builder's tested boilerplate**: both run `bringStorefrontUpToDate`, which rewrites
+  the marked blocks in `scripts/delayed.js`, `head.html` and `404.html` in place. Republish
+  does not touch code.
 - **Order of release.** The service that reads the sheet must be deployed first: an
   extension publishing category paths before the overlay answers them publishes 404s.

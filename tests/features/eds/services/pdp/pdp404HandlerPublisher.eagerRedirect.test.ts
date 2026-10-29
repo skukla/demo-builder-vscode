@@ -12,6 +12,11 @@
  */
 
 import { installSmart404Handler } from '@/features/eds/services/pdp/pdp404HandlerPublisher';
+import {
+    SMART_404_HEAD_MARKER_END,
+    SMART_404_HEAD_MARKER_START,
+    SMART_404_HEAD_SNIPPET_TEMPLATE,
+} from '@/features/eds/services/pdp/pdp404Snippet';
 
 import {
     daLiveOrg,
@@ -199,6 +204,39 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         );
         expect(headCommits).toHaveLength(0);
     });
+    it('replaces an older eager block in head.html in place, so a changed script reaches an existing storefront', async () => {
+        // EDS-61: the cold-path hide learned category addresses. A storefront made before
+        // that carries the product-only block; a reset or update must swap it, not skip it.
+        const stale = `${SMART_404_HEAD_MARKER_START}\n<script nonce="aem">/* product-only */</script>\n${SMART_404_HEAD_MARKER_END}`;
+        const before = `<meta charset="UTF-8">\n<script nonce="aem" type="importmap">{}</script>\n${stale}\n<title>t</title>\n`;
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) =>
+            Promise.resolve(path === 'head.html'
+                ? { content: before, sha: 'head-sha' }
+                : { content: '// delayed.js\n', sha: 'delayed-sha' }));
+
+        await installSmart404Handler(mockGithub, repoOwner, repoName, overlayUrl, mockLogger, daLiveOrg, daLiveSite);
+
+        const headCall = mockGithub.createOrUpdateFile.mock.calls.find((c) => c[2] === 'head.html');
+        const after = headCall![3] as string;
+        expect(after).not.toContain('product-only');
+        expect(after.split(SMART_404_HEAD_MARKER_START)).toHaveLength(2);
+        expect(after).toContain("p === '/categories/default'");
+        expect(after.endsWith(`${SMART_404_HEAD_MARKER_END}\n<title>t</title>\n`)).toBe(true);
+        expect(headCall![5]).toBe('head-sha');
+    });
+
+    it('writes nothing to head.html when its eager block is already current', async () => {
+        const current = SMART_404_HEAD_SNIPPET_TEMPLATE.replace(/__NONCE__/g, 'aem');
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) =>
+            Promise.resolve(path === 'head.html'
+                ? { content: `<script nonce="aem" type="importmap">{}</script>${current}`, sha: 'head-sha' }
+                : { content: '// delayed.js\n', sha: 'delayed-sha' }));
+
+        await installSmart404Handler(mockGithub, repoOwner, repoName, overlayUrl, mockLogger, daLiveOrg, daLiveSite);
+
+        expect(mockGithub.createOrUpdateFile.mock.calls.filter((c) => c[2] === 'head.html')).toHaveLength(0);
+    });
+
     it('head.html vendor failure is non-fatal: installed=true still, delayed.js fallback active', async () => {
         // If head.html commit fails (network, conflict), the user gets
         // the slower delayed.js path. We never want to report install

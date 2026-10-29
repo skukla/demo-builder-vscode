@@ -47,10 +47,14 @@ export const SMART_404_HEAD_MARKER_END = '<!-- === end Smart 404 PDP eager redir
  * cold flash. Bail out of prerender; the real navigation re-fires the
  * snippet.
  *
- * No-ops on every non-PDP path. Doesn't compete with the delayed.js
- * snippet — covers the mixed-case case; the delayed.js snippet handles
- * the lowercase-cold case (URL is already lowercase but not yet
- * published).
+ * No-ops on every path the delayed.js snippet ignores. Doesn't compete
+ * with the delayed.js snippet — covers the mixed-case product case and the
+ * cold-path hide; the delayed.js snippet handles the lowercase-cold case
+ * (URL is already lowercase but not yet published). The mixed-case redirect
+ * is product-only: a category address is lowercase by definition.
+ *
+ * The category shape here and in `SMART_404_SNIPPET_TEMPLATE` is the same
+ * rule, written twice because the two scripts ship in different files.
  */
 export const SMART_404_HEAD_SNIPPET_TEMPLATE = `
 
@@ -58,15 +62,21 @@ ${SMART_404_HEAD_MARKER_START}
 <script nonce="__NONCE__">
   (function () {
     if (document.prerendering) return;
-    var m = location.pathname.match(/^\\/products\\/([^/]+)\\/([^/]+)$/);
-    if (!m) return;
-    var lc = '/products/' + m[1].toLowerCase() + '/' + m[2].toLowerCase();
-    // Mixed case: redirect to lowercase before any paint
-    if (lc !== location.pathname) {
-      location.replace(lc);
+    var p = location.pathname;
+    var m = p.match(/^\\/products\\/([^/]+)\\/([^/]+)$/);
+    if (m) {
+      var lc = '/products/' + m[1].toLowerCase() + '/' + m[2].toLowerCase();
+      // Mixed case: redirect to lowercase before any paint
+      if (lc !== p) {
+        location.replace(lc);
+        return;
+      }
+    } else if (!/^(?:\\/[a-z0-9-]+)+$/.test(p) || p === '/404'
+      || p === '/categories/default' || p === '/products/default') {
+      // Neither a product nor a category address: not ours.
       return;
     }
-    // Already lowercase. If this is a 404 page (cold path: SKU never
+    // Already lowercase. If this is a 404 page (cold path: page never
     // published), the storefront's default 404 chrome will paint before
     // delayed.js loads and runs our cold-path snippet. Hide just the
     // <main> (not the whole body) so the storefront's header and footer
@@ -103,12 +113,26 @@ export function extractCspNonce(headHtmlContent: string): string | undefined {
 
 /**
  * Smart 404 JS template — product pages, and category pages (EDS-61), which
- * the overlay serves at each category's own address (`/signs`) and the same
- * action publishes (only for a category the store lists, on a site that has
- * opted in with its authored-pages sheet, at its cleaned path). A missing page
- * cannot be told from a category by its shape, so for any other lowercase path
- * the snippet asks quietly: no loading state, and on a refusal the storefront's
- * own 404 stays as it was. The eager `head.html` redirect stays product-only.
+ * the overlay serves at each category's own address (`/signs/fire`) and the
+ * same `prepublish-pdp` action publishes on a shopper's first visit.
+ *
+ * The action's contract (EDS-61 step 2, 2026-10-29): a category address is any
+ * path whose segments are all `[a-z0-9-]`, except `/categories/default` and
+ * `/products/default`; a product-shaped address is tried as a product first,
+ * then as a category. It answers 200 (published, with the path), 404 (neither,
+ * nothing published), 503 (the store could not be asked, nothing published) or
+ * 400 (bad input). The snippet asks only for an address of one of those two
+ * shapes, so an ordinary 404 (a file, an uppercase or underscored path) costs
+ * no request and shows nothing of ours.
+ *
+ * On a refusal: a product-shaped address goes to the native `/404`, whatever
+ * the status (owner, 2026-10-29: a product link must never land on a search);
+ * any other category address on a 503 goes to a search filtered to the
+ * category (the menu block's own fallback, `searchFallbackHref` in
+ * `blocks/catalog-menu/catalog-menu-core.js`);
+ * any other category refusal puts the storefront's own 404 back at the
+ * address the shopper opened, as it was before the snippet ran.
+ *
  * Three substitutions handled by `buildSmart404Snippet`:
  *   __TRIGGER_URL__ — sibling `prepublish-pdp` endpoint URL
  *   __ORG__         — storefront's DA.live org (also the action's `org` param)
@@ -116,29 +140,30 @@ export function extractCspNonce(headHtmlContent: string): string | undefined {
  *
  * Wrapped in an IIFE and gated on `window.isErrorPage` so it's inert on
  * every other page. Sits inside `delayed.js`, so it runs after the EDS
- * critical-path scripts complete — a brief flash of the default "Page
- * Not Found" content is visible before the redirect fires.
+ * critical-path scripts complete; the eager `head.html` / `404.html` script
+ * hides `<main>` until then, on the same two address shapes.
  */
 const SMART_404_SNIPPET_TEMPLATE = `
 ${SMART_404_MARKER_START}
-// Auto-publishes the page when a visitor hits a cold product URL
-// (/products/{urlKey}/{sku}) or what may be a category's page (any other
-// lowercase path; never /404 or the /categories/default template). For a
-// product it replaces the storefront's default "Page Not Found" body with a
-// loading state during the ~1-2 second cold-publish window; for a maybe-
-// category it shows nothing until the page exists.
+// Auto-publishes the page when a visitor hits a cold product address
+// (/products/{urlKey}/{sku}) or a cold category address (every segment
+// [a-z0-9-]; never /404 or the /categories/default and /products/default
+// templates). It replaces the storefront's default "Page Not Found" body
+// with a loading state during the ~1-2 second cold-publish window, then
+// reloads into the published page. Any other path is left alone.
 (function smart404PdpRebuild() {
   if (!window.isErrorPage) return;
   const RETRY_FLAG = 'pdpRetry';
   const { pathname } = window.location;
   const PRODUCT = /^\\/products\\/([^/]+)\\/([^/]+)$/;
-  const CATEGORY = /^(?:\\/[a-z0-9_-]+)+$/;
+  const CATEGORY = /^(?:\\/[a-z0-9-]+)+$/;
+  const TEMPLATES = ['/404', '/categories/default', '/products/default'];
   const isProduct = PRODUCT.test(pathname);
-  const isCategory = !isProduct && CATEGORY.test(pathname)
-    && pathname !== '/404' && pathname !== '/categories/default';
+  const lc = pathname.toLowerCase();
+  // A product address is asked for lowercased; a category one must already be.
+  const isCategory = CATEGORY.test(isProduct ? lc : pathname) && !TEMPLATES.includes(lc);
   if (!isProduct && !isCategory) return;
   if (new URLSearchParams(window.location.search).has(RETRY_FLAG)) return;
-  const lc = pathname.toLowerCase();
   // Where the action may send us: a page of the same kind.
   const PAGE_PATH = isProduct ? /^\\/products\\/[^/?#]+\\/[^/?#]+$/ : CATEGORY;
   // Reveal the body now that we're ready to show our own loading state.
@@ -147,6 +172,13 @@ ${SMART_404_MARKER_START}
   // removing it now lets our loading state render.
   const hideStyle = document.getElementById('smart-404-cold-hide');
   if (hideStyle) hideStyle.remove();
+  const mainEl = document.querySelector('main');
+  // The storefront's own 404 body, kept (nodes, not markup, so anything the
+  // storefront wired to it still works) to put back for an address that
+  // turns out to be no category.
+  const own404 = mainEl
+    ? { className: mainEl.className, nodes: Array.from(mainEl.childNodes) }
+    : null;
   // Replace the 404 body with a loading state. Element-level inline
   // style attributes are governed by style-src 'unsafe-inline' (not
   // the nonce or strict-dynamic), and storefront CSPs we have
@@ -157,24 +189,39 @@ ${SMART_404_MARKER_START}
   // main's class so the default 404 chrome (e.g. main.error's own
   // flex layout) does not compete with our flex centering and push
   // the message off-center.
-  function showLoading() {
-    const mainEl = document.querySelector('main');
-    // Loading state: a centered spinner with a "Loading product…" caption.
-    // Uses storefront design tokens for color/typography with hardcoded
-    // fallbacks. Spinner is a CSS-only rotating ring (no images, no
-    // assets to load) so it renders instantly the moment we paint.
+  function showLoading(caption) {
+    // Loading state: a centered spinner with a caption ("Loading product…"
+    // on a product address, "Loading…" on a category one). Uses storefront
+    // design tokens for color/typography with hardcoded fallbacks. Spinner
+    // is a CSS-only rotating ring (no images, no assets to load) so it
+    // renders instantly the moment we paint.
     const WRAP = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;padding:var(--spacing-large,40px) var(--spacing-medium,20px);gap:var(--spacing-medium,20px);';
     const SPIN = 'width:48px;height:48px;border:4px solid var(--color-neutral-200,#f0f0f0);border-top-color:var(--color-brand-500,#454545);border-radius:50%;animation:smart404Spin 0.8s linear infinite;';
     const TEXT = 'font:var(--type-body-1-default-font,1.25rem/1.5 sans-serif);color:var(--color-brand-500,#454545);';
     const ANIM = '<style>@keyframes smart404Spin{to{transform:rotate(360deg)}}</style>';
-    const LOADING_HTML = \`<div style="\${WRAP}"><div style="\${SPIN}"></div><div style="\${TEXT}">Loading product…</div></div>\${ANIM}\`;
+    const LOADING_HTML = \`<div style="\${WRAP}"><div style="\${SPIN}"></div><div style="\${TEXT}">\${caption}</div></div>\${ANIM}\`;
     if (mainEl) {
       mainEl.className = '';
       mainEl.innerHTML = LOADING_HTML;
     }
   }
-  // A maybe-category shows nothing of ours: most missing pages are no category.
-  if (isProduct) showLoading();
+  function showOwn404() {
+    if (!mainEl || !own404) return;
+    mainEl.className = own404.className;
+    mainEl.replaceChildren(...own404.nodes);
+  }
+  // The search the menu block links a category with no page to
+  // (searchFallbackHref in blocks/catalog-menu/catalog-menu-core.js), or
+  // null where it links none: the search block would read "10-20" as a range.
+  function categorySearch() {
+    const urlPath = lc.slice(1);
+    const [from, to] = urlPath.split('-');
+    const isNumber = (value) => Number.isFinite(Number(value));
+    if (to !== undefined && isNumber(from) && isNumber(to)) return null;
+    const filter = encodeURIComponent(\`categoryPath:\${urlPath}\`);
+    return \`/search?filter=\${filter}\`;
+  }
+  showLoading(isProduct ? 'Loading product…' : 'Loading…');
   (async () => {
     if (lc !== window.location.pathname) {
       try {
@@ -214,9 +261,19 @@ ${SMART_404_MARKER_START}
       window.location.replace(\`\${target}?\${RETRY_FLAG}=1\`);
       return;
     }
-    // A maybe-category the action refused is no category: the storefront's
-    // own 404 is already showing, untouched.
-    if (!isProduct) return;
+    // 503: the store could not be asked, so this may still be a category.
+    // Its products are one search away, as the menu would link them. Never
+    // for a product address: a product link must not land on a search.
+    const search = !isProduct && r && r.status === 503 ? categorySearch() : null;
+    if (search) {
+      window.location.replace(search);
+      return;
+    }
+    if (!isProduct) {
+      // No such category: the storefront's own 404, where the shopper is.
+      showOwn404();
+      return;
+    }
     // Action failed after retry — the SKU has no publishable PDP
     // (deleted, renamed, or never existed in Commerce). The honest UX is
     // the storefront's native /404, not a custom in-place message that

@@ -8,6 +8,7 @@
  */
 
 import { withEagerRedirect } from '@/features/eds/services/pdp/pdp404HandlerPublisher';
+import { SMART_404_HEAD_MARKER_END, SMART_404_HEAD_MARKER_START } from '@/features/eds/services/pdp/pdp404Snippet';
 import { alignNotFoundImportMap } from '@/features/eds/services/storefront/notFoundPage';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { HEAD, importsOf, NOT_FOUND } from '../../../../helpers/notFoundPageFixtures';
@@ -99,5 +100,25 @@ describe('withEagerRedirect', () => {
         const done = withEagerRedirect(PAGE, createMockLogger())!;
 
         expect(withEagerRedirect(done, createMockLogger())).toBeNull();
+    });
+
+    it('replaces an older redirect block in place, so a changed script reaches an existing storefront', () => {
+        // EDS-61: the cold-path hide learned category addresses; a 404.html made before
+        // that carries the product-only block, and an update must swap it, not skip it.
+        const stale = `${SMART_404_HEAD_MARKER_START}<script nonce="aem">/* product-only */</script>${SMART_404_HEAD_MARKER_END}`;
+        const old = PAGE.replace('</head>', `${stale}</head>`);
+
+        const out = withEagerRedirect(old, createMockLogger())!;
+
+        expect(out).not.toContain('product-only');
+        expect(out.split(SMART_404_HEAD_MARKER_START)).toHaveLength(2);
+        expect(out).toContain("p === '/categories/default'");
+        expect(out.indexOf(SMART_404_HEAD_MARKER_END)).toBeLessThan(out.indexOf('</head>'));
+    });
+
+    it('leaves a half-marked block alone rather than guess where it ends', () => {
+        const half = PAGE.replace('</head>', `${SMART_404_HEAD_MARKER_START}<script nonce="aem">x</script></head>`);
+
+        expect(withEagerRedirect(half, createMockLogger())).toBeNull();
     });
 });
